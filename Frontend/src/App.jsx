@@ -18,6 +18,14 @@ import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 
+import CoordinatorLayout from './pages/Coordinator/Component/CoordinatorLayout';
+import CoordinatorOverview from './pages/Coordinator/Component/CoordinatorOverview';
+import CoordinatorBatches from './pages/Coordinator/Component/CoordinatorBatches';
+import CoordinatorAttendance from './pages/Coordinator/Component/CoordinatorAttendance';
+import CoordinatorWeeklyReports from './pages/Coordinator/Component/CoordinatorWeeklyReports';
+import CoordinatorLearning from './pages/Coordinator/Component/CoordinatorLearning';
+import CoordinatorHelp from './pages/Coordinator/Component/CoordinatorHelp';
+
 function App() {
   return (
     <BrowserRouter>
@@ -46,8 +54,20 @@ function App() {
           <Route path="settings" element={<ProfilePage />} />
         </Route>
 
+        {/* Coordinator Workspace Routes */}
+        <Route path="/coordinator" element={<CoordinatorLayout />}>
+          <Route index element={<CoordinatorOverview />} />
+          <Route path="batches" element={<CoordinatorBatches />} />
+          <Route path="attendance" element={<CoordinatorAttendance />} />
+          <Route path="weekly-reports" element={<CoordinatorWeeklyReports />} />
+          <Route path="learning" element={<CoordinatorLearning />} />
+          <Route path="help" element={<CoordinatorHelp />} />
+          <Route path="profile" element={<CoordinatorOverview />} />
+          <Route path="settings" element={<CoordinatorOverview />} />
+        </Route>
+
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/student" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
