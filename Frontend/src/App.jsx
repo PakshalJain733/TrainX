@@ -35,6 +35,26 @@ import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
 import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
 import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
 
+// Mentor Workspace Imports
+import MentorLayout from './pages/Mentor/Components/MentorLayout';
+import MentorOverview from './pages/Mentor/Components/Overview';
+import MentorBatches from './pages/Mentor/Components/Batches';
+import MentorStudents from './pages/Mentor/Components/Students';
+import MentorRoadmaps from './pages/Mentor/Components/Roadmaps';
+import MentorAIInterviews from './pages/Mentor/Components/AIInterviews';
+import MentorSkillGaps from './pages/Mentor/Components/SkillGaps';
+import MentorAttendance from './pages/Mentor/Components/Attendance';
+import MentorLeaderboard from './pages/Mentor/Components/Leaderboard';
+import MentorMockDrives from './pages/Mentor/Components/MockDrives';
+import MentorDefaulters from './pages/Mentor/Components/Defaulters';
+import MentorStudyMaterial from './pages/Mentor/Components/StudyMaterial';
+import MentorWeeklyReports from './pages/Mentor/Components/WeeklyReports';
+import MentorAssignments from './pages/Mentor/Components/Assignments';
+import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
+import MentorNotifications from './pages/Mentor/Components/Notifications';
+import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
+import MentorHelp from './pages/Mentor/Components/Help';
+
 function App() {
   return (
     <BrowserRouter>
@@ -61,6 +81,28 @@ function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<ProfilePage />} />
+        </Route>
+
+        {/* Mentor Workspace Routes */}
+        <Route path="/mentor" element={<MentorLayout />}>
+          <Route index element={<MentorOverview />} />
+          <Route path="students" element={<MentorStudents />} />
+          <Route path="roadmaps" element={<MentorRoadmaps />} />
+          <Route path="ai-interviews" element={<MentorAIInterviews />} />
+          <Route path="skill-gaps" element={<MentorSkillGaps />} />
+          <Route path="attendance" element={<MentorAttendance />} />
+          <Route path="leaderboard" element={<MentorLeaderboard />} />
+          <Route path="mock-drives" element={<MentorMockDrives />} />
+          <Route path="defaulters" element={<MentorDefaulters />} />
+          <Route path="study-material" element={<MentorStudyMaterial />} />
+          <Route path="weekly-reports" element={<MentorWeeklyReports />} />
+          <Route path="batches" element={<MentorBatches />} />
+          <Route path="assignments" element={<MentorAssignments />} />
+          <Route path="sessions" element={<MentorLiveSessions />} />
+          <Route path="notifications" element={<MentorNotifications />} />
+          <Route path="profile" element={<MentorProfilePage />} />
+          <Route path="settings" element={<MentorProfilePage />} />
+          <Route path="help" element={<MentorHelp />} />
         </Route>
 
         {/* Super Admin Workspace Routes */}
