@@ -13,14 +13,14 @@
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .submit-batch-btn { background: #4f46e5 !important; color: #fff !important; border-radius: 8px !important; align-self: flex-start; }
 .batches-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-.batch-card { border-radius: 12px !important; border: 1px solid #e2e8f0 !important; transition: all 0.2s ease; }
-.batch-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.08) !important; border-color: #c7d2fe !important; }
-.batch-card-header { display: flex !important; align-items: flex-start !important; gap: 14px !important; flex-direction: row !important; }
-.batch-icon-container { width: 44px; height: 44px; border-radius: 12px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.batch-name { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
-.batch-mentor { font-size: 12px; color: #64748b; margin: 0; }
-.batch-card-body { display: flex; flex-direction: column; gap: 10px; }
-.batch-meta-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #475569; }
-.batch-meta-item svg { color: #4f46e5; flex-shrink: 0; }
-.batch-card-actions { margin-top: 8px; }
-.batch-view-btn { width: 100% !important; justify-content: center !important; gap: 8px !important; border-radius: 8px !important; }
+.admin-batches-container .batch-card { border-radius: 12px !important; border: 1px solid #e2e8f0 !important; transition: all 0.2s ease; }
+.admin-batches-container .batch-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(79,70,229,0.08) !important; border-color: #c7d2fe !important; }
+.admin-batches-container .batch-card-header { display: flex !important; align-items: flex-start !important; gap: 14px !important; flex-direction: row !important; }
+.admin-batches-container .batch-icon-container { width: 44px; height: 44px; border-radius: 12px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.admin-batches-container .batch-name { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 4px; }
+.admin-batches-container .batch-mentor { font-size: 12px; color: #64748b; margin: 0; }
+.admin-batches-container .batch-card-body { display: flex; flex-direction: column; gap: 10px; }
+.admin-batches-container .batch-meta-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #475569; }
+.admin-batches-container .batch-meta-item svg { color: #4f46e5; flex-shrink: 0; }
+.admin-batches-container .batch-card-actions { margin-top: 8px; }
+.admin-batches-container .batch-view-btn { width: 100% !important; justify-content: center !important; gap: 8px !important; border-radius: 8px !important; }

@@ -220,7 +220,32 @@ export default function PracticeProblems() {
     return matchesSearch && matchesDiff && matchesTopic && matchesStatus;
   });
 
-  const solvedCount = practiceProblemsData.filter(p => p.solved).length;
+  const handleToggleSolved = (id) => {
+    setProblemsList((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, solved: !p.solved } : p))
+    );
+  };
+
+  const totalProblemsCount = problemsList.length;
+  const solvedCount = problemsList.filter((p) => p.solved).length;
+  const completionRate = totalProblemsCount > 0 ? Math.round((solvedCount / totalProblemsCount) * 100) : 0;
+
+  const easyProblems = problemsList.filter((p) => p.difficulty === "Easy");
+  const easyTotal = easyProblems.length;
+  const easySolved = easyProblems.filter((p) => p.solved).length;
+  const easyPct = easyTotal > 0 ? Math.round((easySolved / easyTotal) * 100) : 0;
+
+  const mediumProblems = problemsList.filter((p) => p.difficulty === "Medium");
+  const mediumTotal = mediumProblems.length;
+  const mediumSolved = mediumProblems.filter((p) => p.solved).length;
+  const mediumPct = mediumTotal > 0 ? Math.round((mediumSolved / mediumTotal) * 100) : 0;
+
+  const hardProblems = problemsList.filter((p) => p.difficulty === "Hard");
+  const hardTotal = hardProblems.length;
+  const hardSolved = hardProblems.filter((p) => p.solved).length;
+  const hardPct = hardTotal > 0 ? Math.round((hardSolved / hardTotal) * 100) : 0;
+
+  const accuracyRate = solvedCount > 0 ? Math.min(100, Math.round(75 + (solvedCount * 2))) : 0;
 
   return (
     <div className="student-page-inner stack-6">
@@ -237,14 +262,14 @@ export default function PracticeProblems() {
             <div className="stat-icon-wrap bg-blue-soft">
               <Code2 size={22} />
             </div>
-            <span className="stat-badge badge-blue">50% Completed</span>
+            <span className="stat-badge badge-blue">{completionRate}% Completed</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number">{solvedCount} <span className="stat-total">/ {practiceProblemsData.length}</span></div>
+            <div className="stat-number">{solvedCount} <span className="stat-total">/ {totalProblemsCount}</span></div>
             <div className="stat-title">Problems Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-blue-bar" style={{ width: "50%" }} />
+            <div className="stat-progress-bar bg-blue-bar" style={{ width: `${completionRate}%` }} />
           </div>
         </div>
 
@@ -253,14 +278,14 @@ export default function PracticeProblems() {
             <div className="stat-icon-wrap bg-emerald-soft">
               <CheckCircle2 size={22} />
             </div>
-            <span className="stat-badge badge-emerald">5 Solved</span>
+            <span className="stat-badge badge-emerald">{easySolved} Solved</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-emerald">5</div>
+            <div className="stat-number text-emerald">{easySolved}</div>
             <div className="stat-title">Easy Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-emerald-bar" style={{ width: "100%" }} />
+            <div className="stat-progress-bar bg-emerald-bar" style={{ width: `${easyPct}%` }} />
           </div>
         </div>
 
@@ -269,14 +294,14 @@ export default function PracticeProblems() {
             <div className="stat-icon-wrap bg-amber-soft">
               <Flame size={22} />
             </div>
-            <span className="stat-badge badge-amber">1 Solved</span>
+            <span className="stat-badge badge-amber">{mediumSolved} Solved</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-amber">1</div>
+            <div className="stat-number text-amber">{mediumSolved}</div>
             <div className="stat-title">Medium Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-amber-bar" style={{ width: "25%" }} />
+            <div className="stat-progress-bar bg-amber-bar" style={{ width: `${mediumPct}%` }} />
           </div>
         </div>
 
@@ -285,14 +310,14 @@ export default function PracticeProblems() {
             <div className="stat-icon-wrap bg-red-soft">
               <Flame size={22} />
             </div>
-            <span className="stat-badge badge-red">0 Solved</span>
+            <span className="stat-badge badge-red">{hardSolved} Solved</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-red">0</div>
+            <div className="stat-number text-red">{hardSolved}</div>
             <div className="stat-title">Hard Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-red-bar" style={{ width: "0%" }} />
+            <div className="stat-progress-bar bg-red-bar" style={{ width: `${hardPct}%` }} />
           </div>
         </div>
 
@@ -304,11 +329,11 @@ export default function PracticeProblems() {
             <span className="stat-badge badge-purple">High Score</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-purple">88%</div>
+            <div className="stat-number text-purple">{accuracyRate}%</div>
             <div className="stat-title">Accuracy Rate</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-purple-bar" style={{ width: "88%" }} />
+            <div className="stat-progress-bar bg-purple-bar" style={{ width: `${accuracyRate}%` }} />
           </div>
         </div>
       </div>
@@ -439,11 +464,19 @@ export default function PracticeProblems() {
                 filteredProblems.map((prob) => (
                   <tr key={prob.id} className="problem-row">
                     <td>
-                      {prob.solved ? (
-                        <CheckCircle2 size={18} className="solved-icon" title="Solved" />
-                      ) : (
-                        <Circle size={18} className="unsolved-icon" title="Unsolved" />
-                      )}
+                      <button
+                        type="button"
+                        className="status-toggle-btn"
+                        onClick={() => handleToggleSolved(prob.id)}
+                        title={prob.solved ? "Mark as Unsolved" : "Mark as Solved"}
+                        aria-label={prob.solved ? "Mark as Unsolved" : "Mark as Solved"}
+                      >
+                        {prob.solved ? (
+                          <CheckCircle2 size={18} className="solved-icon" />
+                        ) : (
+                          <Circle size={18} className="unsolved-icon" />
+                        )}
+                      </button>
                     </td>
                     <td>
                       <div className="prob-title-box">

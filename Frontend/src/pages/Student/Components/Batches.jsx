@@ -662,7 +662,7 @@ export default function Batches() {
         {batchesList.map((b) => {
           const Icon = b.icon;
           return (
-            <div key={b.id} className="batch-card">
+            <div key={b.id} className="batch-card" style={{ "--accent-color": b.color, "--accent-bg": b.bg }}>
               <div>
                 <div className="batch-card-top">
                   <div
