@@ -69,6 +69,17 @@ const practiceProblemsData = [
     solutionAvailable: true
   },
   {
+    id: 12,
+    title: "Longest Path in a DAG",
+    topic: "Graphs",
+    difficulty: "Hard",
+    acceptance: "27.5%",
+    points: 350,
+    solved: false,
+    companies: ["Microsoft", "Amazon", "Netflix"],
+    solutionAvailable: true
+  },
+  {
     id: 6,
     title: "Merge K Sorted Lists",
     topic: "Heap / Priority Queue",
@@ -121,6 +132,17 @@ const practiceProblemsData = [
     points: 250,
     solved: false,
     companies: ["Oracle", "Microsoft"],
+    solutionAvailable: true
+  },
+  {
+    id: 11,
+    title: "Median of Two Sorted Arrays",
+    topic: "Binary Search",
+    difficulty: "Hard",
+    acceptance: "39.1%",
+    points: 400,
+    solved: false,
+    companies: ["Google", "Amazon", "Apple"],
     solutionAvailable: true
   }
 ];
@@ -255,6 +277,22 @@ export default function PracticeProblems() {
           </div>
           <div className="stat-progress-bg">
             <div className="stat-progress-bar bg-amber-bar" style={{ width: "25%" }} />
+          </div>
+        </div>
+
+        <div className="stat-card-modern card-red">
+          <div className="stat-card-top">
+            <div className="stat-icon-wrap bg-red-soft">
+              <Flame size={22} />
+            </div>
+            <span className="stat-badge badge-red">0 Solved</span>
+          </div>
+          <div className="stat-card-body">
+            <div className="stat-number text-red">0</div>
+            <div className="stat-title">Hard Solved</div>
+          </div>
+          <div className="stat-progress-bg">
+            <div className="stat-progress-bar bg-red-bar" style={{ width: "0%" }} />
           </div>
         </div>
 

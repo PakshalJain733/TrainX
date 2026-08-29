@@ -41,7 +41,6 @@ const primaryNavItems = [
   { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
   { title: "Coding Tasks", url: "/admin/practice", icon: Terminal },
   { title: "Student Progress", url: "/admin/progress", icon: LineChart },
-  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
   { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
 ];
 

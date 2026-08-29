@@ -134,11 +134,6 @@ export default function Overview() {
               <Sparkles size={14} className="overview-btn-icon" /> Batches
             </Button>
           </Link>
-          <Link to="/student/attendance">
-            <Button className="overview-btn-secondary">
-              <BookOpen size={14} className="overview-btn-icon" /> Attendance
-            </Button>
-          </Link>
         </div>
       </div>
 

@@ -17,6 +17,7 @@ import Help from "./pages/Student/Components/Help";
 import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
+import Settings from "./pages/Student/Components/Settings";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -56,7 +57,7 @@ function App() {
           <Route path="help" element={<Help />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<ProfilePage />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
 
         {/* Admin Dashboard Routes */}
