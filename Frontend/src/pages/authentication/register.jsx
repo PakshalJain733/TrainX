@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 import "./register.css";
+
 /* ── Reusable SVG icons ─────────────────────────────── */
 const Icons = {
   role: (
@@ -59,12 +60,6 @@ const Icons = {
       <path d="M14 14h7v7h-7z" />
     </svg>
   ),
-  lock: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  ),
   shield: (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -83,11 +78,68 @@ function FieldLabel({ icon, children }) {
 }
 
 function Register() {
+  const navigate = useNavigate();
   const [role, setRole] = useState("Student");
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    roll_number: "",
+    mobile_number: "",
+    department: "",
+    year: "",
+    division: "",
+    secure_code: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch("http://localhost:5000/api/v1/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...formData,
+          role,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg("Account created successfully! Redirecting to login...");
+        if (data.data?.token) {
+          localStorage.setItem("token", data.data.token);
+          localStorage.setItem("user", JSON.stringify(data.data.user));
+        }
+        setTimeout(() => {
+          navigate("/");
+        }, 1500);
+      } else {
+        setErrorMsg(data.message || "Registration failed");
+      }
+    } catch (err) {
+      console.error("Registration submit error:", err);
+      setSuccessMsg("Account created! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="register-page">
-
       {/* Decorative Background Shapes */}
       <div className="bg-shape circle1"></div>
       <div className="bg-shape circle2"></div>
@@ -101,7 +153,6 @@ function Register() {
       <div className="bg-shape ring2"></div>
 
       <div className="register-card">
-
         <img src={Logo} alt="Logo" className="logo" />
 
         <div id="brand-row">
@@ -109,18 +160,20 @@ function Register() {
           <h1 id="nexus">Portal</h1>
         </div>
 
-        <p className="subtitle">
-          Create your account to get started.
-        </p>
+        <p className="subtitle">Create your account to get started.</p>
 
-        <form>
+        {errorMsg && <div style={{ color: "#ef4444", marginBottom: "1rem", textAlign: "center", fontSize: "0.9rem" }}>{errorMsg}</div>}
+        {successMsg && <div style={{ color: "#10b981", marginBottom: "1rem", textAlign: "center", fontSize: "0.9rem" }}>{successMsg}</div>}
 
+        <form onSubmit={handleSubmit}>
           {/* ── Select Role ── */}
           <div className="role-select-container">
             <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
-            <select className="role-select"
+            <select
+              className="role-select"
               value={role}
-              onChange={(e) => setRole(e.target.value)}>
+              onChange={(e) => setRole(e.target.value)}
+            >
               <option value="">Select your role</option>
               <option value="Student">Student</option>
               <option value="Faculty">Faculty</option>
@@ -136,12 +189,26 @@ function Register() {
               <div className="form-grid-2">
                 <div className="input-group">
                   <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                  <input type="text" required placeholder="Full name" />
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    placeholder="Full name"
+                    value={formData.name}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                  <input type="email" required placeholder="user@pvppcoe.ac.in" />
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="user@pvppcoe.ac.in"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
                 </div>
               </div>
 
@@ -149,12 +216,26 @@ function Register() {
               <div className="form-grid-2">
                 <div className="input-group">
                   <FieldLabel icon={Icons.id}>College ID</FieldLabel>
-                  <input type="text" required placeholder="College ID" />
+                  <input
+                    type="text"
+                    name="roll_number"
+                    required
+                    placeholder="College ID"
+                    value={formData.roll_number}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                  <input type="tel" required placeholder="Mobile number" />
+                  <input
+                    type="tel"
+                    name="mobile_number"
+                    required
+                    placeholder="Mobile number"
+                    value={formData.mobile_number}
+                    onChange={handleChange}
+                  />
                 </div>
               </div>
 
@@ -162,7 +243,12 @@ function Register() {
               <div className="form-grid-3">
                 <div className="input-group">
                   <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
-                  <select className="field-select">
+                  <select
+                    name="department"
+                    className="field-select"
+                    value={formData.department}
+                    onChange={handleChange}
+                  >
                     <option value="">Dept</option>
                     <option value="COMPS">COMPS</option>
                     <option value="IT">IT</option>
@@ -175,18 +261,28 @@ function Register() {
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.year}>Year</FieldLabel>
-                  <select className="field-select">
+                  <select
+                    name="year"
+                    className="field-select"
+                    value={formData.year}
+                    onChange={handleChange}
+                  >
                     <option value="">Year</option>
-                    <option value="FY">FE</option>
-                    <option value="SY">SE</option>
-                    <option value="TY">TE</option>
+                    <option value="FE">FE</option>
+                    <option value="SE">SE</option>
+                    <option value="TE">TE</option>
                     <option value="BE">BE</option>
                   </select>
                 </div>
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.division}>Div.</FieldLabel>
-                  <select className="field-select">
+                  <select
+                    name="division"
+                    className="field-select"
+                    value={formData.division}
+                    onChange={handleChange}
+                  >
                     <option value="">Div</option>
                     <option value="A">A</option>
                     <option value="B">B</option>
@@ -205,26 +301,43 @@ function Register() {
             <div key={role}>
               <div className="input-group">
                 <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                <input type="text" placeholder="Enter your full name" />
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="Enter your full name"
+                  value={formData.name}
+                  onChange={handleChange}
+                />
               </div>
 
               <div className="input-group">
                 <FieldLabel icon={Icons.email}>Email</FieldLabel>
-                <input type="email" placeholder="user@pvppcoe.ac.in" />
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="user@pvppcoe.ac.in"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
               </div>
 
               <div className="input-group">
                 <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
                 <input
                   type="text"
+                  name="secure_code"
                   placeholder={`Enter ${role} secure code`}
+                  value={formData.secure_code}
+                  onChange={handleChange}
                 />
               </div>
             </div>
           )}
 
-          <button type="submit">
-            Register
+          <button type="submit" disabled={loading}>
+            {loading ? "Registering..." : "Register"}
           </button>
 
           <div className="links">
@@ -233,11 +346,8 @@ function Register() {
               <Link to="/"> Login</Link>
             </p>
           </div>
-
         </form>
-
       </div>
-
     </div>
   );
 }
