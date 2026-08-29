@@ -18,6 +18,23 @@ import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 
+// Super Admin Workspace Imports
+import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
+import SuperAdminOverview from './pages/SuperAdmin/Overview';
+import CollegesPage from './pages/SuperAdmin/Colleges';
+import DepartmentsPage from './pages/SuperAdmin/Departments';
+import SuperAdminBatches from './pages/SuperAdmin/Batches';
+import AdminVerificationPage from './pages/SuperAdmin/AdminVerification';
+import CoordinatorsPage from './pages/SuperAdmin/Coordinators';
+import MentorsTrainersPage from './pages/SuperAdmin/MentorsTrainers';
+import StudentsRiskPage from './pages/SuperAdmin/Students';
+import SuperAdminPerformancePage from './pages/SuperAdmin/Performance';
+import SuperAdminAttendancePage from './pages/SuperAdmin/Attendance';
+import SuperAdminAIRoadmapsPage from './pages/SuperAdmin/AIRoadmaps';
+import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
+import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
+import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
+
 function App() {
   return (
     <BrowserRouter>
@@ -45,6 +62,26 @@ function App() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<ProfilePage />} />
         </Route>
+
+        {/* Super Admin Workspace Routes */}
+        <Route path="/super-admin" element={<SuperAdminLayout />}>
+          <Route index element={<SuperAdminOverview />} />
+          <Route path="colleges" element={<CollegesPage />} />
+          <Route path="departments" element={<DepartmentsPage />} />
+          <Route path="batches" element={<SuperAdminBatches />} />
+          <Route path="verification" element={<AdminVerificationPage />} />
+          <Route path="coordinators" element={<CoordinatorsPage />} />
+          <Route path="mentors" element={<MentorsTrainersPage />} />
+          <Route path="students" element={<StudentsRiskPage />} />
+          <Route path="performance" element={<SuperAdminPerformancePage />} />
+          <Route path="attendance" element={<SuperAdminAttendancePage />} />
+          <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
+          <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
+          <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
+          <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
+        </Route>
+        <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
+        <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/student" replace />} />
