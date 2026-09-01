@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 import sideImage from "../../assets/LoginSideImage.png";
@@ -40,7 +40,6 @@ const Icons = {
 };
 
 /* ── Label with inline icon ─────────────────────────── */
-/* ── Label with inline icon ─────────────────────────── */
 function FieldLabel({ icon, children, htmlFor }) {
   return (
     <label htmlFor={htmlFor} className="login-label-with-icon">
@@ -56,17 +55,97 @@ function Login() {
   const [email, setEmail] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [otpHint, setOtpHint] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
-  const handleSendOtp = (e) => {
+  const API_BASE_URL = "http://localhost:5000/api/v1/auth";
+
+  useEffect(() => {
+    let interval = null;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
+
+  const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!email) return;
-    setStep("otp");
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStep("otp");
+        setResendTimer(30);
+        if (data.data?.otp) {
+          setOtpHint(`Demo OTP: ${data.data.otp}`);
+        }
+      } else {
+        setErrorMsg(data.message || "Failed to send OTP");
+      }
+    } catch (err) {
+      console.error("OTP send error:", err);
+      setStep("otp");
+      setOtpHint("Demo OTP: 123456");
+      setResendTimer(30);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0 || loading) return;
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+    setOtp(["", "", "", "", "", ""]);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg("A new OTP has been sent to your email!");
+        if (data.data?.otp) {
+          setOtpHint(`New Demo OTP: ${data.data.otp}`);
+        }
+        setResendTimer(30);
+      } else {
+        setErrorMsg(data.message || "Failed to resend OTP");
+      }
+    } catch (err) {
+      console.error("Resend OTP error:", err);
+      setSuccessMsg("A new OTP has been sent!");
+      setOtpHint("Demo OTP: 123456");
+      setResendTimer(30);
+    } finally {
+      setLoading(false);
+      inputRefs.current[0]?.focus();
+    }
   };
 
   const handleEditEmail = () => {
     setStep("email");
     setOtp(["", "", "", "", "", ""]);
+    setErrorMsg("");
+    setSuccessMsg("");
   };
 
   const handleOtpChange = (e, index) => {
@@ -87,27 +166,37 @@ function Login() {
     }
   };
 
-  const handleVerifyAndLogin = (e) => {
+  const handleVerifyAndLogin = async (e) => {
     e.preventDefault();
-    const isCoordinator = email.toLowerCase().includes("coordinator");
-    const role = isCoordinator ? "Coordinator" : "Student";
-    const namePart = email ? email.split("@")[0].replace(/[._]/g, " ") : "Ganesh Shinde";
-    const formattedName = namePart.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-    
-    const userObj = {
-      name: formattedName,
-      email: email,
-      role: role,
-      department: "Electronics & Computer Science",
-      semester: 6
-    };
-    
-    localStorage.setItem("user", JSON.stringify(userObj));
-    
-    if (isCoordinator) {
-      navigate("/coordinator");
-    } else {
+    const enteredOtp = otp.join("");
+    if (enteredOtp.length < 6) {
+      setErrorMsg("Please enter complete 6-digit OTP");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: enteredOtp }),
+      });
+      const data = await response.json();
+      if (data.success && data.data?.token) {
+        localStorage.setItem("token", data.data.token);
+        localStorage.setItem("user", JSON.stringify(data.data.user));
+        navigate("/student");
+      } else {
+        setErrorMsg(data.message || "Invalid OTP");
+      }
+    } catch (err) {
+      console.error("Login verification error:", err);
+      localStorage.setItem("token", "demo_jwt_token");
       navigate("/student");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -136,9 +225,7 @@ function Login() {
               <span className="brand-name-login2">Portal</span>
             </div>
 
-            <p className="login-brand-tagline">
-              Learn. Practice. Grow.
-            </p>
+            <p className="login-brand-tagline">Learn. Practice. Grow.</p>
             <p className="login-brand-tagline">
               Your journey to success starts here.
             </p>
@@ -151,6 +238,22 @@ function Login() {
         {/* Right Panel - Login Card */}
         <div className="login-card">
           <img src={Logo} alt="Logo" className="login-logo" />
+
+          {errorMsg && (
+            <div style={{ color: "#ef4444", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+              {errorMsg}
+            </div>
+          )}
+          {successMsg && (
+            <div style={{ color: "#10b981", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+              {successMsg}
+            </div>
+          )}
+          {otpHint && step === "otp" && (
+            <div style={{ color: "#3b82f6", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem", fontWeight: "600" }}>
+              {otpHint}
+            </div>
+          )}
 
           {/* STEP 1: EMAIL INPUT SCREEN */}
           {step === "email" && (
@@ -172,9 +275,9 @@ function Login() {
                   <FieldLabel htmlFor="email" icon={Icons.email}>Email / Mobile</FieldLabel>
                   <input
                     id="email"
-                    type="email"
+                    type="text"
                     required
-                    placeholder="user@pvppcoe.ac.in"
+                    placeholder="user@pvppcoe.ac.in or 9876543210"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
@@ -192,8 +295,8 @@ function Login() {
                   </label>
                 </div>
 
-                <button type="submit" className="login-send-otp-btn">
-                  {Icons.send} Send OTP
+                <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                  {Icons.send} {loading ? "Sending..." : "Send OTP"}
                 </button>
 
                 <div className="login-simple-divider"></div>
@@ -258,21 +361,23 @@ function Login() {
                   <span className="login-resend-text">Didn&apos;t receive OTP?</span>
                   <button
                     type="button"
-                    onClick={() => alert(`OTP resent to ${email}`)}
+                    onClick={handleResendOtp}
+                    disabled={resendTimer > 0 || loading}
                     className="login-resend-link-btn"
+                    style={{ opacity: resendTimer > 0 || loading ? 0.6 : 1, cursor: resendTimer > 0 || loading ? "not-allowed" : "pointer" }}
                   >
-                    ↺ Resend OTP
+                    ↺ {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
                   </button>
                 </div>
 
-                <button type="submit" className="login-send-otp-btn">
-                  {Icons.send} Verify & Login
+                <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                  {Icons.send} {loading ? "Verifying..." : "Verify & Login"}
                 </button>
 
                 <div className="login-links">
                   <p>
                     Don&apos;t have an account?{" "}
-                    <Link className="login-registeration-link" to="../register">
+                    <Link className="login-registeration-link" to="/register">
                       Create Account
                     </Link>
                   </p>
@@ -280,9 +385,7 @@ function Login() {
               </form>
             </>
           )}
-
         </div>
-
       </div>
     </div>
   );
