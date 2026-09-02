@@ -41,6 +41,58 @@ import CoordinatorWeeklyReports from './pages/Coordinator/Component/CoordinatorW
 import CoordinatorLearning from './pages/Coordinator/Component/CoordinatorLearning';
 import CoordinatorHelp from './pages/Coordinator/Component/CoordinatorHelp';
 
+// Super Admin Workspace Imports
+import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
+import SuperAdminOverview from './pages/SuperAdmin/Overview';
+import CollegesPage from './pages/SuperAdmin/Colleges';
+import DepartmentsPage from './pages/SuperAdmin/Departments';
+import SuperAdminBatches from './pages/SuperAdmin/Batches';
+import AdminVerificationPage from './pages/SuperAdmin/AdminVerification';
+import CoordinatorsPage from './pages/SuperAdmin/Coordinators';
+import MentorsTrainersPage from './pages/SuperAdmin/MentorsTrainers';
+import StudentsRiskPage from './pages/SuperAdmin/Students';
+import SuperAdminPerformancePage from './pages/SuperAdmin/Performance';
+import SuperAdminAttendancePage from './pages/SuperAdmin/Attendance';
+import SuperAdminAIRoadmapsPage from './pages/SuperAdmin/AIRoadmaps';
+import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
+import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
+import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
+
+// Mentor Workspace Imports
+import MentorLayout from './pages/Mentor/Components/MentorLayout';
+import MentorOverview from './pages/Mentor/Components/Overview';
+import MentorBatches from './pages/Mentor/Components/Batches';
+import MentorStudents from './pages/Mentor/Components/Students';
+import MentorRoadmaps from './pages/Mentor/Components/Roadmaps';
+import MentorAIInterviews from './pages/Mentor/Components/AIInterviews';
+import MentorSkillGaps from './pages/Mentor/Components/SkillGaps';
+import MentorAttendance from './pages/Mentor/Components/Attendance';
+import MentorLeaderboard from './pages/Mentor/Components/Leaderboard';
+import MentorMockDrives from './pages/Mentor/Components/MockDrives';
+import MentorDefaulters from './pages/Mentor/Components/Defaulters';
+import MentorStudyMaterial from './pages/Mentor/Components/StudyMaterial';
+import MentorWeeklyReports from './pages/Mentor/Components/WeeklyReports';
+import MentorAssignments from './pages/Mentor/Components/Assignments';
+import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
+import MentorNotifications from './pages/Mentor/Components/Notifications';
+import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
+import MentorHelp from './pages/Mentor/Components/Help';
+
+// Coordinator Workspace Imports
+import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
+import CoordinatorOverview from './pages/Coordinator/Components/Overview';
+import CoordinatorBatches from './pages/Coordinator/Components/Batches';
+import CoordinatorStudents from './pages/Coordinator/Components/Students';
+import CoordinatorMentors from './pages/Coordinator/Components/Mentors';
+import CoordinatorSchedules from './pages/Coordinator/Components/Schedules';
+import CoordinatorAssessments from './pages/Coordinator/Components/Assessments';
+import CoordinatorAttendance from './pages/Coordinator/Components/Attendance';
+import CoordinatorPlacement from './pages/Coordinator/Components/Placement';
+import CoordinatorRequests from './pages/Coordinator/Components/Requests';
+import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
+import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
+import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -95,6 +147,65 @@ function App() {
           <Route path="profile" element={<CoordinatorOverview />} />
           <Route path="settings" element={<CoordinatorOverview />} />
         </Route>
+
+        {/* Mentor Workspace Routes */}
+        <Route path="/mentor" element={<MentorLayout />}>
+          <Route index element={<MentorOverview />} />
+          <Route path="students" element={<MentorStudents />} />
+          <Route path="roadmaps" element={<MentorRoadmaps />} />
+          <Route path="ai-interviews" element={<MentorAIInterviews />} />
+          <Route path="skill-gaps" element={<MentorSkillGaps />} />
+          <Route path="attendance" element={<MentorAttendance />} />
+          <Route path="leaderboard" element={<MentorLeaderboard />} />
+          <Route path="mock-drives" element={<MentorMockDrives />} />
+          <Route path="defaulters" element={<MentorDefaulters />} />
+          <Route path="study-material" element={<MentorStudyMaterial />} />
+          <Route path="weekly-reports" element={<MentorWeeklyReports />} />
+          <Route path="batches" element={<MentorBatches />} />
+          <Route path="assignments" element={<MentorAssignments />} />
+          <Route path="sessions" element={<MentorLiveSessions />} />
+          <Route path="notifications" element={<MentorNotifications />} />
+          <Route path="profile" element={<MentorProfilePage />} />
+          <Route path="settings" element={<MentorProfilePage />} />
+          <Route path="help" element={<MentorHelp />} />
+        </Route>
+
+        {/* Coordinator Workspace Routes */}
+        <Route path="/coordinator" element={<CoordinatorLayout />}>
+          <Route index element={<CoordinatorOverview />} />
+          <Route path="batches" element={<CoordinatorBatches />} />
+          <Route path="students" element={<CoordinatorStudents />} />
+          <Route path="mentors" element={<CoordinatorMentors />} />
+          <Route path="schedules" element={<CoordinatorSchedules />} />
+          <Route path="assessments" element={<CoordinatorAssessments />} />
+          <Route path="attendance" element={<CoordinatorAttendance />} />
+          <Route path="placement" element={<CoordinatorPlacement />} />
+          <Route path="requests" element={<CoordinatorRequests />} />
+          <Route path="reports" element={<CoordinatorWeeklyReports />} />
+          <Route path="notifications" element={<CoordinatorNotifications />} />
+          <Route path="profile" element={<CoordinatorProfilePage />} />
+          <Route path="settings" element={<CoordinatorProfilePage />} />
+        </Route>
+
+        {/* Super Admin Workspace Routes */}
+        <Route path="/super-admin" element={<SuperAdminLayout />}>
+          <Route index element={<SuperAdminOverview />} />
+          <Route path="colleges" element={<CollegesPage />} />
+          <Route path="departments" element={<DepartmentsPage />} />
+          <Route path="batches" element={<SuperAdminBatches />} />
+          <Route path="verification" element={<AdminVerificationPage />} />
+          <Route path="coordinators" element={<CoordinatorsPage />} />
+          <Route path="mentors" element={<MentorsTrainersPage />} />
+          <Route path="students" element={<StudentsRiskPage />} />
+          <Route path="performance" element={<SuperAdminPerformancePage />} />
+          <Route path="attendance" element={<SuperAdminAttendancePage />} />
+          <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
+          <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
+          <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
+          <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
+        </Route>
+        <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
+        <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
