@@ -1,7 +1,212 @@
 import { useState } from "react";
-import { Search, GraduationCap, AlertCircle, CheckCircle, Mail, Phone } from "lucide-react";
+import {
+  Search,
+  GraduationCap,
+  AlertCircle,
+  CheckCircle,
+  Mail,
+  Phone,
+  Sparkles,
+  CheckCircle2,
+  CircleDot,
+  Lock,
+  BookOpen,
+  MapPin,
+  TrendingUp,
+} from "lucide-react";
 import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
 import "../Styles/Students.css";
+
+const careerTracks = [
+  { id: "python-backend", name: "Python Backend Developer" },
+  { id: "react-frontend", name: "React Frontend Developer" },
+  { id: "fullstack", name: "Full Stack Engineer" },
+  { id: "data-ai", name: "Data Science & AI Engineer" },
+  { id: "cloud-devops", name: "Cloud & DevOps Specialist" },
+];
+
+const roadmapData = {
+  "python-backend": [
+    {
+      id: 1,
+      title: "Milestone 1: Python Fundamentals",
+      desc: "Syntax, data types, control flow, functions and error handling.",
+      status: "completed",
+      progress: 100,
+      tags: ["Variables & Types", "Loops", "Functions", "Exceptions"],
+      quizzes: 4,
+      exercises: 12,
+    },
+    {
+      id: 2,
+      title: "Milestone 2: Object Oriented Programming",
+      desc: "Classes, inheritance, polymorphism and design principles.",
+      status: "completed",
+      progress: 100,
+      tags: ["Classes", "Inheritance", "Magic Methods", "SOLID"],
+      quizzes: 3,
+      exercises: 10,
+    },
+    {
+      id: 3,
+      title: "Milestone 3: SQL & Databases",
+      desc: "Relational modelling, joins, indexing and query optimisation.",
+      status: "in-progress",
+      progress: 55,
+      tags: ["Joins", "Aggregations", "Indexes", "Transactions"],
+      quizzes: 3,
+      exercises: 8,
+    },
+    {
+      id: 4,
+      title: "Milestone 4: REST APIs with FastAPI",
+      desc: "Routing, validation, auth and API documentation.",
+      status: "in-progress",
+      progress: 20,
+      tags: ["Routing", "Pydantic", "JWT Auth", "Testing"],
+      quizzes: 2,
+      exercises: 9,
+    },
+    {
+      id: 5,
+      title: "Milestone 5: React Frontend Basics",
+      desc: "Components, state, hooks and consuming APIs.",
+      status: "locked",
+      progress: 0,
+      tags: ["JSX", "Hooks", "Routing", "State"],
+      quizzes: 3,
+      exercises: 10,
+    },
+  ],
+  "react-frontend": [
+    {
+      id: 1,
+      title: "Milestone 1: Modern JavaScript (ES6+)",
+      desc: "Async/await, closures, prototypes, array methods, and event loop.",
+      status: "completed",
+      progress: 100,
+      tags: ["ES6 Modules", "Promises", "Destructuring", "DOM API"],
+      quizzes: 5,
+      exercises: 14,
+    },
+    {
+      id: 2,
+      title: "Milestone 2: React Core & Component Design",
+      desc: "JSX, virtual DOM, props vs state, and component life cycles.",
+      status: "in-progress",
+      progress: 70,
+      tags: ["Components", "Props", "Hooks", "Event Handling"],
+      quizzes: 4,
+      exercises: 12,
+    },
+    {
+      id: 3,
+      title: "Milestone 3: State Management & Routing",
+      desc: "Zustand, Context API, Redux Toolkit, and React Router v6.",
+      status: "locked",
+      progress: 0,
+      tags: ["Context API", "Zustand", "React Router", "Global State"],
+      quizzes: 3,
+      exercises: 8,
+    },
+  ],
+  fullstack: [
+    {
+      id: 1,
+      title: "Milestone 1: Full Stack Architecture Foundations",
+      desc: "Client-Server model, HTTP protocols, REST conventions, and MVC.",
+      status: "completed",
+      progress: 100,
+      tags: ["HTTP/HTTPS", "REST", "JSON", "Architecture"],
+      quizzes: 3,
+      exercises: 8,
+    },
+    {
+      id: 2,
+      title: "Milestone 2: Backend & Database Engineering",
+      desc: "Node.js / Express or Python backend with PostgreSQL and ORM.",
+      status: "in-progress",
+      progress: 65,
+      tags: ["Express", "PostgreSQL", "Prisma", "Authentication"],
+      quizzes: 4,
+      exercises: 12,
+    },
+    {
+      id: 3,
+      title: "Milestone 3: Frontend Integration & State",
+      desc: "Connecting React frontend with resilient API clients and caching.",
+      status: "locked",
+      progress: 0,
+      tags: ["Axios", "TanStack Query", "Forms", "UI Layouts"],
+      quizzes: 3,
+      exercises: 10,
+    },
+  ],
+  "data-ai": [
+    {
+      id: 1,
+      title: "Milestone 1: Python for Data Science & Pandas",
+      desc: "NumPy vectorization, Pandas DataFrames, and data cleaning.",
+      status: "completed",
+      progress: 100,
+      tags: ["NumPy", "Pandas", "Data Cleaning", "Matplotlib"],
+      quizzes: 4,
+      exercises: 15,
+    },
+    {
+      id: 2,
+      title: "Milestone 2: Classical Machine Learning",
+      desc: "Supervised & Unsupervised ML algorithms, Scikit-learn, and evaluation.",
+      status: "completed",
+      progress: 100,
+      tags: ["Regression", "Random Forest", "K-Means", "Scikit-Learn"],
+      quizzes: 5,
+      exercises: 14,
+    },
+    {
+      id: 3,
+      title: "Milestone 3: Deep Learning & PyTorch",
+      desc: "Neural network architectures, Backpropagation, and PyTorch tensors.",
+      status: "in-progress",
+      progress: 40,
+      tags: ["PyTorch", "CNNs", "Loss Functions", "Tensors"],
+      quizzes: 3,
+      exercises: 10,
+    },
+  ],
+  "cloud-devops": [
+    {
+      id: 1,
+      title: "Milestone 1: Linux Administration & Shell Scripting",
+      desc: "Bash commands, file permissions, networking, and systemd services.",
+      status: "completed",
+      progress: 100,
+      tags: ["Linux", "Bash", "SSH", "Systemd"],
+      quizzes: 4,
+      exercises: 10,
+    },
+    {
+      id: 2,
+      title: "Milestone 2: Docker Containerization",
+      desc: "Building Dockerfiles, multi-stage builds, and Docker Compose.",
+      status: "in-progress",
+      progress: 80,
+      tags: ["Docker", "Containers", "Images", "Compose"],
+      quizzes: 3,
+      exercises: 9,
+    },
+    {
+      id: 3,
+      title: "Milestone 3: Kubernetes & AWS Cloud",
+      desc: "Cluster orchestration, Pods, Deployments, and AWS EKS.",
+      status: "locked",
+      progress: 0,
+      tags: ["Kubernetes", "AWS EKS", "Ingress", "Helm"],
+      quizzes: 4,
+      exercises: 11,
+    },
+  ],
+};
 
 export default function CoordinatorStudents() {
   const [students, setStudents] = useState(coordinatorStudents);
@@ -9,6 +214,15 @@ export default function CoordinatorStudents() {
   const [batchFilter, setBatchFilter] = useState("All");
   const [riskFilter, setRiskFilter] = useState("All");
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [activeTab, setActiveTab] = useState("roadmap"); // 'overview', 'roadmap', 'skills'
+  const [selectedGoal, setSelectedGoal] = useState("python-backend");
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleOpenStudentModal = (student) => {
+    setSelectedStudent(student);
+    setSelectedGoal(student.selectedGoal || "python-backend");
+    setActiveTab("roadmap");
+  };
 
   const filteredStudents = students.filter((s) => {
     const matchesSearch =
@@ -20,13 +234,76 @@ export default function CoordinatorStudents() {
     return matchesSearch && matchesBatch && matchesRisk;
   });
 
+  const milestones = roadmapData[selectedGoal] || roadmapData["python-backend"];
+
+  const handleGenerate = () => {
+    setIsGenerating(true);
+    setTimeout(() => {
+      setIsGenerating(false);
+    }, 500);
+  };
+
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "completed":
+        return (
+          <span
+            style={{
+              padding: "3px 10px",
+              borderRadius: "999px",
+              fontSize: "11px",
+              fontWeight: 700,
+              background: "#ecfdf5",
+              color: "#047857",
+              border: "1px solid #a7f3d0",
+            }}
+          >
+            Completed
+          </span>
+        );
+      case "in-progress":
+        return (
+          <span
+            style={{
+              padding: "3px 10px",
+              borderRadius: "999px",
+              fontSize: "11px",
+              fontWeight: 700,
+              background: "#eff6ff",
+              color: "#1d4ed8",
+              border: "1px solid #bfdbfe",
+            }}
+          >
+            In Progress
+          </span>
+        );
+      case "locked":
+      default:
+        return (
+          <span
+            style={{
+              padding: "3px 10px",
+              borderRadius: "999px",
+              fontSize: "11px",
+              fontWeight: 700,
+              background: "#f1f5f9",
+              color: "#64748b",
+              border: "1px solid #cbd5e1",
+            }}
+          >
+            Locked
+          </span>
+        );
+    }
+  };
+
   return (
     <div>
       <div className="coord-page-header">
         <div>
-          <h1 className="coord-page-title">Student Directory & Risk Audit</h1>
+          <h1 className="coord-page-title">Student Directory & AI Roadmap Audit</h1>
           <p className="coord-page-sub">
-            Monitor student attendance %, academic scores, AI interview performance, and risk level.
+            Monitor student attendance %, academic scores, selected AI career roadmaps, and risk level.
           </p>
         </div>
       </div>
@@ -76,9 +353,10 @@ export default function CoordinatorStudents() {
             <tr>
               <th>Student</th>
               <th>Roll No & Batch</th>
+              <th>Selected AI Roadmap</th>
               <th>Attendance</th>
               <th>Quiz Score</th>
-              <th>AI Interview Score</th>
+              <th>AI Interview</th>
               <th>Risk Level</th>
               <th>Actions</th>
             </tr>
@@ -93,6 +371,25 @@ export default function CoordinatorStudents() {
                 <td>
                   <div style={{ fontWeight: 600, color: "#334155" }}>{s.rollNo}</div>
                   <div style={{ fontSize: "11px", color: "#64748b" }}>{s.batch}</div>
+                </td>
+                <td>
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      color: "#2563eb",
+                      background: "#eff6ff",
+                      padding: "4px 10px",
+                      borderRadius: "8px",
+                      border: "1px solid #bfdbfe",
+                    }}
+                  >
+                    <Sparkles size={13} color="#2563eb" />
+                    {s.selectedGoalName || "Python Backend"}
+                  </span>
                 </td>
                 <td>
                   <span
@@ -127,9 +424,9 @@ export default function CoordinatorStudents() {
                 </td>
                 <td>
                   <button
-                    className="coord-btn"
-                    style={{ padding: "6px 12px", fontSize: "12px", background: "#f1f5f9", color: "#334155" }}
-                    onClick={() => setSelectedStudent(s)}
+                    className="coord-btn coord-btn--primary"
+                    style={{ padding: "6px 12px", fontSize: "12px" }}
+                    onClick={() => handleOpenStudentModal(s)}
                   >
                     View Details
                   </button>
@@ -140,65 +437,196 @@ export default function CoordinatorStudents() {
         </table>
       </div>
 
-      {/* Student Details Modal */}
+      {/* Student Details & AI Roadmap Modal */}
       {selectedStudent && (
         <div className="coord-modal-backdrop" onClick={() => setSelectedStudent(null)}>
-          <div className="coord-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Student Audit Profile</h2>
+          <div className="coord-modal coord-modal--lg" onClick={(e) => e.stopPropagation()}>
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+              <div>
+                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+                  {selectedStudent.name} — Student Audit Details
+                </h2>
+                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                  Roll No: <strong>{selectedStudent.rollNo}</strong> · Batch: <strong>{selectedStudent.batch}</strong>
+                </div>
+              </div>
               <button
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "#64748b" }}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: "#64748b" }}
                 onClick={() => setSelectedStudent(null)}
               >
                 ✕
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
-              <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontWeight: 800, fontSize: "16px", color: "#0f172a" }}>{selectedStudent.name}</div>
-                <div style={{ color: "#64748b", marginTop: "2px" }}>
-                  Roll No: <strong>{selectedStudent.rollNo}</strong> · {selectedStudent.batch}
+            {/* Tabs Row */}
+            <div className="coord-tabs-bar">
+              <button
+                className={`coord-tab-btn ${activeTab === "roadmap" ? "coord-tab-btn--active" : ""}`}
+                onClick={() => setActiveTab("roadmap")}
+              >
+                <Sparkles size={15} /> Selected AI Roadmap
+              </button>
+              <button
+                className={`coord-tab-btn ${activeTab === "overview" ? "coord-tab-btn--active" : ""}`}
+                onClick={() => setActiveTab("overview")}
+              >
+                <GraduationCap size={15} /> Overview & Scores
+              </button>
+            </div>
+
+            {/* TAB CONTENT 1: AI ROADMAP */}
+            {activeTab === "roadmap" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                {/* Career Goal Generator Card */}
+                <div className="student-roadmap-generator-card">
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Sparkles size={20} color="#2563eb" />
+                    <div>
+                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                        Select career / skill goal
+                      </h3>
+                      <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
+                        AI analyses your goal, current scores and skill gaps to build your personalized roadmap.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
+                    <select
+                      className="student-roadmap-select-input"
+                      style={{ flex: 1 }}
+                      value={selectedGoal}
+                      onChange={(e) => setSelectedGoal(e.target.value)}
+                    >
+                      {careerTracks.map((track) => (
+                        <option key={track.id} value={track.id}>
+                          {track.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      className="coord-btn coord-btn--primary"
+                      onClick={handleGenerate}
+                      disabled={isGenerating}
+                      style={{ padding: "10px 20px" }}
+                    >
+                      <Sparkles size={16} />
+                      {isGenerating ? "Generating..." : "Generate roadmap"}
+                    </button>
+                  </div>
                 </div>
-                <div style={{ display: "flex", gap: "12px", marginTop: "8px", fontSize: "12px", color: "#475569" }}>
-                  <span>
-                    <Mail size={13} inline /> {selectedStudent.email}
-                  </span>
-                  <span>
-                    <Phone size={13} inline /> {selectedStudent.phone}
-                  </span>
+
+                {/* Milestone Timeline List */}
+                <div className="student-roadmap-timeline">
+                  {milestones.map((m) => (
+                    <div key={m.id} className={`student-roadmap-milestone-card milestone-status-${m.status}`}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          {m.status === "completed" && <CheckCircle2 size={18} color="#10b981" />}
+                          {m.status === "in-progress" && <CircleDot size={18} color="#2563eb" />}
+                          {m.status === "locked" && <Lock size={16} color="#94a3b8" />}
+                          <h4 style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                            {m.title}
+                          </h4>
+                        </div>
+                        {getStatusBadge(m.status)}
+                      </div>
+
+                      <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 12px 0" }}>{m.desc}</p>
+
+                      {/* Progress Bar */}
+                      <div
+                        style={{
+                          width: "100%",
+                          height: "6px",
+                          background: "#f1f5f9",
+                          borderRadius: "999px",
+                          overflow: "hidden",
+                          marginBottom: "12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${m.progress}%`,
+                            background: m.status === "completed" ? "#10b981" : "#2563eb",
+                            borderRadius: "999px",
+                          }}
+                        />
+                      </div>
+
+                      {/* Tags & Meta */}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                          {m.tags.map((tag) => (
+                            <span key={tag} className="student-tag-pill">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
+                          {m.quizzes} quizzes · {m.exercises} coding exercises
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
+            )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                <div style={{ background: "#eff6ff", padding: "12px", borderRadius: "10px" }}>
-                  <div style={{ fontSize: "11px", color: "#1d4ed8", fontWeight: 700 }}>Attendance Rate</div>
-                  <div style={{ fontSize: "20px", fontWeight: 800, color: "#1e40af" }}>{selectedStudent.attendance}%</div>
+            {/* TAB CONTENT 2: OVERVIEW & SCORES */}
+            {activeTab === "overview" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13px" }}>
+                <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontWeight: 800, fontSize: "16px", color: "#0f172a" }}>{selectedStudent.name}</div>
+                  <div style={{ color: "#64748b", marginTop: "2px" }}>
+                    Roll No: <strong>{selectedStudent.rollNo}</strong> · Batch: {selectedStudent.batch}
+                  </div>
+                  <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "12px", color: "#475569" }}>
+                    <span>
+                      <Mail size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} /> {selectedStudent.email}
+                    </span>
+                    <span>
+                      <Phone size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} /> {selectedStudent.phone}
+                    </span>
+                  </div>
                 </div>
 
-                <div style={{ background: "#faf5ff", padding: "12px", borderRadius: "10px" }}>
-                  <div style={{ fontSize: "11px", color: "#7e22ce", fontWeight: 700 }}>Avg Quiz Score</div>
-                  <div style={{ fontSize: "20px", fontWeight: 800, color: "#6b21a8" }}>{selectedStudent.avgScore}%</div>
-                </div>
-              </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+                  <div style={{ background: "#eff6ff", padding: "12px", borderRadius: "10px" }}>
+                    <div style={{ fontSize: "11px", color: "#1d4ed8", fontWeight: 700 }}>Attendance Rate</div>
+                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#1e40af" }}>{selectedStudent.attendance}%</div>
+                  </div>
 
-              <div style={{ padding: "12px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>Placement Readiness Status</div>
-                <div style={{ fontSize: "14px", fontWeight: 700, color: "#4f46e5", marginTop: "2px" }}>
-                  {selectedStudent.placementStatus}
-                </div>
-              </div>
+                  <div style={{ background: "#faf5ff", padding: "12px", borderRadius: "10px" }}>
+                    <div style={{ fontSize: "11px", color: "#7e22ce", fontWeight: 700 }}>Avg Quiz Score</div>
+                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#6b21a8" }}>{selectedStudent.avgScore}%</div>
+                  </div>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "8px" }}>
+                  <div style={{ background: "#ecfdf5", padding: "12px", borderRadius: "10px" }}>
+                    <div style={{ fontSize: "11px", color: "#047857", fontWeight: 700 }}>AI Interview Score</div>
+                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#065f46" }}>{selectedStudent.interviewScore}%</div>
+                  </div>
+                </div>
+
+                <div style={{ padding: "12px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>Placement Readiness Status</div>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#4f46e5", marginTop: "2px" }}>
+                    {selectedStudent.placementStatus}
+                  </div>
+                </div>
+
                 <button
                   className="coord-btn coord-btn--primary"
-                  style={{ width: "100%", justifyContent: "center" }}
+                  style={{ width: "100%", justifyContent: "center", marginTop: "8px" }}
                   onClick={() => alert(`Warning notice sent to ${selectedStudent.name}`)}
                 >
                   Send Counseling Notice
                 </button>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
