@@ -13,37 +13,49 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
+import { apiFetch } from "../../../utils/api";
 import "../Style/CoordinatorOverview.css";
 
-const stats = [
-  { label: "Total Students", value: "240 Students", hint: "ECS & IT Departments", icon: Users },
-  { label: "Active Batches", value: "6 Batches", hint: "COMPS, IT, ECS", icon: TrendingUp },
-  { label: "Avg Attendance", value: "88.5%", hint: "+1.2% this week", icon: CalendarCheck },
-  { label: "Weekly Reviews", value: "32 Pending", hint: "208 graded this week", icon: FileCheck2 },
-];
-
-const leaveRequests = [
-  { id: 1, name: "Neha Kulkarni", batch: "ECS - Sem 6", reason: "Smart India Hackathon", date: "Oct 12, 2026", initials: "NK" },
-  { id: 2, name: "Kabir Menon", batch: "COMPS - Sem 6", reason: "Inter-collegiate Sports", date: "Oct 14, 2026", initials: "KM" },
-  { id: 3, name: "Ananya Rao", batch: "IT - Sem 6", reason: "Medical Leave (Ailment)", date: "Oct 15, 2026", initials: "AR" },
-];
-
-const recentSubmissions = [
-  { id: 1, student: "Ganesh Shinde", batch: "ECS - Sem 6", time: "10 mins ago", status: "Ungraded" },
-  { id: 2, student: "Riya Shah", batch: "ECS - Sem 6", time: "1 hour ago", status: "Graded (9/10)" },
-  { id: 3, student: "Aditya Mehta", batch: "IT - Sem 6", time: "2 hours ago", status: "Ungraded" },
-  { id: 4, student: "Tanvi Saxena", batch: "COMPS - Sem 6", time: "1 day ago", status: "Graded (8/10)" },
-];
-
 export default function CoordinatorOverview() {
-  const [user, setUser] = useState({ name: "Prof. A. Deshmukh" });
+  const [user, setUser] = useState({ name: "Coordinator" });
+  const [stats, setStats] = useState({
+    students: 0,
+    batches: 1,
+    attendance: "95%",
+    pendingReviews: 0,
+  });
+  const [leaveRequests, setLeaveRequests] = useState([]);
+  const [recentSubmissions, setRecentSubmissions] = useState([]);
 
   useEffect(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u && u.name) setUser(u);
     } catch (e) {}
+
+    const loadData = async () => {
+      try {
+        const statsRes = await apiFetch("/admin/stats");
+        if (statsRes && statsRes.data) {
+          setStats((prev) => ({
+            ...prev,
+            students: statsRes.data.students || 0,
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch coordinator stats:", err);
+      }
+    };
+
+    loadData();
   }, []);
+
+  const statCards = [
+    { label: "Total Students", value: `${stats.students} Enrolled`, hint: "Department students", icon: Users },
+    { label: "Active Batches", value: `${stats.batches} Batch`, hint: "Assigned streams", icon: TrendingUp },
+    { label: "Avg Attendance", value: stats.attendance, hint: "Current semester", icon: CalendarCheck },
+    { label: "Weekly Reviews", value: `${stats.pendingReviews} Pending`, hint: "Awaiting approval", icon: FileCheck2 },
+  ];
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
@@ -82,7 +94,7 @@ export default function CoordinatorOverview() {
 
       {/* Stats Cards Row */}
       <div className="overview-grid-4">
-        {stats.map((s) => (
+        {statCards.map((s) => (
           <Card key={s.label} className="overview-stat-card shadow-sm">
             <CardContent className="overview-card-content">
               <div className="overview-stat-top">
@@ -115,24 +127,32 @@ export default function CoordinatorOverview() {
           </div>
 
           <div className="overview-list stack-3">
-            {leaveRequests.map((req) => (
-              <div key={req.id} className="overview-list-row">
-                <div className="overview-list-row-left">
-                  <div className="overview-list-avatar">{req.initials}</div>
-                  <div>
-                    <h3 className="overview-list-name">{req.name}</h3>
-                    <p className="overview-list-sub">{req.batch} · {req.reason}</p>
+            {leaveRequests.length > 0 ? (
+              leaveRequests.map((req) => (
+                <div key={req.id} className="overview-list-row">
+                  <div className="overview-list-row-left">
+                    <div className="overview-list-avatar">{req.initials}</div>
+                    <div>
+                      <h3 className="overview-list-name">{req.name}</h3>
+                      <p className="overview-list-sub">{req.batch} · {req.reason}</p>
+                    </div>
+                  </div>
+                  <div className="overview-list-row-right">
+                    <span className="overview-list-badge">{req.date}</span>
+                    <div className="overview-list-actions">
+                      <button className="btn-approve" onClick={() => alert("Approved " + req.name)}>Approve</button>
+                      <button className="btn-reject" onClick={() => alert("Rejected " + req.name)}>Reject</button>
+                    </div>
                   </div>
                 </div>
-                <div className="overview-list-row-right">
-                  <span className="overview-list-badge">{req.date}</span>
-                  <div className="overview-list-actions">
-                    <button className="btn-approve" onClick={() => alert("Approved " + req.name)}>Approve</button>
-                    <button className="btn-reject" onClick={() => alert("Rejected " + req.name)}>Reject</button>
-                  </div>
-                </div>
+              ))
+            ) : (
+              <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
+                <CalendarCheck size={28} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>No pending leave requests</p>
+                <p style={{ margin: "4px 0 0 0", fontSize: 12.5 }}>All student leave applications are reviewed.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
 
@@ -151,27 +171,36 @@ export default function CoordinatorOverview() {
           </div>
 
           <div className="overview-list stack-3">
-            {recentSubmissions.map((sub) => (
-              <div key={sub.id} className="overview-list-row">
-                <div className="overview-list-row-left">
-                  <div className="overview-list-icon">
-                    <FileCheck2 size={16} />
+            {recentSubmissions.length > 0 ? (
+              recentSubmissions.map((sub) => (
+                <div key={sub.id} className="overview-list-row">
+                  <div className="overview-list-row-left">
+                    <div className="overview-list-icon">
+                      <FileCheck2 size={16} />
+                    </div>
+                    <div>
+                      <h3 className="overview-list-name">{sub.student}</h3>
+                      <p className="overview-list-sub">{sub.batch} · Submitted {sub.time}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="overview-list-name">{sub.student}</h3>
-                    <p className="overview-list-sub">{sub.batch} · Submitted {sub.time}</p>
+                  <div className="overview-list-row-right">
+                    <span className={`status-tag ${sub.status.includes("Graded") ? "status-tag--success" : "status-tag--warning"}`}>
+                      {sub.status}
+                    </span>
                   </div>
                 </div>
-                <div className="overview-list-row-right">
-                  <span className={`status-tag ${sub.status.includes("Graded") ? "status-tag--success" : "status-tag--warning"}`}>
-                    {sub.status}
-                  </span>
-                </div>
+              ))
+            ) : (
+              <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
+                <FileCheck2 size={28} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>No weekly reports submitted yet</p>
+                <p style={{ margin: "4px 0 0 0", fontSize: 12.5 }}>Student weekly reports will appear here for grading.</p>
               </div>
-            ))}
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 }
+

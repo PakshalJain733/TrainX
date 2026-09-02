@@ -22,6 +22,7 @@ import Settings from "./pages/Student/Components/Settings";
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
 import AdminOverview from "./pages/Admin/Components/AdminOverview";
+import AdminUsers from "./pages/Admin/Components/AdminUsers";
 import AdminBatches from "./pages/Admin/Components/AdminBatches";
 import AdminAttendance from "./pages/Admin/Components/AdminAttendance";
 import AdminLearningContent from "./pages/Admin/Components/AdminLearningContent";
@@ -71,6 +72,7 @@ function App() {
         {/* Admin Dashboard Routes */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminOverview />} />
+          <Route path="users" element={<AdminUsers />} />
           <Route path="batches" element={<AdminBatches />} />
           <Route path="attendance" element={<AdminAttendance />} />
           <Route path="learning" element={<AdminLearningContent />} />

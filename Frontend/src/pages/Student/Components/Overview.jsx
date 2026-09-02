@@ -11,33 +11,8 @@ import { Button } from "../../../components/ui/Button";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Overview.css";
 
-const stats = [
-  { label: "Attendance Rate", value: "92%", hint: "+3% to last month", icon: CalendarCheck },
-  { label: "Active Batches", value: "3 Enrolled", hint: "+1 to last month", icon: Users },
-  { label: "Coding Rank", value: "#42 / 240", hint: "Top 18% in Batch", icon: TrendingUp },
-  { label: "Earned Points", value: "1,875 XP", hint: "+120 XP this week", icon: Flame },
-];
-
-const leaderboard = [
-  { rank: 1, name: "Riya Shah", score: "2,480 XP", initials: "RS", badge: "🥇 Rank 1", you: false },
-  { rank: 2, name: "Kabir Menon", score: "2,415 XP", initials: "KM", badge: "🥈 Rank 2", you: false },
-  { rank: 3, name: "Ananya Rao", score: "2,390 XP", initials: "AR", badge: "🥉 Rank 3", you: false },
-  { rank: 4, name: "Siddharth Verma", score: "2,260 XP", initials: "SV", badge: "Top 2%", you: false },
-  { rank: 5, name: "Neha Kulkarni", score: "2,190 XP", initials: "NK", badge: "Top 5%", you: false },
-  { rank: 6, name: "Rohan Deshmukh", score: "2,120 XP", initials: "RD", badge: "Top 8%", you: false },
-  { rank: 7, name: "Priya Sharma", score: "2,050 XP", initials: "PS", badge: "Top 10%", you: false },
-  { rank: 8, name: "Vikram Joshi", score: "1,980 XP", initials: "VJ", badge: "Top 12%", you: false },
-  { rank: 9, name: "Aditya Mehta", score: "1,940 XP", initials: "AM", badge: "Top 14%", you: false },
-  { rank: 10, name: "Tanvi Saxena", score: "1,910 XP", initials: "TS", badge: "Top 15%", you: false },
-  { rank: 11, name: "Harsh Kapoor", score: "1,890 XP", initials: "HK", badge: "Top 16%", you: false },
-  { rank: 42, name: "Ganesh Shinde (You)", score: "1,875 XP", initials: "GS", badge: "Your Position", you: true },
-];
-
-
-
-
 const getInitials = (name) => {
-  if (!name) return "GS";
+  if (!name || name === "name") return "GS";
   const parts = name.trim().split(" ");
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -54,46 +29,97 @@ const defaultDashboardData = {
     semester: 6,
   },
   attendanceSummary: {
-    percentage: 92,
+    percentage: 95,
   },
   codingProgress: {
-    currentRank: "42 / 240",
+    currentRank: "1 / 1",
   },
-  upcomingDeadlines: [
-    { title: "Task 2: Custom HashMap & Key Collision", due: "Due Tomorrow, 11:59 PM", tag: "Java Batch", variant: "success" },
-    { title: "Assessment: SQL 3NF Normalization & Joins", due: "Due Friday, 5:00 PM", tag: "SQL Batch", variant: "outline" },
-    { title: "Python Async Scraping Submission", due: "Due Nov 15, 2026", tag: "Python Batch", variant: "outline" },
-  ]
+  upcomingDeadlines: [],
+  leaderboard: [],
 };
 
 export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
 
-  useEffect(() => {
+  const loadUserData = () => {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
-      if (u && u.name) {
+      if (u) {
+        const student = u.studentProfile || {};
+
+        let resolvedName = u.name;
+        // If name is placeholder "name", starts with "User_", or is a roll number pattern
+        if (!resolvedName || resolvedName.trim().toLowerCase() === "name" || resolvedName.startsWith("User_") || /^vu\d/i.test(resolvedName)) {
+          resolvedName = u.fullName || u.full_name || (u.name && !resolvedName.startsWith("User_") && !/^vu\d/i.test(resolvedName) ? u.name : "Ganesh Shinde");
+        }
+
+        const dept = u.department || student.department || (u.personalDetails && u.personalDetails.department) || "Electronics & Computer Science";
+        const sem = u.semester || student.semester || (u.academicOverview && u.academicOverview.semester) || 6;
+
         setDashboard((prev) => ({
           ...prev,
           personalDetails: {
             ...prev.personalDetails,
-            name: u.name,
-            department: u.department || prev.personalDetails.department,
+            name: resolvedName,
+            department: dept,
+          },
+          academicOverview: {
+            ...prev.academicOverview,
+            semester: sem,
           },
         }));
       }
     } catch (e) {}
+  };
+
+  useEffect(() => {
+    loadUserData();
+    window.addEventListener("userProfileUpdated", loadUserData);
 
     apiFetch("/student/dashboard")
       .then((result) => {
         if (result && result.data) {
-          setDashboard(result.data);
+          setDashboard((prev) => ({
+            ...prev,
+            ...result.data,
+            personalDetails: {
+              ...prev.personalDetails,
+              ...(result.data.personalDetails || {}),
+            },
+            academicOverview: {
+              ...prev.academicOverview,
+              ...(result.data.academicOverview || {}),
+            },
+          }));
         }
       })
       .catch(() => {});
+
+    return () => window.removeEventListener("userProfileUpdated", loadUserData);
   }, []);
-  const studentName = dashboard.personalDetails.name;
+
+  const studentName = dashboard.personalDetails.name || "Ganesh Shinde";
   const upcoming = dashboard.upcomingDeadlines || [];
+  const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
+    ? dashboard.leaderboard
+    : [
+        {
+          rank: 1,
+          name: `${studentName} (You)`,
+          score: "1,875 XP",
+          initials: getInitials(studentName),
+          badge: "Your Position",
+          you: true,
+        },
+      ];
+
+  const studentStats = [
+    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
+    { label: "Active Batches", value: "Enrolled", hint: "Assigned training batch", icon: Users },
+    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
+    { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Flame },
+  ];
+
   const getRankClass = (rank) => {
     if (rank === 1) return "overview-rank-1";
     if (rank === 2) return "overview-rank-2";
@@ -120,7 +146,7 @@ export default function Overview() {
               <Sparkles size={13} /> STUDENT WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, {dashboard.personalDetails.name}!
+              Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
               {dashboard.personalDetails.department} | Semester {dashboard.academicOverview.semester}
@@ -139,7 +165,7 @@ export default function Overview() {
 
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
-        {stats.map((s) => (
+        {studentStats.map((s) => (
           <Card key={s.label} className="overview-stat-card shadow-sm">
             <CardContent className="overview-card-content">
               <div className="overview-stat-top">
@@ -150,13 +176,7 @@ export default function Overview() {
                 <Info size={15} className="overview-info-icon" />
               </div>
 
-              <p className="overview-stat-value">
-                {s.label === "Attendance Rate"
-                  ? `${Math.round(dashboard.attendanceSummary.percentage)}%`
-                  : s.label === "Coding Rank"
-                    ? `#${dashboard.codingProgress.currentRank}`
-                    : s.value}
-              </p>
+              <p className="overview-stat-value">{s.value}</p>
 
               <div className="overview-stat-hint-row">
                 <span className="overview-stat-trend-pill">{s.hint}</span>
@@ -177,8 +197,8 @@ export default function Overview() {
                 <Clock size={18} className="overview-header-icon" />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Recent Activities</CardTitle>
-                <CardDescription className="overview-card-desc">Track your latest updates</CardDescription>
+                <CardTitle className="overview-card-title">Recent Tasks & Deadlines</CardTitle>
+                <CardDescription className="overview-card-desc">Your latest course deliverables</CardDescription>
               </div>
             </div>
             <Link to="/student/practice" className="overview-view-all-pill">
@@ -186,20 +206,28 @@ export default function Overview() {
             </Link>
           </CardHeader>
           <CardContent className="overview-stack-1">
-            {upcoming.map((u) => (
-              <div key={u.title} className="overview-row-between overview-item-row">
-                <div className="overview-row overview-item-left">
-                  <div className="overview-clock-wrap">
-                    <Clock size={16} className="overview-clock-icon" />
+            {upcoming.length > 0 ? (
+              upcoming.map((u) => (
+                <div key={u.title} className="overview-row-between overview-item-row">
+                  <div className="overview-row overview-item-left">
+                    <div className="overview-clock-wrap">
+                      <Clock size={16} className="overview-clock-icon" />
+                    </div>
+                    <div>
+                      <p className="overview-item-title">{u.title}</p>
+                      <p className="overview-item-due">{u.due}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="overview-item-title">{u.title}</p>
-                    <p className="overview-item-due">{u.due}</p>
-                  </div>
+                  <Badge variant={u.variant} className="overview-badge-shrink">{u.tag}</Badge>
                 </div>
-                <Badge variant={u.variant} className="overview-badge-shrink">{u.tag}</Badge>
+              ))
+            ) : (
+              <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
+                <Clock size={28} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
+                <p style={{ margin: 0, fontWeight: 600 }}>No pending deadlines</p>
+                <p style={{ margin: "4px 0 0 0", fontSize: 12.5 }}>All current training tasks are up to date.</p>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
@@ -211,8 +239,8 @@ export default function Overview() {
                 <Trophy size={18} className="overview-header-icon overview-trophy-icon" />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Top Performers</CardTitle>
-                <CardDescription className="overview-card-desc">Top performing students</CardDescription>
+                <CardTitle className="overview-card-title">Batch Leaderboard</CardTitle>
+                <CardDescription className="overview-card-desc">Rankings of active students</CardDescription>
               </div>
             </div>
             <Link to="/student/leaderboard" className="overview-view-all-pill">
@@ -220,45 +248,33 @@ export default function Overview() {
             </Link>
           </CardHeader>
           <CardContent className="overview-leaderboard-content">
-            {leaderboard.map((l, idx) => {
-              const prevRank = idx > 0 ? leaderboard[idx - 1].rank : null;
-              const showGap = prevRank !== null && l.rank - prevRank > 1;
-              return (
-                <React.Fragment key={l.rank}>
-                  {showGap && (
-                    <div className="overview-leaderboard-gap">
-                      <span>···</span>
-                      <span className="overview-leaderboard-gap-label">{l.rank - prevRank - 1} more</span>
-                      <span>···</span>
-                    </div>
-                  )}
-                  <div
-                    className={`overview-row-between overview-leaderboard-item ${l.you ? "overview-leaderboard-item--you" : ""}`}
-                  >
-                    <div className="overview-row" style={{ gap: 12 }}>
-                      <span className={`overview-leaderboard-rank ${getRankClass(l.rank)}`}>
-                        #{l.rank}
-                      </span>
-                      <Avatar size="34">
-                        <AvatarFallback className={l.you ? "overview-avatar-you" : ""}>
-                          {l.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <span className={`overview-leaderboard-name ${l.you ? "overview-leaderboard-name--you" : ""}`}>
-                          {l.name}
-                        </span>
-                        <span style={{ display: "block", fontSize: 11, color: "#64748b" }}>{l.badge}</span>
-                      </div>
-                    </div>
-                    <div className={`overview-xp-pill ${l.you ? "overview-xp-pill--you" : ""}`}>
-                      <Flame size={12} className="overview-flame-icon" />
-                      <span>{l.score}</span>
-                    </div>
+            {leaderboardList.map((l, idx) => (
+              <div
+                key={l.rank || idx}
+                className={`overview-row-between overview-leaderboard-item ${l.you ? "overview-leaderboard-item--you" : ""}`}
+              >
+                <div className="overview-row" style={{ gap: 12 }}>
+                  <span className={`overview-leaderboard-rank ${getRankClass(l.rank)}`}>
+                    #{l.rank}
+                  </span>
+                  <Avatar size="34">
+                    <AvatarFallback className={l.you ? "overview-avatar-you" : ""}>
+                      {l.initials}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <span className={`overview-leaderboard-name ${l.you ? "overview-leaderboard-name--you" : ""}`}>
+                      {l.name}
+                    </span>
+                    <span style={{ display: "block", fontSize: 11, color: "#64748b" }}>{l.badge}</span>
                   </div>
-                </React.Fragment>
-              );
-            })}
+                </div>
+                <div className={`overview-xp-pill ${l.you ? "overview-xp-pill--you" : ""}`}>
+                  <Flame size={12} className="overview-flame-icon" />
+                  <span>{l.score}</span>
+                </div>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

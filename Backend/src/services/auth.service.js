@@ -9,6 +9,7 @@ import {
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
+import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 
 export const registerUser = async (data) => {
   const { name, email, mobile_number, role, roll_number, department, year, division, semester } = data;
@@ -62,6 +63,13 @@ export const registerUser = async (data) => {
     });
   }
 
+  // Send welcome email asynchronously
+  if (user.email && user.email.includes('@')) {
+    sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch((err) => {
+      console.warn(`[AUTH] Welcome email notification skipped: ${err.message}`);
+    });
+  }
+
   // Generate JWT token
   const token = generateToken({
     userId: user.id,
@@ -79,15 +87,35 @@ export const registerUser = async (data) => {
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
+      department: studentProfile?.department || department || '',
+      year: studentProfile?.year || year || '',
+      division: studentProfile?.division || division || '',
+      semester: studentProfile?.semester || semester || '',
+      roll_number: studentProfile?.roll_number || roll_number || '',
       studentProfile,
     },
   };
 };
 
 export const sendUserOtp = async (identifier) => {
+  const user = await findUserByEmailOrMobile(identifier);
+  if (!user) {
+    const error = new Error('No account found with this email or mobile number. Please register first.');
+    error.statusCode = 404;
+    throw error;
+  }
+
   const otp = generateOtp(6);
   await saveOtpRecord(identifier, otp);
   console.log(`[AUTH SERVICE] Generated OTP for ${identifier}: ${otp}`);
+
+  // Dispatch OTP email via Nodemailer
+  const recipientEmail = user.email || (identifier.includes('@') ? identifier : null);
+  if (recipientEmail && recipientEmail.includes('@')) {
+    sendOtpEmail({ to: recipientEmail, otp, name: user.name }).catch((err) => {
+      console.warn(`[AUTH] Nodemailer email dispatch notice: ${err.message}`);
+    });
+  }
 
   return {
     identifier,
@@ -96,24 +124,18 @@ export const sendUserOtp = async (identifier) => {
 };
 
 export const verifyUserOtpAndLogin = async (identifier, otp) => {
+  const user = await findUserByEmailOrMobile(identifier);
+  if (!user) {
+    const error = new Error('No account found with this email or mobile number. Please register first.');
+    error.statusCode = 404;
+    throw error;
+  }
+
   const isValid = await verifyOtpRecord(identifier, otp);
   if (!isValid) {
     const error = new Error('Invalid or expired OTP');
     error.statusCode = 400;
     throw error;
-  }
-
-  let user = await findUserByEmailOrMobile(identifier);
-
-  // If user doesn't exist yet, auto-onboard user with email or mobile
-  if (!user) {
-    const isMobile = /^\d+$/.test(identifier.trim());
-    user = await createUser({
-      name: isMobile ? `User_${identifier}` : identifier.split('@')[0],
-      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
-      mobile_number: isMobile ? identifier : '',
-      role: ROLES.STUDENT,
-    });
   }
 
   const studentProfile = await getStudentByUserId(user.id);
@@ -134,7 +156,13 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
+      department: studentProfile?.department || '',
+      year: studentProfile?.year || '',
+      division: studentProfile?.division || '',
+      semester: studentProfile?.semester || '',
+      roll_number: studentProfile?.roll_number || '',
       studentProfile,
     },
   };
 };
+

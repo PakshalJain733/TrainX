@@ -36,6 +36,7 @@ app.get('/api/v1/health', (req, res) => {
 // Mount Module Routes under /api/v1 (Section 11)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/students', studentRoutes);
+app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/colleges', collegeRoutes);
 app.use('/api/v1/trainings', trainingRoutes);

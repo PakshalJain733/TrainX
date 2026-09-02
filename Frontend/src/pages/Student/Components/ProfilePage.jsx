@@ -29,10 +29,14 @@ export default function ProfilePage() {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) {
+        let name = u.name;
+        if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
+          name = u.fullName || u.full_name || (u.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? u.name : "Ganesh Shinde");
+        }
         return {
-          name: u.name || "Ganesh Shinde",
+          name: name,
           email: u.email || "ganeshshinde@pvppcoe.ac.in",
-          phone: u.phone || "+91 98765 43210",
+          phone: u.phone || u.mobile_number || "+91 98765 43210",
           rollNo: u.rollNo || u.roll_number || "21ECS042",
           department: u.department || "Electronics & Computer Science",
           semester: u.semester || "Semester 6",

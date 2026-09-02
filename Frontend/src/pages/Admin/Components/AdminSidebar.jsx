@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
+  UserCog,
   CalendarCheck,
   BookOpen,
   GraduationCap,
@@ -23,8 +24,8 @@ function SidebarBrand({ collapsed, subtitle }) {
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
           {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
         </div>
@@ -35,6 +36,7 @@ function SidebarBrand({ collapsed, subtitle }) {
 
 const primaryNavItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
+  { title: "Manage Users", url: "/admin/users", icon: UserCog },
   { title: "Batches", url: "/admin/batches", icon: Users },
   { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpen },

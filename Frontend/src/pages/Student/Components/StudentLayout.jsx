@@ -129,10 +129,19 @@ export default function StudentLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const resolveUser = (rawUser) => {
+    if (!rawUser) return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
+    let name = rawUser.name;
+    if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
+      name = rawUser.fullName || rawUser.full_name || (rawUser.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? rawUser.name : "Ganesh Shinde");
+    }
+    return { ...rawUser, name };
+  };
+
   const [user, setUser] = useState(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
-      if (u) return u;
+      if (u) return resolveUser(u);
     } catch (e) {}
     return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
   });
@@ -141,7 +150,7 @@ export default function StudentLayout() {
     const handleUpdate = () => {
       try {
         const u = JSON.parse(localStorage.getItem("user"));
-        if (u) setUser(u);
+        if (u) setUser(resolveUser(u));
       } catch (e) {}
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
