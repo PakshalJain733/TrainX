@@ -55,6 +55,21 @@ import MentorNotifications from './pages/Mentor/Components/Notifications';
 import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
 import MentorHelp from './pages/Mentor/Components/Help';
 
+// Coordinator Workspace Imports
+import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
+import CoordinatorOverview from './pages/Coordinator/Components/Overview';
+import CoordinatorBatches from './pages/Coordinator/Components/Batches';
+import CoordinatorStudents from './pages/Coordinator/Components/Students';
+import CoordinatorMentors from './pages/Coordinator/Components/Mentors';
+import CoordinatorSchedules from './pages/Coordinator/Components/Schedules';
+import CoordinatorAssessments from './pages/Coordinator/Components/Assessments';
+import CoordinatorAttendance from './pages/Coordinator/Components/Attendance';
+import CoordinatorPlacement from './pages/Coordinator/Components/Placement';
+import CoordinatorRequests from './pages/Coordinator/Components/Requests';
+import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
+import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
+import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -103,6 +118,23 @@ function App() {
           <Route path="profile" element={<MentorProfilePage />} />
           <Route path="settings" element={<MentorProfilePage />} />
           <Route path="help" element={<MentorHelp />} />
+        </Route>
+
+        {/* Coordinator Workspace Routes */}
+        <Route path="/coordinator" element={<CoordinatorLayout />}>
+          <Route index element={<CoordinatorOverview />} />
+          <Route path="batches" element={<CoordinatorBatches />} />
+          <Route path="students" element={<CoordinatorStudents />} />
+          <Route path="mentors" element={<CoordinatorMentors />} />
+          <Route path="schedules" element={<CoordinatorSchedules />} />
+          <Route path="assessments" element={<CoordinatorAssessments />} />
+          <Route path="attendance" element={<CoordinatorAttendance />} />
+          <Route path="placement" element={<CoordinatorPlacement />} />
+          <Route path="requests" element={<CoordinatorRequests />} />
+          <Route path="reports" element={<CoordinatorWeeklyReports />} />
+          <Route path="notifications" element={<CoordinatorNotifications />} />
+          <Route path="profile" element={<CoordinatorProfilePage />} />
+          <Route path="settings" element={<CoordinatorProfilePage />} />
         </Route>
 
         {/* Super Admin Workspace Routes */}
