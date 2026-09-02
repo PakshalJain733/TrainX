@@ -176,6 +176,7 @@ function Register() {
             >
               <option value="">Select your role</option>
               <option value="Student">Student</option>
+              <option value="Coordinator">Coordinator</option>
               <option value="Faculty">Faculty</option>
               <option value="Mentor">Mentor</option>
               <option value="HOD">HOD</option>

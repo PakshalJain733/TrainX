@@ -192,7 +192,7 @@
 }
 
 
-button {
+.register-card button {
     width: 100%;
     padding: 11px;
     background: linear-gradient(90deg, #1a6fcf 0%, #2563eb 100%);
@@ -209,13 +209,13 @@ button {
     margin-bottom: 4px;
 }
 
-button:hover {
+.register-card button:hover {
     background: linear-gradient(90deg, #155bbf 0%, #1d50c8 100%);
     transform: translateY(-1px);
     box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
 }
 
-button:active {
+.register-card button:active {
     transform: translateY(1px);
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
@@ -613,11 +613,11 @@ button:active {
         border-radius: 8px;
     }
 
-    button {
+    .register-card button {
         padding: 9px;
         font-size: 14px;
         border-radius: 8px;
-        margin-top: 8px;
+        margin-top: 10px;
         margin-bottom: 4px;
     }
 
@@ -638,10 +638,6 @@ button:active {
 
     .input-group {
         margin-bottom: 9px;
-    }
-
-    button {
-        margin-top: 10px;
     }
 
     .logo {

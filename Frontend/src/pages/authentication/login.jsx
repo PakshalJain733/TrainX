@@ -198,6 +198,26 @@ function Login() {
     } finally {
       setLoading(false);
     }
+    const isCoordinator = email.toLowerCase().includes("coordinator");
+    const role = isCoordinator ? "Coordinator" : "Student";
+    const namePart = email ? email.split("@")[0].replace(/[._]/g, " ") : "Ganesh Shinde";
+    const formattedName = namePart.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    
+    const userObj = {
+      name: formattedName,
+      email: email,
+      role: role,
+      department: "Electronics & Computer Science",
+      semester: 6
+    };
+    
+    localStorage.setItem("user", JSON.stringify(userObj));
+    
+    if (isCoordinator) {
+      navigate("/coordinator");
+    } else {
+      navigate("/student");
+    }
   };
 
   return (
