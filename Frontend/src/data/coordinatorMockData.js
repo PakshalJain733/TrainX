@@ -475,3 +475,56 @@ export const coordinatorWeeklyReports = [
     fileSize: "1.4 MB",
   },
 ];
+
+export const coordinatorQuizActivityLogs = [
+  { id: 1, studentName: "Ananya Sharma", rollNo: "CSE26-009", batch: "CSE 2026 Alpha Cohort", quizTitle: "Data Structures & Graph Theory Mid-Term Quiz", score: "96%", timeSpent: "24 mins", status: "Passed", submittedAt: "10 mins ago" },
+  { id: 2, studentName: "Aarav Mehta", rollNo: "CSE26-042", batch: "CSE 2026 Alpha Cohort", quizTitle: "Data Structures & Graph Theory Mid-Term Quiz", score: "88%", timeSpent: "28 mins", status: "Passed", submittedAt: "25 mins ago" },
+  { id: 3, studentName: "Priya Roy", rollNo: "DS25-012", batch: "Data Science & ML 2025", quizTitle: "Generative AI & Fine-Tuning LLMs Assessment", score: "94%", timeSpent: "32 mins", status: "Passed", submittedAt: "1 hour ago" },
+  { id: 4, studentName: "Karan Singh", rollNo: "FS04-089", batch: "Fullstack React & Node", quizTitle: "Fullstack Authentication & Redis Caching Exam", score: "72%", timeSpent: "35 mins", status: "Passed", submittedAt: "2 hours ago" },
+  { id: 5, studentName: "Neha Reddy", rollNo: "DS25-018", batch: "Data Science & ML 2025", quizTitle: "Generative AI & Fine-Tuning LLMs Assessment", score: "54%", timeSpent: "40 mins", status: "Needs Retake", submittedAt: "3 hours ago" },
+  { id: 6, studentName: "Rohan Verma", rollNo: "CSE26-099", batch: "CSE 2026 Alpha Cohort", quizTitle: "Data Structures & Graph Theory Mid-Term Quiz", score: "48%", timeSpent: "42 mins", status: "Needs Retake", submittedAt: "4 hours ago" },
+];
+
+export const coordinatorDetailedQuizScorecards = {
+  1: {
+    quizTitle: "Data Structures & Graph Theory Mid-Term Quiz",
+    batch: "CSE 2026 Alpha Cohort",
+    totalEnrolled: 120,
+    attempted: 112,
+    passedCount: 103,
+    avgScore: "84%",
+    highestScore: "98%",
+    lowestScore: "42%",
+    questionAnalytics: [
+      { qNo: 1, text: "Dijkstra's Shortest Path Complexity with Binary Heap", topic: "Graph Theory", correctPct: "88%", difficulty: "Medium" },
+      { qNo: 2, text: "Detecting Cycles in Directed Graph using Kahn's Algorithm", topic: "Topological Sort", correctPct: "64%", difficulty: "Hard" },
+      { qNo: 3, text: "Time complexity of Union-Find with Path Compression", topic: "Disjoint Set Union", correctPct: "92%", difficulty: "Easy" },
+      { qNo: 4, text: "Dynamic Programming Memoization vs Tabulation Memory Trade-off", topic: "Dynamic Programming", correctPct: "71%", difficulty: "Medium" },
+    ],
+    studentSubmissions: [
+      { id: 1, name: "Ananya Sharma", rollNo: "CSE26-009", score: 96, status: "Passed", timeSpent: "24m", attemptedAt: "2026-09-02 10:15", correctCount: "19/20" },
+      { id: 2, name: "Aarav Mehta", rollNo: "CSE26-042", score: 88, status: "Passed", timeSpent: "28m", attemptedAt: "2026-09-02 10:00", correctCount: "17/20" },
+      { id: 3, name: "Karan Singh", rollNo: "FS04-089", score: 76, status: "Passed", timeSpent: "35m", attemptedAt: "2026-09-02 09:30", correctCount: "15/20" },
+      { id: 4, name: "Rohan Verma", rollNo: "CSE26-099", score: 48, status: "Needs Retake", timeSpent: "42m", attemptedAt: "2026-09-02 08:45", correctCount: "9/20" },
+    ]
+  },
+  2: {
+    quizTitle: "Generative AI & Fine-Tuning LLMs Assessment",
+    batch: "Data Science & ML 2025",
+    totalEnrolled: 110,
+    attempted: 110,
+    passedCount: 108,
+    avgScore: "91%",
+    highestScore: "100%",
+    lowestScore: "54%",
+    questionAnalytics: [
+      { qNo: 1, text: "LoRA & QLoRA Parameter Efficient Fine-Tuning Memory Savings", topic: "PEFT Architecture", correctPct: "95%", difficulty: "Medium" },
+      { qNo: 2, text: "Self-Attention Query Key Value Matrix Dimensions in Transformers", topic: "Transformer Attention", correctPct: "89%", difficulty: "Medium" },
+      { qNo: 3, text: "RLHF PPO Reward Model Calibration", topic: "RLHF", correctPct: "78%", difficulty: "Hard" },
+    ],
+    studentSubmissions: [
+      { id: 1, name: "Priya Roy", rollNo: "DS25-012", score: 98, status: "Passed", timeSpent: "30m", attemptedAt: "2026-08-30 14:20", correctCount: "24/25" },
+      { id: 2, name: "Neha Reddy", rollNo: "DS25-018", score: 54, status: "Needs Retake", timeSpent: "40m", attemptedAt: "2026-08-30 15:10", correctCount: "13/25" },
+    ]
+  }
+};

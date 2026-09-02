@@ -13,6 +13,10 @@ import {
   BookOpen,
   MapPin,
   TrendingUp,
+  ArrowLeft,
+  Award,
+  Send,
+  UserCheck,
 } from "lucide-react";
 import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
 import "../Styles/Students.css";
@@ -214,14 +218,15 @@ export default function CoordinatorStudents() {
   const [batchFilter, setBatchFilter] = useState("All");
   const [riskFilter, setRiskFilter] = useState("All");
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [activeTab, setActiveTab] = useState("roadmap"); // 'overview', 'roadmap', 'skills'
+  const [activeTab, setActiveTab] = useState("roadmap"); // 'roadmap', 'overview', 'skills'
   const [selectedGoal, setSelectedGoal] = useState("python-backend");
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const handleOpenStudentModal = (student) => {
+  const handleOpenStudentDetail = (student) => {
     setSelectedStudent(student);
     setSelectedGoal(student.selectedGoal || "python-backend");
     setActiveTab("roadmap");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const filteredStudents = students.filter((s) => {
@@ -297,6 +302,259 @@ export default function CoordinatorStudents() {
     }
   };
 
+  // FULLSCREEN STUDENT DETAIL VIEW (NO MODAL POPUP)
+  if (selectedStudent) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        {/* Top Back Navigation Bar */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <button
+            className="coord-btn"
+            style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#334155" }}
+            onClick={() => setSelectedStudent(null)}
+          >
+            <ArrowLeft size={16} /> Back to Student Directory
+          </button>
+
+          <span
+            className={`coord-student-pill ${
+              selectedStudent.riskStatus === "Top Performer"
+                ? "coord-student-pill--top"
+                : selectedStudent.riskStatus === "Good"
+                ? "coord-student-pill--good"
+                : selectedStudent.riskStatus === "Moderate"
+                ? "coord-student-pill--moderate"
+                : "coord-student-pill--risk"
+            }`}
+            style={{ padding: "6px 14px", fontSize: "12px" }}
+          >
+            {selectedStudent.riskStatus}
+          </span>
+        </div>
+
+        {/* Student Profile Overview Header Card */}
+        <div
+          style={{
+            background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
+            color: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px 28px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            boxShadow: "0 8px 24px rgba(30, 27, 75, 0.15)",
+          }}
+        >
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "52px",
+                  height: "52px",
+                  borderRadius: "14px",
+                  background: "#4f46e5",
+                  color: "#ffffff",
+                  fontSize: "20px",
+                  fontWeight: 800,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
+                }}
+              >
+                {selectedStudent.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+              </div>
+              <div>
+                <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0 }}>{selectedStudent.name}</h1>
+                <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.8)", margin: "4px 0 0 0" }}>
+                  Roll No: <strong>{selectedStudent.rollNo}</strong> · Batch: <strong>{selectedStudent.batch}</strong> ({selectedStudent.department})
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "20px", marginTop: "16px", fontSize: "13px", color: "rgba(255, 255, 255, 0.9)" }}>
+              <span>
+                <Mail size={14} style={{ verticalAlign: "middle", marginRight: "6px" }} /> {selectedStudent.email}
+              </span>
+              <span>
+                <Phone size={14} style={{ verticalAlign: "middle", marginRight: "6px" }} /> {selectedStudent.phone}
+              </span>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "16px", textAlign: "right" }}>
+            <div style={{ background: "rgba(255, 255, 255, 0.1)", padding: "12px 18px", borderRadius: "12px" }}>
+              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>Attendance</div>
+              <div style={{ fontSize: "22px", fontWeight: 800, color: "#34d399" }}>{selectedStudent.attendance}%</div>
+            </div>
+
+            <div style={{ background: "rgba(255, 255, 255, 0.1)", padding: "12px 18px", borderRadius: "12px" }}>
+              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>Quiz Average</div>
+              <div style={{ fontSize: "22px", fontWeight: 800, color: "#818cf8" }}>{selectedStudent.avgScore}%</div>
+            </div>
+
+            <div style={{ background: "rgba(255, 255, 255, 0.1)", padding: "12px 18px", borderRadius: "12px" }}>
+              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>AI Interview</div>
+              <div style={{ fontSize: "22px", fontWeight: 800, color: "#c084fc" }}>{selectedStudent.interviewScore}%</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Fullscreen Navigation Tabs Bar */}
+        <div className="coord-tabs-bar" style={{ marginBottom: "8px" }}>
+          <button
+            className={`coord-tab-btn ${activeTab === "roadmap" ? "coord-tab-btn--active" : ""}`}
+            onClick={() => setActiveTab("roadmap")}
+          >
+            <Sparkles size={16} /> Selected AI Career Roadmap
+          </button>
+          <button
+            className={`coord-tab-btn ${activeTab === "overview" ? "coord-tab-btn--active" : ""}`}
+            onClick={() => setActiveTab("overview")}
+          >
+            <GraduationCap size={16} /> Academic Scores & Placement Readiness
+          </button>
+        </div>
+
+        {/* TAB 1: FULLSCREEN AI ROADMAP INTERFACE */}
+        {activeTab === "roadmap" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* Career Goal Generator Card */}
+            <div className="student-roadmap-generator-card">
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <Sparkles size={22} color="#2563eb" />
+                <div>
+                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                    Select career / skill goal
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "#64748b", margin: "2px 0 0 0" }}>
+                    AI analyses student goal, current scores and skill gaps to build their personalized roadmap.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", alignItems: "center", marginTop: "4px" }}>
+                <select
+                  className="student-roadmap-select-input"
+                  style={{ flex: 1, minWidth: "300px" }}
+                  value={selectedGoal}
+                  onChange={(e) => setSelectedGoal(e.target.value)}
+                >
+                  {careerTracks.map((track) => (
+                    <option key={track.id} value={track.id}>
+                      {track.name}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  className="coord-btn coord-btn--primary"
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                  style={{ padding: "10px 22px" }}
+                >
+                  <Sparkles size={16} />
+                  {isGenerating ? "Generating Roadmap..." : "Generate roadmap"}
+                </button>
+              </div>
+            </div>
+
+            {/* Milestones Timeline */}
+            <div className="student-roadmap-timeline">
+              {milestones.map((m) => (
+                <div key={m.id} className={`student-roadmap-milestone-card milestone-status-${m.status}`}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      {m.status === "completed" && <CheckCircle2 size={20} color="#10b981" />}
+                      {m.status === "in-progress" && <CircleDot size={20} color="#2563eb" />}
+                      {m.status === "locked" && <Lock size={18} color="#94a3b8" />}
+                      <h4 style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                        {m.title}
+                      </h4>
+                    </div>
+                    {getStatusBadge(m.status)}
+                  </div>
+
+                  <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 14px 0" }}>{m.desc}</p>
+
+                  {/* Progress Bar */}
+                  <div
+                    style={{
+                      width: "100%",
+                      height: "7px",
+                      background: "#f1f5f9",
+                      borderRadius: "999px",
+                      overflow: "hidden",
+                      marginBottom: "14px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: "100%",
+                        width: `${m.progress}%`,
+                        background: m.status === "completed" ? "#10b981" : "#2563eb",
+                        borderRadius: "999px",
+                      }}
+                    />
+                  </div>
+
+                  {/* Tags & Meta Stats */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                      {m.tags.map((tag) => (
+                        <span key={tag} className="student-tag-pill">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: "12.5px", color: "#64748b", fontWeight: 500 }}>
+                      {m.quizzes} quizzes · {m.exercises} coding exercises
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: OVERVIEW & ACADEMICS */}
+        {activeTab === "overview" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <div className="coord-card">
+              <div className="coord-card-title">Placement Readiness Audit</div>
+              <div style={{ fontSize: "15px", fontWeight: 700, color: "#4f46e5", marginTop: "4px" }}>
+                {selectedStudent.placementStatus}
+              </div>
+              <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>
+                Candidate has cleared department criteria and is currently eligible for tier-1 partner recruitment drives.
+              </p>
+            </div>
+
+            <div className="coord-card">
+              <div className="coord-card-title">Coordinator Actions & Warnings</div>
+              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+                <button
+                  className="coord-btn coord-btn--primary"
+                  onClick={() => alert(`Warning notice sent to ${selectedStudent.name}`)}
+                >
+                  <Send size={15} /> Send Counseling Warning
+                </button>
+                <button
+                  className="coord-btn"
+                  style={{ background: "#ecfdf5", color: "#047857" }}
+                  onClick={() => alert(`Medical override granted for ${selectedStudent.name}`)}
+                >
+                  Grant Attendance Medical Override
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // DEFAULT STUDENT DIRECTORY TABLE VIEW
   return (
     <div>
       <div className="coord-page-header">
@@ -426,7 +684,7 @@ export default function CoordinatorStudents() {
                   <button
                     className="coord-btn coord-btn--primary"
                     style={{ padding: "6px 12px", fontSize: "12px" }}
-                    onClick={() => handleOpenStudentModal(s)}
+                    onClick={() => handleOpenStudentDetail(s)}
                   >
                     View Details
                   </button>
@@ -436,200 +694,6 @@ export default function CoordinatorStudents() {
           </tbody>
         </table>
       </div>
-
-      {/* Student Details & AI Roadmap Modal */}
-      {selectedStudent && (
-        <div className="coord-modal-backdrop" onClick={() => setSelectedStudent(null)}>
-          <div className="coord-modal coord-modal--lg" onClick={(e) => e.stopPropagation()}>
-            {/* Modal Header */}
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-              <div>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
-                  {selectedStudent.name} — Student Audit Details
-                </h2>
-                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
-                  Roll No: <strong>{selectedStudent.rollNo}</strong> · Batch: <strong>{selectedStudent.batch}</strong>
-                </div>
-              </div>
-              <button
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: "#64748b" }}
-                onClick={() => setSelectedStudent(null)}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Tabs Row */}
-            <div className="coord-tabs-bar">
-              <button
-                className={`coord-tab-btn ${activeTab === "roadmap" ? "coord-tab-btn--active" : ""}`}
-                onClick={() => setActiveTab("roadmap")}
-              >
-                <Sparkles size={15} /> Selected AI Roadmap
-              </button>
-              <button
-                className={`coord-tab-btn ${activeTab === "overview" ? "coord-tab-btn--active" : ""}`}
-                onClick={() => setActiveTab("overview")}
-              >
-                <GraduationCap size={15} /> Overview & Scores
-              </button>
-            </div>
-
-            {/* TAB CONTENT 1: AI ROADMAP */}
-            {activeTab === "roadmap" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {/* Career Goal Generator Card */}
-                <div className="student-roadmap-generator-card">
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Sparkles size={20} color="#2563eb" />
-                    <div>
-                      <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
-                        Select career / skill goal
-                      </h3>
-                      <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>
-                        AI analyses your goal, current scores and skill gaps to build your personalized roadmap.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center" }}>
-                    <select
-                      className="student-roadmap-select-input"
-                      style={{ flex: 1 }}
-                      value={selectedGoal}
-                      onChange={(e) => setSelectedGoal(e.target.value)}
-                    >
-                      {careerTracks.map((track) => (
-                        <option key={track.id} value={track.id}>
-                          {track.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    <button
-                      className="coord-btn coord-btn--primary"
-                      onClick={handleGenerate}
-                      disabled={isGenerating}
-                      style={{ padding: "10px 20px" }}
-                    >
-                      <Sparkles size={16} />
-                      {isGenerating ? "Generating..." : "Generate roadmap"}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Milestone Timeline List */}
-                <div className="student-roadmap-timeline">
-                  {milestones.map((m) => (
-                    <div key={m.id} className={`student-roadmap-milestone-card milestone-status-${m.status}`}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          {m.status === "completed" && <CheckCircle2 size={18} color="#10b981" />}
-                          {m.status === "in-progress" && <CircleDot size={18} color="#2563eb" />}
-                          {m.status === "locked" && <Lock size={16} color="#94a3b8" />}
-                          <h4 style={{ fontSize: "15px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
-                            {m.title}
-                          </h4>
-                        </div>
-                        {getStatusBadge(m.status)}
-                      </div>
-
-                      <p style={{ fontSize: "13px", color: "#64748b", margin: "0 0 12px 0" }}>{m.desc}</p>
-
-                      {/* Progress Bar */}
-                      <div
-                        style={{
-                          width: "100%",
-                          height: "6px",
-                          background: "#f1f5f9",
-                          borderRadius: "999px",
-                          overflow: "hidden",
-                          marginBottom: "12px",
-                        }}
-                      >
-                        <div
-                          style={{
-                            height: "100%",
-                            width: `${m.progress}%`,
-                            background: m.status === "completed" ? "#10b981" : "#2563eb",
-                            borderRadius: "999px",
-                          }}
-                        />
-                      </div>
-
-                      {/* Tags & Meta */}
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                          {m.tags.map((tag) => (
-                            <span key={tag} className="student-tag-pill">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
-                          {m.quizzes} quizzes · {m.exercises} coding exercises
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* TAB CONTENT 2: OVERVIEW & SCORES */}
-            {activeTab === "overview" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px", fontSize: "13px" }}>
-                <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontWeight: 800, fontSize: "16px", color: "#0f172a" }}>{selectedStudent.name}</div>
-                  <div style={{ color: "#64748b", marginTop: "2px" }}>
-                    Roll No: <strong>{selectedStudent.rollNo}</strong> · Batch: {selectedStudent.batch}
-                  </div>
-                  <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "12px", color: "#475569" }}>
-                    <span>
-                      <Mail size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} /> {selectedStudent.email}
-                    </span>
-                    <span>
-                      <Phone size={13} style={{ verticalAlign: "middle", marginRight: "4px" }} /> {selectedStudent.phone}
-                    </span>
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-                  <div style={{ background: "#eff6ff", padding: "12px", borderRadius: "10px" }}>
-                    <div style={{ fontSize: "11px", color: "#1d4ed8", fontWeight: 700 }}>Attendance Rate</div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#1e40af" }}>{selectedStudent.attendance}%</div>
-                  </div>
-
-                  <div style={{ background: "#faf5ff", padding: "12px", borderRadius: "10px" }}>
-                    <div style={{ fontSize: "11px", color: "#7e22ce", fontWeight: 700 }}>Avg Quiz Score</div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#6b21a8" }}>{selectedStudent.avgScore}%</div>
-                  </div>
-
-                  <div style={{ background: "#ecfdf5", padding: "12px", borderRadius: "10px" }}>
-                    <div style={{ fontSize: "11px", color: "#047857", fontWeight: 700 }}>AI Interview Score</div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#065f46" }}>{selectedStudent.interviewScore}%</div>
-                  </div>
-                </div>
-
-                <div style={{ padding: "12px", borderRadius: "10px", background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>Placement Readiness Status</div>
-                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#4f46e5", marginTop: "2px" }}>
-                    {selectedStudent.placementStatus}
-                  </div>
-                </div>
-
-                <button
-                  className="coord-btn coord-btn--primary"
-                  style={{ width: "100%", justifyContent: "center", marginTop: "8px" }}
-                  onClick={() => alert(`Warning notice sent to ${selectedStudent.name}`)}
-                >
-                  Send Counseling Notice
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
