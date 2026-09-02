@@ -33,13 +33,6 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 
-import CoordinatorLayout from './pages/Coordinator/Component/CoordinatorLayout';
-import CoordinatorOverview from './pages/Coordinator/Component/CoordinatorOverview';
-import CoordinatorBatches from './pages/Coordinator/Component/CoordinatorBatches';
-import CoordinatorAttendance from './pages/Coordinator/Component/CoordinatorAttendance';
-import CoordinatorWeeklyReports from './pages/Coordinator/Component/CoordinatorWeeklyReports';
-import CoordinatorLearning from './pages/Coordinator/Component/CoordinatorLearning';
-import CoordinatorHelp from './pages/Coordinator/Component/CoordinatorHelp';
 
 // Super Admin Workspace Imports
 import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
@@ -136,17 +129,6 @@ function App() {
           <Route path="help" element={<AdminHelp />} />
         </Route>
 
-        {/* Coordinator Workspace Routes */}
-        <Route path="/coordinator" element={<CoordinatorLayout />}>
-          <Route index element={<CoordinatorOverview />} />
-          <Route path="batches" element={<CoordinatorBatches />} />
-          <Route path="attendance" element={<CoordinatorAttendance />} />
-          <Route path="weekly-reports" element={<CoordinatorWeeklyReports />} />
-          <Route path="learning" element={<CoordinatorLearning />} />
-          <Route path="help" element={<CoordinatorHelp />} />
-          <Route path="profile" element={<CoordinatorOverview />} />
-          <Route path="settings" element={<CoordinatorOverview />} />
-        </Route>
 
         {/* Mentor Workspace Routes */}
         <Route path="/mentor" element={<MentorLayout />}>
