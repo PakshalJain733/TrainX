@@ -129,10 +129,7 @@ function Register() {
       }
     } catch (err) {
       console.error("Registration submit error:", err);
-      setSuccessMsg("Account created! Redirecting to login...");
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }

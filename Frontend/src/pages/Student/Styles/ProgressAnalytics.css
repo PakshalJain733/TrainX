@@ -49,11 +49,15 @@
   color: #059669;
 }
 
-/* 2x2 Analytics Arena */
+/* Charts Grid */
 .progress-charts-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+}
+
+.progress-charts-grid--two {
+  grid-template-columns: 1fr 1fr;
 }
 
 @media (max-width: 992px) {
@@ -94,49 +98,49 @@
   justify-content: center;
 }
 
-/* Milestone Breakdown */
-.milestone-breakdown-list {
-  display: flex;
+/* Donut Chart Container */
+.progress-donut-container {
   flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 20px;
+  height: auto;
 }
 
-.milestone-breakdown-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.milestone-breakdown-top {
+.progress-donut-wrap {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
+  justify-content: center;
 }
 
-.milestone-breakdown-pct {
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.milestone-breakdown-bar {
+.progress-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
-  height: 7px;
-  background: #f1f5f9;
-  border-radius: 999px;
-  overflow: hidden;
 }
 
-.milestone-breakdown-fill {
-  height: 100%;
-  background: #2563eb;
-  border-radius: 999px;
-  transition: width 0.3s ease;
+.donut-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #334155;
 }
 
-.milestone-breakdown-fill.completed {
-  background: #10b981;
+.donut-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
+
+.donut-legend-label {
+  flex: 1;
+  font-weight: 600;
+}
+
+.donut-legend-val {
+  font-weight: 700;
+  color: #0f172a;
+}
+

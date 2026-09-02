@@ -31,8 +31,8 @@ function SidebarBrand({ collapsed, subtitle }) {
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
           {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
         </div>
@@ -43,18 +43,19 @@ function SidebarBrand({ collapsed, subtitle }) {
 
 const primaryNavItems = [
   { title: "Dashboard", url: "/student", icon: LayoutDashboard, exact: true },
+  { title: "Batches", url: "/student/Batches", icon: Code2 },
   { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles },
   { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck },
   { title: "Practice", url: "/student/practice", icon: Terminal },
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
   { title: "Progress", url: "/student/progress", icon: LineChart },
-  { title: "Leaderboard", url: "/student/leaderboard", icon: Trophy },
   { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
 ];
 
 const footerNavItems = [
+  { title: "Settings", url: "/student/settings", icon: Settings },
   { title: "Support", url: "/student/help", icon: HelpCircle },
 ];
 

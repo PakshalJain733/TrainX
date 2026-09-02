@@ -57,7 +57,7 @@
   }
 }
 
-.batch-card {
+.batches-wrapper .batch-card {
   background: #ffffff;
   border: 1px solid #f1f5f9;
   border-radius: 16px;
@@ -72,19 +72,19 @@
   box-shadow: 0 4px 16px rgba(124, 92, 252, 0.03);
 }
 
-.batch-card:hover {
+.batches-wrapper .batch-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 10px 24px rgba(124, 92, 252, 0.08);
   border-color: var(--accent-color);
 }
 
-.batch-card-header {
+.batches-wrapper .batch-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.batch-icon-wrap {
+.batches-wrapper .batch-icon-wrap {
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -93,12 +93,12 @@
   justify-content: center;
 }
 
-.batch-actions-menu {
+.batches-wrapper .batch-actions-menu {
   display: flex;
   gap: 4px;
 }
 
-.batch-action-btn {
+.batches-wrapper .batch-action-btn {
   background: transparent;
   border: none;
   width: 26px;
@@ -112,35 +112,35 @@
   transition: background-color 0.2s, color 0.2s;
 }
 
-.batch-action-btn:hover {
+.batches-wrapper .batch-action-btn:hover {
   background-color: #f1f5f9;
 }
 
-.batch-action-btn.delete:hover {
+.batches-wrapper .batch-action-btn.delete:hover {
   background-color: #fee2e2;
   color: #ef4444;
 }
 
-.batch-card-body {
+.batches-wrapper .batch-card-body {
   margin-top: 12px;
   flex: 1;
 }
 
-.batch-track {
+.batches-wrapper .batch-track {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.batch-title {
+.batches-wrapper .batch-title {
   font-size: 15px;
   font-weight: 700;
   color: #0f172a;
   margin-top: 4px;
 }
 
-.batch-desc-trunc {
+.batches-wrapper .batch-desc-trunc {
   font-size: 12px;
   color: #64748b;
   margin-top: 6px;
@@ -151,7 +151,7 @@
   overflow: hidden;
 }
 
-.batch-card-stats-row {
+.batches-wrapper .batch-card-stats-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -160,7 +160,7 @@
   padding-top: 12px;
 }
 
-.batch-stat-block {
+.batches-wrapper .batch-stat-block {
   display: flex;
   align-items: center;
   gap: 6px;

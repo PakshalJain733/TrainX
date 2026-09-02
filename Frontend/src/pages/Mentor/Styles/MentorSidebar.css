@@ -1,0 +1,152 @@
+/* MentorSidebar.css — Dedicated Mentor Sidebar Styles */
+.mentor-sidebar {
+  width: 16rem;
+  height: 100vh;
+  background-color: #0f172a;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #1e293b;
+  transition: width 0.25s ease;
+  user-select: none;
+  z-index: 40;
+  flex-shrink: 0;
+}
+
+.mentor-sidebar.sidebar--collapsed {
+  width: 4.5rem;
+}
+
+.sidebar-header {
+  padding: 1.25rem 1rem;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.sidebar-brand-logo-container {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px -2px rgba(79, 70, 229, 0.4);
+}
+
+.sidebar-brand-logo {
+  width: 1.35rem;
+  height: 1.35rem;
+  object-fit: contain;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  font-weight: 800;
+  font-size: 1rem;
+  letter-spacing: -0.025em;
+}
+
+.brand-name1 {
+  color: #ffffff;
+}
+
+.brand-name2 {
+  color: #818cf8;
+}
+
+.sidebar-brand-sub {
+  font-size: 0.6875rem;
+  color: #818cf8;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 0.75rem;
+}
+
+.sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-menu-item {
+  width: 100%;
+}
+
+.sidebar-menu-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  color: #94a3b8;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.sidebar-menu-btn:hover {
+  background: #1e293b;
+  color: #f8fafc;
+}
+
+.sidebar-menu-btn--active {
+  background: linear-gradient(90deg, rgba(79, 70, 229, 0.25) 0%, rgba(79, 70, 229, 0.05) 100%);
+  color: #ffffff;
+  font-weight: 700;
+  border-left: 3px solid #6366f1;
+}
+
+.sidebar-menu-btn--active .sidebar-icon {
+  color: #818cf8;
+}
+
+.sidebar-icon {
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-footer {
+  padding: 0.75rem;
+  border-top: 1px solid #1e293b;
+}
+
+@media (max-width: 768px) {
+  .mentor-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100vh;
+    transition: left 0.3s ease;
+  }
+  .mentor-sidebar.mobile-open {
+    left: 0;
+  }
+}

@@ -95,13 +95,11 @@ function Login() {
           setOtpHint(`Demo OTP: ${data.data.otp}`);
         }
       } else {
-        setErrorMsg(data.message || "Failed to send OTP");
+        setErrorMsg(data.message || "Failed to send OTP. Please ensure your account is registered.");
       }
     } catch (err) {
       console.error("OTP send error:", err);
-      setStep("otp");
-      setOtpHint("Demo OTP: 123456");
-      setResendTimer(30);
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
     } finally {
       setLoading(false);
     }
@@ -132,9 +130,7 @@ function Login() {
       }
     } catch (err) {
       console.error("Resend OTP error:", err);
-      setSuccessMsg("A new OTP has been sent!");
-      setOtpHint("Demo OTP: 123456");
-      setResendTimer(30);
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
     } finally {
       setLoading(false);
       inputRefs.current[0]?.focus();
@@ -187,36 +183,23 @@ function Login() {
       if (data.success && data.data?.token) {
         localStorage.setItem("token", data.data.token);
         localStorage.setItem("user", JSON.stringify(data.data.user));
-        navigate("/student");
+        
+        const role = data.data.user?.role?.toLowerCase() || "";
+        if (role.includes("coordinator")) {
+          navigate("/coordinator");
+        } else if (role.includes("admin") || role.includes("hod")) {
+          navigate("/admin");
+        } else {
+          navigate("/student");
+        }
       } else {
-        setErrorMsg(data.message || "Invalid OTP");
+        setErrorMsg(data.message || "Invalid OTP or account not found.");
       }
     } catch (err) {
       console.error("Login verification error:", err);
-      localStorage.setItem("token", "demo_jwt_token");
-      navigate("/student");
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
     } finally {
       setLoading(false);
-    }
-    const isCoordinator = email.toLowerCase().includes("coordinator");
-    const role = isCoordinator ? "Coordinator" : "Student";
-    const namePart = email ? email.split("@")[0].replace(/[._]/g, " ") : "Ganesh Shinde";
-    const formattedName = namePart.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-    
-    const userObj = {
-      name: formattedName,
-      email: email,
-      role: role,
-      department: "Electronics & Computer Science",
-      semester: 6
-    };
-    
-    localStorage.setItem("user", JSON.stringify(userObj));
-    
-    if (isCoordinator) {
-      navigate("/coordinator");
-    } else {
-      navigate("/student");
     }
   };
 
