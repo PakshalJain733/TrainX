@@ -98,11 +98,19 @@ export const registerUser = async (data) => {
 };
 
 export const sendUserOtp = async (identifier) => {
-  const user = await findUserByEmailOrMobile(identifier);
+  let user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    const error = new Error('No account found with this email or mobile number. Please register first.');
-    error.statusCode = 404;
-    throw error;
+    // Auto-onboard user if not registered yet
+    const isMobile = /^\d+$/.test(identifier.trim());
+    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
+    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+    user = await createUser({
+      name: formattedName || 'Student',
+      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
+      mobile_number: isMobile ? identifier : '',
+      role: ROLES.STUDENT,
+    });
   }
 
   const otp = generateOtp(6);
@@ -124,11 +132,18 @@ export const sendUserOtp = async (identifier) => {
 };
 
 export const verifyUserOtpAndLogin = async (identifier, otp) => {
-  const user = await findUserByEmailOrMobile(identifier);
+  let user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    const error = new Error('No account found with this email or mobile number. Please register first.');
-    error.statusCode = 404;
-    throw error;
+    const isMobile = /^\d+$/.test(identifier.trim());
+    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
+    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+    user = await createUser({
+      name: formattedName || 'Student',
+      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
+      mobile_number: isMobile ? identifier : '',
+      role: ROLES.STUDENT,
+    });
   }
 
   const isValid = await verifyOtpRecord(identifier, otp);

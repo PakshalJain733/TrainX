@@ -12,7 +12,7 @@ import { apiFetch } from "../../../utils/api";
 import "../Styles/Overview.css";
 
 const getInitials = (name) => {
-  if (!name || name === "name") return "GS";
+  if (!name || name.trim().length === 0) return "?";
   const parts = name.trim().split(" ");
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -20,19 +20,32 @@ const getInitials = (name) => {
   return name.slice(0, 2).toUpperCase();
 };
 
+const getStoredUserName = () => {
+  try {
+    const u = JSON.parse(localStorage.getItem("user"));
+    if (!u) return "Pakshal";
+    const name = u.name || "";
+    const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
+    if (isAutoName) {
+      return u.fullName || u.full_name || "Pakshal";
+    }
+    return name;
+  } catch { return "Pakshal"; }
+};
+
 const defaultDashboardData = {
   personalDetails: {
-    name: "Ganesh Shinde",
-    department: "Electronics & Computer Science",
+    name: getStoredUserName(),
+    department: "",
   },
   academicOverview: {
-    semester: 6,
+    semester: "",
   },
   attendanceSummary: {
-    percentage: 95,
+    percentage: 0,
   },
   codingProgress: {
-    currentRank: "1 / 1",
+    currentRank: "N/A",
   },
   upcomingDeadlines: [],
   leaderboard: [],
@@ -47,10 +60,10 @@ export default function Overview() {
       if (u) {
         const student = u.studentProfile || {};
 
-        let resolvedName = u.name;
-        // If name is placeholder "name", starts with "User_", or is a roll number pattern
-        if (!resolvedName || resolvedName.trim().toLowerCase() === "name" || resolvedName.startsWith("User_") || /^vu\d/i.test(resolvedName)) {
-          resolvedName = u.fullName || u.full_name || (u.name && !resolvedName.startsWith("User_") && !/^vu\d/i.test(resolvedName) ? u.name : "Ganesh Shinde");
+        let resolvedName = u.name || "";
+        const isAutoName = !resolvedName || /^\d+$/.test(resolvedName.trim()) || resolvedName.startsWith("User_") || /^vu\d/i.test(resolvedName.trim());
+        if (isAutoName) {
+          resolvedName = u.fullName || u.full_name || "Pakshal";
         }
 
         const dept = u.department || student.department || (u.personalDetails && u.personalDetails.department) || "Electronics & Computer Science";
