@@ -1,11 +1,20 @@
 import React, { useState } from "react";
 import {
   Bot,
-  Lightbulb,
   ChevronRight,
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  Mic,
+  MicOff,
+  Volume2,
+  Play,
+  RotateCcw,
+  X,
+  Award,
+  Zap,
+  TrendingUp,
+  FileCheck,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import "../Styles/AiInterview.css";
@@ -16,39 +25,41 @@ const questionsList = [
     question:
       "Explain the difference between INNER JOIN and LEFT JOIN with an example.",
     topic: "SQL Optimisation",
+    sampleAnswer:
+      "INNER JOIN returns only matching records present in both tables. LEFT JOIN returns all records from the left table and matching rows from the right table, defaulting unmatched right-hand values to NULL.",
   },
   {
     id: 2,
     question:
       "How do RESTful APIs handle idempotency, and which HTTP methods are inherently idempotent?",
     topic: "API Design",
+    sampleAnswer:
+      "Idempotency guarantees that executing a request multiple times leaves the system state identical to executing it once. GET, PUT, and DELETE are idempotent, while POST creates new resources each time.",
   },
   {
     id: 3,
     question:
       "Explain how Python handles memory management and garbage collection internally.",
     topic: "Python Core",
+    sampleAnswer:
+      "Python utilizes reference counting for real-time memory deallocation and a cyclic generational garbage collector (Generations 0, 1, 2) to collect unreachable reference loops.",
   },
   {
     id: 4,
     question:
       "What is the difference between an Array and a Linked List in terms of time complexity for insertions and lookups?",
     topic: "Data Structures",
+    sampleAnswer:
+      "Arrays allow O(1) direct index lookups but require O(N) memory re-shifts for insertions. Linked Lists require O(N) traversal for lookups but enable O(1) node insertion once position is reached.",
   },
   {
     id: 5,
     question:
       "How would you optimize a database query that is experiencing full table scans on a table with 5 million records?",
     topic: "SQL Optimisation",
+    sampleAnswer:
+      "I would examine the EXPLAIN query execution plan, add B-Tree or composite indexes on WHERE/JOIN predicates, avoid leading wildcards in LIKE queries, and implement Redis query result caching.",
   },
-];
-
-const skillGaps = [
-  { skill: "SQL Optimisation", current: 58, target: 80 },
-  { skill: "API Design", current: 64, target: 85 },
-  { skill: "Data Structures", current: 71, target: 85 },
-  { skill: "Python Core", current: 88, target: 90 },
-  { skill: "Communication", current: 76, target: 85 },
 ];
 
 const pastInterviews = [
@@ -79,7 +90,13 @@ export default function AIInterview() {
   const [answer, setAnswer] = useState("");
   const [submittedAnswers, setSubmittedAnswers] = useState({});
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [feedback, setFeedback] = useState(null);
+  
+  // Live AI Modal State
+  const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const [isInterviewFinished, setIsInterviewFinished] = useState(false);
+  const [overallScorecard, setOverallScorecard] = useState(null);
 
   const currentQ = questionsList[currentIdx];
   const progressPercent = ((currentIdx + 1) / questionsList.length) * 100;
@@ -95,18 +112,64 @@ export default function AIInterview() {
       }));
 
       setIsEvaluating(false);
-      setFeedback({
-        score: Math.floor(Math.random() * 20 + 75),
-        feedbackText:
-          "Good clarity on definitions and examples. Make sure to specify edge case handling and indexes in production scenarios.",
-      });
 
       if (currentIdx < questionsList.length - 1) {
         setCurrentIdx((i) => i + 1);
         setAnswer("");
-        setFeedback(null);
+      } else {
+        // Finished all questions!
+        generateScorecard();
       }
     }, 600);
+  };
+
+  const handleOpenLiveModal = () => {
+    setIsLiveModalOpen(true);
+    setIsAiSpeaking(true);
+    setTimeout(() => setIsAiSpeaking(false), 2500);
+  };
+
+  const handleAutoFillSample = () => {
+    setAnswer(currentQ.sampleAnswer);
+  };
+
+  const toggleRecording = () => {
+    if (!isRecording) {
+      setIsRecording(true);
+      setTimeout(() => {
+        setIsRecording(false);
+        setAnswer(currentQ.sampleAnswer);
+      }, 3000);
+    } else {
+      setIsRecording(false);
+    }
+  };
+
+  const generateScorecard = () => {
+    const finalReport = {
+      score: 86,
+      technical: 88,
+      problemSolving: 84,
+      communication: 86,
+      feedback:
+        "Outstanding technical explanation of database indexing and REST principles. High problem-solving structure demonstrated with optimal time complexity awareness.",
+      strengths: [
+        "Clear distinction of INNER vs LEFT joins",
+        "Accurate HTTP method idempotency specification",
+        "Strong query optimization approach with EXPLAIN plans",
+      ],
+    };
+    setOverallScorecard(finalReport);
+    setIsInterviewFinished(true);
+  };
+
+  const resetInterview = () => {
+    setCurrentIdx(0);
+    setAnswer("");
+    setSubmittedAnswers({});
+    setIsInterviewFinished(false);
+    setOverallScorecard(null);
+    setIsLiveModalOpen(false);
   };
 
   return (
@@ -120,7 +183,7 @@ export default function AIInterview() {
           </div>
 
           <div className="interview-question-tracker">
-            Question {currentIdx + 1} of {questionsList.length}
+            Question {currentIdx + 1} of {questionsList.length} • {currentQ.topic}
           </div>
 
           <div className="interview-progress-bar">
@@ -134,19 +197,28 @@ export default function AIInterview() {
 
           <textarea
             className="interview-textarea"
-            placeholder="Type your structured answer here (include code/logic examples if applicable)..."
+            placeholder="Type your structured answer here or click the AI Robot to launch live voice mode..."
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
           />
 
           <div className="interview-action-row">
             <button
+              type="button"
+              className="ai-autofill-btn"
+              onClick={handleAutoFillSample}
+              title="Auto-fill sample response"
+            >
+              <Zap size={14} /> Auto-fill Sample Answer
+            </button>
+
+            <button
               className="interview-next-btn"
               onClick={handleNext}
               disabled={isEvaluating || !answer.trim()}
             >
               {isEvaluating ? (
-                "Evaluating Answer..."
+                "Evaluating..."
               ) : currentIdx === questionsList.length - 1 ? (
                 <>Submit & Finish <ChevronRight size={16} /></>
               ) : (
@@ -156,31 +228,24 @@ export default function AIInterview() {
           </div>
         </div>
 
-        {/* Skill Gap Analysis */}
-        <div className="skill-gap-card">
-          <div className="skill-gap-header">
-            <Lightbulb size={20} className="text-amber-500" />
-            <span>Skill gap analysis</span>
+        {/* AI Bot Visual Card (Clickable Robot Trigger) */}
+        <div
+          className="ai-bot-visual-card"
+          onClick={handleOpenLiveModal}
+          title="Click to launch interactive Live AI Interview phase"
+        >
+          <div className="ai-bot-graphic">
+            <div className="ai-bot-circle">
+              <Bot size={54} className="ai-bot-icon" />
+            </div>
+            <div className="ai-bot-pulse"></div>
           </div>
-          <p className="skill-gap-subtitle">Current score vs target benchmarks</p>
-
-          <div className="skill-gap-items">
-            {skillGaps.map((item) => (
-              <div key={item.skill} className="skill-gap-item-row">
-                <div className="skill-gap-item-meta">
-                  <span>{item.skill}</span>
-                  <span className="skill-gap-score-target">
-                    {item.current} / {item.target}
-                  </span>
-                </div>
-                <div className="skill-gap-bar">
-                  <div
-                    className="skill-gap-fill"
-                    style={{ width: `${(item.current / item.target) * 100}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+          <h3 className="ai-bot-title">AI Interviewer Active</h3>
+          <p className="ai-bot-desc">
+            Click here to launch the interactive live voice & simulation phase. Analyzes accuracy, problem solving & clarity.
+          </p>
+          <div className="ai-bot-launch-badge">
+            <Play size={16} fill="currentColor" /> Start Live AI Interview
           </div>
         </div>
       </div>
@@ -188,7 +253,9 @@ export default function AIInterview() {
       {/* Past Interviews History */}
       <div className="past-interviews-card">
         <h3 className="past-interviews-header">Past interviews</h3>
-        <p className="past-interviews-subtitle">AI evaluation history & diagnostic notes</p>
+        <p className="past-interviews-subtitle">
+          AI evaluation history & diagnostic notes
+        </p>
 
         <div className="past-interviews-grid">
           {pastInterviews.map((item) => (
@@ -227,6 +294,173 @@ export default function AIInterview() {
           ))}
         </div>
       </div>
+
+      {/* LIVE AI INTERVIEW MODAL / ARENA */}
+      {isLiveModalOpen && (
+        <div className="ai-modal-overlay">
+          <div className="ai-modal-container">
+            <div className="ai-modal-header">
+              <div className="ai-modal-title-wrap">
+                <div className="ai-modal-icon-badge">
+                  <Bot size={24} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>
+                    Live AI Technical Interview Simulation
+                  </h3>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>
+                    Interactive Voice & Coding Drill Phase
+                  </span>
+                </div>
+              </div>
+              <button
+                className="ai-modal-close-btn"
+                onClick={() => setIsLiveModalOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="ai-modal-body">
+              {!isInterviewFinished ? (
+                <>
+                  {/* AI Interviewer Audio Visualizer */}
+                  <div className="ai-speak-bubble">
+                    <Volume2 size={22} style={{ color: "#2563eb", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 700, marginBottom: 4 }}>
+                        {isAiSpeaking ? "AI INTERVIEWER SPEAKING..." : "AI INTERVIEWER PROMPT"}
+                      </div>
+                      <div>{currentQ.question}</div>
+                    </div>
+                    {isAiSpeaking && (
+                      <div className="ai-voice-waves">
+                        <span className="ai-wave-bar"></span>
+                        <span className="ai-wave-bar"></span>
+                        <span className="ai-wave-bar"></span>
+                        <span className="ai-wave-bar"></span>
+                        <span className="ai-wave-bar"></span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Question & Answer Inputs */}
+                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13, fontWeight: 700 }}>
+                      <span>Your Response (Question {currentIdx + 1} of {questionsList.length})</span>
+                      <span style={{ color: "#2563eb" }}>{currentQ.topic}</span>
+                    </div>
+
+                    <textarea
+                      className="interview-textarea"
+                      placeholder="Speak using the mic button below or type your answer..."
+                      value={answer}
+                      onChange={(e) => setAnswer(e.target.value)}
+                      style={{ minHeight: 120 }}
+                    />
+
+                    <div className="ai-modal-controls">
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          type="button"
+                          className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
+                          onClick={toggleRecording}
+                        >
+                          {isRecording ? <Mic size={16} /> : <MicOff size={16} />}
+                          {isRecording ? "Listening (3s)..." : "Simulate Speech Input"}
+                        </button>
+                        <button
+                          type="button"
+                          className="ai-autofill-btn"
+                          onClick={handleAutoFillSample}
+                        >
+                          <Zap size={14} /> Auto-fill Sample Answer
+                        </button>
+                      </div>
+
+                      <button
+                        className="interview-next-btn"
+                        onClick={handleNext}
+                        disabled={isEvaluating || !answer.trim()}
+                      >
+                        {isEvaluating ? (
+                          "Evaluating..."
+                        ) : currentIdx === questionsList.length - 1 ? (
+                          <>Submit & View Scorecard <Award size={16} /></>
+                        ) : (
+                          <>Next Question <ChevronRight size={16} /></>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* FINAL DIAGNOSTIC SCORECARD REPORT */
+                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                  <div className="ai-scorecard-hero">
+                    <Award size={48} style={{ color: "#60a5fa" }} />
+                    <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
+                      Live AI Interview Completed!
+                    </h2>
+                    <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
+                      Overall Technical Evaluation & Readiness Score
+                    </p>
+                    <div className="ai-score-big">{overallScorecard?.score}%</div>
+
+                    <div className="ai-score-breakdown-grid">
+                      <div className="ai-score-mini-card">
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#34d399" }}>
+                          {overallScorecard?.technical}%
+                        </div>
+                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Technical Depth</div>
+                      </div>
+                      <div className="ai-score-mini-card">
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#60a5fa" }}>
+                          {overallScorecard?.problemSolving}%
+                        </div>
+                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Problem Solving</div>
+                      </div>
+                      <div className="ai-score-mini-card">
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "#c084fc" }}>
+                          {overallScorecard?.communication}%
+                        </div>
+                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Communication</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: "#f8fafc", padding: 18, borderRadius: 14, border: "1px solid #e2e8f0" }}>
+                    <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                      <TrendingUp size={16} className="text-blue-600" /> AI Diagnostic Feedback
+                    </h4>
+                    <p style={{ margin: 0, fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
+                      {overallScorecard?.feedback}
+                    </p>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                    <button
+                      type="button"
+                      className="ai-autofill-btn"
+                      onClick={resetInterview}
+                      style={{ padding: "10px 20px" }}
+                    >
+                      <RotateCcw size={16} /> Retake AI Interview
+                    </button>
+                    <button
+                      type="button"
+                      className="interview-next-btn"
+                      onClick={() => setIsLiveModalOpen(false)}
+                    >
+                      <CheckCircle2 size={16} /> Close & Save Results
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

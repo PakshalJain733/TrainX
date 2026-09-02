@@ -1,0 +1,249 @@
+@import "../../Student/Styles/WeeklyReports.css";
+
+/* Coordinator Weekly Reports specific styling overrides */
+
+.reports-page-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0c2340;
+}
+
+.reports-page-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.filters-bar {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.filter-item select {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+}
+
+.reports-list-card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.reports-list-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+
+.list-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.empty-reports-view {
+  padding: 30px;
+  text-align: center;
+  color: #64748b;
+  font-size: 13.5px;
+}
+
+.report-list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.report-list-row:hover {
+  transform: translateX(3px);
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.row-left-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.report-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+  color: #334155;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.row-student-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.row-meta-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.row-right-wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.row-grade-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fef9c3;
+  color: #854d0e;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid #fef08a;
+}
+
+.badge-pending {
+  border-color: #f59e0b !important;
+  color: #d97706 !important;
+  background: rgba(245, 158, 11, 0.05) !important;
+}
+
+.chevron {
+  color: #94a3b8;
+}
+
+/* Detail view styles */
+.report-detail-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid #cbd2eb;
+  padding-bottom: 16px;
+}
+
+.report-detail-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.report-detail-sub {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.report-detail-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .report-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-content-card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 24px;
+}
+
+.report-meta-info-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+}
+
+.meta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-text-value {
+  font-size: 13.5px;
+  color: #334155;
+  line-height: 1.6;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.grading-panel-card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 16px;
+  padding: 24px;
+  height: fit-content;
+}
+
+.divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 12px 0 16px;
+}
+
+.btn-submit-grade {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 8px !important;
+  width: 100% !important;
+  height: 40px !important;
+}
+
+.btn-submit-grade:hover {
+  background: #4338ca !important;
+}

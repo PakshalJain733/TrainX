@@ -1,0 +1,9 @@
+@import "../../Student/Styles/StudentLayout.css";
+
+/* Coordinator Layout specific overrides (if any) */
+.student-header__badge--success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+  font-weight: 600 !important;
+}

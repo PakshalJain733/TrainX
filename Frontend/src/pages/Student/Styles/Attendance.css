@@ -795,57 +795,46 @@
   border-bottom: none;
 }
 
-.attendance-cell-datetime {
-  display: flex;
-  flex-direction: column;
-}
-
-.attendance-date {
-  font-weight: 600;
-  color: var(--foreground, #0f172a);
-}
-
-.attendance-time {
-  font-size: 11px;
-  color: var(--text-muted, #64748b);
-}
-
-.attendance-font-medium {
-  font-weight: 600;
-}
-
-.attendance-text-muted {
-  color: var(--text-muted, #64748b);
+.attendance-status-badge-present,
+.attendance-status-badge-absent,
+.attendance-status-badge-excused {
+  width: auto !important;
+  max-width: fit-content !important;
+  display: inline-flex;
+  align-items: center;
 }
 
 .attendance-status-badge-present {
   background-color: rgba(16, 185, 129, 0.12);
   color: #10b981;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 1px solid rgba(16, 185, 129, 0.2);
-  width:auto;
+  width: auto !important;
+  max-width: fit-content !important;
 }
 
 .attendance-status-badge-absent {
   background-color: rgba(239, 68, 68, 0.12);
   color: #ef4444;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 1px solid rgba(239, 68, 68, 0.2);
-  width:100%;
+  width: auto !important;
+  max-width: fit-content !important;
 }
 
 .attendance-status-badge-excused {
   background-color: rgba(139, 92, 246, 0.12);
   color: #8b5cf6;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
   border: 1px solid rgba(139, 92, 246, 0.2);
-  width:auto;
+  width: auto !important;
+  max-width: fit-content !important;
 }
 
 /* Leave / Absence Module Layout */

@@ -29,10 +29,14 @@ export default function ProfilePage() {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) {
+        let name = u.name;
+        if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
+          name = u.fullName || u.full_name || (u.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? u.name : "Ganesh Shinde");
+        }
         return {
-          name: u.name || "Ganesh Shinde",
+          name: name,
           email: u.email || "ganeshshinde@pvppcoe.ac.in",
-          phone: u.phone || "+91 98765 43210",
+          phone: u.phone || u.mobile_number || "+91 98765 43210",
           rollNo: u.rollNo || u.roll_number || "21ECS042",
           department: u.department || "Electronics & Computer Science",
           semester: u.semester || "Semester 6",
@@ -152,9 +156,6 @@ export default function ProfilePage() {
             </div>
 
             <div className="profile-status-badge-wrap">
-              <span className="profile-status-badge">
-                <CheckCircle2 size={13} /> On Track
-              </span>
             </div>
           </div>
 
@@ -265,74 +266,6 @@ export default function ProfilePage() {
                     <option value="Data Science & Machine Learning">Data Science & Machine Learning</option>
                     <option value="DevOps & Cloud Engineering">DevOps & Cloud Engineering</option>
                   </select>
-                </div>
-              </div>
-
-              <div className="profile-field profile-field-full">
-                <label className="profile-label">Academic Bio & Key Interests</label>
-                <textarea
-                  rows={3}
-                  className="profile-textarea"
-                  value={form.bio}
-                  onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            {/* Section 2: Preferences & Alerts */}
-            <div className="profile-form-section profile-section-toggles">
-              <div className="profile-section-heading">
-                <Bell size={18} className="profile-heading-icon" />
-                <div>
-                  <h3 className="profile-heading-title">Preferences & Alerts</h3>
-                  <p className="profile-heading-desc">Control automated reports, mock interview reminders, and milestone emails.</p>
-                </div>
-              </div>
-
-              <div className="profile-toggle-list">
-                <div className="profile-toggle-item">
-                  <div className="profile-toggle-text">
-                    <span className="profile-toggle-title">Milestone Progress Alerts</span>
-                    <span className="profile-toggle-desc">Receive real-time notifications when a milestone is completed or unlocked.</span>
-                  </div>
-                  <label className="profile-switch">
-                    <input
-                      type="checkbox"
-                      checked={form.notifMilestones}
-                      onChange={(e) => setForm((p) => ({ ...p, notifMilestones: e.target.checked }))}
-                    />
-                    <span className="profile-slider round" />
-                  </label>
-                </div>
-
-                <div className="profile-toggle-item">
-                  <div className="profile-toggle-text">
-                    <span className="profile-toggle-title">Weekly Mentor Report Digest</span>
-                    <span className="profile-toggle-desc">Get a PDF scorecard summary of your attendance, quizzes, and mentor feedback every Friday.</span>
-                  </div>
-                  <label className="profile-switch">
-                    <input
-                      type="checkbox"
-                      checked={form.notifWeeklyReport}
-                      onChange={(e) => setForm((p) => ({ ...p, notifWeeklyReport: e.target.checked }))}
-                    />
-                    <span className="profile-slider round" />
-                  </label>
-                </div>
-
-                <div className="profile-toggle-item">
-                  <div className="profile-toggle-text">
-                    <span className="profile-toggle-title">AI Mock Interview Drill Reminders</span>
-                    <span className="profile-toggle-desc">Remind you 1 hour before scheduled AI technical mock drills & gap evaluation sessions.</span>
-                  </div>
-                  <label className="profile-switch">
-                    <input
-                      type="checkbox"
-                      checked={form.notifInterview}
-                      onChange={(e) => setForm((p) => ({ ...p, notifInterview: e.target.checked }))}
-                    />
-                    <span className="profile-slider round" />
-                  </label>
                 </div>
               </div>
             </div>

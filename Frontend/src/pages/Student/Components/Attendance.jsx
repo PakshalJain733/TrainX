@@ -56,16 +56,6 @@ const kpiData = [
     icon: ShieldCheck,
     color: "#8b5cf6",
     bgColor: "rgba(139, 92, 246, 0.12)"
-  },
-  {
-    title: "Safety Margin Buffer",
-    value: "14 Classes",
-    subtext: "Buffer before dropping below 75%",
-    status: "Safe Zone",
-    variant: "purple",
-    icon: TrendingUp,
-    color: "#6366f1",
-    bgColor: "rgba(99, 102, 241, 0.12)"
   }
 ];
 
@@ -687,68 +677,7 @@ export default function Attendance() {
             })}
           </div>
 
-          {/* Graphical Analytics Section */}
-          <div className="attendance-analytics-grid">
-            <Card className="attendance-analytics-card">
-              <CardHeader className="attendance-analytics-header">
-                <CardTitle className="attendance-chart-title">
-                  <TrendingUp size={16} /> Monthly Attendance Trend
-                </CardTitle>
-                <CardDescription>Tracking overall attendance percentage over semester months</CardDescription>
-              </CardHeader>
-              <CardContent className="attendance-chart-content">
-                <div style={{ width: "100%", height: 220 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="attendanceColor" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
-                      <XAxis dataKey="month" tickLine={false} axisLine={false} style={{ fontSize: 12 }} />
-                      <YAxis domain={[50, 100]} tickLine={false} axisLine={false} style={{ fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "var(--card)",
-                          borderColor: "var(--border)",
-                          borderRadius: 8,
-                          fontSize: 12
-                        }}
-                        formatter={(val) => [`${val}%`, "Attendance"]}
-                      />
-                      <ReferenceLine y={75} stroke="#ef4444" strokeDasharray="4 4" label={{ value: "75% Min Req", fill: "#ef4444", fontSize: 11, position: "insideTopRight" }} />
-                      <Area type="monotone" dataKey="attendance" stroke="#4f46e5" strokeWidth={2.5} fillOpacity={1} fill="url(#attendanceColor)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card className="attendance-analytics-card">
-              <CardHeader className="attendance-analytics-header">
-                <CardTitle className="attendance-chart-title">
-                  <BarChart3 size={16} /> Day-wise Presence Rate
-                </CardTitle>
-                <CardDescription>Average attendance percentage across weekdays</CardDescription>
-              </CardHeader>
-              <CardContent className="attendance-chart-content">
-                <div style={{ width: "100%", height: 220 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={daywiseAttendance} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
-                      <XAxis dataKey="day" tickLine={false} axisLine={false} style={{ fontSize: 12 }} />
-                      <YAxis domain={[0, 100]} tickLine={false} axisLine={false} style={{ fontSize: 12 }} />
-                      <Bar dataKey="rate" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} activeBar={false}>
-                        <LabelList dataKey="rate" position="top" style={{ fontSize: 10, fontWeight: 700, fill: "#3b82f6" }} formatter={(v) => `${v}%`} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
           {/* Recent Attendance Log Table */}
           <Card className="attendance-log-card">
@@ -759,19 +688,6 @@ export default function Attendance() {
                     <Calendar size={16} /> Recent Class Attendance Log
                   </CardTitle>
                   <CardDescription>Daily automated presence records & verify status</CardDescription>
-                </div>
-                <div className="attendance-filter-btns">
-                  {["All", "Present", "Absent", "Excused"].map(filter => (
-                    <Button
-                      key={filter}
-                      size="sm"
-                      variant={logFilter === filter ? "default" : "outline"}
-                      className="attendance-filter-btn"
-                      onClick={() => setLogFilter(filter)}
-                    >
-                      {filter}
-                    </Button>
-                  ))}
                 </div>
               </div>
             </CardHeader>
@@ -1015,77 +931,10 @@ export default function Attendance() {
 
         {/* Verification Tab */}
         <TabsContent value="verify" className="attendance-verify-container stack-6">
-          {/* Verification Statistics Header */}
-          <div className="attendance-kpi-grid">
-            <Card className="attendance-kpi-card">
-              <CardContent className="attendance-kpi-content">
-                <div className="attendance-kpi-header">
-                  <span className="attendance-kpi-title">Total Applications</span>
-                  <FileText size={18} className="text-indigo-600" />
-                </div>
-                <h3 className="attendance-kpi-value">{verifications.length}</h3>
-                <p className="attendance-kpi-subtext">Submitted this semester</p>
-              </CardContent>
-            </Card>
-
-            <Card className="attendance-kpi-card">
-              <CardContent className="attendance-kpi-content">
-                <div className="attendance-kpi-header">
-                  <span className="attendance-kpi-title">Approved</span>
-                  <CheckCircle2 size={18} className="text-emerald-600" />
-                </div>
-                <h3 className="attendance-kpi-value text-emerald-600">
-                  {verifications.filter(v => v.status === "Approved").length}
-                </h3>
-                <p className="attendance-kpi-subtext">Attendance regularized</p>
-              </CardContent>
-            </Card>
-
-            <Card className="attendance-kpi-card">
-              <CardContent className="attendance-kpi-content">
-                <div className="attendance-kpi-header">
-                  <span className="attendance-kpi-title">Pending Review</span>
-                  <Clock3 size={18} className="text-amber-500" />
-                </div>
-                <h3 className="attendance-kpi-value text-amber-500">
-                  {verifications.filter(v => v.status === "Pending").length}
-                </h3>
-                <p className="attendance-kpi-subtext">Under mentor review</p>
-              </CardContent>
-            </Card>
-
-            <Card className="attendance-kpi-card">
-              <CardContent className="attendance-kpi-content">
-                <div className="attendance-kpi-header">
-                  <span className="attendance-kpi-title">Rejected / Queries</span>
-                  <XCircle size={18} className="text-rose-500" />
-                </div>
-                <h3 className="attendance-kpi-value text-rose-500">
-                  {verifications.filter(v => v.status === "Rejected").length}
-                </h3>
-                <p className="attendance-kpi-subtext">Requires action</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Filter Bar */}
           <div className="attendance-row-between attendance-verify-filter-row">
             <div>
               <h3 className="attendance-section-heading">Verification Tracker</h3>
               <p className="attendance-section-subheading">Track step-by-step approval progress & mentor notes</p>
-            </div>
-            <div className="attendance-filter-btns">
-              {["All", "Approved", "Pending", "Rejected"].map((status) => (
-                <Button
-                  key={status}
-                  size="sm"
-                  variant={verifyFilter === status ? "default" : "outline"}
-                  className="attendance-filter-btn"
-                  onClick={() => setVerifyFilter(status)}
-                >
-                  {status}
-                </Button>
-              ))}
             </div>
           </div>
 

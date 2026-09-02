@@ -17,6 +17,22 @@ import Help from "./pages/Student/Components/Help";
 import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
+import Settings from "./pages/Student/Components/Settings";
+
+// Admin imports
+import AdminLayout from "./pages/Admin/Components/AdminLayout";
+import AdminOverview from "./pages/Admin/Components/AdminOverview";
+import AdminUsers from "./pages/Admin/Components/AdminUsers";
+import AdminBatches from "./pages/Admin/Components/AdminBatches";
+import AdminAttendance from "./pages/Admin/Components/AdminAttendance";
+import AdminLearningContent from "./pages/Admin/Components/AdminLearningContent";
+import AdminQuizzes from "./pages/Admin/Components/AdminQuizzes";
+import AdminPracticeProblems from "./pages/Admin/Components/AdminPracticeProblems";
+import AdminProgress from "./pages/Admin/Components/AdminProgress";
+import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
+import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
+import AdminHelp from "./pages/Admin/Components/AdminHelp";
+
 
 // Super Admin Workspace Imports
 import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
@@ -95,8 +111,24 @@ function App() {
           <Route path="help" element={<Help />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<ProfilePage />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
+
+        {/* Admin Dashboard Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminOverview />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="batches" element={<AdminBatches />} />
+          <Route path="attendance" element={<AdminAttendance />} />
+          <Route path="learning" element={<AdminLearningContent />} />
+          <Route path="quiz" element={<AdminQuizzes />} />
+          <Route path="practice" element={<AdminPracticeProblems />} />
+          <Route path="progress" element={<AdminProgress />} />
+          <Route path="leaderboard" element={<AdminLeaderboard />} />
+          <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+          <Route path="help" element={<AdminHelp />} />
+        </Route>
+
 
         {/* Mentor Workspace Routes */}
         <Route path="/mentor" element={<MentorLayout />}>
@@ -159,7 +191,7 @@ function App() {
         <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/student" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

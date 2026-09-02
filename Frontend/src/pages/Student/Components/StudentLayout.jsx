@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
 import { StudentSidebar } from "./StudentSidebar";
 import "../Styles/StudentLayout.css";
 
@@ -8,58 +8,105 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
   const sampleNotifications = [
     {
       id: 1,
-      title: "Attendance Marked as Present",
-      time: "10 min ago",
+      type: "calendar",
+      title: "Department Meeting Schedule",
+      desc: "HOD CSE has requested an urgent faculty meeting at 3:30 PM in Conference Room...",
+      time: "5 min ago",
       unread: true,
     },
     {
       id: 2,
-      title: "New Assignment Published",
-      time: "1h ago",
+      type: "alert",
+      title: "New Student Grievance",
+      desc: "Student Aarav Patel (BTech CSE, Sem 6) submitted a grade re-evaluation request.",
+      time: "25 min ago",
       unread: true,
     },
     {
       id: 3,
-      title: "IA2 Results & Marksheets Uploaded",
-      time: "3h ago",
+      type: "success",
+      title: "Attendance Report Approved",
+      desc: "Monthly attendance report for Semester 6 Data Structures has been generated.",
+      time: "1 hour ago",
       unread: true,
     },
+    {
+      id: 4,
+      type: "document",
+      title: "Curriculum Syllabus Update",
+      desc: "Revised syllabus for AI & Machine Learning module has been published by...",
+      time: "3 hours ago",
+      unread: false,
+    },
+    {
+      id: 5,
+      type: "calendar",
+      title: "Exam Duty Allocation",
+      desc: "Your invigilation schedule for upcoming Mid-term exams has been published.",
+      time: "Yesterday",
+      unread: false,
+    }
   ];
 
+  const getIcon = (type) => {
+    switch(type) {
+      case "calendar": return <Calendar size={16} className="notif-icon-calendar" />;
+      case "alert": return <AlertTriangle size={16} className="notif-icon-alert" />;
+      case "success": return <CheckCircle2 size={16} className="notif-icon-success" />;
+      case "document": return <FileText size={16} className="notif-icon-document" />;
+      default: return <Bell size={16} />;
+    }
+  };
+
   return (
-    <>
-      <div className="student-header__profile-dropdown notif-dropdown-box">
-        <div className="notif-dropdown-top">
-          <span className="notif-dropdown-title">Notifications</span>
-          <button
-            className="notif-mark-read-btn"
-            onClick={() => onUnreadChange && onUnreadChange(false)}
-          >
-            Mark all read
-          </button>
+    <div className="student-header__profile-dropdown notif-dropdown-box">
+      {/* Header */}
+      <div className="notif-header">
+        <div className="notif-header-left">
+          <div className="notif-header-icon-wrap">
+            <Bell size={18} className="notif-header-icon" />
+            <span className="notif-header-dot"></span>
+          </div>
+          <div className="notif-header-text">
+            <div className="notif-header-title">Notifications</div>
+            <div className="notif-header-subtitle">3 unread alerts</div>
+          </div>
         </div>
-        <div className="notif-list-wrap">
-          {sampleNotifications.map((n) => (
-            <div
-              key={n.id}
-              className={`notif-list-card ${n.unread ? "notif-list-card--unread" : "notif-list-card--read"}`}
-            >
-              <div className="notif-card-title">{n.title}</div>
-              <div className="notif-card-time">{n.time}</div>
-            </div>
-          ))}
-        </div>
-        <div className="notif-footer-wrap">
-          <Link
-            to="/student/notifications"
-            className="notif-view-all-btn"
-            onClick={onClose}
-          >
-            View All Notifications
-          </Link>
-        </div>
+        <button className="notif-mark-read-btn" onClick={() => onUnreadChange && onUnreadChange(false)}>
+          <Check size={14} className="notif-check-icon" /> Mark read
+        </button>
       </div>
-    </>
+
+      {/* Tabs */}
+      <div className="notif-tabs">
+        <button className="notif-tab active">All (5)</button>
+        <button className="notif-tab">Unread (3)</button>
+      </div>
+
+      {/* List */}
+      <div className="notif-list-wrap">
+        {sampleNotifications.map((n) => (
+          <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
+            <div className={`notif-icon-box type-${n.type}`}>
+              {getIcon(n.type)}
+            </div>
+            <div className="notif-content">
+              <div className="notif-content-top">
+                <div className="notif-card-title">{n.title}</div>
+                <div className="notif-card-time">{n.time}</div>
+                <button className="notif-delete-btn"><Trash2 size={14}/></button>
+              </div>
+              <div className="notif-card-desc">{n.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div className="notif-footer-wrap">
+        <button className="notif-clear-all-btn">Clear all</button>
+      </div>
+    </div>
   );
 }
 
@@ -82,10 +129,19 @@ export default function StudentLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const resolveUser = (rawUser) => {
+    if (!rawUser) return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
+    let name = rawUser.name;
+    if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
+      name = rawUser.fullName || rawUser.full_name || (rawUser.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? rawUser.name : "Ganesh Shinde");
+    }
+    return { ...rawUser, name };
+  };
+
   const [user, setUser] = useState(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
-      if (u) return u;
+      if (u) return resolveUser(u);
     } catch (e) {}
     return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
   });
@@ -94,7 +150,7 @@ export default function StudentLayout() {
     const handleUpdate = () => {
       try {
         const u = JSON.parse(localStorage.getItem("user"));
-        if (u) setUser(u);
+        if (u) setUser(resolveUser(u));
       } catch (e) {}
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
@@ -188,18 +244,12 @@ export default function StudentLayout() {
                 </button>
 
                 <div className="student-breadcrumb">
-                  <span className="student-breadcrumb-item">AcadNexus</span>
-                  <span className="student-breadcrumb-sep">/</span>
                   <span className="student-breadcrumb-active">{pageTitle}</span>
                 </div>
               </div>
 
               <div className="student-header__right" ref={headerRightRef}>
-                <div className="student-header__badges">
-                  <span className="student-header__badge student-header__badge--success">
-                    Sem 6
-                  </span>
-                </div>
+
 
                 {/* Notification Bell Dropdown Wrap */}
                 <div className="student-header__notif-wrap">
@@ -236,7 +286,6 @@ export default function StudentLayout() {
                   >
                     <div className="student-header__user-info">
                       <span className="student-header__name">{user.name}</span>
-                      <span className="student-header__sub">{getShortDept(user.department)} · Sem {(user.year === "TE" || user.semester === 5 || !user.semester) ? 6 : user.semester}</span>
                     </div>
                     <div className="student-header__avatar" aria-label={`User profile ${user.name}`}>
                       {user.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
@@ -252,7 +301,6 @@ export default function StudentLayout() {
                           </div>
                           <div className="student-header__profile-info">
                             <span className="student-header__profile-name">{user.name}</span>
-                            <span className="student-header__profile-sub">{getShortDept(user.department)} · Sem {(user.year === "TE" || user.semester === 5 || !user.semester) ? 6 : user.semester}</span>
                           </div>
                         </div>
                         <div className="student-header__profile-divider" />
