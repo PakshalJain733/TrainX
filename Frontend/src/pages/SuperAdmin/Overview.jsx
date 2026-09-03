@@ -9,23 +9,27 @@ export default function Overview() {
   return (
     <div className="space-y-6">
       {/* Top Banner / System Health */}
-      <div className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+      <div
+        className="bg-gradient-to-r from-indigo-900 via-indigo-800 to-purple-900 text-white shadow-md relative overflow-hidden"
+        style={{ borderRadius: '16px', padding: '24px 28px', minHeight: '145px', display: 'flex', alignItems: 'center' }}
+      >
         <div className="absolute right-0 top-0 translate-x-8 -translate-y-8 w-64 h-64 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 w-full">
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-200 text-xs font-semibold border border-indigo-400/20 mb-3">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
               <span>System Operations Operational</span>
             </div>
-            <h2 className="text-2xl font-extrabold tracking-tight">Institutional Super Admin Dashboard</h2>
-            <p className="text-indigo-200 text-xs mt-1 max-w-xl">
+            <h2 className="text-white tracking-tight" style={{ fontSize: '28px', fontWeight: 700, margin: 0 }}>Institutional Super Admin Dashboard</h2>
+            <p className="text-indigo-200 text-sm mt-1 max-w-xl">
               Cross-college portal status, active student engagement analytics, governance verification queue, and faculty allocations.
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Link
               to="/super-admin/verification"
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-xl text-xs shadow-sm transition flex items-center gap-2"
+              className="px-4 bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold rounded-lg text-xs shadow-sm transition flex items-center gap-2"
+              style={{ height: '40px', borderRadius: '8px' }}
             >
               <Clock className="w-4 h-4" />
               <span>Review Requests (5)</span>
@@ -35,16 +39,16 @@ export default function Overview() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4" style={{ gap: '24px' }}>
         {overviewStats.map((stat) => (
           <StatsCard key={stat.id} {...stat} />
         ))}
       </div>
 
       {/* Recent Verifications & Colleges Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3" style={{ gap: '24px' }}>
         {/* Pending Verification Requests Widget */}
-        <div className="lg:col-span-1 bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col">
+        <div className="lg:col-span-1 bg-white border border-slate-200 flex flex-col" style={{ borderRadius: '12px', padding: '20px' }}>
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-4 h-4 text-amber-500" />
@@ -70,7 +74,7 @@ export default function Overview() {
         </div>
 
         {/* Top Active Colleges Widget */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200 shadow-xs">
+        <div className="lg:col-span-2 bg-white border border-slate-200" style={{ borderRadius: '12px', padding: '20px' }}>
           <div className="flex items-center justify-between pb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <Building2 className="w-4 h-4 text-indigo-600" />

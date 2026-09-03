@@ -1,0 +1,288 @@
+/* CodingPlatform.css — Modern IDE Interface */
+
+.coding-platform-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* Adjust based on your header/layout height */
+  margin: -24px; /* Negate padding from student-page-inner to go edge-to-edge if needed, or keep padding */
+  background: #ffffff; /* Light IDE background */
+  color: #0f172a;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.cp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cp-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  background: #f1f5f9;
+}
+
+.cp-back-btn:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.cp-task-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-task-badge {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cp-lang-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.cp-run-btn, .cp-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cp-run-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cp-run-btn:hover {
+  background: #e2e8f0;
+}
+
+.cp-submit-btn {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.cp-submit-btn:hover {
+  background: #059669;
+}
+
+/* ── Split Workspace ── */
+.cp-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Pane: Problem Description */
+.cp-problem-pane {
+  width: 40%;
+  min-width: 300px;
+  background: #ffffff;
+  color: #334155;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-pane-tabs {
+  display: flex;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-pane-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-pane-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background: #ffffff;
+}
+
+.cp-problem-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cp-problem-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475569;
+  margin-bottom: 24px;
+}
+
+.cp-test-case {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.cp-test-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin: 0 0 8px 0;
+}
+
+.cp-test-code {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  color: #0f172a;
+  margin: 0 0 12px 0;
+  background: #ffffff;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+/* Right Pane: Code Editor & Console */
+.cp-editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+}
+
+.cp-editor-area {
+  flex: 1;
+  display: flex;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.cp-line-numbers {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+  text-align: right;
+  padding-right: 16px;
+  user-select: none;
+}
+
+.cp-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e2e8f0;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  white-space: pre;
+}
+
+/* Console / Terminal */
+.cp-console {
+  height: 200px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-console-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.cp-console-output {
+  padding: 16px;
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  color: #10b981;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cp-console-output.error {
+  color: #ef4444;
+}
+
+.cp-console-output.empty {
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
