@@ -526,7 +526,7 @@ export default function AcademicQuiz() {
                     onClick={() => { setActiveQuiz(quiz); setQuizMode("review"); }}
                   >
                     <CheckCircle2 size={16} /> Review Answers
-                  </Button>
+``                  </Button>
                 )}
               </div>
             </CardContent>
