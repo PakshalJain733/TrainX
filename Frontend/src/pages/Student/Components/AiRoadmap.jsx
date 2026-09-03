@@ -173,16 +173,27 @@ const roadmapData = {
 };
 
 export default function AIRoadmap() {
-  const [selectedGoal, setSelectedGoal] = useState("python-backend");
+  const [inputValue, setInputValue] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-
-  const milestones = roadmapData[selectedGoal] || roadmapData["python-backend"];
+  const [milestones, setMilestones] = useState(roadmapData["python-backend"]);
 
   const handleGenerate = () => {
+    if (!inputValue.trim()) return;
     setIsGenerating(true);
     setTimeout(() => {
+      const baseMap = roadmapData["fullstack"];
+      const newMap = baseMap.map(m => ({
+        ...m,
+        title: m.id === 1 ? `Milestone 1: ${inputValue} Foundations` : m.title,
+        status: "locked",
+        progress: 0
+      }));
+      newMap[0].status = "in-progress";
+      
+      setMilestones(newMap);
       setIsGenerating(false);
-    }, 600);
+      setInputValue("");
+    }, 1200);
   };
 
   const getStatusBadge = (status) => {
@@ -204,32 +215,38 @@ export default function AIRoadmap() {
         <div className="roadmap-generator-header">
           <Sparkles size={20} className="roadmap-generator-icon" />
           <div>
-            <h2 className="roadmap-generator-title">Select career / skill goal</h2>
+            <h2 className="roadmap-generator-title">Enter your career / skill goal</h2>
             <p className="roadmap-generator-subtitle">
-              AI analyses your goal, current scores and skill gaps to build your personalized roadmap.
+              Type any course or skill goal — AI will build a personalized milestone roadmap for you.
             </p>
           </div>
         </div>
 
         <div className="roadmap-controls-row">
-          <select
+          <input
+            type="text"
             className="roadmap-select-input"
-            value={selectedGoal}
-            onChange={(e) => setSelectedGoal(e.target.value)}
-          >
-            {careerTracks.map((track) => (
-              <option key={track.id} value={track.id}>
-                {track.name}
-              </option>
-            ))}
-          </select>
+            placeholder="e.g. Data Science, Web3, iOS App Development..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+          />
           <button
-            className="roadmap-gen-btn"
+            className={`roadmap-gen-btn ${isGenerating ? "roadmap-gen-btn--loading" : ""}`}
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={isGenerating || !inputValue.trim()}
           >
-            <Sparkles size={16} />
-            {isGenerating ? "Generating Roadmap..." : "Generate roadmap"}
+            {isGenerating ? (
+              <>
+                <span className="roadmap-spinner" />
+                Generating Roadmap...
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                Generate Roadmap
+              </>
+            )}
           </button>
         </div>
       </div>

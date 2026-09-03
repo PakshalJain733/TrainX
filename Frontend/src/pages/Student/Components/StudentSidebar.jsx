@@ -43,7 +43,7 @@ function SidebarBrand({ collapsed, subtitle }) {
 
 const primaryNavItems = [
   { title: "Dashboard", url: "/student", icon: LayoutDashboard, exact: true },
-  { title: "Batches", url: "/student/Batches", icon: Code2 },
+  { title: "Batches", url: "/student/batches", icon: Code2 },
   { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles },
   { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck },
   { title: "Practice", url: "/student/practice", icon: Terminal },

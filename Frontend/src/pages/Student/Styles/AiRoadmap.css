@@ -101,6 +101,25 @@
   transform: none;
 }
 
+.roadmap-gen-btn--loading {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  cursor: wait;
+}
+
+.roadmap-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: roadmap-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes roadmap-spin {
+  to { transform: rotate(360deg); }
+}
+
 .milestone-action-btn {
   background: #f8fafc;
   border: 1px solid #cbd5e1;
