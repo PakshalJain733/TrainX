@@ -51,7 +51,7 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="profile-form-card" style={{ maxWidth: "800px", margin: "0 auto" }}>
+      <div className="profile-form-card" style={{ maxWidth: "100%" }}>
         <form onSubmit={handleSave}>
           <div className="profile-form-section profile-section-toggles">
             <div className="profile-section-heading">

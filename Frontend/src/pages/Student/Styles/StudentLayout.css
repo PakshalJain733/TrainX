@@ -237,6 +237,9 @@ body {
   width: max-content !important;
   min-width: 380px;
   max-width: min(440px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
   padding: 16px;
   border-radius: 12px;
 }
@@ -332,8 +335,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 360px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  padding-right: 4px; /* for scrollbar */
 }
 
 .notif-list-card {
