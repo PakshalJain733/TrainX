@@ -32,6 +32,7 @@ import AdminProgress from "./pages/Admin/Components/AdminProgress";
 import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
+import AdminProfile from './pages/Admin/Components/AdminProfile';
 
 
 // Super Admin Workspace Imports
@@ -127,6 +128,7 @@ function App() {
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="weekly-reports" element={<AdminWeeklyReports />} />
           <Route path="help" element={<AdminHelp />} />
+          <Route path="profile" element={<AdminProfile />} />
         </Route>
 
 

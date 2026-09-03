@@ -191,6 +191,7 @@ export default function StudentLayout() {
     if (path.startsWith("/student/certificates")) return "Certificates";
     if (path.startsWith("/student/timetable")) return "Timetable";
     if (path.startsWith("/student/compiler")) return "Compiler / Code Editor";
+    if (path.startsWith("/student/quiz")) return "Quiz";
     if (path.startsWith("/student/batches")) return "Batches";
     if (path.startsWith("/student/practice")) return "Practice Problems";
     if (path.startsWith("/student/notes")) return "Study Notes & Resources";

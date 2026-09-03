@@ -6,6 +6,7 @@ import {
   Video,
   Sparkles,
   CheckCircle,
+  CheckCircle2,
   Clock,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
@@ -184,9 +185,6 @@ export default function LearningContent() {
                 <div className="learning-type-icon-wrap">
                   <IconComponent size={18} />
                 </div>
-                <Badge variant={isCompleted ? "success" : "outline"}>
-                  {item.status}
-                </Badge>
               </div>
 
               <div className="learning-card-body">
@@ -196,14 +194,19 @@ export default function LearningContent() {
                 </p>
               </div>
 
-              <button
-                className={`learning-toggle-btn ${
-                  isCompleted ? "btn-mark-pending" : "btn-mark-complete"
-                }`}
-                onClick={() => toggleStatus(item.id)}
-              >
-                {isCompleted ? "Mark pending" : "Mark complete"}
-              </button>
+              {isCompleted ? (
+                <div className="learning-completed-label">
+                  <CheckCircle2 size={15} className="learning-completed-icon" />
+                  Completed
+                </div>
+              ) : (
+                <button
+                  className="learning-toggle-btn btn-mark-complete"
+                  onClick={() => toggleStatus(item.id)}
+                >
+                  Mark complete
+                </button>
+              )}
             </div>
           );
         })}

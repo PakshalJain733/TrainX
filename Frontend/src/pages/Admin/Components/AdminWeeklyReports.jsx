@@ -1,5 +1,5 @@
-import React from "react";
-import { FileCheck2, Download, TrendingUp, Users, Trophy, Calendar } from "lucide-react";
+import React, { useState } from "react";
+import { FileCheck2, Download, TrendingUp, Users, Trophy, Settings2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import "../Styles/AdminWeeklyReports.css";
 
@@ -11,6 +11,14 @@ const reports = [
 ];
 
 export default function AdminWeeklyReports() {
+  const [autoGenerate, setAutoGenerate] = useState(true);
+  const [generated, setGenerated] = useState(false);
+
+  const handleGenerate = () => {
+    setGenerated(true);
+    setTimeout(() => setGenerated(false), 3000);
+  };
+
   return (
     <div className="admin-reports-container">
       <div className="reports-header-row">
@@ -18,10 +26,28 @@ export default function AdminWeeklyReports() {
           <h2 className="reports-title">Weekly Reports</h2>
           <p className="reports-subtitle">Batch-wise weekly performance summaries and analytics.</p>
         </div>
-        <button className="reports-generate-btn">
-          <FileCheck2 size={16} /> Generate This Week's Report
-        </button>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
+            <input 
+              type="checkbox" 
+              checked={autoGenerate} 
+              onChange={(e) => setAutoGenerate(e.target.checked)} 
+              style={{ width: '16px', height: '16px', accentColor: '#4f46e5' }}
+            />
+            Auto-generate every Monday
+          </label>
+          <button className="reports-generate-btn" onClick={handleGenerate}>
+            <FileCheck2 size={16} /> Generate Now
+          </button>
+        </div>
       </div>
+
+      {generated && (
+        <div style={{ padding: '12px 16px', background: '#dcfce7', color: '#15803d', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500' }}>
+          <CheckCircle2 size={18} />
+          Report generation started. You will be notified when it's ready.
+        </div>
+      )}
 
       <div className="reports-grid">
         {reports.map(r => (
