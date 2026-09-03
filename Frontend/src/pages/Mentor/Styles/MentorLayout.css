@@ -457,7 +457,7 @@ body {
   justify-content: space-between;
   gap: 16px;
   height: var(--navbar-height, 64px);
-  padding: 0 20px;
+  padding: 0 24px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);

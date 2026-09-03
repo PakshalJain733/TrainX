@@ -177,11 +177,14 @@
 .coord-card {
   background: #ffffff;
   border: var(--card-border, 1px solid #e2e8f0);
-  border-radius: var(--content-card-radius, 12px);
+  border-radius: var(--content-card-radius, 14px);
   padding: var(--content-card-padding, 24px);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  height: auto !important;
+  max-height: none !important;
+  min-height: auto !important;
   box-sizing: border-box;
 }
 

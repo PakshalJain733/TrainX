@@ -1,3 +1,8 @@
+/* Tailwind CSS directives */
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
 :root {
   --sidebar-width: 240px;
   --navbar-height: 64px;
@@ -26,11 +31,6 @@
   --button-radius: 8px;
   --input-height: 42px;
 }
-
-/* Tailwind CSS directives */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 * {
   margin: 0;
