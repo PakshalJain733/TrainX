@@ -58,7 +58,7 @@ export default function CodingPlatform() {
           </div>
           
           <div className="cp-header-right">
-            <div style={{ display: "flex", gap: "8px", marginRight: "12px" }}>
+            <div className="cp-header-actions-group">
               <button 
                 className="cp-run-btn" 
                 onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
@@ -118,7 +118,7 @@ export default function CodingPlatform() {
             <div className="cp-problem-content">
               {activeTab === 'description' ? (
                 <>
-                  <h3 style={{ margin: "0 0 16px 0", fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
+                  <h3 className="cp-req-heading">
                     Problem Requirements
                   </h3>
                   <div className="cp-problem-desc">
@@ -134,7 +134,7 @@ export default function CodingPlatform() {
                   
                   <div className="cp-test-case">
                     <p className="cp-test-title">Constraints:</p>
-                    <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "13px", color: "#475569" }}>
+                    <ul className="cp-constraints-list">
                       <li><code>2 &lt;= nums.length &lt;= 10^4</code></li>
                       <li><code>-10^9 &lt;= nums[i] &lt;= 10^9</code></li>
                       <li>Only one valid answer exists.</li>
@@ -142,8 +142,8 @@ export default function CodingPlatform() {
                   </div>
                 </>
               ) : (
-                <div style={{ textAlign: "center", color: "#64748b", marginTop: "40px" }}>
-                  <CheckCircle2 size={32} style={{ opacity: 0.5, marginBottom: "12px" }} />
+                <div className="cp-no-submissions">
+                  <CheckCircle2 size={32} className="cp-no-submissions-icon" />
                   <p>No previous submissions for this task.</p>
                 </div>
               )}
@@ -169,13 +169,13 @@ export default function CodingPlatform() {
                 <div className="cp-console-title">
                   <Terminal size={14} /> Console Output
                 </div>
-                <div style={{ display: "flex", gap: "10px", color: "#94a3b8" }}>
+                <div className="cp-console-actions">
                   <Layout size={14} cursor="pointer" />
                 </div>
               </div>
               <div className={`cp-console-output ${!consoleOutput ? 'empty' : ''}`}>
                 {consoleOutput ? (
-                  <pre style={{ margin: 0, fontFamily: "inherit", whiteSpace: "pre-wrap" }}>
+                  <pre className="cp-pre-output">
                     {consoleOutput}
                   </pre>
                 ) : (
