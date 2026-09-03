@@ -6,11 +6,12 @@ export const overviewStats = [
 ];
 
 export const initialColleges = [
-  { id: 1, name: 'Apex Institute of Technology', location: 'Bangalore', code: 'AIT-BLR', status: 'Active', studentsCount: 420, departmentsCount: 6, adminName: 'Dr. Rajesh Verma', adminEmail: 'r.verma@apex.edu.in' },
-  { id: 2, name: 'Meridian Engineering College', location: 'Hyderabad', code: 'MEC-HYD', status: 'Active', studentsCount: 380, departmentsCount: 5, adminName: 'Prof. Sunita Rao', adminEmail: 's.rao@meridian.edu.in' },
-  { id: 3, name: 'Vanguard Academy of Science', location: 'Pune', code: 'VAS-PNE', status: 'Active', studentsCount: 510, departmentsCount: 7, adminName: 'Dr. Amit Patel', adminEmail: 'a.patel@vanguard.edu.in' },
-  { id: 4, name: 'St. Xavier Technical Campus', location: 'Mumbai', code: 'SXC-MUM', status: 'Pending Verification', studentsCount: 290, departmentsCount: 4, adminName: 'Priya Shah', adminEmail: 'p.shah@stxaviers.edu.in' },
-  { id: 5, name: 'Global Institute of Computer Applications', location: 'Delhi NCR', code: 'GICA-DEL', status: 'Active', studentsCount: 630, departmentsCount: 8, adminName: 'Dr. Suresh Nair', adminEmail: 's.nair@gica.ac.in' },
+  { id: 1, name: 'Padmabhushan Vasantdada Patil College of Engineering & VA', location: 'Mumbai', code: 'PVPPCOE-MUM', status: 'Active', studentsCount: 520, departmentsCount: 6, adminName: 'Dr. Mahavir Devmane', adminEmail: 'principal@pvppcoe.ac.in' },
+  { id: 2, name: 'Apex Institute of Technology', location: 'Bangalore', code: 'AIT-BLR', status: 'Active', studentsCount: 420, departmentsCount: 6, adminName: 'Dr. Rajesh Verma', adminEmail: 'r.verma@apex.edu.in' },
+  { id: 3, name: 'Meridian Engineering College', location: 'Hyderabad', code: 'MEC-HYD', status: 'Active', studentsCount: 380, departmentsCount: 5, adminName: 'Prof. Sunita Rao', adminEmail: 's.rao@meridian.edu.in' },
+  { id: 4, name: 'Vanguard Academy of Science', location: 'Pune', code: 'VAS-PNE', status: 'Active', studentsCount: 510, departmentsCount: 7, adminName: 'Dr. Amit Patel', adminEmail: 'a.patel@vanguard.edu.in' },
+  { id: 5, name: 'St. Xavier Technical Campus', location: 'Mumbai', code: 'SXC-MUM', status: 'Pending Verification', studentsCount: 290, departmentsCount: 4, adminName: 'Priya Shah', adminEmail: 'p.shah@stxaviers.edu.in' },
+  { id: 6, name: 'Global Institute of Computer Applications', location: 'Delhi NCR', code: 'GICA-DEL', status: 'Active', studentsCount: 630, departmentsCount: 8, adminName: 'Dr. Suresh Nair', adminEmail: 's.nair@gica.ac.in' },
 ];
 
 export const initialDepartments = [
@@ -56,6 +57,7 @@ export const initialPerformanceData = {
   overallPassRate: 84.2,
   avgPlacementReadiness: 78.4,
   collegeBenchmarks: [
+    { college: 'Padmabhushan Vasantdada Patil College of Engineering & VA', passRate: 91.2, readinessScore: 86.5, activeStudents: 520 },
     { college: 'Apex Institute of Technology', passRate: 89.5, readinessScore: 84.2, activeStudents: 420 },
     { college: 'Vanguard Academy of Science', passRate: 88.0, readinessScore: 81.5, activeStudents: 510 },
     { college: 'Global Institute of Comp Apps', passRate: 83.4, readinessScore: 77.0, activeStudents: 630 },
@@ -72,11 +74,12 @@ export const initialPerformanceData = {
 };
 
 export const initialAttendanceData = [
-  { id: 1, college: 'Apex Institute of Technology', batch: 'CSE 2026 Alpha', totalStudents: 120, avgAttendance: '94.2%', flaggedStudents: 2, status: 'Healthy' },
-  { id: 2, college: 'Meridian Engineering College', batch: 'Fullstack Batch #4', totalStudents: 95, avgAttendance: '88.5%', flaggedStudents: 6, status: 'Moderate' },
-  { id: 3, college: 'Vanguard Academy of Science', batch: 'Data Science 2025', totalStudents: 110, avgAttendance: '92.1%', flaggedStudents: 3, status: 'Healthy' },
-  { id: 4, college: 'Global Institute of Comp Apps', batch: 'Cloud DevOps', totalStudents: 85, avgAttendance: '79.4%', flaggedStudents: 11, status: 'Attention Required' },
-  { id: 5, college: 'St. Xavier Technical Campus', batch: 'ECE 2024 Cohort', totalStudents: 75, avgAttendance: '82.0%', flaggedStudents: 8, status: 'Moderate' },
+  { id: 1, college: 'Padmabhushan Vasantdada Patil College of Engineering & VA', batch: 'CSE 2026 Batch A', totalStudents: 130, avgAttendance: '95.6%', flaggedStudents: 1, status: 'Healthy' },
+  { id: 2, college: 'Apex Institute of Technology', batch: 'CSE 2026 Alpha', totalStudents: 120, avgAttendance: '94.2%', flaggedStudents: 2, status: 'Healthy' },
+  { id: 3, college: 'Meridian Engineering College', batch: 'Fullstack Batch #4', totalStudents: 95, avgAttendance: '88.5%', flaggedStudents: 6, status: 'Moderate' },
+  { id: 4, college: 'Vanguard Academy of Science', batch: 'Data Science 2025', totalStudents: 110, avgAttendance: '92.1%', flaggedStudents: 3, status: 'Healthy' },
+  { id: 5, college: 'Global Institute of Comp Apps', batch: 'Cloud DevOps', totalStudents: 85, avgAttendance: '79.4%', flaggedStudents: 11, status: 'Attention Required' },
+  { id: 6, college: 'St. Xavier Technical Campus', batch: 'ECE 2024 Cohort', totalStudents: 75, avgAttendance: '82.0%', flaggedStudents: 8, status: 'Moderate' },
 ];
 
 export const initialAIRoadmaps = [

@@ -528,3 +528,517 @@ export const coordinatorDetailedQuizScorecards = {
     ]
   }
 };
+
+export const coordinatorCodingPerformance = [
+  {
+    id: 1,
+    studentName: "Ananya Sharma",
+    rollNo: "CSE26-009",
+    batch: "CSE 2026 Alpha Cohort",
+    department: "CSE",
+    totalSolved: 248,
+    easySolved: 110,
+    mediumSolved: 102,
+    hardSolved: 36,
+    accuracyRate: 94.5,
+    totalSubmissions: 310,
+    streakDays: 42,
+    primaryLanguage: "C++",
+    leaderboardRank: 1,
+    status: "Top Performer",
+    lastActive: "Today at 09:30 AM",
+    topics: { "Data Structures": 96, "Dynamic Programming": 92, "Graphs": 90, "Algorithms": 95, "SQL": 88 },
+    recentSubmissions: [
+      { id: "s1", problem: "LRU Cache Implementation", difficulty: "Hard", language: "C++", status: "Accepted", time: "12ms", memory: "24.2MB", submittedAt: "2 hours ago" },
+      { id: "s2", problem: "Word Ladder II", difficulty: "Hard", language: "C++", status: "Accepted", time: "45ms", memory: "18.6MB", submittedAt: "Yesterday" },
+      { id: "s3", problem: "Serialize and Deserialize Binary Tree", difficulty: "Hard", language: "Python", status: "Accepted", time: "38ms", memory: "22.1MB", submittedAt: "2 days ago" }
+    ]
+  },
+  {
+    id: 2,
+    studentName: "Aarav Mehta",
+    rollNo: "CSE26-042",
+    batch: "CSE 2026 Alpha Cohort",
+    department: "CSE",
+    totalSolved: 195,
+    easySolved: 90,
+    mediumSolved: 85,
+    hardSolved: 20,
+    accuracyRate: 88.2,
+    totalSubmissions: 260,
+    streakDays: 18,
+    primaryLanguage: "Python",
+    leaderboardRank: 4,
+    status: "Good",
+    lastActive: "Today at 11:15 AM",
+    topics: { "Data Structures": 90, "Dynamic Programming": 78, "Graphs": 84, "Algorithms": 86, "SQL": 92 },
+    recentSubmissions: [
+      { id: "s4", problem: "Binary Tree Zigzag Level Order Traversal", difficulty: "Medium", language: "Python", status: "Accepted", time: "18ms", memory: "16.4MB", submittedAt: "3 hours ago" },
+      { id: "s5", problem: "Longest Increasing Subsequence", difficulty: "Medium", language: "Python", status: "Accepted", time: "52ms", memory: "15.9MB", submittedAt: "1 day ago" }
+    ]
+  },
+  {
+    id: 3,
+    studentName: "Priya Roy",
+    rollNo: "DS25-012",
+    batch: "Data Science & ML 2025",
+    department: "AI & DS",
+    totalSolved: 220,
+    easySolved: 100,
+    mediumSolved: 95,
+    hardSolved: 25,
+    accuracyRate: 92.0,
+    totalSubmissions: 275,
+    streakDays: 31,
+    primaryLanguage: "Python",
+    leaderboardRank: 2,
+    status: "Top Performer",
+    lastActive: "Yesterday",
+    topics: { "Data Structures": 88, "Dynamic Programming": 85, "Graphs": 82, "Algorithms": 90, "SQL": 98 },
+    recentSubmissions: [
+      { id: "s6", problem: "Kth Smallest Element in a BST", difficulty: "Medium", language: "Python", status: "Accepted", time: "22ms", memory: "19.0MB", submittedAt: "Yesterday" }
+    ]
+  },
+  {
+    id: 4,
+    studentName: "Karan Singh",
+    rollNo: "FS04-089",
+    batch: "Fullstack React & Node",
+    department: "CSE",
+    totalSolved: 142,
+    easySolved: 75,
+    mediumSolved: 55,
+    hardSolved: 12,
+    accuracyRate: 76.4,
+    totalSubmissions: 210,
+    streakDays: 7,
+    primaryLanguage: "JavaScript",
+    leaderboardRank: 12,
+    status: "Average",
+    lastActive: "2 days ago",
+    topics: { "Data Structures": 75, "Dynamic Programming": 62, "Graphs": 68, "Algorithms": 78, "SQL": 80 },
+    recentSubmissions: [
+      { id: "s7", problem: "Flatten Nested List Iterator", difficulty: "Medium", language: "JavaScript", status: "Time Limit Exceeded", time: "TLE", memory: "--", submittedAt: "2 days ago" },
+      { id: "s8", problem: "Valid Parentheses", difficulty: "Easy", language: "JavaScript", status: "Accepted", time: "8ms", memory: "14.1MB", submittedAt: "3 days ago" }
+    ]
+  },
+  {
+    id: 5,
+    studentName: "Neha Reddy",
+    rollNo: "DS25-018",
+    batch: "Data Science & ML 2025",
+    department: "AI & DS",
+    totalSolved: 78,
+    easySolved: 50,
+    mediumSolved: 24,
+    hardSolved: 4,
+    accuracyRate: 58.0,
+    totalSubmissions: 165,
+    streakDays: 0,
+    primaryLanguage: "Python",
+    leaderboardRank: 28,
+    status: "Struggling",
+    lastActive: "5 days ago",
+    topics: { "Data Structures": 55, "Dynamic Programming": 42, "Graphs": 48, "Algorithms": 60, "SQL": 70 },
+    recentSubmissions: [
+      { id: "s9", problem: "Course Schedule II", difficulty: "Medium", language: "Python", status: "Wrong Answer", time: "--", memory: "--", submittedAt: "5 days ago" },
+      { id: "s10", problem: "Two Sum", difficulty: "Easy", language: "Python", status: "Accepted", time: "30ms", memory: "15.2MB", submittedAt: "6 days ago" }
+    ]
+  },
+  {
+    id: 6,
+    studentName: "Rohan Verma",
+    rollNo: "CSE26-099",
+    batch: "CSE 2026 Alpha Cohort",
+    department: "CSE",
+    totalSolved: 62,
+    easySolved: 45,
+    mediumSolved: 15,
+    hardSolved: 2,
+    accuracyRate: 51.5,
+    totalSubmissions: 140,
+    streakDays: 0,
+    primaryLanguage: "Java",
+    leaderboardRank: 35,
+    status: "Struggling",
+    lastActive: "8 days ago",
+    topics: { "Data Structures": 50, "Dynamic Programming": 35, "Graphs": 40, "Algorithms": 52, "SQL": 60 },
+    recentSubmissions: [
+      { id: "s11", problem: "Merge K Sorted Lists", difficulty: "Hard", language: "Java", status: "Runtime Error", time: "--", memory: "--", submittedAt: "8 days ago" }
+    ]
+  },
+  {
+    id: 7,
+    studentName: "Siddharth Nair",
+    rollNo: "CLOUD-034",
+    batch: "Cloud Native & DevOps",
+    department: "IT",
+    totalSolved: 165,
+    easySolved: 80,
+    mediumSolved: 70,
+    hardSolved: 15,
+    accuracyRate: 82.5,
+    totalSubmissions: 225,
+    streakDays: 12,
+    primaryLanguage: "Go",
+    leaderboardRank: 8,
+    status: "Good",
+    lastActive: "Yesterday",
+    topics: { "Data Structures": 82, "Dynamic Programming": 70, "Graphs": 75, "Algorithms": 84, "SQL": 85 },
+    recentSubmissions: [
+      { id: "s12", problem: "Container With Most Water", difficulty: "Medium", language: "Go", status: "Accepted", time: "16ms", memory: "17.4MB", submittedAt: "Yesterday" }
+    ]
+  },
+  {
+    id: 8,
+    studentName: "Ishita Deshmukh",
+    rollNo: "FS04-022",
+    batch: "Fullstack React & Node",
+    department: "CSE",
+    totalSolved: 182,
+    easySolved: 85,
+    mediumSolved: 80,
+    hardSolved: 17,
+    accuracyRate: 86.0,
+    totalSubmissions: 240,
+    streakDays: 15,
+    primaryLanguage: "JavaScript",
+    leaderboardRank: 6,
+    status: "Good",
+    lastActive: "Today at 08:45 AM",
+    topics: { "Data Structures": 85, "Dynamic Programming": 76, "Graphs": 80, "Algorithms": 88, "SQL": 90 },
+    recentSubmissions: [
+      { id: "s13", problem: "3Sum", difficulty: "Medium", language: "JavaScript", status: "Accepted", time: "34ms", memory: "18.1MB", submittedAt: "Today" }
+    ]
+  }
+];
+
+export const coordinatorInterviewRecords = [
+  {
+    id: 1,
+    studentName: "Ananya Sharma",
+    rollNo: "CSE26-009",
+    batch: "CSE 2026 Alpha Cohort",
+    targetRole: "Full Stack Engineer",
+    interviewer: "AI Bot v3.2 & Rohan Sharma",
+    conductedDate: "2026-09-01",
+    status: "Completed",
+    techScore: 94,
+    behavioralScore: 90,
+    overallScore: 92,
+    grade: "A+",
+    weakSpot: "Minor latency in explaining System Design cache invalidation strategies",
+    strengths: ["Exceptional DSA problem solving", "Clear step-by-step code walkthrough", "Strong communication"],
+    summary: "Candidate demonstrated outstanding grasp of Graph algorithms and System Design concepts. Passed all technical test cases comfortably.",
+    detailedScores: {
+      problemSolving: 96,
+      codeQuality: 94,
+      systemDesign: 90,
+      communication: 92,
+      csFundamentals: 95
+    },
+    questionFeedback: [
+      { q: "Design a Rate Limiter using Token Bucket Algorithm", score: "95%", notes: "Flawless explanation of concurrency & Redis integration." },
+      { q: "Implement LRU Cache from scratch", score: "98%", notes: "Optimal O(1) doubly linked list + hash map solution written in C++." }
+    ]
+  },
+  {
+    id: 2,
+    studentName: "Aarav Mehta",
+    rollNo: "CSE26-042",
+    batch: "CSE 2026 Alpha Cohort",
+    targetRole: "Python Backend Developer",
+    interviewer: "AI Bot v3.2",
+    conductedDate: "2026-08-30",
+    status: "Completed",
+    techScore: 86,
+    behavioralScore: 84,
+    overallScore: 85,
+    grade: "A",
+    weakSpot: "Edge cases in Graph cycle detection and DAG topological sorting",
+    strengths: ["Clean Python syntax", "Good API design intuition", "Confident articulation"],
+    summary: "Solid backend interview performance. Showed good understanding of SQL indexing and REST principles, but struggled slightly on complex Graph edge cases.",
+    detailedScores: {
+      problemSolving: 85,
+      codeQuality: 88,
+      systemDesign: 82,
+      communication: 86,
+      csFundamentals: 88
+    },
+    questionFeedback: [
+      { q: "Explain ACID properties & PostgreSQL Isolation Levels", score: "90%", notes: "Accurate explanation of Phantom Reads and Repeatable Read." },
+      { q: "Find Cycle in Directed Graph", score: "78%", notes: "Missed handling disconnected component graph vertices initially." }
+    ]
+  },
+  {
+    id: 3,
+    studentName: "Priya Roy",
+    rollNo: "DS25-012",
+    batch: "Data Science & ML 2025",
+    targetRole: "Data Science & AI Engineer",
+    interviewer: "AI Bot v3.2 & Dr. Vikram Seth",
+    conductedDate: "2026-08-29",
+    status: "Completed",
+    techScore: 92,
+    behavioralScore: 88,
+    overallScore: 90,
+    grade: "A+",
+    weakSpot: "Time complexity trade-offs in Transformers vs Recurrent Networks",
+    strengths: ["Deep mathematical clarity on PyTorch", "High confidence in LLM fine-tuning concepts", "Structured presentation"],
+    summary: "Excellent domain knowledge in AI/ML. Solved matrix operation challenge in PyTorch with high efficiency.",
+    detailedScores: {
+      problemSolving: 92,
+      codeQuality: 90,
+      systemDesign: 88,
+      communication: 90,
+      csFundamentals: 94
+    },
+    questionFeedback: [
+      { q: "Derive Self-Attention Memory Complexity", score: "94%", notes: "Derived O(N^2) memory bottleneck accurately." }
+    ]
+  },
+  {
+    id: 4,
+    studentName: "Karan Singh",
+    rollNo: "FS04-089",
+    batch: "Fullstack React & Node",
+    targetRole: "React Frontend Developer",
+    interviewer: "AI Bot v3.2",
+    conductedDate: "2026-08-28",
+    status: "Completed",
+    techScore: 74,
+    behavioralScore: 74,
+    overallScore: 74,
+    grade: "B",
+    weakSpot: "React Context API re-render optimizations and closure trap in useEffect",
+    strengths: ["Good UI component structuring", "Familiar with Tailwind and Redux Toolkit"],
+    summary: "Decent performance, but needs practice on asynchronous JavaScript event loop and React state batching concepts.",
+    detailedScores: {
+      problemSolving: 72,
+      codeQuality: 75,
+      systemDesign: 70,
+      communication: 76,
+      csFundamentals: 74
+    },
+    questionFeedback: [
+      { q: "Optimize Heavy List Rendering in React", score: "72%", notes: "Mentioned virtualization but couldn't write custom windowing hook." }
+    ]
+  },
+  {
+    id: 5,
+    studentName: "Neha Reddy",
+    rollNo: "DS25-018",
+    batch: "Data Science & ML 2025",
+    targetRole: "Data Science & AI Engineer",
+    interviewer: "AI Bot v3.2",
+    conductedDate: "2026-08-25",
+    status: "Needs Retake",
+    techScore: 56,
+    behavioralScore: 52,
+    overallScore: 54,
+    grade: "F",
+    weakSpot: "High-dimensional matrix math, PyTorch gradient calculation, nervous under pressure",
+    strengths: ["Basic Python syntax knowledge"],
+    summary: "Student struggled with fundamental ML linear algebra questions and experienced noticeable interview anxiety. Retake strongly recommended after mentor counseling.",
+    detailedScores: {
+      problemSolving: 50,
+      codeQuality: 55,
+      systemDesign: 48,
+      communication: 55,
+      csFundamentals: 58
+    },
+    questionFeedback: [
+      { q: "Explain Backpropagation & Gradient Descent", score: "52%", notes: "Could not explain chain rule application in deep neural layers." }
+    ]
+  },
+  {
+    id: 6,
+    studentName: "Rohan Verma",
+    rollNo: "CSE26-099",
+    batch: "CSE 2026 Alpha Cohort",
+    targetRole: "Python Backend Developer",
+    interviewer: "AI Bot v3.2",
+    conductedDate: "2026-08-24",
+    status: "Needs Retake",
+    techScore: 48,
+    behavioralScore: 48,
+    overallScore: 48,
+    grade: "F",
+    weakSpot: "Basic Data Structures (Arrays/Stacks), Time Complexity Analysis, Communication stutter",
+    strengths: ["Attended on time"],
+    summary: "Significant conceptual gaps in Core Data Structures and Algorithms. Failed coding round 1.",
+    detailedScores: {
+      problemSolving: 42,
+      codeQuality: 45,
+      systemDesign: 40,
+      communication: 50,
+      csFundamentals: 52
+    },
+    questionFeedback: [
+      { q: "Invert a Binary Tree", score: "45%", notes: "Stuck on recursion base case." }
+    ]
+  },
+  {
+    id: 7,
+    studentName: "Siddharth Nair",
+    rollNo: "CLOUD-034",
+    batch: "Cloud Native & DevOps",
+    targetRole: "Cloud & DevOps Specialist",
+    interviewer: "AI Bot v3.2",
+    conductedDate: "2026-08-31",
+    status: "Completed",
+    techScore: 82,
+    behavioralScore: 78,
+    overallScore: 80,
+    grade: "B+",
+    weakSpot: "Kubernetes Custom Resource Definitions (CRDs) and ingress controller security",
+    strengths: ["Docker containerization", "CI/CD Pipeline creation", "Linux CLI fluency"],
+    summary: "Passed evaluation smoothly. Recommended for upcoming AWS placement drives.",
+    detailedScores: {
+      problemSolving: 80,
+      codeQuality: 82,
+      systemDesign: 84,
+      communication: 78,
+      csFundamentals: 80
+    },
+    questionFeedback: [
+      { q: "Set up Multi-Stage Dockerfile for Go Application", score: "88%", notes: "Optimized image size down to 15MB using scratch stage." }
+    ]
+  },
+  {
+    id: 8,
+    studentName: "Ishita Deshmukh",
+    rollNo: "FS04-022",
+    batch: "Fullstack React & Node",
+    targetRole: "React Frontend Developer",
+    interviewer: "AI Bot v3.2",
+    conductedDate: "2026-09-02",
+    status: "Completed",
+    techScore: 84,
+    behavioralScore: 80,
+    overallScore: 82,
+    grade: "A",
+    weakSpot: "Web Security (CSRF/XSS) prevention mechanisms in JWT storage",
+    strengths: ["Component modularity", "TypeScript typing", "Clean UI state design"],
+    summary: "Strong candidate for web frontend positions. Solved state synchronization problem using custom hooks.",
+    detailedScores: {
+      problemSolving: 82,
+      codeQuality: 86,
+      systemDesign: 80,
+      communication: 82,
+      csFundamentals: 82
+    },
+    questionFeedback: [
+      { q: "Custom React Hook for Debounced Search API Call", score: "88%", notes: "Clean implementation using setTimeout and cleanup function." }
+    ]
+  }
+];
+
+export const coordinatorStudentsNeedImprovement = [
+  {
+    id: 1,
+    studentName: "Neha Reddy",
+    rollNo: "DS25-018",
+    batch: "Data Science & ML 2025",
+    department: "AI & DS",
+    attendance: 72.0,
+    avgQuizScore: 58.0,
+    codingAccuracy: 58.0,
+    interviewScore: 54,
+    assignedMentor: "Dr. Vikram Seth",
+    riskLevel: "High Risk",
+    riskFactors: ["Low Attendance (<75%)", "Failed AI Interview (54%)", "Weak Coding Activity"],
+    remediationStatus: "Remediation Plan Assigned",
+    assignedPlan: "Remedial Linear Algebra & PyTorch Practice Set + 1-on-1 Mentor Counseling",
+    targetDeadline: "2026-09-12",
+    lastContact: "2026-09-02",
+    notes: "Student missed 4 lectures due to illness. Needs mandatory attendance catch-up and retake of AI Mock Interview #2.",
+    email: "neha.r@apex.edu.in",
+    phone: "+91 98555 66778"
+  },
+  {
+    id: 2,
+    studentName: "Rohan Verma",
+    rollNo: "CSE26-099",
+    batch: "CSE 2026 Alpha Cohort",
+    department: "CSE",
+    attendance: 68.0,
+    avgQuizScore: 52.0,
+    codingAccuracy: 51.5,
+    interviewScore: 48,
+    assignedMentor: "Rohan Sharma",
+    riskLevel: "High Risk",
+    riskFactors: ["Critical Attendance (<70%)", "Failed AI Interview (48%)", "Low Quiz Average"],
+    remediationStatus: "Mentorship Scheduled",
+    assignedPlan: "Attendance Defaulter Warning + Mandatory DSA Bootcamp (Arrays & Recursion)",
+    targetDeadline: "2026-09-10",
+    lastContact: "2026-09-01",
+    notes: "Official warning notice sent to student and HOD. 1-on-1 session booked with mentor Rohan Sharma for Friday 11:00 AM.",
+    email: "rohan.v@apex.edu.in",
+    phone: "+91 98666 77889"
+  },
+  {
+    id: 3,
+    studentName: "Karan Singh",
+    rollNo: "FS04-089",
+    batch: "Fullstack React & Node",
+    department: "CSE",
+    attendance: 85.0,
+    avgQuizScore: 76.0,
+    codingAccuracy: 76.4,
+    interviewScore: 74,
+    assignedMentor: "Ananya Gupta",
+    riskLevel: "Moderate Risk",
+    riskFactors: ["Lagging in Coding Problem Submissions", "Batch Attendance Dip"],
+    remediationStatus: "Under Review",
+    assignedPlan: "Assigned 15 Intermediate React & Async JS Practice Challenges",
+    targetDeadline: "2026-09-15",
+    lastContact: "2026-08-30",
+    notes: "Student has good foundational attendance but needs focused push on advanced coding tasks to boost placement readiness.",
+    email: "karan.s@apex.edu.in",
+    phone: "+91 98444 55667"
+  },
+  {
+    id: 4,
+    studentName: "Manish Kumar",
+    rollNo: "CLOUD-055",
+    batch: "Cloud Native & DevOps",
+    department: "IT",
+    attendance: 71.5,
+    avgQuizScore: 61.0,
+    codingAccuracy: 64.0,
+    interviewScore: 60,
+    assignedMentor: "Siddharth Roy",
+    riskLevel: "High Risk",
+    riskFactors: ["Low Attendance (<75%)", "Borderline Assessment Score"],
+    remediationStatus: "Remediation Plan Assigned",
+    assignedPlan: "Linux CLI & Docker Hands-on Lab Catchup",
+    targetDeadline: "2026-09-14",
+    lastContact: "2026-08-31",
+    notes: "Requires makeup lab sessions for Docker networking and Kubernetes cluster deployment.",
+    email: "manish.k@apex.edu.in",
+    phone: "+91 98999 11223"
+  },
+  {
+    id: 5,
+    studentName: "Simran Kaur",
+    rollNo: "CSE26-078",
+    batch: "CSE 2026 Alpha Cohort",
+    department: "CSE",
+    attendance: 78.0,
+    avgQuizScore: 64.5,
+    codingAccuracy: 62.0,
+    interviewScore: 65,
+    assignedMentor: "Rohan Sharma",
+    riskLevel: "Moderate Risk",
+    riskFactors: ["Borderline Interview Score (65%)", "Low Coding Submissions in Graph Algorithms"],
+    remediationStatus: "Mentorship Scheduled",
+    assignedPlan: "Graph Theory & Dynamic Programming Tutorial Pack",
+    targetDeadline: "2026-09-18",
+    lastContact: "2026-09-02",
+    notes: "Showing steady effort, but needs assistance on time complexity optimization.",
+    email: "simran.k@apex.edu.in",
+    phone: "+91 98123 45678"
+  }
+];
+

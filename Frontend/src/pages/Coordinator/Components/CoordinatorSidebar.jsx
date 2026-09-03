@@ -13,6 +13,9 @@ import {
   Bell,
   Settings,
   HelpCircle,
+  Code,
+  Bot,
+  AlertTriangle,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/CoordinatorSidebar.css";
@@ -40,8 +43,10 @@ const primaryNavItems = [
   { title: "Dashboard", url: "/coordinator", icon: LayoutDashboard, exact: true },
   { title: "Batches", url: "/coordinator/batches", icon: Users },
   { title: "Students", url: "/coordinator/students", icon: GraduationCap },
+  { title: "Coding Performance", url: "/coordinator/coding-performance", icon: Code },
+  { title: "AI Interviews & Feedback", url: "/coordinator/interviews", icon: Bot },
+  { title: "Students Needing Support", url: "/coordinator/improvement", icon: AlertTriangle },
   { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
-  { title: "Live Schedules", url: "/coordinator/schedules", icon: CalendarCheck },
   { title: "Assessments & Quiz", url: "/coordinator/assessments", icon: FileCheck2 },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: LineChart },
   { title: "Placement Drives", url: "/coordinator/placement", icon: Briefcase },

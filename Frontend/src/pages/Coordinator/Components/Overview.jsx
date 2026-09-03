@@ -54,10 +54,6 @@ export default function CoordinatorOverview() {
             <PlusCircle size={16} />
             Create Batch
           </Link>
-          <Link to="/coordinator/schedules" className="coord-btn coord-btn--outline">
-            <Calendar size={16} />
-            Schedule Class
-          </Link>
         </div>
       </div>
 
@@ -187,63 +183,6 @@ export default function CoordinatorOverview() {
                       />
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Live Classes Schedule */}
-          <div className="coord-card">
-            <div className="coord-card-header">
-              <div className="coord-card-title">
-                <Video size={18} color="#059669" />
-                Today & Upcoming Live Training Sessions
-              </div>
-              <Link to="/coordinator/schedules" className="coord-card-link">
-                Full Timetable →
-              </Link>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {coordinatorSchedules.map((session) => (
-                <div
-                  key={session.id}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: "10px",
-                    border: "1px solid #e2e8f0",
-                    background: "#ffffff",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>{session.title}</div>
-                    <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
-                      {session.batch} · {session.time}
-                    </div>
-                  </div>
-                  <a
-                    href={session.meetLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      background: session.status === "Live Now" ? "#ef4444" : "#4f46e5",
-                      color: "#ffffff",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
-                  >
-                    {session.status === "Live Now" ? "Join Live" : "View Link"}
-                    <ArrowUpRight size={14} />
-                  </a>
                 </div>
               ))}
             </div>

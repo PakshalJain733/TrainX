@@ -94,8 +94,10 @@ export default function CoordinatorLayout() {
     if (path === "/coordinator" || path === "/coordinator/") return "Overview Dashboard";
     if (path.startsWith("/coordinator/batches")) return "Batches Governance";
     if (path.startsWith("/coordinator/students")) return "Student Directory & Risk Audit";
+    if (path.startsWith("/coordinator/coding-performance")) return "Student Coding Performance Analytics";
+    if (path.startsWith("/coordinator/interviews")) return "AI Mock Interview Completion & Feedback";
+    if (path.startsWith("/coordinator/improvement")) return "Students Needing Improvement & Support Hub";
     if (path.startsWith("/coordinator/mentors")) return "Industry Trainers & Mentors";
-    if (path.startsWith("/coordinator/schedules")) return "Live Schedules & Timetable";
     if (path.startsWith("/coordinator/assessments")) return "Assessments & Quiz Governance";
     if (path.startsWith("/coordinator/attendance")) return "Attendance Governance";
     if (path.startsWith("/coordinator/placement")) return "Placement Readiness & Drives";
