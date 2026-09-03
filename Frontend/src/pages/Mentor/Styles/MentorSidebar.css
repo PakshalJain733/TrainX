@@ -3,7 +3,7 @@
 :root {
   --sidebar-bg:          #f1f5f9;
   --sidebar-border:      #cbd2eb;
-  --sidebar-width:       215px;
+  --sidebar-width:       240px;
   --sidebar-width-icon:  68px;
   --sidebar-text:        #64748b;
   --sidebar-text-bright: #0f172a;
@@ -44,7 +44,7 @@
   justify-content: space-between;
   padding: 0 14px;
   border-bottom: none;
-  height: 68px;
+  height: var(--navbar-height, 64px);
   gap: 8px;
   box-sizing: border-box;
 }

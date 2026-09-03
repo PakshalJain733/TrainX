@@ -19,8 +19,9 @@
 /* Radiant Hero Welcome Banner */
 .overview-hero-card {
   background: linear-gradient(135deg, #0f2942 0%, #0053c0 100%);
-  border-radius: 16px;
-  padding: 24px 28px;
+  min-height: var(--welcome-banner-height, 145px);
+  border-radius: var(--welcome-banner-radius, 16px);
+  padding: var(--banner-padding, 24px 28px);
   color: #ffffff;
   box-shadow: 0 10px 28px rgba(79, 70, 229, 0.15);
   display: flex;
@@ -28,8 +29,9 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
-  margin-bottom: 24px;
+  margin-bottom: var(--gap-sections, 24px);
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .overview-hero-left {
@@ -66,15 +68,15 @@
 }
 
 .overview-hero-title {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: var(--banner-title-size, 28px);
+  font-weight: var(--banner-title-weight, 700);
   color: #ffffff;
   margin: 0;
   letter-spacing: -0.02em;
 }
 
 .overview-hero-desc {
-  font-size: 13.5px;
+  font-size: var(--banner-subtitle-size, 14px);
   color: #e2e8f0;
   margin: 4px 0 0 0;
   line-height: 1.5;
@@ -90,7 +92,8 @@
   background: #ffffff !important;
   color: #4f46e5 !important;
   font-weight: 700 !important;
-  border-radius: 90px !important;
+  height: var(--button-height, 40px) !important;
+  border-radius: var(--button-radius, 8px) !important;
   font-size: 13px !important;
   border: none !important;
 }
@@ -100,7 +103,8 @@
   color: #ffffff !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
   font-weight: 700 !important;
-  border-radius: 90px !important;
+  height: var(--button-height, 40px) !important;
+  border-radius: var(--button-radius, 8px) !important;
   font-size: 13px !important;
 }
 
@@ -112,17 +116,19 @@
 .overview-grid-4 {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--gap-sections, 24px);
   width: 100%;
-  margin-bottom: 24px;
+  margin-bottom: var(--gap-sections, 24px);
 }
 
 .overview-stat-card {
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  min-height: var(--stat-card-min-height, 120px);
+  border-radius: var(--stat-card-radius, 12px);
+  border: var(--card-border, 1px solid #e2e8f0);
   background: #ffffff;
   box-shadow: 0 4px 16px rgba(79, 70, 229, 0.03);
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .overview-stat-card:hover {
@@ -132,10 +138,13 @@
 }
 
 .overview-card-content {
-  padding: 16px 18px !important;
+  padding: var(--stat-card-padding, 20px) !important;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
   gap: 8px;
+  box-sizing: border-box;
 }
 
 .overview-stat-top {
@@ -157,15 +166,15 @@
 }
 
 .overview-stat-label {
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--stat-label-size, 14px);
+  font-weight: 600;
   color: #475569;
   flex: 1;
 }
 
 .overview-stat-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: var(--stat-number-size, 28px);
+  font-weight: var(--stat-number-weight, 700);
   color: #0f172a;
   letter-spacing: -0.02em;
   margin: 2px 0 0;
@@ -187,13 +196,13 @@
 .overview-split-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-  margin-bottom: 24px;
+  gap: var(--gap-sections, 24px);
+  margin-bottom: var(--gap-sections, 24px);
 }
 
 .overview-subcard {
-  border-radius: 14px !important;
-  border: 1px solid #cbd5e1 !important;
+  border-radius: var(--content-card-radius, 12px) !important;
+  border: var(--card-border, 1px solid #e2e8f0) !important;
   background: #ffffff !important;
   box-shadow: none !important;
   display: flex;
@@ -208,7 +217,7 @@
   flex-direction: row !important;
   justify-content: space-between !important;
   align-items: center !important;
-  padding: 16px 20px !important;
+  padding: 20px 24px !important;
   border-bottom: 1px solid #e2e8f0;
   background: #ffffff;
 }
@@ -238,8 +247,8 @@
 }
 
 .overview-card-title {
-  font-size: 15.5px;
-  font-weight: 800;
+  font-size: var(--section-heading-size, 18px);
+  font-weight: var(--section-heading-weight, 600);
   color: #0f172a;
   margin: 0;
   line-height: 1.2;

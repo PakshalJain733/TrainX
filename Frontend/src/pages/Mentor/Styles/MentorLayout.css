@@ -456,7 +456,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 68px;
+  height: var(--navbar-height, 64px);
   padding: 0 20px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
@@ -852,7 +852,7 @@ body {
 .mentor-page-inner {
   width: 100%;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: var(--main-page-padding, 24px);
   box-sizing: border-box;
 }
 

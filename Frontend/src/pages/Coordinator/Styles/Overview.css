@@ -2,13 +2,14 @@
 .coord-overview {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: var(--gap-sections, 24px);
 }
 
 .coord-welcome-card {
   background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
-  border-radius: 16px;
-  padding: 24px 28px;
+  min-height: var(--welcome-banner-height, 145px);
+  border-radius: var(--welcome-banner-radius, 16px);
+  padding: var(--banner-padding, 24px 28px);
   color: #ffffff;
   display: flex;
   justify-content: space-between;
@@ -16,6 +17,7 @@
   box-shadow: 0 10px 25px rgba(79, 70, 229, 0.25);
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .coord-welcome-card::after {
@@ -31,14 +33,14 @@
 }
 
 .coord-welcome-title {
-  font-size: 24px;
-  font-weight: 800;
+  font-size: var(--banner-title-size, 28px);
+  font-weight: var(--banner-title-weight, 700);
   letter-spacing: -0.02em;
   margin-bottom: 6px;
 }
 
 .coord-welcome-sub {
-  font-size: 14px;
+  font-size: var(--banner-subtitle-size, 14px);
   color: rgba(255, 255, 255, 0.85);
   max-width: 540px;
   line-height: 1.5;
@@ -54,8 +56,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
-  border-radius: 10px;
+  height: var(--button-height, 40px);
+  padding: 0 18px;
+  border-radius: var(--button-radius, 8px);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -87,19 +90,28 @@
 
 .coord-stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gap-sections, 24px);
+}
+
+@media (max-width: 1024px) {
+  .coord-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .coord-stat-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 18px 20px;
+  border: var(--card-border, 1px solid #e2e8f0);
+  border-radius: var(--stat-card-radius, 12px);
+  min-height: var(--stat-card-min-height, 120px);
+  padding: var(--stat-card-padding, 20px);
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 8px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
 }
 
 .coord-stat-card:hover {
@@ -115,7 +127,7 @@
 }
 
 .coord-stat-label {
-  font-size: 13px;
+  font-size: var(--stat-label-size, 14px);
   font-weight: 600;
   color: #64748b;
 }
@@ -130,8 +142,8 @@
 }
 
 .coord-stat-value {
-  font-size: 26px;
-  font-weight: 800;
+  font-size: var(--stat-number-size, 28px);
+  font-weight: var(--stat-number-weight, 700);
   color: #0f172a;
   letter-spacing: -0.02em;
 }
@@ -153,7 +165,7 @@
 .coord-grid-split {
   display: grid;
   grid-template-columns: 1.5fr 1fr;
-  gap: 24px;
+  gap: var(--gap-sections, 24px);
 }
 
 @media (max-width: 1024px) {
@@ -164,12 +176,13 @@
 
 .coord-card {
   background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 20px 24px;
+  border: var(--card-border, 1px solid #e2e8f0);
+  border-radius: var(--content-card-radius, 12px);
+  padding: var(--content-card-padding, 24px);
   display: flex;
   flex-direction: column;
   gap: 16px;
+  box-sizing: border-box;
 }
 
 .coord-card-header {
@@ -179,8 +192,8 @@
 }
 
 .coord-card-title {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: var(--section-heading-size, 18px);
+  font-weight: var(--section-heading-weight, 600);
   color: #0f172a;
   display: flex;
   align-items: center;
