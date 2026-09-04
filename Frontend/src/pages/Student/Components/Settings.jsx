@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Bell, Save, CheckCircle2 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
-import "../Styles/ProfilePage.css"; // Reuse profile styles for simplicity
+import "../Styles/ProfilePage.css";
+import "../Styles/Settings.css";
 
 export default function Settings() {
   const [saved, setSaved] = useState(false);
@@ -51,7 +52,7 @@ export default function Settings() {
         </div>
       )}
 
-      <div className="profile-form-card" style={{ maxWidth: "100%" }}>
+      <div className="profile-form-card settings-form-card">
         <form onSubmit={handleSave}>
           <div className="profile-form-section profile-section-toggles">
             <div className="profile-section-heading">

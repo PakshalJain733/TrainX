@@ -1,301 +1,283 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Sparkles,
   CheckCircle2,
   CircleDot,
   Lock,
-  ArrowRight,
   BookOpen,
-  Code2,
-  HelpCircle,
-  TrendingUp,
+  RefreshCw,
+  Cpu,
+  Target,
+  UserCheck,
+  Award,
+  Check,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
+import apiFetch from "../../../utils/api";
 import "../Styles/AiRoadmap.css";
 
-const careerTracks = [
-  { id: "python-backend", name: "Python Backend Developer" },
-  { id: "react-frontend", name: "React Frontend Developer" },
-  { id: "fullstack", name: "Full Stack Engineer" },
-  { id: "data-ai", name: "Data Science & AI Engineer" },
-  { id: "cloud-devops", name: "Cloud & DevOps Specialist" },
-];
-
-const roadmapData = {
-  "python-backend": [
-    {
-      id: 1,
-      title: "Milestone 1: Python Fundamentals",
-      desc: "Syntax, data types, control flow, functions and error handling.",
-      status: "completed",
-      progress: 100,
-      tags: ["Variables & Types", "Loops", "Functions", "Exceptions"],
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: Object Oriented Programming",
-      desc: "Classes, inheritance, polymorphism and design principles.",
-      status: "completed",
-      progress: 100,
-      tags: ["Classes", "Inheritance", "Magic Methods", "SOLID"],
-      quizzes: 3,
-      exercises: 10,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: SQL & Databases",
-      desc: "Relational modelling, joins, indexing and query optimisation.",
-      status: "in-progress",
-      progress: 55,
-      tags: ["Joins", "Aggregations", "Indexes", "Transactions"],
-      quizzes: 3,
-      exercises: 8,
-    },
-    {
-      id: 4,
-      title: "Milestone 4: REST APIs with FastAPI",
-      desc: "Routing, validation, auth and API documentation.",
-      status: "in-progress",
-      progress: 20,
-      tags: ["Routing", "Pydantic", "JWT Auth", "Testing"],
-      quizzes: 2,
-      exercises: 9,
-    },
-    {
-      id: 5,
-      title: "Milestone 5: React Frontend Basics",
-      desc: "Components, state, hooks and consuming APIs.",
-      status: "locked",
-      progress: 0,
-      tags: ["JSX", "Hooks", "Routing", "State"],
-      quizzes: 3,
-      exercises: 10,
-    },
-    {
-      id: 6,
-      title: "Milestone 6: Capstone Projects",
-      desc: "Two end-to-end projects reviewed by your mentor.",
-      status: "locked",
-      progress: 0,
-      tags: ["Project Planning", "Deployment", "Code Review"],
-      quizzes: 1,
-      exercises: 4,
-    },
-    {
-      id: 7,
-      title: "Milestone 7: Interview Preparation",
-      desc: "DSA revision, system design basics and AI mock interviews.",
-      status: "locked",
-      progress: 0,
-      tags: ["DSA", "HR Round", "System Design"],
-      quizzes: 4,
-      exercises: 15,
-    },
-  ],
-  "react-frontend": [
-    {
-      id: 1,
-      title: "Milestone 1: Modern JavaScript (ES6+)",
-      desc: "Async/await, closures, prototypes, array methods, and event loop.",
-      status: "completed",
-      progress: 100,
-      tags: ["ES6 Modules", "Promises", "Destructuring", "DOM API"],
-      quizzes: 5,
-      exercises: 14,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: React Core & Component Design",
-      desc: "JSX, virtual DOM, props vs state, and component life cycles.",
-      status: "in-progress",
-      progress: 70,
-      tags: ["Components", "Props", "Hooks", "Event Handling"],
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: State Management & Routing",
-      desc: "Zustand, Context API, Redux Toolkit, and React Router v6.",
-      status: "locked",
-      progress: 0,
-      tags: ["Context API", "Zustand", "React Router", "Global State"],
-      quizzes: 3,
-      exercises: 8,
-    },
-    {
-      id: 4,
-      title: "Milestone 4: Performance & Production Deployment",
-      desc: "Memoization, lazy loading, Vite bundling, and CI/CD hosting.",
-      status: "locked",
-      progress: 0,
-      tags: ["UseMemo", "Code Splitting", "Vite", "Vercel"],
-      quizzes: 2,
-      exercises: 6,
-    },
-  ],
-  fullstack: [
-    {
-      id: 1,
-      title: "Milestone 1: Full Stack Architecture Foundations",
-      desc: "Client-Server model, HTTP protocols, REST conventions, and MVC.",
-      status: "completed",
-      progress: 100,
-      tags: ["HTTP/HTTPS", "REST", "JSON", "Architecture"],
-      quizzes: 3,
-      exercises: 8,
-    },
-    {
-      id: 2,
-      title: "Milestone 2: Backend & Database Engineering",
-      desc: "Node.js / Express or Python backend with PostgreSQL and ORM.",
-      status: "in-progress",
-      progress: 45,
-      tags: ["Express", "PostgreSQL", "Prisma", "Authentication"],
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 3,
-      title: "Milestone 3: Frontend Integration & State",
-      desc: "Connecting React frontend with resilient API clients and caching.",
-      status: "locked",
-      progress: 0,
-      tags: ["Axios", "TanStack Query", "Forms", "UI Layouts"],
-      quizzes: 3,
-      exercises: 10,
-    },
-  ],
-};
-
 export default function AIRoadmap() {
-  const [inputValue, setInputValue] = useState("");
+  const [goalInput, setGoalInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
-  const [milestones, setMilestones] = useState(roadmapData["python-backend"]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentRoadmap, setCurrentRoadmap] = useState(null);
+  const [aiSource, setAiSource] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
-  const handleGenerate = () => {
-    if (!inputValue.trim()) return;
-    setIsGenerating(true);
-    setTimeout(() => {
-      const baseMap = roadmapData["fullstack"];
-      const newMap = baseMap.map(m => ({
-        ...m,
-        title: m.id === 1 ? `Milestone 1: ${inputValue} Foundations` : m.title,
-        status: "locked",
-        progress: 0
-      }));
-      newMap[0].status = "in-progress";
-      
-      setMilestones(newMap);
-      setIsGenerating(false);
-      setInputValue("");
-    }, 1200);
+  // Fetch student profile & active roadmap
+  useEffect(() => {
+    loadUserProfile();
+    loadStudentRoadmap();
+  }, []);
+
+  const loadUserProfile = () => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      if (u) {
+        setUserProfile(u);
+      }
+    } catch (e) {}
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "completed":
-        return <Badge variant="success">Completed</Badge>;
-      case "in-progress":
-        return <Badge variant="default">In Progress</Badge>;
-      case "locked":
-      default:
-        return <Badge variant="outline">Locked</Badge>;
+  const loadStudentRoadmap = async () => {
+    setIsLoading(true);
+    const response = await apiFetch("/roadmaps");
+    if (response && response.data) {
+      setCurrentRoadmap(response.data);
+      if (response.data.targetRole) {
+        setGoalInput(response.data.targetRole);
+      }
+      if (response.data.aiSource) {
+        setAiSource(response.data.aiSource);
+      }
+    }
+    setIsLoading(false);
+  };
+
+  const handleGenerate = async (e) => {
+    if (e) e.preventDefault();
+    if (!goalInput.trim()) return;
+
+    setIsGenerating(true);
+    try {
+      const u = userProfile || JSON.parse(localStorage.getItem("user") || "{}");
+      const rawSkills = u.skills || "";
+      const skillsArr = typeof rawSkills === "string" ? rawSkills.split(",") : (rawSkills || []);
+
+      const response = await apiFetch("/roadmaps/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          targetRole: goalInput.trim(),
+          studentProfile: {
+            department: u.department || "Electronics & Computer Science",
+            semester: u.semester || "Semester 6",
+            cgpa: u.cgpa || "8.75",
+          },
+          currentSkills: skillsArr.map((s) => s.trim()).filter(Boolean),
+        }),
+      });
+
+      if (response && response.data) {
+        setCurrentRoadmap(response.data);
+        if (response.data.aiSource) {
+          setAiSource(response.data.aiSource);
+        }
+      }
+    } catch (err) {
+      console.error("Roadmap generation error:", err);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
+  const handleToggleStatus = async (item) => {
+    const statusCycle = {
+      completed: "in-progress",
+      "in-progress": "completed",
+      locked: "in-progress",
+    };
+    const newStatus = statusCycle[item.status] || "in-progress";
+    const newProgress = newStatus === "completed" ? 100 : newStatus === "in-progress" ? 50 : 0;
+
+    // Optimistic UI update
+    if (currentRoadmap && currentRoadmap.milestones) {
+      const updatedMilestones = currentRoadmap.milestones.map((m) =>
+        m.id === item.id ? { ...m, status: newStatus, progress: newProgress } : m
+      );
+      setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+    }
+
+    // Server status update
+    await apiFetch(`/roadmaps/items/${item.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: newStatus,
+        progress: newProgress,
+      }),
+    });
+  };
+
+  const getStatusBadge = (status, onClick) => {
+    switch (status) {
+      case "completed":
+        return (
+          <Badge
+            variant="success"
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onClick}
+          >
+            Completed ✓
+          </Badge>
+        );
+      case "in-progress":
+        return (
+          <Badge
+            variant="default"
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onClick}
+          >
+            In Progress
+          </Badge>
+        );
+      case "locked":
+      default:
+        return (
+          <Badge
+            variant="outline"
+            className="cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onClick}
+          >
+            Locked
+          </Badge>
+        );
+    }
+  };
+
+  const milestones = currentRoadmap?.milestones || [];
+
   return (
     <div className="roadmap-container">
-      {/* Career Goal Card */}
+      {/* Clean AI Roadmap Header & Custom Goal Input */}
       <div className="roadmap-generator-card">
         <div className="roadmap-generator-header">
-          <Sparkles size={20} className="roadmap-generator-icon" />
+          <Sparkles size={22} className="roadmap-generator-icon text-indigo-500 animate-pulse" />
           <div>
-            <h2 className="roadmap-generator-title">Enter your career / skill goal</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="roadmap-generator-title">Personalized AI Career Roadmap Generator</h2>
+              {aiSource && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1">
+                  <Cpu size={12} /> {aiSource === "gemini-ai" ? "Gemini 2.5 AI Model" : "Adaptive AI Model"}
+                </span>
+              )}
+            </div>
             <p className="roadmap-generator-subtitle">
-              Type any course or skill goal — AI will build a personalized milestone roadmap for you.
+              Type any career goal or technology (e.g. <strong>Java Developer</strong>, <strong>Cyber Security</strong>, <strong>Flutter Developer</strong>), and the AI will generate your step-by-step learning roadmap.
             </p>
           </div>
         </div>
 
-        <div className="roadmap-controls-row">
-          <input
-            type="text"
-            className="roadmap-select-input"
-            placeholder="e.g. Data Science, Web3, iOS App Development..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
-          />
-          <button
-            className={`roadmap-gen-btn ${isGenerating ? "roadmap-gen-btn--loading" : ""}`}
-            onClick={handleGenerate}
-            disabled={isGenerating || !inputValue.trim()}
-          >
-            {isGenerating ? (
-              <>
-                <span className="roadmap-spinner" />
-                Generating Roadmap...
-              </>
-            ) : (
-              <>
-                <Sparkles size={16} />
-                Generate Roadmap
-              </>
-            )}
-          </button>
-        </div>
+        {/* Custom Input Box & Generate Action */}
+        <form onSubmit={handleGenerate} className="mt-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Custom Input Field */}
+            <input
+              type="text"
+              className="roadmap-select-input flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              placeholder="Type your role (e.g. Java Developer, Cyber Security, Data Engineer, Mobile App Dev)..."
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              required
+            />
+
+            {/* Generate Button */}
+            <button
+              type="submit"
+              className="roadmap-gen-btn flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md flex-shrink-0"
+              disabled={isGenerating || !goalInput.trim()}
+            >
+              {isGenerating ? (
+                <>
+                  <RefreshCw size={16} className="animate-spin" />
+                  <span>Generating Roadmap...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={16} />
+                  <span>Generate Roadmap</span>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+
+        {userProfile?.skills && (
+          <div className="mt-3 text-xs text-slate-500 flex items-center gap-1.5">
+            <Check size={14} className="text-emerald-500" />
+            <span>Profile Skills Pruning Active: <strong>{typeof userProfile.skills === "string" ? userProfile.skills : userProfile.skills.join(", ")}</strong> will not be re-taught from scratch.</span>
+          </div>
+        )}
       </div>
 
       {/* Timeline Section */}
-      <div className="roadmap-timeline">
-        {milestones.map((m) => (
-          <div
-            key={m.id}
-            className={`roadmap-milestone-wrapper milestone-status-${m.status}`}
-          >
-            <div className="roadmap-milestone-indicator">
-              {m.status === "completed" && <CheckCircle2 size={20} />}
-              {m.status === "in-progress" && <CircleDot size={20} />}
-              {m.status === "locked" && <Lock size={18} />}
-            </div>
-
-            <div className="roadmap-milestone-card">
-              <div className="milestone-card-header">
-                <h3 className="milestone-title">{m.title}</h3>
-                {getStatusBadge(m.status)}
+      {isLoading ? (
+        <div className="py-16 text-center text-slate-500 flex flex-col items-center gap-3">
+          <RefreshCw size={28} className="animate-spin text-indigo-500" />
+          <p>Loading AI learning path...</p>
+        </div>
+      ) : milestones.length === 0 ? (
+        <div className="py-12 text-center text-slate-500 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 bg-slate-50/50 dark:bg-slate-900/30">
+          <BookOpen size={36} className="mx-auto text-slate-400 mb-2" />
+          <p className="font-semibold text-slate-700 dark:text-slate-200">No roadmap generated yet.</p>
+          <p className="text-sm text-slate-500 mb-4">Type any role above (e.g. <strong>Java Developer</strong>, <strong>Cyber Security</strong>, <strong>Data Science</strong>) and click <strong>Generate Roadmap</strong> to create your AI path.</p>
+        </div>
+      ) : (
+        <div className="roadmap-timeline">
+          {milestones.map((m) => (
+            <div
+              key={m.id}
+              className={`roadmap-milestone-wrapper milestone-status-${m.status}`}
+            >
+              <div className="roadmap-milestone-indicator">
+                {m.status === "completed" && <CheckCircle2 size={20} className="text-emerald-500" />}
+                {m.status === "in-progress" && <CircleDot size={20} className="text-indigo-500" />}
+                {m.status === "locked" && <Lock size={18} className="text-slate-400" />}
               </div>
 
-              <p className="milestone-desc">{m.desc}</p>
-
-              <div className="milestone-progress-bar-wrap">
-                <div
-                  className="milestone-progress-bar-fill"
-                  style={{ width: `${m.progress}%` }}
-                />
-              </div>
-
-              <div className="milestone-footer-row">
-                <div className="milestone-tags-list">
-                  {m.tags.map((tag) => (
-                    <span key={tag} className="milestone-tag-pill">
-                      {tag}
-                    </span>
-                  ))}
+              <div className="roadmap-milestone-card">
+                <div className="milestone-card-header">
+                  <h3 className="milestone-title">{m.title}</h3>
+                  {getStatusBadge(m.status, () => handleToggleStatus(m))}
                 </div>
 
-                <div className="milestone-stats-meta">
-                  {m.quizzes} quizzes · {m.exercises} coding exercises
+                <p className="milestone-desc">{m.desc}</p>
+
+                <div className="milestone-progress-bar-wrap">
+                  <div
+                    className="milestone-progress-bar-fill"
+                    style={{ width: `${m.progress}%` }}
+                  />
+                </div>
+
+                <div className="milestone-footer-row">
+                  <div className="milestone-tags-list">
+                    {(m.tags || []).map((tag) => (
+                      <span key={tag} className="milestone-tag-pill">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="milestone-stats-meta">
+                    {m.quizzes} quizzes · {m.exercises} coding exercises
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

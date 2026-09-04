@@ -218,7 +218,7 @@ export default function AdminLearningContent() {
                 </p>
               </div>
 
-              <Badge variant={item.status === "Published" ? "success" : "outline"}>
+              <Badge variant={item.status === "Published" ? "success" : "outline"} style={{ width: "max-content" }}>
                 {item.status}
               </Badge>
             </div>

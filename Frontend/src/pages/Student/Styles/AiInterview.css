@@ -562,3 +562,83 @@
   padding: 12px;
   text-align: center;
 }
+
+/* Utility CSS classes for AiInterview Modal */
+.ai-modal-heading {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+}
+.ai-modal-subheading {
+  font-size: 12px;
+  color: #64748b;
+}
+.ai-speak-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+.ai-speak-content {
+  flex: 1;
+}
+.ai-speak-label {
+  font-size: 12px;
+  color: #2563eb;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.ai-qa-box {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+.ai-qa-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ai-qa-topic {
+  color: #2563eb;
+}
+.interview-textarea-min {
+  min-height: 120px;
+}
+.ai-controls-btn-group {
+  display: flex;
+  gap: 8px;
+}
+.ai-scorecard-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.ai-award-icon {
+  color: #60a5fa;
+}
+.ai-scorecard-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+}
+.ai-scorecard-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.ai-mini-score-val-green {
+  font-size: 18px;
+  font-weight: 800;
+  color: #34d399;
+}
+.ai-mini-score-val-blue {
+  font-size: 18px;
+  font-weight: 800;
+  color: #60a5fa;
+}
+.ai-mini-score-label {
+  font-size: 11px;
+  color: #cbd5e1;
+}
+

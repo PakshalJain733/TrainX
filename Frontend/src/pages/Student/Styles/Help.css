@@ -706,3 +706,79 @@
 .help-submit-btn:hover {
   background: #1d4ed8;
 }
+
+/* Utility classes to replace inline styles */
+.help-icon-blue {
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+}
+.help-badge-blue {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+.help-icon-emerald {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+.help-badge-emerald {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
+.help-link-emerald {
+  color: #059669;
+}
+.help-icon-purple {
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
+}
+.help-badge-purple {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+.help-link-purple {
+  color: #7c3aed;
+}
+.help-faq-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.help-empty-state {
+  padding: 40px;
+  text-align: center;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+.help-empty-icon {
+  margin-bottom: 10px;
+  color: #94a3b8;
+}
+.help-empty-title {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+}
+.help-empty-desc {
+  color: #64748b;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.help-flex-center-gap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.help-table-subject {
+  font-weight: 600;
+}
+.help-table-date {
+  color: #64748b;
+}
+.help-guide-meta {
+  font-size: 11px;
+  color: #64748b;
+}
+.help-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
