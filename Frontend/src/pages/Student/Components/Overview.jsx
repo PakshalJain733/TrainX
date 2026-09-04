@@ -28,7 +28,7 @@ const defaultDashboardData = {
   academicOverview: {
     semester: "Semester 6",
     cgpa: "8.75",
-    skills: "Python, React, SQL",
+    skills: "",
     profileCompleted: true,
   },
   attendanceSummary: {
@@ -75,7 +75,7 @@ export default function Overview() {
             ...prev.academicOverview,
             semester: sem,
             cgpa: cgpa,
-            skills: u.skills || "Python, React, Data Structures",
+            skills: u.skills || "",
             profileCompleted: isCompleted,
           },
         }));
