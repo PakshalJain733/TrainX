@@ -1,11 +1,11 @@
 import { query } from '../config/db.js';
 
-<<<<<<< HEAD
 const mockColleges = [
   { id: 1, name: 'Vasantdada Patil Pratishthan College of Engineering', code: 'PVPPCOE', created_at: new Date('2026-01-01') },
   { id: 2, name: 'Don Bosco Institute of Technology', code: 'DBIT', created_at: new Date('2026-01-01') },
 ];
 
+// Get all colleges (with fallback)
 export const getAllCollegesModel = async () => {
   try {
     const results = await query('SELECT * FROM colleges ORDER BY id ASC');
@@ -16,6 +16,9 @@ export const getAllCollegesModel = async () => {
   return mockColleges;
 };
 
+export const findColleges = getAllCollegesModel;
+
+// Get one college (with fallback)
 export const getCollegeByIdModel = async (id) => {
   const numId = parseInt(id, 10);
   try {
@@ -27,6 +30,9 @@ export const getCollegeByIdModel = async (id) => {
   return mockColleges.find((c) => c.id === numId) || null;
 };
 
+export const findCollegeById = getCollegeByIdModel;
+
+// Create college (with fallback)
 export const createCollegeModel = async ({ name, code }) => {
   try {
     const res = await query('INSERT INTO colleges (name, code) VALUES (?, ?)', [name, code]);
@@ -38,34 +44,8 @@ export const createCollegeModel = async ({ name, code }) => {
   mockColleges.push(newCol);
   return newCol;
 };
-=======
-// Get all colleges
-export const findColleges = async () => {
-  return await query('SELECT * FROM colleges ORDER BY id DESC');
-};
 
-// Get one college
-export const findCollegeById = async (id) => {
-  const rows = await query(
-    'SELECT * FROM colleges WHERE id = ?',
-    [id]
-  );
-  return rows[0];
-};
-
-// Create college
-export const createCollege = async (name, code) => {
-  const result = await query(
-    'INSERT INTO colleges (name, code) VALUES (?, ?)',
-    [name, code]
-  );
-
-  return {
-    id: result.insertId,
-    name,
-    code
-  };
-};
+export const createCollege = async (name, code) => createCollegeModel({ name, code });
 
 // Update college
 export const updateCollege = async (id, name, code) => {
@@ -82,4 +62,3 @@ export const deleteCollege = async (id) => {
     [id]
   );
 };
->>>>>>> Pakshal

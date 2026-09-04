@@ -21,7 +21,9 @@ CREATE TABLE IF NOT EXISTS departments (
   name VARCHAR(255) NOT NULL,
   code VARCHAR(50) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_department_code_per_college (college_id, code)
 );
 
 -- Seed Initial Departments
@@ -41,7 +43,11 @@ CREATE TABLE IF NOT EXISTS batches (
   year VARCHAR(20) DEFAULT 'TE',
   division VARCHAR(20) DEFAULT 'A',
   academic_year VARCHAR(20) DEFAULT '2025-2026',
+  start_year INT,
+  end_year INT,
+  status ENUM('active', 'inactive') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
 );
@@ -65,37 +71,6 @@ CREATE TABLE IF NOT EXISTS users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
 );
--- Departments Table
-
-CREATE TABLE IF NOT EXISTS departments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  college_id INT NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  code VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_department_code_per_college (college_id, code)
-);
-
--- Batches Table
-
-CREATE TABLE IF NOT EXISTS batches (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  college_id INT NOT NULL,
-  department_id INT NOT NULL,
-  name VARCHAR(100) NOT NULL,
-  academic_year VARCHAR(20),
-  start_year INT,
-  end_year INT,
-  status ENUM('active', 'inactive') DEFAULT 'active',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
-);
 
 -- 5. Students Table (User -> College -> Department -> Batch)
 CREATE TABLE IF NOT EXISTS students (
@@ -105,9 +80,6 @@ CREATE TABLE IF NOT EXISTS students (
   department_id INT NULL,
   batch_id INT NULL,
   roll_number VARCHAR(100) NOT NULL,
-  college_id INT,
-  department_id INT,
-   batch_id INT,
   department VARCHAR(100),
   year VARCHAR(20),
   division VARCHAR(20),
@@ -130,37 +102,22 @@ CREATE TABLE IF NOT EXISTS otps (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-<<<<<<< HEAD
 -- 7. Assessments Table
 CREATE TABLE IF NOT EXISTS assessments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   college_id INT DEFAULT 1,
+  batch_id INT,
   department_id INT NULL,
   title VARCHAR(255) NOT NULL,
   description TEXT,
   category VARCHAR(100) DEFAULT 'Technical Quiz',
   duration_minutes INT DEFAULT 30,
   total_marks INT DEFAULT 50,
-  passing_percentage DECIMAL(5,2) DEFAULT 60.00,
-  is_published BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
-);
-
--- 8. Assessment Questions Table
-=======
--- Assessments Table
-CREATE TABLE IF NOT EXISTS assessments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(255) NOT NULL,
-  description TEXT,
-  college_id INT,
-  batch_id INT,
-  created_by INT,
-  duration_minutes INT DEFAULT NULL,
-  total_marks INT DEFAULT 0,
   pass_marks INT DEFAULT 0,
+  passing_percentage DECIMAL(5,2) DEFAULT 60.00,
+  created_by INT,
   status ENUM('draft', 'published', 'archived') DEFAULT 'draft',
+  is_published BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
@@ -168,20 +125,21 @@ CREATE TABLE IF NOT EXISTS assessments (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Assessment Questions Table
->>>>>>> Pakshal
+-- 8. Assessment Questions Table
 CREATE TABLE IF NOT EXISTS assessment_questions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   assessment_id INT NOT NULL,
   question_text TEXT NOT NULL,
-<<<<<<< HEAD
-  option_a VARCHAR(255) NOT NULL,
-  option_b VARCHAR(255) NOT NULL,
-  option_c VARCHAR(255) NOT NULL,
-  option_d VARCHAR(255) NOT NULL,
-  correct_option CHAR(1) NOT NULL, -- 'A', 'B', 'C', or 'D'
+  option_a TEXT NOT NULL,
+  option_b TEXT NOT NULL,
+  option_c TEXT,
+  option_d TEXT,
+  correct_option ENUM('a', 'b', 'c', 'd') NOT NULL,
   marks INT DEFAULT 10,
   explanation TEXT NULL,
+  question_order INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
 );
 
@@ -191,16 +149,19 @@ CREATE TABLE IF NOT EXISTS assessment_attempts (
   assessment_id INT NOT NULL,
   user_id INT NOT NULL,
   college_id INT DEFAULT 1,
+  score INT DEFAULT 0,
   total_questions INT NOT NULL DEFAULT 0,
   attempted_questions INT NOT NULL DEFAULT 0,
   correct_count INT NOT NULL DEFAULT 0,
+  correct_answers INT DEFAULT 0,
   incorrect_count INT NOT NULL DEFAULT 0,
   unattempted_count INT NOT NULL DEFAULT 0,
   marks_obtained INT NOT NULL DEFAULT 0,
   total_marks INT NOT NULL DEFAULT 0,
   percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00,
-  status ENUM('passed', 'failed') NOT NULL DEFAULT 'failed',
+  status ENUM('in_progress', 'passed', 'failed', 'completed') NOT NULL DEFAULT 'in_progress',
   started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  submitted_at TIMESTAMP NULL,
   completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,
@@ -208,55 +169,14 @@ CREATE TABLE IF NOT EXISTS assessment_attempts (
 );
 
 -- 10. Assessment Answers Table
-=======
-  option_a TEXT NOT NULL,
-  option_b TEXT NOT NULL,
-  option_c TEXT,
-  option_d TEXT,
-  correct_option ENUM('a', 'b', 'c', 'd') NOT NULL,
-  marks INT DEFAULT 1,
-  question_order INT DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
-);
-
--- Assessment Attempts Table
-CREATE TABLE IF NOT EXISTS assessment_attempts (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  assessment_id INT NOT NULL,
-  score INT DEFAULT 0,
-  percentage DECIMAL(5, 2) DEFAULT 0.00,
-  total_questions INT DEFAULT 0,
-  correct_answers INT DEFAULT 0,
-  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  submitted_at TIMESTAMP NULL,
-  status ENUM('in_progress', 'completed') DEFAULT 'in_progress',
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
-);
-
--- Assessment Answers Table
->>>>>>> Pakshal
 CREATE TABLE IF NOT EXISTS assessment_answers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   attempt_id INT NOT NULL,
   question_id INT NOT NULL,
-<<<<<<< HEAD
-  selected_option CHAR(1) NULL,
+  selected_option ENUM('a', 'b', 'c', 'd') NULL,
   is_correct BOOLEAN NOT NULL DEFAULT FALSE,
   marks_awarded INT NOT NULL DEFAULT 0,
-  FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
-  FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
-);
-=======
-  selected_option ENUM('a', 'b', 'c', 'd') NULL,
-  is_correct BOOLEAN DEFAULT FALSE,
-  marks_awarded INT DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
   FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
 );
-
->>>>>>> Pakshal

@@ -1,6 +1,5 @@
 import { query } from '../config/db.js';
 
-<<<<<<< HEAD
 const mockAssessments = [
   {
     id: 1,
@@ -13,6 +12,7 @@ const mockAssessments = [
     total_marks: 50,
     passing_percentage: 60.00,
     is_published: 1,
+    status: 'published',
     created_at: new Date('2026-02-01'),
   },
   {
@@ -26,6 +26,7 @@ const mockAssessments = [
     total_marks: 40,
     passing_percentage: 50.00,
     is_published: 1,
+    status: 'published',
     created_at: new Date('2026-02-01'),
   },
 ];
@@ -39,7 +40,7 @@ const mockQuestions = [
     option_b: 'O(log n)',
     option_c: 'O(n)',
     option_d: 'O(n log n)',
-    correct_option: 'B',
+    correct_option: 'b',
     marks: 10,
     explanation: 'A balanced BST divides search space in half at each step, resulting in O(log n) time complexity.',
   },
@@ -51,7 +52,7 @@ const mockQuestions = [
     option_b: 'JSON.toString()',
     option_c: 'JSON.stringify()',
     option_d: 'JSON.encode()',
-    correct_option: 'C',
+    correct_option: 'c',
     marks: 10,
     explanation: 'JSON.stringify() converts a JavaScript object or value to a JSON string.',
   },
@@ -63,7 +64,7 @@ const mockQuestions = [
     option_b: 'express.urlencoded()',
     option_c: 'express.json()',
     option_d: 'express.router()',
-    correct_option: 'C',
+    correct_option: 'c',
     marks: 10,
     explanation: 'express.json() is built-in middleware in Express to parse incoming requests with JSON payloads.',
   },
@@ -75,7 +76,7 @@ const mockQuestions = [
     option_b: 'HAVING',
     option_c: 'GROUP BY',
     option_d: 'ORDER BY',
-    correct_option: 'B',
+    correct_option: 'b',
     marks: 10,
     explanation: 'The HAVING clause was added to SQL because the WHERE keyword cannot be used with aggregate functions.',
   },
@@ -87,7 +88,7 @@ const mockQuestions = [
     option_b: '403 Forbidden',
     option_c: '404 Not Found',
     option_d: '400 Bad Request',
-    correct_option: 'B',
+    correct_option: 'b',
     marks: 10,
     explanation: '403 Forbidden indicates the server understood the request but refuses to authorize it due to lack of permissions.',
   },
@@ -96,7 +97,7 @@ const mockQuestions = [
 const mockAttempts = [];
 const mockAnswers = [];
 
-// ─── EXISTING MODEL FUNCTIONS ──────────────────────────────────────────────────
+// ─── Assessments ─────────────────────────────────────────────────────────────
 
 export const getAssessmentsModel = async (collegeId = null) => {
   try {
@@ -119,6 +120,33 @@ export const getAssessmentsModel = async (collegeId = null) => {
   });
 };
 
+export const findAssessments = async (filters = {}) => {
+  let sql = `
+    SELECT a.*, u.name AS created_by_name, c.name AS college_name
+    FROM assessments a
+    LEFT JOIN users u ON a.created_by = u.id
+    LEFT JOIN colleges c ON a.college_id = c.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (filters.college_id) {
+    sql += ' AND a.college_id = ?';
+    params.push(filters.college_id);
+  }
+  if (filters.batch_id) {
+    sql += ' AND a.batch_id = ?';
+    params.push(filters.batch_id);
+  }
+  if (filters.status) {
+    sql += ' AND a.status = ?';
+    params.push(filters.status);
+  }
+
+  sql += ' ORDER BY a.id DESC';
+  return await query(sql, params);
+};
+
 export const getAssessmentByIdModel = async (id) => {
   const numId = parseInt(id, 10);
   try {
@@ -130,6 +158,46 @@ export const getAssessmentByIdModel = async (id) => {
   return mockAssessments.find((a) => a.id === numId) || null;
 };
 
+export const findAssessmentById = async (id) => {
+  const rows = await query(`
+    SELECT a.*, u.name AS created_by_name, c.name AS college_name
+    FROM assessments a
+    LEFT JOIN users u ON a.created_by = u.id
+    LEFT JOIN colleges c ON a.college_id = c.id
+    WHERE a.id = ?
+  `, [id]);
+  return rows[0] || (await getAssessmentByIdModel(id));
+};
+
+export const createAssessment = async ({ title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status }) => {
+  const result = await query(
+    `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, description || null, college_id || null, batch_id || null, created_by, duration_minutes || null, total_marks || 0, pass_marks || 0, status || 'draft']
+  );
+  return findAssessmentById(result.insertId);
+};
+
+export const updateAssessment = async (id, { title, description, college_id, batch_id, duration_minutes, total_marks, pass_marks, status }) => {
+  await query(
+    `UPDATE assessments SET title=?, description=?, college_id=?, batch_id=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?
+     WHERE id = ?`,
+    [title, description || null, college_id || null, batch_id || null, duration_minutes || null, total_marks, pass_marks, status, id]
+  );
+  return findAssessmentById(id);
+};
+
+export const deleteAssessment = async (id) => {
+  return await query('DELETE FROM assessments WHERE id = ?', [id]);
+};
+
+export const publishAssessment = async (id) => {
+  await query("UPDATE assessments SET status = 'published', is_published = TRUE WHERE id = ?", [id]);
+  return findAssessmentById(id);
+};
+
+// ─── Questions ──────────────────────────────────────────────────────────────
+
 export const getAssessmentQuestionsModel = async (assessmentId, includeAnswers = false) => {
   const numId = parseInt(assessmentId, 10);
   try {
@@ -137,7 +205,7 @@ export const getAssessmentQuestionsModel = async (assessmentId, includeAnswers =
     if (includeAnswers) {
       sql += ', correct_option, explanation';
     }
-    sql += ' FROM assessment_questions WHERE assessment_id = ? ORDER BY id ASC';
+    sql += ' FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC, id ASC';
     const results = await query(sql, [numId]);
     if (results && Array.isArray(results) && results.length > 0) return results;
   } catch (error) {
@@ -152,6 +220,46 @@ export const getAssessmentQuestionsModel = async (assessmentId, includeAnswers =
       return safeQ;
     });
 };
+
+export const findQuestionsByAssessment = async (assessmentId, includeCorrect = false) => {
+  const columns = includeCorrect
+    ? 'id, assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order'
+    : 'id, assessment_id, question_text, option_a, option_b, option_c, option_d, marks, question_order';
+
+  return await query(
+    `SELECT ${columns} FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC, id ASC`,
+    [assessmentId]
+  );
+};
+
+export const findQuestionById = async (id) => {
+  const rows = await query('SELECT * FROM assessment_questions WHERE id = ?', [id]);
+  return rows[0];
+};
+
+export const createQuestion = async ({ assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order }) => {
+  const result = await query(
+    `INSERT INTO assessment_questions (assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks || 1, question_order || 0]
+  );
+  return findQuestionById(result.insertId);
+};
+
+export const updateQuestion = async (id, { question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order }) => {
+  await query(
+    `UPDATE assessment_questions SET question_text=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_option=?, marks=?, question_order=?
+     WHERE id = ?`,
+    [question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order, id]
+  );
+  return findQuestionById(id);
+};
+
+export const deleteQuestion = async (id) => {
+  return await query('DELETE FROM assessment_questions WHERE id = ?', [id]);
+};
+
+// ─── Attempts ───────────────────────────────────────────────────────────────
 
 export const saveAssessmentAttemptModel = async (attemptData) => {
   const {
@@ -259,18 +367,10 @@ export const getStudentAttemptsModel = async (userId) => {
   return mockAttempts.filter((a) => a.user_id === numId);
 };
 
-// ─── NEW MODEL FUNCTIONS ───────────────────────────────────────────────────────
-
-/**
- * Start or resume an assessment attempt.
- * - If the student already has any attempt (in_progress or completed), return it.
- * - Otherwise insert a new 'in_progress' row.
- */
 export const startAttemptModel = async (assessmentId, userId) => {
   const numAssId = parseInt(assessmentId, 10);
   const numUserId = parseInt(userId, 10);
 
-  // 1. Check for existing attempt (any status)
   try {
     const existing = await query(
       `SELECT * FROM assessment_attempts 
@@ -281,14 +381,12 @@ export const startAttemptModel = async (assessmentId, userId) => {
     if (existing && existing.length > 0) return existing[0];
   } catch (error) {
     console.warn(`[Assessment Model] startAttemptModel check fallback: ${error.message}`);
-    // Check mock store
     const mockExisting = mockAttempts
       .filter((a) => a.assessment_id === numAssId && a.user_id === numUserId)
       .sort((a, b) => b.id - a.id)[0];
     if (mockExisting) return mockExisting;
   }
 
-  // 2. No existing attempt — create new in_progress
   let newAttemptId = null;
   try {
     const res = await query(
@@ -306,7 +404,6 @@ export const startAttemptModel = async (assessmentId, userId) => {
     console.warn(`[Assessment Model] startAttemptModel insert fallback: ${error.message}`);
   }
 
-  // Fallback: create in mock store
   const mockAttempt = {
     id: newAttemptId || mockAttempts.length + 1,
     assessment_id: numAssId,
@@ -318,9 +415,6 @@ export const startAttemptModel = async (assessmentId, userId) => {
   return mockAttempt;
 };
 
-/**
- * Fetch a single attempt by its ID (with joined assessment info).
- */
 export const getAttemptByIdModel = async (attemptId) => {
   const numId = parseInt(attemptId, 10);
   try {
@@ -339,9 +433,6 @@ export const getAttemptByIdModel = async (attemptId) => {
   return mockAttempts.find((a) => a.id === numId) || null;
 };
 
-/**
- * Update an attempt record after grading (marks as completed with submitted_at timestamp).
- */
 export const updateAttemptModel = async (attemptId, updateData) => {
   const numId = parseInt(attemptId, 10);
   const {
@@ -380,7 +471,6 @@ export const updateAttemptModel = async (attemptId, updateData) => {
     console.warn(`[Assessment Model] updateAttemptModel fallback: ${error.message}`);
   }
 
-  // Keep mock store consistent during fallback mode
   const mockAttempt = mockAttempts.find((a) => a.id === numId);
   if (mockAttempt) {
     Object.assign(mockAttempt, { ...updateData, submitted_at: new Date() });
@@ -389,10 +479,6 @@ export const updateAttemptModel = async (attemptId, updateData) => {
   return { id: numId, ...updateData, submitted_at: new Date() };
 };
 
-/**
- * Bulk-insert graded answers into assessment_answers.
- * Each answer object: { question_id, selected_option, is_correct, marks_awarded }
- */
 export const saveAnswersModel = async (attemptId, answers = []) => {
   const numId = parseInt(attemptId, 10);
 
@@ -409,7 +495,6 @@ export const saveAnswersModel = async (attemptId, answers = []) => {
     console.warn(`[Assessment Model] saveAnswersModel fallback: ${error.message}`);
   }
 
-  // Persist in mock store
   answers.forEach((ans) => {
     mockAnswers.push({
       id: mockAnswers.length + 1,
@@ -421,10 +506,6 @@ export const saveAnswersModel = async (attemptId, answers = []) => {
   return answers;
 };
 
-/**
- * Fetch all saved answers for a given attempt (used by Result API).
- * Returns joined data including question text and correct option.
- */
 export const getAttemptAnswersModel = async (attemptId) => {
   const numId = parseInt(attemptId, 10);
   try {
@@ -442,115 +523,9 @@ export const getAttemptAnswersModel = async (attemptId) => {
     console.warn(`[Assessment Model] getAttemptAnswersModel fallback: ${error.message}`);
   }
   return mockAnswers.filter((a) => a.attempt_id === numId);
-=======
-// ─── Assessments ────────────────────────────────────────────────────────────
-
-export const findAssessments = async (filters = {}) => {
-  let sql = `
-    SELECT a.*, u.name AS created_by_name, c.name AS college_name
-    FROM assessments a
-    LEFT JOIN users u ON a.created_by = u.id
-    LEFT JOIN colleges c ON a.college_id = c.id
-    WHERE 1=1
-  `;
-  const params = [];
-
-  if (filters.college_id) {
-    sql += ' AND a.college_id = ?';
-    params.push(filters.college_id);
-  }
-  if (filters.batch_id) {
-    sql += ' AND a.batch_id = ?';
-    params.push(filters.batch_id);
-  }
-  if (filters.status) {
-    sql += ' AND a.status = ?';
-    params.push(filters.status);
-  }
-
-  sql += ' ORDER BY a.id DESC';
-  return await query(sql, params);
 };
 
-export const findAssessmentById = async (id) => {
-  const rows = await query(`
-    SELECT a.*, u.name AS created_by_name, c.name AS college_name
-    FROM assessments a
-    LEFT JOIN users u ON a.created_by = u.id
-    LEFT JOIN colleges c ON a.college_id = c.id
-    WHERE a.id = ?
-  `, [id]);
-  return rows[0];
-};
-
-export const createAssessment = async ({ title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status }) => {
-  const result = await query(
-    `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, description || null, college_id || null, batch_id || null, created_by, duration_minutes || null, total_marks || 0, pass_marks || 0, status || 'draft']
-  );
-  return findAssessmentById(result.insertId);
-};
-
-export const updateAssessment = async (id, { title, description, college_id, batch_id, duration_minutes, total_marks, pass_marks, status }) => {
-  await query(
-    `UPDATE assessments SET title=?, description=?, college_id=?, batch_id=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?
-     WHERE id = ?`,
-    [title, description || null, college_id || null, batch_id || null, duration_minutes || null, total_marks, pass_marks, status, id]
-  );
-  return findAssessmentById(id);
-};
-
-export const deleteAssessment = async (id) => {
-  return await query('DELETE FROM assessments WHERE id = ?', [id]);
-};
-
-export const publishAssessment = async (id) => {
-  await query("UPDATE assessments SET status = 'published' WHERE id = ?", [id]);
-  return findAssessmentById(id);
-};
-
-// ─── Questions ──────────────────────────────────────────────────────────────
-
-export const findQuestionsByAssessment = async (assessmentId, includeCorrect = false) => {
-  const columns = includeCorrect
-    ? 'id, assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order'
-    : 'id, assessment_id, question_text, option_a, option_b, option_c, option_d, marks, question_order';
-
-  return await query(
-    `SELECT ${columns} FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC, id ASC`,
-    [assessmentId]
-  );
-};
-
-export const findQuestionById = async (id) => {
-  const rows = await query('SELECT * FROM assessment_questions WHERE id = ?', [id]);
-  return rows[0];
-};
-
-export const createQuestion = async ({ assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order }) => {
-  const result = await query(
-    `INSERT INTO assessment_questions (assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks || 1, question_order || 0]
-  );
-  return findQuestionById(result.insertId);
-};
-
-export const updateQuestion = async (id, { question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order }) => {
-  await query(
-    `UPDATE assessment_questions SET question_text=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_option=?, marks=?, question_order=?
-     WHERE id = ?`,
-    [question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order, id]
-  );
-  return findQuestionById(id);
-};
-
-export const deleteQuestion = async (id) => {
-  return await query('DELETE FROM assessment_questions WHERE id = ?', [id]);
-};
-
-// ─── Attempts ───────────────────────────────────────────────────────────────
+// ─── Pakshal's direct DB functions (no fallback) ────────────────────────────
 
 export const findAttemptById = async (id) => {
   const rows = await query('SELECT * FROM assessment_attempts WHERE id = ?', [id]);
@@ -593,8 +568,6 @@ export const completeAttempt = async (id, { score, percentage, total_questions, 
   return findAttemptById(id);
 };
 
-// ─── Answers ────────────────────────────────────────────────────────────────
-
 export const saveAnswer = async ({ attempt_id, question_id, selected_option, is_correct, marks_awarded }) => {
   const result = await query(
     `INSERT INTO assessment_answers (attempt_id, question_id, selected_option, is_correct, marks_awarded)
@@ -611,5 +584,4 @@ export const findAnswersByAttempt = async (attemptId) => {
     JOIN assessment_questions aq ON aa.question_id = aq.id
     WHERE aa.attempt_id = ?
   `, [attemptId]);
->>>>>>> Pakshal
 };

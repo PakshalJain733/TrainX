@@ -1,48 +1,38 @@
-<<<<<<< HEAD
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 import {
   getAllCollegesModel,
   getCollegeByIdModel,
   createCollegeModel,
+  updateCollege,
+  deleteCollege,
 } from '../models/college.model.js';
 import {
   getDepartmentsByCollegeModel,
   getDepartmentByIdModel,
   createDepartmentModel,
+  updateDepartment,
+  deleteDepartment,
 } from '../models/department.model.js';
 import {
   getBatchesModel,
   getBatchByIdModel,
   createBatchModel,
+  updateBatch,
+  deleteBatch,
 } from '../models/batch.model.js';
+
+// ─── Colleges ─────────────────────────────────────────────────────────────────
 
 export const getColleges = async (req, res, next) => {
   try {
     const colleges = await getAllCollegesModel();
-=======
-import {
-  findColleges,
-  findCollegeById,
-  createCollege,
-  updateCollege,
-  deleteCollege
-} from '../models/college.model.js';
-
-import { sendSuccess } from '../utils/response.js';
-
-// Get all colleges
-export const getColleges = async (req, res, next) => {
-  try {
-    const colleges = await findColleges();
->>>>>>> Pakshal
     return sendSuccess(res, 'Colleges retrieved successfully', colleges);
   } catch (error) {
     next(error);
   }
 };
 
-<<<<<<< HEAD
 export const getCollegeById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -50,27 +40,12 @@ export const getCollegeById = async (req, res, next) => {
     if (!college) {
       return sendError(res, 'College not found', 404);
     }
-=======
-// Get one college
-export const getCollegeById = async (req, res, next) => {
-  try {
-    const college = await findCollegeById(req.params.id);
-
-    if (!college) {
-      return res.status(404).json({
-        success: false,
-        message: 'College not found'
-      });
-    }
-
->>>>>>> Pakshal
     return sendSuccess(res, 'College retrieved successfully', college);
   } catch (error) {
     next(error);
   }
 };
 
-<<<<<<< HEAD
 export const createCollege = async (req, res, next) => {
   try {
     const { name, code } = req.body;
@@ -79,50 +54,45 @@ export const createCollege = async (req, res, next) => {
     }
     const newCollege = await createCollegeModel({ name, code });
     return sendSuccess(res, 'College created successfully', newCollege, 201);
-=======
-// Create college
-export const addCollege = async (req, res, next) => {
-  try {
-    const { name, code } = req.body;
-
-    if (!name || !code) {
-      return res.status(400).json({
-        success: false,
-        message: 'Name and code are required'
-      });
-    }
-
-    const college = await createCollege(name, code);
-    return sendSuccess(res, 'College created successfully', college);
->>>>>>> Pakshal
   } catch (error) {
     next(error);
   }
 };
 
-<<<<<<< HEAD
+export const addCollege = createCollege;
+
+export const editCollege = async (req, res, next) => {
+  try {
+    const { name, code } = req.body;
+    await updateCollege(req.params.id, name, code);
+    return sendSuccess(res, 'College updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeCollege = async (req, res, next) => {
+  try {
+    await deleteCollege(req.params.id);
+    return sendSuccess(res, 'College deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Departments ──────────────────────────────────────────────────────────────
+
 export const getDepartments = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role === ROLES.SUPER_ADMIN;
     const collegeId = isSuperAdmin ? (req.query.collegeId || null) : req.user.collegeId;
     const departments = await getDepartmentsByCollegeModel(collegeId);
     return sendSuccess(res, 'Departments retrieved successfully', departments);
-=======
-// Update college
-export const editCollege = async (req, res, next) => {
-  try {
-    const { name, code } = req.body;
-
-    await updateCollege(req.params.id, name, code);
-
-    return sendSuccess(res, 'College updated successfully');
->>>>>>> Pakshal
   } catch (error) {
     next(error);
   }
 };
 
-<<<<<<< HEAD
 export const createDepartment = async (req, res, next) => {
   try {
     const { name, code, college_id } = req.body;
@@ -147,6 +117,27 @@ export const createDepartment = async (req, res, next) => {
   }
 };
 
+export const editDepartment = async (req, res, next) => {
+  try {
+    const { name, code, college_id } = req.body;
+    await updateDepartment(req.params.id, college_id, name, code);
+    return sendSuccess(res, 'Department updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeDepartment = async (req, res, next) => {
+  try {
+    await deleteDepartment(req.params.id);
+    return sendSuccess(res, 'Department deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Batches ──────────────────────────────────────────────────────────────────
+
 export const getBatches = async (req, res, next) => {
   try {
     const isSuperAdmin = req.user.role === ROLES.SUPER_ADMIN;
@@ -162,7 +153,7 @@ export const getBatches = async (req, res, next) => {
 
 export const createBatch = async (req, res, next) => {
   try {
-    const { name, department_id, year, division, academic_year, college_id } = req.body;
+    const { name, department_id, year, division, academic_year, college_id, start_year, end_year, status } = req.body;
     if (!name || !department_id) {
       return sendError(res, 'Batch name and department_id are required', 400);
     }
@@ -185,6 +176,9 @@ export const createBatch = async (req, res, next) => {
       year,
       division,
       academic_year,
+      start_year,
+      end_year,
+      status,
     });
 
     return sendSuccess(res, 'Batch created successfully', newBatch, 201);
@@ -193,16 +187,23 @@ export const createBatch = async (req, res, next) => {
   }
 };
 
-export const getCollegeData = getColleges;
-=======
-// Delete college
-export const removeCollege = async (req, res, next) => {
+export const editBatch = async (req, res, next) => {
   try {
-    await deleteCollege(req.params.id);
-
-    return sendSuccess(res, 'College deleted successfully');
+    const { college_id, department_id, name, academic_year, start_year, end_year, status } = req.body;
+    const updated = await updateBatch(req.params.id, { college_id, department_id, name, academic_year, start_year, end_year, status });
+    return sendSuccess(res, 'Batch updated successfully', updated);
   } catch (error) {
     next(error);
   }
 };
->>>>>>> Pakshal
+
+export const removeBatch = async (req, res, next) => {
+  try {
+    await deleteBatch(req.params.id);
+    return sendSuccess(res, 'Batch deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCollegeData = getColleges;
