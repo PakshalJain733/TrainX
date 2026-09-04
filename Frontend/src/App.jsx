@@ -34,6 +34,7 @@ import AdminProgress from "./pages/Admin/Components/AdminProgress";
 import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
+import AdminProfile from './pages/Admin/Components/AdminProfile';
 
 
 // Super Admin Workspace Imports
@@ -127,27 +128,22 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
 
-          {/* Admin Dashboard Routes */}
-          <Route
-            path="/admin"
-            element={
-              <MaintenanceGuard moduleKey="adminDashboard">
-                <AdminLayout />
-              </MaintenanceGuard>
-            }
-          >
-            <Route index element={<AdminOverview />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="batches" element={<AdminBatches />} />
-            <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><AdminAttendance /></MaintenanceGuard>} />
-            <Route path="learning" element={<MaintenanceGuard moduleKey="learningContent"><AdminLearningContent /></MaintenanceGuard>} />
-            <Route path="quiz" element={<MaintenanceGuard moduleKey="academicQuizzes"><AdminQuizzes /></MaintenanceGuard>} />
-            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><AdminPracticeProblems /></MaintenanceGuard>} />
-            <Route path="progress" element={<AdminProgress />} />
-            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><AdminLeaderboard /></MaintenanceGuard>} />
-            <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><AdminWeeklyReports /></MaintenanceGuard>} />
-            <Route path="help" element={<AdminHelp />} />
-          </Route>
+        {/* Admin Dashboard Routes */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminOverview />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="batches" element={<AdminBatches />} />
+          <Route path="attendance" element={<AdminAttendance />} />
+          <Route path="learning" element={<AdminLearningContent />} />
+          <Route path="quiz" element={<AdminQuizzes />} />
+          <Route path="practice" element={<AdminPracticeProblems />} />
+          <Route path="progress" element={<AdminProgress />} />
+          <Route path="leaderboard" element={<AdminLeaderboard />} />
+          <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+          <Route path="help" element={<AdminHelp />} />
+          <Route path="profile" element={<AdminProfile />} />
+        </Route>
+
 
           {/* Mentor Workspace Routes */}
           <Route

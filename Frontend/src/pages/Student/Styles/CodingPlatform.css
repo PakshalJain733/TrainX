@@ -286,3 +286,48 @@
   justify-content: center;
   height: 100%;
 }
+
+/* Inline CSS Replacements */
+.cp-header-actions-group {
+  display: flex;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+.cp-req-heading {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cp-constraints-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.cp-no-submissions {
+  text-align: center;
+  color: #64748b;
+  margin-top: 40px;
+}
+
+.cp-no-submissions-icon {
+  opacity: 0.5;
+  margin-bottom: 12px;
+}
+
+.cp-console-actions {
+  display: flex;
+  gap: 10px;
+  color: #94a3b8;
+}
+
+.cp-pre-output {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+}
+

@@ -18,6 +18,7 @@ import {
   HelpCircle,
   GraduationCap,
   Settings,
+  UserCheck,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentSidebar.css";
@@ -43,7 +44,7 @@ function SidebarBrand({ collapsed, subtitle }) {
 
 const primaryNavItems = [
   { title: "Dashboard", url: "/student", icon: LayoutDashboard, exact: true },
-  { title: "Batches", url: "/student/Batches", icon: Code2 },
+  { title: "Batches", url: "/student/batches", icon: Code2 },
   { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles },
   { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck },
   { title: "Practice", url: "/student/practice", icon: Terminal },
@@ -90,7 +91,6 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
 
   return (
     <aside className={`student-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-
       {/* Header */}
       <div className="sidebar-header">
         <SidebarBrand collapsed={collapsed} subtitle="Student Workspace" />
@@ -103,13 +103,12 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
         </ul>
       </div>
 
-      {/* Pinned Bottom Account Section with Divider */}
+      {/* Pinned Bottom Account Section */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
           {footerNavItems.map(renderItem)}
         </ul>
       </div>
-
     </aside>
   );
 }

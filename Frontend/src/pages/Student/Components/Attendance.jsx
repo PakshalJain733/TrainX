@@ -508,28 +508,7 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Manual Entry */}
-            {showManual && (
-              <div className="qr-manual-section">
-                <p className="qr-manual-label">Enter attendance code manually</p>
-                <div className="qr-manual-row">
-                  <input
-                    className="qr-manual-input"
-                    value={manualCode}
-                    onChange={e => setManualCode(e.target.value)}
-                    placeholder="e.g. ATT-2026-0827"
-                    autoFocus
-                  />
-                  <button
-                    className="qr-manual-submit"
-                    disabled={!manualCode.trim()}
-                    onClick={() => { setScanResult(manualCode); setCameraStatus("success"); stopCamera(); setShowManual(false); }}
-                  >
-                    Mark Present
-                  </button>
-                </div>
-              </div>
-            )}
+            {/* Manual Entry Removed */}
 
             {/* Footer */}
             <div className="qr-modal-footer">
@@ -548,12 +527,8 @@ export default function Attendance() {
               {(cameraStatus === "idle" || cameraStatus === "error") && <div/>}
               {cameraStatus === "loading" && <div/>}
 
-              {cameraStatus === "success" ? (
-                <button className="qr-enter-code-btn" style={{background:"#4f46e5",color:"#fff",border:"none"}} onClick={closeModal}>Done</button>
-              ) : (
-                <button className="qr-enter-code-btn" onClick={() => { setShowManual(v => !v); }}>
-                  {showManual ? "Hide Manual Entry" : "Enter Code Manually"}
-                </button>
+              {cameraStatus === "success" && (
+                <button className="qr-enter-code-btn" style={{background:"#4f46e5",color:"#fff",border:"none", width: "100%"}} onClick={closeModal}>Done</button>
               )}
             </div>
 
@@ -762,33 +737,7 @@ export default function Attendance() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleLeaveSubmit} className="attendance-stack-4">
-                  {/* Category Pills Selection */}
-                  <div className="attendance-stack-2">
-                    <Label className="attendance-label-bold">Select Leave Category</Label>
-                    <div className="attendance-category-pills">
-                      {[
-                        { name: "Medical Leave", icon: ShieldCheck, desc: "Doctor note required" },
-                        { name: "Academic Duty", icon: BookOpen, desc: "Events / Contests" },
-                        { name: "Personal / Family", icon: Clock, desc: "Emergency / Events" },
-                      ].map((cat) => {
-                        const CatIcon = cat.icon;
-                        const isSelected = leaveCategory === cat.name;
-                        return (
-                          <div
-                            key={cat.name}
-                            className={`attendance-category-pill ${isSelected ? 'pill-active' : ''}`}
-                            onClick={() => setLeaveCategory(cat.name)}
-                          >
-                            <CatIcon size={16} />
-                            <div>
-                              <div className="pill-title">{cat.name}</div>
-                              <div className="pill-desc">{cat.desc}</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+
 
                   {/* Dates Selection */}
                   <div className="attendance-grid-2 attendance-leave-dates">
@@ -882,32 +831,6 @@ export default function Attendance() {
 
             {/* Right Column: Quota & Guidelines */}
             <div className="attendance-leave-sidebar stack-4">
-              <Card className="attendance-quota-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="attendance-card-title flex items-center gap-2">
-                    <Sparkles size={16} className="text-amber-500" /> Semester Leave Quotas
-                  </CardTitle>
-                  <CardDescription>Allowance & utilization balance</CardDescription>
-                </CardHeader>
-                <CardContent className="attendance-stack-4">
-                  {leaveQuotas.map((q, idx) => {
-                    const QuotaIcon = q.icon;
-                    const pct = Math.round((q.used / q.total) * 100);
-                    return (
-                      <div key={idx} className="attendance-quota-item">
-                        <div className="attendance-quota-header">
-                          <div className="attendance-row gap-2">
-                            <QuotaIcon size={15} style={{ color: q.color }} />
-                            <span className="attendance-quota-name">{q.type}</span>
-                          </div>
-                          <span className="attendance-quota-count">{q.used} / {q.total} Used</span>
-                        </div>
-                        <Progress value={pct} className="h-2" />
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
 
               {/* Leave Policy Guidelines Card */}
               <Card className="attendance-policy-card">
