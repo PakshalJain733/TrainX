@@ -190,11 +190,6 @@ export default function Overview() {
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/student/profile">
-            <Button variant="outline" className="gap-2 text-sm bg-white/10 text-white border-white/20 hover:bg-white/20">
-              <UserCheck size={14} /> My Profile
-            </Button>
-          </Link>
           <Link to="/student/batches">
             <Button className="overview-btn-primary">
               <Sparkles size={14} className="overview-btn-icon" /> Batches
