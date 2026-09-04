@@ -67,44 +67,42 @@ export default function ProfilePage() {
         let name = u.name || "";
         const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
         if (isAutoName) {
-          name = u.fullName || u.full_name || "Pakshal";
+          name = u.fullName || u.full_name || "";
         }
         return {
           name: name,
-          email: u.email || "ganeshshinde@pvppcoe.ac.in",
-          phone: u.phone || u.mobile_number || "+91 98765 43210",
-          rollNo: u.rollNo || u.roll_number || "21ECS042",
-          department: u.department || "Electronics & Computer Science",
-          semester: u.semester || "Semester 6",
-          cgpa: u.cgpa || u.aggregate_cgpa || "8.75",
+          email: u.email || "",
+          phone: u.phone || u.mobile_number || "",
+          rollNo: u.rollNo || u.roll_number || "",
+          department: u.department || "",
+          semester: u.semester || "",
+          cgpa: u.cgpa || u.aggregate_cgpa || "",
           skills: u.skills || "",
           profileCompleted: u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills),
-          batch: u.batch || "B.Tech 2026 — Batch A",
+          batch: u.batch || "",
           college: u.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-          coordinator: u.coordinator || "Prof. A. Deshmukh (ECS)",
-          mentor: u.mentor || "Ms. R. Kulkarni (C2C Mentor)",
-          track: u.track || "Python Backend Developer",
-          bio: u.bio || "Passionate 6th semester ECS student focusing on scalable backend architectures, distributed systems, and real-time APIs.",
+          coordinator: u.coordinator || "",
+          mentor: u.mentor || "",
+          track: u.track || "",
         };
       }
     } catch (e) {}
 
     return {
-      name: "Ganesh Shinde",
-      email: "ganeshshinde@pvppcoe.ac.in",
-      phone: "+91 98765 43210",
-      rollNo: "21ECS042",
-      department: "Electronics & Computer Science",
-      semester: "Semester 6",
-      cgpa: "8.75",
+      name: "",
+      email: "",
+      phone: "",
+      rollNo: "",
+      department: "",
+      semester: "",
+      cgpa: "",
       skills: "",
       profileCompleted: true,
-      batch: "B.Tech 2026 — Batch A",
+      batch: "",
       college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-      coordinator: "Prof. A. Deshmukh (ECS)",
-      mentor: "Ms. R. Kulkarni (C2C Mentor)",
-      track: "Python Backend Developer",
-      bio: "Passionate 6th semester ECS student focusing on scalable backend architectures, distributed systems, and real-time APIs.",
+      coordinator: "",
+      mentor: "",
+      track: "",
     };
   });
 

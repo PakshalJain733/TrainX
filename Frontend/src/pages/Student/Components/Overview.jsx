@@ -285,7 +285,7 @@ export default function Overview() {
                       <AvatarFallback className="text-xs font-bold">{item.initials}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.name}</h5>
+                     <h5 className="text-sm font-semibold dark:text-slate-200\">{item.name}</h5>
                       <span className="text-xs text-slate-500">{item.score}</span>
                     </div>
                   </div>

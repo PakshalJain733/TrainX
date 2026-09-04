@@ -1,7 +1,7 @@
 CREATE DATABASE IF NOT EXISTS training_portal_db;
 USE training_portal_db;
 
--- Colleges Table
+-- 1. Colleges Table
 CREATE TABLE IF NOT EXISTS colleges (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -9,10 +9,50 @@ CREATE TABLE IF NOT EXISTS colleges (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Default College
-INSERT IGNORE INTO colleges (id, name, code) VALUES (1, 'Vasantdada Patil Pratishthan College of Engineering', 'PVPPCOE');
+-- Seed Initial Colleges
+INSERT IGNORE INTO colleges (id, name, code) VALUES 
+(1, 'Vasantdada Patil Pratishthan College of Engineering', 'PVPPCOE'),
+(2, 'Don Bosco Institute of Technology', 'DBIT');
 
--- Users Table
+-- 2. Departments Table
+CREATE TABLE IF NOT EXISTS departments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+);
+
+-- Seed Initial Departments
+INSERT IGNORE INTO departments (id, college_id, name, code) VALUES
+(1, 1, 'Computer Engineering', 'COMP'),
+(2, 1, 'Information Technology', 'IT'),
+(3, 1, 'Electronics and Computer Science', 'ECS'),
+(4, 1, 'Artificial Intelligence and Data Science', 'AIDS'),
+(5, 2, 'Computer Engineering', 'DBIT_COMP');
+
+-- 3. Batches Table
+CREATE TABLE IF NOT EXISTS batches (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT NOT NULL,
+  department_id INT NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  year VARCHAR(20) DEFAULT 'TE',
+  division VARCHAR(20) DEFAULT 'A',
+  academic_year VARCHAR(20) DEFAULT '2025-2026',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+);
+
+-- Seed Initial Batches
+INSERT IGNORE INTO batches (id, college_id, department_id, name, year, division, academic_year) VALUES
+(1, 1, 1, 'COMP-TE-A-2026', 'TE', 'A', '2025-2026'),
+(2, 1, 3, 'ECS-TE-B-2026', 'TE', 'B', '2025-2026'),
+(3, 2, 5, 'DBIT-COMP-2026', 'TE', 'A', '2025-2026');
+
+-- 4. Users Table
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -26,24 +66,97 @@ CREATE TABLE IF NOT EXISTS users (
   FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
 );
 
--- Students Table
+-- 5. Students Table (User -> College -> Department -> Batch)
 CREATE TABLE IF NOT EXISTS students (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNIQUE NOT NULL,
+  college_id INT DEFAULT 1,
+  department_id INT NULL,
+  batch_id INT NULL,
   roll_number VARCHAR(100) NOT NULL,
   department VARCHAR(100),
   year VARCHAR(20),
   division VARCHAR(20),
   semester VARCHAR(20),
+  cgpa VARCHAR(10) DEFAULT '8.5',
+  skills TEXT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
+  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL
 );
 
--- OTP Store Table
+-- 6. OTP Store Table
 CREATE TABLE IF NOT EXISTS otps (
   id INT AUTO_INCREMENT PRIMARY KEY,
   email VARCHAR(255) NOT NULL,
   otp VARCHAR(10) NOT NULL,
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. Assessments Table
+CREATE TABLE IF NOT EXISTS assessments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT DEFAULT 1,
+  department_id INT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(100) DEFAULT 'Technical Quiz',
+  duration_minutes INT DEFAULT 30,
+  total_marks INT DEFAULT 50,
+  passing_percentage DECIMAL(5,2) DEFAULT 60.00,
+  is_published BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
+);
+
+-- 8. Assessment Questions Table
+CREATE TABLE IF NOT EXISTS assessment_questions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  assessment_id INT NOT NULL,
+  question_text TEXT NOT NULL,
+  option_a VARCHAR(255) NOT NULL,
+  option_b VARCHAR(255) NOT NULL,
+  option_c VARCHAR(255) NOT NULL,
+  option_d VARCHAR(255) NOT NULL,
+  correct_option CHAR(1) NOT NULL, -- 'A', 'B', 'C', or 'D'
+  marks INT DEFAULT 10,
+  explanation TEXT NULL,
+  FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
+);
+
+-- 9. Assessment Attempts Table
+CREATE TABLE IF NOT EXISTS assessment_attempts (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  assessment_id INT NOT NULL,
+  user_id INT NOT NULL,
+  college_id INT DEFAULT 1,
+  total_questions INT NOT NULL DEFAULT 0,
+  attempted_questions INT NOT NULL DEFAULT 0,
+  correct_count INT NOT NULL DEFAULT 0,
+  incorrect_count INT NOT NULL DEFAULT 0,
+  unattempted_count INT NOT NULL DEFAULT 0,
+  marks_obtained INT NOT NULL DEFAULT 0,
+  total_marks INT NOT NULL DEFAULT 0,
+  percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  status ENUM('passed', 'failed') NOT NULL DEFAULT 'failed',
+  started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (assessment_id) REFERENCES assessments(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 10. Assessment Answers Table
+CREATE TABLE IF NOT EXISTS assessment_answers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  attempt_id INT NOT NULL,
+  question_id INT NOT NULL,
+  selected_option CHAR(1) NULL,
+  is_correct BOOLEAN NOT NULL DEFAULT FALSE,
+  marks_awarded INT NOT NULL DEFAULT 0,
+  FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
+  FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
 );

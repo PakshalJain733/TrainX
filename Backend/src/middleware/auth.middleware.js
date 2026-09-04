@@ -10,11 +10,21 @@ export const authenticateToken = (req, res, next) => {
     return sendError(res, 'Authentication token required', 401);
   }
 
-  jwt.verify(token, config.jwt.secret, (err, user) => {
+  jwt.verify(token, config.jwt.secret, (err, decodedUser) => {
     if (err) {
-      return sendError(res, 'Invalid or expired token', 403);
+      return sendError(res, 'Invalid or expired authentication token', 401);
     }
-    req.user = user;
+    
+    // Normalize user properties for consistent access across controllers/services
+    req.user = {
+      ...decodedUser,
+      id: decodedUser.userId || decodedUser.id,
+      userId: decodedUser.userId || decodedUser.id,
+      collegeId: decodedUser.collegeId || decodedUser.college_id || 1,
+      college_id: decodedUser.college_id || decodedUser.collegeId || 1,
+      role: decodedUser.role || 'student',
+    };
+
     next();
   });
 };
