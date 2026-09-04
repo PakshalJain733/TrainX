@@ -1,7 +1,36 @@
 /* Tailwind CSS directives */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+:root {
+  --sidebar-width: 240px;
+  --navbar-height: 64px;
+  --main-page-padding: 24px;
+  --gap-sections: 24px;
+  --welcome-banner-height: 145px;
+  --welcome-banner-radius: 16px;
+  --banner-padding: 24px 28px;
+  --banner-title-size: 28px;
+  --banner-title-weight: 700;
+  --banner-subtitle-size: 14px;
+  --stat-card-min-height: 120px;
+  --stat-card-radius: 12px;
+  --stat-card-padding: 20px;
+  --stat-number-size: 28px;
+  --stat-number-weight: 700;
+  --stat-label-size: 14px;
+  --card-border: 1px solid #e2e8f0;
+  --content-card-radius: 12px;
+  --content-card-padding: 24px;
+  --section-heading-size: 18px;
+  --section-heading-weight: 600;
+  --body-text-size: 14px;
+  --small-text-size: 13px;
+  --button-height: 40px;
+  --button-radius: 8px;
+  --input-height: 42px;
+}
 
 * {
   margin: 0;
@@ -15,6 +44,7 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-size: var(--body-text-size);
 }
 
 #root {

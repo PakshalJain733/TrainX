@@ -460,8 +460,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 68px;
-  padding: 0 20px;
+  height: var(--navbar-height, 64px);
+  padding: 0 24px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -519,7 +519,7 @@ body {
 
 .student-header__search-input {
   width: 100%;
-  height: 40px;
+  height: var(--input-height, 42px);
   background: #f8fafc;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -856,7 +856,7 @@ body {
 .student-page-inner {
   width: 100%;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: var(--main-page-padding, 24px);
   box-sizing: border-box;
 }
 

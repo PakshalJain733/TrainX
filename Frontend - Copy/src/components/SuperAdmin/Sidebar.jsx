@@ -67,9 +67,9 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-[#0f172a] text-slate-100 flex flex-col h-screen sticky top-0 border-r border-slate-800 shrink-0 select-none">
+    <aside className="w-[240px] bg-[#0f172a] text-slate-100 flex flex-col h-screen sticky top-0 border-r border-slate-800 shrink-0 select-none">
       {/* Brand Header */}
-      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between">
+      <div className="h-[64px] px-4 border-b border-slate-800/80 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
             <Shield className="w-5 h-5" />
@@ -86,10 +86,10 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation List */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+      <nav className="flex-1 overflow-y-auto p-3 space-y-6">
         {navigationGroups.map((group) => (
           <div key={group.title} className="space-y-1">
-            <div className="px-3 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+            <div className="px-4 pb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">
               {group.title}
             </div>
             {group.items.map((item) => {
@@ -99,9 +99,9 @@ export default function Sidebar() {
                 <NavLink
                   key={item.name}
                   to={item.path}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 ${
+                  className={`flex items-center justify-between h-[44px] px-4 rounded-lg text-xs font-medium transition-all duration-200 ${
                     active
-                      ? 'bg-slate-800/90 text-white font-semibold border-l-2 border-indigo-500 shadow-xs'
+                      ? 'bg-indigo-600/20 text-white font-semibold border-l-2 border-indigo-500 shadow-xs'
                       : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/40'
                   }`}
                 >
