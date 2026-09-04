@@ -333,7 +333,7 @@ export default function AdminUsers() {
                 <th>Academic / Dept</th>
                 <th>Mobile Number</th>
                 <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th className="th-actions-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -357,19 +357,19 @@ export default function AdminUsers() {
                     <td>
                       {u.role === "student" ? (
                         <div>
-                          <div style={{ fontWeight: 600, color: "#1e293b" }}>
+                          <div className="user-dept-student">
                             {u.department || "No Dept"} {u.year ? `· ${u.year}` : ""} {u.division ? `(Div ${u.division})` : ""}
                           </div>
-                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                          <div className="user-dept-roll">
                             ID: {u.roll_number || "N/A"} · Sem {u.semester || "N/A"}
                           </div>
                         </div>
                       ) : (
-                        <span style={{ color: "#64748b" }}>{u.department || "Institutional Staff"}</span>
+                        <span className="user-dept-staff">{u.department || "Institutional Staff"}</span>
                       )}
                     </td>
                     <td>
-                      <span style={{ color: "#334155", fontWeight: 500 }}>
+                      <span className="user-mobile-text">
                         {u.mobile_number || "—"}
                       </span>
                     </td>
@@ -380,7 +380,7 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td>
-                      <div className="action-btns-row" style={{ justifyContent: "flex-end" }}>
+                      <div className="action-btns-row action-btns-right">
                         <button
                           className="btn-table-action"
                           title="Edit User"
@@ -430,7 +430,7 @@ export default function AdminUsers() {
             <form onSubmit={handleCreateUser}>
               <div className="modal-body">
                 {feedback.message && (
-                  <div style={{ color: feedback.type === "error" ? "#dc2626" : "#16a34a", fontSize: 13, background: "#fef2f2", padding: 8, borderRadius: 6 }}>
+                  <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
                     {feedback.message}
                   </div>
                 )}
@@ -570,7 +570,7 @@ export default function AdminUsers() {
             <form onSubmit={handleUpdateUser}>
               <div className="modal-body">
                 {feedback.message && (
-                  <div style={{ color: feedback.type === "error" ? "#dc2626" : "#16a34a", fontSize: 13, background: "#fef2f2", padding: 8, borderRadius: 6 }}>
+                  <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
                     {feedback.message}
                   </div>
                 )}
@@ -680,15 +680,15 @@ export default function AdminUsers() {
               </button>
             </div>
             <div className="modal-body">
-              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#fee2e2", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div className="delete-user-row">
+                <div className="delete-user-icon-wrap">
                   <AlertCircle size={24} />
                 </div>
                 <div>
-                  <p style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
+                  <p className="delete-user-title">
                     Are you sure you want to delete user "{selectedUser.name}"?
                   </p>
-                  <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#64748b" }}>
+                  <p className="delete-user-sub">
                     This action will permanently remove the user and any associated student profile records.
                   </p>
                 </div>

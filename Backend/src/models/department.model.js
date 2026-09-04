@@ -1,12 +1,6 @@
 import { query } from '../config/db.js';
 
-const mockDepartments = [
-  { id: 1, college_id: 1, name: 'Computer Engineering', code: 'COMP', created_at: new Date('2026-01-01') },
-  { id: 2, college_id: 1, name: 'Information Technology', code: 'IT', created_at: new Date('2026-01-01') },
-  { id: 3, college_id: 1, name: 'Electronics and Computer Science', code: 'ECS', created_at: new Date('2026-01-01') },
-  { id: 4, college_id: 1, name: 'Artificial Intelligence and Data Science', code: 'AIDS', created_at: new Date('2026-01-01') },
-  { id: 5, college_id: 2, name: 'Computer Engineering', code: 'DBIT_COMP', created_at: new Date('2026-01-01') },
-];
+const mockDepartments = [];
 
 // Get all departments (with fallback)
 export const getDepartmentsByCollegeModel = async (collegeId = null) => {

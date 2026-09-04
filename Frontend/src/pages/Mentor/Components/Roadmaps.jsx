@@ -1,5 +1,6 @@
 import React from 'react';
-import { Target, Sparkles, BookOpen, Layers } from 'lucide-react';
+import { Target } from 'lucide-react';
+import '../Styles/Roadmaps.css';
 
 export default function Roadmaps() {
   const tracks = [
@@ -9,31 +10,36 @@ export default function Roadmaps() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="mentor-roadmaps-container">
+      <div className="mentor-page-header">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Target className="w-5 h-5 text-indigo-600" />
+          <h2 className="mentor-page-title">
+            <Target size={20} color="#4f46e5" />
             <span>Batch Adaptive Roadmaps</span>
           </h2>
-          <p className="text-xs text-slate-500">AI-generated curriculum pathways and module progression across allocated cohorts</p>
+          <p className="mentor-page-subtitle">AI-generated curriculum pathways and module progression across allocated cohorts</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="mentor-roadmaps-grid">
         {tracks.map((t) => (
-          <div key={t.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 hover:border-indigo-300 transition">
-            <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 uppercase border border-indigo-200">
+          <div key={t.id} className="mentor-roadmap-card">
+            <span className="mentor-roadmap-batch-tag">
               {t.batch}
             </span>
-            <h3 className="font-bold text-slate-900 text-base">{t.name}</h3>
+            <h3 className="mentor-roadmap-title">{t.name}</h3>
 
-            <div className="pt-2 border-t border-slate-100 flex justify-between text-xs font-semibold">
-              <span className="text-slate-500">Curriculum Completion</span>
-              <span className="text-indigo-600">{t.completion}</span>
-            </div>
-            <div className="w-full bg-slate-200 rounded-full h-2">
-              <div className="bg-indigo-600 h-2 rounded-full" style={{ width: t.completion }}></div>
+            <div className="mentor-roadmap-progress-wrap">
+              <div className="mentor-roadmap-progress-head">
+                <span className="mentor-roadmap-progress-label">Curriculum Completion</span>
+                <span className="mentor-roadmap-progress-val">{t.completion}</span>
+              </div>
+              <div className="mentor-roadmap-track">
+                <div
+                  className="mentor-roadmap-fill"
+                  style={{ width: t.completion }}
+                />
+              </div>
             </div>
           </div>
         ))}

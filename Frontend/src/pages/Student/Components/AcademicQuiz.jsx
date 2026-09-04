@@ -355,7 +355,7 @@ function QuizPlatform({ quiz, mode, onExit }) {
             <div className="qp-form-card-accent" />
 
             <div className="qp-form-card-body">
-              <div className="qp-question-meta" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div className="qp-question-meta">
                 <div>
                   <span className="qp-question-num">Question {current + 1} of {questions.length}</span>
                   <span className="qp-question-pts">2 pts</span>

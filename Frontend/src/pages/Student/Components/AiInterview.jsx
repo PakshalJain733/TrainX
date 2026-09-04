@@ -417,32 +417,31 @@ export default function AIInterview() {
                         <div className="ai-mini-score-val-blue">
                           {overallScorecard?.problemSolving}%
                         </div>
-                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Problem Solving</div>
+                        <div className="ai-mini-score-label">Problem Solving</div>
                       </div>
                       <div className="ai-score-mini-card">
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#c084fc" }}>
+                        <div className="ai-mini-score-val-purple">
                           {overallScorecard?.communication}%
                         </div>
-                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Communication</div>
+                        <div className="ai-mini-score-label">Communication</div>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ background: "#f8fafc", padding: 18, borderRadius: 14, border: "1px solid #e2e8f0" }}>
-                    <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="ai-diagnostic-box">
+                    <h4 className="ai-diagnostic-title">
                       <TrendingUp size={16} className="text-blue-600" /> AI Diagnostic Feedback
                     </h4>
-                    <p style={{ margin: 0, fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
+                    <p className="ai-diagnostic-text">
                       {overallScorecard?.feedback}
                     </p>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div className="ai-action-row">
                     <button
                       type="button"
-                      className="ai-autofill-btn"
+                      className="ai-autofill-btn ai-retake-btn"
                       onClick={resetInterview}
-                      style={{ padding: "10px 20px" }}
                     >
                       <RotateCcw size={16} /> Retake AI Interview
                     </button>

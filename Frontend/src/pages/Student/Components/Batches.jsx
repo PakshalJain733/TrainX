@@ -536,7 +536,6 @@ export default function Batches() {
                         to={taskHref}
                         key={task.taskNumber}
                         className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
-                        style={{ textDecoration: 'none', display: 'flex', color: 'inherit' }}
                       >
                         <div className="cw-item-left">
                           <span className="cw-task-num-badge">{task.taskNumber}</span>

@@ -69,15 +69,14 @@ export default function CoordinatorBatches() {
       </div>
 
       <div className="coord-filter-bar">
-        <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
-          <Search size={16} style={{ position: "absolute", left: "12px", top: "10px", color: "#64748b" }} />
+        <div className="coord-search-wrap">
+          <Search size={16} className="coord-search-icon" />
           <input
             type="text"
-            className="coord-search-input"
+            className="coord-search-input coord-search-input--with-icon"
             placeholder="Search batch name, code or mentor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: "36px" }}
           />
         </div>
         <select
@@ -108,33 +107,31 @@ export default function CoordinatorBatches() {
             {filteredBatches.map((b) => (
               <tr key={b.id}>
                 <td>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{b.name}</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>
+                  <div className="coord-cell-main">{b.name}</div>
+                  <div className="coord-cell-sub">
                     {b.code} · {b.department}
                   </div>
                 </td>
                 <td>
-                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <div className="coord-cell-flex">
                     <Users size={14} color="#64748b" /> {b.enrolledStudents} Students
                   </div>
                 </td>
                 <td>
-                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                  <div className="coord-cell-flex">
                     <UserCheck size={14} color="#4f46e5" /> {b.mentor}
                   </div>
                 </td>
                 <td>
-                  <div style={{ width: "140px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "2px" }}>
-                      <span style={{ fontWeight: 700, color: "#4f46e5" }}>{b.progress}%</span>
+                  <div className="coord-progress-wrap">
+                    <div className="coord-progress-head">
+                      <span className="coord-progress-text">{b.progress}%</span>
                     </div>
-                    <div style={{ height: "6px", width: "100%", background: "#e2e8f0", borderRadius: "999px" }}>
+                    <div className="coord-progress-track">
                       <div
+                        className="coord-progress-bar"
                         style={{
-                          height: "100%",
                           width: `${b.progress}%`,
-                          background: "#4f46e5",
-                          borderRadius: "999px",
                         }}
                       />
                     </div>
@@ -152,22 +149,14 @@ export default function CoordinatorBatches() {
                 </td>
                 <td>
                   <span
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "999px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      background: b.status === "Active" ? "#ecfdf5" : "#eff6ff",
-                      color: b.status === "Active" ? "#047857" : "#1d4ed8",
-                    }}
+                    className={b.status === "Active" ? "coord-status-badge--active" : "coord-status-badge--default"}
                   >
                     {b.status}
                   </span>
                 </td>
                 <td>
                   <button
-                    className="coord-btn"
-                    style={{ padding: "6px 12px", fontSize: "12px", background: "#f1f5f9", color: "#334155" }}
+                    className="coord-btn coord-btn--manage"
                   >
                     Manage
                   </button>
@@ -182,56 +171,38 @@ export default function CoordinatorBatches() {
       {showCreateModal && (
         <div className="coord-modal-backdrop" onClick={() => setShowCreateModal(false)}>
           <div className="coord-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Create New Batch</h2>
-            <form onSubmit={handleCreateBatch} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <h2 className="coord-modal-title">Create New Batch</h2>
+            <form onSubmit={handleCreateBatch} className="coord-modal-form">
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Batch Name</label>
+                <label className="coord-form-label">Batch Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. CSE 2026 Beta Cohort"
                   value={newBatchName}
                   onChange={(e) => setNewBatchName(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    marginTop: "4px",
-                  }}
+                  className="coord-form-input"
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Batch Code</label>
+                <label className="coord-form-label">Batch Code</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. CSE-2026-B"
                   value={newBatchCode}
                   onChange={(e) => setNewBatchCode(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    marginTop: "4px",
-                  }}
+                  className="coord-form-input"
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assign Industry Mentor</label>
+                <label className="coord-form-label">Assign Industry Mentor</label>
                 <select
                   value={newMentor}
                   onChange={(e) => setNewMentor(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    marginTop: "4px",
-                  }}
+                  className="coord-form-input"
                 >
                   {coordinatorMentors.map((m) => (
                     <option key={m.id} value={m.name}>
@@ -241,11 +212,10 @@ export default function CoordinatorBatches() {
                 </select>
               </div>
 
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>
+              <div className="coord-modal-actions">
                 <button
                   type="button"
-                  className="coord-btn"
-                  style={{ background: "#f1f5f9", color: "#475569" }}
+                  className="coord-btn coord-btn--cancel"
                   onClick={() => setShowCreateModal(false)}
                 >
                   Cancel

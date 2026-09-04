@@ -259,12 +259,12 @@ function Login() {
           <img src={Logo} alt="Logo" className="login-logo" />
 
           {errorMsg && (
-            <div style={{ color: "#ef4444", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+            <div className="auth-error-msg">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div style={{ color: "#10b981", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+            <div className="auth-success-msg">
               {successMsg}
             </div>
           )}

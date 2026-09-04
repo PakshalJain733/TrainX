@@ -27,7 +27,7 @@ export default function Colleges() {
   return (
     <div className="space-y-6">
       {/* Header & Main Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sa-page-header">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Building2 className="w-5 h-5 text-indigo-600" />
@@ -38,25 +38,27 @@ export default function Colleges() {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-2 self-start sm:self-auto"
+          className="sa-btn-primary"
         >
           <Plus className="w-4 h-4" />
           <span>Add New College</span>
         </button>
       </div>
 
+
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="sa-search-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="sa-search-wrap flex-1">
+          <Search className="sa-search-icon" />
           <input
             type="text"
             placeholder="Search college name, city, or code..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+            className="sa-search-input"
           />
         </div>
+
 
         <div className="flex items-center gap-2">
           <button className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-100 flex items-center gap-1.5 transition">
@@ -68,62 +70,73 @@ export default function Colleges() {
 
       {/* Colleges Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px]">
-                <th className="py-3 px-4">College Name</th>
-                <th className="py-3 px-4">Location</th>
-                <th className="py-3 px-4">College Admin</th>
-                <th className="py-3 px-4">Departments</th>
-                <th className="py-3 px-4">Active Students</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredColleges.map((college) => (
-                <tr key={college.id} className="hover:bg-slate-50/70 transition">
-                  <td className="py-3.5 px-4">
-                    <div className="font-bold text-slate-900">{college.name}</div>
-                    <div className="text-[10px] text-indigo-600 font-semibold">{college.code}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600">
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{college.location}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="font-semibold text-slate-800">{college.adminName}</div>
-                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                      <Mail className="w-3 h-3 text-slate-400" />
-                      <span>{college.adminEmail}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-800">{college.departmentsCount}</td>
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1 font-bold text-slate-900">
-                      <Users className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>{college.studentsCount}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <StatusBadge status={college.status} />
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <ActionDropdown
-                      onView={() => alert(`Viewing details for ${college.name}`)}
-                      onEdit={() => alert(`Editing ${college.name}`)}
-                      onDelete={() => handleDelete(college.id)}
-                    />
-                  </td>
+        {filteredColleges.length === 0 ? (
+          <EmptyState
+            icon={Building2}
+            title="No Colleges Found"
+            description={searchQuery ? `No colleges matching "${searchQuery}"` : "Get started by registering the first partner college."}
+            actionText="Add New College"
+            onAction={() => setIsModalOpen(true)}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <th className="py-3 px-4">College Name</th>
+                  <th className="py-3 px-4">Location</th>
+                  <th className="py-3 px-4">College Admin</th>
+                  <th className="py-3 px-4">Departments</th>
+                  <th className="py-3 px-4">Active Students</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {filteredColleges.map((college) => (
+                  <tr key={college.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-900">{college.name}</div>
+                      <div className="text-[10px] text-indigo-600 font-semibold">{college.code}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600">
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{college.location}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-800">{college.adminName}</div>
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-slate-400" />
+                        <span>{college.adminEmail}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-slate-800">{college.departmentsCount}</td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1 font-bold text-slate-900">
+                        <Users className="w-3.5 h-3.5 text-indigo-500" />
+                        <span>{college.studentsCount}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <StatusBadge status={college.status} />
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <ActionDropdown
+                        onView={() => alert(`Viewing details for ${college.name}`)}
+                        onEdit={() => alert(`Editing ${college.name}`)}
+                        onDelete={() => handleDelete(college.id)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
+
 
       {/* Add College Modal */}
       <AddCollegeModal

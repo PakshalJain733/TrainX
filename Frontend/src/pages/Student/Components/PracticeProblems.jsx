@@ -445,18 +445,18 @@ export default function PracticeProblems() {
           <table className="problems-table">
             <thead>
               <tr>
-                <th style={{ width: "60px" }}>Status</th>
+                <th className="pp-th-status">Status</th>
                 <th>Title</th>
                 <th>Topic</th>
                 <th>Difficulty</th>
                 <th>Acceptance</th>
-                <th style={{ textAlign: "right" }}>Action</th>
+                <th className="pp-th-action">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredProblems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                  <td colSpan={6} className="pp-empty-cell">
                     No practice problems found matching your filters.
                   </td>
                 </tr>
@@ -496,7 +496,7 @@ export default function PracticeProblems() {
                     </td>
                     <td className="acceptance-cell">{prob.acceptance}</td>
 
-                    <td style={{ textAlign: "right" }}>
+                    <td className="pp-td-action">
                       <Button
                         size="sm"
                         className="solve-btn"

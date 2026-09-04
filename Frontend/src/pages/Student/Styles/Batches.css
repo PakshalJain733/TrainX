@@ -762,3 +762,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+.cw-item-row {
+  text-decoration: none;
+  display: flex;
+  color: inherit;
+}

@@ -543,3 +543,78 @@
 .btn-modal-danger:hover {
   background: #b91c1c;
 }
+
+/* Table and modal helpers */
+.th-actions-right {
+  text-align: right;
+}
+
+.user-dept-student {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.user-dept-roll {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.user-dept-staff {
+  color: #64748b;
+}
+
+.user-mobile-text {
+  color: #334155;
+  font-weight: 500;
+}
+
+.action-btns-right {
+  justify-content: flex-end;
+}
+
+.modal-feedback-alert {
+  font-size: 13px;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.modal-feedback--error {
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.modal-feedback--success {
+  color: #16a34a;
+  background: #f0fdf4;
+}
+
+.delete-user-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.delete-user-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.delete-user-title {
+  margin: 0;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.delete-user-sub {
+  margin: 4px 0 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+

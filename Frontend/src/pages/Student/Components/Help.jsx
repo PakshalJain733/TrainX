@@ -279,7 +279,7 @@ export default function Help() {
                         <HelpCircle size={18} color="#3b82f6" />
                         {faq.q}
                       </h4>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="help-faq-actions">
                         <span className="help-faq-category-tag">{faq.category}</span>
                         <ChevronDown size={18} className="help-faq-toggle-icon" />
                       </div>

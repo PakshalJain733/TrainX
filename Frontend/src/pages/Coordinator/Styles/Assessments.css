@@ -66,3 +66,421 @@
   padding: 2px 8px;
   border-radius: 6px;
 }
+
+.coord-stat-icon-bg {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coord-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.coord-btn--csv {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.coord-icon-blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.coord-icon-emerald {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.coord-icon-purple {
+  background: #faf5ff;
+  color: #9333ea;
+}
+
+.coord-icon-rose {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.coord-val-purple {
+  color: #7c3aed;
+}
+
+.coord-val-rose {
+  color: #e11d48;
+}
+
+.coord-val-emerald {
+  color: #059669;
+}
+
+.coord-val-indigo {
+  color: #4f46e5;
+}
+
+.coord-tabs-bar--mb {
+  margin-bottom: 20px;
+}
+
+.coord-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.coord-filter-bar--mb {
+  margin-bottom: 8px;
+}
+
+.coord-assessments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coord-assess-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-assess-title {
+  font-weight: 800;
+  font-size: 16px;
+  color: #0f172a;
+}
+
+.coord-assess-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.coord-assess-batch-strong {
+  color: #334155;
+}
+
+.coord-assess-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.coord-assess-stat-col {
+  text-align: right;
+}
+
+.coord-assess-stat-lbl {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.coord-assess-stat-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.coord-btn--inspect {
+  font-size: 12px;
+  padding: 8px 14px;
+}
+
+.coord-status--active {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.coord-status--completed {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.coord-status--archived {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.coord-live-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.coord-live-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-live-indicator {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 700;
+}
+
+.coord-live-feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.coord-log-name {
+  font-weight: 800;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.coord-log-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.coord-log-quiz {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f46e5;
+  margin-top: 4px;
+}
+
+.coord-log-score-col {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.coord-log-score-num {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.coord-log-time {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.coord-analytics-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.coord-topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.coord-topic-card {
+  background: #f8fafc;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.coord-topic-name {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.coord-topic-acc {
+  font-size: 20px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.coord-topic-status {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.coord-hard-questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.coord-hard-q-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coord-hard-q-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.coord-hard-q-desc {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.coord-modal--lg {
+  max-width: 800px;
+}
+
+.coord-modal-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.coord-modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: #64748b;
+}
+
+.coord-scorecard-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 640px) {
+  .coord-scorecard-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.coord-metric-box {
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.coord-metric-box--gray {
+  background: #f8fafc;
+}
+
+.coord-metric-box--blue {
+  background: #eff6ff;
+}
+
+.coord-metric-box--emerald {
+  background: #ecfdf5;
+}
+
+.coord-metric-box--rose {
+  background: #fff1f2;
+}
+
+.coord-metric-lbl {
+  font-size: 11px;
+}
+
+.coord-metric-val {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.coord-btn--retake {
+  padding: 4px 8px;
+  font-size: 11px;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.coord-q-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.coord-q-meta {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.coord-val-amber {
+  color: #d97706;
+}
+
+.coord-metric-lbl--blue {
+  color: #1d4ed8;
+}
+
+.coord-metric-val--blue {
+  color: #1e40af;
+}
+
+.coord-metric-val--emerald {
+  color: #065f46;
+}
+
+.coord-metric-val--rose {
+  color: #9f1239;
+}
+
+.coord-hard-q-stat--rose {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coord-hard-q-stat--amber {
+  font-size: 12px;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.coord-hard-q-stat--emerald {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.coord-table-roll-text {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.coord-table-score-pass {
+  font-weight: 800;
+  color: #059669;
+}
+
+.coord-table-score-fail {
+  font-weight: 800;
+  color: #dc2626;
+}
+
+.coord-table-sub-count {
+  font-size: 12px;
+  color: #334155;
+}
+
+.coord-table-sub-time {
+  font-size: 12px;
+  color: #64748b;
+}
+

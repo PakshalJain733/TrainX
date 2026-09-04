@@ -1,10 +1,6 @@
 import { query } from '../config/db.js';
 
-const mockBatches = [
-  { id: 1, college_id: 1, department_id: 1, name: 'COMP-TE-A-2026', year: 'TE', division: 'A', academic_year: '2025-2026', created_at: new Date('2026-01-01') },
-  { id: 2, college_id: 1, department_id: 3, name: 'ECS-TE-B-2026', year: 'TE', division: 'B', academic_year: '2025-2026', created_at: new Date('2026-01-01') },
-  { id: 3, college_id: 2, department_id: 5, name: 'DBIT-COMP-2026', year: 'TE', division: 'A', academic_year: '2025-2026', created_at: new Date('2026-01-01') },
-];
+const mockBatches = [];
 
 // Get all batches (with optional filters and fallback)
 export const getBatchesModel = async ({ collegeId = null, departmentId = null } = {}) => {

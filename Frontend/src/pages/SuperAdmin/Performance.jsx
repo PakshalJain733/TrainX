@@ -1,6 +1,7 @@
 import React from 'react';
 import { initialPerformanceData } from '../../data/superAdminMockData';
 import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import './SuperAdmin.css';
 
 export default function Performance() {
   const data = initialPerformanceData;
@@ -64,7 +65,7 @@ export default function Performance() {
               </div>
               <div className="w-full bg-slate-200 rounded-full h-2">
                 <div
-                  className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
+                  className="bg-indigo-600 h-2 rounded-full sa-progress-bar-fill"
                   style={{ width: `${item.score}%` }}
                 ></div>
               </div>

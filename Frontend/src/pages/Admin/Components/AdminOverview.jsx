@@ -133,7 +133,7 @@ export default function AdminOverview() {
             {recentUsers.length > 0 ? (
               recentUsers.map((u) => (
                 <div key={u.id} className="overview-row-between overview-item-row">
-                  <div className="overview-row overview-item-left" style={{ gap: 12 }}>
+                  <div className="overview-row overview-item-left admin-overview-user-item-left">
                     <Avatar size="32">
                       <AvatarFallback>{getInitials(u.name)}</AvatarFallback>
                     </Avatar>
@@ -148,10 +148,10 @@ export default function AdminOverview() {
                 </div>
               ))
             ) : (
-              <div style={{ padding: "32px 16px", textAlign: "center", color: "#64748b" }}>
-                <Clock size={28} style={{ margin: "0 auto 8px auto", opacity: 0.5 }} />
-                <p style={{ margin: 0, fontWeight: 600 }}>No users registered yet</p>
-                <p style={{ margin: "4px 0 0 0", fontSize: 12.5 }}>Users will appear here once registered.</p>
+              <div className="admin-overview-empty-users">
+                <Clock size={28} className="admin-overview-empty-clock" />
+                <p className="admin-overview-empty-title">No users registered yet</p>
+                <p className="admin-overview-empty-sub">Users will appear here once registered.</p>
               </div>
             )}
           </CardContent>
@@ -170,43 +170,43 @@ export default function AdminOverview() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="overview-leaderboard-content" style={{ display: "flex", flexDirection: "column", gap: 12, padding: "16px 20px" }}>
-            <Link to="/admin/users" style={{ textDecoration: "none" }}>
-              <div className="overview-row-between" style={{ padding: "12px 16px", borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div className="overview-row" style={{ gap: 12 }}>
+          <CardContent className="overview-leaderboard-content admin-quick-actions-content">
+            <Link to="/admin/users" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
                   <Users size={18} color="#4f46e5" />
                   <div>
-                    <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 13.5 }}>User Management</span>
-                    <span style={{ display: "block", fontSize: 12, color: "#64748b" }}>Create, edit, and assign roles</span>
+                    <span className="admin-quick-action-title">User Management</span>
+                    <span className="admin-quick-action-sub">Create, edit, and assign roles</span>
                   </div>
                 </div>
-                <span style={{ fontSize: 12, color: "#4f46e5", fontWeight: 600 }}>Open &rarr;</span>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--blue">Open &rarr;</span>
               </div>
             </Link>
 
-            <Link to="/admin/batches" style={{ textDecoration: "none" }}>
-              <div className="overview-row-between" style={{ padding: "12px 16px", borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div className="overview-row" style={{ gap: 12 }}>
+            <Link to="/admin/batches" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
                   <BookOpen size={18} color="#059669" />
                   <div>
-                    <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 13.5 }}>Batch Rosters</span>
-                    <span style={{ display: "block", fontSize: 12, color: "#64748b" }}>Manage cohorts & training streams</span>
+                    <span className="admin-quick-action-title">Batch Rosters</span>
+                    <span className="admin-quick-action-sub">Manage cohorts & training streams</span>
                   </div>
                 </div>
-                <span style={{ fontSize: 12, color: "#059669", fontWeight: 600 }}>Open &rarr;</span>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--green">Open &rarr;</span>
               </div>
             </Link>
 
-            <Link to="/admin/attendance" style={{ textDecoration: "none" }}>
-              <div className="overview-row-between" style={{ padding: "12px 16px", borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-                <div className="overview-row" style={{ gap: 12 }}>
+            <Link to="/admin/attendance" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
                   <CalendarCheck size={18} color="#d97706" />
                   <div>
-                    <span style={{ fontWeight: 700, color: "#1e293b", fontSize: 13.5 }}>Attendance Tracking</span>
-                    <span style={{ display: "block", fontSize: 12, color: "#64748b" }}>Session attendance & percentages</span>
+                    <span className="admin-quick-action-title">Attendance Tracking</span>
+                    <span className="admin-quick-action-sub">Session attendance & percentages</span>
                   </div>
                 </div>
-                <span style={{ fontSize: 12, color: "#d97706", fontWeight: 600 }}>Open &rarr;</span>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--amber">Open &rarr;</span>
               </div>
             </Link>
           </CardContent>

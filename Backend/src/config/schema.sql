@@ -9,10 +9,6 @@ CREATE TABLE IF NOT EXISTS colleges (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Seed Initial Colleges
-INSERT IGNORE INTO colleges (id, name, code) VALUES 
-(1, 'Vasantdada Patil Pratishthan College of Engineering', 'PVPPCOE'),
-(2, 'Don Bosco Institute of Technology', 'DBIT');
 
 -- 2. Departments Table
 CREATE TABLE IF NOT EXISTS departments (
@@ -26,13 +22,6 @@ CREATE TABLE IF NOT EXISTS departments (
   UNIQUE KEY unique_department_code_per_college (college_id, code)
 );
 
--- Seed Initial Departments
-INSERT IGNORE INTO departments (id, college_id, name, code) VALUES
-(1, 1, 'Computer Engineering', 'COMP'),
-(2, 1, 'Information Technology', 'IT'),
-(3, 1, 'Electronics and Computer Science', 'ECS'),
-(4, 1, 'Artificial Intelligence and Data Science', 'AIDS'),
-(5, 2, 'Computer Engineering', 'DBIT_COMP');
 
 -- 3. Batches Table
 CREATE TABLE IF NOT EXISTS batches (
@@ -52,11 +41,6 @@ CREATE TABLE IF NOT EXISTS batches (
   FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
 );
 
--- Seed Initial Batches
-INSERT IGNORE INTO batches (id, college_id, department_id, name, year, division, academic_year) VALUES
-(1, 1, 1, 'COMP-TE-A-2026', 'TE', 'A', '2025-2026'),
-(2, 1, 3, 'ECS-TE-B-2026', 'TE', 'B', '2025-2026'),
-(3, 2, 5, 'DBIT-COMP-2026', 'TE', 'A', '2025-2026');
 
 -- 4. Users Table
 CREATE TABLE IF NOT EXISTS users (

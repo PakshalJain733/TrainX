@@ -644,3 +644,21 @@
   background: #003d99 !important;
 }
 
+/* Classes moved from inline styles */
+.pp-th-status {
+  width: 60px;
+}
+
+.pp-th-action {
+  text-align: right;
+}
+
+.pp-empty-cell {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.pp-td-action {
+  text-align: right;
+}

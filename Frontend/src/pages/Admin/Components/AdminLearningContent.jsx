@@ -132,7 +132,7 @@ export default function AdminLearningContent() {
 
       {/* Add Form */}
       {showForm && (
-        <div className="learning-add-card" style={{ background: "#f5f3ff", border: "1px solid #c7d2fe", borderRadius: 12, padding: 20, marginBottom: 24 }}>
+        <div className="learning-add-card">
           <form onSubmit={handleAdd} className="learning-add-form">
             <div className="form-group">
               <label>Title</label>
@@ -218,7 +218,7 @@ export default function AdminLearningContent() {
                 </p>
               </div>
 
-              <Badge variant={item.status === "Published" ? "success" : "outline"} style={{ width: "max-content" }}>
+              <Badge variant={item.status === "Published" ? "success" : "outline"} className="learning-badge-pill">
                 {item.status}
               </Badge>
             </div>

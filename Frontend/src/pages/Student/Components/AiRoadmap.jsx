@@ -179,22 +179,20 @@ export default function AIRoadmap() {
         </div>
 
         {/* Custom Input Box & Generate Action */}
-        <form onSubmit={handleGenerate} className="mt-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Custom Input Field */}
+        <form onSubmit={handleGenerate} className="roadmap-form-wrap">
+          <div className="roadmap-input-row">
             <input
               type="text"
-              className="roadmap-select-input flex-1 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="roadmap-select-input"
               placeholder="Type your role (e.g. Java Developer, Cyber Security, Data Engineer, Mobile App Dev)..."
               value={goalInput}
               onChange={(e) => setGoalInput(e.target.value)}
               required
             />
 
-            {/* Generate Button */}
             <button
               type="submit"
-              className="roadmap-gen-btn flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm transition-all shadow-md flex-shrink-0"
+              className="roadmap-gen-btn"
               disabled={isGenerating || !goalInput.trim()}
             >
               {isGenerating ? (
@@ -211,6 +209,7 @@ export default function AIRoadmap() {
             </button>
           </div>
         </form>
+
 
         {userProfile?.skills && (
           <div className="mt-3 text-xs text-slate-500 flex items-center gap-1.5">

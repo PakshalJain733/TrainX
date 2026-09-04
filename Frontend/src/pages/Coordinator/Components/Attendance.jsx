@@ -32,7 +32,7 @@ export default function CoordinatorAttendance() {
       </div>
 
       {/* Summary Cards */}
-      <div className="coord-stats-grid" style={{ marginBottom: "24px" }}>
+      <div className="coord-stats-grid coord-card--mb">
         {coordinatorBatches.map((b) => (
           <div key={b.id} className="coord-stat-card">
             <div className="coord-stat-label">{b.name}</div>
@@ -46,31 +46,30 @@ export default function CoordinatorAttendance() {
 
       {/* Flagged Defaulters List */}
       <div className="coord-card">
-        <div className="coord-card-title" style={{ color: "#be123c" }}>
+        <div className="coord-card-title coord-card-title--danger">
           <AlertTriangle size={18} color="#e11d48" />
           Flagged Attendance Defaulters (&lt;75%)
         </div>
 
         {defaulters.length === 0 ? (
-          <div style={{ padding: "20px", textAlign: "center", color: "#059669", fontWeight: 700 }}>
+          <div className="coord-empty-state--success">
             🎉 No attendance defaulters in CSE department!
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", marginTop: "12px" }}>
+          <div className="coord-defaulters-list">
             {defaulters.map((d) => (
               <div key={d.id} className="coord-defaulter-card">
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: "14px", color: "#881337" }}>{d.name}</div>
-                  <div style={{ fontSize: "12px", color: "#9f1239", marginTop: "2px" }}>
+                  <div className="coord-defaulter-name">{d.name}</div>
+                  <div className="coord-defaulter-meta">
                     Roll No: <strong>{d.rollNo}</strong> · {d.batch}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-                  <div style={{ fontSize: "16px", fontWeight: 800, color: "#e11d48" }}>{d.attendance}%</div>
+                <div className="coord-defaulter-right">
+                  <div className="coord-defaulter-pct">{d.attendance}%</div>
                   <button
-                    className="coord-btn"
-                    style={{ background: "#ffffff", border: "1px solid #fecdd3", color: "#be123c", fontSize: "12px" }}
+                    className="coord-btn coord-btn--override"
                     onClick={() => handleOverride(d.id)}
                   >
                     Grant Medical Override (+4%)

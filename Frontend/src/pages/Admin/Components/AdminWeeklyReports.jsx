@@ -26,13 +26,13 @@ export default function AdminWeeklyReports() {
           <h2 className="reports-title">Weekly Reports</h2>
           <p className="reports-subtitle">Batch-wise weekly performance summaries and analytics.</p>
         </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
+        <div className="reports-actions-group">
+          <label className="reports-auto-label">
             <input 
               type="checkbox" 
               checked={autoGenerate} 
               onChange={(e) => setAutoGenerate(e.target.checked)} 
-              style={{ width: '16px', height: '16px', accentColor: '#4f46e5' }}
+              className="reports-auto-checkbox"
             />
             Auto-generate every Monday
           </label>
@@ -43,7 +43,7 @@ export default function AdminWeeklyReports() {
       </div>
 
       {generated && (
-        <div style={{ padding: '12px 16px', background: '#dcfce7', color: '#15803d', borderRadius: '8px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '500' }}>
+        <div className="reports-success-banner">
           <CheckCircle2 size={18} />
           Report generation started. You will be notified when it's ready.
         </div>

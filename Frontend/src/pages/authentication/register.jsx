@@ -159,8 +159,8 @@ function Register() {
 
         <p className="subtitle">Create your account to get started.</p>
 
-        {errorMsg && <div style={{ color: "#ef4444", marginBottom: "1rem", textAlign: "center", fontSize: "0.9rem" }}>{errorMsg}</div>}
-        {successMsg && <div style={{ color: "#10b981", marginBottom: "1rem", textAlign: "center", fontSize: "0.9rem" }}>{successMsg}</div>}
+        {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
+        {successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         <form onSubmit={handleSubmit}>
           {/* ── Select Role ── */}

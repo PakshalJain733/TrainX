@@ -734,3 +734,8 @@
   .qp-form-card-body { padding: 20px 16px; }
 }
 
+.qp-question-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

@@ -1,0 +1,25 @@
+/* AIInterviews.css - Mentor AI Interviews Tab Styles */
+.mentor-ai-interviews-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mentor-interview-role {
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.mentor-interview-score {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.mentor-interview-overall {
+  font-weight: 700;
+  color: #059669;
+}
+
+.mentor-interview-weakness {
+  color: #475569;
+}

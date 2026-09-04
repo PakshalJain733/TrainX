@@ -782,3 +782,9 @@
   gap: 12px;
 }
 
+/* Classes moved from inline styles */
+.help-faq-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

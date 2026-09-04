@@ -1,9 +1,6 @@
 import { query } from '../config/db.js';
 
-const mockColleges = [
-  { id: 1, name: 'Vasantdada Patil Pratishthan College of Engineering', code: 'PVPPCOE', created_at: new Date('2026-01-01') },
-  { id: 2, name: 'Don Bosco Institute of Technology', code: 'DBIT', created_at: new Date('2026-01-01') },
-];
+const mockColleges = [];
 
 // Get all colleges (with fallback)
 export const getAllCollegesModel = async () => {

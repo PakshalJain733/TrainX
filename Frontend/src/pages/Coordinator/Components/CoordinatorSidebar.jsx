@@ -13,6 +13,10 @@ import {
   Bell,
   Settings,
   HelpCircle,
+  Sparkles,
+  Bot,
+  Video,
+  Trophy,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/CoordinatorSidebar.css";
@@ -41,10 +45,15 @@ const primaryNavItems = [
   { title: "Batches", url: "/coordinator/batches", icon: Users },
   { title: "Students", url: "/coordinator/students", icon: GraduationCap },
   { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
+  { title: "Live Classrooms", url: "/coordinator/sessions", icon: Video },
   { title: "Live Schedules", url: "/coordinator/schedules", icon: CalendarCheck },
   { title: "Assessments & Quiz", url: "/coordinator/assessments", icon: FileCheck2 },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: LineChart },
+  { title: "AI Roadmaps", url: "/coordinator/roadmaps", icon: Sparkles },
+  { title: "AI Mock Interviews", url: "/coordinator/interviews", icon: Bot },
+  { title: "Performance & Skills", url: "/coordinator/performance", icon: LineChart },
   { title: "Placement Drives", url: "/coordinator/placement", icon: Briefcase },
+  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
   { title: "Governance Reports", url: "/coordinator/reports", icon: FileSpreadsheet },
 ];
@@ -52,6 +61,7 @@ const primaryNavItems = [
 const footerNavItems = [
   { title: "Notifications", url: "/coordinator/notifications", icon: Bell },
   { title: "Settings & Profile", url: "/coordinator/profile", icon: Settings },
+  { title: "Help & Support", url: "/coordinator/help", icon: HelpCircle },
 ];
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {

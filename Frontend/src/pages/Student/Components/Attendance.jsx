@@ -479,13 +479,13 @@ export default function Attendance() {
               {cameraStatus === "success" && (
                 <div className="qr-camera-placeholder qr-camera-success">
                   <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  <p style={{color:"#10b981",fontWeight:700}}>QR Code Scanned!</p>
-                  {scanResult && <p style={{color:"#64748b",fontSize:"12px",wordBreak:"break-all",marginTop:4}}>Code: {scanResult}</p>}
+                  <p className="qr-scanned-title">QR Code Scanned!</p>
+                  {scanResult && <p className="qr-scanned-code">Code: {scanResult}</p>}
                 </div>
               )}
 
               {/* Live Camera Feed */}
-              <div style={{ position: "relative", display: cameraStatus === "active" ? "block" : "none" }}>
+              <div className={cameraStatus === "active" ? "qr-video-container" : "qr-video-container--hidden"}>
                 <video
                   ref={videoRef}
                   className="qr-video-feed"
@@ -519,8 +519,8 @@ export default function Attendance() {
                 </div>
               )}
               {cameraStatus === "success" && (
-                <div className="qr-status-pill" style={{color:"#10b981",background:"rgba(16,185,129,0.1)"}}>
-                  <span className="qr-status-dot" style={{background:"#10b981"}}/>
+                <div className="qr-status-pill qr-status-pill--success">
+                  <span className="qr-status-dot qr-status-dot--success"/>
                   Attendance Marked!
                 </div>
               )}
@@ -528,7 +528,7 @@ export default function Attendance() {
               {cameraStatus === "loading" && <div/>}
 
               {cameraStatus === "success" && (
-                <button className="qr-enter-code-btn" style={{background:"#4f46e5",color:"#fff",border:"none", width: "100%"}} onClick={closeModal}>Done</button>
+                <button className="qr-enter-code-btn qr-done-btn" onClick={closeModal}>Done</button>
               )}
             </div>
 
@@ -536,7 +536,7 @@ export default function Attendance() {
         </div>
       )}
 
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+      <div className="attendance-header-row">
         <SectionHeader
           eyebrow="Attendance Management"
           title="Attendance & Leave"

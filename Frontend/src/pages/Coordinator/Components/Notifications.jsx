@@ -33,23 +33,23 @@ export default function CoordinatorNotifications() {
         </div>
       </div>
 
-      <div className="coord-card" style={{ marginBottom: "24px" }}>
+      <div className="coord-card coord-card--mb">
         <div className="coord-card-title">
           <Send size={18} color="#4f46e5" />
           Send Real-time Broadcast
         </div>
 
-        <form onSubmit={handleSend} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+        <form onSubmit={handleSend} className="coord-broadcast-form">
           <textarea
             rows={3}
             required
             placeholder="Type your notice or notification message..."
             value={text}
             onChange={(e) => setText(e.target.value)}
-            style={{ padding: "12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px", resize: "none" }}
+            className="coord-broadcast-textarea"
           />
 
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div className="coord-broadcast-actions">
             <button type="submit" className="coord-btn coord-btn--primary">
               <Send size={14} /> Send Broadcast Now
             </button>
@@ -63,16 +63,16 @@ export default function CoordinatorNotifications() {
           Broadcast History & Activity Log
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+        <div className="coord-notif-list">
           {logs.map((item) => (
             <div key={item.id} className="coord-notif-item">
               <div>
-                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>{item.title}</div>
-                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                <div className="coord-notif-title">{item.title}</div>
+                <div className="coord-notif-sub">
                   Audience: <strong>{item.target}</strong>
                 </div>
               </div>
-              <span style={{ fontSize: "11px", color: "#94a3b8" }}>{item.time}</span>
+              <span className="coord-notif-time">{item.time}</span>
             </div>
           ))}
         </div>

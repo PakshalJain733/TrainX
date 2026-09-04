@@ -23,54 +23,51 @@ export default function CoordinatorRequests() {
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div className="coord-requests-list">
         {requests.map((r) => (
           <div key={r.id} className="coord-request-card">
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontWeight: 800, fontSize: "15px", color: "#0f172a" }}>{r.studentName}</span>
-                <span style={{ fontSize: "11px", color: "#64748b" }}>Roll No: {r.rollNo}</span>
+              <div className="coord-req-header">
+                <span className="coord-req-name">{r.studentName}</span>
+                <span className="coord-req-roll">Roll No: {r.rollNo}</span>
                 <span
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: "999px",
-                    fontSize: "11px",
-                    fontWeight: 700,
-                    background: r.status === "Approved" ? "#ecfdf5" : r.status === "Rejected" ? "#fff1f2" : "#fffbeb",
-                    color: r.status === "Approved" ? "#047857" : r.status === "Rejected" ? "#be123c" : "#b45309",
-                  }}
+                  className={
+                    r.status === "Approved"
+                      ? "coord-req-status-approved"
+                      : r.status === "Rejected"
+                      ? "coord-req-status-rejected"
+                      : "coord-req-status-pending"
+                  }
                 >
                   {r.status}
                 </span>
               </div>
 
-              <div style={{ fontSize: "13px", fontWeight: 700, color: "#4f46e5", marginTop: "4px" }}>
+              <div className="coord-req-type">
                 {r.requestType}
               </div>
-              <div style={{ fontSize: "12px", color: "#475569", marginTop: "2px" }}>
+              <div className="coord-req-reason">
                 Reason: {r.reason}
               </div>
             </div>
 
             {r.status === "Pending" ? (
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div className="coord-req-actions">
                 <button
-                  className="coord-btn"
-                  style={{ background: "#ecfdf5", color: "#047857", fontSize: "12px" }}
+                  className="coord-btn coord-btn--approve"
                   onClick={() => handleAction(r.id, "Approved")}
                 >
                   <CheckCircle size={14} /> Approve
                 </button>
                 <button
-                  className="coord-btn"
-                  style={{ background: "#fff1f2", color: "#be123c", fontSize: "12px" }}
+                  className="coord-btn coord-btn--reject"
                   onClick={() => handleAction(r.id, "Rejected")}
                 >
                   <XCircle size={14} /> Reject
                 </button>
               </div>
             ) : (
-              <div style={{ fontSize: "12px", fontWeight: 700, color: "#64748b" }}>
+              <div className="coord-req-actioned">
                 Actioned ({r.status})
               </div>
             )}
