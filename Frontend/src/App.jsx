@@ -192,8 +192,8 @@ function App() {
             <Route path="mentors" element={<CoordinatorMentors />} />
             <Route path="assessments" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorAssessments /></MaintenanceGuard>} />
             <Route path="quizzes" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorAssessments /></MaintenanceGuard>} />
-            <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><CoordinatorAttendance /></MaintenanceGuard>} />
-            <Route path="placement" element={<MaintenanceGuard moduleKey="mockDrives"><CoordinatorPlacement /></MaintenanceGuard>} />
+            <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><CoordinatorAssessments /></MaintenanceGuard>} />
+            <Route path="placement" element={<MaintenanceGuard moduleKey="mockDrives"><CoordinatorAssessments /></MaintenanceGuard>} />
             <Route path="requests" element={<CoordinatorRequests />} />
             <Route path="reports" element={<MaintenanceGuard moduleKey="weeklyReports"><CoordinatorWeeklyReports /></MaintenanceGuard>} />
             <Route path="notifications" element={<CoordinatorNotifications />} />

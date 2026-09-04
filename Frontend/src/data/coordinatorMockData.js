@@ -19,8 +19,6 @@ export const coordinatorStats = [
   { id: "batches", label: "Active Batches", value: "4", subtext: "CSE, IT & AI-DS tracks", trend: "100% on schedule", color: "blue" },
   { id: "mentors", label: "Assigned Trainers", value: "8", subtext: "Industry specialists", trend: "4.9 avg rating", color: "emerald" },
   { id: "attendance", label: "Avg Attendance", value: "92.4%", subtext: "14 students flagged <75%", trend: "+1.8% vs last week", color: "purple" },
-  { id: "readiness", label: "Placement Readiness", value: "84.8%", subtext: "Top 5% among colleges", trend: "High Readiness", color: "amber" },
-  { id: "requests", label: "Pending Approvals", value: "6", subtext: "Leaves & Re-test requests", trend: "Requires Action", color: "rose" },
 ];
 
 export const coordinatorBatches = [

@@ -98,9 +98,12 @@ export default function CoordinatorLayout() {
     if (path.startsWith("/coordinator/interviews")) return "AI Mock Interview Completion & Feedback";
     if (path.startsWith("/coordinator/improvement")) return "Students Needing Improvement & Support Hub";
     if (path.startsWith("/coordinator/mentors")) return "Industry Trainers & Mentors";
-    if (path.startsWith("/coordinator/assessments")) return "Assessments & Quiz Governance";
-    if (path.startsWith("/coordinator/attendance")) return "Attendance Governance";
-    if (path.startsWith("/coordinator/placement")) return "Placement Readiness & Drives";
+    if (
+      path.startsWith("/coordinator/assessments") ||
+      path.startsWith("/coordinator/attendance") ||
+      path.startsWith("/coordinator/placement")
+    )
+      return "Assessments, Attendance & Placement Governance";
     if (path.startsWith("/coordinator/requests")) return "Requests & Approvals Center";
     if (path.startsWith("/coordinator/reports")) return "Governance & Audit Reports";
     if (path.startsWith("/coordinator/notifications")) return "Broadcast Notifications";

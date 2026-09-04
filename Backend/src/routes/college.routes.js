@@ -1,7 +1,16 @@
 import { Router } from 'express';
-import { getCollegeData } from '../controllers/college.controller.js';
+import {
+  getColleges,
+  createCollege,
+  updateCollege,
+  deleteCollege,
+} from '../controllers/college.controller.js';
 
 const router = Router();
-router.get('/', getCollegeData);
+
+router.get('/', getColleges);
+router.post('/', createCollege);
+router.put('/:id', updateCollege);
+router.delete('/:id', deleteCollege);
 
 export default router;

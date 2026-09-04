@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Plus,
   FileCheck2,
@@ -17,6 +18,8 @@ import {
   XCircle,
   HelpCircle,
   Send,
+  LineChart,
+  Briefcase,
 } from "lucide-react";
 import {
   coordinatorAssessments,
@@ -25,9 +28,22 @@ import {
   coordinatorDetailedQuizScorecards,
   coordinatorStudents,
 } from "../../../data/coordinatorMockData";
+import CoordinatorAttendance from "./Attendance";
+import CoordinatorPlacement from "./Placement";
 import "../Styles/Assessments.css";
 
+import { assessmentAPI } from "../../../services/api";
+
 export default function CoordinatorAssessments() {
+  const location = useLocation();
+
+  const getInitialTab = () => {
+    if (location.pathname.includes("attendance")) return "attendance";
+    if (location.pathname.includes("placement")) return "placement";
+    return "assessments";
+  };
+
+  const [mainTab, setMainTab] = useState(getInitialTab);
   const [assessments, setAssessments] = useState(coordinatorAssessments);
   const [activityLogs, setActivityLogs] = useState(coordinatorQuizActivityLogs);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
@@ -43,6 +59,21 @@ export default function CoordinatorAssessments() {
   const [type, setType] = useState("MCQ Quiz");
   const [dueDate, setDueDate] = useState("");
 
+  const fetchAssessments = async () => {
+    try {
+      const data = await assessmentAPI.getAssessments();
+      if (data && Array.isArray(data) && data.length > 0) {
+        setAssessments(data);
+      }
+    } catch (err) {
+      console.warn("Using local assessments fallback data.");
+    }
+  };
+
+  useEffect(() => {
+    fetchAssessments();
+  }, []);
+
   const filteredAssessments = assessments.filter((a) => {
     const matchesSearch =
       a.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -51,7 +82,7 @@ export default function CoordinatorAssessments() {
     return matchesSearch && matchesBatch;
   });
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
 
@@ -67,7 +98,13 @@ export default function CoordinatorAssessments() {
       status: "Active",
     };
 
-    setAssessments([newAssessment, ...assessments]);
+    try {
+      const created = await assessmentAPI.createAssessment(newAssessment);
+      setAssessments([created, ...assessments]);
+    } catch (err) {
+      setAssessments([newAssessment, ...assessments]);
+    }
+
     setShowCreateModal(false);
     setTitle("");
   };
@@ -81,24 +118,66 @@ export default function CoordinatorAssessments() {
       {/* Top Header */}
       <div className="coord-page-header">
         <div>
-          <h1 className="coord-page-title">Quiz Activity & Results Governance</h1>
+          <h1 className="coord-page-title">Assessments, Attendance & Placement Governance</h1>
           <p className="coord-page-sub">
-            Monitor real-time student quiz submissions, batch scorecards, topic mastery, and question analytics.
+            Unified governance portal for student quiz assessments, attendance tracking, and placement drive readiness.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            className="coord-btn"
-            style={{ background: "#f1f5f9", color: "#334155" }}
-            onClick={() => alert("Downloading Department Quiz Scorecard CSV...")}
-          >
-            <Download size={15} /> Export Scorecards CSV
-          </button>
-          <button className="coord-btn coord-btn--primary" onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} /> Publish New Quiz
-          </button>
-        </div>
       </div>
+
+      {/* Main Top Tab Switcher */}
+      <div
+        className="coord-tabs-bar"
+        style={{
+          marginBottom: "24px",
+          background: "#f8fafc",
+          padding: "6px",
+          borderRadius: "14px",
+          display: "flex",
+          gap: "8px",
+          border: "1px solid #e2e8f0",
+        }}
+      >
+        <button
+          className={`coord-tab-btn ${mainTab === "assessments" ? "coord-tab-btn--active" : ""}`}
+          onClick={() => setMainTab("assessments")}
+          style={{ flex: 1, justifyContent: "center", padding: "10px 16px", fontSize: "14px", fontWeight: 700 }}
+        >
+          <FileCheck2 size={16} /> Assessments & Quiz
+        </button>
+        <button
+          className={`coord-tab-btn ${mainTab === "attendance" ? "coord-tab-btn--active" : ""}`}
+          onClick={() => setMainTab("attendance")}
+          style={{ flex: 1, justifyContent: "center", padding: "10px 16px", fontSize: "14px", fontWeight: 700 }}
+        >
+          <LineChart size={16} /> Attendance Governance
+        </button>
+        <button
+          className={`coord-tab-btn ${mainTab === "placement" ? "coord-tab-btn--active" : ""}`}
+          onClick={() => setMainTab("placement")}
+          style={{ flex: 1, justifyContent: "center", padding: "10px 16px", fontSize: "14px", fontWeight: 700 }}
+        >
+          <Briefcase size={16} /> Placement Drives
+        </button>
+      </div>
+
+      {mainTab === "attendance" && <CoordinatorAttendance hideHeader={true} />}
+      {mainTab === "placement" && <CoordinatorPlacement hideHeader={true} />}
+
+      {mainTab === "assessments" && (
+        <>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginBottom: "16px" }}>
+            <button
+              className="coord-btn"
+              style={{ background: "#f1f5f9", color: "#334155" }}
+              onClick={() => alert("Downloading Department Quiz Scorecard CSV...")}
+            >
+              <Download size={15} /> Export Scorecards CSV
+            </button>
+            <button className="coord-btn coord-btn--primary" onClick={() => setShowCreateModal(true)}>
+              <Plus size={16} /> Publish New Quiz
+            </button>
+          </div>
 
       {/* KPI Stats Bar */}
       <div className="coord-stats-grid" style={{ marginBottom: "20px" }}>
@@ -374,6 +453,8 @@ export default function CoordinatorAssessments() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
 
       {/* DETAILED QUIZ RESULTS & SCORECARD MODAL */}

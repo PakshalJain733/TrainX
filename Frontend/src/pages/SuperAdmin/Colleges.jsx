@@ -1,26 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initialColleges } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
 import AddCollegeModal from '../../components/SuperAdmin/AddCollegeModal';
-import { Plus, Search, Filter, Building2, MapPin, Mail, Users } from 'lucide-react';
+import { Plus, Search, Filter, Building2, MapPin, Mail, Users, RefreshCw } from 'lucide-react';
+import { collegeAPI } from '../../services/api';
 
 export default function Colleges() {
   const [colleges, setColleges] = useState(initialColleges);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const filteredColleges = colleges.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleAddCollege = (newCollege) => {
-    setColleges([newCollege, ...colleges]);
+  const fetchColleges = async () => {
+    setLoading(true);
+    try {
+      const data = await collegeAPI.getColleges();
+      if (data && Array.isArray(data) && data.length > 0) {
+        setColleges(data);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch colleges from backend API, using local state fallback.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (id) => {
+  useEffect(() => {
+    fetchColleges();
+  }, []);
+
+  const filteredColleges = colleges.filter((c) =>
+    (c.name && c.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (c.location && c.location.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (c.code && c.code.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const handleAddCollege = async (newCollege) => {
+    try {
+      const created = await collegeAPI.createCollege(newCollege);
+      setColleges([created, ...colleges]);
+    } catch (err) {
+      setColleges([newCollege, ...colleges]);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+    } catch (err) {
+      // Proceed with local deletion
+    }
     setColleges(colleges.filter((c) => c.id !== id));
   };
 
@@ -36,13 +66,22 @@ export default function Colleges() {
           <p className="text-xs text-slate-500">Manage all registered institutions and partner universities</p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-2 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Add New College</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchColleges}
+            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition"
+            title="Refresh from API"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add New College</span>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -95,21 +134,21 @@ export default function Colleges() {
                     </div>
                   </td>
                   <td className="py-3.5 px-4">
-                    <div className="font-semibold text-slate-800">{college.adminName}</div>
+                    <div className="font-semibold text-slate-800">{college.adminName || "Dr. College Admin"}</div>
                     <div className="text-[10px] text-slate-400 flex items-center gap-1">
                       <Mail className="w-3 h-3 text-slate-400" />
-                      <span>{college.adminEmail}</span>
+                      <span>{college.contactEmail || college.adminEmail || `admin@${college.code ? college.code.toLowerCase() : 'college'}.edu.in`}</span>
                     </div>
                   </td>
-                  <td className="py-3.5 px-4 font-semibold text-slate-800">{college.departmentsCount}</td>
+                  <td className="py-3.5 px-4 font-semibold text-slate-800">{college.departmentsCount || 0}</td>
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-1 font-bold text-slate-900">
                       <Users className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>{college.studentsCount}</span>
+                      <span>{college.studentsCount || 0}</span>
                     </div>
                   </td>
                   <td className="py-3.5 px-4">
-                    <StatusBadge status={college.status} />
+                    <StatusBadge status={college.status || "Active"} />
                   </td>
                   <td className="py-3.5 px-4 text-right">
                     <ActionDropdown

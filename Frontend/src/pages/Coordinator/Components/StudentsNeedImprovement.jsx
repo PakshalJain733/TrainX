@@ -74,37 +74,32 @@ export default function StudentsNeedImprovement() {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="bg-gradient-to-r from-rose-900 via-rose-800 to-slate-900 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-4 -translate-y-4 opacity-10 pointer-events-none">
-          <AlertTriangle size={240} />
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700 mb-2">
+            <Sparkles size={14} className="text-rose-600" />
+            <span>Coordinator Risk Remediation & Defaulter Governance</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Students Needing Improvement
+          </h1>
+          <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+            Identify struggling students across attendance, coding accuracy, quiz performance, and mock interviews to assign targeted support plans.
+          </p>
         </div>
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-700/50 border border-rose-500/30 text-xs font-semibold text-rose-200 mb-3 backdrop-blur-sm">
-              <Sparkles size={14} className="text-amber-400" />
-              <span>Coordinator Risk Remediation & Defaulter Governance</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
-              Students Needing Improvement
-            </h1>
-            <p className="text-sm text-rose-200 mt-1 max-w-2xl">
-              Identify struggling students across attendance, coding accuracy, quiz performance, and mock interviews to assign targeted support plans.
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                setSearchTerm("");
-                setSelectedBatch("all");
-                setSelectedRisk("all");
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-rose-700/40 hover:bg-rose-700/60 border border-rose-500/30 rounded-xl text-xs font-medium text-white transition backdrop-blur-sm"
-            >
-              <RefreshCw size={14} />
-              Reset Filters
-            </button>
-          </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setSearchTerm("");
+              setSelectedBatch("all");
+              setSelectedRisk("all");
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 transition"
+          >
+            <RefreshCw size={14} />
+            Reset Filters
+          </button>
         </div>
       </div>
 

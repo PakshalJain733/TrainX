@@ -47,9 +47,7 @@ const primaryNavItems = [
   { title: "AI Interviews & Feedback", url: "/coordinator/interviews", icon: Bot },
   { title: "Students Needing Support", url: "/coordinator/improvement", icon: AlertTriangle },
   { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
-  { title: "Assessments & Quiz", url: "/coordinator/assessments", icon: FileCheck2 },
-  { title: "Attendance Governance", url: "/coordinator/attendance", icon: LineChart },
-  { title: "Placement Drives", url: "/coordinator/placement", icon: Briefcase },
+  { title: "Assessments, Attendance & Placement", url: "/coordinator/assessments", icon: FileCheck2 },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
   { title: "Governance Reports", url: "/coordinator/reports", icon: FileSpreadsheet },
 ];
@@ -62,10 +60,18 @@ const footerNavItems = [
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
 
-  const isActive = (url, exact) =>
-    exact
+  const isActive = (url, exact) => {
+    if (url === "/coordinator/assessments") {
+      return (
+        pathname.startsWith("/coordinator/assessments") ||
+        pathname.startsWith("/coordinator/attendance") ||
+        pathname.startsWith("/coordinator/placement")
+      );
+    }
+    return exact
       ? pathname === url
       : pathname === url || pathname.startsWith(url + "/");
+  };
 
   const handleNavClick = () => {
     if (onClose) onClose();

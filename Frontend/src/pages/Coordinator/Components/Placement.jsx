@@ -3,21 +3,23 @@ import { Briefcase, Award, Users, CheckCircle } from "lucide-react";
 import { coordinatorPlacementDrives, coordinatorStudents } from "../../../data/coordinatorMockData";
 import "../Styles/Placement.css";
 
-export default function CoordinatorPlacement() {
+export default function CoordinatorPlacement({ hideHeader }) {
   const [drives] = useState(coordinatorPlacementDrives);
 
   const placedStudents = coordinatorStudents.filter((s) => s.placementStatus.includes("Placed"));
 
   return (
     <div>
-      <div className="coord-page-header">
-        <div>
-          <h1 className="coord-page-title">Placement Readiness & Mock Recruitment Drives</h1>
-          <p className="coord-page-sub">
-            Track student registrations, tier-1 partner recruitment drives, and placed candidate records.
-          </p>
+      {!hideHeader && (
+        <div className="coord-page-header">
+          <div>
+            <h1 className="coord-page-title">Placement Readiness & Mock Recruitment Drives</h1>
+            <p className="coord-page-sub">
+              Track student registrations, tier-1 partner recruitment drives, and placed candidate records.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", marginBottom: "24px" }}>
         <div className="coord-stat-card">

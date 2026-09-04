@@ -3,7 +3,7 @@ import { AlertTriangle, Download, CheckCircle, RefreshCw } from "lucide-react";
 import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
 import "../Styles/Attendance.css";
 
-export default function CoordinatorAttendance() {
+export default function CoordinatorAttendance({ hideHeader }) {
   const [students, setStudents] = useState(coordinatorStudents);
 
   const defaulters = students.filter((s) => s.attendance < 75);
@@ -16,20 +16,22 @@ export default function CoordinatorAttendance() {
 
   return (
     <div>
-      <div className="coord-page-header">
-        <div>
-          <h1 className="coord-page-title">Attendance Governance & Defaulters</h1>
-          <p className="coord-page-sub">
-            Monitor batch-wise attendance rates, flag defaulters (&lt;75%), and grant attendance medical overrides.
-          </p>
+      {!hideHeader && (
+        <div className="coord-page-header">
+          <div>
+            <h1 className="coord-page-title">Attendance Governance & Defaulters</h1>
+            <p className="coord-page-sub">
+              Monitor batch-wise attendance rates, flag defaulters (&lt;75%), and grant attendance medical overrides.
+            </p>
+          </div>
+          <button
+            className="coord-btn coord-btn--primary"
+            onClick={() => alert("Downloading Department Attendance Audit PDF...")}
+          >
+            <Download size={16} /> Export Attendance Report
+          </button>
         </div>
-        <button
-          className="coord-btn coord-btn--primary"
-          onClick={() => alert("Downloading Department Attendance Audit PDF...")}
-        >
-          <Download size={16} /> Export Attendance Report
-        </button>
-      </div>
+      )}
 
       {/* Summary Cards */}
       <div className="coord-stats-grid" style={{ marginBottom: "24px" }}>
