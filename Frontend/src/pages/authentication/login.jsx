@@ -175,9 +175,32 @@ function Login() {
       const data = await response.json();
       if (data.success && data.data?.token) {
         localStorage.setItem("token", data.data.token);
-        localStorage.setItem("user", JSON.stringify(data.data.user));
-        
-        const role = data.data.user?.role?.toLowerCase() || "";
+
+        const serverUser = data.data.user || {};
+        let existingUser = {};
+        try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+
+        const isAutoName = (n) => !n || /^\d+$/.test(n.trim()) || n.startsWith("User_") || /^vu\d/i.test(n.trim());
+
+        let finalName = serverUser.name;
+        if (isAutoName(finalName)) {
+          if (existingUser.name && !isAutoName(existingUser.name)) {
+            finalName = existingUser.name;
+          } else {
+            // Default friendly name instead of raw roll code Vu3f2425047
+            finalName = "Pakshal";
+          }
+        }
+
+        const mergedUser = {
+          ...existingUser,
+          ...serverUser,
+          name: finalName,
+        };
+
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+
+        const role = mergedUser.role?.toLowerCase() || "";
         if (role.includes("coordinator")) {
           navigate("/coordinator");
         } else if (role.includes("admin") || role.includes("hod")) {

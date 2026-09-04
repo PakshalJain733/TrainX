@@ -64,9 +64,10 @@ export default function ProfilePage() {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) {
-        let name = u.name;
-        if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
-          name = u.fullName || u.full_name || (u.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? u.name : "Ganesh Shinde");
+        let name = u.name || "";
+        const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
+        if (isAutoName) {
+          name = u.fullName || u.full_name || "Pakshal";
         }
         return {
           name: name,

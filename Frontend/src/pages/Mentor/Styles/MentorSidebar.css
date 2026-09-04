@@ -3,7 +3,7 @@
 :root {
   --sidebar-bg:          #f1f5f9;
   --sidebar-border:      #cbd2eb;
-  --sidebar-width:       215px;
+  --sidebar-width:       240px;
   --sidebar-width-icon:  68px;
   --sidebar-text:        #64748b;
   --sidebar-text-bright: #0f172a;
@@ -31,6 +31,8 @@
   position: relative;
   z-index: 100;
   flex-shrink: 0;
+  padding: 12px 0;
+  box-sizing: border-box;
 }
 
 .mentor-sidebar.sidebar--collapsed {
@@ -42,9 +44,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 16px;
   border-bottom: none;
-  height: 68px;
+  height: var(--navbar-height, 64px);
   gap: 8px;
   box-sizing: border-box;
 }
@@ -154,7 +156,7 @@
 /* ── Content ── */
 .sidebar-content {
   flex: 1;
-  padding: 12px 8px;
+  padding: 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -191,7 +193,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .sidebar-menu-item {
@@ -202,10 +204,11 @@
 .sidebar-menu-btn {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 9px 10px;
-  border-radius: var(--sidebar-radius);
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
   text-decoration: none;
   color: var(--sidebar-text);
   font-size: 13.5px;
@@ -217,6 +220,7 @@
   transition: background 0.18s, color 0.18s;
   white-space: nowrap;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .sidebar-menu-btn:hover {
