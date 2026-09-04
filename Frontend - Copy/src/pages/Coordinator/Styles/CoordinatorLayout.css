@@ -59,8 +59,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 68px;
-  padding: 0 20px;
+  height: var(--navbar-height, 64px);
+  padding: 0 24px;
   background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
   box-sizing: border-box;

@@ -162,6 +162,7 @@ function App() {
           <Route path="mentors" element={<CoordinatorMentors />} />
           <Route path="schedules" element={<CoordinatorSchedules />} />
           <Route path="assessments" element={<CoordinatorAssessments />} />
+          <Route path="quizzes" element={<CoordinatorAssessments />} />
           <Route path="attendance" element={<CoordinatorAttendance />} />
           <Route path="placement" element={<CoordinatorPlacement />} />
           <Route path="requests" element={<CoordinatorRequests />} />
