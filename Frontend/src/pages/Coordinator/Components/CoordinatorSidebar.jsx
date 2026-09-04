@@ -29,8 +29,8 @@ function SidebarBrand({ collapsed, subtitle }) {
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
           {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
         </div>

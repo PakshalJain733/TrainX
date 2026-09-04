@@ -1,158 +1,181 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { mentorProfile, mentorBatches, mentorStudents, mentorAssignments, mentorLiveSessions } from '../../../data/mentorMockData';
-import { Layers, Users, CalendarCheck, FileCode, Video, ArrowUpRight, CheckCircle2, Clock, Star, Sparkles } from 'lucide-react';
+import {
+  Layers, Users, CalendarCheck, FileCode, Video, ArrowUpRight, CheckCircle2,
+  Clock, Star, Sparkles, Info, BookOpen, ChevronRight
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import '../../Student/Styles/Overview.css';
+
+const getInitials = (name) => {
+  if (!name) return "VS";
+  const parts = name.trim().split(" ");
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+};
 
 export default function Overview() {
+  const mentorStats = [
+    { label: "Active Batches", value: `${mentorProfile.allocatedBatchesCount} Cohorts`, hint: "All cohorts on track", icon: Layers },
+    { label: "Total Students", value: `${mentorProfile.totalStudentsAssigned}`, hint: "94% active participation", icon: Users },
+    { label: "Live Classes Today", value: "1 Session", hint: "Starts 02:00 PM", icon: Video },
+    { label: "Pending Reviews", value: `${mentorProfile.pendingEvaluationsCount} Code Reviews`, hint: "Require trainer feedback", icon: FileCode },
+  ];
+
   return (
-    <div className="space-y-6">
-      {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-indigo-900 via-slate-900 to-indigo-950 rounded-2xl p-6 text-white shadow-md relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="space-y-2 max-w-xl z-10">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" /> Mentor & Instructor Control Hub
+    <div className="student-page-inner stack-6 overview-wrapper">
+      {/* Radiant Welcome Hero Banner */}
+      <div className="overview-hero-card">
+        <div className="overview-hero-left">
+          <div className="overview-hero-avatar">
+            {getInitials(mentorProfile.name)}
           </div>
-          <h2 className="text-2xl font-extrabold tracking-tight">Welcome back, {mentorProfile.name}</h2>
-          <p className="text-xs text-slate-300">
-            You are currently instructing <span className="font-semibold text-white">{mentorProfile.allocatedBatchesCount} active cohorts</span> with <span className="font-semibold text-white">{mentorProfile.totalStudentsAssigned} students</span> across 3 technical colleges.
-          </p>
+          <div>
+            <div className="overview-hero-eyebrow">
+              <Sparkles size={13} /> MENTOR WORKSPACE DASHBOARD
+            </div>
+            <h1 className="overview-hero-title">
+              Welcome back, {mentorProfile.name}!
+            </h1>
+            <p className="overview-hero-desc">
+              Senior Technical Trainer | {mentorProfile.allocatedBatchesCount} Active Batches | {mentorProfile.totalStudentsAssigned} Assigned Students
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 z-10">
-          <div className="px-4 py-3 bg-white/10 backdrop-blur-xs rounded-xl border border-white/10 text-center">
-            <p className="text-[10px] text-slate-300 uppercase font-semibold">Trainer Rating</p>
-            <div className="flex items-center justify-center gap-1 text-amber-400 font-bold text-lg mt-0.5">
-              <Star className="w-4 h-4 fill-amber-400" /> {mentorProfile.rating}
-            </div>
-          </div>
-          <div className="px-4 py-3 bg-white/10 backdrop-blur-xs rounded-xl border border-white/10 text-center">
-            <p className="text-[10px] text-slate-300 uppercase font-semibold">Pending Review</p>
-            <p className="font-bold text-white text-lg mt-0.5">{mentorProfile.pendingEvaluationsCount}</p>
-          </div>
+        <div className="overview-hero-actions">
+          <Link to="/mentor/batches">
+            <Button className="overview-btn-primary">
+              <Layers size={14} className="overview-btn-icon" /> View Batches
+            </Button>
+          </Link>
+          <Link to="/mentor/sessions">
+            <Button className="overview-btn-secondary">
+              <Video size={14} className="overview-btn-icon" /> Live Sessions
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {/* Top Quick Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs text-slate-500 font-semibold">Active Batches</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">{mentorProfile.allocatedBatchesCount}</h3>
-            <span className="text-[11px] text-emerald-600 font-medium">All cohorts on track</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <Layers className="w-5 h-5" />
-          </div>
-        </div>
+      {/* 4 Stats Cards Row */}
+      <div className="overview-grid-4">
+        {mentorStats.map((s) => (
+          <Card key={s.label} className="overview-stat-card shadow-sm">
+            <CardContent className="overview-card-content">
+              <div className="overview-stat-top">
+                <div className="overview-icon-container">
+                  <s.icon size={16} />
+                </div>
+                <span className="overview-stat-label">{s.label}</span>
+                <Info size={15} className="overview-info-icon" />
+              </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs text-slate-500 font-semibold">Total Students</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">{mentorProfile.totalStudentsAssigned}</h3>
-            <span className="text-[11px] text-indigo-600 font-medium">94% active participation</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <Users className="w-5 h-5" />
-          </div>
-        </div>
+              <p className="overview-stat-value">{s.value}</p>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs text-slate-500 font-semibold">Live Classes Today</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">1 Session</h3>
-            <span className="text-[11px] text-amber-600 font-semibold">Starts 02:00 PM</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-            <Video className="w-5 h-5" />
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs text-slate-500 font-semibold">Pending Code Reviews</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">14 Submissions</h3>
-            <span className="text-[11px] text-rose-600 font-medium">Require feedback</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
-            <FileCode className="w-5 h-5" />
-          </div>
-        </div>
+              <div className="overview-stat-hint-row">
+                <span className="overview-stat-trend-pill">{s.hint}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Two Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Batches Overview */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900">Allocated Training Batches</h3>
-              <span className="text-xs text-indigo-600 font-semibold cursor-pointer hover:underline">View All Batches</span>
+      {/* 2-Column Main Arena */}
+      <div className="overview-split-grid">
+        {/* Left: Allocated Training Batches */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap">
+                <Layers size={18} className="overview-header-icon" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Allocated Training Batches</CardTitle>
+                <CardDescription className="overview-card-desc">Active cohort syllabus completion & health</CardDescription>
+              </div>
             </div>
-
-            <div className="space-y-3">
-              {mentorBatches.map((b) => (
-                <div key={b.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50/70 hover:bg-slate-50 transition space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                        {b.code}
-                      </span>
-                      <h4 className="font-bold text-slate-900 text-sm mt-1">{b.name}</h4>
-                      <p className="text-xs text-slate-500">{b.college} · {b.department}</p>
-                    </div>
-                    <span className="px-2.5 py-1 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 self-start sm:self-auto">
-                      {b.status}
+            <Link to="/mentor/batches" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+              View All <ChevronRight size={14} />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            {mentorBatches.map((b) => (
+              <div key={b.id} className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 hover:bg-slate-50 transition space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      {b.code}
                     </span>
+                    <h4 className="font-bold text-slate-900 text-sm mt-1">{b.name}</h4>
+                    <p className="text-xs text-slate-500">{b.college} · {b.department}</p>
                   </div>
+                  <Badge variant="success" className="text-xs">{b.status}</Badge>
+                </div>
 
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span className="text-slate-600">Syllabus Progress</span>
-                      <span className="text-indigo-600">{b.progress}%</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-2">
-                      <div
-                        className="bg-indigo-600 h-2 rounded-full transition-all"
-                        style={{ width: `${b.progress}%` }}
-                      ></div>
-                    </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-slate-600">Syllabus Progress</span>
+                    <span className="text-indigo-600">{b.progress}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 rounded-full h-2">
+                    <div
+                      className="bg-indigo-600 h-2 rounded-full transition-all"
+                      style={{ width: `${b.progress}%` }}
+                    ></div>
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        {/* Right: Upcoming Live Session & Trainer Stats */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
+                <Video size={18} className="overview-header-icon text-amber-500" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Live Session & Evaluation</CardTitle>
+                <CardDescription className="overview-card-desc">Scheduled instructor sessions & rating</CardDescription>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* Right 1 Col: Live Session & Pending Tasks */}
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Video className="w-4 h-4 text-indigo-600" />
-              <span>Upcoming Live Session</span>
-            </h3>
-
+            <Badge variant="outline">Today</Badge>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
             {mentorLiveSessions.map((s) => (
               <div key={s.id} className="p-4 bg-gradient-to-br from-indigo-50 to-slate-50 rounded-xl border border-indigo-100 space-y-3">
-                <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-600 text-white uppercase tracking-wider">
-                  {s.status}
-                </span>
-                <h4 className="font-bold text-slate-900 text-xs">{s.title}</h4>
-                <p className="text-[11px] text-slate-600 font-medium">{s.batch}</p>
-                <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                  <Clock className="w-3.5 h-3.5 text-indigo-600" /> {s.time}
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-600 text-white uppercase tracking-wider">
+                    {s.status}
+                  </span>
+                  <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                    <Star size={14} className="fill-amber-400" /> Rating {mentorProfile.rating}
+                  </div>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm">{s.title}</h4>
+                <p className="text-xs text-slate-600 font-medium">{s.batch}</p>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Clock size={14} className="text-indigo-600" /> {s.time}
                 </div>
                 <a
                   href={s.link}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition inline-flex items-center justify-center gap-1.5 shadow-xs"
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition inline-flex items-center justify-center gap-1.5 shadow-xs text-center"
                 >
                   Join Meeting Room
                 </a>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+

@@ -9,18 +9,18 @@ const leaderboardData = {
     { rank: 3, initials: "RS", name: "Riya Shah", sub: "AIML · 6 milestones", score: 90, isCurrentUser: false },
     { rank: 4, initials: "KM", name: "Karan Mehta", sub: "ECS · 6 milestones", score: 88, isCurrentUser: false },
     { rank: 5, initials: "NJ", name: "Neha Joshi", sub: "CS · 6 milestones", score: 86, isCurrentUser: false },
-    { rank: 12, initials: "GS", name: "Ganesh Shinde", sub: "ECS · 2 milestones", score: 78, isCurrentUser: true },
+    { rank: 12, initials: "P", name: "Pakshal", sub: "ECS · 2 milestones", score: 78, isCurrentUser: true },
   ],
   department: [
     { rank: 1, initials: "KM", name: "Karan Mehta", sub: "ECS · 6 milestones", score: 88, isCurrentUser: false },
     { rank: 2, initials: "TD", name: "Tanvi Deshmukh", sub: "ECS · 4 milestones", score: 82, isCurrentUser: false },
-    { rank: 3, initials: "GS", name: "Ganesh Shinde", sub: "ECS · 2 milestones", score: 78, isCurrentUser: true },
+    { rank: 3, initials: "P", name: "Pakshal", sub: "ECS · 2 milestones", score: 78, isCurrentUser: true },
     { rank: 4, initials: "RK", name: "Rohan Kulkarni", sub: "ECS · 2 milestones", score: 74, isCurrentUser: false },
   ],
   milestone: [
     { rank: 1, initials: "SP", name: "Sneha Patil", sub: "7 milestones completed", score: 98, isCurrentUser: false },
     { rank: 2, initials: "AV", name: "Aman Verma", sub: "7 milestones completed", score: 96, isCurrentUser: false },
-    { rank: 7, initials: "GS", name: "Ganesh Shinde", sub: "2 milestones completed", score: 82, isCurrentUser: true },
+    { rank: 7, initials: "P", name: "Pakshal", sub: "2 milestones completed", score: 82, isCurrentUser: true },
   ],
 };
 

@@ -148,20 +148,11 @@ export default function CoordinatorLayout() {
                 </button>
 
                 <div className="coordinator-breadcrumb">
-                  <span className="coordinator-breadcrumb-item">AcadNexus</span>
-                  <span className="coordinator-breadcrumb-sep">/</span>
-                  <span className="coordinator-breadcrumb-item">Coordinator</span>
-                  <span className="coordinator-breadcrumb-sep">/</span>
                   <span className="coordinator-breadcrumb-active">{pageTitle}</span>
                 </div>
               </div>
 
               <div className="coordinator-header__right" ref={headerRightRef}>
-                <div className="coordinator-header__badge">
-                  <ShieldCheck size={13} style={{ marginRight: "4px" }} />
-                  CSE Coordinator
-                </div>
-
                 <div className="coordinator-header__notif-wrap" style={{ position: "relative" }}>
                   <button
                     className="coordinator-header__icon-btn"
@@ -192,7 +183,6 @@ export default function CoordinatorLayout() {
                   >
                     <div className="coordinator-header__user-info">
                       <span className="coordinator-header__name">{coordinatorProfile.name}</span>
-                      <span className="coordinator-header__sub">CSE Dept · Apex Inst</span>
                     </div>
                     <div className="coordinator-header__avatar">
                       AM

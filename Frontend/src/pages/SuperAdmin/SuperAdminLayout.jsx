@@ -168,10 +168,6 @@ export default function SuperAdminLayout() {
                 </button>
 
                 <div className="superadmin-breadcrumb">
-                  <span className="superadmin-breadcrumb-sep">AcadNexus</span>
-                  <span className="superadmin-breadcrumb-sep">/</span>
-                  <span className="superadmin-breadcrumb-sep">Super Admin</span>
-                  <span className="superadmin-breadcrumb-sep">/</span>
                   <span className="superadmin-breadcrumb-active">{pageTitle}</span>
                 </div>
               </div>
@@ -185,12 +181,6 @@ export default function SuperAdminLayout() {
                   <Sparkles size={14} className="text-indigo-600" />
                   <span>AI Risk Audit</span>
                 </button>
-
-                {/* Role Badge */}
-                <div className="superadmin-header__badge">
-                  <Shield size={12} style={{ marginRight: "4px" }} />
-                  Super Admin
-                </div>
 
                 {/* Notifications Dropdown Wrap */}
                 <div style={{ position: "relative" }}>
@@ -222,7 +212,6 @@ export default function SuperAdminLayout() {
                   >
                     <div className="superadmin-header__user-info">
                       <span className="superadmin-header__name">Dr. Sara Rao</span>
-                      <span className="superadmin-header__sub">Platform Owner</span>
                     </div>
                     <div className="superadmin-header__avatar">SR</div>
                   </button>

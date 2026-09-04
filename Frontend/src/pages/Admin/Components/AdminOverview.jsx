@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AdminOverview.css";
+import "../../Student/Styles/Overview.css";
 
 export default function AdminOverview() {
   const [stats, setStats] = useState({

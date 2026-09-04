@@ -120,7 +120,15 @@ export default function Overview() {
     return () => window.removeEventListener("userProfileUpdated", loadUserData);
   }, []);
 
-  const studentName = dashboard.personalDetails.name || "Ganesh Shinde";
+  const studentName = dashboard.personalDetails.name || getStoredUserName() || "Pakshal";
+  const studentDept = dashboard.personalDetails.department || "Electronics & Computer Science";
+  const studentSem = dashboard.academicOverview.semester || "Semester 6";
+  const studentCgpa = dashboard.academicOverview.cgpa || "8.75";
+
+  const heroSubtitle = [studentDept, studentSem, studentCgpa ? `CGPA: ${studentCgpa}` : ""]
+    .filter(Boolean)
+    .join(" | ");
+
   const upcoming = dashboard.upcomingDeadlines || [];
   const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
     ? dashboard.leaderboard
@@ -136,9 +144,9 @@ export default function Overview() {
       ];
 
   const studentStats = [
-    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
+    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage || 95)}%`, hint: "Active semester attendance", icon: CalendarCheck },
     { label: "Active Batches", value: "Enrolled", hint: "Assigned training batch", icon: Users },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
+    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank || '1/1'}`, hint: "Current cohort rank", icon: TrendingUp },
     { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Flame },
   ];
 
@@ -184,7 +192,7 @@ export default function Overview() {
               Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
-              {dashboard.personalDetails.department} | {dashboard.academicOverview.semester} | {dashboard.academicOverview.cgpa ? `CGPA: ${dashboard.academicOverview.cgpa}` : ''}
+              {heroSubtitle}
             </p>
           </div>
         </div>

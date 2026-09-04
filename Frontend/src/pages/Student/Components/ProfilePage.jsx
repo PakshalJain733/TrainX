@@ -90,8 +90,8 @@ export default function ProfilePage() {
     } catch (e) {}
 
     return {
-      name: "Ganesh Shinde",
-      email: "ganeshshinde@pvppcoe.ac.in",
+      name: "Pakshal",
+      email: "pakshal@trainingportal.com",
       phone: "+91 98765 43210",
       rollNo: "21ECS042",
       department: "Electronics & Computer Science",
@@ -100,7 +100,7 @@ export default function ProfilePage() {
       skills: "",
       profileCompleted: true,
       batch: "B.Tech 2026 — Batch A",
-      college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+      college: "Apex Institute of Technology",
       coordinator: "Prof. A. Deshmukh (ECS)",
       mentor: "Ms. R. Kulkarni (C2C Mentor)",
       track: "Python Backend Developer",

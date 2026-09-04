@@ -9,12 +9,20 @@ import {
   AlertTriangle,
   Send,
   CheckCircle,
+  Sparkles,
+  Info,
+  ChevronRight,
+  UserX,
+  BookOpen
 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
 import {
   coordinatorStats,
   coordinatorStudents,
 } from "../../../data/coordinatorMockData";
-import "../Styles/Overview.css";
+import "../../Student/Styles/Overview.css";
 
 export default function CoordinatorOverview() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -30,130 +38,166 @@ export default function CoordinatorOverview() {
     setTimeout(() => setBroadcastSent(false), 3000);
   };
 
+  const statsList = [
+    { label: "Enrolled Students", value: "480", hint: "Active in CSE department", icon: GraduationCap },
+    { label: "Managed Batches", value: "6 Cohorts", hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
+  ];
+
   return (
-    <div className="coord-overview">
-      {/* Welcome Banner */}
-      <div className="coord-welcome-card">
-        <div>
-          <h1 className="coord-welcome-title">Welcome back, Alok Mishra 👋</h1>
-          <p className="coord-welcome-sub">
-            Department Coordinator · Computer Science & Engineering (Apex Institute of Technology).
-            Here is your daily training governance summary and batch status overview.
-          </p>
-        </div>
-        <div className="coord-welcome-actions">
-          <Link to="/coordinator/batches" className="coord-btn coord-btn--primary">
-            <PlusCircle size={16} />
-            Create Batch
-          </Link>
-        </div>
-      </div>
-
-      {/* Risk Alert Banner if any */}
-      {highRiskStudents.length > 0 && (
-        <div className="coord-alert-banner">
-          <div className="coord-alert-left">
-            <AlertTriangle className="coord-alert-icon" size={24} />
-            <div>
-              <div className="coord-alert-title">
-                Attention Required: {highRiskStudents.length} Students Flagged as High Risk
-              </div>
-              <div className="coord-alert-sub">
-                Low attendance (&lt; 75%) or test performance dips detected in Data Science & CSE cohorts.
-              </div>
-            </div>
+    <div className="student-page-inner stack-6 overview-wrapper">
+      {/* Radiant Welcome Hero Banner */}
+      <div className="overview-hero-card">
+        <div className="overview-hero-left">
+          <div className="overview-hero-avatar">
+            AM
           </div>
-          <Link to="/coordinator/students" className="coord-btn" style={{ background: "#e11d48", color: "#ffffff" }}>
-            Review Defaulters
+          <div>
+            <div className="overview-hero-eyebrow">
+              <Sparkles size={13} /> COORDINATOR WORKSPACE DASHBOARD
+            </div>
+            <h1 className="overview-hero-title">
+              Welcome back, Alok Mishra!
+            </h1>
+            <p className="overview-hero-desc">
+              Department Coordinator · Computer Science & Engineering | Apex Institute of Technology
+            </p>
+          </div>
+        </div>
+
+        <div className="overview-hero-actions">
+          <Link to="/coordinator/batches">
+            <Button className="overview-btn-primary">
+              <PlusCircle size={14} className="overview-btn-icon" /> Create Batch
+            </Button>
+          </Link>
+          <Link to="/coordinator/students">
+            <Button className="overview-btn-secondary">
+              <UserX size={14} className="overview-btn-icon" /> Defaulter Audit
+            </Button>
           </Link>
         </div>
-      )}
-
-      {/* KPI Stats Grid */}
-      <div className="coord-stats-grid">
-        {coordinatorStats.map((stat) => {
-          let iconBg = "#eff6ff";
-          let iconColor = "#2563eb";
-          if (stat.color === "purple") {
-            iconBg = "#faf5ff";
-            iconColor = "#9333ea";
-          } else if (stat.color === "emerald") {
-            iconBg = "#ecfdf5";
-            iconColor = "#059669";
-          } else if (stat.color === "amber") {
-            iconBg = "#fffbeb";
-            iconColor = "#d97706";
-          } else if (stat.color === "rose") {
-            iconBg = "#fff1f2";
-            iconColor = "#e11d48";
-          }
-
-          return (
-            <div key={stat.id} className="coord-stat-card">
-              <div className="coord-stat-top">
-                <span className="coord-stat-label">{stat.label}</span>
-                <div className="coord-stat-icon-bg" style={{ background: iconBg, color: iconColor }}>
-                  {stat.id === "students" && <GraduationCap size={18} />}
-                  {stat.id === "batches" && <Users size={18} />}
-                  {stat.id === "mentors" && <UserCheck size={18} />}
-                  {stat.id === "attendance" && <LineChart size={18} />}
-                </div>
-              </div>
-              <div className="coord-stat-value">{stat.value}</div>
-              <div className="coord-stat-subtext">{stat.subtext}</div>
-            </div>
-          );
-        })}
       </div>
 
-      {/* Broadcast Department Announcement */}
-      <div className="coord-card">
-        <div className="coord-card-title">
-          <Send size={18} color="#4f46e5" />
-          Broadcast Department Announcement
-        </div>
-        <form onSubmit={handleBroadcast} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          <select
-            style={{
-              padding: "10px 14px",
-              borderRadius: "8px",
-              border: "1px solid #cbd5e1",
-              fontSize: "13px",
-            }}
-          >
-            <option value="all">All CSE Batches & Students</option>
-            <option value="cse26">CSE 2026 Alpha Cohort</option>
-            <option value="fs">Fullstack React & Node Specialization</option>
-            <option value="ds">Data Science & ML 2025</option>
-          </select>
-          <textarea
-            rows={4}
-            placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10 AM)..."
-            value={broadcastMsg}
-            onChange={(e) => setBroadcastMsg(e.target.value)}
-            style={{
-              padding: "12px",
-              borderRadius: "8px",
-              border: "1px solid #cbd5e1",
-              fontSize: "13px",
-              resize: "vertical",
-            }}
-          />
-          <button
-            type="submit"
-            className="coord-btn coord-btn--primary"
-            style={{ justifyContent: "center", width: "fit-content", minWidth: "200px" }}
-          >
-            <Send size={14} />
-            Send Announcement
-          </button>
-          {broadcastSent && (
-            <div style={{ fontSize: "13px", color: "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-              <CheckCircle size={16} /> Announcement broadcasted to students!
+      {/* 4 Stats Cards Row */}
+      <div className="overview-grid-4">
+        {statsList.map((s) => (
+          <Card key={s.label} className="overview-stat-card shadow-sm">
+            <CardContent className="overview-card-content">
+              <div className="overview-stat-top">
+                <div className="overview-icon-container">
+                  <s.icon size={16} />
+                </div>
+                <span className="overview-stat-label">{s.label}</span>
+                <Info size={15} className="overview-info-icon" />
+              </div>
+
+              <p className="overview-stat-value">{s.value}</p>
+
+              <div className="overview-stat-hint-row">
+                <span className="overview-stat-trend-pill">{s.hint}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* 2-Column Main Arena */}
+      <div className="overview-split-grid">
+        {/* Left: Broadcast Announcement Form */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap">
+                <Send size={18} className="overview-header-icon" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Broadcast Department Notice</CardTitle>
+                <CardDescription className="overview-card-desc">Send instant announcements to students & cohorts</CardDescription>
+              </div>
             </div>
-          )}
-        </form>
+            <Badge variant="outline">CSE Dept</Badge>
+          </CardHeader>
+          <CardContent className="p-4">
+            <form onSubmit={handleBroadcast} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Target Audience</label>
+                <select
+                  className="w-full p-2.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  <option value="all">All CSE Batches & Students</option>
+                  <option value="cse26">CSE 2026 Alpha Cohort</option>
+                  <option value="fs">Fullstack React & Node Specialization</option>
+                  <option value="ds">Data Science & ML 2025</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Notice Message</label>
+                <textarea
+                  rows={4}
+                  placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10 AM)..."
+                  value={broadcastMsg}
+                  onChange={(e) => setBroadcastMsg(e.target.value)}
+                  className="w-full p-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-y"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2 px-4 rounded-lg flex items-center gap-1.5">
+                  <Send size={14} /> Send Announcement
+                </Button>
+                {broadcastSent && (
+                  <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle size={15} /> Sent successfully!
+                  </span>
+                )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Right: Flagged High Risk Students */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
+                <AlertTriangle size={18} className="overview-header-icon text-rose-500" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Defaulter & Risk Audit</CardTitle>
+                <CardDescription className="overview-card-desc">Students requiring intervention</CardDescription>
+              </div>
+            </div>
+            <Link to="/coordinator/students" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+              View All <ChevronRight size={14} />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-4 space-y-2.5">
+            {highRiskStudents.length === 0 ? (
+              <div className="py-8 text-center text-slate-500">
+                <CheckCircle size={28} className="mx-auto text-emerald-500 mb-2" />
+                <p className="text-sm font-semibold">No high risk students flagged.</p>
+              </div>
+            ) : (
+              highRiskStudents.map((s) => (
+                <div key={s.id} className="p-3 rounded-xl border border-rose-100 bg-rose-50/40 flex items-center justify-between">
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800">{s.name}</h5>
+                    <p className="text-[11px] text-slate-500">{s.rollNo} · {s.batch}</p>
+                    <span className="text-[10px] text-rose-600 font-semibold mt-0.5 block">
+                      Attendance: {s.attendance} | Performance: {s.testAvg}
+                    </span>
+                  </div>
+                  <Badge variant="destructive" className="text-[10px]">High Risk</Badge>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+
