@@ -1,0 +1,28 @@
+/* Students.css */
+.coord-student-pill {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.coord-student-pill--top {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.coord-student-pill--good {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.coord-student-pill--moderate {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.coord-student-pill--risk {
+  background: #fff1f2;
+  color: #be123c;
+}

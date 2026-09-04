@@ -64,9 +64,10 @@ export default function ProfilePage() {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) {
-        let name = u.name;
-        if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
-          name = u.fullName || u.full_name || (u.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? u.name : "Ganesh Shinde");
+        let name = u.name || "";
+        const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
+        if (isAutoName) {
+          name = u.fullName || u.full_name || "Pakshal";
         }
         return {
           name: name,
@@ -76,7 +77,7 @@ export default function ProfilePage() {
           department: u.department || "Electronics & Computer Science",
           semester: u.semester || "Semester 6",
           cgpa: u.cgpa || u.aggregate_cgpa || "8.75",
-          skills: u.skills || "Python, React.js, Data Structures & Algorithms, SQL & Databases",
+          skills: u.skills || "",
           profileCompleted: u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills),
           batch: u.batch || "B.Tech 2026 — Batch A",
           college: u.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
@@ -96,7 +97,7 @@ export default function ProfilePage() {
       department: "Electronics & Computer Science",
       semester: "Semester 6",
       cgpa: "8.75",
-      skills: "Python, React.js, Data Structures & Algorithms, SQL & Databases",
+      skills: "",
       profileCompleted: true,
       batch: "B.Tech 2026 — Batch A",
       college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
