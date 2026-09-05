@@ -164,3 +164,52 @@ CREATE TABLE IF NOT EXISTS assessment_answers (
   FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
   FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
 );
+
+-- 11. Coding Problems Table
+CREATE TABLE IF NOT EXISTS coding_problems (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(255) NOT NULL,
+  description LONGTEXT,
+  difficulty ENUM('Easy', 'Medium', 'Hard') DEFAULT 'Easy',
+  category VARCHAR(100) DEFAULT 'Algorithms',
+  total_marks INT DEFAULT 100,
+  time_limit_ms INT DEFAULT 2000,
+  memory_limit_mb INT DEFAULT 256,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 12. Coding Test Cases Table
+CREATE TABLE IF NOT EXISTS coding_test_cases (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  problem_id INT NOT NULL,
+  input LONGTEXT NOT NULL,
+  expected_output LONGTEXT NOT NULL,
+  is_hidden BOOLEAN DEFAULT FALSE,
+  weightage INT DEFAULT 1,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (problem_id) REFERENCES coding_problems(id) ON DELETE CASCADE
+);
+
+-- 13. Coding Submissions (Attempts) Table
+CREATE TABLE IF NOT EXISTS coding_submissions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id INT NOT NULL,
+  problem_id INT NOT NULL,
+  submitted_code LONGTEXT NOT NULL,
+  language VARCHAR(50) NOT NULL,
+  passed_test_cases INT NOT NULL DEFAULT 0,
+  total_test_cases INT NOT NULL DEFAULT 0,
+  score DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  marks DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  percentage DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+  status ENUM('passed', 'failed', 'partial', 'accepted', 'wrong_answer', 'runtime_error', 'time_limit_exceeded', 'compilation_error', 'pending') NOT NULL DEFAULT 'passed',
+  execution_details JSON NULL,
+  submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (problem_id) REFERENCES coding_problems(id) ON DELETE CASCADE,
+  INDEX idx_student_id (student_id),
+  INDEX idx_problem_id (problem_id)
+);
+
