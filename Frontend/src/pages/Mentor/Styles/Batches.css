@@ -1,0 +1,94 @@
+/* Batches.css - Mentor Batches Tab Styles */
+.mentor-batches-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mentor-batches-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .mentor-batches-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.mentor-batch-card-main {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  transition: all 0.2s ease;
+}
+
+.mentor-batch-card-main:hover {
+  border-color: #c7d2fe;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.08);
+}
+
+.mentor-batch-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.mentor-batch-details-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mentor-batch-main-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 16px;
+  margin: 0;
+}
+
+.mentor-batch-college-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.mentor-batch-dept-sub {
+  font-size: 12px;
+  color: #4f46e5;
+  font-weight: 600;
+  margin: 0;
+}
+
+.mentor-batch-stats-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid #f1f5f9;
+  font-size: 12px;
+}
+
+.mentor-batch-stat-line {
+  display: flex;
+  justify-content: space-between;
+  color: #475569;
+}
+
+.mentor-batch-stat-strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mentor-batch-schedule-text {
+  font-weight: 500;
+  color: #1e293b;
+  font-size: 11px;
+}

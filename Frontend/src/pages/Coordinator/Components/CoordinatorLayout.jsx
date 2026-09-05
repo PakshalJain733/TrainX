@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, ShieldCheck } from "lucide-react";
 import { CoordinatorSidebar } from "./CoordinatorSidebar";
+import CoordinatorTabBar from "./CoordinatorTabBar";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import "../Styles/CoordinatorLayout.css";
 
@@ -28,31 +29,26 @@ function NotificationDropdown({ onClose }) {
   ];
 
   return (
-    <div className="coordinator-header__profile-dropdown" style={{ width: "320px", padding: "12px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-        <span style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>Coordinator Alerts</span>
-        <span style={{ fontSize: "11px", color: "#4f46e5", cursor: "pointer", fontWeight: 600 }}>Mark all read</span>
+    <div className="coordinator-header__profile-dropdown coordinator-header__notif-dropdown">
+      <div className="coordinator-header__notif-header">
+        <span className="coordinator-header__notif-title">Coordinator Alerts</span>
+        <span className="coordinator-header__notif-mark-btn">Mark all read</span>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      <div className="coordinator-header__notif-list">
         {sampleNotifications.map((n) => (
           <div
             key={n.id}
-            style={{
-              padding: "8px 10px",
-              borderRadius: "8px",
-              background: n.unread ? "#eff6ff" : "#f8fafc",
-              fontSize: "12px",
-            }}
+            className={`coordinator-header__notif-card ${n.unread ? "coordinator-header__notif-card--unread" : ""}`}
           >
-            <div style={{ fontWeight: 600, color: "#1e293b" }}>{n.title}</div>
-            <div style={{ fontSize: "10px", color: "#64748b", marginTop: "2px" }}>{n.time}</div>
+            <div className="coordinator-header__notif-card-title">{n.title}</div>
+            <div className="coordinator-header__notif-card-time">{n.time}</div>
           </div>
         ))}
       </div>
-      <div style={{ marginTop: "10px", textAlign: "center" }}>
+      <div className="coordinator-header__notif-footer">
         <Link
           to="/coordinator/notifications"
-          style={{ fontSize: "12px", fontWeight: 600, color: "#4f46e5", textDecoration: "none" }}
+          className="coordinator-header__notif-footer-link"
           onClick={onClose}
         >
           View All Notifications
@@ -95,14 +91,20 @@ export default function CoordinatorLayout() {
     if (path.startsWith("/coordinator/batches")) return "Batches Governance";
     if (path.startsWith("/coordinator/students")) return "Student Directory & Risk Audit";
     if (path.startsWith("/coordinator/mentors")) return "Industry Trainers & Mentors";
+    if (path.startsWith("/coordinator/sessions")) return "Live Classrooms & Training";
     if (path.startsWith("/coordinator/schedules")) return "Live Schedules & Timetable";
     if (path.startsWith("/coordinator/assessments")) return "Assessments & Quiz Governance";
     if (path.startsWith("/coordinator/attendance")) return "Attendance Governance";
+    if (path.startsWith("/coordinator/roadmaps")) return "AI Career Roadmaps";
+    if (path.startsWith("/coordinator/interviews")) return "AI Mock Interviews & Viva";
+    if (path.startsWith("/coordinator/performance")) return "Performance & Skill Gap Analytics";
     if (path.startsWith("/coordinator/placement")) return "Placement Readiness & Drives";
+    if (path.startsWith("/coordinator/leaderboard")) return "Department Leaderboard";
     if (path.startsWith("/coordinator/requests")) return "Requests & Approvals Center";
     if (path.startsWith("/coordinator/reports")) return "Governance & Audit Reports";
     if (path.startsWith("/coordinator/notifications")) return "Broadcast Notifications";
     if (path.startsWith("/coordinator/profile")) return "Coordinator Profile & Settings";
+    if (path.startsWith("/coordinator/help")) return "Help & Support";
     return "Coordinator Workspace";
   };
 
@@ -153,11 +155,11 @@ export default function CoordinatorLayout() {
 
               <div className="coordinator-header__right" ref={headerRightRef}>
                 <div className="coordinator-header__badge">
-                  <ShieldCheck size={13} style={{ marginRight: "4px" }} />
+                  <ShieldCheck size={13} className="coordinator-header__badge-icon" />
                   CSE Coordinator
                 </div>
 
-                <div className="coordinator-header__notif-wrap" style={{ position: "relative" }}>
+                <div className="coordinator-header__notif-wrap">
                   <button
                     className="coordinator-header__icon-btn"
                     aria-label="Notifications"
@@ -234,6 +236,7 @@ export default function CoordinatorLayout() {
 
             {/* Main Content Body */}
             <div className="coordinator-card-body">
+              <CoordinatorTabBar />
               <Outlet />
             </div>
           </div>

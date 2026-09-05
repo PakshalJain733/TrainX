@@ -135,7 +135,7 @@ export default function CoordinatorNotifications() {
           Send Real-time Department Broadcast
         </div>
 
-        <form onSubmit={handleSend} style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "12px" }}>
+        <form onSubmit={handleSend} className="coord-broadcast-form">
           <textarea
             rows={3}
             required
@@ -145,7 +145,7 @@ export default function CoordinatorNotifications() {
             style={{ padding: "12px", borderRadius: "12px", border: "1.5px solid #cbd5e1", fontSize: "13.5px", resize: "none" }}
           />
 
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          <div className="coord-broadcast-actions">
             <button type="submit" className="coord-btn coord-btn--primary">
               <Send size={14} /> Publish Broadcast Alert
             </button>

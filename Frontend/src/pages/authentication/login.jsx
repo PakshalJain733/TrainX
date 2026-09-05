@@ -58,7 +58,6 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [otpHint, setOtpHint] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
@@ -91,9 +90,6 @@ function Login() {
       if (data.success) {
         setStep("otp");
         setResendTimer(30);
-        if (data.data?.otp) {
-          setOtpHint(`Demo OTP: ${data.data.otp}`);
-        }
       } else {
         setErrorMsg(data.message || "Failed to send OTP. Please ensure your account is registered.");
       }
@@ -121,9 +117,6 @@ function Login() {
       const data = await response.json();
       if (data.success) {
         setSuccessMsg("A new OTP has been sent to your email!");
-        if (data.data?.otp) {
-          setOtpHint(`New Demo OTP: ${data.data.otp}`);
-        }
         setResendTimer(30);
       } else {
         setErrorMsg(data.message || "Failed to resend OTP");
@@ -266,21 +259,15 @@ function Login() {
           <img src={Logo} alt="Logo" className="login-logo" />
 
           {errorMsg && (
-            <div style={{ color: "#ef4444", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+            <div className="auth-error-msg">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div style={{ color: "#10b981", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+            <div className="auth-success-msg">
               {successMsg}
             </div>
           )}
-          {otpHint && step === "otp" && (
-            <div style={{ color: "#3b82f6", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem", fontWeight: "600" }}>
-              {otpHint}
-            </div>
-          )}
-
           {/* STEP 1: EMAIL INPUT SCREEN */}
           {step === "email" && (
             <>
@@ -298,12 +285,12 @@ function Login() {
 
               <form onSubmit={handleSendOtp}>
                 <div className="login-input-group">
-                  <FieldLabel htmlFor="email" icon={Icons.email}>Email / Mobile</FieldLabel>
+                  <FieldLabel htmlFor="email" icon={Icons.email}>Email</FieldLabel>
                   <input
                     id="email"
                     type="text"
                     required
-                    placeholder="user@pvppcoe.ac.in or 9876543210"
+                    placeholder="user@pvppcoe.ac.in"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />

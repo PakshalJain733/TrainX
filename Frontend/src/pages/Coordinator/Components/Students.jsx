@@ -251,73 +251,30 @@ export default function CoordinatorStudents() {
   const getStatusBadge = (status) => {
     switch (status) {
       case "completed":
-        return (
-          <span
-            style={{
-              padding: "3px 10px",
-              borderRadius: "999px",
-              fontSize: "11px",
-              fontWeight: 700,
-              background: "#ecfdf5",
-              color: "#047857",
-              border: "1px solid #a7f3d0",
-            }}
-          >
-            Completed
-          </span>
-        );
+        return <span className="status-badge status-badge-completed">Completed</span>;
       case "in-progress":
-        return (
-          <span
-            style={{
-              padding: "3px 10px",
-              borderRadius: "999px",
-              fontSize: "11px",
-              fontWeight: 700,
-              background: "#eff6ff",
-              color: "#1d4ed8",
-              border: "1px solid #bfdbfe",
-            }}
-          >
-            In Progress
-          </span>
-        );
+        return <span className="status-badge status-badge-progress">In Progress</span>;
       case "locked":
       default:
-        return (
-          <span
-            style={{
-              padding: "3px 10px",
-              borderRadius: "999px",
-              fontSize: "11px",
-              fontWeight: 700,
-              background: "#f1f5f9",
-              color: "#64748b",
-              border: "1px solid #cbd5e1",
-            }}
-          >
-            Locked
-          </span>
-        );
+        return <span className="status-badge status-badge-locked">Locked</span>;
     }
   };
 
   // FULLSCREEN STUDENT DETAIL VIEW (NO MODAL POPUP)
   if (selectedStudent) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div className="student-detail-wrapper">
         {/* Top Back Navigation Bar */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div className="student-detail-top-nav">
           <button
-            className="coord-btn"
-            style={{ background: "#ffffff", border: "1px solid #cbd5e1", color: "#334155" }}
+            className="coord-btn student-btn-back"
             onClick={() => setSelectedStudent(null)}
           >
             <ArrowLeft size={16} /> Back to Student Directory
           </button>
 
           <span
-            className={`coord-student-pill ${
+            className={`coord-student-pill coord-student-pill--lg ${
               selectedStudent.riskStatus === "Top Performer"
                 ? "coord-student-pill--top"
                 : selectedStudent.riskStatus === "Good"
@@ -326,82 +283,56 @@ export default function CoordinatorStudents() {
                 ? "coord-student-pill--moderate"
                 : "coord-student-pill--risk"
             }`}
-            style={{ padding: "6px 14px", fontSize: "12px" }}
           >
             {selectedStudent.riskStatus}
           </span>
         </div>
 
         {/* Student Profile Overview Header Card */}
-        <div
-          style={{
-            background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
-            color: "#ffffff",
-            borderRadius: "16px",
-            padding: "24px 28px",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            boxShadow: "0 8px 24px rgba(30, 27, 75, 0.15)",
-          }}
-        >
+        <div className="student-detail-header-card">
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-              <div
-                style={{
-                  width: "52px",
-                  height: "52px",
-                  borderRadius: "14px",
-                  background: "#4f46e5",
-                  color: "#ffffff",
-                  fontSize: "20px",
-                  fontWeight: 800,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 12px rgba(79, 70, 229, 0.4)",
-                }}
-              >
+            <div className="student-detail-user-row">
+              <div className="student-detail-avatar">
                 {selectedStudent.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
               </div>
               <div>
-                <h1 style={{ fontSize: "22px", fontWeight: 800, margin: 0 }}>{selectedStudent.name}</h1>
-                <p style={{ fontSize: "13px", color: "rgba(255, 255, 255, 0.8)", margin: "4px 0 0 0" }}>
+                <h1 className="student-detail-title">{selectedStudent.name}</h1>
+                <p className="student-detail-sub">
                   Roll No: <strong>{selectedStudent.rollNo}</strong> · Batch: <strong>{selectedStudent.batch}</strong> ({selectedStudent.department})
                 </p>
               </div>
             </div>
 
-            <div style={{ display: "flex", gap: "20px", marginTop: "16px", fontSize: "13px", color: "rgba(255, 255, 255, 0.9)" }}>
+            <div className="student-detail-contact-row">
               <span>
-                <Mail size={14} style={{ verticalAlign: "middle", marginRight: "6px" }} /> {selectedStudent.email}
+                <Mail size={14} className="student-detail-contact-icon" /> {selectedStudent.email}
               </span>
               <span>
-                <Phone size={14} style={{ verticalAlign: "middle", marginRight: "6px" }} /> {selectedStudent.phone}
+                <Phone size={14} className="student-detail-contact-icon" /> {selectedStudent.phone}
               </span>
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: "16px", textAlign: "right" }}>
-            <div style={{ background: "rgba(255, 255, 255, 0.1)", padding: "12px 18px", borderRadius: "12px" }}>
-              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>Attendance</div>
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#34d399" }}>{selectedStudent.attendance}%</div>
+          <div className="student-detail-stats-group">
+            <div className="student-detail-stat-box">
+              <div className="student-detail-stat-label">Attendance</div>
+              <div className="student-detail-stat-val student-detail-stat-val--attendance">{selectedStudent.attendance}%</div>
             </div>
 
-            <div style={{ background: "rgba(255, 255, 255, 0.1)", padding: "12px 18px", borderRadius: "12px" }}>
-              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>Quiz Average</div>
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#818cf8" }}>{selectedStudent.avgScore}%</div>
+            <div className="student-detail-stat-box">
+              <div className="student-detail-stat-label">Quiz Average</div>
+              <div className="student-detail-stat-val student-detail-stat-val--quiz">{selectedStudent.avgScore}%</div>
             </div>
 
-            <div style={{ background: "rgba(255, 255, 255, 0.1)", padding: "12px 18px", borderRadius: "12px" }}>
-              <div style={{ fontSize: "11px", color: "rgba(255, 255, 255, 0.7)", fontWeight: 600 }}>AI Interview</div>
-              <div style={{ fontSize: "22px", fontWeight: 800, color: "#c084fc" }}>{selectedStudent.interviewScore}%</div>
+            <div className="student-detail-stat-box">
+              <div className="student-detail-stat-label">AI Interview</div>
+              <div className="student-detail-stat-val student-detail-stat-val--interview">{selectedStudent.interviewScore}%</div>
             </div>
           </div>
         </div>
 
         {/* Fullscreen Navigation Tabs Bar */}
-        <div className="coord-tabs-bar" style={{ marginBottom: "8px" }}>
+        <div className="coord-tabs-bar coord-tabs-bar--mb-sm">
           <button
             className={`coord-tab-btn ${activeTab === "roadmap" ? "coord-tab-btn--active" : ""}`}
             onClick={() => setActiveTab("roadmap")}
@@ -418,25 +349,24 @@ export default function CoordinatorStudents() {
 
         {/* TAB 1: FULLSCREEN AI ROADMAP INTERFACE */}
         {activeTab === "roadmap" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="student-detail-wrapper">
             {/* Career Goal Generator Card */}
             <div className="student-roadmap-generator-card">
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div className="student-roadmap-title-row">
                 <Sparkles size={22} color="#2563eb" />
                 <div>
-                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                  <h3 className="student-roadmap-generator-title">
                     Select career / skill goal
                   </h3>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: "2px 0 0 0" }}>
+                  <p className="student-roadmap-generator-desc">
                     AI analyses student goal, current scores and skill gaps to build their personalized roadmap.
                   </p>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", alignItems: "center", marginTop: "4px" }}>
+              <div className="student-roadmap-actions-row">
                 <select
                   className="student-roadmap-select-input"
-                  style={{ flex: 1, minWidth: "300px" }}
                   value={selectedGoal}
                   onChange={(e) => setSelectedGoal(e.target.value)}
                 >
@@ -448,10 +378,9 @@ export default function CoordinatorStudents() {
                 </select>
 
                 <button
-                  className="coord-btn coord-btn--primary"
+                  className="coord-btn coord-btn--primary student-btn-generate"
                   onClick={handleGenerate}
                   disabled={isGenerating}
-                  style={{ padding: "10px 22px" }}
                 >
                   <Sparkles size={16} />
                   {isGenerating ? "Generating Roadmap..." : "Generate roadmap"}
@@ -463,51 +392,42 @@ export default function CoordinatorStudents() {
             <div className="student-roadmap-timeline">
               {milestones.map((m) => (
                 <div key={m.id} className={`student-roadmap-milestone-card milestone-status-${m.status}`}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div className="student-milestone-top-row">
+                    <div className="student-milestone-title-group">
                       {m.status === "completed" && <CheckCircle2 size={20} color="#10b981" />}
                       {m.status === "in-progress" && <CircleDot size={20} color="#2563eb" />}
                       {m.status === "locked" && <Lock size={18} color="#94a3b8" />}
-                      <h4 style={{ fontSize: "16px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                      <h4 className="student-milestone-title">
                         {m.title}
                       </h4>
                     </div>
                     {getStatusBadge(m.status)}
                   </div>
 
-                  <p style={{ fontSize: "13.5px", color: "#64748b", margin: "0 0 14px 0" }}>{m.desc}</p>
+                  <p className="student-milestone-desc">{m.desc}</p>
 
                   {/* Progress Bar */}
-                  <div
-                    style={{
-                      width: "100%",
-                      height: "7px",
-                      background: "#f1f5f9",
-                      borderRadius: "999px",
-                      overflow: "hidden",
-                      marginBottom: "14px",
-                    }}
-                  >
+                  <div className="student-milestone-progress-track">
                     <div
-                      style={{
-                        height: "100%",
-                        width: `${m.progress}%`,
-                        background: m.status === "completed" ? "#10b981" : "#2563eb",
-                        borderRadius: "999px",
-                      }}
+                      className={`student-milestone-progress-bar ${
+                        m.status === "completed"
+                          ? "student-milestone-progress-bar--completed"
+                          : "student-milestone-progress-bar--progress"
+                      }`}
+                      style={{ width: `${m.progress}%` }}
                     />
                   </div>
 
                   {/* Tags & Meta Stats */}
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                  <div className="student-milestone-meta-row">
+                    <div className="student-tag-list">
                       {m.tags.map((tag) => (
                         <span key={tag} className="student-tag-pill">
                           {tag}
                         </span>
                       ))}
                     </div>
-                    <div style={{ fontSize: "12.5px", color: "#64748b", fontWeight: 500 }}>
+                    <div className="student-milestone-stats-text">
                       {m.quizzes} quizzes · {m.exercises} coding exercises
                     </div>
                   </div>
@@ -519,20 +439,20 @@ export default function CoordinatorStudents() {
 
         {/* TAB 2: OVERVIEW & ACADEMICS */}
         {activeTab === "overview" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div className="student-detail-wrapper">
             <div className="coord-card">
               <div className="coord-card-title">Placement Readiness Audit</div>
-              <div style={{ fontSize: "15px", fontWeight: 700, color: "#4f46e5", marginTop: "4px" }}>
+              <div className="student-readiness-badge">
                 {selectedStudent.placementStatus}
               </div>
-              <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>
+              <p className="student-readiness-desc">
                 Candidate has cleared department criteria and is currently eligible for tier-1 partner recruitment drives.
               </p>
             </div>
 
             <div className="coord-card">
               <div className="coord-card-title">Coordinator Actions & Warnings</div>
-              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+              <div className="student-actions-row">
                 <button
                   className="coord-btn coord-btn--primary"
                   onClick={() => alert(`Warning notice sent to ${selectedStudent.name}`)}
@@ -540,8 +460,7 @@ export default function CoordinatorStudents() {
                   <Send size={15} /> Send Counseling Warning
                 </button>
                 <button
-                  className="coord-btn"
-                  style={{ background: "#ecfdf5", color: "#047857" }}
+                  className="coord-btn student-medical-btn"
                   onClick={() => alert(`Medical override granted for ${selectedStudent.name}`)}
                 >
                   Grant Attendance Medical Override
@@ -567,15 +486,14 @@ export default function CoordinatorStudents() {
       </div>
 
       <div className="coord-filter-bar">
-        <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
-          <Search size={16} style={{ position: "absolute", left: "12px", top: "10px", color: "#64748b" }} />
+        <div className="coord-search-wrap">
+          <Search size={16} className="coord-search-icon" />
           <input
             type="text"
-            className="coord-search-input"
+            className="coord-search-input coord-search-input--spaced"
             placeholder="Search student name, roll no or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: "36px" }}
           />
         </div>
 
@@ -623,47 +541,37 @@ export default function CoordinatorStudents() {
             {filteredStudents.map((s) => (
               <tr key={s.id}>
                 <td>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{s.name}</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>{s.email}</div>
+                  <div className="student-table-name">{s.name}</div>
+                  <div className="student-table-email">{s.email}</div>
                 </td>
                 <td>
-                  <div style={{ fontWeight: 600, color: "#334155" }}>{s.rollNo}</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>{s.batch}</div>
+                  <div className="student-table-roll">{s.rollNo}</div>
+                  <div className="student-table-batch">{s.batch}</div>
                 </td>
                 <td>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      color: "#2563eb",
-                      background: "#eff6ff",
-                      padding: "4px 10px",
-                      borderRadius: "8px",
-                      border: "1px solid #bfdbfe",
-                    }}
-                  >
+                  <span className="student-roadmap-pill">
                     <Sparkles size={13} color="#2563eb" />
                     {s.selectedGoalName || "Python Backend"}
                   </span>
                 </td>
                 <td>
                   <span
-                    style={{
-                      fontWeight: 700,
-                      color: s.attendance >= 90 ? "#059669" : s.attendance >= 75 ? "#d97706" : "#dc2626",
-                    }}
+                    className={
+                      s.attendance >= 90
+                        ? "student-score-green"
+                        : s.attendance >= 75
+                        ? "student-score-amber"
+                        : "student-score-red"
+                    }
                   >
                     {s.attendance}%
                   </span>
                 </td>
                 <td>
-                  <span style={{ fontWeight: 700, color: "#4f46e5" }}>{s.avgScore}%</span>
+                  <span className="student-score-indigo">{s.avgScore}%</span>
                 </td>
                 <td>
-                  <span style={{ fontWeight: 700, color: "#7c3aed" }}>{s.interviewScore}%</span>
+                  <span className="student-score-purple">{s.interviewScore}%</span>
                 </td>
                 <td>
                   <span
@@ -682,8 +590,7 @@ export default function CoordinatorStudents() {
                 </td>
                 <td>
                   <button
-                    className="coord-btn coord-btn--primary"
-                    style={{ padding: "6px 12px", fontSize: "12px" }}
+                    className="coord-btn coord-btn--primary student-table-action-btn"
                     onClick={() => handleOpenStudentDetail(s)}
                   >
                     View Details

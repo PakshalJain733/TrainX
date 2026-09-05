@@ -1,0 +1,20 @@
+.coord-interviews-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.coord-header-icon {
+  vertical-align: middle;
+  margin-right: 8px;
+}
+
+.coord-score-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 13px;
+}

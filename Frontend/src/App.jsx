@@ -33,6 +33,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
+import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
 
 // Super Admin Workspace Imports
@@ -78,16 +79,19 @@ import CoordinatorOverview from './pages/Coordinator/Components/Overview';
 import CoordinatorBatches from './pages/Coordinator/Components/Batches';
 import CoordinatorStudents from './pages/Coordinator/Components/Students';
 import CoordinatorMentors from './pages/Coordinator/Components/Mentors';
+import CoordinatorLiveSessions from './pages/Coordinator/Components/LiveSessions';
 import CoordinatorSchedules from './pages/Coordinator/Components/Schedules';
 import CoordinatorAssessments from './pages/Coordinator/Components/Assessments';
 import CoordinatorAttendance from './pages/Coordinator/Components/Attendance';
+import CoordinatorAIRoadmaps from './pages/Coordinator/Components/AIRoadmaps';
+import CoordinatorAIInterviews from './pages/Coordinator/Components/AIInterviews';
+import CoordinatorPerformance from './pages/Coordinator/Components/Performance';
 import CoordinatorPlacement from './pages/Coordinator/Components/Placement';
+import CoordinatorLeaderboard from './pages/Coordinator/Components/Leaderboard';
 import CoordinatorRequests from './pages/Coordinator/Components/Requests';
 import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
 import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
-import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
-import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
 
 function App() {
   return (
@@ -126,6 +130,7 @@ function App() {
           <Route path="learning" element={<AdminLearningContent />} />
           <Route path="quiz" element={<AdminQuizzes />} />
           <Route path="practice" element={<AdminPracticeProblems />} />
+          <Route path="broadcast" element={<AdminBroadcast />} />
           <Route path="progress" element={<AdminProgress />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="weekly-reports" element={<AdminWeeklyReports />} />
@@ -162,17 +167,28 @@ function App() {
           <Route path="batches" element={<CoordinatorBatches />} />
           <Route path="students" element={<CoordinatorStudents />} />
           <Route path="mentors" element={<CoordinatorMentors />} />
+          <Route path="sessions" element={<CoordinatorLiveSessions />} />
+          <Route path="live-sessions" element={<CoordinatorLiveSessions />} />
           <Route path="schedules" element={<CoordinatorSchedules />} />
           <Route path="assessments" element={<CoordinatorAssessments />} />
           <Route path="quizzes" element={<CoordinatorAssessments />} />
           <Route path="attendance" element={<CoordinatorAttendance />} />
+          <Route path="roadmaps" element={<CoordinatorAIRoadmaps />} />
+          <Route path="ai-roadmaps" element={<CoordinatorAIRoadmaps />} />
+          <Route path="interviews" element={<CoordinatorAIInterviews />} />
+          <Route path="ai-interviews" element={<CoordinatorAIInterviews />} />
+          <Route path="performance" element={<CoordinatorPerformance />} />
+          <Route path="skills" element={<CoordinatorPerformance />} />
           <Route path="placement" element={<CoordinatorPlacement />} />
+          <Route path="leaderboard" element={<CoordinatorLeaderboard />} />
           <Route path="requests" element={<CoordinatorRequests />} />
           <Route path="reports" element={<CoordinatorWeeklyReports />} />
+          <Route path="weekly-reports" element={<CoordinatorWeeklyReports />} />
           <Route path="practice" element={<CoordinatorCodingPractice />} />
           <Route path="notifications" element={<CoordinatorNotifications />} />
           <Route path="profile" element={<CoordinatorProfilePage />} />
           <Route path="settings" element={<CoordinatorProfilePage />} />
+          <Route path="help" element={<CoordinatorHelp />} />
         </Route>
 
         {/* Super Admin Workspace Routes */}

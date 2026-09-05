@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import '../Styles/MentorTabBar.css';
 
 const mentorTabs = [
   { name: 'Overview', path: '/mentor', exact: true },
@@ -26,19 +27,15 @@ export default function MentorTabBar() {
   };
 
   return (
-    <div className="w-full bg-[#0f172a] p-1.5 rounded-xl border border-slate-800 shadow-md mb-6 overflow-x-auto select-none no-scrollbar">
-      <div className="flex items-center gap-1 min-w-max">
+    <div className="mentor-tabbar-container">
+      <div className="mentor-tabbar-list">
         {mentorTabs.map((tab) => {
           const active = isActive(tab);
           return (
             <NavLink
               key={tab.name}
               to={tab.path}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap ${
-                active
-                  ? 'bg-slate-800 text-white shadow-xs border border-slate-700/60 font-bold'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
+              className={`mentor-tabbar-link ${active ? 'active' : ''}`}
             >
               {tab.name}
             </NavLink>
@@ -48,3 +45,4 @@ export default function MentorTabBar() {
     </div>
   );
 }
+

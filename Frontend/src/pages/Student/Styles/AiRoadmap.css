@@ -40,66 +40,86 @@
   margin: 0;
 }
 
-.roadmap-controls-row {
+/* Form Controls */
+.roadmap-form-wrap {
+  margin-top: 16px;
+  width: 100%;
+}
+
+.roadmap-input-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .roadmap-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 
 .roadmap-select-input {
   flex: 1;
-  min-width: 260px;
-  padding: 10px 14px;
-  border-radius: 10px;
+  min-width: 0;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
   border: 1.5px solid #cbd5e1;
   font-size: 13.5px;
   font-weight: 500;
   color: #1e293b;
   background: #f8fafc;
   outline: none;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
 .roadmap-select-input:focus {
-  border-color: #2563eb;
+  border-color: #4f46e5;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
 }
 
 .roadmap-gen-btn {
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 13.5px;
-  padding: 10px 22px;
-  border-radius: 10px;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 12px;
   border: none;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .roadmap-gen-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%);
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);
 }
 
 .roadmap-gen-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
 }
 
 .roadmap-gen-btn:disabled {
-  opacity: 0.65;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
 }
+
 
 .roadmap-gen-btn--loading {
   background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);

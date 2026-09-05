@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Users,
   UserPlus,
@@ -18,6 +19,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AdminUsers.css";
 
 export default function AdminUsers() {
@@ -210,27 +212,16 @@ export default function AdminUsers() {
 
   return (
     <div className="admin-page-inner admin-users-container">
-      {/* Header Banner */}
-      <div className="admin-users-hero">
-        <div className="admin-users-hero-left">
-          <div className="admin-users-hero-icon">
-            <Users size={28} />
-          </div>
-          <div>
-            <div className="admin-users-eyebrow">
-              <Sparkles size={12} /> USER DIRECTORY & ACCESS CONTROL
-            </div>
-            <h1 className="admin-users-title">User Management</h1>
-            <p className="admin-users-desc">
-              Manage registered student profiles, mentors, coordinators, and assign system access roles.
-            </p>
-          </div>
-        </div>
-
-        <button className="admin-btn-add" onClick={handleOpenAdd}>
-          <UserPlus size={16} /> Add New User
-        </button>
-      </div>
+      {/* Page Header */}
+      <SectionHeader
+        title="User Management"
+        description="Manage registered student profiles, mentors, coordinators, and assign system access roles."
+        action={
+          <button className="admin-btn-add" onClick={handleOpenAdd}>
+            <UserPlus size={16} /> Add New User
+          </button>
+        }
+      />
 
       {/* Stats Cards Row */}
       <div className="admin-users-stats-grid">
@@ -333,7 +324,7 @@ export default function AdminUsers() {
                 <th>Academic / Dept</th>
                 <th>Mobile Number</th>
                 <th>Status</th>
-                <th style={{ textAlign: "right" }}>Actions</th>
+                <th className="th-actions-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -357,19 +348,19 @@ export default function AdminUsers() {
                     <td>
                       {u.role === "student" ? (
                         <div>
-                          <div style={{ fontWeight: 600, color: "#1e293b" }}>
+                          <div className="user-dept-student">
                             {u.department || "No Dept"} {u.year ? `· ${u.year}` : ""} {u.division ? `(Div ${u.division})` : ""}
                           </div>
-                          <div style={{ fontSize: 12, color: "#64748b" }}>
+                          <div className="user-dept-roll">
                             ID: {u.roll_number || "N/A"} · Sem {u.semester || "N/A"}
                           </div>
                         </div>
                       ) : (
-                        <span style={{ color: "#64748b" }}>{u.department || "Institutional Staff"}</span>
+                        <span className="user-dept-staff">{u.department || "Institutional Staff"}</span>
                       )}
                     </td>
                     <td>
-                      <span style={{ color: "#334155", fontWeight: 500 }}>
+                      <span className="user-mobile-text">
                         {u.mobile_number || "—"}
                       </span>
                     </td>
@@ -380,7 +371,7 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td>
-                      <div className="action-btns-row" style={{ justifyContent: "flex-end" }}>
+                      <div className="action-btns-row action-btns-right">
                         <button
                           className="btn-table-action"
                           title="Edit User"
@@ -418,11 +409,19 @@ export default function AdminUsers() {
       </div>
 
       {/* Add User Modal */}
-      {isAddModalOpen && (
-        <div className="modal-overlay">
+      {isAddModalOpen && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
           <div className="modal-dialog">
             <div className="modal-header">
-              <h2 className="modal-title">Create New User</h2>
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <UserPlus size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Create New User</h2>
+                  <p className="modal-subtitle">Provision account credentials and access privileges.</p>
+                </div>
+              </div>
               <button className="modal-close-btn" onClick={() => setIsAddModalOpen(false)}>
                 <X size={18} />
               </button>
@@ -430,7 +429,7 @@ export default function AdminUsers() {
             <form onSubmit={handleCreateUser}>
               <div className="modal-body">
                 {feedback.message && (
-                  <div style={{ color: feedback.type === "error" ? "#dc2626" : "#16a34a", fontSize: 13, background: "#fef2f2", padding: 8, borderRadius: 6 }}>
+                  <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
                     {feedback.message}
                   </div>
                 )}
@@ -440,7 +439,7 @@ export default function AdminUsers() {
                     type="text"
                     required
                     className="form-input-admin"
-                    placeholder="Enter user's full name"
+                    placeholder="e.g. Priya Sharma"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
@@ -554,15 +553,24 @@ export default function AdminUsers() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit User Modal */}
-      {isEditModalOpen && selectedUser && (
-        <div className="modal-overlay">
+      {isEditModalOpen && selectedUser && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsEditModalOpen(false); }}>
           <div className="modal-dialog">
             <div className="modal-header">
-              <h2 className="modal-title">Edit User Profile</h2>
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--blue">
+                  <Edit2 size={18} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Edit User Profile</h2>
+                  <p className="modal-subtitle">Update user account information and role assignments.</p>
+                </div>
+              </div>
               <button className="modal-close-btn" onClick={() => setIsEditModalOpen(false)}>
                 <X size={18} />
               </button>
@@ -570,7 +578,7 @@ export default function AdminUsers() {
             <form onSubmit={handleUpdateUser}>
               <div className="modal-body">
                 {feedback.message && (
-                  <div style={{ color: feedback.type === "error" ? "#dc2626" : "#16a34a", fontSize: 13, background: "#fef2f2", padding: 8, borderRadius: 6 }}>
+                  <div className={`modal-feedback-alert ${feedback.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
                     {feedback.message}
                   </div>
                 )}
@@ -666,29 +674,35 @@ export default function AdminUsers() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Delete User Confirmation */}
-      {isDeleteModalOpen && selectedUser && (
-        <div className="modal-overlay">
-          <div className="modal-dialog">
+      {isDeleteModalOpen && selectedUser && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsDeleteModalOpen(false); }}>
+          <div className="modal-dialog modal-dialog--sm">
             <div className="modal-header">
-              <h2 className="modal-title">Delete User</h2>
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--red">
+                  <AlertCircle size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Delete User</h2>
+                  <p className="modal-subtitle">Permanent action confirmation</p>
+                </div>
+              </div>
               <button className="modal-close-btn" onClick={() => setIsDeleteModalOpen(false)}>
                 <X size={18} />
               </button>
             </div>
             <div className="modal-body">
-              <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-                <div style={{ width: 44, height: 44, borderRadius: 12, background: "#fee2e2", color: "#dc2626", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <AlertCircle size={24} />
-                </div>
+              <div className="delete-user-row">
                 <div>
-                  <p style={{ margin: 0, fontWeight: 700, color: "#0f172a" }}>
+                  <p className="delete-user-title">
                     Are you sure you want to delete user "{selectedUser.name}"?
                   </p>
-                  <p style={{ margin: "4px 0 0 0", fontSize: 13, color: "#64748b" }}>
+                  <p className="delete-user-sub">
                     This action will permanently remove the user and any associated student profile records.
                   </p>
                 </div>
@@ -698,17 +712,13 @@ export default function AdminUsers() {
               <button type="button" className="btn-modal-cancel" onClick={() => setIsDeleteModalOpen(false)}>
                 Cancel
               </button>
-              <button
-                type="button"
-                className="btn-modal-submit btn-modal-danger"
-                onClick={handleDeleteUser}
-                disabled={actionLoading}
-              >
+              <button type="button" className="btn-modal-submit btn-modal-danger" onClick={handleDeleteUser} disabled={actionLoading}>
                 {actionLoading ? "Deleting..." : "Delete User"}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

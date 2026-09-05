@@ -86,10 +86,9 @@ export default function CoordinatorAssessments() {
             Monitor real-time student quiz submissions, batch scorecards, topic mastery, and question analytics.
           </p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className="coord-header-actions">
           <button
-            className="coord-btn"
-            style={{ background: "#f1f5f9", color: "#334155" }}
+            className="coord-btn coord-btn--csv"
             onClick={() => alert("Downloading Department Quiz Scorecard CSV...")}
           >
             <Download size={15} /> Export Scorecards CSV
@@ -101,11 +100,11 @@ export default function CoordinatorAssessments() {
       </div>
 
       {/* KPI Stats Bar */}
-      <div className="coord-stats-grid" style={{ marginBottom: "20px" }}>
+      <div className="coord-stats-grid coord-tabs-bar--mb">
         <div className="coord-stat-card">
           <div className="coord-stat-top">
             <span className="coord-stat-label">Active Quizzes</span>
-            <div className="coord-stat-icon-bg" style={{ background: "#eff6ff", color: "#2563eb" }}>
+            <div className="coord-stat-icon-bg coord-icon-blue">
               <FileCheck2 size={18} />
             </div>
           </div>
@@ -116,7 +115,7 @@ export default function CoordinatorAssessments() {
         <div className="coord-stat-card">
           <div className="coord-stat-top">
             <span className="coord-stat-label">Submission Rate</span>
-            <div className="coord-stat-icon-bg" style={{ background: "#ecfdf5", color: "#059669" }}>
+            <div className="coord-stat-icon-bg coord-icon-emerald">
               <Zap size={18} />
             </div>
           </div>
@@ -127,11 +126,11 @@ export default function CoordinatorAssessments() {
         <div className="coord-stat-card">
           <div className="coord-stat-top">
             <span className="coord-stat-label">Avg Quiz Score</span>
-            <div className="coord-stat-icon-bg" style={{ background: "#faf5ff", color: "#9333ea" }}>
+            <div className="coord-stat-icon-bg coord-icon-purple">
               <Award size={18} />
             </div>
           </div>
-          <div className="coord-stat-value" style={{ color: "#7c3aed" }}>
+          <div className="coord-stat-value coord-val-purple">
             84.5%
           </div>
           <div className="coord-stat-subtext">+3.2% vs last quiz</div>
@@ -140,11 +139,11 @@ export default function CoordinatorAssessments() {
         <div className="coord-stat-card">
           <div className="coord-stat-top">
             <span className="coord-stat-label">Retake Required</span>
-            <div className="coord-stat-icon-bg" style={{ background: "#fff1f2", color: "#e11d48" }}>
+            <div className="coord-stat-icon-bg coord-icon-rose">
               <AlertTriangle size={18} />
             </div>
           </div>
-          <div className="coord-stat-value" style={{ color: "#e11d48" }}>
+          <div className="coord-stat-value coord-val-rose">
             14 Students
           </div>
           <div className="coord-stat-subtext">Scored &lt;60% cutoff</div>
@@ -152,7 +151,7 @@ export default function CoordinatorAssessments() {
       </div>
 
       {/* Main Tabs Row */}
-      <div className="coord-tabs-bar" style={{ marginBottom: "20px" }}>
+      <div className="coord-tabs-bar coord-tabs-bar--mb">
         <button
           className={`coord-tab-btn ${activeTab === "directory" ? "coord-tab-btn--active" : ""}`}
           onClick={() => setActiveTab("directory")}
@@ -175,18 +174,17 @@ export default function CoordinatorAssessments() {
 
       {/* VIEW 1: QUIZ DIRECTORY & SCORECARDS */}
       {activeTab === "directory" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div className="coord-view-container">
           {/* Filters */}
-          <div className="coord-filter-bar" style={{ marginBottom: "8px" }}>
-            <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
-              <Search size={16} style={{ position: "absolute", left: "12px", top: "10px", color: "#64748b" }} />
+          <div className="coord-filter-bar coord-filter-bar--mb">
+            <div className="coord-search-wrap">
+              <Search size={16} className="coord-search-icon" />
               <input
                 type="text"
-                className="coord-search-input"
+                className="coord-search-input coord-search-input--with-icon"
                 placeholder="Search quiz title or batch..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ paddingLeft: "36px" }}
               />
             </div>
 
@@ -205,49 +203,47 @@ export default function CoordinatorAssessments() {
           </div>
 
           {/* Quizzes List */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div className="coord-assessments-list">
             {filteredAssessments.map((a) => (
               <div key={a.id} className="coord-assessment-card">
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ fontWeight: 800, fontSize: "16px", color: "#0f172a" }}>{a.title}</div>
+                  <div className="coord-assess-title-row">
+                    <div className="coord-assess-title">{a.title}</div>
                     <span
-                      style={{
-                        padding: "2px 8px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        background: a.status === "Active" ? "#eff6ff" : a.status === "Completed" ? "#ecfdf5" : "#f1f5f9",
-                        color: a.status === "Active" ? "#1d4ed8" : a.status === "Completed" ? "#047857" : "#64748b",
-                      }}
+                      className={
+                        a.status === "Active"
+                          ? "coord-status--active"
+                          : a.status === "Completed"
+                          ? "coord-status--completed"
+                          : "coord-status--archived"
+                      }
                     >
                       {a.status}
                     </span>
                   </div>
-                  <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px" }}>
-                    Target Batch: <strong style={{ color: "#334155" }}>{a.batch}</strong> · Type: {a.type} · Due: {a.dueDate}
+                  <div className="coord-assess-sub">
+                    Target Batch: <strong className="coord-assess-batch-strong">{a.batch}</strong> · Type: {a.type} · Due: {a.dueDate}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "11px", color: "#64748b" }}>Submissions</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>{a.submissions}</div>
+                <div className="coord-assess-stats-row">
+                  <div className="coord-assess-stat-col">
+                    <div className="coord-assess-stat-lbl">Submissions</div>
+                    <div className="coord-assess-stat-num">{a.submissions}</div>
                   </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "11px", color: "#64748b" }}>Avg Score</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#4f46e5" }}>{a.avgScore}</div>
+                  <div className="coord-assess-stat-col">
+                    <div className="coord-assess-stat-lbl">Avg Score</div>
+                    <div className="coord-assess-stat-num coord-val-indigo">{a.avgScore}</div>
                   </div>
 
-                  <div style={{ textAlign: "right" }}>
-                    <div style={{ fontSize: "11px", color: "#64748b" }}>Pass Rate</div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: "#059669" }}>{a.passRate}</div>
+                  <div className="coord-assess-stat-col">
+                    <div className="coord-assess-stat-lbl">Pass Rate</div>
+                    <div className="coord-assess-stat-num coord-val-emerald">{a.passRate}</div>
                   </div>
 
                   <button
-                    className="coord-btn coord-btn--primary"
-                    style={{ fontSize: "12px", padding: "8px 14px" }}
+                    className="coord-btn coord-btn--primary coord-btn--inspect"
                     onClick={() => {
                       setSelectedQuiz(a);
                       setModalTab("scorecard");
@@ -265,33 +261,33 @@ export default function CoordinatorAssessments() {
       {/* VIEW 2: LIVE SUBMISSIONS FEED */}
       {activeTab === "live_feed" && (
         <div className="coord-card">
-          <div className="coord-card-title" style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="coord-card-title coord-live-header">
+            <div className="coord-live-title-box">
               <Zap size={18} color="#2563eb" />
               Real-time Student Quiz Submission Stream
             </div>
-            <span style={{ fontSize: "12px", color: "#059669", fontWeight: 700 }}>● Live Ticker Active</span>
+            <span className="coord-live-indicator">● Live Ticker Active</span>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "14px" }}>
+          <div className="coord-live-feed-list">
             {activityLogs.map((log) => (
               <div key={log.id} className="quiz-activity-item">
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a" }}>{log.studentName}</div>
-                  <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                  <div className="coord-log-name">{log.studentName}</div>
+                  <div className="coord-log-meta">
                     Roll No: <strong>{log.rollNo}</strong> · {log.batch}
                   </div>
-                  <div style={{ fontSize: "12px", fontWeight: 600, color: "#4f46e5", marginTop: "4px" }}>
+                  <div className="coord-log-quiz">
                     Quiz: {log.quizTitle}
                   </div>
                 </div>
 
-                <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                  <div style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>{log.score}</div>
+                <div className="coord-log-score-col">
+                  <div className="coord-log-score-num">{log.score}</div>
                   <span className={log.status === "Passed" ? "quiz-pill-pass" : "quiz-pill-retake"}>
                     {log.status}
                   </span>
-                  <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "2px" }}>
+                  <div className="coord-log-time">
                     Time spent: {log.timeSpent} · {log.submittedAt}
                   </div>
                 </div>
@@ -303,7 +299,7 @@ export default function CoordinatorAssessments() {
 
       {/* VIEW 3: QUESTION ANALYTICS & TOPIC MASTERY */}
       {activeTab === "analytics" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div className="coord-analytics-col">
           {/* Topic Mastery Radar Cards */}
           <div className="coord-card">
             <div className="coord-card-title">
@@ -311,29 +307,29 @@ export default function CoordinatorAssessments() {
               Department Topic Mastery & Proficiency Audit
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginTop: "12px" }}>
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Graph Theory & Shortest Path</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#059669", marginTop: "2px" }}>88% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>High Proficiency</div>
+            <div className="coord-topic-grid">
+              <div className="coord-topic-card">
+                <div className="coord-topic-name">Graph Theory & Shortest Path</div>
+                <div className="coord-topic-acc coord-val-emerald">88% Accuracy</div>
+                <div className="coord-topic-status">High Proficiency</div>
               </div>
 
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Topological Sorting & Kahn Algo</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#d97706", marginTop: "2px" }}>64% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#d97706", marginTop: "4px" }}>Moderate Skill Gap</div>
+              <div className="coord-topic-card">
+                <div className="coord-topic-name">Topological Sorting & Kahn Algo</div>
+                <div className="coord-topic-acc coord-val-amber">64% Accuracy</div>
+                <div className="coord-topic-status coord-val-amber">Moderate Skill Gap</div>
               </div>
 
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Disjoint Set Union (Union-Find)</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#059669", marginTop: "2px" }}>92% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#059669", marginTop: "4px" }}>Mastered</div>
+              <div className="coord-topic-card">
+                <div className="coord-topic-name">Disjoint Set Union (Union-Find)</div>
+                <div className="coord-topic-acc coord-val-emerald">92% Accuracy</div>
+                <div className="coord-topic-status coord-val-emerald">Mastered</div>
               </div>
 
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Dynamic Programming Memoization</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#e11d48", marginTop: "2px" }}>58% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#e11d48", marginTop: "4px" }}>Requires Tutorial Remediation</div>
+              <div className="coord-topic-card">
+                <div className="coord-topic-name">Dynamic Programming Memoization</div>
+                <div className="coord-topic-acc coord-val-rose">58% Accuracy</div>
+                <div className="coord-topic-status coord-val-rose">Requires Tutorial Remediation</div>
               </div>
             </div>
           </div>
@@ -345,29 +341,29 @@ export default function CoordinatorAssessments() {
               Hardest Questions & Low Accuracy Alert
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+            <div className="coord-hard-questions-list">
               <div className="question-analytic-box">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="coord-hard-q-header">
                   <span className="question-tag">Dynamic Programming</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#e11d48" }}>Only 42% Correct</span>
+                  <span className="coord-val-rose coord-hard-q-stat--rose">Only 42% Correct</span>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>
+                <div className="coord-hard-q-title">
                   Q: Space complexity difference between Bottom-Up Tabulation and Top-Down Memoization for 0/1 Knapsack
                 </div>
-                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                <div className="coord-hard-q-desc">
                   Common Mistake: 38% of students overlooked auxiliary recursion call stack memory depth.
                 </div>
               </div>
 
               <div className="question-analytic-box">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="coord-hard-q-header">
                   <span className="question-tag">Topological Sort</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#d97706" }}>64% Correct</span>
+                  <span className="coord-hard-q-stat--amber">64% Correct</span>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>
+                <div className="coord-hard-q-title">
                   Q: Detecting cycles in Directed Acyclic Graphs (DAG) using In-Degree reduction
                 </div>
-                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                <div className="coord-hard-q-desc">
                   Common Mistake: Confused Undirected DFS visited array with Directed recursion stack tracking.
                 </div>
               </div>
@@ -380,17 +376,17 @@ export default function CoordinatorAssessments() {
       {selectedQuiz && currentScorecard && (
         <div className="coord-modal-backdrop" onClick={() => setSelectedQuiz(null)}>
           <div className="coord-modal coord-modal--lg" onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+            <div className="coord-modal-head-row">
               <div>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>
+                <h2 className="coord-modal-title">
                   {selectedQuiz.title} — Detailed Results
                 </h2>
-                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                <div className="coord-assess-sub">
                   Target Batch: <strong>{selectedQuiz.batch}</strong> · Submissions: <strong>{selectedQuiz.submissions}</strong>
                 </div>
               </div>
               <button
-                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "20px", color: "#64748b" }}
+                className="coord-modal-close-btn"
                 onClick={() => setSelectedQuiz(null)}
               >
                 ✕
@@ -398,27 +394,27 @@ export default function CoordinatorAssessments() {
             </div>
 
             {/* Scorecard Quick Metrics */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "10px", marginBottom: "16px" }}>
-              <div style={{ background: "#f8fafc", padding: "10px", borderRadius: "10px", textAlign: "center" }}>
-                <div style={{ fontSize: "11px", color: "#64748b" }}>Attempted</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a" }}>
+            <div className="coord-scorecard-metrics">
+              <div className="coord-metric-box coord-metric-box--gray">
+                <div className="coord-metric-lbl coord-assess-stat-lbl">Attempted</div>
+                <div className="coord-metric-val">
                   {currentScorecard.attempted} / {currentScorecard.totalEnrolled}
                 </div>
               </div>
 
-              <div style={{ background: "#eff6ff", padding: "10px", borderRadius: "10px", textAlign: "center" }}>
-                <div style={{ fontSize: "11px", color: "#1d4ed8" }}>Average Score</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: "#1e40af" }}>{currentScorecard.avgScore}</div>
+              <div className="coord-metric-box coord-metric-box--blue">
+                <div className="coord-metric-lbl coord-metric-lbl--blue">Average Score</div>
+                <div className="coord-metric-val coord-metric-val--blue">{currentScorecard.avgScore}</div>
               </div>
 
-              <div style={{ background: "#ecfdf5", padding: "10px", borderRadius: "10px", textAlign: "center" }}>
-                <div style={{ fontSize: "11px", color: "#047857" }}>Highest Score</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: "#065f46" }}>{currentScorecard.highestScore}</div>
+              <div className="coord-metric-box coord-metric-box--emerald">
+                <div className="coord-metric-lbl coord-val-emerald">Highest Score</div>
+                <div className="coord-metric-val coord-metric-val--emerald">{currentScorecard.highestScore}</div>
               </div>
 
-              <div style={{ background: "#fff1f2", padding: "10px", borderRadius: "10px", textAlign: "center" }}>
-                <div style={{ fontSize: "11px", color: "#be123c" }}>Passed Cutoff</div>
-                <div style={{ fontSize: "16px", fontWeight: 800, color: "#9f1239" }}>
+              <div className="coord-metric-box coord-metric-box--rose">
+                <div className="coord-metric-lbl coord-val-rose">Passed Cutoff</div>
+                <div className="coord-metric-val coord-metric-val--rose">
                   {currentScorecard.passedCount} Students
                 </div>
               </div>
@@ -442,7 +438,7 @@ export default function CoordinatorAssessments() {
 
             {/* TAB 1: STUDENT SCORECARD LIST */}
             {modalTab === "scorecard" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div className="coord-assessments-list">
                 <table className="coord-table">
                   <thead>
                     <tr>
@@ -459,21 +455,21 @@ export default function CoordinatorAssessments() {
                     {currentScorecard.studentSubmissions.map((sub) => (
                       <tr key={sub.id}>
                         <td>
-                          <div style={{ fontWeight: 700, color: "#0f172a" }}>{sub.name}</div>
+                          <div className="coord-cell-main">{sub.name}</div>
                         </td>
                         <td>
-                          <span style={{ fontWeight: 600, color: "#64748b" }}>{sub.rollNo}</span>
+                          <span className="coord-table-roll-text">{sub.rollNo}</span>
                         </td>
                         <td>
-                          <span style={{ fontWeight: 800, color: sub.score >= 70 ? "#059669" : "#dc2626" }}>
+                          <span className={sub.score >= 70 ? "coord-table-score-pass" : "coord-table-score-fail"}>
                             {sub.score}%
                           </span>
                         </td>
                         <td>
-                          <span style={{ fontSize: "12px", color: "#334155" }}>{sub.correctCount}</span>
+                          <span className="coord-table-sub-count">{sub.correctCount}</span>
                         </td>
                         <td>
-                          <span style={{ fontSize: "12px", color: "#64748b" }}>{sub.timeSpent}</span>
+                          <span className="coord-table-sub-time">{sub.timeSpent}</span>
                         </td>
                         <td>
                           <span className={sub.status === "Passed" ? "quiz-pill-pass" : "quiz-pill-retake"}>
@@ -483,8 +479,7 @@ export default function CoordinatorAssessments() {
                         <td>
                           {sub.status !== "Passed" && (
                             <button
-                              className="coord-btn"
-                              style={{ padding: "4px 8px", fontSize: "11px", background: "#fff1f2", color: "#be123c" }}
+                              className="coord-btn coord-btn--retake"
                               onClick={() => alert(`Retake notification dispatched to ${sub.name}`)}
                             >
                               Send Retake
@@ -500,19 +495,19 @@ export default function CoordinatorAssessments() {
 
             {/* TAB 2: QUESTION BREAKDOWN */}
             {modalTab === "questions" && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div className="coord-hard-questions-list">
                 {currentScorecard.questionAnalytics.map((q) => (
                   <div key={q.qNo} className="question-analytic-box">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div className="coord-hard-q-header">
                       <span className="question-tag">{q.topic}</span>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#059669" }}>
+                      <span className="coord-val-emerald coord-hard-q-stat--emerald">
                         {q.correctPct} Correct Answers
                       </span>
                     </div>
-                    <div style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>
+                    <div className="coord-q-title">
                       Q{q.qNo}: {q.text}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#64748b" }}>
+                    <div className="coord-q-meta">
                       Difficulty Level: <strong>{q.difficulty}</strong>
                     </div>
                   </div>
@@ -527,26 +522,26 @@ export default function CoordinatorAssessments() {
       {showCreateModal && (
         <div className="coord-modal-backdrop" onClick={() => setShowCreateModal(false)}>
           <div className="coord-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Publish New Quiz / Test</h2>
-            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <h2 className="coord-modal-title">Publish New Quiz / Test</h2>
+            <form onSubmit={handleCreate} className="coord-modal-form">
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Quiz Title</label>
+                <label className="coord-form-label">Quiz Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Dynamic Programming & Recursion Quiz"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                  className="coord-form-input"
                 />
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Target Batch</label>
+                <label className="coord-form-label">Target Batch</label>
                 <select
                   value={batch}
                   onChange={(e) => setBatch(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                  className="coord-form-input"
                 >
                   {coordinatorBatches.map((b) => (
                     <option key={b.id} value={b.name}>{b.name}</option>
@@ -555,11 +550,11 @@ export default function CoordinatorAssessments() {
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assessment Format</label>
+                <label className="coord-form-label">Assessment Format</label>
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                  className="coord-form-input"
                 >
                   <option value="MCQ Quiz">MCQ Quiz</option>
                   <option value="Coding Assessment">Coding Assessment</option>
@@ -568,17 +563,17 @@ export default function CoordinatorAssessments() {
               </div>
 
               <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Due Date</label>
+                <label className="coord-form-label">Due Date</label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                  className="coord-form-input"
                 />
               </div>
 
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
-                <button type="button" className="coord-btn" style={{ background: "#f1f5f9" }} onClick={() => setShowCreateModal(false)}>
+              <div className="coord-modal-actions">
+                <button type="button" className="coord-btn coord-btn--cancel" onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </button>
                 <button type="submit" className="coord-btn coord-btn--primary">

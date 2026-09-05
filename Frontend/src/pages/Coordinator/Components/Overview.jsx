@@ -75,7 +75,7 @@ export default function CoordinatorOverview() {
               </div>
             </div>
           </div>
-          <Link to="/coordinator/students" className="coord-btn" style={{ background: "#e11d48", color: "#ffffff" }}>
+          <Link to="/coordinator/students" className="coord-btn coord-btn--danger">
             Review Defaulters
           </Link>
         </div>
@@ -84,27 +84,18 @@ export default function CoordinatorOverview() {
       {/* KPI Stats Grid */}
       <div className="coord-stats-grid">
         {coordinatorStats.map((stat) => {
-          let iconBg = "#eff6ff";
-          let iconColor = "#2563eb";
-          if (stat.color === "purple") {
-            iconBg = "#faf5ff";
-            iconColor = "#9333ea";
-          } else if (stat.color === "emerald") {
-            iconBg = "#ecfdf5";
-            iconColor = "#059669";
-          } else if (stat.color === "amber") {
-            iconBg = "#fffbeb";
-            iconColor = "#d97706";
-          } else if (stat.color === "rose") {
-            iconBg = "#fff1f2";
-            iconColor = "#e11d48";
-          }
+          let themeModifier = "coord-stat-icon-bg--indigo";
+          if (stat.id === "batches") themeModifier = "coord-stat-icon-bg--blue";
+          if (stat.id === "mentors") themeModifier = "coord-stat-icon-bg--emerald";
+          if (stat.id === "attendance") themeModifier = "coord-stat-icon-bg--amber";
+          if (stat.id === "readiness") themeModifier = "coord-stat-icon-bg--purple";
+          if (stat.id === "requests") themeModifier = "coord-stat-icon-bg--rose";
 
           return (
             <div key={stat.id} className="coord-stat-card">
               <div className="coord-stat-top">
                 <span className="coord-stat-label">{stat.label}</span>
-                <div className="coord-stat-icon-bg" style={{ background: iconBg, color: iconColor }}>
+                <div className={`coord-stat-icon-bg ${themeModifier}`}>
                   {stat.id === "students" && <GraduationCap size={18} />}
                   {stat.id === "batches" && <Users size={18} />}
                   {stat.id === "mentors" && <UserCheck size={18} />}
@@ -123,7 +114,7 @@ export default function CoordinatorOverview() {
       {/* Split Grid */}
       <div className="coord-grid-split">
         {/* Left Column: Active Batches & Schedules */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div className="coord-col-stack">
           {/* Batches Overview */}
           <div className="coord-card">
             <div className="coord-card-header">
@@ -136,54 +127,36 @@ export default function CoordinatorOverview() {
               </Link>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="coord-batch-list">
               {coordinatorBatches.map((batch) => (
-                <div
-                  key={batch.id}
-                  style={{
-                    padding: "14px 16px",
-                    borderRadius: "12px",
-                    border: "1px solid #e2e8f0",
-                    background: "#f8fafc",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "10px",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div key={batch.id} className="coord-batch-item">
+                  <div className="coord-batch-header-row">
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>{batch.name}</div>
-                      <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
-                        Trainer: <strong style={{ color: "#334155" }}>{batch.mentor}</strong> · {batch.enrolledStudents} Students
+                      <div className="coord-batch-title">{batch.name}</div>
+                      <div className="coord-batch-mentor-text">
+                        Trainer: <strong className="coord-batch-mentor-name">{batch.mentor}</strong> · {batch.enrolledStudents} Students
                       </div>
                     </div>
                     <span
-                      style={{
-                        padding: "3px 10px",
-                        borderRadius: "999px",
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        background: batch.status === "Active" ? "#ecfdf5" : "#eff6ff",
-                        color: batch.status === "Active" ? "#047857" : "#1d4ed8",
-                      }}
+                      className={`coord-batch-status-pill ${
+                        batch.status === "Active"
+                          ? "coord-batch-status--active"
+                          : "coord-batch-status--other"
+                      }`}
                     >
                       {batch.status}
                     </span>
                   </div>
 
                   <div>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", marginBottom: "4px" }}>
-                      <span style={{ color: "#64748b" }}>Syllabus Completion</span>
-                      <span style={{ fontWeight: 700, color: "#4f46e5" }}>{batch.progress}%</span>
+                    <div className="coord-batch-progress-header">
+                      <span className="coord-batch-progress-label">Syllabus Completion</span>
+                      <span className="coord-batch-progress-val">{batch.progress}%</span>
                     </div>
-                    <div style={{ height: "6px", width: "100%", background: "#e2e8f0", borderRadius: "999px", overflow: "hidden" }}>
+                    <div className="coord-batch-progress-track">
                       <div
-                        style={{
-                          height: "100%",
-                          width: `${batch.progress}%`,
-                          background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
-                          borderRadius: "999px",
-                        }}
+                        className="coord-batch-progress-bar"
+                        style={{ width: `${batch.progress}%` }}
                       />
                     </div>
                   </div>
@@ -204,23 +177,12 @@ export default function CoordinatorOverview() {
               </Link>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div className="coord-schedule-list">
               {coordinatorSchedules.map((session) => (
-                <div
-                  key={session.id}
-                  style={{
-                    padding: "12px 14px",
-                    borderRadius: "10px",
-                    border: "1px solid #e2e8f0",
-                    background: "#ffffff",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+                <div key={session.id} className="coord-schedule-item">
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>{session.title}</div>
-                    <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>
+                    <div className="coord-schedule-title">{session.title}</div>
+                    <div className="coord-schedule-meta">
                       {session.batch} · {session.time}
                     </div>
                   </div>
@@ -228,18 +190,11 @@ export default function CoordinatorOverview() {
                     href={session.meetLink}
                     target="_blank"
                     rel="noreferrer"
-                    style={{
-                      padding: "6px 12px",
-                      borderRadius: "8px",
-                      background: session.status === "Live Now" ? "#ef4444" : "#4f46e5",
-                      color: "#ffffff",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      textDecoration: "none",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "4px",
-                    }}
+                    className={`coord-schedule-link-btn ${
+                      session.status === "Live Now"
+                        ? "coord-schedule-link--live"
+                        : "coord-schedule-link--upcoming"
+                    }`}
                   >
                     {session.status === "Live Now" ? "Join Live" : "View Link"}
                     <ArrowUpRight size={14} />
@@ -251,7 +206,7 @@ export default function CoordinatorOverview() {
         </div>
 
         {/* Right Column: Approvals & Broadcast */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <div className="coord-col-stack">
           {/* Pending Approvals Widget */}
           <div className="coord-card">
             <div className="coord-card-header">
@@ -264,24 +219,23 @@ export default function CoordinatorOverview() {
               </Link>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="coord-requests-list">
               {coordinatorRequests.map((req) => (
-                <div
-                  key={req.id}
-                  style={{
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    fontSize: "12px",
-                  }}
-                >
-                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: "#1e293b" }}>
+                <div key={req.id} className="coord-request-card">
+                  <div className="coord-request-top">
                     <span>{req.studentName}</span>
-                    <span style={{ color: req.status === "Pending" ? "#d97706" : "#059669" }}>{req.status}</span>
+                    <span
+                      className={
+                        req.status === "Pending"
+                          ? "coord-request-status--pending"
+                          : "coord-request-status--approved"
+                      }
+                    >
+                      {req.status}
+                    </span>
                   </div>
-                  <div style={{ color: "#4f46e5", fontWeight: 600, marginTop: "2px" }}>{req.requestType}</div>
-                  <div style={{ color: "#64748b", marginTop: "2px" }}>{req.reason}</div>
+                  <div className="coord-request-type">{req.requestType}</div>
+                  <div className="coord-request-reason">{req.reason}</div>
                 </div>
               ))}
             </div>
@@ -293,15 +247,8 @@ export default function CoordinatorOverview() {
               <Send size={18} color="#4f46e5" />
               Broadcast Department Announcement
             </div>
-            <form onSubmit={handleBroadcast} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <select
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "12px",
-                }}
-              >
+            <form onSubmit={handleBroadcast} className="coord-broadcast-form">
+              <select className="coord-broadcast-select">
                 <option value="all">All CSE Batches & Students</option>
                 <option value="cse26">CSE 2026 Alpha Cohort</option>
                 <option value="fs">Fullstack React & Node Specialization</option>
@@ -312,24 +259,17 @@ export default function CoordinatorOverview() {
                 placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10 AM)..."
                 value={broadcastMsg}
                 onChange={(e) => setBroadcastMsg(e.target.value)}
-                style={{
-                  padding: "10px",
-                  borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
-                  fontSize: "12px",
-                  resize: "none",
-                }}
+                className="coord-broadcast-textarea"
               />
               <button
                 type="submit"
-                className="coord-btn coord-btn--primary"
-                style={{ justifyContent: "center", width: "100%" }}
+                className="coord-btn coord-btn--primary coord-btn--full"
               >
                 <Send size={14} />
                 Send Announcement
               </button>
               {broadcastSent && (
-                <div style={{ fontSize: "12px", color: "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                <div className="coord-broadcast-success-msg">
                   <CheckCircle size={14} /> Announcement broadcasted to students!
                 </div>
               )}

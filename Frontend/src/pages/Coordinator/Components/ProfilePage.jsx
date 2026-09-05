@@ -16,26 +16,12 @@ export default function CoordinatorProfilePage() {
   return (
     <div>
       <div className="coord-profile-header">
-        <div
-          style={{
-            width: "64px",
-            height: "64px",
-            borderRadius: "50%",
-            background: "#ffffff",
-            color: "#4f46e5",
-            fontSize: "24px",
-            fontWeight: 800,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-          }}
-        >
+        <div className="coord-profile-avatar">
           AM
         </div>
         <div>
-          <h1 style={{ fontSize: "22px", fontWeight: 800 }}>{profile.name}</h1>
-          <p style={{ fontSize: "13px", opacity: 0.85, marginTop: "2px" }}>
+          <h1 className="coord-profile-name">{profile.name}</h1>
+          <p className="coord-profile-sub">
             {profile.role} · {profile.department} ({profile.college})
           </p>
         </div>
@@ -47,57 +33,57 @@ export default function CoordinatorProfilePage() {
           Edit Coordinator Information
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+        <form onSubmit={handleSubmit} className="coord-profile-form">
+          <div className="coord-form-grid-2">
             <div>
-              <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Full Name</label>
+              <label className="coord-form-label">Full Name</label>
               <input
                 type="text"
                 value={profile.name}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                className="coord-profile-input"
               />
             </div>
 
             <div>
-              <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Official Email</label>
+              <label className="coord-form-label">Official Email</label>
               <input
                 type="email"
                 value={profile.email}
                 onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                className="coord-profile-input"
               />
             </div>
 
             <div>
-              <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Contact Phone</label>
+              <label className="coord-form-label">Contact Phone</label>
               <input
                 type="text"
                 value={profile.phone}
                 onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                className="coord-profile-input"
               />
             </div>
 
             <div>
-              <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Department / College</label>
+              <label className="coord-form-label">Department / College</label>
               <input
                 type="text"
                 disabled
                 value={`${profile.department} (${profile.college})`}
-                style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid #e2e8f0", background: "#f8fafc", marginTop: "4px" }}
+                className="coord-profile-input coord-profile-input--disabled"
               />
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+          <div className="coord-profile-actions">
             <button type="submit" className="coord-btn coord-btn--primary">
               <Save size={14} /> Save Profile Changes
             </button>
           </div>
 
           {saved && (
-            <div style={{ color: "#059669", fontWeight: 700, fontSize: "13px" }}>
+            <div className="coord-profile-saved-msg">
               ✓ Profile information saved successfully!
             </div>
           )}

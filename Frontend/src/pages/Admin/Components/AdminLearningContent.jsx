@@ -10,71 +10,12 @@ import {
   X,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../../Student/Styles/LearningContent.css";
 import "../Styles/AdminLearningContent.css";
 
-const initialResources = [
-  {
-    id: 1,
-    title: "Python Fundamentals - Module 1",
-    category: "Python Backend",
-    type: "Video",
-    duration: "35 min",
-    status: "Published",
-    icon: Video,
-  },
-  {
-    id: 2,
-    title: "SQL Joins & Aggregations",
-    category: "Full Stack",
-    type: "Document",
-    duration: "20 min",
-    status: "Published",
-    icon: FileText,
-  },
-  {
-    id: 3,
-    title: "React Hooks Deep Dive",
-    category: "React Frontend",
-    type: "Video",
-    duration: "28 min",
-    status: "Draft",
-    icon: Video,
-  },
-  {
-    id: 4,
-    title: "REST API Design Patterns",
-    category: "All Batches",
-    type: "AI Notes",
-    duration: "25 min",
-    status: "Published",
-    icon: Sparkles,
-  },
-  {
-    id: 5,
-    title: "Advanced Pydantic Validation",
-    category: "Python Backend",
-    type: "Document",
-    duration: "18 min",
-    status: "Published",
-    icon: FileText,
-  },
-  {
-    id: 6,
-    title: "Database Sharding & Replication",
-    category: "Full Stack",
-    type: "AI Notes",
-    duration: "30 min",
-    status: "Draft",
-    icon: Sparkles,
-  },
-];
-
-const allTopics = [
-  "Python Basics", "Data Types", "OOP", "SQL", "Joins",
-  "REST APIs", "React", "Hooks", "State", "Routing",
-  "Authentication", "Deployment", "Testing", "Docker",
-];
+const initialResources = [];
+const allTopics = [];
 
 export default function AdminLearningContent() {
   const [resources, setResources] = useState(initialResources);
@@ -119,20 +60,19 @@ export default function AdminLearningContent() {
 
   return (
     <div className="learning-content-page">
-      {/* Header with Add button */}
-      <div className="learning-header-row">
-        <div>
-          <h2 className="learning-title">Manage Learning Content</h2>
-          <p className="learning-subtitle">Upload and organize videos, documents, and learning resources.</p>
-        </div>
-        <button onClick={() => setShowForm(!showForm)} className="add-content-btn">
-          {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancel" : "Add Content"}
-        </button>
-      </div>
+      <SectionHeader
+        title="Manage Learning Content"
+        description="Upload and organize videos, documents, and learning resources."
+        action={
+          <button onClick={() => setShowForm(!showForm)} className="add-content-btn">
+            {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancel" : "Add Content"}
+          </button>
+        }
+      />
 
       {/* Add Form */}
       {showForm && (
-        <div className="learning-add-card" style={{ background: "#f5f3ff", border: "1px solid #c7d2fe", borderRadius: 12, padding: 20, marginBottom: 24 }}>
+        <div className="learning-add-card">
           <form onSubmit={handleAdd} className="learning-add-form">
             <div className="form-group">
               <label>Title</label>
@@ -198,38 +138,45 @@ export default function AdminLearningContent() {
 
       {/* Resource Cards Grid */}
       <div className="learning-resources-grid">
-        {filteredResources.map((item) => {
-          const IconComponent = item.icon;
-          return (
-            <div key={item.id} className="learning-resource-card">
-              <div className="learning-card-top">
-                <div className="learning-type-icon-wrap">
-                  <IconComponent size={18} />
+        {filteredResources.length === 0 ? (
+          <div className="learning-empty-state">
+            <BookOpen size={36} className="learning-empty-icon" />
+            <p className="learning-empty-title">No learning resources uploaded yet.</p>
+          </div>
+        ) : (
+          filteredResources.map((item) => {
+            const IconComponent = item.icon || FileText;
+            return (
+              <div key={item.id} className="learning-resource-card">
+                <div className="learning-card-top">
+                  <div className="learning-type-icon-wrap">
+                    <IconComponent size={18} />
+                  </div>
+                  <button className="admin-lc-delete-btn" onClick={() => handleDelete(item.id)} title="Delete content">
+                    <Trash2 size={15} />
+                  </button>
                 </div>
-                <button className="admin-lc-delete-btn" onClick={() => handleDelete(item.id)} title="Delete content">
-                  <Trash2 size={15} />
-                </button>
-              </div>
 
-              <div className="learning-card-body">
-                <h3 className="learning-card-title">{item.title}</h3>
-                <p className="learning-card-meta">
-                  {item.category} · {item.type} · {item.duration}
-                </p>
-              </div>
+                <div className="learning-card-body">
+                  <h3 className="learning-card-title">{item.title}</h3>
+                  <p className="learning-card-meta">
+                    {item.category} · {item.type} · {item.duration}
+                  </p>
+                </div>
 
-              <Badge variant={item.status === "Published" ? "success" : "outline"}>
-                {item.status}
-              </Badge>
-            </div>
-          );
-        })}
+                <Badge variant={item.status === "Published" ? "success" : "outline"} className="learning-badge-pill">
+                  {item.status}
+                </Badge>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Topic Coverage */}
       <div className="topic-coverage-card">
         <div className="topic-coverage-header">
-          <BookOpen size={18} className="text-blue-600" />
+          <BookOpen size={18} className="topic-coverage-header-icon" />
           <span>Topic coverage</span>
         </div>
         <p className="topic-coverage-subtitle">
@@ -237,11 +184,15 @@ export default function AdminLearningContent() {
         </p>
 
         <div className="topic-coverage-tags">
-          {allTopics.map((topic, idx) => (
-            <span key={idx} className="topic-coverage-tag-pill">
-              {topic}
-            </span>
-          ))}
+          {allTopics.length === 0 ? (
+            <span className="topic-empty-label">No topics registered yet.</span>
+          ) : (
+            allTopics.map((topic, idx) => (
+              <span key={idx} className="topic-coverage-tag-pill">
+                {topic}
+              </span>
+            ))
+          )}
         </div>
       </div>
     </div>

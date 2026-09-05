@@ -61,24 +61,7 @@ const defaultFaqs = [
   }
 ];
 
-const initialTickets = [
-  {
-    id: "TICK-8042",
-    subject: "Attendance record missing for OS Lecture on Aug 08",
-    category: "Attendance & QR",
-    priority: "High",
-    status: "In Progress",
-    created: "2026-08-08"
-  },
-  {
-    id: "TICK-7910",
-    subject: "Unable to submit FreeRTOS assignment file",
-    category: "Academics & Labs",
-    priority: "Normal",
-    status: "Resolved",
-    created: "2026-08-04"
-  }
-];
+const initialTickets = [];
 
 const kbGuides = [
   {
@@ -179,11 +162,11 @@ export default function Help() {
           className="help-channel-card-modern"
           onClick={() => setIsTicketModalOpen(true)}
         >
-          <div className="help-channel-icon-avatar" style={{ background: "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)" }}>
+          <div className="help-channel-icon-avatar help-icon-blue">
             <Ticket size={22} />
           </div>
           <div className="help-channel-info">
-            <span className="help-channel-badge" style={{ background: "rgba(37, 99, 235, 0.1)", color: "#2563eb" }}>IT Support Desk</span>
+            <span className="help-channel-badge help-badge-blue">IT Support Desk</span>
             <h3 className="help-channel-title">Raise Support Ticket</h3>
             <p className="help-channel-sub">Report system bugs, login errors, or missing attendance records.</p>
             <span className="help-channel-action-link">+ Create New Ticket →</span>
@@ -194,14 +177,14 @@ export default function Help() {
           className="help-channel-card-modern"
           onClick={() => { window.location.href = "mailto:support@acadnexus.com"; }}
         >
-          <div className="help-channel-icon-avatar" style={{ background: "linear-gradient(135deg, #059669 0%, #10b981 100%)" }}>
+          <div className="help-channel-icon-avatar help-icon-emerald">
             <MessageCircle size={22} />
           </div>
           <div className="help-channel-info">
-            <span className="help-channel-badge" style={{ background: "rgba(16, 185, 129, 0.1)", color: "#059669" }}>Email Assistance</span>
+            <span className="help-channel-badge help-badge-emerald">Email Assistance</span>
             <h3 className="help-channel-title">Email Support</h3>
             <p className="help-channel-sub">Direct response from department coordinator within 24 hours.</p>
-            <span className="help-channel-action-link" style={{ color: "#059669" }}>support@acadnexus.com →</span>
+            <span className="help-channel-action-link help-link-emerald">support@acadnexus.com →</span>
           </div>
         </div>
 
@@ -209,14 +192,14 @@ export default function Help() {
           className="help-channel-card-modern"
           onClick={() => { window.location.href = "tel:+919876543210"; }}
         >
-          <div className="help-channel-icon-avatar" style={{ background: "linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%)" }}>
+          <div className="help-channel-icon-avatar help-icon-purple">
             <Phone size={22} />
           </div>
           <div className="help-channel-info">
-            <span className="help-channel-badge" style={{ background: "rgba(139, 92, 246, 0.1)", color: "#7c3aed" }}>Helpline</span>
+            <span className="help-channel-badge help-badge-purple">Helpline</span>
             <h3 className="help-channel-title">Campus Hotline</h3>
             <p className="help-channel-sub">Mon – Fri, 9:00 AM – 6:00 PM</p>
-            <span className="help-channel-action-link" style={{ color: "#7c3aed" }}>+91 98765 43210 →</span>
+            <span className="help-channel-action-link help-link-purple">+91 98765 43210 →</span>
           </div>
         </div>
       </div>
@@ -247,7 +230,7 @@ export default function Help() {
 
       {/* TAB 1: KNOWLEDGE BASE & FAQS */}
       {activeTab === "faq" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div className="help-faq-column">
           {/* Category Filter Pills */}
           <div className="help-cat-pills-row">
             {categories.map((cat) => (
@@ -263,10 +246,10 @@ export default function Help() {
 
           {/* FAQ Accordion Items */}
           {filteredFaqs.length === 0 ? (
-            <div style={{ padding: 40, textAlign: "center", background: "#ffffff", borderRadius: 12, border: "1px solid #e2e8f0" }}>
-              <HelpCircle size={36} color="#94a3b8" style={{ marginBottom: 10 }} />
-              <h4 style={{ margin: 0, color: "#0f172a", fontSize: 16 }}>No FAQs found matching "{searchQuery}"</h4>
-              <p style={{ color: "#64748b", fontSize: 13, marginTop: 4 }}>Try clearing your search query or submit a support ticket to our IT team.</p>
+            <div className="help-empty-state">
+              <HelpCircle size={36} className="help-empty-icon" />
+              <h4 className="help-empty-title">No FAQs found matching "{searchQuery}"</h4>
+              <p className="help-empty-desc">Try clearing your search query or submit a support ticket to our IT team.</p>
             </div>
           ) : (
             <div className="help-faq-list">
@@ -279,7 +262,7 @@ export default function Help() {
                         <HelpCircle size={18} color="#3b82f6" />
                         {faq.q}
                       </h4>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="help-faq-actions">
                         <span className="help-faq-category-tag">{faq.category}</span>
                         <ChevronDown size={18} className="help-faq-toggle-icon" />
                       </div>
@@ -331,32 +314,40 @@ export default function Help() {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
-                  <tr key={t.id}>
-                    <td><span className="help-ticket-id">{t.id}</span></td>
-                    <td style={{ fontWeight: 600 }}>{t.subject}</td>
-                    <td><span className="help-faq-category-tag">{t.category}</span></td>
-                    <td>
-                      <span className={`help-priority-pill ${t.priority === "High" ? "help-priority-high" : "help-priority-normal"}`}>
-                        {t.priority}
-                      </span>
-                    </td>
-                    <td style={{ color: "#64748b" }}>{t.created}</td>
-                    <td>
-                      <span className={`help-ticket-status-pill ${t.status === "In Progress"
-                          ? "help-status-in-progress"
-                          : t.status === "Resolved"
-                            ? "help-status-resolved"
-                            : "help-status-open"
-                        }`}>
-                        {t.status === "In Progress" && "⏳ "}
-                        {t.status === "Resolved" && "✓ "}
-                        {t.status === "Open" && "● "}
-                        {t.status}
-                      </span>
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="help-table-empty-cell">
+                      No support tickets raised yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  tickets.map((t) => (
+                    <tr key={t.id}>
+                      <td><span className="help-ticket-id">{t.id}</span></td>
+                      <td className="help-table-subject">{t.subject}</td>
+                      <td><span className="help-faq-category-tag">{t.category}</span></td>
+                      <td>
+                        <span className={`help-priority-pill ${t.priority === "High" ? "help-priority-high" : "help-priority-normal"}`}>
+                          {t.priority}
+                        </span>
+                      </td>
+                      <td className="help-table-date">{t.created}</td>
+                      <td>
+                        <span className={`help-ticket-status-pill ${t.status === "In Progress"
+                            ? "help-status-in-progress"
+                            : t.status === "Resolved"
+                              ? "help-status-resolved"
+                              : "help-status-open"
+                          }`}>
+                          {t.status === "In Progress" && "⏳ "}
+                          {t.status === "Resolved" && "✓ "}
+                          {t.status === "Open" && "● "}
+                          {t.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -374,7 +365,7 @@ export default function Help() {
                 </div>
                 <div>
                   <h4 className="help-kb-title">{guide.title}</h4>
-                  <span style={{ fontSize: 11, color: "#64748b" }}>{guide.type} • {guide.size}</span>
+                  <span className="help-guide-meta">{guide.type} • {guide.size}</span>
                 </div>
               </div>
               <p className="help-kb-desc">{guide.desc}</p>
@@ -417,7 +408,7 @@ export default function Help() {
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="help-grid-2col">
                 <div className="help-form-group">
                   <label className="help-form-label">Category</label>
                   <select

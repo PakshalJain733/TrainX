@@ -644,3 +644,17 @@
         width: 80px;
     }
 }
+
+.auth-error-msg {
+    color: #ef4444;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.auth-success-msg {
+    color: #10b981;
+    margin-bottom: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}

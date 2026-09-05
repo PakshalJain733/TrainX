@@ -1,67 +1,73 @@
 import React from 'react';
 import { mentorBatches } from '../../../data/mentorMockData';
-import { Layers, Calendar, Users, BookOpen, Clock, Plus } from 'lucide-react';
+import { Layers, Plus } from 'lucide-react';
+import '../Styles/SkillGaps.css';
+import '../Styles/Overview.css';
+import '../Styles/Batches.css';
 
 export default function Batches() {
   return (
-    <div className="space-y-6">
+    <div className="mentor-batches-container">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="mentor-page-header">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Layers className="w-5 h-5 text-indigo-600" />
+          <h2 className="mentor-page-title">
+            <Layers size={20} color="#4f46e5" />
             <span>My Allocated Batches</span>
           </h2>
-          <p className="text-xs text-slate-500">Course schedules, syllabus completion, enrolled students, and cohort progress</p>
+          <p className="mentor-page-subtitle">Course schedules, syllabus completion, enrolled students, and cohort progress</p>
         </div>
 
-        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2">
-          <Plus className="w-4 h-4" />
+        <button className="mentor-btn-primary">
+          <Plus size={16} />
           <span>Post Announcement</span>
         </button>
       </div>
 
       {/* Batch Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="mentor-batches-grid">
         {mentorBatches.map((b) => (
-          <div key={b.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-indigo-300 transition space-y-4">
-            <div className="flex items-start justify-between">
-              <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+          <div key={b.id} className="mentor-batch-card-main">
+            <div className="mentor-batch-top-row">
+              <span className="mentor-batch-code-tag">
                 {b.code}
               </span>
-              <span className="px-2.5 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="mentor-status-tag mentor-status-tag--emerald">
                 {b.status}
               </span>
             </div>
 
-            <div>
-              <h3 className="font-bold text-slate-900 text-base">{b.name}</h3>
-              <p className="text-xs text-slate-500 mt-0.5">{b.college}</p>
-              <p className="text-xs text-indigo-600 font-semibold">{b.department}</p>
+            <div className="mentor-batch-details-block">
+              <h3 className="mentor-batch-main-title">{b.name}</h3>
+              <p className="mentor-batch-college-sub">{b.college}</p>
+              <p className="mentor-batch-dept-sub">{b.department}</p>
             </div>
 
-            <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
-              <div className="flex justify-between text-slate-600">
+            <div className="mentor-batch-stats-stack">
+              <div className="mentor-batch-stat-line">
                 <span>Enrolled Students:</span>
-                <span className="font-bold text-slate-900">{b.enrolledStudents}</span>
+                <span className="mentor-batch-stat-strong">{b.enrolledStudents}</span>
               </div>
-              <div className="flex justify-between text-slate-600">
+              <div className="mentor-batch-stat-line">
                 <span>Modules Covered:</span>
-                <span className="font-bold text-slate-900">{b.topicsCovered} / {b.totalTopics}</span>
+                <span className="mentor-batch-stat-strong">{b.topicsCovered} / {b.totalTopics}</span>
               </div>
-              <div className="flex justify-between text-slate-600">
+              <div className="mentor-batch-stat-line">
                 <span>Class Schedule:</span>
-                <span className="font-medium text-slate-800 text-[11px]">{b.schedule}</span>
+                <span className="mentor-batch-schedule-text">{b.schedule}</span>
               </div>
             </div>
 
-            <div className="space-y-1 pt-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-600">Overall Completion</span>
-                <span className="text-indigo-600">{b.progress}%</span>
+            <div className="mentor-progress-section">
+              <div className="mentor-progress-head">
+                <span className="mentor-progress-label">Overall Completion</span>
+                <span className="mentor-progress-val">{b.progress}%</span>
               </div>
-              <div className="w-full bg-slate-200 rounded-full h-2">
-                <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${b.progress}%` }}></div>
+              <div className="mentor-progress-track">
+                <div
+                  className="mentor-progress-fill"
+                  style={{ width: `${b.progress}%` }}
+                />
               </div>
             </div>
           </div>

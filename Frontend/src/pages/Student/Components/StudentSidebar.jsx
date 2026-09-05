@@ -18,6 +18,7 @@ import {
   HelpCircle,
   GraduationCap,
   Settings,
+  UserCheck,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentSidebar.css";
@@ -90,7 +91,6 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
 
   return (
     <aside className={`student-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-
       {/* Header */}
       <div className="sidebar-header">
         <SidebarBrand collapsed={collapsed} subtitle="Student Workspace" />
@@ -103,13 +103,12 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
         </ul>
       </div>
 
-      {/* Pinned Bottom Account Section with Divider */}
+      {/* Pinned Bottom Account Section */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
           {footerNavItems.map(renderItem)}
         </ul>
       </div>
-
     </aside>
   );
 }

@@ -1,5 +1,37 @@
 /* Attendance.css */
 
+.attendance-empty-grid-cell {
+  grid-column: 1 / -1;
+  padding: 40px 16px;
+  text-align: center;
+  color: #64748b;
+}
+
+.attendance-empty-icon {
+  margin: 0 auto 8px auto;
+  opacity: 0.4;
+  color: #64748b;
+}
+
+.attendance-empty-title {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.attendance-empty-table-cell {
+  text-align: center;
+  padding: 40px 16px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.attendance-empty-verify-box {
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+}
+
 /* ── QR Scan Trigger Button ── */
 .qr-scan-trigger-btn {
   display: flex;
@@ -1235,6 +1267,48 @@
   border: 1px solid rgba(79, 70, 229, 0.2);
 }
 
+.qr-scanned-title {
+  color: #10b981;
+  font-weight: 700;
+}
 
+.qr-scanned-code {
+  color: #64748b;
+  font-size: 12px;
+  word-break: break-all;
+  margin-top: 4px;
+}
 
+.qr-video-container {
+  position: relative;
+  display: block;
+}
 
+.qr-video-container--hidden {
+  position: relative;
+  display: none;
+}
+
+.qr-status-pill--success {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.qr-status-dot--success {
+  background: #10b981;
+}
+
+.qr-done-btn {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  width: 100%;
+}
+
+.attendance-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
