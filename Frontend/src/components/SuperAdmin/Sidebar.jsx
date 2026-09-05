@@ -19,6 +19,7 @@ import {
   Shield,
   Settings,
   HelpCircle,
+  Code,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
 import "../../pages/SuperAdmin/Styles/SuperAdminSidebar.css";
@@ -66,6 +67,7 @@ const navigationGroups = [
     items: [
       { name: "Performance", path: "/super-admin/performance", icon: TrendingUp },
       { name: "Attendance", path: "/super-admin/attendance", icon: CalendarCheck },
+      { name: "Coding practice", path: "/super-admin/coding-practice", icon: Code },
     ],
   },
   {

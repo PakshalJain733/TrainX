@@ -53,11 +53,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: rgba(79, 70, 229, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
   padding: 4px;
   flex-shrink: 0;
 }
@@ -81,24 +81,24 @@
 }
 
 .brand-name1 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   color: #ffffff;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.4px;
 }
 
 .brand-name2 {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
-  color: #818cf8;
-  letter-spacing: -0.5px;
+  color: #3b82f6;
+  letter-spacing: -0.4px;
 }
 
 .sidebar-brand-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: #94a3b8;
-  font-weight: 600;
-  letter-spacing: 0.2px;
+  font-weight: 500;
+  letter-spacing: 0.1px;
 }
 
 /* Sidebar Body Content */

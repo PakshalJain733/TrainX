@@ -164,37 +164,252 @@ body {
   border: 2px solid #ffffff;
 }
 
+/* Notification Dropdown (Matching Student Dashboard) */
+.notif-dropdown-box {
+  width: max-content !important;
+  min-width: 380px;
+  max-width: min(440px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 12px;
+}
+
+.notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.notif-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notif-header-icon-wrap {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  background: #f1f5f9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+}
+
+.notif-header-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  border: 2px solid #f1f5f9;
+}
+
+.notif-header-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.notif-header-subtitle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.notif-mark-read-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.notif-mark-read-btn:hover {
+  background: #dbeafe;
+}
+
+.notif-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.notif-tab {
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.notif-tab.active {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.notif-list-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.notif-list-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  align-items: flex-start;
+}
+
+.notif-list-card.unread {
+  background: #f4f7fa;
+  border-color: #dbeafe;
+}
+
+.notif-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notif-icon-box.type-calendar { background: #fee2e2; color: #ef4444; }
+.notif-icon-box.type-alert { background: #fef9c3; color: #eab308; }
+.notif-icon-box.type-success { background: #dcfce7; color: #22c55e; }
+.notif-icon-box.type-document { background: #e0e7ff; color: #6366f1; }
+
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notif-content-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.notif-card-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+  line-height: 1.35;
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.notif-card-time {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.notif-delete-btn {
+  background: none;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+}
+.notif-delete-btn:hover { color: #ef4444; }
+
+.notif-card-desc {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notif-footer-wrap {
+  margin-top: 16px;
+  text-align: right;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 12px;
+}
+
+.notif-clear-all-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notif-clear-all-btn:hover { text-decoration: underline; }
+
 .superadmin-header__user {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 6px 4px 12px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+  height: 40px;
   background: #ffffff;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
+  padding: 3px 6px 3px 14px;
+  border-radius: 9999px;
   transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .superadmin-header__user:hover {
   background: #f8fafc;
   border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
 .superadmin-header__user-info {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  justify-content: center;
+  line-height: 1.25;
+  white-space: nowrap;
 }
 
 .superadmin-header__name {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   color: #0f172a;
+  white-space: nowrap;
 }
 
 .superadmin-header__sub {
-  font-size: 10px;
+  font-size: 11px;
   color: #64748b;
   font-weight: 500;
 }
@@ -202,18 +417,18 @@ body {
 .superadmin-header__avatar {
   display: flex;
   align-items: center;
-  justify-content: justify-center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #4f46e5 0%, #312e81 100%);
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4f46e5;
   color: #ffffff;
-  font-size: 12px;
-  font-weight: 800;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
-  text-align: center;
-  line-height: 34px;
-  padding-left: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  box-sizing: border-box;
 }
 
 .superadmin-header__profile-dropdown {

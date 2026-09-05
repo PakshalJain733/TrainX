@@ -54,6 +54,7 @@ import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
 import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
 import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
 import SuperAdminMaintenanceControls from './pages/SuperAdmin/MaintenanceControls';
+import SuperAdminCodingPracticeMonitoring from './pages/SuperAdmin/CodingPracticeMonitoring';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
@@ -80,6 +81,7 @@ import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout'
 import CoordinatorOverview from './pages/Coordinator/Components/Overview';
 import CoordinatorBatches from './pages/Coordinator/Components/Batches';
 import CoordinatorStudents from './pages/Coordinator/Components/Students';
+import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
 import CoordinatorCodingPerformance from './pages/Coordinator/Components/CodingPerformance';
 import CoordinatorInterviewPerformance from './pages/Coordinator/Components/InterviewPerformance';
 import CoordinatorStudentsNeedImprovement from './pages/Coordinator/Components/StudentsNeedImprovement';
@@ -186,6 +188,7 @@ function App() {
             <Route index element={<CoordinatorOverview />} />
             <Route path="batches" element={<CoordinatorBatches />} />
             <Route path="students" element={<CoordinatorStudents />} />
+            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorCodingPractice /></MaintenanceGuard>} />
             <Route path="coding-performance" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorCodingPerformance /></MaintenanceGuard>} />
             <Route path="interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><CoordinatorInterviewPerformance /></MaintenanceGuard>} />
             <Route path="improvement" element={<MaintenanceGuard moduleKey="defaulters"><CoordinatorStudentsNeedImprovement /></MaintenanceGuard>} />
@@ -214,6 +217,7 @@ function App() {
             <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
             <Route path="performance" element={<SuperAdminPerformancePage />} />
             <Route path="attendance" element={<SuperAdminAttendancePage />} />
+            <Route path="coding-practice" element={<SuperAdminCodingPracticeMonitoring />} />
             <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
             <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
             <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />

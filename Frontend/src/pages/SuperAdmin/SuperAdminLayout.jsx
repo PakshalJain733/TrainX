@@ -19,8 +19,9 @@ import Sidebar from "../../components/SuperAdmin/Sidebar";
 import AIRiskAuditModal from "../../components/SuperAdmin/AIRiskAuditModal";
 import "./Styles/SuperAdminLayout.css";
 
-function NotificationDropdown({ onClose }) {
-  const sampleNotifications = [
+function NotificationDropdown({ onClose, onUnreadChange }) {
+  const [activeTab, setActiveTab] = useState("All");
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
       type: "alert",
@@ -45,35 +46,112 @@ function NotificationDropdown({ onClose }) {
       time: "2 hours ago",
       unread: false,
     },
-  ];
+    {
+      id: 4,
+      type: "calendar",
+      title: "Platform Maintenance Schedule",
+      desc: "Scheduled database backup and optimization at 02:00 AM UTC.",
+      time: "5 hours ago",
+      unread: false,
+    },
+  ]);
+
+  const getIcon = (type) => {
+    switch (type) {
+      case "calendar":
+        return <Calendar size={16} className="notif-icon-calendar" />;
+      case "alert":
+        return <AlertTriangle size={16} className="notif-icon-alert" />;
+      case "success":
+        return <CheckCircle2 size={16} className="notif-icon-success" />;
+      case "document":
+        return <FileText size={16} className="notif-icon-document" />;
+      default:
+        return <Bell size={16} />;
+    }
+  };
+
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    if (onUnreadChange) onUnreadChange(false);
+  };
+
+  const deleteNotif = (id) => {
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+  const filteredList = notifications.filter((n) =>
+    activeTab === "Unread" ? n.unread : true
+  );
 
   return (
-    <div className="superadmin-header__profile-dropdown" style={{ width: "320px", padding: "12px" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontStyle: "normal", alignItems: "center", marginBottom: "10px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <Bell size={16} style={{ color: "#4f46e5" }} />
-          <span style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>Super Admin Alerts</span>
+    <div className="superadmin-header__profile-dropdown notif-dropdown-box" style={{ width: "380px", right: 0, padding: "16px" }}>
+      {/* Header */}
+      <div className="notif-header">
+        <div className="notif-header-left">
+          <div className="notif-header-icon-wrap">
+            <Bell size={18} className="notif-header-icon" />
+            {unreadCount > 0 && <span className="notif-header-dot" />}
+          </div>
+          <div className="notif-header-text">
+            <div className="notif-header-title">Super Admin Alerts</div>
+            <div className="notif-header-subtitle">
+              {unreadCount > 0 ? `${unreadCount} unread alerts` : "All caught up"}
+            </div>
+          </div>
         </div>
-        <span style={{ fontSize: "11px", color: "#4f46e5", cursor: "pointer", fontWeight: 600 }}>Mark all read</span>
+        {unreadCount > 0 && (
+          <button className="notif-mark-read-btn" onClick={markAllRead}>
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        )}
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {sampleNotifications.map((n) => (
-          <div
-            key={n.id}
-            style={{
-              padding: "8px 10px",
-              borderRadius: "8px",
-              background: n.unread ? "#eff6ff" : "#f8fafc",
-              border: "1px solid",
-              borderColor: n.unread ? "#bfdbfe" : "#e2e8f0",
-              fontSize: "12px",
-            }}
-          >
-            <div style={{ fontWeight: 600, color: "#1e293b" }}>{n.title}</div>
-            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px" }}>{n.desc}</div>
-            <div style={{ fontSize: "10px", color: "#94a3b8", marginTop: "4px" }}>{n.time}</div>
+
+      {/* Tabs */}
+      <div className="notif-tabs">
+        <button
+          className={`notif-tab ${activeTab === "All" ? "active" : ""}`}
+          onClick={() => setActiveTab("All")}
+        >
+          All ({notifications.length})
+        </button>
+        <button
+          className={`notif-tab ${activeTab === "Unread" ? "active" : ""}`}
+          onClick={() => setActiveTab("Unread")}
+        >
+          Unread ({unreadCount})
+        </button>
+      </div>
+
+      {/* List */}
+      <div className="notif-list-wrap" style={{ maxHeight: "320px", overflowY: "auto" }}>
+        {filteredList.map((n) => (
+          <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
+            <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
+            <div className="notif-content">
+              <div className="notif-content-top">
+                <div className="notif-card-title">{n.title}</div>
+                <div className="notif-card-time">{n.time}</div>
+                <button
+                  className="notif-delete-btn"
+                  onClick={() => deleteNotif(n.id)}
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+              <div className="notif-card-desc">{n.desc}</div>
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* Footer */}
+      <div className="notif-footer-wrap">
+        <button className="notif-clear-all-btn" onClick={() => setNotifications([])}>
+          Clear all alerts
+        </button>
       </div>
     </div>
   );
@@ -120,6 +198,7 @@ export default function SuperAdminLayout() {
     if (path.startsWith("/super-admin/maintenance")) return "Maintenance Controls";
     if (path.startsWith("/super-admin/performance")) return "Performance Analytics";
     if (path.startsWith("/super-admin/attendance")) return "Attendance Governance";
+    if (path.startsWith("/super-admin/coding-practice")) return "Global Coding Practice Monitoring";
     if (path.startsWith("/super-admin/ai-roadmaps")) return "AI Roadmaps System";
     if (path.startsWith("/super-admin/ai-interviews")) return "AI Mock Interviews";
     if (path.startsWith("/super-admin/mock-drives")) return "Mock Placement Drives";
