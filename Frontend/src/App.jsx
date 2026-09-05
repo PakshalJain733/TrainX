@@ -92,6 +92,9 @@ import CoordinatorRequests from './pages/Coordinator/Components/Requests';
 import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
 import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
+import CoordinatorHelp from './pages/Coordinator/Components/Help';
+import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
+import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
 
 function App() {
   return (

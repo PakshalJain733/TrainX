@@ -236,7 +236,6 @@ export default function CoordinatorLayout() {
 
             {/* Main Content Body */}
             <div className="coordinator-card-body">
-              <CoordinatorTabBar />
               <Outlet />
             </div>
           </div>

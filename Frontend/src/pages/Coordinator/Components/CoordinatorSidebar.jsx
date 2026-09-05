@@ -14,6 +14,10 @@ import {
   Settings,
   HelpCircle,
   Code,
+  Video,
+  Bot,
+  Sparkles,
+  Trophy,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/CoordinatorSidebar.css";
