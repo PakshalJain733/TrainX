@@ -20,7 +20,7 @@ export function SectionHeader({ title, description, eyebrow, action, className =
             </p>
           )}
         </div>
-        {action && <div>{action}</div>}
+        {action && <div className="ui-section-action">{action}</div>}
       </div>
     </div>
   );

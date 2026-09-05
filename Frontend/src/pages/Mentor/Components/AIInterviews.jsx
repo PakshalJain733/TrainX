@@ -4,10 +4,7 @@ import '../Styles/Students.css';
 import '../Styles/AIInterviews.css';
 
 export default function AIInterviews() {
-  const reviews = [
-    { id: 1, name: "Aarav Mehta", batch: "CSE 2026 Alpha", role: "Full Stack Engineer", techScore: 78, behavioralScore: 84, overall: 81, weakness: "Edge cases in Graph algorithms" },
-    { id: 2, name: "Neha Reddy", batch: "Data Science 2025", role: "AI Engineer", techScore: 62, behavioralScore: 70, overall: 66, weakness: "High-dimensional matrix math" },
-  ];
+  const reviews = [];
 
   return (
     <div className="mentor-ai-interviews-container">
@@ -37,19 +34,27 @@ export default function AIInterviews() {
               </tr>
             </thead>
             <tbody>
-              {reviews.map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <p className="mentor-student-name">{r.name}</p>
-                    <p className="mentor-student-college">{r.batch}</p>
+              {reviews.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="mentor-empty-table-cell">
+                    No AI mock interview evaluations recorded yet.
                   </td>
-                  <td className="mentor-interview-role">{r.role}</td>
-                  <td className="mentor-interview-score">{r.techScore}</td>
-                  <td className="mentor-interview-score">{r.behavioralScore}</td>
-                  <td className="mentor-interview-overall">{r.overall}</td>
-                  <td className="mentor-interview-weakness">{r.weakness}</td>
                 </tr>
-              ))}
+              ) : (
+                reviews.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <p className="mentor-student-name">{r.name}</p>
+                      <p className="mentor-student-college">{r.batch}</p>
+                    </td>
+                    <td className="mentor-interview-role">{r.role}</td>
+                    <td className="mentor-interview-score">{r.techScore}</td>
+                    <td className="mentor-interview-score">{r.behavioralScore}</td>
+                    <td className="mentor-interview-overall">{r.overall}</td>
+                    <td className="mentor-interview-weakness">{r.weakness}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

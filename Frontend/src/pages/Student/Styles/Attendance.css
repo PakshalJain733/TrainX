@@ -1,5 +1,37 @@
 /* Attendance.css */
 
+.attendance-empty-grid-cell {
+  grid-column: 1 / -1;
+  padding: 40px 16px;
+  text-align: center;
+  color: #64748b;
+}
+
+.attendance-empty-icon {
+  margin: 0 auto 8px auto;
+  opacity: 0.4;
+  color: #64748b;
+}
+
+.attendance-empty-title {
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.attendance-empty-table-cell {
+  text-align: center;
+  padding: 40px 16px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.attendance-empty-verify-box {
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+}
+
 /* ── QR Scan Trigger Button ── */
 .qr-scan-trigger-btn {
   display: flex;

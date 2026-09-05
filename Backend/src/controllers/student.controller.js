@@ -81,9 +81,24 @@ export const getStudentDashboard = async (req, res, next) => {
   }
 };
 
+import { getPracticeProblemsModel } from '../models/practiceProblem.model.js';
+
 export const getStudentPracticeProblems = async (req, res, next) => {
   try {
-    const problems = [
+    const dbProblems = await getPracticeProblemsModel();
+    if (dbProblems && dbProblems.length > 0) {
+      const mapped = dbProblems.map((p) => ({
+        id: p.id,
+        title: p.title,
+        category: p.category || 'General DSA',
+        difficulty: p.difficulty,
+        points: p.points || 100,
+        solve_status: 'Unsolved',
+      }));
+      return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
+    }
+
+    const fallbackProblems = [
       { id: 1, title: 'Two Sum', category: 'Arrays & Hashing', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
       { id: 2, title: 'Valid Palindrome', category: 'Two Pointers', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
       { id: 3, title: 'Longest Substring Without Repeating Characters', category: 'Sliding Window', difficulty: 'Medium', points: 150, solve_status: 'Unsolved' },
@@ -93,7 +108,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
       { id: 7, title: 'Merge k Sorted Lists', category: 'Heap / Priority Queue', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
       { id: 8, title: 'Trapping Rain Water', category: 'Two Pointers', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
     ];
-    return sendSuccess(res, 'Practice problems retrieved successfully', problems);
+    return sendSuccess(res, 'Practice problems retrieved successfully', fallbackProblems);
   } catch (error) {
     next(error);
   }

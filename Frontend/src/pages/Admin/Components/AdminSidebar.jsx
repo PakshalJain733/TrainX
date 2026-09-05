@@ -11,6 +11,7 @@ import {
   Trophy,
   FileCheck2,
   HelpCircle,
+  Megaphone,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/AdminSidebar.css";
@@ -47,6 +48,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "Broadcast Notice", url: "/admin/broadcast", icon: Megaphone },
   { title: "Support Tickets", url: "/admin/help", icon: HelpCircle },
 ];
 

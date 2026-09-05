@@ -1,6 +1,7 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 import { query } from '../config/db.js';
+import { generateQuizQuestionsAI } from '../ai/quiz.ai.js';
 import {
   getAssessmentsService,
   getAssessmentDetailsService,
@@ -69,16 +70,28 @@ export const getAssessmentById = async (req, res, next) => {
 
 export const addAssessment = async (req, res, next) => {
   try {
-    const { title, description, college_id, batch_id, duration_minutes, total_marks, pass_marks } = req.body;
+    const { title, description, college_id, batch_id, duration_minutes, total_marks, pass_marks, status, is_published } = req.body;
     if (!title) return sendError(res, 'title is required', 400);
 
-    const created_by = req.user.id;
-    const assessment = await createAssessment({ title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status: 'draft' });
+    const created_by = req.user?.id || 1;
+    const assessmentStatus = status || 'published';
+    const assessment = await createAssessment({
+      title,
+      description,
+      college_id,
+      batch_id,
+      created_by,
+      duration_minutes,
+      total_marks,
+      pass_marks,
+      status: assessmentStatus
+    });
     return sendSuccess(res, 'Assessment created successfully', assessment, 201);
   } catch (error) {
     next(error);
   }
 };
+
 
 export const editAssessment = async (req, res, next) => {
   try {
@@ -150,7 +163,7 @@ export const addQuestion = async (req, res, next) => {
   try {
     const assessment = await findAssessmentById(req.params.id);
     if (!assessment) return sendError(res, 'Assessment not found', 404);
-    if (assessment.status === 'published') return sendError(res, 'Cannot add questions to a published assessment', 400);
+
 
     const { question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order } = req.body;
 
@@ -538,4 +551,20 @@ export const getAssessmentResults = async (req, res, next) => {
   }
 };
 
+// ─── Admin: Live AI Question Generation via Google Gemini ──────────────────────
+
+export const generateAIQuestionsCtrl = async (req, res, next) => {
+  try {
+    const { title, topic, count = 10 } = req.body;
+    const searchTopic = (title || topic || 'Technical Assessment').trim();
+
+    const questions = await generateQuizQuestionsAI(searchTopic, count);
+    return sendSuccess(res, 'Live Google Gemini AI questions generated successfully', questions);
+  } catch (error) {
+    console.error(`[Quiz AI Error] ${error.message}`);
+    return sendError(res, `Google Gemini AI error: ${error.message}`, 500);
+  }
+};
+
 export const getAssessmentData = getAssessments;
+

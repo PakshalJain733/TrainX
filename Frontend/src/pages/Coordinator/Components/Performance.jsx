@@ -70,22 +70,22 @@ export default function CoordinatorPerformance() {
       <div className="coord-stats-grid">
         <div className="coord-stat-card">
           <div className="coord-stat-label">Overall Dept Average</div>
-          <div className="coord-stat-value" style={{ color: "#2563eb" }}>78.4%</div>
+          <div className="coord-stat-value coord-stat-value--blue">78.4%</div>
           <div className="coord-stat-subtext">+4.2% since mid-term audit</div>
         </div>
         <div className="coord-stat-card">
           <div className="coord-stat-label">Identified Skill Gaps</div>
-          <div className="coord-stat-value" style={{ color: "#d97706" }}>3 Critical</div>
+          <div className="coord-stat-value coord-stat-value--amber">3 Critical</div>
           <div className="coord-stat-subtext">System Design & DP Algorithms</div>
         </div>
         <div className="coord-stat-card">
           <div className="coord-stat-label">Coding Platform Active</div>
-          <div className="coord-stat-value" style={{ color: "#059669" }}>189 / 235</div>
+          <div className="coord-stat-value coord-stat-value--emerald">189 / 235</div>
           <div className="coord-stat-subtext">80.4% student participation</div>
         </div>
         <div className="coord-stat-card">
           <div className="coord-stat-label">Remedial Labs Assigned</div>
-          <div className="coord-stat-value" style={{ color: "#7c3aed" }}>6 Sessions</div>
+          <div className="coord-stat-value coord-stat-value--purple">6 Sessions</div>
           <div className="coord-stat-subtext">Scheduled with Mentors</div>
         </div>
       </div>

@@ -371,7 +371,7 @@
 }
 
 .ui-section-eyebrow {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -383,21 +383,29 @@
 .ui-section-main {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
 }
 
 .ui-section-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 800;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.3px;
+  line-height: 1.25;
 }
 
 .ui-section-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: #64748b;
-  margin-top: 4px;
+  margin-top: 3px;
   margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.ui-section-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }

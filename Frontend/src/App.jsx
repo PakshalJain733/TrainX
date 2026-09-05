@@ -33,6 +33,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
+import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
 
 // Super Admin Workspace Imports
@@ -130,6 +131,7 @@ function App() {
           <Route path="learning" element={<AdminLearningContent />} />
           <Route path="quiz" element={<AdminQuizzes />} />
           <Route path="practice" element={<AdminPracticeProblems />} />
+          <Route path="broadcast" element={<AdminBroadcast />} />
           <Route path="progress" element={<AdminProgress />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="weekly-reports" element={<AdminWeeklyReports />} />

@@ -29,19 +29,19 @@ import "../Styles/Attendance.css";
 const kpiData = [
   {
     title: "Overall Attendance",
-    value: "90%",
+    value: "0%",
     subtext: "Eligibility Required: 75%",
-    status: "Exam Eligible",
-    variant: "success",
+    status: "No Records",
+    variant: "info",
     icon: UserCheck,
-    color: "#10b981",
-    bgColor: "rgba(16, 185, 129, 0.12)"
+    color: "#3b82f6",
+    bgColor: "rgba(59, 130, 246, 0.12)"
   },
   {
     title: "Total Conducted",
-    value: "171 / 192",
-    subtext: "21 total classes missed",
-    status: "89% Attended",
+    value: "0 / 0",
+    subtext: "0 total classes missed",
+    status: "0% Attended",
     variant: "info",
     icon: BookOpen,
     color: "#3b82f6",
@@ -49,9 +49,9 @@ const kpiData = [
   },
   {
     title: "Approved Leaves",
-    value: "3 Days",
-    subtext: "1 pending mentor verification",
-    status: "Covered",
+    value: "0 Days",
+    subtext: "0 pending mentor verification",
+    status: "None",
     variant: "warning",
     icon: ShieldCheck,
     color: "#8b5cf6",
@@ -59,198 +59,13 @@ const kpiData = [
   }
 ];
 
-const subjects = [
-  {
-    id: "ds",
-    name: "Data Structures & Algorithms",
-    code: "CS-301",
-    faculty: "Dr. A. Sharma",
-    pct: 94,
-    attended: 47,
-    total: 50,
-    absent: 3,
-    excused: 1,
-    icon: Code2,
-    iconBg: "rgba(79, 70, 229, 0.12)",
-    iconColor: "#4f46e5",
-    badgeVariant: "secondary",
-    statusText: "Excellent",
-    safeMargin: "Can safely skip 11 more classes"
-  },
-  {
-    id: "os",
-    name: "Operating Systems",
-    code: "CS-302",
-    faculty: "Prof. R. Varma",
-    pct: 88,
-    attended: 44,
-    total: 50,
-    absent: 6,
-    excused: 2,
-    icon: Cpu,
-    iconBg: "rgba(14, 165, 233, 0.12)",
-    iconColor: "#0ea5e9",
-    badgeVariant: "secondary",
-    statusText: "Good",
-    safeMargin: "Can safely skip 6 more classes"
-  },
-  {
-    id: "dbms",
-    name: "Database Management Systems",
-    code: "CS-303",
-    faculty: "Prof. S. Kulkarni",
-    pct: 92,
-    attended: 46,
-    total: 50,
-    absent: 4,
-    excused: 0,
-    icon: Database,
-    iconBg: "rgba(16, 185, 129, 0.12)",
-    iconColor: "#10b981",
-    badgeVariant: "secondary",
-    statusText: "Excellent",
-    safeMargin: "Can safely skip 8 more classes"
-  },
-  {
-    id: "cn",
-    name: "Computer Networks",
-    code: "CS-304",
-    faculty: "Dr. P. Nair",
-    pct: 81,
-    attended: 34,
-    total: 42,
-    absent: 8,
-    excused: 0,
-    icon: Network,
-    iconBg: "rgba(245, 158, 11, 0.12)",
-    iconColor: "#f59e0b",
-    badgeVariant: "destructive",
-    statusText: "Attention Needed",
-    safeMargin: "Must attend next 3 consecutive classes"
-  }
-];
-
-const monthlyTrend = [
-  { month: "Aug", attendance: 95, required: 75 },
-  { month: "Sep", attendance: 92, required: 75 },
-  { month: "Oct", attendance: 86, required: 75 },
-  { month: "Nov", attendance: 90, required: 75 },
-  { month: "Dec", attendance: 89.6, required: 75 }
-];
-
-const daywiseAttendance = [
-  { day: "Mon", rate: 94 },
-  { day: "Tue", rate: 88 },
-  { day: "Wed", rate: 92 },
-  { day: "Thu", rate: 82 },
-  { day: "Fri", rate: 91 }
-];
-
-const recentLogs = [
-  { id: 1, date: "Dec 04, 2026", time: "09:30 AM", subject: "Data Structures", slot: "Lab 2", status: "Present", faculty: "Dr. A. Sharma" },
-  { id: 2, date: "Dec 04, 2026", time: "11:30 AM", subject: "Operating Systems", slot: "Lec 4", status: "Present", faculty: "Prof. R. Varma" },
-  { id: 3, date: "Dec 03, 2026", time: "02:00 PM", subject: "Computer Networks", slot: "Lec 1", status: "Absent", faculty: "Dr. P. Nair" },
-  { id: 4, date: "Dec 02, 2026", time: "10:30 AM", subject: "DBMS", slot: "Lec 3", status: "Present", faculty: "Prof. S. Kulkarni" },
-  { id: 5, date: "Dec 01, 2026", time: "01:30 PM", subject: "Operating Systems", slot: "Lab 1", status: "Excused", faculty: "Prof. R. Varma" }
-];
-
-const leaveQuotas = [
-  { type: "Medical Leaves", used: 3, total: 6, color: "#8b5cf6", icon: ShieldCheck },
-  { type: "Duty Leaves", used: 2, total: 4, color: "#3b82f6", icon: BookOpen },
-  { type: "Casual / Personal", used: 1, total: 3, color: "#f59e0b", icon: Clock }
-];
-
-const initialVerifications = [
-  {
-    id: "LV-2026-089",
-    title: "Medical Leave · High Fever & Flu",
-    category: "Medical Leave",
-    startDate: "Nov 12, 2026",
-    endDate: "Nov 14, 2026",
-    days: 3,
-    status: "Approved",
-    ok: true,
-    mentor: "Prof. Reddy (Faculty Advisor)",
-    submittedDate: "Nov 11, 2026",
-    remarks: "Medical certificate verified by college health center. Attendance regularized for 3 days.",
-    attachment: "medical_certificate_nov12.pdf",
-    currentStep: 3
-  },
-  {
-    id: "LV-2026-074",
-    title: "Academic Duty · Inter-College Hackathon",
-    category: "Academic Duty",
-    startDate: "Nov 20, 2026",
-    endDate: "Nov 21, 2026",
-    days: 2,
-    status: "Approved",
-    ok: true,
-    mentor: "Prof. S. Kulkarni",
-    submittedDate: "Nov 18, 2026",
-    remarks: "Event participation confirmed by C2C Cell. Duty leave granted.",
-    attachment: "hackathon_invite_pass.pdf",
-    currentStep: 3
-  },
-  {
-    id: "LV-2026-102",
-    title: "Family Function · Sister's Wedding",
-    category: "Personal / Family",
-    startDate: "Dec 10, 2026",
-    endDate: "Dec 12, 2026",
-    days: 3,
-    status: "Pending",
-    ok: false,
-    mentor: "Prof. Reddy (Faculty Advisor)",
-    submittedDate: "Dec 03, 2026",
-    remarks: "Under review by Mentor. Awaiting HOD final confirmation.",
-    attachment: "wedding_invitation.pdf",
-    currentStep: 2
-  },
-  {
-    id: "LV-2026-045",
-    title: "Personal Emergency · Travel Delay",
-    category: "Personal / Family",
-    startDate: "Oct 05, 2026",
-    endDate: "Oct 05, 2026",
-    days: 1,
-    status: "Rejected",
-    ok: false,
-    mentor: "Prof. Reddy (Faculty Advisor)",
-    submittedDate: "Oct 06, 2026",
-    remarks: "Submitted after deadline without prior notification or valid travel proof.",
-  }
-];
-
-const defaulterSubjects = [
-  {
-    id: "net",
-    name: "Computer Networks & Security",
-    code: "CS-304",
-    faculty: "Dr. R. K. Sen",
-    pct: 68,
-    attended: 24,
-    total: 35,
-    neededTo75: 5,
-    status: "Critical Defaulter",
-    badgeVariant: "destructive",
-    warningDate: "02 Aug 2026",
-    advisorAction: "Counseling Mandatory"
-  },
-  {
-    id: "se",
-    name: "Software Engineering & Testing",
-    code: "CS-305",
-    faculty: "Prof. P. Varma",
-    pct: 72,
-    attended: 26,
-    total: 36,
-    neededTo75: 2,
-    status: "Warning Zone",
-    badgeVariant: "warning",
-    warningDate: "05 Aug 2026",
-    advisorAction: "Attendance Advisory Sent"
-  }
-];
+const subjects = [];
+const monthlyTrend = [];
+const daywiseAttendance = [];
+const recentLogs = [];
+const leaveQuotas = [];
+const initialVerifications = [];
+const defaulterSubjects = [];
 
 export default function Attendance() {
   const [logFilter, setLogFilter] = useState("All");
@@ -569,13 +384,13 @@ export default function Attendance() {
                   <CardContent className="attendance-kpi-content">
                     <div className="attendance-kpi-header">
                       <span className="attendance-kpi-title">{kpi.title}</span>
-                      <div className="attendance-kpi-icon-box" style={{ background: kpi.bgColor, color: kpi.color }}>
+                      <div className="attendance-kpi-icon-box">
                         <IconComponent size={18} />
                       </div>
                     </div>
                     <div className="attendance-kpi-value-row">
                       <h3 className="attendance-kpi-value">{kpi.value}</h3>
-                      <Badge className="attendance-kpi-badge" style={{ backgroundColor: kpi.bgColor, color: kpi.color, borderColor: kpi.color + '40' }}>
+                      <Badge className="attendance-kpi-badge" variant={kpi.variant}>
                         {kpi.status}
                       </Badge>
                     </div>
@@ -596,60 +411,67 @@ export default function Attendance() {
 
           {/* Enhanced Subject Cards Grid */}
           <div className="attendance-subject-grid">
-            {subjects.map((s) => {
-              const SubjectIcon = s.icon;
-              return (
-                <Card key={s.id} className="attendance-subject-card">
-                  <CardContent className="attendance-subject-content">
-                    <div className="attendance-subject-header">
-                      <div className="attendance-subject-info">
-                        <div className="attendance-subject-icon-box" style={{ background: s.iconBg, color: s.iconColor }}>
-                          <SubjectIcon size={20} />
+            {subjects.length === 0 ? (
+              <div className="attendance-empty-grid-cell">
+                <BookOpen size={32} className="attendance-empty-icon" />
+                <p className="attendance-empty-title">No subject attendance records found.</p>
+              </div>
+            ) : (
+              subjects.map((s) => {
+                const SubjectIcon = s.icon;
+                return (
+                  <Card key={s.id} className="attendance-subject-card">
+                    <CardContent className="attendance-subject-content">
+                      <div className="attendance-subject-header">
+                        <div className="attendance-subject-info">
+                          <div className="attendance-subject-icon-box">
+                            <SubjectIcon size={20} />
+                          </div>
+                          <div>
+                            <p className="attendance-subject-code">{s.code} · {s.faculty}</p>
+                            <h4 className="attendance-subject-name">{s.name}</h4>
+                          </div>
                         </div>
-                        <div>
-                          <p className="attendance-subject-code">{s.code} · {s.faculty}</p>
-                          <h4 className="attendance-subject-name">{s.name}</h4>
+                        <Badge variant={s.pct >= 85 ? "secondary" : "destructive"} className="attendance-pct-badge">
+                          {s.pct}%
+                        </Badge>
+                      </div>
+
+                      {/* Progress bar with custom color styling */}
+                      <div className="attendance-progress-wrapper">
+                        <Progress value={s.pct} className="attendance-custom-progress" />
+                      </div>
+
+                      {/* Subject Class Stats */}
+                      <div className="attendance-subject-stats-row">
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Conducted</span>
+                          <span className="attendance-stat-val">{s.total}</span>
+                        </div>
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Attended</span>
+                          <span className="attendance-stat-val attendance-val-green">{s.attended}</span>
+                        </div>
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Absent</span>
+                          <span className="attendance-stat-val attendance-val-red">{s.absent}</span>
+                        </div>
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Excused</span>
+                          <span className="attendance-stat-val attendance-val-purple">{s.excused}</span>
                         </div>
                       </div>
-                      <Badge variant={s.pct >= 85 ? "secondary" : "destructive"} className="attendance-pct-badge">
-                        {s.pct}%
-                      </Badge>
-                    </div>
 
-                    {/* Progress bar with custom color styling */}
-                    <div className="attendance-progress-wrapper">
-                      <Progress value={s.pct} className="attendance-custom-progress" />
-                    </div>
-
-                    {/* Subject Class Stats */}
-                    <div className="attendance-subject-stats-row">
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Conducted</span>
-                        <span className="attendance-stat-val">{s.total}</span>
+                      {/* Safety Margin Indicator */}
+                      <div className="attendance-margin-footer">
+                        <Info size={13} className="attendance-info-icon" />
+                        <span>{s.safeMargin}</span>
                       </div>
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Attended</span>
-                        <span className="attendance-stat-val attendance-val-green">{s.attended}</span>
-                      </div>
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Absent</span>
-                        <span className="attendance-stat-val attendance-val-red">{s.absent}</span>
-                      </div>
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Excused</span>
-                        <span className="attendance-stat-val attendance-val-purple">{s.excused}</span>
-                      </div>
-                    </div>
-
-                    {/* Safety Margin Indicator */}
-                    <div className="attendance-margin-footer">
-                      <Info size={13} className="attendance-info-icon" />
-                      <span>{s.safeMargin}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </div>
 
 
@@ -679,35 +501,43 @@ export default function Attendance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLogs.map(log => (
-                      <tr key={log.id}>
-                        <td>
-                          <div className="attendance-cell-datetime">
-                            <span className="attendance-date">{log.date}</span>
-                            <span className="attendance-time">{log.time}</span>
-                          </div>
-                        </td>
-                        <td className="attendance-font-medium">{log.subject}</td>
-                        <td><Badge variant="outline">{log.slot}</Badge></td>
-                        <td className="attendance-text-muted">{log.faculty}</td>
-                        <td>
-                          <Badge
-                            className={
-                              log.status === "Present"
-                                ? "attendance-status-badge-present"
-                                : log.status === "Absent"
-                                ? "attendance-status-badge-absent"
-                                : "attendance-status-badge-excused"
-                            }
-                          >
-                            {log.status === "Present" && <CheckCircle2 size={12} />}
-                            {log.status === "Absent" && <XCircle size={12} />}
-                            {log.status === "Excused" && <ShieldCheck size={12} />}
-                            {log.status}
-                          </Badge>
+                    {filteredLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="attendance-empty-table-cell">
+                          No recent attendance logs recorded yet.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredLogs.map(log => (
+                        <tr key={log.id}>
+                          <td>
+                            <div className="attendance-cell-datetime">
+                              <span className="attendance-date">{log.date}</span>
+                              <span className="attendance-time">{log.time}</span>
+                            </div>
+                          </td>
+                          <td className="attendance-font-medium">{log.subject}</td>
+                          <td><Badge variant="outline">{log.slot}</Badge></td>
+                          <td className="attendance-text-muted">{log.faculty}</td>
+                          <td>
+                            <Badge
+                              className={
+                                log.status === "Present"
+                                  ? "attendance-status-badge-present"
+                                  : log.status === "Absent"
+                                  ? "attendance-status-badge-absent"
+                                  : "attendance-status-badge-excused"
+                              }
+                            >
+                              {log.status === "Present" && <CheckCircle2 size={12} />}
+                              {log.status === "Absent" && <XCircle size={12} />}
+                              {log.status === "Excused" && <ShieldCheck size={12} />}
+                              {log.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -863,78 +693,85 @@ export default function Attendance() {
 
           {/* Detailed Verification Cards */}
           <div className="attendance-stack-4">
-            {filteredVerifications.map((v) => (
-              <Card key={v.id} className="attendance-verify-card">
-                <CardContent className="attendance-verify-card-content">
-                  <div className="attendance-verify-card-header">
-                    <div className="attendance-verify-title-block">
-                      <div className="attendance-row gap-2">
-                        <Badge variant="outline" className="attendance-id-badge">{v.id}</Badge>
-                        <Badge variant="secondary" className="attendance-cat-badge">{v.category}</Badge>
+            {filteredVerifications.length === 0 ? (
+              <div className="attendance-empty-verify-box">
+                <Clock3 size={32} className="attendance-empty-icon" />
+                <p className="attendance-empty-title">No verification requests found.</p>
+              </div>
+            ) : (
+              filteredVerifications.map((v) => (
+                <Card key={v.id} className="attendance-verify-card">
+                  <CardContent className="attendance-verify-card-content">
+                    <div className="attendance-verify-card-header">
+                      <div className="attendance-verify-title-block">
+                        <div className="attendance-row gap-2">
+                          <Badge variant="outline" className="attendance-id-badge">{v.id}</Badge>
+                          <Badge variant="secondary" className="attendance-cat-badge">{v.category}</Badge>
+                        </div>
+                        <h4 className="attendance-verify-card-title">{v.title}</h4>
+                        <p className="attendance-verify-dates-text">
+                          <CalendarDays size={13} /> {v.startDate} {v.startDate !== v.endDate ? `to ${v.endDate}` : ''} ({v.days} Day{v.days > 1 ? 's' : ''})
+                        </p>
                       </div>
-                      <h4 className="attendance-verify-card-title">{v.title}</h4>
-                      <p className="attendance-verify-dates-text">
-                        <CalendarDays size={13} /> {v.startDate} {v.startDate !== v.endDate ? `to ${v.endDate}` : ''} ({v.days} Day{v.days > 1 ? 's' : ''})
-                      </p>
-                    </div>
 
-                    <div className="attendance-verify-status-box">
-                      <Badge
-                        className={
-                          v.status === "Approved"
-                            ? "attendance-status-badge-present"
-                            : v.status === "Pending"
-                            ? "attendance-status-badge-excused"
-                            : "attendance-status-badge-absent"
-                        }
-                      >
-                        {v.status === "Approved" && <CheckCircle2 size={13} />}
-                        {v.status === "Pending" && <Clock3 size={13} />}
-                        {v.status === "Rejected" && <XCircle size={13} />}
-                        {v.status}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Multi-step Timeline Progress Bar */}
-                  <div className="attendance-verify-timeline">
-                    <div className={`timeline-step ${v.currentStep >= 1 ? 'step-completed' : ''}`}>
-                      <div className="step-circle">{v.currentStep >= 1 ? <Check size={12} /> : "1"}</div>
-                      <span className="step-label">Submitted ({v.submittedDate})</span>
-                    </div>
-                    <div className="timeline-line"></div>
-                    <div className={`timeline-step ${v.currentStep >= 2 ? (v.status === "Rejected" ? 'step-rejected' : 'step-completed') : ''}`}>
-                      <div className="step-circle">{v.currentStep >= 2 ? <Check size={12} /> : "2"}</div>
-                      <span className="step-label">Mentor Review</span>
-                    </div>
-                    <div className="timeline-line"></div>
-                    <div className={`timeline-step ${v.currentStep >= 3 ? 'step-completed' : ''}`}>
-                      <div className="step-circle">{v.currentStep >= 3 ? <Check size={12} /> : "3"}</div>
-                      <span className="step-label">HOD Approval & Regularized</span>
-                    </div>
-                  </div>
-
-                  {/* Mentor Remarks & Attachment Footer */}
-                  <div className="attendance-verify-card-footer">
-                    <div className="attendance-remarks-box">
-                      <MessageSquare size={15} className="attendance-remarks-icon" />
-                      <div>
-                        <span className="remarks-reviewer">Reviewer Remarks ({v.mentor}):</span>
-                        <p className="remarks-text">{v.remarks}</p>
+                      <div className="attendance-verify-status-box">
+                        <Badge
+                          className={
+                            v.status === "Approved"
+                              ? "attendance-status-badge-present"
+                              : v.status === "Pending"
+                              ? "attendance-status-badge-excused"
+                              : "attendance-status-badge-absent"
+                          }
+                        >
+                          {v.status === "Approved" && <CheckCircle2 size={13} />}
+                          {v.status === "Pending" && <Clock3 size={13} />}
+                          {v.status === "Rejected" && <XCircle size={13} />}
+                          {v.status}
+                        </Badge>
                       </div>
                     </div>
 
-                    {v.attachment && (
-                      <div className="attendance-attachment-pill">
-                        <Paperclip size={13} />
-                        <span>{v.attachment}</span>
-                        <Download size={12} className="ml-1 cursor-pointer hover:text-indigo-600" />
+                    {/* Multi-step Timeline Progress Bar */}
+                    <div className="attendance-verify-timeline">
+                      <div className={`timeline-step ${v.currentStep >= 1 ? 'step-completed' : ''}`}>
+                        <div className="step-circle">{v.currentStep >= 1 ? <Check size={12} /> : "1"}</div>
+                        <span className="step-label">Submitted ({v.submittedDate})</span>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <div className="timeline-line"></div>
+                      <div className={`timeline-step ${v.currentStep >= 2 ? (v.status === "Rejected" ? 'step-rejected' : 'step-completed') : ''}`}>
+                        <div className="step-circle">{v.currentStep >= 2 ? <Check size={12} /> : "2"}</div>
+                        <span className="step-label">Mentor Review</span>
+                      </div>
+                      <div className="timeline-line"></div>
+                      <div className={`timeline-step ${v.currentStep >= 3 ? 'step-completed' : ''}`}>
+                        <div className="step-circle">{v.currentStep >= 3 ? <Check size={12} /> : "3"}</div>
+                        <span className="step-label">HOD Approval & Regularized</span>
+                      </div>
+                    </div>
+
+                    {/* Mentor Remarks & Attachment Footer */}
+                    <div className="attendance-verify-card-footer">
+                      <div className="attendance-remarks-box">
+                        <MessageSquare size={15} className="attendance-remarks-icon" />
+                        <div>
+                          <span className="remarks-reviewer">Reviewer Remarks ({v.mentor}):</span>
+                          <p className="remarks-text">{v.remarks}</p>
+                        </div>
+                      </div>
+
+                      {v.attachment && (
+                        <div className="attendance-attachment-pill">
+                          <Paperclip size={13} />
+                          <span>{v.attachment}</span>
+                          <Download size={12} className="ml-1 cursor-pointer hover:text-indigo-600" />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>

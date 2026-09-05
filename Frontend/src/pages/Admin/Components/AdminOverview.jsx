@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield
+  CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -194,6 +194,19 @@ export default function AdminOverview() {
                   </div>
                 </div>
                 <span className="admin-quick-action-arrow admin-quick-action-arrow--green">Open &rarr;</span>
+              </div>
+            </Link>
+
+            <Link to="/admin/broadcast" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <Megaphone size={18} color="#7c3aed" />
+                  <div>
+                    <span className="admin-quick-action-title">Broadcast Notice Center</span>
+                    <span className="admin-quick-action-sub">Send alerts & notices to all batches</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--purple">Send &rarr;</span>
               </div>
             </Link>
 

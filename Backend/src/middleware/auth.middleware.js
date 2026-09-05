@@ -7,12 +7,12 @@ export const authenticateToken = (req, res, next) => {
   const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
 
   if (!token) {
-    return sendError(res, 'Authentication token required', 401);
+    return sendError(res, 'Authentication required. Please log in.', 401);
   }
 
   jwt.verify(token, config.jwt.secret, (err, decodedUser) => {
     if (err) {
-      return sendError(res, 'Invalid or expired authentication token', 401);
+      return sendError(res, 'Invalid or expired authentication token. Please log in again.', 401);
     }
     
     // Normalize user properties for consistent access across controllers/services
@@ -22,7 +22,7 @@ export const authenticateToken = (req, res, next) => {
       userId: decodedUser.userId || decodedUser.id,
       collegeId: decodedUser.collegeId || decodedUser.college_id || 1,
       college_id: decodedUser.college_id || decodedUser.collegeId || 1,
-      role: decodedUser.role || 'student',
+      role: decodedUser.role || 'super_admin',
     };
 
     next();

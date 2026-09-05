@@ -1,99 +1,633 @@
-import React, { useState } from "react";
-import { Plus, Trash2, GraduationCap } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
+import React, { useState, useEffect } from "react";
+import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw } from "lucide-react";
+import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AdminQuizzes.css";
 
-const initialQuizzes = [
-  { id: 1, title: "Python Basics Quiz 1", batch: "Python Backend", questions: 10, status: "Active", submissions: 38 },
-  { id: 2, title: "SQL Advanced Concepts", batch: "Full Stack", questions: 8, status: "Active", submissions: 42 },
-  { id: 3, title: "React Hooks Assessment", batch: "React Frontend", questions: 12, status: "Draft", submissions: 0 },
-  { id: 4, title: "DSA Fundamentals Test", batch: "All Batches", questions: 15, status: "Completed", submissions: 480 },
-];
+const API_BASE = "http://localhost:5000/api/v1";
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+function normalizeQuestion(item, idx) {
+  if (!item) return { id: idx + 1, text: `Question ${idx + 1}`, options: { a: "", b: "", c: "", d: "" }, correct: "a" };
+  const text = item.question_text || item.text || `Question ${idx + 1}`;
+  const opts = item.options ? item.options : {
+    a: item.option_a || "",
+    b: item.option_b || "",
+    c: item.option_c || "N/A",
+    d: item.option_d || "N/A",
+  };
+  const correct = (item.correct_option || item.correct || "a").toString().toLowerCase().trim();
+
+  return {
+    id: item.id || idx + 1,
+    text,
+    options: opts,
+    correct,
+  };
+}
+
+// Map backend assessment → UI quiz shape
+function mapAssessment(a) {
+  const rawQs = Array.isArray(a.questions) ? a.questions : [];
+  const normalizedQs = rawQs.map(normalizeQuestion);
+
+  return {
+    id: a.id,
+    title: a.title,
+    batch: a.batch_name || "All Batches",
+    questionsCount: a.total_questions || normalizedQs.length || 0,
+    type: a.category === "AI Generated" ? "AI Generated" : "Manual",
+    status: a.status === "published" ? "Active" : a.status === "draft" ? "Draft" : a.status,
+    submissions: a.submission_count || 0,
+    questionsList: normalizedQs,
+    description: a.description || "",
+  };
+}
+
 
 export default function AdminQuizzes() {
-  const [quizzes, setQuizzes] = useState(initialQuizzes);
+  const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [mode, setMode] = useState("ai"); // 'ai' or 'manual'
+
+  // Quiz Form Fields
   const [title, setTitle] = useState("");
   const [batch, setBatch] = useState("All Batches");
-  const [questions, setQuestions] = useState("");
+  const [numQuestions, setNumQuestions] = useState("10");
 
-  const handleAdd = (e) => {
-    e.preventDefault();
-    setQuizzes([...quizzes, { id: Date.now(), title, batch, questions: parseInt(questions) || 10, status: "Draft", submissions: 0 }]);
-    setTitle(""); setShowForm(false);
+  // AI Loading state
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Manual Questions State
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualQuestions, setManualQuestions] = useState([]);
+  const [qText, setQText] = useState("");
+  const [optA, setOptA] = useState("");
+  const [optB, setOptB] = useState("");
+  const [optC, setOptC] = useState("");
+  const [optD, setOptD] = useState("");
+  const [correctOpt, setCorrectOpt] = useState("a");
+
+  // View Quiz Questions Modal
+  const [activeQuizQuestions, setActiveQuizQuestions] = useState(null);
+
+  const [availableBatches, setAvailableBatches] = useState([]);
+
+  // ── Fetch quizzes & batches from DB on mount ───────────────────
+  const fetchBatches = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setAvailableBatches(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to load batches:", err);
+    }
   };
 
-  const handleDelete = (id) => setQuizzes(quizzes.filter(q => q.id !== id));
+  const fetchQuizzes = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/assessments`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setQuizzes(data.data.map(mapAssessment));
+      }
+    } catch (err) {
+      console.error("Failed to load quizzes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuizzes();
+    fetchBatches();
+  }, []);
+
+
+  // ── Save quiz + questions to DB ──────────────────────────────────
+  const saveQuizToDB = async (questionsList, quizType) => {
+    const selectedBatchObj = availableBatches.find(b => b.name === batch);
+    const batchId = selectedBatchObj ? selectedBatchObj.id : null;
+
+    // 1. Create the assessment
+    const assessRes = await fetch(`${API_BASE}/assessments`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title: title.trim(),
+        batch_id: batchId,
+        batch_name: batch,
+        category: quizType === "AI Generated" ? "AI Generated" : "Technical Quiz",
+        description: `${quizType} quiz for ${batch}`,
+        status: "published",
+        is_published: true,
+        total_marks: questionsList.length * 10,
+        duration_minutes: Math.max(10, questionsList.length * 2),
+      }),
+    });
+    const assessData = await assessRes.json();
+    if (!assessData.success) throw new Error(assessData.message || "Failed to create quiz");
+    const assessmentId = assessData.data?.id || assessData.data?.insertId;
+    if (!assessmentId) throw new Error("No assessment ID returned");
+
+    // 2. Add each question
+    for (const q of questionsList) {
+      await fetch(`${API_BASE}/assessments/${assessmentId}/questions`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          question_text: q.text,
+          option_a: q.options.a,
+          option_b: q.options.b,
+          option_c: q.options.c !== "N/A" ? q.options.c : null,
+          option_d: q.options.d !== "N/A" ? q.options.d : null,
+          correct_option: q.correct,
+          marks: 10,
+        }),
+      });
+    }
+
+    return assessmentId;
+  };
+
+  // Handle adding a single question to manual queue
+  const handleAddQuestionToManual = (e) => {
+    e.preventDefault();
+    if (!qText.trim() || !optA.trim() || !optB.trim()) {
+      alert("Please provide the question text and at least Options A and B.");
+      return;
+    }
+    const newQ = {
+      id: Date.now(),
+      text: qText,
+      options: { a: optA, b: optB, c: optC || "N/A", d: optD || "N/A" },
+      correct: correctOpt
+    };
+    setManualQuestions([...manualQuestions, newQ]);
+    setQText(""); setOptA(""); setOptB(""); setOptC(""); setOptD(""); setCorrectOpt("a");
+  };
+
+  const handleRemoveManualQuestion = (id) => {
+    setManualQuestions(manualQuestions.filter(q => q.id !== id));
+  };
+
+  // Live Google Gemini AI Question Generator via Backend API
+  const fetchLiveAIQuestions = async (quizTitle, count) => {
+    const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        title: quizTitle,
+        count: parseInt(count, 10) || 10,
+      }),
+    });
+    const data = await res.json();
+    if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
+      throw new Error(data.message || "Failed to generate AI questions with Google Gemini");
+    }
+    return data.data;
+  };
+
+  // Submit Quiz Creation → API
+  const handleCreateQuizSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!title.trim()) { alert("Please enter a Quiz Title."); return; }
+
+    if (mode === "ai") {
+      setIsGenerating(true);
+      try {
+        const aiQs = await fetchLiveAIQuestions(title, numQuestions);
+        await saveQuizToDB(aiQs, "AI Generated");
+        await fetchQuizzes();
+        resetForm();
+      } catch (err) {
+        alert("Error generating quiz: " + err.message);
+      } finally {
+        setIsGenerating(false);
+      }
+
+    } else {
+      if (manualQuestions.length === 0) { alert("Please add at least 1 question before saving the quiz."); return; }
+      setIsGenerating(true);
+      try {
+        await saveQuizToDB(manualQuestions, "Manual");
+        await fetchQuizzes();
+        resetForm();
+      } catch (err) {
+        alert("Error creating quiz: " + err.message);
+      } finally {
+        setIsGenerating(false);
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setTitle(""); setBatch("All Batches"); setNumQuestions("10");
+    setManualQuestions([]); setShowForm(false); setShowManualModal(false);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this quiz? This cannot be undone.")) return;
+    try {
+      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+      setQuizzes(quizzes.filter(q => q.id !== id));
+    } catch (err) {
+      alert("Failed to delete quiz: " + err.message);
+    }
+  };
 
   const statusVariant = (s) => s === "Active" ? "success" : s === "Completed" ? "default" : "outline";
 
+
+
   return (
     <div className="admin-quizzes-container">
-      <div className="quizzes-header-row">
-        <div>
-          <h2 className="quizzes-title">Manage Quizzes</h2>
-          <p className="quizzes-subtitle">Create and track quiz assessments across batches.</p>
-        </div>
-        <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
-          <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
-        </button>
-      </div>
+      <SectionHeader
+        title="Manage Quizzes"
+        description="Create and track quiz assessments across batches using AI or manual entry."
+        action={
+          <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
+            <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
+          </button>
+        }
+      />
 
       {showForm && (
-        <Card className="quiz-add-card">
+        <Card className="quiz-add-card animate-fade-in">
           <CardContent>
-            <form onSubmit={handleAdd} className="quiz-add-form">
+            {/* Creation Option Tabs */}
+            <div className="quiz-mode-selector">
+              <button
+                type="button"
+                className={`mode-tab ${mode === "ai" ? "active" : ""}`}
+                onClick={() => setMode("ai")}
+              >
+                <Sparkles size={18} className="mode-icon ai-sparkle-icon" />
+                <div className="mode-text">
+                  <span className="mode-title">Generate Questions (AI)</span>
+                  <span className="mode-sub">AI automatically generates questions & options</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`mode-tab ${mode === "manual" ? "active" : ""}`}
+                onClick={() => setMode("manual")}
+              >
+                <ListPlus size={18} className="mode-icon" />
+                <div className="mode-text">
+                  <span className="mode-title">Add Questions (Manual)</span>
+                  <span className="mode-sub">Open custom editor screen to enter questions & choices</span>
+                </div>
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateQuizSubmit} className="quiz-add-form">
               <div className="form-group">
                 <label>Quiz Title</label>
-                <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Python OOP Assessment" required />
+                <input
+                  value={title}
+                  onChange={e => setTitle(e.target.value)}
+                  placeholder="e.g. Python OOP Assessment & Data Structures"
+                  required
+                />
               </div>
+
               <div className="form-row">
                 <div className="form-group">
                   <label>Target Batch</label>
                   <select value={batch} onChange={e => setBatch(e.target.value)}>
-                    <option>All Batches</option>
-                    <option>Python Backend</option>
-                    <option>React Frontend</option>
-                    <option>Full Stack</option>
+                    <option value="All Batches">All Batches</option>
+                    {availableBatches.length > 0 ? (
+                      availableBatches.map((b) => (
+                        <option key={b.id} value={b.name}>
+                          {b.name} {b.join_code ? `(${b.join_code})` : ""}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="Python Backend">Python Backend</option>
+                        <option value="React Frontend">React Frontend</option>
+                        <option value="Full Stack">Full Stack</option>
+                      </>
+                    )}
                   </select>
+
                 </div>
-                <div className="form-group">
-                  <label>Number of Questions</label>
-                  <input type="number" value={questions} onChange={e => setQuestions(e.target.value)} placeholder="e.g. 10" />
-                </div>
+
+                {mode === "ai" ? (
+                  <div className="form-group">
+                    <label>Number of Questions to Generate</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      value={numQuestions}
+                      onChange={e => setNumQuestions(e.target.value)}
+                      placeholder="e.g. 10"
+                      required
+                    />
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label>Manual Questions Status</label>
+                    <div className="manual-status-box">
+                      <span className="q-count-badge">{manualQuestions.length} Questions Added</span>
+                      <button
+                        type="button"
+                        className="open-modal-btn"
+                        onClick={() => {
+                          if (!title.trim()) {
+                            alert("Please enter a Quiz Title first.");
+                            return;
+                          }
+                          setShowManualModal(true);
+                        }}
+                      >
+                        <ListPlus size={15} /> Add / Edit Questions Screen
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-              <button type="submit" className="quiz-submit-btn">Create Quiz</button>
+
+              <div className="form-actions">
+                {mode === "ai" ? (
+                  <button type="submit" className="quiz-submit-btn ai-btn" disabled={isGenerating}>
+                    {isGenerating ? (
+                      <>
+                        <span className="spinner"></span> Generating Questions with AI...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={16} /> Generate Quiz with AI
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button type="submit" className="quiz-submit-btn manual-btn">
+                    <CheckCircle2 size={16} /> Save Quiz ({manualQuestions.length} Questions)
+                  </button>
+                )}
+              </div>
             </form>
           </CardContent>
         </Card>
       )}
 
-      <div className="quizzes-grid">
-        {quizzes.map(q => (
-          <Card key={q.id} className="quiz-card">
-            <CardContent className="quiz-card-body">
-              <div className="quiz-icon-wrap">
-                <GraduationCap size={20} />
+      {/* FLASH SCREEN MODAL: Manual Add Questions */}
+      {showManualModal && (
+        <div className="quiz-modal-backdrop">
+          <div className="quiz-modal-content modal-flash-in">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">Question Builder Screen</h3>
+                <p className="modal-subtitle">Quiz: <strong style={{ color: '#4f46e5' }}>{title || "Untitled Quiz"}</strong></p>
               </div>
-              <div className="quiz-info">
-                <h4 className="quiz-name">{q.title}</h4>
-                <div className="quiz-meta">
-                  <span className="quiz-batch-tag">{q.batch}</span>
-                  <span className="quiz-questions">{q.questions} Qs</span>
-                  <span className="quiz-submissions">{q.submissions} submissions</span>
+              <button className="modal-close-btn" onClick={() => setShowManualModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body-grid">
+              {/* Question Entry Form */}
+              <div className="question-entry-pane">
+                <h4 className="pane-heading"><Plus size={16} /> Add New Question</h4>
+                <form onSubmit={handleAddQuestionToManual} className="manual-q-form">
+                  <div className="form-group">
+                    <label>Question Text *</label>
+                    <textarea
+                      rows={3}
+                      value={qText}
+                      onChange={e => setQText(e.target.value)}
+                      placeholder="e.g. What is the difference between let and const in JavaScript?"
+                      required
+                    />
+                  </div>
+
+                  <div className="options-grid">
+                    <div className="form-group">
+                      <label>Option A *</label>
+                      <input
+                        value={optA}
+                        onChange={e => setOptA(e.target.value)}
+                        placeholder="Option A answer text"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Option B *</label>
+                      <input
+                        value={optB}
+                        onChange={e => setOptB(e.target.value)}
+                        placeholder="Option B answer text"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Option C</label>
+                      <input
+                        value={optC}
+                        onChange={e => setOptC(e.target.value)}
+                        placeholder="Option C answer text"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Option D</label>
+                      <input
+                        value={optD}
+                        onChange={e => setOptD(e.target.value)}
+                        placeholder="Option D answer text"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Select Correct Option *</label>
+                    <div className="correct-option-selector">
+                      {['a', 'b', 'c', 'd'].map((optKey) => (
+                        <label key={optKey} className={`opt-choice-label ${correctOpt === optKey ? "selected" : ""}`}>
+                          <input
+                            type="radio"
+                            name="correctOpt"
+                            value={optKey}
+                            checked={correctOpt === optKey}
+                            onChange={() => setCorrectOpt(optKey)}
+                          />
+                          <span>Option {optKey.toUpperCase()}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button type="submit" className="add-question-btn">
+                    <Plus size={16} /> Add Question to Quiz List
+                  </button>
+                </form>
+              </div>
+
+              {/* Added Questions List Preview Pane */}
+              <div className="question-list-pane">
+                <div className="list-pane-header">
+                  <h4 className="pane-heading"><BookOpen size={16} /> Added Questions ({manualQuestions.length})</h4>
                 </div>
+
+                {manualQuestions.length === 0 ? (
+                  <div className="modal-empty-pane">
+                    <HelpCircle size={32} />
+                    <p>No questions added yet.</p>
+                    <span>Fill the form on the left and click "Add Question".</span>
+                  </div>
+                ) : (
+                  <div className="modal-questions-scroll">
+                    {manualQuestions.map((q, idx) => (
+                      <div key={q.id} className="manual-q-item">
+                        <div className="manual-q-head">
+                          <span className="q-number">Q{idx + 1}</span>
+                          <p className="q-title-text">{q.text}</p>
+                          <button
+                            type="button"
+                            className="q-delete-icon"
+                            onClick={() => handleRemoveManualQuestion(q.id)}
+                            title="Remove Question"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                        <div className="manual-q-options-mini">
+                          {Object.entries(q.options).map(([k, val]) => (
+                            <div key={k} className={`mini-opt ${q.correct === k ? "is-correct" : ""}`}>
+                              <span className="opt-key">{k.toUpperCase()}:</span> {val}
+                              {q.correct === k && <CheckCircle2 size={12} className="correct-check-icon" />}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="quiz-right">
-                <Badge variant={statusVariant(q.status)}>{q.status}</Badge>
-                <button className="quiz-delete-btn" onClick={() => handleDelete(q.id)}>
-                  <Trash2 size={15} />
-                </button>
+            </div>
+
+            <div className="modal-footer">
+              <span className="footer-info">Total Questions Added: <strong>{manualQuestions.length}</strong></span>
+              <button
+                type="button"
+                className="modal-done-btn"
+                onClick={() => setShowManualModal(false)}
+              >
+                Done / Return to Quiz Form
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW QUIZ QUESTIONS MODAL */}
+      {activeQuizQuestions && (
+        <div className="quiz-modal-backdrop">
+          <div className="quiz-modal-content modal-flash-in view-quiz-modal">
+            <div className="modal-header">
+              <div>
+                <h3 className="modal-title">{activeQuizQuestions.title}</h3>
+                <p className="modal-subtitle">Batch: {activeQuizQuestions.batch} | Type: {activeQuizQuestions.type}</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <button className="modal-close-btn" onClick={() => setActiveQuizQuestions(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="modal-body-scroll">
+              <div className="questions-view-list">
+                {activeQuizQuestions.questionsList.map((q, i) => (
+                  <div key={q.id || i} className="view-q-card">
+                    <h5 className="view-q-title">Q{i + 1}. {q.text}</h5>
+                    <div className="view-q-options">
+                      {Object.entries(q.options).map(([key, val]) => (
+                        <div key={key} className={`view-opt-pill ${q.correct === key ? "correct" : ""}`}>
+                          <span className="opt-letter">{key.toUpperCase()}</span>
+                          <span className="opt-val">{val}</span>
+                          {q.correct === key && <Badge variant="success" className="correct-badge">Correct</Badge>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="modal-done-btn" onClick={() => setActiveQuizQuestions(null)}>
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quizzes List */}
+      <div className="quizzes-grid">
+        {quizzes.length === 0 ? (
+          <div className="admin-empty-state-card">
+            <GraduationCap size={36} className="admin-empty-state-icon" />
+            <p className="admin-empty-state-title">No quizzes created yet</p>
+            <p className="admin-empty-state-sub">Click "Create Quiz" to add a new assessment for your batches.</p>
+          </div>
+        ) : (
+          quizzes.map(q => (
+            <Card key={q.id} className="quiz-card">
+              <CardContent className="quiz-card-body">
+                <div className="quiz-icon-wrap">
+                  {q.type === "AI Generated" ? (
+                    <Sparkles size={20} className="ai-icon-pulse" />
+                  ) : (
+                    <GraduationCap size={20} />
+                  )}
+                </div>
+                <div className="quiz-info">
+                  <h4 className="quiz-name">{q.title}</h4>
+                  <div className="quiz-meta">
+                    <span className="quiz-batch-tag">{q.batch}</span>
+                    <span className="quiz-questions">{q.questionsCount} Questions</span>
+                    <span className={`quiz-type-tag ${q.type === "AI Generated" ? "type-ai" : "type-manual"}`}>
+                      {q.type === "AI Generated" ? "⚡ AI Generated" : "✍️ Manual"}
+                    </span>
+                    <span className="quiz-submissions">{q.submissions} submissions</span>
+                  </div>
+                </div>
+                <div className="quiz-right">
+                  <Badge variant={statusVariant(q.status)}>{q.status}</Badge>
+                  {q.questionsList && q.questionsList.length > 0 && (
+                    <button
+                      className="quiz-view-btn"
+                      onClick={() => setActiveQuizQuestions(q)}
+                      title="View Questions"
+                    >
+                      <Eye size={15} /> Questions
+                    </button>
+                  )}
+                  <button className="quiz-delete-btn" onClick={() => handleDelete(q.id)} title="Delete Quiz">
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );
 }
+

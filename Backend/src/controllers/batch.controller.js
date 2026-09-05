@@ -5,12 +5,14 @@ import {
   findBatchById,
   createBatch,
   updateBatch,
-  deleteBatch
+  deleteBatch,
+  findBatchByCode,
+  joinStudentBatch,
+  getStudentBatchesModel,
 } from '../models/batch.model.js';
-import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 
-// GET /api/v1/batches  OR  ?college_id=  OR  ?department_id=
+// GET /api/v1/batches
 export const getBatches = async (req, res, next) => {
   try {
     let batches;
@@ -43,25 +45,36 @@ export const getBatchById = async (req, res, next) => {
 // POST /api/v1/batches
 export const addBatch = async (req, res, next) => {
   try {
-    const { college_id, department_id, name, academic_year, start_year, end_year, status } = req.body;
+    const {
+      college_id = 1,
+      department_id,
+      name,
+      mentor,
+      schedule,
+      join_code,
+      joinCode,
+      code_expires_at,
+      codeExpiresAt,
+      students = 0,
+      status = 'active',
+    } = req.body;
 
-    if (!college_id || !department_id || !name) {
-      return sendError(res, 'college_id, department_id, and name are required', 400);
+    if (!name || !name.trim()) {
+      return sendError(res, 'Batch name is required', 400);
     }
 
-    // Validate college exists
-    const colleges = await query('SELECT id FROM colleges WHERE id = ?', [college_id]);
-    if (!colleges.length) {
-      return sendError(res, `College with id ${college_id} does not exist`, 400);
-    }
+    const batch = await createBatch({
+      college_id: college_id || 1,
+      department_id: department_id || null,
+      name: name.trim(),
+      mentor: mentor || '',
+      schedule: schedule || '',
+      join_code: join_code || joinCode || '',
+      code_expires_at: code_expires_at || codeExpiresAt || null,
+      students: students || 0,
+      status: status || 'active',
+    });
 
-    // Validate department exists and belongs to college
-    const departments = await query('SELECT id FROM departments WHERE id = ? AND college_id = ?', [department_id, college_id]);
-    if (!departments.length) {
-      return sendError(res, `Department with id ${department_id} does not exist or does not belong to college ${college_id}`, 400);
-    }
-
-    const batch = await createBatch({ college_id, department_id, name, academic_year, start_year, end_year, status });
     return sendSuccess(res, 'Batch created successfully', batch, 201);
   } catch (error) {
     next(error);
@@ -76,37 +89,30 @@ export const editBatch = async (req, res, next) => {
       return sendError(res, 'Batch not found', 404);
     }
 
-    const { college_id, department_id, name, academic_year, start_year, end_year, status } = req.body;
-
-    const newCollegeId = college_id || existing.college_id;
-    const newDeptId = department_id || existing.department_id;
-    const newName = name || existing.name;
-    const newStatus = status || existing.status;
-
-    // Validate college if being changed
-    if (college_id) {
-      const colleges = await query('SELECT id FROM colleges WHERE id = ?', [college_id]);
-      if (!colleges.length) {
-        return sendError(res, `College with id ${college_id} does not exist`, 400);
-      }
-    }
-
-    // Validate department if being changed
-    if (department_id) {
-      const departments = await query('SELECT id FROM departments WHERE id = ? AND college_id = ?', [newDeptId, newCollegeId]);
-      if (!departments.length) {
-        return sendError(res, `Department with id ${department_id} does not exist or does not belong to the college`, 400);
-      }
-    }
+    const {
+      college_id,
+      department_id,
+      name,
+      mentor,
+      schedule,
+      join_code,
+      joinCode,
+      code_expires_at,
+      codeExpiresAt,
+      students,
+      status,
+    } = req.body;
 
     const updated = await updateBatch(req.params.id, {
-      college_id: newCollegeId,
-      department_id: newDeptId,
-      name: newName,
-      academic_year: academic_year !== undefined ? academic_year : existing.academic_year,
-      start_year: start_year !== undefined ? start_year : existing.start_year,
-      end_year: end_year !== undefined ? end_year : existing.end_year,
-      status: newStatus
+      college_id,
+      department_id,
+      name,
+      mentor,
+      schedule,
+      join_code: join_code !== undefined ? join_code : joinCode,
+      code_expires_at: code_expires_at !== undefined ? code_expires_at : codeExpiresAt,
+      students,
+      status,
     });
 
     return sendSuccess(res, 'Batch updated successfully', updated);
@@ -124,6 +130,61 @@ export const removeBatch = async (req, res, next) => {
     }
     await deleteBatch(req.params.id);
     return sendSuccess(res, 'Batch deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ─── Student: Join Batch by Code ────────────────────────────────
+
+// POST /api/v1/batches/join
+export const joinBatchByCode = async (req, res, next) => {
+  try {
+    const { join_code, code } = req.body;
+    const batchCode = (join_code || code || '').trim();
+
+    if (!batchCode) {
+      return sendError(res, 'Please provide a batch join code', 400);
+    }
+
+    // Find batch by code
+    const batch = await findBatchByCode(batchCode);
+    if (!batch) {
+      return sendError(res, 'Invalid batch code. Please check and try again.', 404);
+    }
+
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return sendError(res, 'Authentication required', 401);
+    }
+
+    // Join the batch
+    const success = await joinStudentBatch(userId, batch.id);
+    if (!success) {
+      return sendError(res, 'Failed to join batch. Please try again.', 500);
+    }
+
+    return sendSuccess(res, `Successfully joined batch: ${batch.name}`, {
+      batch_id: batch.id,
+      batch_name: batch.name,
+      join_code: batch.join_code,
+      status: batch.status,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/v1/batches/my-batches
+export const getMyBatches = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return sendError(res, 'Authentication required', 401);
+    }
+
+    const batches = await getStudentBatchesModel(userId);
+    return sendSuccess(res, 'Your batches retrieved successfully', batches);
   } catch (error) {
     next(error);
   }

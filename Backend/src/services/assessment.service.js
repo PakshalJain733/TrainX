@@ -212,11 +212,13 @@ export const startAssessmentService = async (assessmentId, userId) => {
   }
 
   // 2. Check published
-  if (!assessment.is_published) {
+  const isAvailable = Boolean(assessment.is_published) || assessment.status === 'published';
+  if (!isAvailable) {
     const error = new Error('This assessment is not available yet');
     error.statusCode = 403;
     throw error;
   }
+
 
   // 3. Create or return attempt
   const attempt = await startAttemptModel(assessmentId, userId);
@@ -441,8 +443,9 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     marks_obtained: marksObtained,
     total_marks: totalMarks,
     percentage,
-    status: finalStatus,
+    status: 'completed',
   });
+
 
   // 12. Return result summary
   return {

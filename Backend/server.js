@@ -1,11 +1,14 @@
 import app from './src/app.js';
 import { config } from './src/config/env.js';
 import { checkDatabaseConnection } from './src/config/db.js';
+import { initializeDatabase } from './src/config/init_db.js';
 
 const startServer = async () => {
   try {
-    // Check DB connection on startup
+    // Check DB connection and auto-initialize tables on startup
     await checkDatabaseConnection();
+    await initializeDatabase();
+
 
     const PORT = config.port;
     app.listen(PORT, () => {

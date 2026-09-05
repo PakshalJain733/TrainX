@@ -137,7 +137,7 @@ const completedAnswers = {
   3: [0, 0, 1],          // answers for quiz 3
 };
 
-const quizzes = [
+const builtInQuizzes = [
   {
     id: 1,
     title: "Mid-Term Evaluation: Data Structures",
@@ -150,6 +150,7 @@ const quizzes = [
     status: "Upcoming",
     difficulty: "Medium",
     questions: 5,
+    source: "builtin"
   },
   {
     id: 2,
@@ -164,6 +165,7 @@ const quizzes = [
     score: "26/30",
     difficulty: "Hard",
     questions: 3,
+    source: "builtin"
   },
   {
     id: 3,
@@ -178,8 +180,88 @@ const quizzes = [
     score: "18/20",
     difficulty: "Medium",
     questions: 3,
+    source: "builtin"
   },
 ];
+
+/* ─── Fetch quizzes from Database ─────────────────────────────── */
+const API_BASE = "http://localhost:5000/api/v1";
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+async function fetchApiQuizzes() {
+  try {
+    const [availRes, attemptsRes] = await Promise.all([
+      fetch(`${API_BASE}/assessments/available`, { headers: getAuthHeaders() }),
+      fetch(`${API_BASE}/assessments/my-attempts`, { headers: getAuthHeaders() }).catch(() => ({ json: () => ({ success: false }) }))
+    ]);
+
+    const availData = await availRes.json();
+    const attemptsData = await attemptsRes.json ? await attemptsRes.json() : { success: false };
+
+    const list = availData.success && Array.isArray(availData.data) ? availData.data : [];
+    const userAttempts = attemptsData.success && Array.isArray(attemptsData.data) ? attemptsData.data : [];
+
+    // Create a map of completed attempt results by assessment_id
+    const attemptMap = {};
+    userAttempts.forEach(att => {
+      const qId = String(att.assessment_id);
+      const isFinished = att.status === 'completed' || att.status === 'finished' || att.status === 'passed' || att.status === 'failed' || (att.submitted_at !== null && att.submitted_at !== undefined);
+      if (isFinished) {
+        // Keep the attempt with the highest score / finished status
+        if (!attemptMap[qId] || attemptMap[qId].status === 'in_progress') {
+          attemptMap[qId] = att;
+        }
+      }
+    });
+
+    // Map assessment DB shape -> student quiz shape
+    return list.map((q) => {
+      const pastAttempt = attemptMap[String(q.id)];
+      const isCompleted = Boolean(pastAttempt);
+      const totalQs = q.total_questions || (q.questions ? q.questions.length : 5);
+      const correctCount = pastAttempt ? (pastAttempt.correct_count !== undefined && pastAttempt.correct_count !== null ? pastAttempt.correct_count : Math.round((pastAttempt.marks_obtained || 0) / 10)) : 0;
+      const scoreStr = isCompleted ? `Score: ${correctCount}/${totalQs}` : null;
+
+      return {
+        id: q.id,
+        title: q.title,
+        subject: q.category === "AI Generated" ? "AI Generated" : q.category || "Custom Quiz",
+        topic: q.batch_name || "General",
+        date: q.created_at ? new Date(q.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }) : "Today",
+        duration: `${q.duration_minutes || 30} mins`,
+        durationSecs: (q.duration_minutes || 30) * 60,
+        marks: `${q.total_marks || (q.total_questions || 0) * 10} Marks`,
+        status: isCompleted ? "Completed" : "Upcoming",
+        score: scoreStr,
+        difficulty: "Medium",
+        questions: q.total_questions || q.question_count || (q.questions ? q.questions.length : 0),
+        questionsList: (q.questions || []).map((item) => ({
+          id: item.id,
+          text: item.question_text || item.text || "Question",
+          options: item.options ? item.options : {
+            a: item.option_a || "",
+            b: item.option_b || "",
+            c: item.option_c || "N/A",
+            d: item.option_d || "N/A"
+          },
+          correct: (item.correct_option || item.correct || "a").toString().toLowerCase().trim()
+        })),
+        source: "admin"
+      };
+    });
+  } catch (err) {
+    console.error("Failed to load API quizzes:", err);
+    return [];
+  }
+}
+
 
 /* ─── Timer hook ───────────────────────────────────────────────── */
 function useTimer(initialSecs, onExpire) {
@@ -205,8 +287,27 @@ function useTimer(initialSecs, onExpire) {
 }
 
 /* ─── Quiz Platform (Google-Forms style) ──────────────────────── */
+function normalizeAdminQuestion(q, idx) {
+  // Admin questions: { id, text, options: {a,b,c,d}, correct: 'a' }
+  // -> standard: { id, question, options: [], correct: index, explanation }
+  const optKeys = ['a', 'b', 'c', 'd'];
+  const optionsArr = optKeys.map(k => q.options[k] || '').filter(v => v && v !== 'N/A');
+  const correctIdx = optKeys.indexOf(q.correct);
+  return {
+    id: q.id || idx + 1,
+    question: q.text || `Question ${idx + 1}`,
+    options: optionsArr,
+    correct: correctIdx >= 0 ? correctIdx : 0,
+    explanation: `The correct answer is Option ${(q.correct || 'A').toUpperCase()}.`
+  };
+}
+
 function QuizPlatform({ quiz, mode, onExit }) {
-  const questions = quizQuestions[quiz.id] || [];
+  // For admin quizzes use quiz.questionsList; for built-in use quizQuestions lookup
+  const rawQuestions = quiz.source === "admin" && quiz.questionsList?.length
+    ? quiz.questionsList.map(normalizeAdminQuestion)
+    : (quizQuestions[quiz.id] || []);
+  const questions = rawQuestions;
   const isReview = mode === "review";
   const savedAnswers = isReview ? completedAnswers[quiz.id] || [] : [];
 
@@ -215,10 +316,32 @@ function QuizPlatform({ quiz, mode, onExit }) {
   const [current, setCurrent] = useState(0);
   const [submitted, setSubmitted] = useState(isReview);
 
+
   const { display: timeDisplay, secs: timeLeft } = useTimer(
     isReview ? 0 : quiz.durationSecs,
     () => !isReview && handleSubmit()
   );
+
+  const [attemptId, setAttemptId] = useState(null);
+
+  // Initialize or start assessment attempt with API
+  useEffect(() => {
+    if (quiz.source === "admin" && !isReview && quiz.id) {
+      fetch(`${API_BASE}/assessments/${quiz.id}/start`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data?.attempt?.id) {
+            setAttemptId(data.data.attempt.id);
+          } else if (data.data?.attemptId) {
+            setAttemptId(data.data.attemptId);
+          }
+        })
+        .catch((err) => console.error("Failed to start attempt:", err));
+    }
+  }, [quiz.id, quiz.source, isReview]);
 
   function handleSelect(optIdx) {
     if (submitted) return;
@@ -229,8 +352,31 @@ function QuizPlatform({ quiz, mode, onExit }) {
     });
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
+    if (submitted) return;
     setSubmitted(true);
+
+    if (quiz.source === "admin" && attemptId) {
+      const optKeys = ["a", "b", "c", "d"];
+      const formattedAnswers = questions.map((q, idx) => {
+        const selectedIndex = answers[idx];
+        const selectedOptKey = selectedIndex !== null && selectedIndex !== undefined ? optKeys[selectedIndex] : null;
+        return {
+          question_id: q.id || idx + 1,
+          selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : "A",
+        };
+      });
+
+      try {
+        await fetch(`${API_BASE}/assessments/attempts/${attemptId}/submit`, {
+          method: "POST",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ answers: formattedAnswers }),
+        });
+      } catch (err) {
+        console.error("Failed to submit quiz attempt to backend:", err);
+      }
+    }
   }
 
   const answered = answers.filter((a) => a !== null).length;
@@ -427,7 +573,15 @@ function QuizPlatform({ quiz, mode, onExit }) {
             >
               <ArrowLeft size={16} /> Previous
             </button>
-            {current === questions.length - 1 && !submitted ? (
+            {submitted ? (
+              <button
+                className="qp-nav-arrow qp-nav-arrow--submit"
+                onClick={onExit}
+                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+              >
+                <CheckCircle2 size={16} /> Finish & Return to Dashboard
+              </button>
+            ) : current === questions.length - 1 ? (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit"
                 onClick={handleSubmit}
@@ -455,18 +609,35 @@ export default function AcademicQuiz() {
   const [activeTab, setActiveTab] = useState("All");
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [quizMode, setQuizMode] = useState(null); // "take" | "review"
+  const [allQuizzes, setAllQuizzes] = useState([]);
 
-  const upcomingQuizzes = quizzes.filter((q) => q.status === "Upcoming");
-  const completedQuizzes = quizzes.filter((q) => q.status === "Completed");
+  // Fetch admin-created DB quizzes when page mounts
+  const refreshQuizzes = () => {
+    fetchApiQuizzes().then((apiQuizzes) => {
+      setAllQuizzes(apiQuizzes);
+    });
+  };
+
+  useEffect(() => {
+    refreshQuizzes();
+  }, []);
+
+
+  const upcomingQuizzes = allQuizzes.filter((q) => q.status === "Upcoming");
+  const completedQuizzes = allQuizzes.filter((q) => q.status === "Completed");
   const displayedQuizzes =
-    activeTab === "All" ? quizzes : activeTab === "Upcoming" ? upcomingQuizzes : completedQuizzes;
+    activeTab === "All" ? allQuizzes : activeTab === "Upcoming" ? upcomingQuizzes : completedQuizzes;
 
   if (activeQuiz) {
     return (
       <QuizPlatform
         quiz={activeQuiz}
         mode={quizMode}
-        onExit={() => { setActiveQuiz(null); setQuizMode(null); }}
+        onExit={() => {
+          setActiveQuiz(null);
+          setQuizMode(null);
+          refreshQuizzes();
+        }}
       />
     );
   }
@@ -490,11 +661,13 @@ export default function AcademicQuiz() {
           <Card key={quiz.id} className={`quiz-card ${quiz.status === "Upcoming" ? "quiz-card-highlight" : ""}`}>
             <CardContent className="quiz-card-content">
               <div className="quiz-card-header">
-                <Badge variant={quiz.status === "Upcoming" ? "primary" : "success"}>{quiz.status}</Badge>
+                <Badge variant={quiz.status === "Completed" ? "success" : "primary"}>
+                  {quiz.status}
+                </Badge>
                 {quiz.status === "Completed" && (
                   <div className="quiz-score-badge">
-                    <Trophy size={14} className="text-yellow-500" />
-                    <span>{quiz.score}</span>
+                    <Trophy size={15} style={{ color: '#854d0e', shrink: 0 }} />
+                    <span>{quiz.score && quiz.score.startsWith("Score:") ? quiz.score : `Score: ${quiz.score || "Completed"}`}</span>
                   </div>
                 )}
               </div>

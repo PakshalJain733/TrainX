@@ -5,6 +5,14 @@
   gap: 24px;
 }
 
+.leaderboard-empty-state {
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 .leaderboard-kpis-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

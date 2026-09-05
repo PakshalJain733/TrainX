@@ -3,25 +3,9 @@ import { Trophy, Medal, Award, Flame, Users, Sparkles } from "lucide-react";
 import "../Styles/Leaderboard.css";
 
 const leaderboardData = {
-  overall: [
-    { rank: 1, initials: "SP", name: "Sneha Patil", sub: "CS · 7 milestones", score: 94, isCurrentUser: false },
-    { rank: 2, initials: "AV", name: "Aman Verma", sub: "IT · 7 milestones", score: 92, isCurrentUser: false },
-    { rank: 3, initials: "RS", name: "Riya Shah", sub: "AIML · 6 milestones", score: 90, isCurrentUser: false },
-    { rank: 4, initials: "KM", name: "Karan Mehta", sub: "ECS · 6 milestones", score: 88, isCurrentUser: false },
-    { rank: 5, initials: "NJ", name: "Neha Joshi", sub: "CS · 6 milestones", score: 86, isCurrentUser: false },
-    { rank: 12, initials: "GS", name: "Ganesh Shinde", sub: "ECS · 2 milestones", score: 78, isCurrentUser: true },
-  ],
-  department: [
-    { rank: 1, initials: "KM", name: "Karan Mehta", sub: "ECS · 6 milestones", score: 88, isCurrentUser: false },
-    { rank: 2, initials: "TD", name: "Tanvi Deshmukh", sub: "ECS · 4 milestones", score: 82, isCurrentUser: false },
-    { rank: 3, initials: "GS", name: "Ganesh Shinde", sub: "ECS · 2 milestones", score: 78, isCurrentUser: true },
-    { rank: 4, initials: "RK", name: "Rohan Kulkarni", sub: "ECS · 2 milestones", score: 74, isCurrentUser: false },
-  ],
-  milestone: [
-    { rank: 1, initials: "SP", name: "Sneha Patil", sub: "7 milestones completed", score: 98, isCurrentUser: false },
-    { rank: 2, initials: "AV", name: "Aman Verma", sub: "7 milestones completed", score: 96, isCurrentUser: false },
-    { rank: 7, initials: "GS", name: "Ganesh Shinde", sub: "2 milestones completed", score: 82, isCurrentUser: true },
-  ],
+  overall: [],
+  department: [],
+  milestone: [],
 };
 
 export default function Leaderboard() {
@@ -107,28 +91,34 @@ export default function Leaderboard() {
         </div>
 
         <div className="leaderboard-items-list">
-          {students.map((st) => (
-            <div
-              key={st.name}
-              className={`leaderboard-row-item ${st.isCurrentUser ? "is-current-user" : ""}`}
-            >
-              <div className="leaderboard-row-left">
-                <span className={`leaderboard-rank-num ${getRankClass(st.rank)}`}>
-                  #{st.rank}
-                </span>
-                <div className="leaderboard-avatar">{st.initials}</div>
-                <div className="leaderboard-user-meta">
-                  <div className="leaderboard-user-name">
-                    {st.name}
-                    {st.isCurrentUser && <span className="you-pill">You</span>}
-                  </div>
-                  <div className="leaderboard-user-sub">{st.sub}</div>
-                </div>
-              </div>
-
-              <div className="leaderboard-score-val">{st.score}</div>
+          {students.length === 0 ? (
+            <div className="leaderboard-empty-state">
+              No leaderboard rankings available yet.
             </div>
-          ))}
+          ) : (
+            students.map((st) => (
+              <div
+                key={st.name}
+                className={`leaderboard-row-item ${st.isCurrentUser ? "is-current-user" : ""}`}
+              >
+                <div className="leaderboard-row-left">
+                  <span className={`leaderboard-rank-num ${getRankClass(st.rank)}`}>
+                    #{st.rank}
+                  </span>
+                  <div className="leaderboard-avatar">{st.initials}</div>
+                  <div className="leaderboard-user-meta">
+                    <div className="leaderboard-user-name">
+                      {st.name}
+                      {st.isCurrentUser && <span className="you-pill">You</span>}
+                    </div>
+                    <div className="leaderboard-user-sub">{st.sub}</div>
+                  </div>
+                </div>
+
+                <div className="leaderboard-score-val">{st.score}</div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

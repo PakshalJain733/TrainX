@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
-  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight
+  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
+  Plus, X, KeyRound, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -10,6 +11,17 @@ import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Overview.css";
+import "../Styles/Batches.css";
+
+const API_BASE = "http://localhost:5000/api/v1";
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 const getInitials = (name) => {
   if (!name || name.trim().length === 0) return "?";
@@ -55,6 +67,13 @@ export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
   const navigate = useNavigate();
+
+  // Modal State for Joining Batch from Hero Card
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [modalSuccess, setModalSuccess] = useState("");
 
   const loadUserData = () => {
     try {
@@ -119,6 +138,44 @@ export default function Overview() {
 
     return () => window.removeEventListener("userProfileUpdated", loadUserData);
   }, []);
+
+  // Submit Join Batch from Hero Card Modal
+  const handleJoinSubmit = async (e) => {
+    e.preventDefault();
+    if (!joinCodeInput.trim()) {
+      setModalError("Please enter a valid batch code.");
+      return;
+    }
+
+    setJoining(true);
+    setModalError("");
+    setModalSuccess("");
+
+    try {
+      const res = await fetch(`${API_BASE}/batches/join`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ join_code: joinCodeInput.trim() }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setModalSuccess(data.message || "Successfully joined batch!");
+        setJoinCodeInput("");
+        setTimeout(() => {
+          setShowJoinModal(false);
+          setModalSuccess("");
+          navigate("/student/batches");
+        }, 1200);
+      } else {
+        setModalError(data.message || "Failed to join batch. Please check code.");
+      }
+    } catch (err) {
+      setModalError("Server connection error. Please try again.");
+    } finally {
+      setJoining(false);
+    }
+  };
 
   const studentName = dashboard.personalDetails.name || "Ganesh Shinde";
   const upcoming = dashboard.upcomingDeadlines || [];
@@ -190,13 +247,19 @@ export default function Overview() {
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/student/batches">
-            <Button className="overview-btn-primary">
-              <Sparkles size={14} className="overview-btn-icon" /> Batches
-            </Button>
-          </Link>
+          <Button
+            className="overview-btn-primary"
+            onClick={() => {
+              setModalError("");
+              setModalSuccess("");
+              setShowJoinModal(true);
+            }}
+          >
+            <Plus size={16} className="overview-btn-icon" /> Join Batch
+          </Button>
         </div>
       </div>
+
 
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
@@ -296,6 +359,72 @@ export default function Overview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ─── Join Batch Flash Overlay Modal ───────────────────────── */}
+      {showJoinModal && (
+        <div className="join-modal-overlay">
+          <div className="join-modal-card">
+            <button
+              type="button"
+              className="join-modal-close"
+              onClick={() => setShowJoinModal(false)}
+            >
+              <X size={16} />
+            </button>
+
+            <div className="join-modal-icon-wrap">
+              <KeyRound size={26} />
+            </div>
+
+            <div>
+              <h3 className="join-modal-title">Join a Training Batch</h3>
+              <p className="join-modal-subtitle">
+                Enter the secret join code given to you by your admin or batch mentor.
+              </p>
+            </div>
+
+            {modalError && <div className="join-modal-error">{modalError}</div>}
+            {modalSuccess && <div className="join-modal-success">{modalSuccess}</div>}
+
+            <form onSubmit={handleJoinSubmit} className="join-modal-input-group">
+              <label className="join-modal-label">Enter Batch Code</label>
+              <input
+                type="text"
+                className="join-modal-input"
+                placeholder="e.g. PY-BE-2026"
+                value={joinCodeInput}
+                onChange={(e) => setJoinCodeInput(e.target.value)}
+                autoFocus
+              />
+
+              <div className="join-modal-actions" style={{ marginTop: "12px" }}>
+                <button
+                  type="button"
+                  className="join-modal-cancel-btn"
+                  onClick={() => setShowJoinModal(false)}
+                  disabled={joining}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="join-modal-submit-btn"
+                  disabled={joining}
+                >
+                  {joining ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Joining...
+                    </>
+                  ) : (
+                    "Join Batch"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

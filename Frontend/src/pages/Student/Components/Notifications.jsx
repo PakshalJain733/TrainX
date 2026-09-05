@@ -104,24 +104,29 @@ export default function Notifications() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    apiFetch("/student/notifications")
+    // Fetch live broadcast announcements from admin
+    apiFetch("/admin/broadcast")
       .then((res) => {
-        if (res.data && res.data.length > 0) {
-          const mapped = res.data.map((n) => ({
-            id: n.id,
-            title: n.title,
-            body: n.body,
-            time: "Recently",
-            category: "System",
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const broadcastMapped = res.data.map((b) => ({
+            id: `broadcast-${b.id}`,
+            title: `[Notice] ${b.title}`,
+            body: b.message,
+            time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
+            category: "Broadcast",
             icon: Bell,
-            iconColor: "#2563eb",
-            iconBg: "#eff6ff",
-            unread: !n.read,
+            iconColor: "#7c3aed",
+            iconBg: "#f5f3ff",
+            unread: true,
           }));
-          setNotifications((prev) => [...mapped, ...prev]);
+          setNotifications((prev) => {
+            const existingIds = new Set(prev.map((p) => p.id));
+            const newNotifs = broadcastMapped.filter((n) => !existingIds.has(n.id));
+            return [...newNotifs, ...prev];
+          });
         }
       })
-      .catch((err) => console.error("NOTIFICATIONS FETCH ERROR:", err));
+      .catch((err) => console.error("BROADCAST FETCH ERROR:", err));
   }, []);
 
   const markAllRead = () => {

@@ -18,6 +18,7 @@ import {
   getAttemptResult,
   getAssessmentResults,
   submitAssessmentAttempt,
+  generateAIQuestionsCtrl,
 } from '../controllers/assessment.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -27,7 +28,15 @@ const router = Router();
 // All assessment endpoints require authentication
 router.use(authenticateToken);
 
+// Generate questions using Google Gemini AI
+router.post(
+  '/generate-ai-questions',
+  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  generateAIQuestionsCtrl
+);
+
 // ─── Result & Attempt Routes (before /:id to avoid param conflicts) ────────────
+
 
 // View full result for a completed attempt
 router.get(
@@ -49,7 +58,7 @@ router.post(
 // ─── Student Personal Routes ───────────────────────────────────────────────────
 
 // Available/published assessments for students
-router.get('/available', getPublishedAssessments);
+router.get('/available', authorizeRoles('student'), getPublishedAssessments);
 
 // List all past attempts for the logged-in student
 router.get(

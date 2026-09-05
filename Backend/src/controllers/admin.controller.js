@@ -227,3 +227,143 @@ export const deleteUserAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+// -------------------------------------------------------------
+// Practice Problems / Coding Tasks Management
+// -------------------------------------------------------------
+import {
+  getPracticeProblemsModel,
+  createPracticeProblemModel,
+  deletePracticeProblemModel,
+} from '../models/practiceProblem.model.js';
+
+export const getAdminPracticeProblems = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req);
+    const { batch_id, difficulty } = req.query;
+    const problems = await getPracticeProblemsModel({ collegeId, batchId: batch_id, difficulty });
+    return sendSuccess(res, 'Practice problems retrieved successfully', problems);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createAdminPracticeProblem = async (req, res, next) => {
+  try {
+    const {
+      title,
+      batch = 'All Batches',
+      batch_id = null,
+      difficulty = 'Medium',
+      category = 'General DSA',
+      tags = '',
+      description = '',
+      points = 100,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return sendError(res, 'Problem title is required', 400);
+    }
+
+    const collegeId = getCallerCollegeFilter(req) || 1;
+    const newProblem = await createPracticeProblemModel({
+      college_id: collegeId,
+      batch_id,
+      batch_name: batch,
+      title: title.trim(),
+      description,
+      difficulty,
+      category,
+      tags,
+      points,
+      created_by: req.user ? req.user.id : 1,
+    });
+
+    return sendSuccess(res, 'Coding problem created successfully', newProblem, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdminPracticeProblem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deletePracticeProblemModel(id);
+    return sendSuccess(res, 'Coding problem deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// -------------------------------------------------------------
+// Admin Profile Management
+// -------------------------------------------------------------
+export const getAdminProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id || 1;
+    const user = await findUserById(userId);
+    return sendSuccess(res, 'Admin profile retrieved successfully', user || req.user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAdminProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id || 1;
+    const updated = await updateUserModel(userId, req.body);
+    return sendSuccess(res, 'Admin profile updated successfully', updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// -------------------------------------------------------------
+// Admin Broadcast Notifications Center
+// -------------------------------------------------------------
+import {
+  getBroadcastsModel,
+  createBroadcastModel,
+  deleteBroadcastModel,
+} from '../models/broadcast.model.js';
+
+export const getAdminBroadcasts = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req);
+    const broadcasts = await getBroadcastsModel(collegeId);
+    return sendSuccess(res, 'Broadcast messages retrieved successfully', broadcasts);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createAdminBroadcast = async (req, res, next) => {
+  try {
+    const { title, message, target = 'All Batches', priority = 'General Announcement' } = req.body;
+    if (!title || !message) {
+      return sendError(res, 'Title and message text are required', 400);
+    }
+    const collegeId = getCallerCollegeFilter(req) || 1;
+    const created = await createBroadcastModel({
+      college_id: collegeId,
+      title: title.trim(),
+      message: message.trim(),
+      target,
+      priority,
+      created_by: req.user ? req.user.id : 1,
+    });
+    return sendSuccess(res, 'Broadcast sent successfully to all targets', created, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdminBroadcast = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deleteBroadcastModel(id);
+    return sendSuccess(res, 'Broadcast message deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};

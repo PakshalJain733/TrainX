@@ -8,10 +8,11 @@ export const authorizeRoles = (...allowedRoles) => {
     }
 
     const userRole = req.user.role;
-    const isSuperAdmin = userRole === ROLES.SUPER_ADMIN;
+    const isSuperAdmin = userRole === ROLES.SUPER_ADMIN || userRole === 'super_admin';
+    const isCollegeAdmin = userRole === ROLES.COLLEGE_ADMIN || userRole === 'college_admin';
     const isDirectlyAllowed = allowedRoles.includes(userRole);
 
-    if (isDirectlyAllowed || isSuperAdmin) {
+    if (isDirectlyAllowed || isSuperAdmin || isCollegeAdmin) {
       return next();
     }
 

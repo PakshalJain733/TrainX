@@ -27,18 +27,13 @@ CREATE TABLE IF NOT EXISTS departments (
 CREATE TABLE IF NOT EXISTS batches (
   id INT AUTO_INCREMENT PRIMARY KEY,
   college_id INT NOT NULL,
-  department_id INT NOT NULL,
   name VARCHAR(100) NOT NULL,
   year VARCHAR(20) DEFAULT 'TE',
-  division VARCHAR(20) DEFAULT 'A',
   academic_year VARCHAR(20) DEFAULT '2025-2026',
-  start_year INT,
-  end_year INT,
   status ENUM('active', 'inactive') DEFAULT 'active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-  FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
 );
 
 
@@ -47,9 +42,9 @@ CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
-  mobile_number VARCHAR(20),
+  mobile_number VARCHAR(15) UNIQUE,
   role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
-  college_id INT DEFAULT 1,
+  college_id VARCHAR(255) UNIQUE,
   is_active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -60,7 +55,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS students (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT UNIQUE NOT NULL,
-  college_id INT DEFAULT 1,
+  college_id VARCHAR(255),
   department_id INT NULL,
   batch_id INT NULL,
   roll_number VARCHAR(100) NOT NULL,
@@ -163,4 +158,43 @@ CREATE TABLE IF NOT EXISTS assessment_answers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
   FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
+);
+
+-- 11. Attendance Table (Saves student attendance per batch session)
+CREATE TABLE IF NOT EXISTS attendance (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT DEFAULT 1,
+  batch_id INT NOT NULL,
+  user_id INT NOT NULL,
+  session_date DATE NOT NULL,
+  status ENUM('present', 'absent', 'late', 'excused') NOT NULL DEFAULT 'present',
+  marked_by INT NULL,
+  remarks VARCHAR(255) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (marked_by) REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE KEY unique_user_batch_date (batch_id, user_id, session_date)
+);
+
+-- 12. Practice Problems / Coding Tasks Table
+CREATE TABLE IF NOT EXISTS practice_problems (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT DEFAULT 1,
+  batch_id INT NULL,
+  batch_name VARCHAR(100) DEFAULT 'All Batches',
+  title VARCHAR(255) NOT NULL,
+  description TEXT NULL,
+  difficulty ENUM('Easy', 'Medium', 'Hard') NOT NULL DEFAULT 'Medium',
+  category VARCHAR(100) DEFAULT 'General DSA',
+  tags VARCHAR(255) NULL,
+  points INT DEFAULT 100,
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
