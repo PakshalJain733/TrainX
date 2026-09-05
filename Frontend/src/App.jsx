@@ -86,6 +86,8 @@ import CoordinatorRequests from './pages/Coordinator/Components/Requests';
 import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
 import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
+import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
+import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
 
 function App() {
   return (
@@ -167,6 +169,7 @@ function App() {
           <Route path="placement" element={<CoordinatorPlacement />} />
           <Route path="requests" element={<CoordinatorRequests />} />
           <Route path="reports" element={<CoordinatorWeeklyReports />} />
+          <Route path="practice" element={<CoordinatorCodingPractice />} />
           <Route path="notifications" element={<CoordinatorNotifications />} />
           <Route path="profile" element={<CoordinatorProfilePage />} />
           <Route path="settings" element={<CoordinatorProfilePage />} />
@@ -184,6 +187,7 @@ function App() {
           <Route path="students" element={<StudentsRiskPage />} />
           <Route path="performance" element={<SuperAdminPerformancePage />} />
           <Route path="attendance" element={<SuperAdminAttendancePage />} />
+          <Route path="coding-practice" element={<SuperAdminCodingPractice />} />
           <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
           <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
           <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />

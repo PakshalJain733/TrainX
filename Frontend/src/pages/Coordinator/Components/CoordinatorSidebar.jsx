@@ -13,6 +13,7 @@ import {
   Bell,
   Settings,
   HelpCircle,
+  Code,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/CoordinatorSidebar.css";
@@ -43,6 +44,7 @@ const primaryNavItems = [
   { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
   { title: "Live Schedules", url: "/coordinator/schedules", icon: CalendarCheck },
   { title: "Assessments & Quiz", url: "/coordinator/assessments", icon: FileCheck2 },
+  { title: "Coding Practice", url: "/coordinator/practice", icon: Code },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: LineChart },
   { title: "Placement Drives", url: "/coordinator/placement", icon: Briefcase },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },

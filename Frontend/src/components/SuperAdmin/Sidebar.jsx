@@ -16,7 +16,8 @@ import {
   ClipboardCheck,
   FileText,
   SlidersHorizontal,
-  Shield
+  Shield,
+  Code
 } from 'lucide-react';
 
 const navigationGroups = [
@@ -43,6 +44,7 @@ const navigationGroups = [
     items: [
       { name: 'Performance', path: '/super-admin/performance', icon: TrendingUp },
       { name: 'Attendance', path: '/super-admin/attendance', icon: CalendarCheck },
+      { name: 'Coding practice', path: '/super-admin/coding-practice', icon: Code },
     ]
   },
   {
