@@ -156,15 +156,27 @@ export const findBatchByCode = async (code) => {
 // Join student to a batch (updates students.batch_id)
 export const joinStudentBatch = async (userId, batchId) => {
   try {
-    // Update the student record's batch_id
-    await query(
-      `UPDATE students SET batch_id = ? WHERE user_id = ?`,
-      [parseInt(batchId, 10), parseInt(userId, 10)]
-    );
+    const uId = parseInt(userId, 10);
+    const bId = parseInt(batchId, 10);
+
+    // Check if student row exists for user
+    const rows = await query('SELECT id FROM students WHERE user_id = ? LIMIT 1', [uId]);
+    if (rows && rows.length > 0) {
+      // Update existing student record's batch_id
+      await query('UPDATE students SET batch_id = ? WHERE user_id = ?', [bId, uId]);
+    } else {
+      // Create new student record with batch_id
+      await query(
+        `INSERT INTO students (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills)
+         VALUES (?, 1, NULL, ?, '', '', '', '', '', '8.0', '')`,
+        [uId, bId]
+      );
+    }
+
     // Also bump batch student count
     await query(
-      `UPDATE batches SET students = COALESCE(students, 0) + 1 WHERE id = ?`,
-      [parseInt(batchId, 10)]
+      'UPDATE batches SET students = COALESCE(students, 0) + 1 WHERE id = ?',
+      [bId]
     );
     return true;
   } catch (error) {
