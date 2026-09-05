@@ -10,6 +10,7 @@ import {
   Clock,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/LearningContent.css";
 
 const initialResources = [];
@@ -44,7 +45,12 @@ export default function LearningContent() {
   }, [resources, searchQuery, selectedFilter]);
 
   return (
-    <div className="learning-content-page">
+    <div className="learning-content-page stack-6">
+      <SectionHeader
+        eyebrow="STUDY MATERIALS & CURRICULUM"
+        title="Learning Resources & Documentation"
+        description="Access module lecture notes, reference guides, coding cheatsheets, and faculty curriculum resources."
+      />
       {/* Search and Category Filter Card */}
       <div className="learning-search-card">
         <div className="learning-search-bar">

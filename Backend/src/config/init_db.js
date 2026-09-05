@@ -266,7 +266,37 @@ export async function initializeDatabase() {
       )
     `);
 
-    console.log('[DB Init] All tables (including assessments & questions) successfully created and verified in MySQL!');
+    // 13. Ensure Batch Tasks Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        batch_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        topic VARCHAR(255) NULL,
+        difficulty ENUM('Easy', 'Medium', 'Hard') DEFAULT 'Medium',
+        points INT DEFAULT 100,
+        deadline VARCHAR(100) NULL,
+        description TEXT NULL,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 14. Ensure Task Submissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS task_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        user_id INT NOT NULL,
+        code TEXT NULL,
+        status ENUM('Submitted', 'Passed', 'Failed') DEFAULT 'Submitted',
+        score INT DEFAULT 100,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES batch_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    console.log('[DB Init] All tables (including batch_tasks & task_submissions) successfully created and verified in MySQL!');
 
     await conn.end();
     return true;

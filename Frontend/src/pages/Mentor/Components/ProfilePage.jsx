@@ -154,10 +154,9 @@ export default function ProfilePage() {
           <form onSubmit={handleSave}>
             <div className="profile-form-section">
               <div className="profile-section-heading">
-                <User size={18} className="profile-heading-icon" />
                 <div>
-                  <h3 className="profile-heading-title">Account Details</h3>
-                  <p className="profile-heading-desc">Update your administrator account details.</p>
+                  <h3 className="profile-heading-title">Personal & Contact Details</h3>
+                  <p className="profile-heading-desc">Used for student communication, platform credentials, and notification digests.</p>
                 </div>
               </div>
 

@@ -22,6 +22,7 @@ import {
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card, CardContent } from "../../../components/ui/Card";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AcademicQuiz.css";
 
 /* ─── Admin-provided questions (mock) ─────────────────────────── */
@@ -137,52 +138,6 @@ const completedAnswers = {
   3: [0, 0, 1],          // answers for quiz 3
 };
 
-const builtInQuizzes = [
-  {
-    id: 1,
-    title: "Mid-Term Evaluation: Data Structures",
-    subject: "Computer Science",
-    topic: "Arrays, Linked Lists, Trees",
-    date: "August 28, 2026",
-    duration: "5 mins",
-    durationSecs: 5 * 60,
-    marks: "50 Marks",
-    status: "Upcoming",
-    difficulty: "Medium",
-    questions: 5,
-    source: "builtin"
-  },
-  {
-    id: 2,
-    title: "Operating Systems Core Concepts",
-    subject: "Computer Science",
-    topic: "Processes, Threads, Scheduling",
-    date: "August 25, 2026",
-    duration: "30 mins",
-    durationSecs: 30 * 60,
-    marks: "30 Marks",
-    status: "Completed",
-    score: "26/30",
-    difficulty: "Hard",
-    questions: 3,
-    source: "builtin"
-  },
-  {
-    id: 3,
-    title: "Database Normalization Quiz",
-    subject: "Database Management",
-    topic: "1NF, 2NF, 3NF, BCNF",
-    date: "August 20, 2026",
-    duration: "20 mins",
-    durationSecs: 20 * 60,
-    marks: "20 Marks",
-    status: "Completed",
-    score: "18/20",
-    difficulty: "Medium",
-    questions: 3,
-    source: "builtin"
-  },
-];
 
 /* ─── Fetch quizzes from Database ─────────────────────────────── */
 const API_BASE = "http://localhost:5000/api/v1";
@@ -370,6 +325,16 @@ function QuizPlatform({ quiz, mode, onExit }) {
     if (submitted) return;
     setSubmitted(true);
     setWasSubmitted(true); // Always mark as submitted locally
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('student_completed_quizzes') || '[]');
+      if (!stored.includes(String(quiz.id))) {
+        stored.push(String(quiz.id));
+        stored.push(String(quiz.title || '').toLowerCase());
+        localStorage.setItem('student_completed_quizzes', JSON.stringify(stored));
+      }
+      window.dispatchEvent(new Event('quizCompletedUpdated'));
+    } catch (e) {}
 
     if (quiz.source !== "admin") return; // builtin quizzes don't need backend
 
@@ -644,6 +609,111 @@ function QuizPlatform({ quiz, mode, onExit }) {
   );
 }
 
+const practiceQuizzes = [
+  {
+    id: "p1",
+    title: "Data Structures: Arrays & Linked Lists Drill",
+    subject: "Core Computer Science",
+    topic: "Arrays, Pointers, Linked Lists",
+    date: "Available Now",
+    duration: "15 mins",
+    durationSecs: 15 * 60,
+    marks: "30 Marks",
+    status: "Upcoming",
+    difficulty: "Medium",
+    questions: 3,
+    questionsList: [
+      {
+        id: 101,
+        text: "What is the time complexity of accessing an element in an array by index?",
+        options: { a: "O(n)", b: "O(log n)", c: "O(1)", d: "O(n²)" },
+        correct: "c"
+      },
+      {
+        id: 102,
+        text: "Which data structure follows the LIFO (Last In, First Out) principle?",
+        options: { a: "Queue", b: "Stack", c: "Linked List", d: "Binary Tree" },
+        correct: "b"
+      },
+      {
+        id: 103,
+        text: "What is the primary advantage of a Doubly Linked List over a Singly Linked List?",
+        options: { a: "Requires less memory", b: "Faster element lookup", c: "Bidirectional traversal", d: "Constant time sorting" },
+        correct: "c"
+      }
+    ],
+    source: "practice"
+  },
+  {
+    id: "p2",
+    title: "Web Development: React & ES6 Essentials",
+    subject: "Full Stack Development",
+    topic: "Hooks, Virtual DOM, Promises",
+    date: "Available Now",
+    duration: "20 mins",
+    durationSecs: 20 * 60,
+    marks: "40 Marks",
+    status: "Upcoming",
+    difficulty: "Medium",
+    questions: 3,
+    questionsList: [
+      {
+        id: 201,
+        text: "Which React Hook is primarily used for managing side effects in functional components?",
+        options: { a: "useState", b: "useContext", c: "useEffect", d: "useReducer" },
+        correct: "c"
+      },
+      {
+        id: 202,
+        text: "What concept does React use to minimize direct DOM manipulations for optimal rendering performance?",
+        options: { a: "Real DOM", b: "Virtual DOM", c: "Shadow DOM", d: "HTML Template DOM" },
+        correct: "b"
+      },
+      {
+        id: 203,
+        text: "Which ES6 keyword declares a block-scoped variable that cannot be reassigned?",
+        options: { a: "var", b: "let", c: "const", d: "static" },
+        correct: "c"
+      }
+    ],
+    source: "practice"
+  },
+  {
+    id: "p3",
+    title: "SQL Databases & Indexing Practice",
+    subject: "Database Management",
+    topic: "SELECT, JOINs, B-Trees, Normalization",
+    date: "Available Now",
+    duration: "10 mins",
+    durationSecs: 10 * 60,
+    marks: "20 Marks",
+    status: "Upcoming",
+    difficulty: "Easy",
+    questions: 3,
+    questionsList: [
+      {
+        id: 301,
+        text: "Which SQL clause is used to filter records resulting from a GROUP BY statement?",
+        options: { a: "WHERE", b: "HAVING", c: "ORDER BY", d: "LIKE" },
+        correct: "b"
+      },
+      {
+        id: 302,
+        text: "What type of JOIN returns all records when there is a match in either left or right table?",
+        options: { a: "INNER JOIN", b: "LEFT JOIN", c: "FULL OUTER JOIN", d: "RIGHT JOIN" },
+        correct: "c"
+      },
+      {
+        id: 303,
+        text: "Which normal form requires eliminating partial dependency of non-key attributes on candidate keys?",
+        options: { a: "1NF", b: "2NF", c: "3NF", d: "BCNF" },
+        correct: "b"
+      }
+    ],
+    source: "practice"
+  }
+];
+
 /* ─── Main AcademicQuiz page ───────────────────────────────────── */
 export default function AcademicQuiz() {
   const [activeTab, setActiveTab] = useState("All");
@@ -654,9 +724,38 @@ export default function AcademicQuiz() {
   // Fetch admin-created DB quizzes when page mounts
   const refreshQuizzes = () => {
     fetchApiQuizzes().then((apiQuizzes) => {
-      const apiIds = new Set(apiQuizzes.map((q) => String(q.id)));
-      const filteredBuiltIn = builtInQuizzes.filter((b) => !apiIds.has(String(b.id)));
-      setAllQuizzes([...apiQuizzes, ...filteredBuiltIn]);
+      const completedQuizIds = new Set(
+        JSON.parse(localStorage.getItem("student_completed_quizzes") || "[]").map(String)
+      );
+
+      let merged = [...apiQuizzes];
+      if (merged.length === 0) {
+        // Fallback to practice quizzes catalog
+        merged = practiceQuizzes.map((pq) => {
+          const isDone = completedQuizIds.has(String(pq.id));
+          return {
+            ...pq,
+            status: isDone ? "Completed" : "Upcoming",
+            score: isDone ? "Score: 3/3" : null,
+          };
+        });
+      } else {
+        // Check practice quizzes not covered by API
+        const apiIds = new Set(apiQuizzes.map((q) => String(q.id)));
+        const extraPractice = practiceQuizzes
+          .filter((pq) => !apiIds.has(String(pq.id)))
+          .map((pq) => {
+            const isDone = completedQuizIds.has(String(pq.id));
+            return {
+              ...pq,
+              status: isDone ? "Completed" : "Upcoming",
+              score: isDone ? "Score: 3/3" : null,
+            };
+          });
+        merged = [...merged, ...extraPractice];
+      }
+
+      setAllQuizzes(merged);
     });
   };
 
@@ -700,6 +799,12 @@ export default function AcademicQuiz() {
 
   return (
     <div className="academic-quiz-page stack-6">
+      <SectionHeader
+        eyebrow="ACADEMIC EVALUATION"
+        title="Academic & Practice Quizzes"
+        description="Attempt your scheduled faculty assessments, evaluate core technical concepts, and review past test scores."
+      />
+
       <div className="quiz-filters">
         <button className={`quiz-filter-btn ${activeTab === "All" ? "active" : ""}`} onClick={() => setActiveTab("All")}>
           All Quizzes

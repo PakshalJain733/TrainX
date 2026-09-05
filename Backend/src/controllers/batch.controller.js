@@ -9,6 +9,11 @@ import {
   findBatchByCode,
   joinStudentBatch,
   getStudentBatchesModel,
+  getBatchStudentsModel,
+  createBatchTaskModel,
+  getBatchTasksModel,
+  deleteBatchTaskModel,
+  getTaskSubmissionsModel,
 } from '../models/batch.model.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 
@@ -185,6 +190,59 @@ export const getMyBatches = async (req, res, next) => {
 
     const batches = await getStudentBatchesModel(userId);
     return sendSuccess(res, 'Your batches retrieved successfully', batches);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/v1/batches/:id/students
+export const getBatchStudents = async (req, res, next) => {
+  try {
+    const students = await getBatchStudentsModel(req.params.id);
+    return sendSuccess(res, 'Batch students retrieved successfully', students);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// POST /api/v1/batches/:id/tasks
+export const addBatchTask = async (req, res, next) => {
+  try {
+    const task = await createBatchTaskModel({
+      ...req.body,
+      batch_id: req.params.id,
+    });
+    return sendSuccess(res, 'Batch task created successfully', task, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/v1/batches/:id/tasks
+export const getBatchTasks = async (req, res, next) => {
+  try {
+    const tasks = await getBatchTasksModel(req.params.id);
+    return sendSuccess(res, 'Batch tasks retrieved successfully', tasks);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// DELETE /api/v1/batches/tasks/:taskId
+export const removeBatchTask = async (req, res, next) => {
+  try {
+    await deleteBatchTaskModel(req.params.taskId);
+    return sendSuccess(res, 'Task deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// GET /api/v1/batches/tasks/:taskId/submissions
+export const getTaskSubmissions = async (req, res, next) => {
+  try {
+    const submissions = await getTaskSubmissionsModel(req.params.taskId);
+    return sendSuccess(res, 'Task submissions retrieved successfully', submissions);
   } catch (error) {
     next(error);
   }

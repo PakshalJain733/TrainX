@@ -239,10 +239,9 @@ export default function AdminProfile() {
         {/* RIGHT COLUMN: Edit Form & Notification Preferences */}
         <div className="profile-form-card">
           <form onSubmit={handleSave}>
-            {/* Section 1: Personal Details */}
+            {/* Section 1: Personal Contact Details */}
             <div className="profile-form-section">
               <div className="profile-section-heading">
-                <User size={18} className="profile-heading-icon" />
                 <div>
                   <h3 className="profile-heading-title">Account Details</h3>
                   <p className="profile-heading-desc">Update your administrator account details.</p>
@@ -251,7 +250,7 @@ export default function AdminProfile() {
 
               <div className="profile-form-grid">
                 <div className="profile-field">
-                  <label className="profile-label">Full Name *</label>
+                  <label className="profile-label">Full Name</label>
                   <input
                     type="text"
                     className="profile-input"
@@ -262,7 +261,7 @@ export default function AdminProfile() {
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Email Address *</label>
+                  <label className="profile-label">Email Address</label>
                   <input
                     type="email"
                     className="profile-input"
@@ -281,36 +280,21 @@ export default function AdminProfile() {
                     onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                   />
                 </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Role / Designation</label>
-                  <select
-                    className="profile-input profile-select"
-                    value={form.role}
-                    onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
-                  >
-                    <option value="System Administrator">System Administrator</option>
-                    <option value="College Administrator">College Administrator</option>
-                    <option value="Placement Officer">Placement Officer</option>
-                    <option value="Head of Department">Head of Department</option>
-                  </select>
-                </div>
               </div>
             </div>
 
-            {/* Section 2: Institutional Information */}
-            <div className="profile-form-section">
+            {/* Section 2: Institutional Settings */}
+            <div className="profile-form-section mt-6">
               <div className="profile-section-heading">
-                <Building size={18} className="profile-heading-icon" />
                 <div>
-                  <h3 className="profile-heading-title">Institutional Information</h3>
-                  <p className="profile-heading-desc">College and department assignment.</p>
+                  <h3 className="profile-heading-title">Institutional Overview</h3>
+                  <p className="profile-heading-desc">College affiliation and department authority settings.</p>
                 </div>
               </div>
 
               <div className="profile-form-grid">
-                <div className="profile-field">
-                  <label className="profile-label">College / Institution</label>
+                <div className="profile-field full-width">
+                  <label className="profile-label">College Name</label>
                   <input
                     type="text"
                     className="profile-input"
@@ -330,12 +314,12 @@ export default function AdminProfile() {
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Campus / Office Location</label>
+                  <label className="profile-label">Designation / Role</label>
                   <input
                     type="text"
                     className="profile-input"
-                    value={form.location}
-                    onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                    value={form.role}
+                    readOnly
                   />
                 </div>
               </div>

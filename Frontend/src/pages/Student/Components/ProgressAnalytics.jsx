@@ -1,4 +1,5 @@
 import React from "react";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/ProgressAnalytics.css";
 
 const weeklyData = [
@@ -42,7 +43,13 @@ export default function ProgressAnalytics() {
   const avgQuiz = Math.round(quizScores.reduce((a, q) => a + q.score, 0) / quizScores.length);
 
   return (
-    <div className="progress-analytics-page">
+    <div className="progress-analytics-page stack-6">
+      <SectionHeader
+        eyebrow="PERFORMANCE METRICS"
+        title="Student Progress Analytics"
+        description="Track problem solving velocity, weekly milestones completion, accuracy trends, and quiz performance analytics."
+      />
+
       {/* 3 Top KPIs */}
       <div className="progress-kpis-grid">
         <div className="progress-kpi-card">

@@ -6,11 +6,46 @@ import AIRiskAuditModal from '../../components/SuperAdmin/AIRiskAuditModal';
 import './SuperAdmin.css';
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
-  const sampleNotifications = [
+  const [notifications, setNotifications] = useState([
     { id: 1, type: "alert", title: "4 Admin Verification Requests Pending", time: "10 min ago", unread: true },
     { id: 2, type: "success", title: "Apex Institute of Tech batch sync complete", time: "1h ago", unread: true },
     { id: 3, type: "document", title: "Monthly Cross-College Placement Audit ready", time: "3h ago", unread: false },
-  ];
+  ]);
+
+  const [activeTab, setActiveTab] = useState("all");
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+  const totalCount = notifications.length;
+
+  useEffect(() => {
+    if (onUnreadChange) {
+      onUnreadChange(unreadCount > 0);
+    }
+  }, [unreadCount, onUnreadChange]);
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  };
+
+  const handleDeleteItem = (e, id) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
+
+  const toggleSingleRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n))
+    );
+  };
+
+  const visibleNotifications = notifications.filter((n) => {
+    if (activeTab === "unread") return n.unread;
+    return true;
+  });
 
   const getIcon = (type) => {
     switch (type) {
@@ -24,41 +59,92 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
 
   return (
     <div className="sa-header__profile-dropdown notif-dropdown-box">
+      {/* Header */}
       <div className="notif-header">
         <div className="notif-header-left">
           <div className="notif-header-icon-wrap">
             <Bell size={18} className="notif-header-icon" />
-            <span className="notif-header-dot"></span>
+            {unreadCount > 0 && <span className="notif-header-dot"></span>}
           </div>
           <div className="notif-header-text">
             <div className="notif-header-title">Super Admin Alerts</div>
-            <div className="notif-header-subtitle">2 unread notifications</div>
+            <div className="notif-header-subtitle">
+              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
+            </div>
           </div>
         </div>
-        <button className="notif-mark-read-btn" onClick={() => onUnreadChange && onUnreadChange(false)}>
+        <button
+          className="notif-mark-read-btn"
+          onClick={handleMarkAllRead}
+          disabled={unreadCount === 0}
+          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
+        >
           <Check size={14} className="notif-check-icon" /> Mark read
         </button>
       </div>
 
+      {/* Tabs */}
       <div className="notif-tabs">
-        <button className="notif-tab active">All (3)</button>
-        <button className="notif-tab">Unread (2)</button>
+        <button
+          className={`notif-tab ${activeTab === "all" ? "active" : ""}`}
+          onClick={() => setActiveTab("all")}
+        >
+          All ({totalCount})
+        </button>
+        <button
+          className={`notif-tab ${activeTab === "unread" ? "active" : ""}`}
+          onClick={() => setActiveTab("unread")}
+        >
+          Unread ({unreadCount})
+        </button>
       </div>
 
+      {/* List */}
       <div className="notif-list-wrap">
-        {sampleNotifications.map((n) => (
-          <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
-            <div className={`notif-icon-box type-${n.type}`}>
-              {getIcon(n.type)}
-            </div>
-            <div className="notif-content">
-              <div className="notif-content-top">
-                <div className="notif-card-title">{n.title}</div>
-                <div className="notif-card-time">{n.time}</div>
+        {visibleNotifications.length === 0 ? (
+          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
+            No notifications to display
+          </div>
+        ) : (
+          visibleNotifications.map((n) => (
+            <div
+              key={n.id}
+              className={`notif-list-card ${n.unread ? "unread" : ""}`}
+              onClick={() => toggleSingleRead(n.id)}
+              style={{ cursor: "pointer" }}
+              title="Click to toggle read status"
+            >
+              <div className={`notif-icon-box type-${n.type}`}>
+                {getIcon(n.type)}
+              </div>
+              <div className="notif-content">
+                <div className="notif-content-top">
+                  <div className="notif-card-title">{n.title}</div>
+                  <div className="notif-card-time">{n.time}</div>
+                  <button
+                    className="notif-delete-btn"
+                    onClick={(e) => handleDeleteItem(e, n.id)}
+                    title="Delete notification"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="notif-footer-wrap">
+        <button
+          className="notif-clear-all-btn"
+          onClick={handleClearAll}
+          disabled={totalCount === 0}
+          style={{ opacity: totalCount === 0 ? 0.5 : 1, cursor: totalCount === 0 ? "default" : "pointer" }}
+        >
+          Clear all
+        </button>
       </div>
     </div>
   );

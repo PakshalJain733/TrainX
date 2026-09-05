@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import apiFetch from "../../../utils/api";
 import "../Styles/AiRoadmap.css";
 
@@ -158,7 +159,13 @@ export default function AIRoadmap() {
   const milestones = currentRoadmap?.milestones || [];
 
   return (
-    <div className="roadmap-container">
+    <div className="roadmap-container stack-6">
+      <SectionHeader
+        eyebrow="AI CURRICULUM PATHWAYS"
+        title="AI Adaptive Learning Roadmap"
+        description="Tailored milestone progression, skill tracks, and adaptive learning pathways generated for your target career goal."
+      />
+
       {/* Clean AI Roadmap Header & Custom Goal Input */}
       <div className="roadmap-generator-card">
         <div className="roadmap-generator-header">
