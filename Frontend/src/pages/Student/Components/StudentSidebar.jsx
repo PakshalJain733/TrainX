@@ -7,6 +7,7 @@ import {
   LineChart,
   Trophy,
   CalendarCheck,
+  AlertTriangle,
   FileCheck2,
   CalendarDays,
   Award,
@@ -51,7 +52,7 @@ const primaryNavItems = [
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
   { title: "Progress", url: "/student/progress", icon: LineChart },
-  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
+  { title: "Skill Gaps", url: "/student/skill-gaps", icon: AlertTriangle },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
 ];
 

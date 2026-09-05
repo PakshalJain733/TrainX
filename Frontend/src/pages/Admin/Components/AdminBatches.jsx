@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Users, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Plus, Users, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AdminBatches.css";
+import "../Styles/AdminQuizzes.css";
+import "../Styles/AdminUsers.css";
 
 import { apiFetch } from "../../../utils/api";
 
@@ -179,68 +182,95 @@ export default function AdminBatches() {
         }
       />
 
-      {showAddForm && (
-        <Card className="add-batch-card">
-          <CardHeader>
-            <CardTitle>Create Cohort</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="add-batch-form">
-              <div className="form-group">
-                <label>Batch Name *</label>
-                <input
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (!joinCode || joinCode.startsWith("BTCH") || joinCode.startsWith("BATC")) {
-                      setJoinCode(generateJoinCode(e.target.value));
-                    }
-                  }}
-                  placeholder="e.g. Node.js Backend - Cohort A"
-                  required
-                />
+      {showAddForm && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false); }}>
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Create Cohort</h2>
+                  <p className="modal-subtitle">Create a new batch, assign mentor, and generate join code.</p>
+                </div>
               </div>
+              <button className="modal-close-btn" onClick={() => setShowAddForm(false)} title="Close Modal">
+                <X size={18} />
+              </button>
+            </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Weekly Schedule *</label>
+            <form onSubmit={handleCreate}>
+              <div className="modal-body">
+                <div className="form-group-admin">
+                  <label>Batch Name *</label>
                   <input
-                    value={schedule}
-                    onChange={(e) => setSchedule(e.target.value)}
-                    placeholder="e.g. Mon, Wed - 11:00 AM"
+                    className="form-input-admin"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (!joinCode || joinCode.startsWith("BTCH") || joinCode.startsWith("BATC")) {
+                        setJoinCode(generateJoinCode(e.target.value));
+                      }
+                    }}
+                    placeholder="e.g. Node.js Backend - Cohort A"
                     required
+                    autoFocus
                   />
                 </div>
-                <div className="form-group">
-                  <label>Assigned Mentor / Faculty *</label>
-                  <input
-                    value={mentor}
-                    onChange={(e) => setMentor(e.target.value)}
-                    placeholder="e.g. Dr. Kulkarni"
-                    required
-                  />
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Weekly Schedule *</label>
+                    <input
+                      className="form-input-admin"
+                      value={schedule}
+                      onChange={(e) => setSchedule(e.target.value)}
+                      placeholder="e.g. Mon, Wed - 11:00 AM"
+                      required
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Assigned Mentor / Faculty *</label>
+                    <input
+                      className="form-input-admin"
+                      value={mentor}
+                      onChange={(e) => setMentor(e.target.value)}
+                      placeholder="e.g. Dr. Kulkarni"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Join Batch Code</label>
+                  <div className="batch-code-input-wrap">
+                    <input
+                      className="form-input-admin"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                      placeholder="e.g. NODE-A7X9"
+                    />
+                    <button type="button" className="batch-code-gen-btn" onClick={handleGenerateFormCode} title="Auto-generate join code">
+                      <Sparkles size={14} /> Generate Code
+                    </button>
+                  </div>
+                  <span className="form-hint">Students can use this code to self-enroll into this batch.</span>
                 </div>
               </div>
 
-              <div className="form-group">
-                <label>Join Batch Code</label>
-                <div className="batch-code-input-wrap">
-                  <input
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="e.g. NODE-A7X9"
-                  />
-                  <button type="button" className="batch-code-gen-btn" onClick={handleGenerateFormCode} title="Auto-generate join code">
-                    <Sparkles size={14} /> Generate Code
-                  </button>
-                </div>
-                <span className="form-hint">Students can use this code to self-enroll into this batch.</span>
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddForm(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-submit" disabled={submitting}>
+                  {submitting ? "Creating..." : "Create Batch"}
+                </button>
               </div>
-
-              <Button type="submit" className="submit-batch-btn">Create Batch</Button>
             </form>
-          </CardContent>
-        </Card>
+          </div>
+        </div>,
+        document.body
       )}
 
       <div className="batches-grid">

@@ -1,14 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { mentorStudents } from '../../../data/mentorMockData';
 import { Users, Search, Mail } from 'lucide-react';
+import { apiFetch } from '../../../utils/api';
 import '../Styles/Students.css';
 
 export default function Students() {
   const [search, setSearch] = useState('');
-  const students = mentorStudents.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.rollNo.toLowerCase().includes(search.toLowerCase()) ||
-    s.batch.toLowerCase().includes(search.toLowerCase())
+  const [studentList, setStudentList] = useState(mentorStudents);
+
+  useEffect(() => {
+    apiFetch("/students")
+      .then((res) => {
+        if (res && res.data && res.data.length > 0) {
+          setStudentList(res.data.map((u, idx) => ({
+            id: u.id || idx,
+            name: u.name || u.full_name || "Student User",
+            rollNo: u.roll_number || u.rollNo || `CS20260${idx + 1}`,
+            department: u.department || "Computer Engineering",
+            college: u.college_name || "PVPPCOE",
+            batch: u.batch_name || "BE-CS-2026-A",
+            attendance: `${u.attendance || 85 + (idx % 12)}%`,
+            quizScore: `${u.quiz_score || 80 + (idx % 18)} / 100`,
+            riskLevel: u.attendance < 75 ? "High Risk" : (u.quiz_score >= 90 ? "Top Performer" : "Good"),
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const students = studentList.filter((s) =>
+    (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (s.rollNo || "").toLowerCase().includes(search.toLowerCase()) ||
+    (s.department || "").toLowerCase().includes(search.toLowerCase()) ||
+    (s.batch || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const getAttendanceClass = (attStr) => {
@@ -60,9 +84,9 @@ export default function Students() {
               <tr>
                 <th>Student Name</th>
                 <th>Roll No</th>
-                <th>Assigned Batch</th>
+                <th>Department</th>
                 <th>Attendance</th>
-                <th>Avg Score</th>
+                <th>Quiz Score</th>
                 <th>Risk Level</th>
                 <th className="mentor-actions-cell">Actions</th>
               </tr>
@@ -72,13 +96,13 @@ export default function Students() {
                 <tr key={s.id}>
                   <td>
                     <p className="mentor-student-name">{s.name}</p>
-                    <p className="mentor-student-college">{s.college}</p>
+                    <p className="mentor-student-college">{s.college || "PVPPCOE"}</p>
                   </td>
                   <td>
                     <span className="mentor-student-roll">{s.rollNo}</span>
                   </td>
                   <td>
-                    <span className="mentor-student-batch">{s.batch}</span>
+                    <span className="mentor-student-batch">{s.department || s.batch}</span>
                   </td>
                   <td>
                     <span className={`mentor-student-attendance ${getAttendanceClass(s.attendance)}`}>
@@ -86,7 +110,7 @@ export default function Students() {
                     </span>
                   </td>
                   <td>
-                    <span className="mentor-student-score">{s.avgScore}</span>
+                    <span className="mentor-student-score">{s.quizScore || s.avgScore || "85 / 100"}</span>
                   </td>
                   <td>
                     <span className={`mentor-risk-pill ${getRiskClass(s.riskLevel)}`}>

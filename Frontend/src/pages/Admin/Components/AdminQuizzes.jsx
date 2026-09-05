@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AdminQuizzes.css";
+import "../Styles/AdminUsers.css";
 
 const API_BASE = "http://localhost:5000/api/v1";
 
@@ -264,132 +266,159 @@ export default function AdminQuizzes() {
         }
       />
 
-      {showForm && (
-        <Card className="quiz-add-card animate-fade-in">
-          <CardContent>
-            {/* Creation Option Tabs */}
-            <div className="quiz-mode-selector">
-              <button
-                type="button"
-                className={`mode-tab ${mode === "ai" ? "active" : ""}`}
-                onClick={() => setMode("ai")}
-              >
-                <Sparkles size={18} className="mode-icon ai-sparkle-icon" />
-                <div className="mode-text">
-                  <span className="mode-title">Generate Questions (AI)</span>
-                  <span className="mode-sub">AI automatically generates questions & options</span>
+      {/* CREATE QUIZ MODAL / FLASH SCREEN OVERLAY */}
+      {showForm && createPortal(
+        <div className="quiz-modal-backdrop" onClick={() => setShowForm(false)}>
+          <div className="quiz-modal-content modal-flash-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px' }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <HelpCircle size={20} />
                 </div>
-              </button>
-
-              <button
-                type="button"
-                className={`mode-tab ${mode === "manual" ? "active" : ""}`}
-                onClick={() => setMode("manual")}
-              >
-                <ListPlus size={18} className="mode-icon" />
-                <div className="mode-text">
-                  <span className="mode-title">Add Questions (Manual)</span>
-                  <span className="mode-sub">Open custom editor screen to enter questions & choices</span>
+                <div>
+                  <h2 className="modal-title">Create New Quiz Assessment</h2>
+                  <p className="modal-subtitle">Generate questions automatically using AI or build your custom question set manually.</p>
                 </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateQuizSubmit} className="quiz-add-form">
-              <div className="form-group">
-                <label>Quiz Title</label>
-                <input
-                  value={title}
-                  onChange={e => setTitle(e.target.value)}
-                  placeholder="e.g. Python OOP Assessment & Data Structures"
-                  required
-                />
+            <div style={{ padding: '24px', overflowY: 'auto' }}>
+              {/* Creation Option Tabs */}
+              <div className="quiz-mode-selector">
+                <button
+                  type="button"
+                  className={`mode-tab ${mode === "ai" ? "active" : ""}`}
+                  onClick={() => setMode("ai")}
+                >
+                  <Sparkles size={18} className="mode-icon ai-sparkle-icon" />
+                  <div className="mode-text">
+                    <span className="mode-title">Generate Questions (AI)</span>
+                    <span className="mode-sub">AI automatically generates questions & options</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`mode-tab ${mode === "manual" ? "active" : ""}`}
+                  onClick={() => setMode("manual")}
+                >
+                  <ListPlus size={18} className="mode-icon" />
+                  <div className="mode-text">
+                    <span className="mode-title">Add Questions (Manual)</span>
+                    <span className="mode-sub">Open custom editor screen to enter questions & choices</span>
+                  </div>
+                </button>
               </div>
 
-              <div className="form-row">
+              <form onSubmit={handleCreateQuizSubmit} className="quiz-add-form">
                 <div className="form-group">
-                  <label>Target Batch</label>
-                  <select value={batch} onChange={e => setBatch(e.target.value)}>
-                    <option value="All Batches">All Batches</option>
-                    {availableBatches.length > 0 ? (
-                      availableBatches.map((b) => (
-                        <option key={b.id} value={b.name}>
-                          {b.name} {b.join_code ? `(${b.join_code})` : ""}
-                        </option>
-                      ))
-                    ) : (
-                      <>
-                        <option value="Python Backend">Python Backend</option>
-                        <option value="React Frontend">React Frontend</option>
-                        <option value="Full Stack">Full Stack</option>
-                      </>
-                    )}
-                  </select>
-
+                  <label>Quiz Title</label>
+                  <input
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="e.g. Python OOP Assessment & Data Structures"
+                    required
+                    autoFocus
+                  />
                 </div>
 
-                {mode === "ai" ? (
+                <div className="form-row">
                   <div className="form-group">
-                    <label>Number of Questions to Generate</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="30"
-                      value={numQuestions}
-                      onChange={e => setNumQuestions(e.target.value)}
-                      placeholder="e.g. 10"
-                      required
-                    />
+                    <label>Target Batch</label>
+                    <select value={batch} onChange={e => setBatch(e.target.value)}>
+                      <option value="All Batches">All Batches</option>
+                      {availableBatches.length > 0 ? (
+                        availableBatches.map((b) => (
+                          <option key={b.id} value={b.name}>
+                            {b.name} {b.join_code ? `(${b.join_code})` : ""}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Python Backend">Python Backend</option>
+                          <option value="React Frontend">React Frontend</option>
+                          <option value="Full Stack">Full Stack</option>
+                        </>
+                      )}
+                    </select>
                   </div>
-                ) : (
-                  <div className="form-group">
-                    <label>Manual Questions Status</label>
-                    <div className="manual-status-box">
-                      <span className="q-count-badge">{manualQuestions.length} Questions Added</span>
-                      <button
-                        type="button"
-                        className="open-modal-btn"
-                        onClick={() => {
-                          if (!title.trim()) {
-                            alert("Please enter a Quiz Title first.");
-                            return;
-                          }
-                          setShowManualModal(true);
-                        }}
-                      >
-                        <ListPlus size={15} /> Add / Edit Questions Screen
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
 
-              <div className="form-actions">
-                {mode === "ai" ? (
-                  <button type="submit" className="quiz-submit-btn ai-btn" disabled={isGenerating}>
-                    {isGenerating ? (
-                      <>
-                        <span className="spinner"></span> Generating Questions with AI...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={16} /> Generate Quiz with AI
-                      </>
-                    )}
+                  {mode === "ai" ? (
+                    <div className="form-group">
+                      <label>Number of Questions to Generate</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="30"
+                        value={numQuestions}
+                        onChange={e => setNumQuestions(e.target.value)}
+                        placeholder="e.g. 10"
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div className="form-group">
+                      <label>Manual Questions Status</label>
+                      <div className="manual-status-box">
+                        <span className="q-count-badge">{manualQuestions.length} Questions Added</span>
+                        <button
+                          type="button"
+                          className="open-modal-btn"
+                          onClick={() => {
+                            if (!title.trim()) {
+                              alert("Please enter a Quiz Title first.");
+                              return;
+                            }
+                            setShowManualModal(true);
+                          }}
+                        >
+                          <ListPlus size={15} /> Add / Edit Questions Screen
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="form-actions" style={{ marginTop: '16px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    style={{ padding: '10px 18px', borderRadius: '8px', background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#475569', cursor: 'pointer', fontWeight: 600 }}
+                    onClick={() => setShowForm(false)}
+                    disabled={isGenerating}
+                  >
+                    Cancel
                   </button>
-                ) : (
-                  <button type="submit" className="quiz-submit-btn manual-btn">
-                    <CheckCircle2 size={16} /> Save Quiz ({manualQuestions.length} Questions)
-                  </button>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+                  {mode === "ai" ? (
+                    <button type="submit" className="quiz-submit-btn ai-btn" disabled={isGenerating}>
+                      {isGenerating ? (
+                        <>
+                          <span className="spinner"></span> Generating Questions with AI...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={16} /> Generate Quiz with AI
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <button type="submit" className="quiz-submit-btn manual-btn" disabled={isGenerating}>
+                      <CheckCircle2 size={16} /> Save Quiz ({manualQuestions.length} Questions)
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* FLASH SCREEN MODAL: Manual Add Questions */}
-      {showManualModal && (
-        <div className="quiz-modal-backdrop">
+      {showManualModal && createPortal(
+        <div className="quiz-modal-backdrop" style={{ zIndex: 10000 }}>
           <div className="quiz-modal-content modal-flash-in">
             <div className="modal-header">
               <div>
@@ -532,12 +561,13 @@ export default function AdminQuizzes() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* VIEW QUIZ QUESTIONS MODAL */}
-      {activeQuizQuestions && (
-        <div className="quiz-modal-backdrop">
+      {activeQuizQuestions && createPortal(
+        <div className="quiz-modal-backdrop" style={{ zIndex: 10000 }}>
           <div className="quiz-modal-content modal-flash-in view-quiz-modal">
             <div className="modal-header">
               <div>
@@ -574,7 +604,8 @@ export default function AdminQuizzes() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Quizzes List */}

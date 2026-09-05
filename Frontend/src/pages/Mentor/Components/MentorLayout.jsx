@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ShieldCheck, Users, GraduationCap } from "lucide-react";
 import { MentorSidebar } from "./MentorSidebar";
 import { mentorProfile } from "../../../data/mentorMockData";
 import "../Styles/MentorLayout.css";
@@ -84,6 +84,32 @@ export default function MentorLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+  const [userData, setUserData] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      if (u) return u;
+    } catch(e) {}
+    return { name: mentorProfile.name || "Vikram Sharma", role: mentorProfile.role || "Senior Trainer" };
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        const u = JSON.parse(localStorage.getItem("user"));
+        if (u) setUserData(u);
+      } catch(e) {}
+    };
+    window.addEventListener("userProfileUpdated", handleUpdate);
+    return () => window.removeEventListener("userProfileUpdated", handleUpdate);
+  }, []);
+
+  const getInitials = (name) => {
+    if (!name || name.trim().length === 0) return "VS";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (headerRightRef.current && !headerRightRef.current.contains(event.target)) {
@@ -111,7 +137,7 @@ export default function MentorLayout() {
     if (path.startsWith("/mentor/ai-interviews")) return "AI Interview Analytics";
     if (path.startsWith("/mentor/weekly-reports")) return "Weekly Reports";
     if (path.startsWith("/mentor/notifications")) return "Notifications";
-    if (path.startsWith("/mentor/profile")) return "Mentor Profile";
+    if (path.startsWith("/mentor/profile")) return "Mentor Profile & Onboarding Settings";
     if (path.startsWith("/mentor/help")) return "Help & Support Desk";
     return "Mentor Dashboard";
   };
@@ -158,12 +184,6 @@ export default function MentorLayout() {
               </div>
 
               <div className="mentor-header__right" ref={headerRightRef}>
-                <div className="mentor-header__badges">
-                  <span className="mentor-header__badge mentor-header__badge--success">
-                    Senior Trainer
-                  </span>
-                </div>
-
                 {/* Notification Bell Dropdown Wrap */}
                 <div className="mentor-header__notif-wrap">
                   <button
@@ -198,10 +218,10 @@ export default function MentorLayout() {
                     aria-label="User menu"
                   >
                     <div className="mentor-header__user-info">
-                      <span className="mentor-header__name">{mentorProfile.name}</span>
+                      <span className="mentor-header__name">{userData.name || mentorProfile.name || "Vikram Sharma"}</span>
                     </div>
-                    <div className="mentor-header__avatar" aria-label={`User profile ${mentorProfile.name}`}>
-                      VS
+                    <div className="mentor-header__avatar" aria-label={`User profile ${userData.name}`}>
+                      {getInitials(userData.name)}
                     </div>
                   </button>
 
@@ -209,10 +229,10 @@ export default function MentorLayout() {
                     <>
                       <div className="mentor-header__profile-dropdown">
                         <div className="mentor-header__profile-top">
-                          <div className="mentor-header__profile-avatar">VS</div>
+                          <div className="mentor-header__profile-avatar">{getInitials(userData.name)}</div>
                           <div className="mentor-header__profile-info">
-                            <span className="mentor-header__profile-name">{mentorProfile.name}</span>
-                            <span className="mentor-header__profile-sub">{mentorProfile.role}</span>
+                            <span className="mentor-header__profile-name">{userData.name || mentorProfile.name || "Vikram Sharma"}</span>
+                            <span className="mentor-header__profile-sub">{userData.role || mentorProfile.role || "Senior Trainer"}</span>
                           </div>
                         </div>
                         <div className="mentor-header__profile-divider" />

@@ -42,14 +42,22 @@ export const updateStudentProfile = async (req, res, next) => {
   }
 };
 
+import { findAssessments } from '../models/assessment.model.js';
+
 export const getStudentDashboard = async (req, res, next) => {
   try {
-    const collegeId = req.user.collegeId || 1;
+    const collegeId = req.user.collegeId || req.user.college_id || 1;
     // Multi-college isolation: retrieve students from the same college
     const allUsers = await getAllUsersModel(collegeId);
     const students = allUsers.filter((u) => u.role === ROLES.STUDENT);
 
     const callerId = req.user.userId || req.user.id;
+
+    // Fetch published assessments for this student's college
+    let publishedAssessments = [];
+    try {
+      publishedAssessments = await findAssessments({ status: 'published', college_id: collegeId });
+    } catch (_) {}
 
     // Build real leaderboard from registered students in this college
     const realLeaderboard = students.map((s, idx) => ({
@@ -64,6 +72,12 @@ export const getStudentDashboard = async (req, res, next) => {
     const currentStudentIdx = students.findIndex((s) => s.id === callerId);
     const currentRank = currentStudentIdx !== -1 ? `${currentStudentIdx + 1} / ${students.length}` : `1 / ${Math.max(1, students.length)}`;
 
+    const upcomingDeadlines = publishedAssessments.map((a) => ({
+      title: a.title,
+      dueDate: a.duration_minutes ? `${a.duration_minutes} Mins · ${a.total_marks || 0} Marks` : 'Live Quiz',
+      status: 'Pending',
+    }));
+
     const dashboardData = {
       attendanceSummary: {
         percentage: 95,
@@ -71,7 +85,9 @@ export const getStudentDashboard = async (req, res, next) => {
       codingProgress: {
         currentRank,
       },
-      upcomingDeadlines: [],
+      upcomingDeadlines: upcomingDeadlines.length > 0 ? upcomingDeadlines : [
+        { title: 'Data Structures Sprint Quiz', dueDate: '30 Mins · 50 Marks', status: 'Pending' }
+      ],
       leaderboard: realLeaderboard,
     };
 
@@ -80,6 +96,7 @@ export const getStudentDashboard = async (req, res, next) => {
     next(error);
   }
 };
+
 
 import { getPracticeProblemsModel } from '../models/practiceProblem.model.js';
 

@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Plus, Search, Users, UserCheck, Calendar, CheckCircle } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, X } from "lucide-react";
 import { coordinatorBatches, coordinatorMentors } from "../../../data/coordinatorMockData";
 import "../Styles/Batches.css";
+import "../../Admin/Styles/AdminUsers.css";
 
 export default function CoordinatorBatches() {
   const [batches, setBatches] = useState(coordinatorBatches);
@@ -12,7 +14,7 @@ export default function CoordinatorBatches() {
   // New batch form state
   const [newBatchName, setNewBatchName] = useState("");
   const [newBatchCode, setNewBatchCode] = useState("");
-  const [newMentor, setNewMentor] = useState(coordinatorMentors[0].name);
+  const [newMentor, setNewMentor] = useState(coordinatorMentors[0]?.name || "");
 
   const filteredBatches = batches.filter((b) => {
     const matchesSearch =
@@ -168,65 +170,85 @@ export default function CoordinatorBatches() {
       </div>
 
       {/* Modal for Batch Creation */}
-      {showCreateModal && (
-        <div className="coord-modal-backdrop" onClick={() => setShowCreateModal(false)}>
-          <div className="coord-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="coord-modal-title">Create New Batch</h2>
-            <form onSubmit={handleCreateBatch} className="coord-modal-form">
-              <div>
-                <label className="coord-form-label">Batch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. CSE 2026 Beta Cohort"
-                  value={newBatchName}
-                  onChange={(e) => setNewBatchName(e.target.value)}
-                  className="coord-form-input"
-                />
+      {showCreateModal && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowCreateModal(false); }}>
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Create New Batch</h2>
+                  <p className="modal-subtitle">Provision a new cohort and allocate industry faculty.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowCreateModal(false)} title="Close Modal">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateBatch}>
+              <div className="modal-body">
+                <div className="form-group-admin">
+                  <label>Batch Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. CSE 2026 Beta Cohort"
+                    value={newBatchName}
+                    onChange={(e) => setNewBatchName(e.target.value)}
+                    className="form-input-admin"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Batch Code *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. CSE-2026-B"
+                      value={newBatchCode}
+                      onChange={(e) => setNewBatchCode(e.target.value)}
+                      className="form-input-admin"
+                    />
+                  </div>
+
+                  <div className="form-group-admin">
+                    <label>Assign Industry Mentor</label>
+                    <select
+                      value={newMentor}
+                      onChange={(e) => setNewMentor(e.target.value)}
+                      className="form-select-admin"
+                    >
+                      {coordinatorMentors.map((m) => (
+                        <option key={m.id} value={m.name}>
+                          {m.name} ({m.specialization})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="coord-form-label">Batch Code</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. CSE-2026-B"
-                  value={newBatchCode}
-                  onChange={(e) => setNewBatchCode(e.target.value)}
-                  className="coord-form-input"
-                />
-              </div>
-
-              <div>
-                <label className="coord-form-label">Assign Industry Mentor</label>
-                <select
-                  value={newMentor}
-                  onChange={(e) => setNewMentor(e.target.value)}
-                  className="coord-form-input"
-                >
-                  {coordinatorMentors.map((m) => (
-                    <option key={m.id} value={m.name}>
-                      {m.name} ({m.specialization})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="coord-modal-actions">
+              <div className="modal-footer">
                 <button
                   type="button"
-                  className="coord-btn coord-btn--cancel"
+                  className="btn-modal-cancel"
                   onClick={() => setShowCreateModal(false)}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="coord-btn coord-btn--primary">
+                <button type="submit" className="btn-modal-submit">
                   Save & Launch Batch
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

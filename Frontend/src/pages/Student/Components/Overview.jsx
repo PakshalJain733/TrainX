@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
@@ -12,6 +13,7 @@ import { Button } from "../../../components/ui/Button";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Overview.css";
 import "../Styles/Batches.css";
+import "../../Admin/Styles/AdminUsers.css";
 
 const API_BASE = "http://localhost:5000/api/v1";
 
@@ -177,7 +179,7 @@ export default function Overview() {
     }
   };
 
-  const studentName = dashboard.personalDetails.name || "Ganesh Shinde";
+  const studentName = dashboard.personalDetails.name || "";
   const upcoming = dashboard.upcomingDeadlines || [];
   const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
     ? dashboard.leaderboard
@@ -361,46 +363,47 @@ export default function Overview() {
       </div>
 
       {/* ─── Join Batch Flash Overlay Modal ───────────────────────── */}
-      {showJoinModal && (
-        <div className="join-modal-overlay">
-          <div className="join-modal-card">
-            <button
-              type="button"
-              className="join-modal-close"
-              onClick={() => setShowJoinModal(false)}
-            >
-              <X size={16} />
-            </button>
-
-            <div className="join-modal-icon-wrap">
-              <KeyRound size={26} />
+      {showJoinModal && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowJoinModal(false); }}>
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Join a Training Batch</h2>
+                  <p className="modal-subtitle">Enter secret join access code assigned to your cohort.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowJoinModal(false)} title="Close Modal">
+                <X size={18} />
+              </button>
             </div>
 
-            <div>
-              <h3 className="join-modal-title">Join a Training Batch</h3>
-              <p className="join-modal-subtitle">
-                Enter the secret join code given to you by your admin or batch mentor.
-              </p>
-            </div>
+            <form onSubmit={handleJoinSubmit}>
+              <div className="modal-body">
+                {modalError && <div className="modal-feedback-alert modal-feedback--error">{modalError}</div>}
+                {modalSuccess && <div className="modal-feedback-alert modal-feedback--success">{modalSuccess}</div>}
 
-            {modalError && <div className="join-modal-error">{modalError}</div>}
-            {modalSuccess && <div className="join-modal-success">{modalSuccess}</div>}
+                <div className="form-group-admin">
+                  <label>Enter Batch Join Code *</label>
+                  <input
+                    type="text"
+                    className="form-input-admin"
+                    placeholder="e.g. BTCH-D3BX"
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
 
-            <form onSubmit={handleJoinSubmit} className="join-modal-input-group">
-              <label className="join-modal-label">Enter Batch Code</label>
-              <input
-                type="text"
-                className="join-modal-input"
-                placeholder="e.g. PY-BE-2026"
-                value={joinCodeInput}
-                onChange={(e) => setJoinCodeInput(e.target.value)}
-                autoFocus
-              />
-
-              <div className="join-modal-actions" style={{ marginTop: "12px" }}>
+              <div className="modal-footer">
                 <button
                   type="button"
-                  className="join-modal-cancel-btn"
+                  className="btn-modal-cancel"
                   onClick={() => setShowJoinModal(false)}
                   disabled={joining}
                 >
@@ -408,7 +411,7 @@ export default function Overview() {
                 </button>
                 <button
                   type="submit"
-                  className="join-modal-submit-btn"
+                  className="btn-modal-submit"
                   disabled={joining}
                 >
                   {joining ? (
@@ -422,7 +425,8 @@ export default function Overview() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

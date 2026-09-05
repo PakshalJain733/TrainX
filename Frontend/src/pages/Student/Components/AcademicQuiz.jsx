@@ -333,10 +333,22 @@ function QuizPlatform({ quiz, mode, onExit }) {
       })
         .then((res) => res.json())
         .then((data) => {
+          console.log("[Quiz Start Response]", data);
+          // Success path: attempt just created
           if (data.success && data.data?.attempt?.id) {
             setAttemptId(data.data.attempt.id);
           } else if (data.data?.attemptId) {
             setAttemptId(data.data.attemptId);
+          } else if (data.data?.attempt_id) {
+            setAttemptId(data.data.attempt_id);
+          }
+          // 409 = already attempted — grab the attemptId from error detail
+          else if (!data.success && data.details) {
+            const hint = Array.isArray(data.details) ? data.details[0]?.hint : data.details;
+            if (hint) {
+              const match = String(hint).match(/(\d+)/);
+              if (match) setAttemptId(parseInt(match[1], 10));
+            }
           }
         })
         .catch((err) => console.error("Failed to start attempt:", err));
@@ -352,30 +364,58 @@ function QuizPlatform({ quiz, mode, onExit }) {
     });
   }
 
+  const [wasSubmitted, setWasSubmitted] = useState(false);
+
   async function handleSubmit() {
     if (submitted) return;
     setSubmitted(true);
+    setWasSubmitted(true); // Always mark as submitted locally
 
-    if (quiz.source === "admin" && attemptId) {
-      const optKeys = ["a", "b", "c", "d"];
-      const formattedAnswers = questions.map((q, idx) => {
-        const selectedIndex = answers[idx];
-        const selectedOptKey = selectedIndex !== null && selectedIndex !== undefined ? optKeys[selectedIndex] : null;
-        return {
-          question_id: q.id || idx + 1,
-          selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : "A",
-        };
-      });
+    if (quiz.source !== "admin") return; // builtin quizzes don't need backend
 
-      try {
-        await fetch(`${API_BASE}/assessments/attempts/${attemptId}/submit`, {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ answers: formattedAnswers }),
-        });
-      } catch (err) {
-        console.error("Failed to submit quiz attempt to backend:", err);
+    const optKeys = ["a", "b", "c", "d"];
+    const formattedAnswers = questions.map((q, idx) => {
+      const selectedIndex = answers[idx];
+      const selectedOptKey =
+        selectedIndex !== null && selectedIndex !== undefined ? optKeys[selectedIndex] : null;
+      return {
+        question_id: q.id || idx + 1,
+        selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : "A",
+      };
+    });
+
+    try {
+      if (attemptId) {
+        // Primary path: use the attempt ID from /start
+        const res = await fetch(
+          `${API_BASE}/assessments/attempts/${attemptId}/submit`,
+          {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ answers: formattedAnswers }),
+          }
+        );
+        const data = await res.json();
+        console.log("[Quiz Submit Response]", data);
+        if (!data.success) {
+          console.warn("[Quiz Submit] Backend error:", data.message);
+        }
+      } else {
+        // Fallback path: use legacy /:id/submit if no attemptId
+        console.warn("[Quiz Submit] No attemptId — using legacy submit endpoint");
+        const res = await fetch(
+          `${API_BASE}/assessments/${quiz.id}/submit`,
+          {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ answers: formattedAnswers }),
+          }
+        );
+        const data = await res.json();
+        console.log("[Quiz Submit Fallback Response]", data);
       }
+    } catch (err) {
+      console.error("[Quiz Submit] Network error:", err);
     }
   }
 
@@ -401,7 +441,7 @@ function QuizPlatform({ quiz, mode, onExit }) {
       {/* Header */}
       <div className="qp-header">
         <div className="qp-header-left">
-          <button className="qp-back-btn" onClick={onExit}>
+          <button className="qp-back-btn" onClick={() => onExit(wasSubmitted)}>
             <ChevronLeft size={18} /> Back
           </button>
           <div className="qp-header-title-block">
@@ -576,7 +616,7 @@ function QuizPlatform({ quiz, mode, onExit }) {
             {submitted ? (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit"
-                onClick={onExit}
+                onClick={() => onExit(true)}
                 style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
               >
                 <CheckCircle2 size={16} /> Finish & Return to Dashboard
@@ -614,13 +654,16 @@ export default function AcademicQuiz() {
   // Fetch admin-created DB quizzes when page mounts
   const refreshQuizzes = () => {
     fetchApiQuizzes().then((apiQuizzes) => {
-      setAllQuizzes(apiQuizzes);
+      const apiIds = new Set(apiQuizzes.map((q) => String(q.id)));
+      const filteredBuiltIn = builtInQuizzes.filter((b) => !apiIds.has(String(b.id)));
+      setAllQuizzes([...apiQuizzes, ...filteredBuiltIn]);
     });
   };
 
   useEffect(() => {
     refreshQuizzes();
   }, []);
+
 
 
   const upcomingQuizzes = allQuizzes.filter((q) => q.status === "Upcoming");
@@ -633,10 +676,23 @@ export default function AcademicQuiz() {
       <QuizPlatform
         quiz={activeQuiz}
         mode={quizMode}
-        onExit={() => {
+        onExit={(wasSubmitted) => {
+          if (wasSubmitted) {
+            // Immediately update local state so the card shows "Completed" instantly
+            setAllQuizzes((prev) =>
+              prev.map((q) =>
+                q.id === activeQuiz.id
+                  ? { ...q, status: "Completed", score: q.score || "Completed" }
+                  : q
+              )
+            );
+            // Delay refresh to give backend time to commit transaction
+            setTimeout(() => refreshQuizzes(), 1000);
+          } else {
+             refreshQuizzes();
+          }
           setActiveQuiz(null);
           setQuizMode(null);
-          refreshQuizzes();
         }}
       />
     );

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Code,
   Plus,
@@ -24,6 +25,7 @@ import {
   activeAssignments as mockAssignments,
   studentSubmissions as mockSubmissions,
 } from "../../../data/codingPracticeMockData";
+import "../../Admin/Styles/AdminUsers.css";
 import "../Styles/Assessments.css";
 
 export default function CoordinatorCodingPractice() {
@@ -653,94 +655,111 @@ export default function CoordinatorCodingPractice() {
       )}
 
       {/* ADD PROBLEM MODAL */}
-      {showAddModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.65)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#ffffff", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "560px", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Add New Coding Problem</h2>
-              <button onClick={() => setShowAddModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
-                <X size={20} />
+      {showAddModal && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}>
+          <div className="modal-dialog" style={{ maxWidth: "600px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Code size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Add New Coding Problem</h2>
+                  <p className="modal-subtitle">Create algorithmic practice challenges for student cohorts.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowAddModal(false)} title="Close Modal">
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProblem} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#334155" }}>Problem Title</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="e.g. Valid Palindrome"
-                  value={newProb.title}
-                  onChange={(e) => setNewProb({ ...newProb, title: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px" }}
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
-                <div>
-                  <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#334155" }}>Topic</label>
+            <form onSubmit={handleCreateProblem}>
+              <div className="modal-body">
+                <div className="form-group-admin">
+                  <label>Problem Title *</label>
                   <input
+                    required
                     type="text"
-                    value={newProb.topic}
-                    onChange={(e) => setNewProb({ ...newProb, topic: e.target.value })}
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px" }}
+                    placeholder="e.g. Valid Palindrome"
+                    value={newProb.title}
+                    onChange={(e) => setNewProb({ ...newProb, title: e.target.value })}
+                    className="form-input-admin"
+                    autoFocus
                   />
                 </div>
-                <div>
-                  <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#334155" }}>Difficulty</label>
-                  <select
-                    value={newProb.difficulty}
-                    onChange={(e) => setNewProb({ ...newProb, difficulty: e.target.value })}
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px" }}
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Topic / Category</label>
+                    <input
+                      type="text"
+                      value={newProb.topic}
+                      onChange={(e) => setNewProb({ ...newProb, topic: e.target.value })}
+                      className="form-input-admin"
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Difficulty</label>
+                    <select
+                      value={newProb.difficulty}
+                      onChange={(e) => setNewProb({ ...newProb, difficulty: e.target.value })}
+                      className="form-select-admin"
+                    >
+                      <option value="Easy">Easy</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Hard">Hard</option>
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#334155" }}>XP Points</label>
-                  <input
-                    type="number"
-                    value={newProb.xp}
-                    onChange={(e) => setNewProb({ ...newProb, xp: e.target.value })}
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px" }}
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>XP Points</label>
+                    <input
+                      type="number"
+                      value={newProb.xp}
+                      onChange={(e) => setNewProb({ ...newProb, xp: e.target.value })}
+                      className="form-input-admin"
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Target Companies</label>
+                    <input
+                      type="text"
+                      placeholder="TCS, Infosys, Wipro"
+                      value={newProb.companies}
+                      onChange={(e) => setNewProb({ ...newProb, companies: e.target.value })}
+                      className="form-input-admin"
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Problem Description</label>
+                  <textarea
+                    rows={4}
+                    required
+                    placeholder="Explain problem statement..."
+                    value={newProb.description}
+                    onChange={(e) => setNewProb({ ...newProb, description: e.target.value })}
+                    className="form-input-admin"
+                    style={{ height: "auto", padding: "10px", resize: "none" }}
                   />
                 </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#334155" }}>Target Companies (comma separated)</label>
-                <input
-                  type="text"
-                  placeholder="TCS, Infosys, Wipro"
-                  value={newProb.companies}
-                  onChange={(e) => setNewProb({ ...newProb, companies: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px" }}
-                />
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-submit">
+                  Save Problem
+                </button>
               </div>
-
-              <div>
-                <label style={{ fontSize: "12.5px", fontWeight: 700, color: "#334155" }}>Problem Description</label>
-                <textarea
-                  rows={4}
-                  required
-                  placeholder="Explain problem statement..."
-                  value={newProb.description}
-                  onChange={(e) => setNewProb({ ...newProb, description: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px", resize: "none" }}
-                />
-              </div>
-
-              <button
-                type="submit"
-                style={{ background: "#4f46e5", color: "#ffffff", padding: "12px", borderRadius: "12px", fontWeight: 700, border: "none", cursor: "pointer", marginTop: "10px" }}
-              >
-                Save Problem
-              </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* TEST CASES MODAL */}

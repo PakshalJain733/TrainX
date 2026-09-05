@@ -113,6 +113,7 @@ function App() {
           <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="quiz" element={<AcademicQuiz />} />
           <Route path="attendance" element={<Attendance />} />
+          <Route path="skill-gaps" element={<MentorSkillGaps />} />
           <Route path="weekly-reports" element={<WeeklyReports />} />
           <Route path="batches" element={<Batches />} />
           <Route path="practice" element={<PracticeProblems />} />
@@ -133,6 +134,7 @@ function App() {
           <Route path="learning" element={<AdminLearningContent />} />
           <Route path="quiz" element={<AdminQuizzes />} />
           <Route path="practice" element={<AdminPracticeProblems />} />
+          <Route path="coding-practice" element={<AdminPracticeProblems />} />
           <Route path="broadcast" element={<AdminBroadcast />} />
           <Route path="progress" element={<AdminProgress />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
@@ -145,6 +147,8 @@ function App() {
         {/* Mentor Workspace Routes */}
         <Route path="/mentor" element={<MentorLayout />}>
           <Route index element={<MentorOverview />} />
+          <Route path="quizzes" element={<AdminQuizzes />} />
+          <Route path="assessments" element={<AdminQuizzes />} />
           <Route path="students" element={<MentorStudents />} />
           <Route path="roadmaps" element={<MentorRoadmaps />} />
           <Route path="ai-interviews" element={<MentorAIInterviews />} />
@@ -170,9 +174,6 @@ function App() {
           <Route path="batches" element={<CoordinatorBatches />} />
           <Route path="students" element={<CoordinatorStudents />} />
           <Route path="mentors" element={<CoordinatorMentors />} />
-          <Route path="sessions" element={<CoordinatorLiveSessions />} />
-          <Route path="live-sessions" element={<CoordinatorLiveSessions />} />
-          <Route path="schedules" element={<CoordinatorSchedules />} />
           <Route path="assessments" element={<CoordinatorAssessments />} />
           <Route path="quizzes" element={<CoordinatorAssessments />} />
           <Route path="attendance" element={<CoordinatorAttendance />} />
@@ -187,7 +188,6 @@ function App() {
           <Route path="requests" element={<CoordinatorRequests />} />
           <Route path="reports" element={<CoordinatorWeeklyReports />} />
           <Route path="weekly-reports" element={<CoordinatorWeeklyReports />} />
-          <Route path="practice" element={<CoordinatorCodingPractice />} />
           <Route path="notifications" element={<CoordinatorNotifications />} />
           <Route path="profile" element={<CoordinatorProfilePage />} />
           <Route path="settings" element={<CoordinatorProfilePage />} />

@@ -51,19 +51,19 @@ router.get('/attempts/:attemptId/my-result', authorizeRoles('student'), getMyRes
 // Submit answers for an in_progress attempt
 router.post(
   '/attempts/:attemptId/submit',
-  authorizeRoles('student'),
+  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
   submitAssessment
 );
 
 // ─── Student Personal Routes ───────────────────────────────────────────────────
 
 // Available/published assessments for students
-router.get('/available', authorizeRoles('student'), getPublishedAssessments);
+router.get('/available', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), getPublishedAssessments);
 
 // List all past attempts for the logged-in student
 router.get(
   '/my-attempts',
-  authorizeRoles('student'),
+  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
   getMyAttempts
 );
 
@@ -122,10 +122,10 @@ router.delete('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admi
 router.get('/:id/results', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), getAssessmentResults);
 
 // Student: Start assessment (returns questions WITHOUT correct answers)
-router.post('/:id/start', authorizeRoles('student'), startAssessment);
+router.post('/:id/start', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), startAssessment);
 
 // Legacy backward-compatible routes
-router.post('/:id/attempts', authorizeRoles('student'), submitAssessmentAttempt);
-router.post('/:id/submit', authorizeRoles('student'), submitAssessmentAttempt);
+router.post('/:id/attempts', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), submitAssessmentAttempt);
+router.post('/:id/submit', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), submitAssessmentAttempt);
 
 export default router;

@@ -54,9 +54,9 @@ export default function CoordinatorOverview() {
             <PlusCircle size={16} />
             Create Batch
           </Link>
-          <Link to="/coordinator/schedules" className="coord-btn coord-btn--outline">
+          <Link to="/coordinator/assessments" className="coord-btn coord-btn--outline">
             <Calendar size={16} />
-            Schedule Class
+            Publish Quiz
           </Link>
         </div>
       </div>
@@ -172,8 +172,8 @@ export default function CoordinatorOverview() {
                 <Video size={18} color="#059669" />
                 Today & Upcoming Live Training Sessions
               </div>
-              <Link to="/coordinator/schedules" className="coord-card-link">
-                Full Timetable →
+              <Link to="/coordinator/assessments" className="coord-card-link">
+                Assessments →
               </Link>
             </div>
 

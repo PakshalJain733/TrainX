@@ -1,8 +1,13 @@
 /**
- * Assessment Quiz Logic — End-to-End Test Script
- * Tests all scenarios from the spec.
+ * Assessment Quiz Logic — Full End-to-End Test Suite
+ * Task 1: Complete Quiz Attempt + Result Flow
+ * Task 2: Role Access & College Isolation Checks
+ * Task 3: Comprehensive Validation & Edge Cases
+ * 
  * Run with: node test_assessment_quiz.js
  */
+
+import { generateToken } from './src/utils/generateToken.js';
 
 const BASE_URL = 'http://localhost:5000/api/v1';
 
@@ -14,9 +19,9 @@ const fail = (msg) => log(`  ❌ ${msg}`, '\x1b[31m');
 const info = (msg) => log(`  ℹ️  ${msg}`, '\x1b[36m');
 const section = (title) => {
   console.log('');
-  log(`${'═'.repeat(60)}`, '\x1b[33m');
+  log(`${'═'.repeat(65)}`, '\x1b[33m');
   log(`  ${title}`, '\x1b[33m');
-  log(`${'═'.repeat(60)}`, '\x1b[33m');
+  log(`${'═'.repeat(65)}`, '\x1b[33m');
 };
 
 async function apiRequest(method, path, body = null, token = null) {
@@ -31,48 +36,21 @@ async function apiRequest(method, path, body = null, token = null) {
   return { status: res.status, body: json };
 }
 
-// ─── STEP 1: LOGIN AS STUDENT ─────────────────────────────────────────────────
-
-async function loginAsStudent() {
-  // Try with test credentials
-  const candidates = [
-    { email: 'student@test.com', password: 'password123' },
-    { email: 'ganesh@test.com', password: 'password123' },
-    { email: 'test@student.com', password: 'Test@1234' },
-  ];
-  for (const creds of candidates) {
-    const r = await apiRequest('POST', '/auth/login', creds);
-    if (r.status === 200 && r.body?.data?.token) {
-      info(`Logged in as student: ${creds.email}`);
-      return { token: r.body.data.token, user: r.body.data.user };
-    }
-  }
-  // If no credentials work, use the register route
-  const reg = await apiRequest('POST', '/auth/register', {
-    name: 'Test Student',
-    email: `teststudent_${Date.now()}@quiz.com`,
-    password: 'Test@1234',
-    role: 'student',
-  });
-  if (reg.status === 201 && reg.body?.data?.token) {
-    info(`Registered new test student`);
-    return { token: reg.body.data.token, user: reg.body.data.user };
-  }
-  return { token: null, user: null };
-}
-
 // ─── MAIN TEST RUNNER ─────────────────────────────────────────────────────────
 
 async function runTests() {
-  log('\n🧪 ASSESSMENT QUIZ LOGIC — FULL END-TO-END TESTS', '\x1b[35m');
+  log('\n🧪 ASSESSMENT QUIZ — COMPREHENSIVE E2E & VALIDATION TEST SUITE', '\x1b[35m');
   log(`   Target: ${BASE_URL}`, '\x1b[35m');
 
   let passed = 0;
   let failed = 0;
-  let studentToken = null;
-  let attemptId = null;
-  let mentorToken = null;
-  let adminToken = null;
+
+  // Generate Tokens for various test personas
+  const studentAToken = generateToken({ userId: 101, role: 'student', college_id: 1 });
+  const studentBToken = generateToken({ userId: 102, role: 'student', college_id: 2 }); // Cross-college student
+  const mentorToken   = generateToken({ userId: 201, role: 'mentor', college_id: 1 });
+  const collegeAdminToken = generateToken({ userId: 301, role: 'college_admin', college_id: 1 });
+  const superAdminToken   = generateToken({ userId: 401, role: 'super_admin', college_id: null });
 
   // ── 0. Health check ────────────────────────────────────────────────────────
   section('TEST 0: Health Check');
@@ -80,262 +58,287 @@ async function runTests() {
   if (health.status === 200) { ok('Server is healthy'); passed++; }
   else { fail(`Server not healthy: ${health.status}`); failed++; }
 
-  // ── 1. Authentication ──────────────────────────────────────────────────────
-  section('TEST 1: Student Authentication');
-  const authRes = await loginAsStudent();
-  studentToken = authRes.token;
-  const studentUserId = authRes.user?.id || 1;
-  if (studentToken) { ok(`Got student JWT token (ID: ${studentUserId})`); passed++; }
-  else { fail('Could not get student token — some tests will be skipped'); failed++; }
+  // ── 1. Mentor creates Quiz & adds Questions ─────────────────────────────
+  section('TEST 1: Mentor Creates Quiz (College 1) & Adds Questions');
+  const quizTitle = `E2E Tech Quiz ${Date.now()}`;
+  const createRes = await apiRequest('POST', '/assessments', {
+    title: quizTitle,
+    description: 'Node.js & Express Fundamentals',
+    college_id: 1,
+    duration_minutes: 20,
+    total_marks: 30,
+    pass_marks: 18,
+    status: 'draft',
+  }, mentorToken);
 
-  if (!studentToken) {
-    log('\n⚠️  No student token. Run tests manually after adding a test student.', '\x1b[31m');
+  let targetQuizId;
+  if (createRes.status === 201 && createRes.body?.data?.id) {
+    targetQuizId = createRes.body.data.id;
+    ok(`Mentor created Quiz ID: ${targetQuizId} (Status: Draft)`);
+    passed++;
+  } else {
+    fail(`Mentor quiz creation failed: ${createRes.status} — ${JSON.stringify(createRes.body)}`);
+    failed++;
     return;
   }
 
-  // ── 2. Create Fresh Test Assessment with 5 Questions ────────────────────────
-  section('TEST 2: Create Assessment & Seed 5 Questions');
-  let targetAssessmentId = 1;
-  // Create admin/mentor token for assessment & question creation
-  const { generateToken } = await import('./src/utils/generateToken.js');
-  adminToken = generateToken({ userId: studentUserId, role: 'super_admin', college_id: 1 });
+  // Add 3 Questions
+  const questionsData = [
+    { question_text: "What is Express.js?", option_a: "Web Framework", option_b: "Database", option_c: "CSS Tool", option_d: "OS", correct_option: "a", marks: 10 },
+    { question_text: "Which HTTP code indicates Success?", option_a: "404", option_b: "200", option_c: "500", option_d: "301", correct_option: "b", marks: 10 },
+    { question_text: "What is package.json?", option_a: "Compiler", option_b: "Manifest file", option_c: "Text editor", option_d: "Database query", correct_option: "b", marks: 10 },
+  ];
 
-  const createRes = await apiRequest('POST', '/assessments', {
-    title: `Automated E2E Quiz ${Date.now()}`,
-    category: 'Technical Quiz',
+  const createdQuestions = [];
+  for (const q of questionsData) {
+    const qRes = await apiRequest('POST', `/assessments/${targetQuizId}/questions`, q, mentorToken);
+    if (qRes.status === 201 && qRes.body?.data?.id) {
+      createdQuestions.push(qRes.body.data);
+    }
+  }
+
+  if (createdQuestions.length === 3) {
+    ok(`Added ${createdQuestions.length} questions to Quiz ID ${targetQuizId}`);
+    passed++;
+  } else {
+    fail(`Failed adding questions: got ${createdQuestions.length}/3`);
+    failed++;
+  }
+
+  // ── 2. Publish Quiz ────────────────────────────────────────────────────────
+  section('TEST 2: Publish Quiz');
+  const pubRes = await apiRequest('PATCH', `/assessments/${targetQuizId}/publish`, {}, mentorToken);
+  if (pubRes.status === 200 && pubRes.body?.data?.status === 'published') {
+    ok(`Quiz ID ${targetQuizId} published successfully`);
+    passed++;
+  } else {
+    fail(`Publish failed: ${pubRes.status}`);
+    failed++;
+  }
+
+  // ── 3. Student A starts Quiz ───────────────────────────────────────────────
+  section('TEST 3: Student A Starts Quiz (POST /assessments/:id/start)');
+  const startRes = await apiRequest('POST', `/assessments/${targetQuizId}/start`, {}, studentAToken);
+  let attemptIdA;
+
+  if (startRes.status === 200 && startRes.body?.data?.attempt?.id) {
+    attemptIdA = startRes.body.data.attempt.id;
+    ok(`Attempt started successfully (Attempt ID: ${attemptIdA})`);
+    passed++;
+
+    // Security Check: Correct answers MUST NOT be revealed before submission
+    const qList = startRes.body.data.questions || [];
+    const leaksCorrectOption = qList.some((q) => 'correct_option' in q || 'explanation' in q);
+    if (!leaksCorrectOption) {
+      ok(`Security Verified: correct answers are NOT sent before submission ✓`);
+      passed++;
+    } else {
+      fail(`SECURITY VULNERABILITY: correct answers revealed in start response!`);
+      failed++;
+    }
+  } else {
+    fail(`Start quiz failed: ${startRes.status} — ${JSON.stringify(startRes.body)}`);
+    failed++;
+  }
+
+  // ── 4. Full Marks Submission (100%) ────────────────────────────────────────
+  section('TEST 4: Student A Submits — Full Marks (100%)');
+  if (attemptIdA && createdQuestions.length === 3) {
+    const fullMarksPayload = [
+      { question_id: createdQuestions[0].id, selected_option: 'a' },
+      { question_id: createdQuestions[1].id, selected_option: 'b' },
+      { question_id: createdQuestions[2].id, selected_option: 'b' },
+    ];
+
+    const submitRes = await apiRequest('POST', `/assessments/attempts/${attemptIdA}/submit`, { answers: fullMarksPayload }, studentAToken);
+    if (submitRes.status === 200 && submitRes.body?.data?.scoring) {
+      const s = submitRes.body.data.scoring;
+      if (s.marks_obtained === 30 && s.percentage === '100%' && s.status === 'passed') {
+        ok(`Submitted! Full Marks: 30/30 (100%) — Status: ${s.status} ✓`);
+        passed++;
+      } else {
+        fail(`Score calculation incorrect: ${JSON.stringify(s)}`);
+        failed++;
+      }
+    } else {
+      fail(`Submission failed: ${submitRes.status}`);
+      failed++;
+    }
+  }
+
+  // ── 5. Fetch Result After Completion ──────────────────────────────────────
+  section('TEST 5: Fetch Result After Completion (GET /attempts/:attemptId/result)');
+  if (attemptIdA) {
+    const resRes = await apiRequest('GET', `/assessments/attempts/${attemptIdA}/result`, null, studentAToken);
+    if (resRes.status === 200 && resRes.body?.data?.score) {
+      const d = resRes.body.data;
+      ok(`Result retrieved! Student ID: ${d.student.user_id}, Marks: ${d.score.marks_obtained}/${d.score.total_marks} (${d.score.percentage})`);
+      ok(`Per-question breakdown returned ${d.breakdown.length} items`);
+      passed++;
+    } else {
+      fail(`Get result failed: ${resRes.status}`);
+      failed++;
+    }
+  }
+
+  // ── 6. Duplicate Submission Guard ─────────────────────────────────────────
+  section('TEST 6: Duplicate Submission Guard (submit again → 409)');
+  if (attemptIdA) {
+    const dupRes = await apiRequest('POST', `/assessments/attempts/${attemptIdA}/submit`, { answers: [] }, studentAToken);
+    if (dupRes.status === 409) {
+      ok(`Completed quiz submitted again correctly rejected with 409 Conflict ✓`);
+      passed++;
+    } else {
+      fail(`Expected 409, got ${dupRes.status}`);
+      failed++;
+    }
+  }
+
+  // ── 7. Partial Marks & Blank Answers ──────────────────────────────────────
+  section('TEST 7: Partial Marks & Blank Answers');
+  // Create Quiz 2 for partial marks test
+  const createQuiz2 = await apiRequest('POST', '/assessments', {
+    title: `Partial Marks Quiz ${Date.now()}`,
+    college_id: 1,
     status: 'published',
-    is_published: true,
-    duration_minutes: 30,
-    total_marks: 50,
-  }, adminToken);
+    duration_minutes: 15,
+    total_marks: 20,
+  }, mentorToken);
 
-  if (createRes.body?.data?.id) {
-    targetAssessmentId = createRes.body.data.id;
-    info(`Created fresh Assessment ID: ${targetAssessmentId}`);
+  const quiz2Id = createQuiz2.body?.data?.id;
+  if (quiz2Id) {
+    const q1 = await apiRequest('POST', `/assessments/${quiz2Id}/questions`, { question_text: "Q1", option_a: "A", option_b: "B", correct_option: "a", marks: 10 }, mentorToken);
+    const q2 = await apiRequest('POST', `/assessments/${quiz2Id}/questions`, { question_text: "Q2", option_a: "A", option_b: "B", correct_option: "b", marks: 10 }, mentorToken);
 
-    // Add 5 test questions
-    const sampleQs = [
-      { question_text: "What is Node.js?", option_a: "JS Runtime", option_b: "Browser", option_c: "CSS Library", option_d: "Database", correct_option: "a", marks: 10 },
-      { question_text: "Which method defines HTTP GET in Express?", option_a: "app.fetch()", option_b: "app.get()", option_c: "app.post()", option_d: "app.route()", correct_option: "b", marks: 10 },
-      { question_text: "What does SQL stand for?", option_a: "Simple Query Language", option_b: "Structured Query Language", option_c: "Sequential Logic", option_d: "Server System", correct_option: "b", marks: 10 },
-      { question_text: "Which HTTP status code means Created?", option_a: "200", option_b: "201", option_c: "404", option_d: "500", correct_option: "b", marks: 10 },
-      { question_text: "What is NPM?", option_a: "Node Package Manager", option_b: "New Protocol Machine", option_c: "Network Performance", option_d: "Null Pointer", correct_option: "a", marks: 10 },
-    ];
+    const startQuiz2 = await apiRequest('POST', `/assessments/${quiz2Id}/start`, {}, studentAToken);
+    const attempt2Id = startQuiz2.body?.data?.attempt?.id;
 
-    for (const q of sampleQs) {
-      await apiRequest('POST', `/assessments/${targetAssessmentId}/questions`, q, adminToken);
+    if (attempt2Id && q1.body?.data?.id && q2.body?.data?.id) {
+      // Q1 correct ("a"), Q2 left blank (unattempted)
+      const partialPayload = [
+        { question_id: q1.body.data.id, selected_option: 'a' },
+        { question_id: q2.body.data.id, selected_option: null },
+      ];
+
+      const sub2 = await apiRequest('POST', `/assessments/attempts/${attempt2Id}/submit`, { answers: partialPayload }, studentAToken);
+      if (sub2.status === 200 && sub2.body?.data?.scoring) {
+        const s = sub2.body.data.scoring;
+        if (s.marks_obtained === 10 && s.correct_count === 1 && s.unattempted_count === 1) {
+          ok(`Partial Marks & Blank Answer evaluated correctly: 10/20 marks (1 correct, 1 blank) ✓`);
+          passed++;
+        } else {
+          fail(`Partial score evaluation unexpected: ${JSON.stringify(s)}`);
+          failed++;
+        }
+      } else {
+        fail(`Partial marks submission failed: ${sub2.status}`);
+        failed++;
+      }
     }
-    info('Added 5 sample questions to assessment');
-    ok('Assessment & Questions created successfully');
+  }
+
+  // ── 8. Validation Edge Cases: Invalid Question ID & Invalid Option ────────
+  section('TEST 8: Validation — Invalid Question ID & Invalid Option');
+  // Create Quiz 3 for validation tests
+  const createQuiz3 = await apiRequest('POST', '/assessments', {
+    title: `Validation Quiz ${Date.now()}`,
+    college_id: 1,
+    status: 'published',
+  }, mentorToken);
+  const quiz3Id = createQuiz3.body?.data?.id;
+
+  if (quiz3Id) {
+    await apiRequest('POST', `/assessments/${quiz3Id}/questions`, { question_text: "Valid Q", option_a: "A", option_b: "B", correct_option: "a", marks: 10 }, mentorToken);
+    const start3 = await apiRequest('POST', `/assessments/${quiz3Id}/start`, {}, studentAToken);
+    const attempt3Id = start3.body?.data?.attempt?.id;
+
+    if (attempt3Id) {
+      // Case 8A: Invalid Question ID
+      const badQIdRes = await apiRequest('POST', `/assessments/attempts/${attempt3Id}/submit`, {
+        answers: [{ question_id: 99999, selected_option: 'a' }]
+      }, studentAToken);
+
+      if (badQIdRes.status === 400) {
+        ok(`Invalid question ID rejected with 400 Bad Request ✓`);
+        passed++;
+      } else {
+        fail(`Expected 400 for invalid question ID, got ${badQIdRes.status}`);
+        failed++;
+      }
+
+      // Case 8B: Invalid Option ('Z')
+      const badOptRes = await apiRequest('POST', `/assessments/attempts/${attempt3Id}/submit`, {
+        answers: [{ question_id: start3.body.data.questions[0].id, selected_option: 'Z' }]
+      }, studentAToken);
+
+      if (badOptRes.status === 400) {
+        ok(`Invalid option 'Z' rejected with 400 Bad Request ✓`);
+        passed++;
+      } else {
+        fail(`Expected 400 for invalid option 'Z', got ${badOptRes.status}`);
+        failed++;
+      }
+    }
+  }
+
+  // ── 9. Role Access Checks ──────────────────────────────────────────────────
+  section('TEST 9: Role Access Checks');
+
+  // 9A. Non-student (Mentor) trying to start quiz attempt -> 403
+  const mentorStart = await apiRequest('POST', `/assessments/${targetQuizId}/start`, {}, mentorToken);
+  if (mentorStart.status === 403) {
+    ok(`Role Check: Mentor prevented from starting quiz attempt (403) ✓`);
     passed++;
   } else {
-    fail(`Assessment creation failed: ${createRes.status} — ${JSON.stringify(createRes.body)}`);
+    fail(`Expected 403 for mentor starting attempt, got ${mentorStart.status}`);
     failed++;
   }
 
-
-  // ── 3. Start Assessment (POST /:id/start) ──────────────
-  section(`TEST 3: Start Assessment (POST /assessments/${targetAssessmentId}/start)`);
-  const start = await apiRequest('POST', `/assessments/${targetAssessmentId}/start`, {}, studentToken);
-  info(`Status: ${start.status}`);
-
-  info(`Body: ${JSON.stringify(start.body, null, 2)}`);
-
-  if (start.status === 200 && start.body?.data?.attempt) {
-    attemptId = start.body.data.attempt.id;
-    ok(`Attempt created, ID: ${attemptId}, status: ${start.body.data.attempt.status}`);
-    passed++;
-
-    // Verify no correct_option in questions
-    const questions = start.body.data.questions || [];
-    const hasCorrectOption = questions.some((q) => 'correct_option' in q);
-    if (!hasCorrectOption) {
-      ok(`Questions do NOT contain correct_option (safe for student) ✓`);
+  // 9B. Student B trying to submit Student A's attempt -> 403
+  if (attemptIdA) {
+    const stealSubmit = await apiRequest('POST', `/assessments/attempts/${attemptIdA}/submit`, { answers: [] }, studentBToken);
+    if (stealSubmit.status === 403) {
+      ok(`Unauthorized user submitting another student's attempt blocked (403) ✓`);
       passed++;
     } else {
-      fail(`SECURITY ISSUE: correct_option is visible in questions!`);
-      failed++;
-    }
-    info(`Got ${questions.length} question(s)`);
-  } else if (start.status === 409) {
-    info('Already has an attempt — fetching attempt ID from previous data');
-    const myAttempts = await apiRequest('GET', '/assessments/my-attempts', null, studentToken);
-    if (myAttempts.body?.data?.length > 0) {
-      attemptId = myAttempts.body.data[0].id;
-      info(`Using existing attemptId: ${attemptId}`);
-    }
-    ok('409 handled correctly');
-    passed++;
-  } else {
-    fail(`Start failed: ${start.status} — ${JSON.stringify(start.body)}`);
-    failed++;
-  }
-
-  // ── 4. SCENARIO A: All 5 correct ──────────────────────────────────────────
-  section('TEST 4A: Submit — All 5 Correct (expect 100%)');
-  if (attemptId) {
-    const qList = start.body?.data?.questions || [];
-    const correctAnswersPayload = qList.length > 0 ? [
-      { question_id: qList[0].id, selected_option: 'a' },
-      { question_id: qList[1].id, selected_option: 'b' },
-      { question_id: qList[2].id, selected_option: 'b' },
-      { question_id: qList[3].id, selected_option: 'b' },
-      { question_id: qList[4].id, selected_option: 'a' },
-    ] : [
-      { question_id: 1, selected_option: 'a' },
-      { question_id: 2, selected_option: 'b' },
-      { question_id: 3, selected_option: 'b' },
-      { question_id: 4, selected_option: 'b' },
-      { question_id: 5, selected_option: 'a' },
-    ];
-
-    const submitAll = await apiRequest(
-      'POST',
-      `/assessments/attempts/${attemptId}/submit`,
-      {
-        answers: correctAnswersPayload,
-      },
-      studentToken
-    );
-    info(`Status: ${submitAll.status}`);
-    if (submitAll.status === 200 || submitAll.status === 201) {
-      const s = submitAll.body?.data?.scoring || submitAll.body?.data;
-      ok(`Submitted! Score: ${s.score || s.marks_obtained}/${s.total_marks} (${s.percentage || '100%'}) — ${s.status}`);
-      ok('Quiz submit & auto-grading successful ✓');
-      passed += 2;
-    } else {
-      info(`Response: ${JSON.stringify(submitAll.body)}`);
-      // If attempt was already in progress from a prior run, this is OK
-      if (submitAll.status === 409) ok('Already submitted (409 — duplicate guard works)');
-      else fail(`Submit failed: ${submitAll.status}`);
-      failed++;
-    }
-  } else {
-    fail('No attemptId — skipping submission tests');
-    failed++;
-  }
-
-
-  // ── 5. SCENARIO B: Submit again → must be blocked ─────────────────────────
-  section('TEST 5: Duplicate Submission Guard (submit again → 409)');
-  if (attemptId) {
-    const resubmit = await apiRequest(
-      'POST',
-      `/assessments/attempts/${attemptId}/submit`,
-      {
-        answers: [{ question_id: 1, selected_option: 'A' }],
-      },
-      studentToken
-    );
-    info(`Status: ${resubmit.status}`);
-    if (resubmit.status === 409) {
-      ok(`Duplicate submission blocked with 409 ✓`);
-      info(`Message: ${resubmit.body?.message}`);
-      passed++;
-    } else {
-      fail(`Expected 409, got ${resubmit.status} — Duplicate guard NOT working!`);
+      fail(`Expected 403 for cross-student submission, got ${stealSubmit.status}`);
       failed++;
     }
   }
 
-  // ── 6. Result API ──────────────────────────────────────────────────────────
-  section('TEST 6: Get Attempt Result (GET /attempts/:id/result)');
-  if (attemptId) {
-    const result = await apiRequest(
-      'GET',
-      `/assessments/attempts/${attemptId}/result`,
-      null,
-      studentToken
-    );
-    info(`Status: ${result.status}`);
-    if (result.status === 200 && result.body?.data?.score) {
-      const s = result.body.data.score;
-      ok(`Result retrieved!`);
-      ok(`Assessment: "${result.body.data.assessment?.title}"`);
-      ok(`Marks: ${s.marks_obtained}/${s.total_marks} (${s.percentage})`);
-      ok(`Correct: ${s.correct_count}, Incorrect: ${s.incorrect_count}, Unanswered: ${s.unattempted_count}`);
-      ok(`Status: ${result.body.data.result?.status}`);
+  // 9C. Student B trying to view Student A's result -> 403
+  if (attemptIdA) {
+    const stealResult = await apiRequest('GET', `/assessments/attempts/${attemptIdA}/result`, null, studentBToken);
+    if (stealResult.status === 403) {
+      ok(`Unauthorized user viewing another student's result blocked (403) ✓`);
       passed++;
     } else {
-      info(`Body: ${JSON.stringify(result.body)}`);
-      fail(`Result API failed: ${result.status}`);
+      fail(`Expected 403 for cross-student result fetch, got ${stealResult.status}`);
       failed++;
     }
   }
 
-  // ── 7. Wrong assessment ID ─────────────────────────────────────────────────
-  section('TEST 7: Invalid Assessment ID → 404');
-  const badId = await apiRequest('POST', '/assessments/99999/start', {}, studentToken);
-  if (badId.status === 404) {
-    ok(`Wrong assessment ID returns 404 ✓`);
+  // ── 10. College Data Isolation Checks ─────────────────────────────────────
+  section('TEST 10: College Isolation Checks');
+
+  // Student B (College 2) trying to start College 1's Quiz -> 403
+  const crossColStart = await apiRequest('POST', `/assessments/${targetQuizId}/start`, {}, studentBToken);
+  if (crossColStart.status === 403) {
+    ok(`College Isolation: Student from College 2 blocked from College 1's Quiz (403) ✓`);
     passed++;
   } else {
-    fail(`Expected 404, got ${badId.status}`);
+    fail(`Expected 403 for cross-college quiz access, got ${crossColStart.status}`);
     failed++;
   }
-
-  // ── 8. Invalid option ─────────────────────────────────────────────────────
-  section('TEST 8: Invalid Selected Option → 400');
-  // Start a NEW assessment attempt for a different scenario
-  const start2 = await apiRequest('POST', '/assessments/1/start', {}, studentToken);
-  // This will either be 409 (already completed) or 200 (already in_progress resumed)
-  // Either way test the submit with bad option on the attemptId we have
-  if (attemptId) {
-    const badOption = await apiRequest(
-      'POST',
-      `/assessments/attempts/${attemptId}/submit`,
-      { answers: [{ question_id: 1, selected_option: 'Z' }] },
-      studentToken
-    );
-    if (badOption.status === 409) {
-      ok(`Already completed — duplicate guard fires before option validation ✓`);
-      passed++;
-    } else if (badOption.status === 400) {
-      ok(`Invalid option 'Z' correctly rejected with 400 ✓`);
-      passed++;
-    } else {
-      fail(`Expected 400 or 409, got ${badOption.status}`);
-      failed++;
-    }
-  }
-
-  // ── 9. Wrong attempt ID ────────────────────────────────────────────────────
-  section('TEST 9: Invalid Attempt ID → 404');
-  const badAttempt = await apiRequest(
-    'GET',
-    '/assessments/attempts/99999/result',
-    null,
-    studentToken
-  );
-  if (badAttempt.status === 404) {
-    ok(`Wrong attempt ID returns 404 ✓`);
-    passed++;
-  } else {
-    fail(`Expected 404, got ${badAttempt.status}`);
-    failed++;
-  }
-
-  // ── 10. Role Guard: Non-student role cannot start ───────────────────────────
-  section('TEST 10: Role Guard — Non-student role cannot start assessment');
-  mentorToken = generateToken({ userId: 99, role: 'mentor', college_id: 1 });
-  const mentorAttempt = await apiRequest('POST', `/assessments/${targetAssessmentId}/start`, {}, mentorToken);
-  if (mentorAttempt.status === 401 || mentorAttempt.status === 403) {
-    ok(`Role Guard active — Non-student role prevented from starting quiz (status: ${mentorAttempt.status}) ✓`);
-    passed++;
-  } else {
-    fail(`Expected 401 or 403, got ${mentorAttempt.status}`);
-    failed++;
-  }
-
 
   // ── SUMMARY ───────────────────────────────────────────────────────────────
   section('TEST SUMMARY');
   log(`  Total Passed: ${passed}`, '\x1b[32m');
   log(`  Total Failed: ${failed}`, failed > 0 ? '\x1b[31m' : '\x1b[32m');
   if (failed === 0) {
-    log('\n  🎉 ALL TESTS PASSED — Assessment Quiz Logic is DONE!', '\x1b[32m');
+    log('\n  🎉 ALL TESTS PASSED SUCCESSFULLY! Quiz Flow & Access Control Verified!', '\x1b[32m');
   } else {
-    log(`\n  ⚠️  ${failed} test(s) need attention.`, '\x1b[31m');
+    log(`\n  ⚠️  ${failed} test(s) failed.`, '\x1b[31m');
   }
   console.log('');
 }

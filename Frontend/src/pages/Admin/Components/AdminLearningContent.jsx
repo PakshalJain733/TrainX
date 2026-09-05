@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   BookOpen,
@@ -13,6 +14,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../../Student/Styles/LearningContent.css";
 import "../Styles/AdminLearningContent.css";
+import "../Styles/AdminUsers.css";
 
 const initialResources = [];
 const allTopics = [];
@@ -70,44 +72,81 @@ export default function AdminLearningContent() {
         }
       />
 
-      {/* Add Form */}
-      {showForm && (
-        <div className="learning-add-card">
-          <form onSubmit={handleAdd} className="learning-add-form">
-            <div className="form-group">
-              <label>Title</label>
-              <input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Content title..." required />
+      {/* Add Content Modal / Flash Screen */}
+      {showForm && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <BookOpen size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Upload Learning Content</h2>
+                  <p className="modal-subtitle">Publish videos, documents, or AI study notes for student cohorts.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
+                <X size={18} />
+              </button>
             </div>
-            <div className="form-row-3">
-              <div className="form-group">
-                <label>Type</label>
-                <select value={newType} onChange={e => setNewType(e.target.value)}>
-                  <option>Video</option>
-                  <option>Document</option>
-                  <option>AI Notes</option>
-                </select>
+
+            <form onSubmit={handleAdd}>
+              <div className="modal-body">
+                <div className="form-group-admin">
+                  <label>Content Title *</label>
+                  <input
+                    className="form-input-admin"
+                    value={newTitle}
+                    onChange={e => setNewTitle(e.target.value)}
+                    placeholder="e.g. Node.js Event Loop & Async Architecture"
+                    required
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Resource Type</label>
+                    <select className="form-select-admin" value={newType} onChange={e => setNewType(e.target.value)}>
+                      <option>Video</option>
+                      <option>Document</option>
+                      <option>AI Notes</option>
+                    </select>
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Target Cohort / Batch</label>
+                    <select className="form-select-admin" value={newBatch} onChange={e => setNewBatch(e.target.value)}>
+                      <option>All Batches</option>
+                      <option>Python Backend</option>
+                      <option>React Frontend</option>
+                      <option>Full Stack</option>
+                      <option>Data Science</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Publishing Status</label>
+                  <select className="form-select-admin" value={newStatus} onChange={e => setNewStatus(e.target.value)}>
+                    <option>Draft</option>
+                    <option>Published</option>
+                  </select>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Batch</label>
-                <select value={newBatch} onChange={e => setNewBatch(e.target.value)}>
-                  <option>All Batches</option>
-                  <option>Python Backend</option>
-                  <option>React Frontend</option>
-                  <option>Full Stack</option>
-                  <option>Data Science</option>
-                </select>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setShowForm(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-submit">
+                  Add Content
+                </button>
               </div>
-              <div className="form-group">
-                <label>Status</label>
-                <select value={newStatus} onChange={e => setNewStatus(e.target.value)}>
-                  <option>Draft</option>
-                  <option>Published</option>
-                </select>
-              </div>
-            </div>
-            <button type="submit" className="learning-submit-btn">Add Content</button>
-          </form>
-        </div>
+            </form>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Search and Category Filter */}

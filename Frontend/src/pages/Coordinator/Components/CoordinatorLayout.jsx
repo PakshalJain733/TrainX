@@ -91,8 +91,6 @@ export default function CoordinatorLayout() {
     if (path.startsWith("/coordinator/batches")) return "Batches Governance";
     if (path.startsWith("/coordinator/students")) return "Student Directory & Risk Audit";
     if (path.startsWith("/coordinator/mentors")) return "Industry Trainers & Mentors";
-    if (path.startsWith("/coordinator/sessions")) return "Live Classrooms & Training";
-    if (path.startsWith("/coordinator/schedules")) return "Live Schedules & Timetable";
     if (path.startsWith("/coordinator/assessments")) return "Assessments & Quiz Governance";
     if (path.startsWith("/coordinator/attendance")) return "Attendance Governance";
     if (path.startsWith("/coordinator/roadmaps")) return "AI Career Roadmaps";
