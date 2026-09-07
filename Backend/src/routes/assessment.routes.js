@@ -31,7 +31,7 @@ router.use(authenticateToken);
 // Generate questions using Google Gemini AI
 router.post(
   '/generate-ai-questions',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles('student', 'super_admin', 'college_admin', 'coordinator', 'mentor'),
   generateAIQuestionsCtrl
 );
 
@@ -86,7 +86,7 @@ router.get(
 // Create assessment
 router.post(
   '/',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles('student', 'super_admin', 'college_admin', 'coordinator', 'mentor'),
   addAssessment
 );
 
@@ -114,7 +114,7 @@ router.patch(
 // ─── Questions CRUD ──────────────────────────────────────────────────────────
 
 router.get('/:id/questions', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), getQuestions);
-router.post('/:id/questions', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), addQuestion);
+router.post('/:id/questions', authorizeRoles('student', 'super_admin', 'college_admin', 'coordinator', 'mentor'), addQuestion);
 router.put('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), editQuestion);
 router.delete('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), removeQuestion);
 

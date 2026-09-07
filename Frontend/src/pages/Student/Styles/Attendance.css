@@ -1,5 +1,218 @@
 /* Attendance.css */
 
+/* Task 3: Attendance Warning Banner */
+.attendance-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  padding: 16px 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.08);
+  animation: slideDownWarning 0.3s ease;
+}
+
+@keyframes slideDownWarning {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.warning-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: #ffe4e6;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.warning-banner-body {
+  flex: 1;
+}
+
+.warning-banner-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #9f1239;
+  margin: 0 0 4px 0;
+}
+
+.warning-banner-desc {
+  font-size: 13px;
+  color: #be123c;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.warning-banner-badge {
+  background: #be123c;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+}
+
+/* Task 1: My Attendance Summary Card */
+.my-attendance-summary-card {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.my-attendance-header-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.my-attendance-header-title h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.my-attendance-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.metric-box {
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  border-radius: 14px;
+}
+
+.metric-box--primary {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+  border-color: #c7d2fe;
+}
+
+.metric-lbl {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-val-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 6px 0;
+}
+
+.metric-num {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.text-indigo { color: #4f46e5; }
+.text-emerald { color: #10b981; }
+.text-rose { color: #f43f5e; }
+.text-slate { color: #334155; }
+.text-red { color: #ef4444; }
+
+.badge-status-good {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.badge-warning-low {
+  background: #ffe4e6;
+  color: #be123c;
+  font-weight: 700;
+}
+
+.metric-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.metric-progress-bg {
+  width: 100%;
+  height: 6px;
+  background: #cbd5e1;
+  border-radius: 9999px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.metric-progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.4s ease;
+}
+
+/* Task 2: History Filters Toolbar */
+.history-filters-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.history-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+.filter-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.history-filter-item select {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  cursor: pointer;
+}
+
+.btn-toggle-demo-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-toggle-demo-warning:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
 .attendance-empty-grid-cell {
   grid-column: 1 / -1;
   padding: 40px 16px;

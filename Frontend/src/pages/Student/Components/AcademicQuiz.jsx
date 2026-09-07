@@ -323,6 +323,8 @@ function QuizPlatform({ quiz, mode, onExit }) {
   );
 
   const [attemptId, setAttemptId] = useState(null);
+  const [apiResult, setApiResult] = useState(null);
+  const [resultLoading, setResultLoading] = useState(false);
 
   // Initialize or start assessment attempt with API
   useEffect(() => {
@@ -369,7 +371,7 @@ function QuizPlatform({ quiz, mode, onExit }) {
   async function handleSubmit() {
     if (submitted) return;
     setSubmitted(true);
-    setWasSubmitted(true); // Always mark as submitted locally
+    setWasSubmitted(true);
 
     if (quiz.source !== "admin") return; // builtin quizzes don't need backend
 
@@ -380,15 +382,18 @@ function QuizPlatform({ quiz, mode, onExit }) {
         selectedIndex !== null && selectedIndex !== undefined ? optKeys[selectedIndex] : null;
       return {
         question_id: q.id || idx + 1,
-        selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : "A",
+        selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : null,
       };
     });
 
+    setResultLoading(true);
     try {
-      if (attemptId) {
-        // Primary path: use the attempt ID from /start
+      let submitAttemptId = attemptId;
+      let resultData = null;
+
+      if (submitAttemptId) {
         const res = await fetch(
-          `${API_BASE}/assessments/attempts/${attemptId}/submit`,
+          `${API_BASE}/assessments/attempts/${submitAttemptId}/submit`,
           {
             method: "POST",
             headers: getAuthHeaders(),
@@ -397,11 +402,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
         );
         const data = await res.json();
         console.log("[Quiz Submit Response]", data);
-        if (!data.success) {
+        if (data.success && data.data) {
+          resultData = data.data;
+        } else {
           console.warn("[Quiz Submit] Backend error:", data.message);
         }
       } else {
-        // Fallback path: use legacy /:id/submit if no attemptId
         console.warn("[Quiz Submit] No attemptId — using legacy submit endpoint");
         const res = await fetch(
           `${API_BASE}/assessments/${quiz.id}/submit`,
@@ -413,9 +419,35 @@ function QuizPlatform({ quiz, mode, onExit }) {
         );
         const data = await res.json();
         console.log("[Quiz Submit Fallback Response]", data);
+        if (data.success && data.data) {
+          resultData = data.data;
+          submitAttemptId = data.data.attemptId;
+        }
+      }
+
+      // Fetch full result with per-question breakdown
+      if (submitAttemptId) {
+        try {
+          const resultRes = await fetch(
+            `${API_BASE}/assessments/attempts/${submitAttemptId}/result`,
+            { headers: getAuthHeaders() }
+          );
+          const resultJson = await resultRes.json();
+          if (resultJson.success && resultJson.data) {
+            setApiResult(resultJson.data);
+          } else if (resultData) {
+            setApiResult(resultData);
+          }
+        } catch (_) {
+          if (resultData) setApiResult(resultData);
+        }
+      } else if (resultData) {
+        setApiResult(resultData);
       }
     } catch (err) {
       console.error("[Quiz Submit] Network error:", err);
+    } finally {
+      setResultLoading(false);
     }
   }
 
@@ -434,6 +466,176 @@ function QuizPlatform({ quiz, mode, onExit }) {
       return answers[idx] !== null ? "completed" : "unattempted";
     }
     return answers[idx] === questions[idx].correct ? "correct" : "wrong";
+  }
+
+  // ─── Full Result Screen (after submission for admin quizzes) ──────────────
+  if (submitted && wasSubmitted && quiz.source === "admin" && !isReview) {
+    if (resultLoading) {
+      return (
+        <div className="qp-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
+            <div style={{ width: 44, height: 44, border: '4px solid #334155', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'qp-spin 0.8s linear infinite', margin: '0 auto 16px' }} />
+            <p style={{ fontSize: '1rem' }}>Grading your answers…</p>
+          </div>
+        </div>
+      );
+    }
+
+    const scoring = apiResult?.scoring || {};
+    const breakdown = apiResult?.breakdown || [];
+    const marksObtained = scoring.marks_obtained ?? (score * 10);
+    const totalMarks = scoring.total_marks ?? (questions.length * 10);
+    const rawPct = scoring.percentage ? parseFloat(scoring.percentage) : Math.round((score / questions.length) * 100);
+    const pct = isNaN(rawPct) ? 0 : rawPct;
+    const passStatus = apiResult?.result?.final_result || scoring.status || (pct >= 60 ? 'passed' : 'failed');
+    const isPassed = passStatus === 'passed';
+    const correctCount = scoring.correct_count ?? score;
+    const incorrectCount = scoring.incorrect_count ?? (answers.filter((a, i) => a !== null && a !== questions[i].correct).length);
+    const unattemptedCount = scoring.unattempted_count ?? answers.filter(a => a === null).length;
+
+    return (
+      <div className="qp-overlay">
+        <div className="qp-header">
+          <div className="qp-header-left">
+            <button className="qp-back-btn" onClick={() => onExit(true)}>
+              <ChevronLeft size={18} /> Back to Quizzes
+            </button>
+            <div className="qp-header-title-block">
+              <span className="qp-header-quiz-name">{quiz.title}</span>
+              <span className="qp-header-meta">Result Summary</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="qp-result-page">
+          {/* Hero score card */}
+          <div className={`qpr-hero ${isPassed ? 'qpr-hero--pass' : 'qpr-hero--fail'}`}>
+            <div className="qpr-hero-icon">
+              {isPassed ? <Trophy size={48} /> : <AlertCircle size={48} />}
+            </div>
+            <h1 className="qpr-hero-title">{isPassed ? '🎉 Congratulations! You Passed!' : 'Quiz Completed'}</h1>
+            <div className="qpr-hero-score">
+              <span className="qpr-pct">{pct}%</span>
+              <span className="qpr-marks">{marksObtained} / {totalMarks} marks</span>
+            </div>
+            <div className={`qpr-badge ${isPassed ? 'qpr-badge--pass' : 'qpr-badge--fail'}`}>
+              {isPassed ? '✓ PASSED' : '✗ FAILED'}
+            </div>
+          </div>
+
+          {/* Stats row */}
+          <div className="qpr-stats-row">
+            <div className="qpr-stat qpr-stat--correct">
+              <CheckCircle2 size={24} />
+              <span className="qpr-stat-val">{correctCount}</span>
+              <span className="qpr-stat-lbl">Correct</span>
+            </div>
+            <div className="qpr-stat qpr-stat--wrong">
+              <X size={24} />
+              <span className="qpr-stat-val">{incorrectCount}</span>
+              <span className="qpr-stat-lbl">Wrong</span>
+            </div>
+            <div className="qpr-stat qpr-stat--skip">
+              <Circle size={24} />
+              <span className="qpr-stat-val">{unattemptedCount}</span>
+              <span className="qpr-stat-lbl">Skipped</span>
+            </div>
+            <div className="qpr-stat qpr-stat--total">
+              <Target size={24} />
+              <span className="qpr-stat-val">{questions.length}</span>
+              <span className="qpr-stat-lbl">Total Qs</span>
+            </div>
+          </div>
+
+          {/* Per-question breakdown from API */}
+          {breakdown.length > 0 && (
+            <div className="qpr-breakdown">
+              <h2 className="qpr-breakdown-title">Answer Breakdown</h2>
+              {breakdown.map((item, idx) => (
+                <div key={idx} className={`qpr-q-card ${item.is_correct ? 'qpr-q-correct' : item.selected_option ? 'qpr-q-wrong' : 'qpr-q-skip'}`}>
+                  <div className="qpr-q-header">
+                    <span className="qpr-q-num">Q{idx + 1}</span>
+                    <span className={`qpr-q-badge ${item.is_correct ? 'badge-correct' : item.selected_option ? 'badge-wrong' : 'badge-skip'}`}>
+                      {item.is_correct ? `+${item.marks_awarded || 0} pts ✓` : item.selected_option ? '✗ Wrong' : '— Skipped'}
+                    </span>
+                  </div>
+                  <p className="qpr-q-text">{item.question_text || `Question ${idx + 1}`}</p>
+                  <div className="qpr-q-answers">
+                    {item.selected_option && (
+                      <span className={`qpr-ans-chip ${item.is_correct ? 'qpr-ans-correct' : 'qpr-ans-yours'}`}>
+                        Your answer: <strong>{item.selected_option}</strong>
+                      </span>
+                    )}
+                    {!item.is_correct && (
+                      <span className="qpr-ans-chip qpr-ans-correct">
+                        Correct: <strong>{item.correct_option}</strong>
+                      </span>
+                    )}
+                  </div>
+                  {item.explanation && (
+                    <div className="qpr-explanation">
+                      <span className="qp-explanation-label">Explanation</span>
+                      <p>{item.explanation}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Fallback local results when no API breakdown */}
+          {breakdown.length === 0 && questions.length > 0 && (
+            <div className="qpr-breakdown">
+              <h2 className="qpr-breakdown-title">Your Answers</h2>
+              {questions.map((q, idx) => {
+                const userAns = answers[idx];
+                const isCorrect = userAns === q.correct;
+                const optKeys = ['A', 'B', 'C', 'D'];
+                return (
+                  <div key={idx} className={`qpr-q-card ${isCorrect ? 'qpr-q-correct' : userAns !== null ? 'qpr-q-wrong' : 'qpr-q-skip'}`}>
+                    <div className="qpr-q-header">
+                      <span className="qpr-q-num">Q{idx + 1}</span>
+                      <span className={`qpr-q-badge ${isCorrect ? 'badge-correct' : userAns !== null ? 'badge-wrong' : 'badge-skip'}`}>
+                        {isCorrect ? '+10 pts ✓' : userAns !== null ? '✗ Wrong' : '— Skipped'}
+                      </span>
+                    </div>
+                    <p className="qpr-q-text">{q.question}</p>
+                    <div className="qpr-q-answers">
+                      {userAns !== null && (
+                        <span className={`qpr-ans-chip ${isCorrect ? 'qpr-ans-correct' : 'qpr-ans-yours'}`}>
+                          Your answer: <strong>{optKeys[userAns]}</strong>
+                        </span>
+                      )}
+                      {!isCorrect && (
+                        <span className="qpr-ans-chip qpr-ans-correct">
+                          Correct: <strong>{optKeys[q.correct]}</strong>
+                        </span>
+                      )}
+                    </div>
+                    {q.explanation && (
+                      <div className="qpr-explanation">
+                        <span className="qp-explanation-label">Explanation</span>
+                        <p>{q.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0 48px' }}>
+            <button
+              className="qp-nav-arrow qp-nav-arrow--submit"
+              onClick={() => onExit(true)}
+              style={{ backgroundColor: '#10b981', borderColor: '#10b981', fontSize: '1rem', padding: '12px 32px', borderRadius: 12 }}
+            >
+              <CheckCircle2 size={18} /> Return to Quiz Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
