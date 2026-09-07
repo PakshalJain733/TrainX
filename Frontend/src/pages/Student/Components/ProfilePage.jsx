@@ -80,11 +80,15 @@ export default function ProfilePage() {
           cgpa: u.cgpa || u.aggregate_cgpa || "",
           skills: u.skills || "",
           profileCompleted: u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills),
+          gender: u.gender || "",
+          city: u.city || "",
+          guardianContact: u.guardianContact || u.emergency_contact || "",
+          linkedinUrl: u.linkedinUrl || u.linkedin_url || "",
           batch: u.batch || "",
           college: u.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
           coordinator: u.coordinator || "",
           mentor: u.mentor || "",
-          track: u.track || "",
+          track: u.track || u.target_track || "",
         };
       }
     } catch (e) {}
@@ -95,6 +99,10 @@ export default function ProfilePage() {
       phone: "",
       rollNo: "",
       department: "",
+      gender: "",
+      city: "",
+      guardianContact: "",
+      linkedinUrl: "",
       semester: "",
       cgpa: "",
       skills: "",
@@ -119,9 +127,14 @@ export default function ProfilePage() {
             department: user.department || prev.department,
             rollNo: user.roll_number || prev.rollNo,
             phone: user.mobile_number || prev.phone,
+            gender: user.gender || prev.gender,
+            city: user.city || prev.city,
+            guardianContact: user.emergency_contact || prev.guardianContact,
+            linkedinUrl: user.linkedin_url || prev.linkedinUrl,
             semester: user.semester || prev.semester,
             cgpa: user.cgpa || user.aggregate_cgpa || prev.cgpa,
             skills: user.skills || prev.skills,
+            track: user.target_track || user.track || prev.track,
           }));
         }
       })
@@ -165,7 +178,7 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
     const updatedUser = {
       ...form,
@@ -176,19 +189,35 @@ export default function ProfilePage() {
     localStorage.setItem("user", JSON.stringify(updatedUser));
     window.dispatchEvent(new Event("userProfileUpdated"));
 
-    // Async backend save
-    apiFetch("/students/profile", {
-      method: "PATCH",
-      body: JSON.stringify({
-        semester: form.semester,
-        cgpa: form.cgpa,
-        skills: form.skills,
-        track: form.track,
-      }),
-    }).catch(() => {});
-
     setSaved(true);
-    setTimeout(() => setSaved(false), 3500);
+
+    try {
+      // Synchronous await backend database save!
+      await apiFetch("/students/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          roll_number: form.rollNo,
+          department: form.department,
+          gender: form.gender,
+          city: form.city,
+          guardianContact: form.guardianContact || form.guardianPhone,
+          emergency_contact: form.guardianContact || form.guardianPhone,
+          linkedinUrl: form.linkedinUrl || form.linkedin,
+          semester: form.semester,
+          cgpa: form.cgpa,
+          skills: form.skills,
+          track: form.track,
+        }),
+      });
+    } catch (err) {
+      console.error("PROFILE SAVE API ERROR:", err);
+    }
+
+    // Hard redirect to Student Dashboard after DB write completes
+    window.location.href = "/student";
   };
 
   return (
@@ -379,6 +408,7 @@ export default function ProfilePage() {
                     className="profile-input profile-select"
                     value={form.gender || ""}
                     onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
+                    required
                   >
                     <option value="">Select Gender</option>
                     <option value="Male">Male</option>
@@ -396,17 +426,19 @@ export default function ProfilePage() {
                     value={form.city || ""}
                     onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
                     placeholder="e.g. Mumbai, Maharashtra"
+                    required
                   />
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Guardian / Emergency Contact</label>
+                  <label className="profile-label">Parents Contact</label>
                   <input
-                    type="text"
+                    type="text" 
                     className="profile-input"
-                    value={form.guardianPhone || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, guardianPhone: e.target.value }))}
+                    value={form.guardianContact || form.guardianPhone || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, guardianContact: e.target.value, guardianPhone: e.target.value }))}
                     placeholder="e.g. Parent Phone Number"
+                    required
                   />
                 </div>
 
@@ -415,8 +447,8 @@ export default function ProfilePage() {
                   <input
                     type="url"
                     className="profile-input"
-                    value={form.linkedin || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, linkedin: e.target.value }))}
+                    value={form.linkedinUrl || form.linkedin || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, linkedinUrl: e.target.value, linkedin: e.target.value }))}
                     placeholder="https://linkedin.com/in/username"
                   />
                 </div>
@@ -469,18 +501,14 @@ export default function ProfilePage() {
 
                 <div className="profile-field full-width">
                   <label className="profile-label">Target Career Track / Role Goal *</label>
-                  <select
-                    className="profile-input profile-select"
-                    value={form.track}
+                  <input
+                    type="text"
+                    className="profile-input"
+                    value={form.track || ""}
                     onChange={(e) => setForm((p) => ({ ...p, track: e.target.value }))}
+                    placeholder="e.g. Python Backend Developer, Full Stack Engineer"
                     required
-                  >
-                    <option value="Python Backend Developer">Python Backend Developer</option>
-                    <option value="React Frontend Developer">React Frontend Developer</option>
-                    <option value="Full Stack Engineer">Full Stack Engineer</option>
-                    <option value="Data Science & AI Engineer">Data Science & AI Engineer</option>
-                    <option value="Cloud & DevOps Specialist">Cloud & DevOps Specialist</option>
-                  </select>
+                  />
                 </div>
 
                 {/* SKILLS MULTI-SELECT DROPDOWN SECTION */}
@@ -620,7 +648,7 @@ export default function ProfilePage() {
 
             {/* Bottom Actions */}
             <div className="profile-actions-bar">
-              <button type="submit" className="profile-save-btn">
+              <button type="submit" onClick={handleSave} className="profile-save-btn">
                 <Save size={16} /> Save Profile Details
               </button>
             </div>

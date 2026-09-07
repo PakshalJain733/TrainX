@@ -34,7 +34,7 @@ import { Badge } from "../../../components/ui/Badge";
 import "../Styles/Batches.css";
 import "../../Admin/Styles/AdminUsers.css";
 
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
@@ -71,8 +71,7 @@ const defaultBatchTemplates = [
     ],
     stats: { completedTasks: 5, pendingTasks: 3, urgentTaskNumber: "Task 04", urgentTaskDeadline: "Tomorrow, 11:59 PM" },
     leaderboard: [
-      { rank: 1, name: "Ganesh Shinde (You)", xp: 2650, initials: "GS", self: true },
-      { rank: 2, name: "Riya Shah", xp: 2590, initials: "RS" },
+      { rank: 1, name: "Student (You)", xp: 0, initials: "YO", self: true },
     ]
   },
   {
@@ -81,18 +80,10 @@ const defaultBatchTemplates = [
     color: "#7c3aed",
     bg: "#f5f3ff",
     description: "Graph traversals, Dynamic Programming, Segment Trees, and real-time LeetCode medium/hard patterns.",
-    modules: [
-      {
-        number: 1,
-        title: "Advanced Graphs & Network Flow",
-        tasks: [
-          { taskNumber: "Task 01", title: "Dijkstra Priority Queue Implementation", type: "Algorithm Lab", due: "Completed", status: "Completed" },
-        ],
-      },
-    ],
-    stats: { completedTasks: 6, pendingTasks: 1, urgentTaskNumber: "Task 07", urgentTaskDeadline: "Due Saturday, 11:59 PM" },
+    modules: [],
+    stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
-      { rank: 1, name: "Ganesh Shinde (You)", xp: 2650, initials: "GS", self: true },
+      { rank: 1, name: "Student (You)", xp: 0, initials: "YO", self: true },
     ]
   }
 ];

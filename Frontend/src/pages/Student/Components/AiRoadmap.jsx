@@ -12,6 +12,7 @@ import {
   UserCheck,
   Award,
   Check,
+  Search,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
@@ -169,12 +170,12 @@ export default function AIRoadmap() {
       {/* Clean AI Roadmap Header & Custom Goal Input */}
       <div className="roadmap-generator-card">
         <div className="roadmap-generator-header">
-          <Sparkles size={22} className="roadmap-generator-icon text-indigo-500 animate-pulse" />
-          <div>
-            <div className="flex items-center gap-2">
+          <Sparkles size={22} className="roadmap-generator-icon text-indigo-500 animate-pulse mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
               <h2 className="roadmap-generator-title">Personalized AI Career Roadmap Generator</h2>
               {aiSource && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1 shrink-0">
                   <Cpu size={12} /> {aiSource === "gemini-ai" ? "Gemini 2.5 AI Model" : "Adaptive AI Model"}
                 </span>
               )}
@@ -188,14 +189,17 @@ export default function AIRoadmap() {
         {/* Custom Input Box & Generate Action */}
         <form onSubmit={handleGenerate} className="roadmap-form-wrap">
           <div className="roadmap-input-row">
-            <input
-              type="text"
-              className="roadmap-select-input"
-              placeholder="Type your role (e.g. Java Developer, Cyber Security, Data Engineer, Mobile App Dev)..."
-              value={goalInput}
-              onChange={(e) => setGoalInput(e.target.value)}
-              required
-            />
+            <div className="roadmap-input-field-wrap">
+              <Search size={18} className="roadmap-input-search-icon" />
+              <input
+                type="text"
+                className="roadmap-select-input"
+                placeholder="Type your role (e.g. Java Developer, Cyber Security, Flutter Dev)..."
+                value={goalInput}
+                onChange={(e) => setGoalInput(e.target.value)}
+                required
+              />
+            </div>
 
             <button
               type="submit"
@@ -205,7 +209,7 @@ export default function AIRoadmap() {
               {isGenerating ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
-                  <span>Generating Roadmap...</span>
+                  <span>Generating...</span>
                 </>
               ) : (
                 <>

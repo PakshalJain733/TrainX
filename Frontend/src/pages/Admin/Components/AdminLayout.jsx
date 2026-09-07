@@ -3,6 +3,7 @@ import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
 import { AdminSidebar } from "./AdminSidebar";
 import "../Styles/AdminLayout.css";
+import BroadcastToast from "../../../components/ui/BroadcastToast";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
   const [notifications, setNotifications] = useState([
@@ -351,6 +352,7 @@ export default function AdminLayout() {
           </div>
         </main>
       </div>
+      <BroadcastToast />
     </div>
   );
 }

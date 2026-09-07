@@ -731,9 +731,32 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  .qp-overlay {
+    z-index: 999999;
+    height: 100dvh;
+  }
+  .qp-header {
+    padding: 0 12px;
+    height: 56px;
+    gap: 8px;
+  }
+  .qp-header-quiz-name {
+    font-size: 13px;
+    max-width: 150px;
+  }
+  .qp-header-meta {
+    font-size: 10.5px;
+  }
+  .qp-back-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
   .qp-sidebar { display: none; }
-  .qp-main { padding: 16px; }
-  .qp-form-card-body { padding: 20px 16px; }
+  .qp-main { padding: 12px; flex: 1; overflow-y: auto; }
+  .qp-form-card-body { padding: 16px 14px; }
+  .qp-question-text { font-size: 14.5px; margin-bottom: 16px; }
+  .qp-option { padding: 10px 12px; font-size: 13px; gap: 10px; }
+  .qp-timer, .qp-score-pill, .qp-review-pill { padding: 4px 10px; font-size: 12px; }
 }
 
 .qp-question-meta {

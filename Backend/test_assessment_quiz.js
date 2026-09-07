@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Assessment Quiz Logic — Full End-to-End Test Suite
  * Task 1: Complete Quiz Attempt + Result Flow
@@ -6,8 +7,16 @@
  * 
  * Run with: node test_assessment_quiz.js
  */
+import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-import { generateToken } from './src/utils/generateToken.js';
+dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+
+const generateToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+
 
 const BASE_URL = 'http://localhost:5000/api/v1';
 

@@ -116,7 +116,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .stack-8 {
@@ -239,6 +239,22 @@ body {
   max-width: min(440px, 92vw);
   padding: 16px;
   border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .notif-dropdown-box {
+    position: fixed !important;
+    top: 64px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 80px) !important;
+    z-index: 99999 !important;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25) !important;
+    border-radius: 16px !important;
+  }
 }
 
 .notif-header {
@@ -871,7 +887,14 @@ body {
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .admin-header__user-info {
-    display: none;
+    display: none !important;
+  }
+  .admin-header__user {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    height: auto !important;
   }
 }
 

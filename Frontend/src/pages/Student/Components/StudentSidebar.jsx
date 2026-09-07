@@ -20,6 +20,7 @@ import {
   GraduationCap,
   Settings,
   UserCheck,
+  Bell,
   ChartBar,
   ChartLineIcon,
   ChartBarIncreasing,
@@ -51,13 +52,13 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Dashboard", url: "/student", icon: LayoutDashboard, exact: true },
   { title: "Batches", url: "/student/batches", icon: Code2 },
+  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
   { title: "AI Roadmap", url: "/student/roadmap", icon: ChartBar },
   { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck },
   { title: "Practice", url: "/student/practice", icon: Terminal },
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
   { title: "Progress", url: "/student/progress", icon: LineChart },
-  { title: "Skill Gaps", url: "/student/skill-gaps", icon: AlertTriangle },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
 ];
 

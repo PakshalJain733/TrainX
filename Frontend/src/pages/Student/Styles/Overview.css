@@ -22,14 +22,51 @@
   background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
   border: 1.5px solid #fdba74;
   border-radius: 16px;
-  padding: 18px 24px;
+  padding: 14px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 24px;
+  gap: 16px;
+  margin-bottom: 16px;
   box-shadow: 0 4px 18px rgba(249, 115, 22, 0.1);
-  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+.marquee-content-container {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  white-space: nowrap;
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+
+.marquee-track {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marqueeScroll 22s linear infinite;
+  padding-left: 100%;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+.marquee-text {
+  font-size: 14px;
+  color: #9a3412;
+  font-weight: 500;
+  display: inline-block;
+}
+
+.marquee-text strong {
+  color: #431407;
+  font-weight: 700;
+}
+
+@keyframes marqueeScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-100%); }
 }
 
 .profile-update-banner-left {

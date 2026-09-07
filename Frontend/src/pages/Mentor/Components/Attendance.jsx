@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { mentorBatches, mentorStudents } from '../../../data/mentorMockData';
 import { CalendarCheck, Users, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Layers, Filter, Check, Save } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
@@ -14,6 +14,50 @@ export default function Attendance() {
   // Quick status state for real-time marking
   const [attendanceRecords, setAttendanceRecords] = useState({});
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [leaveActionMsg, setLeaveActionMsg] = useState('');
+
+  // Sample/API leave applications state
+  const [leaveRequests, setLeaveRequests] = useState([
+    {
+      id: 101,
+      studentId: 1,
+      studentName: "Rahul Verma",
+      rollNo: "CS202601",
+      batch: "BE-CS-2026-A",
+      category: "Medical Leave",
+      startDate: "2026-09-08",
+      endDate: "2026-09-10",
+      days: 3,
+      reason: "High fever and viral infection. Doctor advised 3 days complete bed rest.",
+      status: "Pending"
+    },
+    {
+      id: 102,
+      studentId: 4,
+      studentName: "Neha Sharma",
+      rollNo: "CS202611",
+      batch: "BE-CS-2026-A",
+      category: "Personal / Family Event",
+      startDate: "2026-09-09",
+      endDate: "2026-09-09",
+      days: 1,
+      reason: "Attending sister's graduation ceremony out of city.",
+      status: "Pending"
+    },
+    {
+      id: 103,
+      studentId: 9,
+      studentName: "Priya Nair",
+      rollNo: "EXT202607",
+      batch: "BE-EXTC-2026-C",
+      category: "Academic / Hackathon",
+      startDate: "2026-09-12",
+      endDate: "2026-09-14",
+      days: 3,
+      reason: "Participating in Smart India Hackathon grand finale round.",
+      status: "Pending"
+    }
+  ]);
 
   // Master initial student list load
   useEffect(() => {
@@ -65,12 +109,37 @@ export default function Attendance() {
       });
   }, []);
 
-  // Handle Marking Status Toggle
+  // Handle Marking Status Toggle (Present <-> Absent toggle or Late)
   const handleStatusToggle = (id, newStatus) => {
     setAttendanceRecords(prev => ({
       ...prev,
       [id]: newStatus
     }));
+  };
+
+  // Toggle present/absent directly with one click button
+  const handleQuickTogglePresentAbsent = (id) => {
+    setAttendanceRecords(prev => {
+      const current = prev[id] || 'Present';
+      return {
+        ...prev,
+        [id]: current === 'Present' ? 'Absent' : 'Present'
+      };
+    });
+  };
+
+  const handleVerifyLeave = (leaveId, status, studentName) => {
+    setLeaveRequests(prev => prev.map(req => req.id === leaveId ? { ...req, status } : req));
+    setLeaveActionMsg(`Leave application for ${studentName} set to ${status}!`);
+    setTimeout(() => setLeaveActionMsg(''), 3500);
+
+    // If approved, update student attendance state
+    if (status === 'Approved') {
+      const targetReq = leaveRequests.find(r => r.id === leaveId);
+      if (targetReq && targetReq.studentId) {
+        handleStatusToggle(targetReq.studentId, 'Present');
+      }
+    }
   };
 
   const handleSaveAttendance = () => {
@@ -107,303 +176,175 @@ export default function Attendance() {
 
   return (
     <div className="mentor-attendance-container">
-      {/* Page Header */}
-      <div className="mentor-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+
+      {/* ── Page Header ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h2 className="mentor-page-title">
-            <CalendarCheck size={22} color="#4f46e5" />
-            <span>Assigned Students Attendance & Batch Analytics</span>
+          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'linear-gradient(135deg,#4f46e5,#7c3aed)', padding: '8px', borderRadius: '10px', display: 'flex' }}>
+            </div>
+            Attendance & Leave Verification
           </h2>
-          <p className="mentor-page-subtitle">
-            Track live session attendance, monitor low-attendance risks (&lt;75%), and log daily participation across batches.
+          <p style={{ margin: '4px 0 0 46px', fontSize: '13px', color: '#64748b' }}>
+            Mark daily attendance, verify leave applications, and monitor at-risk students.
           </p>
         </div>
-        {savedSuccess && (
-          <div style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <CheckCircle2 size={16} /> Attendance Saved Successfully!
-          </div>
-        )}
-      </div>
-
-      {/* Batch Overview Cards & Particular Batch Selector */}
-      <div className="mentor-attendance-grid">
-        <div 
-          onClick={() => setSelectedBatch('ALL')}
-          className={`mentor-attendance-card ${selectedBatch === 'ALL' ? 'mentor-att-card--active' : ''}`}
-          style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
-        >
-          <div className="mentor-att-card-header">
-            <div>
-              <span className="mentor-att-batch-code">ALL BATCHES OVERVIEW</span>
-              <h3 className="mentor-att-batch-name">All Assigned Batches</h3>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {savedSuccess && (
+            <div style={{ background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={15} /> Attendance saved!
             </div>
-            <span className={`mentor-att-verified-badge ${selectedBatch === 'ALL' ? 'badge-selected' : ''}`}>
-              {selectedBatch === 'ALL' ? 'Active Filter' : 'Select'}
-            </span>
-          </div>
-          <div className="mentor-att-stats">
-            <div className="mentor-att-stat-row">
-              <span>Total Students Assigned:</span>
-              <span className="mentor-att-stat-val--green">{studentList.length} Students</span>
+          )}
+          {leaveActionMsg && (
+            <div style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: '8px', fontSize: '13px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CheckCircle2 size={15} /> {leaveActionMsg}
             </div>
-            <div className="mentor-att-stat-row">
-              <span>Low Attendance (&lt;75%):</span>
-              <span className="mentor-att-stat-val--rose">{studentList.filter(s => s.attendance < 75).length} At Risk</span>
-            </div>
-          </div>
+          )}
         </div>
-
-        {mentorBatches.map((b) => {
-          const stats = calculateBatchStats(b.code);
-          const isSelected = selectedBatch === b.code;
-          return (
-            <div
-              key={b.id}
-              onClick={() => setSelectedBatch(b.code)}
-              className={`mentor-attendance-card ${isSelected ? 'mentor-att-card--active' : ''}`}
-              style={{ cursor: 'pointer', transition: 'all 0.2s ease' }}
-            >
-              <div className="mentor-att-card-header">
-                <div>
-                  <span className="mentor-att-batch-code">{b.code}</span>
-                  <h3 className="mentor-att-batch-name">{b.name}</h3>
-                </div>
-                <span className={`mentor-att-verified-badge ${isSelected ? 'badge-selected' : ''}`}>
-                  {isSelected ? 'Active Filter' : 'Select Batch'}
-                </span>
-              </div>
-
-              <div className="mentor-att-stats">
-                <div className="mentor-att-stat-row">
-                  <span>Avg Batch Attendance:</span>
-                  <span className="mentor-att-stat-val--green">{stats.avg}%</span>
-                </div>
-                <div className="mentor-att-stat-row">
-                  <span>Low Attendance (&lt;75%):</span>
-                  <span className="mentor-att-stat-val--rose">{stats.lowCount} students</span>
-                </div>
-                <div className="mentor-att-stat-row">
-                  <span>Total Enrolled:</span>
-                  <span style={{ fontWeight: '600', color: '#475569' }}>{stats.total} students</span>
-                </div>
-              </div>
-
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedBatch(b.code);
-                }}
-                className="mentor-att-mark-btn"
-                style={isSelected ? { background: '#4f46e5', color: '#fff', borderColor: '#4f46e5' } : {}}
-              >
-                {isSelected ? 'Viewing Batch Attendance' : 'Filter Batch Attendance'}
-              </button>
-            </div>
-          );
-        })}
       </div>
 
-      {/* Live Session Attendance Logger & Controls */}
-      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Layers size={18} color="#2563eb" />
-              Daily Session Attendance Register - {selectedBatch === 'ALL' ? 'All Assigned Batches' : selectedBatch}
-            </h3>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-              Mark attendance for today's session or view existing attendance percentages of students.
-            </p>
-          </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+
+      {/* ── Daily Attendance Register ── */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+        {/* Register Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: '#eff6ff', padding: '6px', borderRadius: '8px', display: 'flex' }}>
+              <Layers size={17} color="#2563eb" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>Daily Attendance Register</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Toggle Present / Absent / Late for today's session.</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Batch Filter */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Filter size={14} color="#94a3b8" />
+              <select
+                value={selectedBatch}
+                onChange={(e) => setSelectedBatch(e.target.value)}
+                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: '600', color: '#1e293b', background: '#f8fafc', cursor: 'pointer', minWidth: '200px' }}
+              >
+                <option value="ALL">All Batches</option>
+                {mentorBatches.map(b => (
+                  <option key={b.id} value={b.code}>{b.code} — {b.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
             <input
               type="date"
               value={sessionDate}
               onChange={(e) => setSessionDate(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', color: '#1e293b' }}
+              style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', color: '#1e293b' }}
             />
             <button
               onClick={handleSaveAttendance}
-              style={{
-                background: '#4f46e5',
-                color: '#ffffff',
-                border: 'none',
-                padding: '9px 18px',
-                borderRadius: '8px',
-                fontWeight: '600',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                boxShadow: '0 2px 4px rgba(79, 70, 229, 0.2)'
-              }}
+              style={{ background: '#4f46e5', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(79,70,229,0.25)', transition: 'all 0.15s' }}
             >
-              <Save size={15} /> Save Attendance Log
+              <Save size={14} /> Save Log
             </button>
           </div>
         </div>
 
-        {/* Realtime Stats Summary Bar */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Assigned In View</span>
-            <span style={{ fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>{totalAssignedInView} Students</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#047857', textTransform: 'uppercase' }}>Present Today</span>
-            <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{presentCountInView}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#be123c', textTransform: 'uppercase' }}>Absent Today</span>
-            <span style={{ fontSize: '18px', fontWeight: '700', color: '#f43f5e' }}>{absentCountInView}</span>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '11px', fontWeight: '600', color: '#d97706', textTransform: 'uppercase' }}>Low Attendance (&lt;75%)</span>
-            <span style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b' }}>{lowAttendanceCount}</span>
-          </div>
-        </div>
-
-        {/* Filter & Search Bar */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-          <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+        {/* Search */}
+        <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
+          <div style={{ position: 'relative', maxWidth: '360px' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder="Search student name, roll number..."
+              placeholder="Search by name or roll number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', paddingLeft: '36px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px' }}
+              style={{ width: '100%', paddingLeft: '34px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', background: '#fff', boxSizing: 'border-box' }}
             />
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <select
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#fff', fontWeight: '500' }}
-            >
-              <option value="ALL">All Batches</option>
-              {mentorBatches.map(b => (
-                <option key={b.id} value={b.code}>{b.code} - {b.name}</option>
-              ))}
-            </select>
           </div>
         </div>
 
-        {/* Detailed Assigned Students Attendance Table */}
-        <div style={{ overflowX: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+        {/* Table */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
-              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: '600' }}>
-                <th style={{ padding: '12px 16px' }}>Student Name</th>
-                <th style={{ padding: '12px 16px' }}>Roll Number</th>
-                <th style={{ padding: '12px 16px' }}>Batch Code</th>
-                <th style={{ padding: '12px 16px' }}>Overall Attendance %</th>
-                <th style={{ padding: '12px 16px' }}>Attended / Total</th>
-                <th style={{ padding: '12px 16px' }}>Today's Session Status</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>#</th>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Student</th>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Batch</th>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Attendance</th>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Sessions</th>
+                <th style={{ padding: '11px 16px', textAlign: 'left', fontWeight: '700', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Today's Status</th>
               </tr>
             </thead>
             <tbody>
               {filteredStudents.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
-                    No assigned students found for the selected batch/filter.
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '36px', color: '#94a3b8', fontSize: '13px' }}>
+                    No students found for the selected batch/filter.
                   </td>
                 </tr>
               ) : (
-                filteredStudents.map((student) => {
+                filteredStudents.map((student, idx) => {
                   const currentStatus = attendanceRecords[student.id] || student.status;
                   const isLow = student.attendance < 75;
-
                   return (
-                    <tr key={student.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '12px 16px', fontWeight: '600', color: '#0f172a' }}>
-                        {student.name}
-                        {isLow && (
-                          <span style={{ marginLeft: '8px', fontSize: '10px', background: '#ffe4e6', color: '#e11d48', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>
-                            &lt; 75% Risk
-                          </span>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px', color: '#64748b', fontFamily: 'monospace' }}>
-                        {student.rollNo}
+                    <tr key={student.id} style={{ borderBottom: '1px solid #f1f5f9', background: idx % 2 === 0 ? '#fff' : '#fafafa' }}>
+                      <td style={{ padding: '12px 16px', color: '#94a3b8', fontWeight: '600', fontSize: '12px' }}>{idx + 1}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <div style={{ fontWeight: '700', color: '#0f172a', fontSize: '13px' }}>{student.name}</div>
+                        <div style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {student.rollNo}
+                          {isLow && <span style={{ background: '#ffe4e6', color: '#e11d48', padding: '1px 6px', borderRadius: '4px', fontWeight: '700', fontFamily: 'sans-serif', fontSize: '10px' }}>⚠ &lt;75%</span>}
+                        </div>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{ background: '#eff6ff', color: '#2563eb', padding: '3px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
+                        <span style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '3px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: '600' }}>
                           {student.batch}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          fontWeight: '700',
-                          color: isLow ? '#e11d48' : student.attendance >= 90 ? '#059669' : '#d97706'
-                        }}>
-                          {student.attendance}%
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '52px', height: '5px', background: '#f1f5f9', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${student.attendance}%`, background: isLow ? '#f43f5e' : student.attendance >= 90 ? '#10b981' : '#f59e0b', borderRadius: '3px' }} />
+                          </div>
+                          <span style={{ fontWeight: '700', fontSize: '13px', color: isLow ? '#e11d48' : student.attendance >= 90 ? '#059669' : '#d97706' }}>
+                            {student.attendance}%
+                          </span>
+                        </div>
                       </td>
-                      <td style={{ padding: '12px 16px', color: '#475569' }}>
-                        {student.attended} / {student.totalClasses} Sessions
+                      <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>
+                        {student.attended} / {student.totalClasses}
                       </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusToggle(student.id, 'Present')}
-                            style={{
-                              padding: '5px 10px',
-                              borderRadius: '6px',
-                              border: currentStatus === 'Present' ? '1px solid #10b981' : '1px solid #e2e8f0',
-                              background: currentStatus === 'Present' ? '#ecfdf5' : '#fff',
-                              color: currentStatus === 'Present' ? '#047857' : '#64748b',
-                              fontWeight: '600',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <CheckCircle2 size={13} /> Present
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusToggle(student.id, 'Absent')}
-                            style={{
-                              padding: '5px 10px',
-                              borderRadius: '6px',
-                              border: currentStatus === 'Absent' ? '1px solid #f43f5e' : '1px solid #e2e8f0',
-                              background: currentStatus === 'Absent' ? '#fff1f2' : '#fff',
-                              color: currentStatus === 'Absent' ? '#be123c' : '#64748b',
-                              fontWeight: '600',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <XCircle size={13} /> Absent
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleStatusToggle(student.id, 'Late')}
-                            style={{
-                              padding: '5px 10px',
-                              borderRadius: '6px',
-                              border: currentStatus === 'Late' ? '1px solid #f59e0b' : '1px solid #e2e8f0',
-                              background: currentStatus === 'Late' ? '#fffbeb' : '#fff',
-                              color: currentStatus === 'Late' ? '#b45309' : '#64748b',
-                              fontWeight: '600',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
-                          >
-                            <Clock size={13} /> Late
-                          </button>
+                      <td style={{ padding: '10px 16px' }}>
+                        <div style={{ display: 'inline-flex', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                          {[
+                            { label: 'Present', status: 'Present', activeColor: '#10b981', icon: <CheckCircle2 size={12} /> },
+                            { label: 'Absent', status: 'Absent', activeColor: '#f43f5e', icon: <XCircle size={12} /> },
+                            { label: 'Late', status: 'Late', activeColor: '#f59e0b', icon: <Clock size={12} /> },
+                          ].map((btn, i, arr) => (
+                            <button
+                              key={btn.status}
+                              type="button"
+                              onClick={() => handleStatusToggle(student.id, btn.status)}
+                              style={{
+                                padding: '6px 12px',
+                                border: 'none',
+                                borderRight: i < arr.length - 1 ? '1px solid #e2e8f0' : 'none',
+                                background: currentStatus === btn.status ? btn.activeColor : 'transparent',
+                                color: currentStatus === btn.status ? '#fff' : '#64748b',
+                                fontWeight: '600',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.15s ease',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {btn.icon} {btn.label}
+                            </button>
+                          ))}
                         </div>
                       </td>
                     </tr>
@@ -414,6 +355,87 @@ export default function Attendance() {
           </table>
         </div>
       </div>
+
+      {/* ── Leave Verification ── */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+        {/* Header */}
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: '#fef3c7', padding: '6px', borderRadius: '8px', display: 'flex' }}>
+              <AlertTriangle size={17} color="#d97706" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>Student Leave Applications</h3>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Review reasons and approve or reject each request.</p>
+            </div>
+          </div>
+          {leaveRequests.filter(r => r.status === 'Pending').length > 0 && (
+            <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d', fontSize: '12px', fontWeight: '700', padding: '4px 12px', borderRadius: '20px' }}>
+              {leaveRequests.filter(r => r.status === 'Pending').length} Pending
+            </span>
+          )}
+        </div>
+
+        {/* Cards */}
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+          {leaveRequests.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px', color: '#94a3b8', fontSize: '13px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #cbd5e1' }}>
+              No pending leave applications.
+            </div>
+          ) : (
+            leaveRequests.map(req => {
+              const accentColor = req.status === 'Approved' ? '#10b981' : req.status === 'Rejected' ? '#f43f5e' : '#f59e0b';
+              const bgTint = req.status === 'Approved' ? '#f0fdf4' : req.status === 'Rejected' ? '#fff1f2' : '#fffbeb';
+              const initials = req.studentName.split(' ').map(n => n[0]).join('');
+              return (
+                <div key={req.id} style={{ border: '1px solid #e2e8f0', borderRadius: '12px', display: 'flex', alignItems: 'center', overflow: 'hidden', background: '#fafafa' }}>
+                  {/* Avatar + Info */}
+                  <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: '50%', background: bgTint, border: `2px solid ${accentColor}55`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '13px', color: accentColor, flexShrink: 0 }}>
+                      {initials}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: '700', fontSize: '14px', color: '#0f172a' }}>{req.studentName}</span>
+                        <span style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace', background: '#f1f5f9', padding: '1px 7px', borderRadius: '4px' }}>{req.rollNo}</span>
+                        <span style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', fontSize: '11px', fontWeight: '600', padding: '1px 8px', borderRadius: '20px' }}>{req.batch}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '700', padding: '1px 8px', borderRadius: '20px', textTransform: 'uppercase', letterSpacing: '0.3px', background: bgTint, color: accentColor, border: `1px solid ${accentColor}40` }}>{req.status}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '16px', marginTop: '5px', flexWrap: 'wrap', fontSize: '12px', color: '#64748b' }}>
+                        <span><strong style={{ color: '#334155' }}>{req.category}</strong></span>
+                        <span>·</span>
+                        <span>{req.startDate} → {req.endDate} <strong style={{ color: accentColor }}>({req.days}d)</strong></span>
+                      </div>
+                      <div style={{ marginTop: '6px', background: '#fff', border: '1px solid #e9eef4', borderRadius: '6px', padding: '7px 10px', fontSize: '12px', color: '#475569', fontStyle: 'italic', lineHeight: '1.5' }}>
+                        <strong style={{ color: '#0f172a', fontStyle: 'normal' }}>Reason: </strong>"{req.reason}"
+                      </div>
+                    </div>
+                  </div>
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '14px 16px', borderLeft: '1px solid #e9eef4', background: '#fff', minWidth: '160px', alignItems: 'stretch' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyLeave(req.id, 'Approved', req.studentName)}
+                      style={{ background: req.status === 'Approved' ? '#10b981' : 'transparent', color: req.status === 'Approved' ? '#fff' : '#64748b', border: req.status === 'Approved' ? '1.5px solid #10b981' : '1.5px solid #cbd5e1', padding: '8px 0', borderRadius: '7px', fontWeight: req.status === 'Approved' ? '700' : '600', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: req.status === 'Approved' ? '0 2px 6px rgba(16,185,129,0.2)' : 'none', transition: 'all 0.15s' }}
+                    >
+                      <CheckCircle2 size={14} /> Approve
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleVerifyLeave(req.id, 'Rejected', req.studentName)}
+                      style={{ background: req.status === 'Rejected' ? '#f43f5e' : 'transparent', color: req.status === 'Rejected' ? '#fff' : '#64748b', border: req.status === 'Rejected' ? '1.5px solid #f43f5e' : '1.5px solid #cbd5e1', padding: '7px 0', borderRadius: '7px', fontWeight: req.status === 'Rejected' ? '700' : '600', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s' }}
+                    >
+                      <XCircle size={14} /> Reject
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }
+

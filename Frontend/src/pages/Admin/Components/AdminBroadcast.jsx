@@ -70,6 +70,28 @@ export default function AdminBroadcast() {
       });
 
       if (res && res.data) {
+        const newNotif = {
+          id: res.data.id || Date.now(),
+          type: "alert",
+          title: `📢 [Broadcast] ${title.trim()}`,
+          desc: message.trim(),
+          body: message.trim(),
+          time: "Just now",
+          unread: true,
+          category: "Broadcast",
+          priority: priority,
+          target: target,
+        };
+
+        // Sync with localStorage
+        try {
+          const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
+          localStorage.setItem("app_broadcast_notifications", JSON.stringify([newNotif, ...stored]));
+        } catch (err) {}
+
+        // Trigger real-time popup & navbar notification badge update
+        window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));
+
         setTitle("");
         setMessage("");
         setSuccessMsg("Broadcast notice sent successfully to all selected target audiences!");

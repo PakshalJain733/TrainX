@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink } from "lucide-react";
 import { StudentSidebar } from "./StudentSidebar";
 import "../Styles/StudentLayout.css";
 
+import BroadcastToast from "../../../components/ui/BroadcastToast";
+
 function NotificationDropdown({ onClose, onUnreadChange }) {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -49,6 +52,27 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
   ]);
 
   const [activeTab, setActiveTab] = useState("all");
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
+      if (stored.length > 0) {
+        setNotifications((prev) => {
+          const ids = new Set(prev.map((p) => p.id));
+          const newItems = stored.filter((s) => !ids.has(s.id));
+          return [...newItems, ...prev];
+        });
+      }
+    } catch (e) {}
+
+    const handleNewNotif = (e) => {
+      if (e.detail) {
+        setNotifications((prev) => [e.detail, ...prev.filter((p) => p.id !== e.detail.id)]);
+      }
+    };
+    window.addEventListener("new_broadcast_notification", handleNewNotif);
+    return () => window.removeEventListener("new_broadcast_notification", handleNewNotif);
+  }, []);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
   const totalCount = notifications.length;
@@ -114,14 +138,25 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             </div>
           </div>
         </div>
-        <button
-          className="notif-mark-read-btn"
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0}
-          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
-        >
-          <Check size={14} className="notif-check-icon" /> Mark read
-        </button>
+        <div className="notif-header-actions-right">
+          <button
+            className="notif-view-all-btn"
+            onClick={() => {
+              if (onClose) onClose();
+              navigate("/student/notifications");
+            }}
+          >
+            View all
+          </button>
+          <button
+            className="notif-mark-read-btn"
+            onClick={handleMarkAllRead}
+            disabled={unreadCount === 0}
+            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
+          >
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -226,6 +261,10 @@ export default function StudentLayout() {
     return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
   });
 
+  const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(() => {
+    return localStorage.getItem("student_profile_notice_dismissed") === "true";
+  });
+
   useEffect(() => {
     const handleUpdate = () => {
       try {
@@ -235,6 +274,14 @@ export default function StudentLayout() {
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
     return () => window.removeEventListener("userProfileUpdated", handleUpdate);
+  }, []);
+
+  useEffect(() => {
+    const handleNewNotif = () => {
+      setHasUnreadNotif(true);
+    };
+    window.addEventListener("new_broadcast_notification", handleNewNotif);
+    return () => window.removeEventListener("new_broadcast_notification", handleNewNotif);
   }, []);
 
   const navigate = useNavigate();
@@ -327,6 +374,30 @@ export default function StudentLayout() {
                 <div className="student-breadcrumb">
                   <span className="student-breadcrumb-active">{pageTitle}</span>
                 </div>
+
+                {/* Horizontal Marquee Ticker Notice right after Dashboard */}
+                {(!user.profileCompleted && !user.cgpa) && !headerNoticeDismissed && (
+                  <div className="header-marquee-ticker">
+                    <div className="header-marquee-track">
+                      <span className="header-marquee-text">
+                        📢 <strong>Action Required: Complete Your Academic Profile</strong> — Please update your Semester, Aggregate CGPA, and Skills in Profile for AI roadmaps.
+                      </span>
+                    </div>
+                    <Link to="/student/profile" className="header-ticker-link">
+                      Update Profile →
+                    </Link>
+                    <button 
+                      className="header-ticker-dismiss" 
+                      onClick={() => {
+                        setHeaderNoticeDismissed(true);
+                        localStorage.setItem("student_profile_notice_dismissed", "true");
+                      }}
+                      title="Dismiss notice"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="student-header__right" ref={headerRightRef}>
@@ -420,6 +491,7 @@ export default function StudentLayout() {
           </div>
         </main>
       </div>
+      <BroadcastToast />
     </div>
   );
 }

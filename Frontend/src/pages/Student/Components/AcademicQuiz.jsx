@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   GraduationCap,
   Clock,
@@ -140,7 +141,7 @@ const completedAnswers = {
 
 
 /* ─── Fetch quizzes from Database ─────────────────────────────── */
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
@@ -257,12 +258,41 @@ function normalizeAdminQuestion(q, idx) {
   };
 }
 
+const defaultQuizQuestions = [
+  {
+    id: 1,
+    question: "What is the primary function of an Operating System?",
+    options: [
+      "To manage computer hardware and software resources",
+      "To compile high-level programming code",
+      "To connect directly to the internet",
+      "To design database schemas"
+    ],
+    correct: 0,
+    explanation: "Operating System acts as an interface between user and hardware, managing memory, processes, and storage."
+  },
+  {
+    id: 2,
+    question: "Which data structure operates on LIFO (Last In First Out) principle?",
+    options: ["Queue", "Stack", "Array", "Linked List"],
+    correct: 1,
+    explanation: "Stack follows LIFO principle where the element inserted last is removed first."
+  },
+  {
+    id: 3,
+    question: "What is the average time complexity of searching in a Hash Table?",
+    options: ["O(n)", "O(log n)", "O(1)", "O(n²)"],
+    correct: 2,
+    explanation: "Hash Table lookup takes O(1) average time complexity using key-value hashing."
+  }
+];
+
 function QuizPlatform({ quiz, mode, onExit }) {
-  // For admin quizzes use quiz.questionsList; for built-in use quizQuestions lookup
-  const rawQuestions = quiz.source === "admin" && quiz.questionsList?.length
-    ? quiz.questionsList.map(normalizeAdminQuestion)
-    : (quizQuestions[quiz.id] || []);
-  const questions = rawQuestions;
+  // Normalize questions from admin DB, practice preset, or fallback
+  const adminQs = quiz.questionsList?.length ? quiz.questionsList.map(normalizeAdminQuestion) : null;
+  const builtinQs = (quizQuestions[quiz.id] && quizQuestions[quiz.id].length) ? quizQuestions[quiz.id] : null;
+  const questions = adminQs || builtinQs || defaultQuizQuestions;
+
   const isReview = mode === "review";
   const savedAnswers = isReview ? completedAnswers[quiz.id] || [] : [];
 
@@ -385,11 +415,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
   }
 
   const answered = answers.filter((a) => a !== null).length;
-  const q = questions[current];
-  const userAnswer = answers[current];
+  const safeCurrent = Math.min(Math.max(0, current), questions.length - 1);
+  const q = questions[safeCurrent] || questions[0] || defaultQuizQuestions[0];
+  const userAnswer = answers[safeCurrent];
 
   const score = submitted
-    ? questions.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0)
+    ? questions.reduce((acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0), 0)
     : 0;
 
   // Determine status for review sidebar
@@ -398,10 +429,10 @@ function QuizPlatform({ quiz, mode, onExit }) {
       if (reviewMarks[idx]) return "review";
       return answers[idx] !== null ? "completed" : "unattempted";
     }
-    return answers[idx] === questions[idx].correct ? "correct" : "wrong";
+    return answers[idx] === questions[idx]?.correct ? "correct" : "wrong";
   }
 
-  return (
+  return createPortal(
     <div className="qp-overlay">
       {/* Header */}
       <div className="qp-header">
@@ -605,114 +636,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
           </div>
         </main>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
-const practiceQuizzes = [
-  {
-    id: "p1",
-    title: "Data Structures: Arrays & Linked Lists Drill",
-    subject: "Core Computer Science",
-    topic: "Arrays, Pointers, Linked Lists",
-    date: "Available Now",
-    duration: "15 mins",
-    durationSecs: 15 * 60,
-    marks: "30 Marks",
-    status: "Upcoming",
-    difficulty: "Medium",
-    questions: 3,
-    questionsList: [
-      {
-        id: 101,
-        text: "What is the time complexity of accessing an element in an array by index?",
-        options: { a: "O(n)", b: "O(log n)", c: "O(1)", d: "O(n²)" },
-        correct: "c"
-      },
-      {
-        id: 102,
-        text: "Which data structure follows the LIFO (Last In, First Out) principle?",
-        options: { a: "Queue", b: "Stack", c: "Linked List", d: "Binary Tree" },
-        correct: "b"
-      },
-      {
-        id: 103,
-        text: "What is the primary advantage of a Doubly Linked List over a Singly Linked List?",
-        options: { a: "Requires less memory", b: "Faster element lookup", c: "Bidirectional traversal", d: "Constant time sorting" },
-        correct: "c"
-      }
-    ],
-    source: "practice"
-  },
-  {
-    id: "p2",
-    title: "Web Development: React & ES6 Essentials",
-    subject: "Full Stack Development",
-    topic: "Hooks, Virtual DOM, Promises",
-    date: "Available Now",
-    duration: "20 mins",
-    durationSecs: 20 * 60,
-    marks: "40 Marks",
-    status: "Upcoming",
-    difficulty: "Medium",
-    questions: 3,
-    questionsList: [
-      {
-        id: 201,
-        text: "Which React Hook is primarily used for managing side effects in functional components?",
-        options: { a: "useState", b: "useContext", c: "useEffect", d: "useReducer" },
-        correct: "c"
-      },
-      {
-        id: 202,
-        text: "What concept does React use to minimize direct DOM manipulations for optimal rendering performance?",
-        options: { a: "Real DOM", b: "Virtual DOM", c: "Shadow DOM", d: "HTML Template DOM" },
-        correct: "b"
-      },
-      {
-        id: 203,
-        text: "Which ES6 keyword declares a block-scoped variable that cannot be reassigned?",
-        options: { a: "var", b: "let", c: "const", d: "static" },
-        correct: "c"
-      }
-    ],
-    source: "practice"
-  },
-  {
-    id: "p3",
-    title: "SQL Databases & Indexing Practice",
-    subject: "Database Management",
-    topic: "SELECT, JOINs, B-Trees, Normalization",
-    date: "Available Now",
-    duration: "10 mins",
-    durationSecs: 10 * 60,
-    marks: "20 Marks",
-    status: "Upcoming",
-    difficulty: "Easy",
-    questions: 3,
-    questionsList: [
-      {
-        id: 301,
-        text: "Which SQL clause is used to filter records resulting from a GROUP BY statement?",
-        options: { a: "WHERE", b: "HAVING", c: "ORDER BY", d: "LIKE" },
-        correct: "b"
-      },
-      {
-        id: 302,
-        text: "What type of JOIN returns all records when there is a match in either left or right table?",
-        options: { a: "INNER JOIN", b: "LEFT JOIN", c: "FULL OUTER JOIN", d: "RIGHT JOIN" },
-        correct: "c"
-      },
-      {
-        id: 303,
-        text: "Which normal form requires eliminating partial dependency of non-key attributes on candidate keys?",
-        options: { a: "1NF", b: "2NF", c: "3NF", d: "BCNF" },
-        correct: "b"
-      }
-    ],
-    source: "practice"
-  }
-];
+const practiceQuizzes = [];
 
 /* ─── Main AcademicQuiz page ───────────────────────────────────── */
 export default function AcademicQuiz() {
@@ -724,38 +653,7 @@ export default function AcademicQuiz() {
   // Fetch admin-created DB quizzes when page mounts
   const refreshQuizzes = () => {
     fetchApiQuizzes().then((apiQuizzes) => {
-      const completedQuizIds = new Set(
-        JSON.parse(localStorage.getItem("student_completed_quizzes") || "[]").map(String)
-      );
-
-      let merged = [...apiQuizzes];
-      if (merged.length === 0) {
-        // Fallback to practice quizzes catalog
-        merged = practiceQuizzes.map((pq) => {
-          const isDone = completedQuizIds.has(String(pq.id));
-          return {
-            ...pq,
-            status: isDone ? "Completed" : "Upcoming",
-            score: isDone ? "Score: 3/3" : null,
-          };
-        });
-      } else {
-        // Check practice quizzes not covered by API
-        const apiIds = new Set(apiQuizzes.map((q) => String(q.id)));
-        const extraPractice = practiceQuizzes
-          .filter((pq) => !apiIds.has(String(pq.id)))
-          .map((pq) => {
-            const isDone = completedQuizIds.has(String(pq.id));
-            return {
-              ...pq,
-              status: isDone ? "Completed" : "Upcoming",
-              score: isDone ? "Score: 3/3" : null,
-            };
-          });
-        merged = [...merged, ...extraPractice];
-      }
-
-      setAllQuizzes(merged);
+      setAllQuizzes(apiQuizzes || []);
     });
   };
 

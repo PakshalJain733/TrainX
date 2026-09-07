@@ -20,6 +20,7 @@ export default function CodingPlatform() {
   const [consoleOutput, setConsoleOutput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("description"); // description, submissions
+  const [mobileView, setMobileView] = useState("problem"); // problem, code
 
   // Generate line numbers array
   const lineCount = code.split('\n').length;
@@ -29,11 +30,13 @@ export default function CodingPlatform() {
   
   const handleRun = () => {
     setConsoleOutput("Running code...\n\n> Output:\nTests executed successfully in 14ms.\nStatus: Accepted");
+    setMobileView("code");
   };
 
   const handleSubmit = () => {
     setIsSubmitting(true);
     setConsoleOutput("Evaluating all test cases...\n...");
+    setMobileView("code");
     setTimeout(() => {
       setIsSubmitting(false);
       setConsoleOutput("Evaluating all test cases...\n\n✅ 15 / 15 test cases passed.\nTime Complexity: O(n)\nSpace Complexity: O(1)\n\nSuccess: Code submitted.");
@@ -52,7 +55,7 @@ export default function CodingPlatform() {
             </Link>
             <h1 className="cp-task-title">
               <Code2 size={18} />
-              {taskId ? `Task ID: ${taskId.toUpperCase()}` : "Coding Task Workspace"}
+              <span className="cp-task-name">{taskId ? `Task ID: ${taskId.toUpperCase()}` : "Coding Task"}</span>
               <span className="cp-task-badge">Backend</span>
             </h1>
           </div>
@@ -60,17 +63,19 @@ export default function CodingPlatform() {
           <div className="cp-header-right">
             <div className="cp-header-actions-group">
               <button 
-                className="cp-run-btn" 
+                className="cp-run-btn cp-nav-arrow-btn" 
                 onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
                 disabled={currentTaskNum <= 1}
+                title="Previous Task"
               >
-                <ChevronLeft size={14} /> Prev
+                <ChevronLeft size={14} /> <span>Prev</span>
               </button>
               <button 
-                className="cp-run-btn" 
+                className="cp-run-btn cp-nav-arrow-btn" 
                 onClick={() => navigate(`/student/coding-platform/task-${String(currentTaskNum + 1).padStart(2, '0')}`)}
+                title="Next Task"
               >
-                Next <ChevronRight size={14} />
+                <span>Next</span> <ChevronRight size={14} />
               </button>
             </div>
 
@@ -82,24 +87,42 @@ export default function CodingPlatform() {
             </select>
             
             <button className="cp-run-btn" onClick={handleRun} disabled={isSubmitting}>
-              <Play size={14} fill="currentColor" /> Run
+              <Play size={14} fill="currentColor" /> <span>Run</span>
             </button>
             <button className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
               {isSubmitting ? (
                 <span>Submitting...</span>
               ) : (
                 <>
-                  <CheckCircle2 size={15} /> Submit Code
+                  <CheckCircle2 size={15} /> <span>Submit</span>
                 </>
               )}
             </button>
           </div>
         </div>
 
+        {/* Mobile Segmented View Switcher (Visible on mobile screens) */}
+        <div className="cp-mobile-tab-bar">
+          <button
+            type="button"
+            className={`cp-mobile-tab ${mobileView === 'problem' ? 'active' : ''}`}
+            onClick={() => setMobileView('problem')}
+          >
+            <FileText size={15} /> Problem Statement
+          </button>
+          <button
+            type="button"
+            className={`cp-mobile-tab ${mobileView === 'code' ? 'active' : ''}`}
+            onClick={() => setMobileView('code')}
+          >
+            <Code2 size={15} /> Code & Console
+          </button>
+        </div>
+
         {/* Split Workspace */}
         <div className="cp-workspace">
           {/* Left Pane: Description */}
-          <div className="cp-problem-pane">
+          <div className={`cp-problem-pane ${mobileView === 'problem' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
             <div className="cp-pane-tabs">
               <div 
                 className={`cp-pane-tab ${activeTab === 'description' ? 'active' : ''}`}
@@ -151,7 +174,7 @@ export default function CodingPlatform() {
           </div>
 
           {/* Right Pane: Code Editor & Console */}
-          <div className="cp-editor-pane">
+          <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
             <div className="cp-editor-area">
               <div className="cp-line-numbers">
                 {lines.map(num => <div key={num}>{num}</div>)}

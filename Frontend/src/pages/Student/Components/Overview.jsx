@@ -15,7 +15,7 @@ import "../Styles/Overview.css";
 import "../Styles/Batches.css";
 import "../../Admin/Styles/AdminUsers.css";
 
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
@@ -68,7 +68,15 @@ const defaultDashboardData = {
 export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
+  const [noticeDismissed, setNoticeDismissed] = useState(() => {
+    return localStorage.getItem("student_profile_notice_dismissed") === "true";
+  });
   const navigate = useNavigate();
+
+  const dismissNotice = () => {
+    setNoticeDismissed(true);
+    localStorage.setItem("student_profile_notice_dismissed", "true");
+  };
 
   // Modal State for Joining Batch from Hero Card
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -263,31 +271,6 @@ export default function Overview() {
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
-
-      {/* First-Time Login High-Contrast Banner */}
-      {!profileCompleted && (
-        <div className="profile-update-banner">
-          <div className="profile-update-banner-left">
-            <div className="profile-update-icon-box">
-              <UserCheck size={24} />
-            </div>
-            <div>
-              <h3 className="profile-update-title">
-                Action Required: Complete Your Academic Profile
-                <span className="profile-update-badge">First-Time Setup</span>
-              </h3>
-              <p className="profile-update-desc">
-                Please update your <strong>Semester</strong>, <strong>Aggregate CGPA</strong>, and <strong>Skills</strong> so our AI can tailor training programs & roadmaps for you.
-              </p>
-            </div>
-          </div>
-          <Link to="/student/profile">
-            <button className="profile-update-btn">
-              Update Profile Now <ArrowRight size={16} />
-            </button>
-          </Link>
-        </div>
-      )}
 
       {/* Radiant Welcome Hero Banner */}
       <div className="overview-hero-card">
