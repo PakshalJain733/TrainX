@@ -1,9 +1,71 @@
 import { Router } from 'express';
-import { getSkillGapData } from '../controllers/skillGap.controller.js';
+import {
+  getSkillGapData,
+  getMySkillGaps,
+  getStudentSkillGapsById,
+  triggerRemedialAssignment,
+  getRemedialInterventions,
+  getAIDiagnostics,
+} from '../controllers/skillGap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authorizeRoles } from '../middleware/role.middleware.js';
+import { ROLES } from '../utils/constants.js';
 
 const router = Router();
+
+// Protect all skill-gap endpoints with JWT authentication
 router.use(authenticateToken);
-router.get('/', getSkillGapData);
+
+/**
+ * Route: Get personal skill gap report for logged-in student
+ * GET /api/v1/skill-gaps/my-gaps
+ */
+router.get('/my-gaps', getMySkillGaps);
+
+/**
+ * Route: Get list of remedial assignments & interventions
+ * GET /api/v1/skill-gaps/remedial
+ */
+router.get('/remedial', getRemedialInterventions);
+
+/**
+ * Route: Get batch-wide skill gaps (Mentor, Coordinator, Admin)
+ * GET /api/v1/skill-gaps
+ */
+router.get(
+  '/',
+  authorizeRoles(ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  getSkillGapData
+);
+
+/**
+ * Route: Get skill gap report for a specific student
+ * GET /api/v1/skill-gaps/student/:studentId
+ */
+router.get(
+  '/student/:studentId',
+  authorizeRoles(ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  getStudentSkillGapsById
+);
+
+/**
+ * Route: Trigger AI-generated remedial assignment
+ * POST /api/v1/skill-gaps/remedial
+ */
+router.post(
+  '/remedial',
+  authorizeRoles(ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  triggerRemedialAssignment
+);
+
+/**
+ * Route: Run live AI diagnostics on a topic
+ * POST /api/v1/skill-gaps/diagnostics
+ */
+router.post(
+  '/diagnostics',
+  authorizeRoles(ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  getAIDiagnostics
+);
 
 export default router;

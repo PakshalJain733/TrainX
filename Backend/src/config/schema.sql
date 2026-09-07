@@ -213,3 +213,48 @@ CREATE TABLE IF NOT EXISTS coding_submissions (
   INDEX idx_problem_id (problem_id)
 );
 
+-- 14. Skill Gaps Table (Batch or Student level diagnostics)
+CREATE TABLE IF NOT EXISTS skill_gaps (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT DEFAULT 1,
+  batch_id INT NULL,
+  student_id INT NULL,
+  topic VARCHAR(255) NOT NULL,
+  category VARCHAR(100) DEFAULT 'Technical',
+  deficiency_rate DECIMAL(5,2) DEFAULT 0.00,
+  avg_score DECIMAL(5,2) DEFAULT 0.00,
+  priority ENUM('High', 'Medium', 'Low') DEFAULT 'Medium',
+  affected_students_count INT DEFAULT 0,
+  status ENUM('open', 'in_remedial', 'resolved') DEFAULT 'open',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 15. Remedial Interventions Table
+CREATE TABLE IF NOT EXISTS remedial_interventions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  college_id INT DEFAULT 1,
+  skill_gap_id INT NULL,
+  batch_id INT NULL,
+  student_id INT NULL,
+  topic VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  assignment_details JSON NULL,
+  recommended_problems JSON NULL,
+  recommended_materials JSON NULL,
+  created_by INT NULL,
+  status ENUM('assigned', 'in_progress', 'completed') DEFAULT 'assigned',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
+  FOREIGN KEY (skill_gap_id) REFERENCES skill_gaps(id) ON DELETE SET NULL,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+

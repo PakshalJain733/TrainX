@@ -3,8 +3,21 @@ import { config } from '../config/env.js';
 import { sendError } from '../utils/response.js';
 
 export const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || req.headers['x-access-token'] || req.headers['token'];
+
+  if (!authHeader) {
+    return sendError(res, 'Authentication token required', 401);
+  }
+
+  let token = authHeader;
+  if (typeof token === 'string') {
+    // Support Bearer / bearer with variable whitespace
+    if (/^Bearer\s+/i.test(token)) {
+      token = token.replace(/^Bearer\s+/i, '');
+    }
+    // Remove surrounding quotes and trim whitespace
+    token = token.replace(/^["']|["']$/g, '').trim();
+  }
 
   if (!token) {
     return sendError(res, 'Authentication token required', 401);
