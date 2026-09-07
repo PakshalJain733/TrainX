@@ -566,8 +566,8 @@ export default function CoordinatorStudents() {
         </div>
       </div>
 
-      <div className="coord-filter-bar">
-        <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
+      <div className="coord-filter-bar" style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", width: "300px" }}>
           <Search size={16} style={{ position: "absolute", left: "12px", top: "10px", color: "#64748b" }} />
           <input
             type="text"
@@ -575,7 +575,7 @@ export default function CoordinatorStudents() {
             placeholder="Search student name, roll no or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: "36px" }}
+            style={{ paddingLeft: "36px", width: "100%" }}
           />
         </div>
 

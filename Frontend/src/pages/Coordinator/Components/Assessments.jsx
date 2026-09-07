@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Plus,
@@ -118,66 +118,25 @@ export default function CoordinatorAssessments() {
       {/* Top Header */}
       <div className="coord-page-header">
         <div>
-          <h1 className="coord-page-title">Assessments, Attendance & Placement Governance</h1>
+          <h1 className="coord-page-title">Quizzes & Assessments Governance</h1>
           <p className="coord-page-sub">
-            Unified governance portal for student quiz assessments, attendance tracking, and placement drive readiness.
+            Manage student MCQ quizzes, publish new tests, view live activity logs, and analyze scorecard performance.
           </p>
         </div>
+
+        <div style={{ display: "flex", gap: "10px" }}>
+          <button
+            className="coord-btn"
+            style={{ background: "#f1f5f9", color: "#334155" }}
+            onClick={() => alert("Downloading Department Quiz Scorecard CSV...")}
+          >
+            <Download size={15} /> Export Scorecards CSV
+          </button>
+          <button className="coord-btn coord-btn--primary" onClick={() => setShowCreateModal(true)}>
+            <Plus size={16} /> Publish New Quiz
+          </button>
+        </div>
       </div>
-
-      {/* Main Top Tab Switcher */}
-      <div
-        className="coord-tabs-bar"
-        style={{
-          marginBottom: "24px",
-          background: "#f8fafc",
-          padding: "6px",
-          borderRadius: "14px",
-          display: "flex",
-          gap: "8px",
-          border: "1px solid #e2e8f0",
-        }}
-      >
-        <button
-          className={`coord-tab-btn ${mainTab === "assessments" ? "coord-tab-btn--active" : ""}`}
-          onClick={() => setMainTab("assessments")}
-          style={{ flex: 1, justifyContent: "center", padding: "10px 16px", fontSize: "14px", fontWeight: 700 }}
-        >
-          <FileCheck2 size={16} /> Assessments & Quiz
-        </button>
-        <button
-          className={`coord-tab-btn ${mainTab === "attendance" ? "coord-tab-btn--active" : ""}`}
-          onClick={() => setMainTab("attendance")}
-          style={{ flex: 1, justifyContent: "center", padding: "10px 16px", fontSize: "14px", fontWeight: 700 }}
-        >
-          <LineChart size={16} /> Attendance Governance
-        </button>
-        <button
-          className={`coord-tab-btn ${mainTab === "placement" ? "coord-tab-btn--active" : ""}`}
-          onClick={() => setMainTab("placement")}
-          style={{ flex: 1, justifyContent: "center", padding: "10px 16px", fontSize: "14px", fontWeight: 700 }}
-        >
-          <Briefcase size={16} /> Placement Drives
-        </button>
-      </div>
-
-      {mainTab === "attendance" && <CoordinatorAttendance hideHeader={true} />}
-      {mainTab === "placement" && <CoordinatorPlacement hideHeader={true} />}
-
-      {mainTab === "assessments" && (
-        <>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginBottom: "16px" }}>
-            <button
-              className="coord-btn"
-              style={{ background: "#f1f5f9", color: "#334155" }}
-              onClick={() => alert("Downloading Department Quiz Scorecard CSV...")}
-            >
-              <Download size={15} /> Export Scorecards CSV
-            </button>
-            <button className="coord-btn coord-btn--primary" onClick={() => setShowCreateModal(true)}>
-              <Plus size={16} /> Publish New Quiz
-            </button>
-          </div>
 
       {/* KPI Stats Bar */}
       <div className="coord-stats-grid" style={{ marginBottom: "20px" }}>
@@ -453,8 +412,6 @@ export default function CoordinatorAssessments() {
             </div>
           </div>
         </div>
-      )}
-      </>
       )}
 
       {/* DETAILED QUIZ RESULTS & SCORECARD MODAL */}

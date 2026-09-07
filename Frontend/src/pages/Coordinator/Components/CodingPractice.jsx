@@ -312,10 +312,6 @@ export default function CodingPractice() {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 mb-2">
-            <Sparkles size={14} className="text-indigo-600" />
-            <span>Coordinator Coding Practice Management Hub</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             Coding Practice & Assignment Governance
           </h1>

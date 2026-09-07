@@ -41,32 +41,32 @@ function SidebarBrand({ collapsed, subtitle }) {
 
 const primaryNavItems = [
   { title: "Dashboard", url: "/coordinator", icon: LayoutDashboard, exact: true },
-  { title: "Batches", url: "/coordinator/batches", icon: Users },
   { title: "Students", url: "/coordinator/students", icon: GraduationCap },
-  { title: "Coding Practice", url: "/coordinator/practice", icon: Code },
-  { title: "Coding Performance", url: "/coordinator/coding-performance", icon: LineChart },
-  { title: "AI Interviews & Feedback", url: "/coordinator/interviews", icon: Bot },
+  { title: "Performances", url: "/coordinator/performances", icon: LineChart },
   { title: "Students Needing Support", url: "/coordinator/improvement", icon: AlertTriangle },
-  { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
-  { title: "Assessments, Attendance & Placement", url: "/coordinator/assessments", icon: FileCheck2 },
+  { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
-  { title: "Governance Reports", url: "/coordinator/reports", icon: FileSpreadsheet },
 ];
 
 const footerNavItems = [
   { title: "Notifications", url: "/coordinator/notifications", icon: Bell },
-  { title: "Settings & Profile", url: "/coordinator/profile", icon: Settings },
 ];
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
 
   const isActive = (url, exact) => {
-    if (url === "/coordinator/assessments") {
+    if (url === "/coordinator/quizzes-and-codes") {
       return (
+        pathname.startsWith("/coordinator/quizzes-and-codes") ||
         pathname.startsWith("/coordinator/assessments") ||
-        pathname.startsWith("/coordinator/attendance") ||
-        pathname.startsWith("/coordinator/placement")
+        pathname.startsWith("/coordinator/practice")
+      );
+    }
+    if (url === "/coordinator/performances") {
+      return (
+        pathname.startsWith("/coordinator/performances") ||
+        pathname.startsWith("/coordinator/coding-performance")
       );
     }
     return exact

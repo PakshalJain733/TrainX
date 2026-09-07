@@ -87,8 +87,6 @@ const defaultCoordinatorNotifications = [
 export default function CoordinatorNotifications() {
   const [notifications, setNotifications] = useState(defaultCoordinatorNotifications);
   const [filter, setFilter] = useState("All");
-  const [broadcastText, setBroadcastText] = useState("");
-  const [targetBatch, setTargetBatch] = useState("All Department Batches");
 
   const categories = ["All", "Unread", "Coding Practice", "Attendance", "AI Interview", "Placement", "Governance"];
 
@@ -106,26 +104,6 @@ export default function CoordinatorNotifications() {
     );
   };
 
-  const handleSendBroadcast = (e) => {
-    e.preventDefault();
-    if (!broadcastText.trim()) return;
-
-    const newNotif = {
-      id: Date.now(),
-      title: `Broadcast Sent to ${targetBatch}`,
-      body: broadcastText,
-      time: "Just now",
-      category: "Coding Practice",
-      icon: Send,
-      iconColor: "#4f46e5",
-      iconBg: "#e0e7ff",
-      unread: false,
-    };
-
-    setNotifications([newNotif, ...notifications]);
-    setBroadcastText("");
-  };
-
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   const filteredNotifs = notifications.filter((n) => {
@@ -139,15 +117,11 @@ export default function CoordinatorNotifications() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 mb-2">
-            <Bell size={14} className="text-indigo-600" />
-            <span>Coordinator Activity & Broadcast Center</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             Notifications & Broadcast Alerts
           </h1>
           <p className="text-sm text-slate-500 mt-1 max-w-2xl">
-            Stay updated with student coding submission alerts, attendance notices, and send real-time broadcast announcements to department batches.
+            Stay updated with student coding submission alerts and attendance notices.
           </p>
         </div>
 
@@ -159,51 +133,6 @@ export default function CoordinatorNotifications() {
             <CheckCheck size={16} /> Mark All as Read
           </button>
         )}
-      </div>
-
-      {/* Broadcast Announcement Box */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-              <Send size={16} />
-            </div>
-            <h3 className="text-sm font-bold text-slate-900">Send Real-time Department Broadcast</h3>
-          </div>
-          <span className="text-xs text-slate-400">Notifies all assigned students & mentors</span>
-        </div>
-
-        <form onSubmit={handleSendBroadcast} className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <textarea
-              rows={2}
-              required
-              placeholder="Type your notice, coding practice reminder, or reschedule notice..."
-              value={broadcastText}
-              onChange={(e) => setBroadcastText(e.target.value)}
-              className="md:col-span-3 w-full p-3 rounded-xl border border-slate-200 text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
-            />
-            <div className="flex flex-col justify-between gap-2">
-              <select
-                value={targetBatch}
-                onChange={(e) => setTargetBatch(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none"
-              >
-                <option value="All Department Batches">All Department Batches</option>
-                <option value="CSE 2026 Alpha Cohort">CSE 2026 Alpha Cohort</option>
-                <option value="Fullstack Web Dev Batch #4">Fullstack Web Dev Batch #4</option>
-                <option value="Data Science & ML 2025">Data Science & ML 2025</option>
-              </select>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center justify-center gap-2 transition"
-              >
-                <Send size={14} /> Send Broadcast
-              </button>
-            </div>
-          </div>
-        </form>
       </div>
 
       {/* Filter Tabs */}

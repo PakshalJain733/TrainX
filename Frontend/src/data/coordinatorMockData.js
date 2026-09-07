@@ -1,10 +1,10 @@
 export const coordinatorProfile = {
-  name: "Alok Mishra",
-  email: "a.mishra@trainingportal.com",
+  name: "Harshad Nandurkar",
+  email: "harshadnandurkar851@gmail.com",
   role: "Department Coordinator",
-  department: "Computer Science & Engineering",
+  department: "Electronics & Computer Science",
   college: "Apex Institute of Technology",
-  phone: "+91 98765 43210",
+  phone: "+91 77109 07045",
   joinDate: "Jan 2024",
   totalStudents: 420,
   activeBatchesCount: 4,
@@ -271,6 +271,30 @@ export const coordinatorMentors = [
     experience: "5 Years",
     status: "Active",
     phone: "+91 97444 55667",
+  },
+  {
+    id: 5,
+    name: "Rais Mulla",
+    email: "r.mulla@campustraining.edu.in",
+    specialization: "CS HOD",
+    assignedBatch: "Computer Science & Engineering",
+    studentsCount: 150,
+    rating: 5.0,
+    experience: "15+ Years",
+    status: "Active",
+    phone: "+91 98999 11223",
+  },
+  {
+    id: 6,
+    name: "Anagha Dhavlikar",
+    email: "a.dhavlikar@campustraining.edu.in",
+    specialization: "ECS HOD",
+    assignedBatch: "Electronics & Computer Science",
+    studentsCount: 140,
+    rating: 5.0,
+    experience: "14+ Years",
+    status: "Active",
+    phone: "+91 98999 44556",
   },
 ];
 
@@ -716,171 +740,251 @@ export const coordinatorInterviewRecords = [
     id: 1,
     studentName: "Ananya Sharma",
     rollNo: "CSE26-009",
+    department: "CSE",
     batch: "CSE 2026 Alpha Cohort",
     targetRole: "Full Stack Engineer",
-    interviewer: "AI Bot v3.2 & Rohan Sharma",
-    conductedDate: "2026-09-01",
+    interviewType: "Technical Core & System Design",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "06 Sep 2026",
+    duration: "45 mins",
+    questionsCount: 5,
     status: "Completed",
     techScore: 94,
-    behavioralScore: 90,
+    communicationScore: 92,
+    problemSolvingScore: 96,
+    confidenceScore: 90,
     overallScore: 92,
-    grade: "A+",
-    weakSpot: "Minor latency in explaining System Design cache invalidation strategies",
-    strengths: ["Exceptional DSA problem solving", "Clear step-by-step code walkthrough", "Strong communication"],
-    summary: "Candidate demonstrated outstanding grasp of Graph algorithms and System Design concepts. Passed all technical test cases comfortably.",
-    detailedScores: {
-      problemSolving: 96,
-      codeQuality: 94,
-      systemDesign: 90,
-      communication: 92,
-      csFundamentals: 95
-    },
-    questionFeedback: [
-      { q: "Design a Rate Limiter using Token Bucket Algorithm", score: "95%", notes: "Flawless explanation of concurrency & Redis integration." },
-      { q: "Implement LRU Cache from scratch", score: "98%", notes: "Optimal O(1) doubly linked list + hash map solution written in C++." }
+    grade: "Excellent",
+    strengths: [
+      "✓ Good understanding of DBMS and SQL query optimization",
+      "✓ Clear explanation of OOP concepts & System Design principles",
+      "✓ Exceptional DSA problem solving in C++"
+    ],
+    weaknesses: [
+      "• Minor latency in explaining Redis cache invalidation edge cases",
+      "• Could provide deeper real-world examples for microservices"
+    ],
+    recommendation: "Excellent technical foundation. Recommended to practice high-concurrency microservice architectures and attempt the Senior Fullstack mock drive.",
+    nextTopics: ["System Design", "Redis Caching", "Microservices"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "20 Aug 2026", score: "58%", status: "Needs Work" },
+      { attempt: "Attempt 2", date: "28 Aug 2026", score: "84%", status: "Good" },
+      { attempt: "Attempt 3", date: "06 Sep 2026", score: "92%", status: "Excellent" }
     ]
   },
   {
     id: 2,
     studentName: "Aarav Mehta",
     rollNo: "CSE26-042",
+    department: "CSE",
     batch: "CSE 2026 Alpha Cohort",
     targetRole: "Python Backend Developer",
-    interviewer: "AI Bot v3.2",
-    conductedDate: "2026-08-30",
+    interviewType: "Backend APIs & Data Structures",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "04 Sep 2026",
+    duration: "40 mins",
+    questionsCount: 5,
     status: "Completed",
     techScore: 86,
-    behavioralScore: 84,
+    communicationScore: 84,
+    problemSolvingScore: 85,
+    confidenceScore: 88,
     overallScore: 85,
-    grade: "A",
-    weakSpot: "Edge cases in Graph cycle detection and DAG topological sorting",
-    strengths: ["Clean Python syntax", "Good API design intuition", "Confident articulation"],
-    summary: "Solid backend interview performance. Showed good understanding of SQL indexing and REST principles, but struggled slightly on complex Graph edge cases.",
-    detailedScores: {
-      problemSolving: 85,
-      codeQuality: 88,
-      systemDesign: 82,
-      communication: 86,
-      csFundamentals: 88
-    },
-    questionFeedback: [
-      { q: "Explain ACID properties & PostgreSQL Isolation Levels", score: "90%", notes: "Accurate explanation of Phantom Reads and Repeatable Read." },
-      { q: "Find Cycle in Directed Graph", score: "78%", notes: "Missed handling disconnected component graph vertices initially." }
+    grade: "Excellent",
+    strengths: [
+      "✓ Clean Python syntax & PEP8 adherence",
+      "✓ Good REST API design intuition and database indexing clarity",
+      "✓ Confident articulation during technical Q&A"
+    ],
+    weaknesses: [
+      "• Edge cases in Directed Graph cycle detection algorithms",
+      "• Answers occasionally lack practical deployment examples"
+    ],
+    recommendation: "Solid backend interview performance. Focus on Graph topological sorting edge cases and proceed to Advanced Backend mock evaluation.",
+    nextTopics: ["Graph Algorithms", "Asyncio", "Docker & CI/CD"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "15 Aug 2026", score: "62%", status: "Average" },
+      { attempt: "Attempt 2", date: "25 Aug 2026", score: "74%", status: "Good" },
+      { attempt: "Attempt 3", date: "04 Sep 2026", score: "85%", status: "Excellent" }
     ]
   },
   {
     id: 3,
     studentName: "Priya Roy",
     rollNo: "DS25-012",
+    department: "AI & DS",
     batch: "Data Science & ML 2025",
     targetRole: "Data Science & AI Engineer",
-    interviewer: "AI Bot v3.2 & Dr. Vikram Seth",
-    conductedDate: "2026-08-29",
+    interviewType: "ML Models & PyTorch Math",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "03 Sep 2026",
+    duration: "50 mins",
+    questionsCount: 6,
     status: "Completed",
     techScore: 92,
-    behavioralScore: 88,
+    communicationScore: 90,
+    problemSolvingScore: 92,
+    confidenceScore: 88,
     overallScore: 90,
-    grade: "A+",
-    weakSpot: "Time complexity trade-offs in Transformers vs Recurrent Networks",
-    strengths: ["Deep mathematical clarity on PyTorch", "High confidence in LLM fine-tuning concepts", "Structured presentation"],
-    summary: "Excellent domain knowledge in AI/ML. Solved matrix operation challenge in PyTorch with high efficiency.",
-    detailedScores: {
-      problemSolving: 92,
-      codeQuality: 90,
-      systemDesign: 88,
-      communication: 90,
-      csFundamentals: 94
-    },
-    questionFeedback: [
-      { q: "Derive Self-Attention Memory Complexity", score: "94%", notes: "Derived O(N^2) memory bottleneck accurately." }
+    grade: "Excellent",
+    strengths: [
+      "✓ Deep mathematical clarity on Neural Network backpropagation",
+      "✓ High confidence in LLM fine-tuning & Transformers",
+      "✓ Structured presentation of data preprocessing pipelines"
+    ],
+    weaknesses: [
+      "• Time complexity trade-offs in Attention mechanisms need refinement",
+      "• Could explain model quantization techniques in more detail"
+    ],
+    recommendation: "Outstanding AI/ML technical depth. Ready for premier AI engineering campus placement drives.",
+    nextTopics: ["Transformer Optimization", "Model Quantization", "ONNX Runtime"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "18 Aug 2026", score: "75%", status: "Good" },
+      { attempt: "Attempt 2", date: "26 Aug 2026", score: "82%", status: "Good" },
+      { attempt: "Attempt 3", date: "03 Sep 2026", score: "90%", status: "Excellent" }
     ]
   },
   {
     id: 4,
     studentName: "Karan Singh",
     rollNo: "FS04-089",
+    department: "CSE",
     batch: "Fullstack React & Node",
     targetRole: "React Frontend Developer",
-    interviewer: "AI Bot v3.2",
-    conductedDate: "2026-08-28",
+    interviewType: "Frontend Frameworks & UI Logic",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "02 Sep 2026",
+    duration: "35 mins",
+    questionsCount: 4,
     status: "Completed",
-    techScore: 74,
-    behavioralScore: 74,
-    overallScore: 74,
-    grade: "B",
-    weakSpot: "React Context API re-render optimizations and closure trap in useEffect",
-    strengths: ["Good UI component structuring", "Familiar with Tailwind and Redux Toolkit"],
-    summary: "Decent performance, but needs practice on asynchronous JavaScript event loop and React state batching concepts.",
-    detailedScores: {
-      problemSolving: 72,
-      codeQuality: 75,
-      systemDesign: 70,
-      communication: 76,
-      csFundamentals: 74
-    },
-    questionFeedback: [
-      { q: "Optimize Heavy List Rendering in React", score: "72%", notes: "Mentioned virtualization but couldn't write custom windowing hook." }
+    techScore: 75,
+    communicationScore: 78,
+    problemSolvingScore: 72,
+    confidenceScore: 76,
+    overallScore: 75,
+    grade: "Good",
+    strengths: [
+      "✓ Good UI component structuring with React & Tailwind",
+      "✓ Clear understanding of state management using Redux Toolkit"
+    ],
+    weaknesses: [
+      "• Weak in Operating System fundamentals & memory management",
+      "• React Context API re-render optimizations lack practical examples",
+      "• Answers lack practical depth in asynchronous Event Loop"
+    ],
+    recommendation: "Practice OS concepts, asynchronous JS event loop, and attempt another technical mock interview.",
+    nextTopics: ["Operating Systems", "React Performance", "Event Loop"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "10 Aug 2026", score: "55%", status: "Needs Work" },
+      { attempt: "Attempt 2", date: "22 Aug 2026", score: "68%", status: "Average" },
+      { attempt: "Attempt 3", date: "02 Sep 2026", score: "75%", status: "Good" }
     ]
   },
   {
     id: 5,
     studentName: "Neha Reddy",
     rollNo: "DS25-018",
+    department: "AI & DS",
     batch: "Data Science & ML 2025",
     targetRole: "Data Science & AI Engineer",
-    interviewer: "AI Bot v3.2",
-    conductedDate: "2026-08-25",
-    status: "Needs Retake",
-    techScore: 56,
-    behavioralScore: 52,
+    interviewType: "Data Analytics & ML Fundamentals",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "01 Sep 2026",
+    duration: "30 mins",
+    questionsCount: 4,
+    status: "Not Attempted",
+    techScore: 54,
+    communicationScore: 55,
+    problemSolvingScore: 50,
+    confidenceScore: 52,
     overallScore: 54,
-    grade: "F",
-    weakSpot: "High-dimensional matrix math, PyTorch gradient calculation, nervous under pressure",
-    strengths: ["Basic Python syntax knowledge"],
-    summary: "Student struggled with fundamental ML linear algebra questions and experienced noticeable interview anxiety. Retake strongly recommended after mentor counseling.",
-    detailedScores: {
-      problemSolving: 50,
-      codeQuality: 55,
-      systemDesign: 48,
-      communication: 55,
-      csFundamentals: 58
-    },
-    questionFeedback: [
-      { q: "Explain Backpropagation & Gradient Descent", score: "52%", notes: "Could not explain chain rule application in deep neural layers." }
+    grade: "Needs Work",
+    strengths: [
+      "✓ Basic Python programming syntax awareness"
+    ],
+    weaknesses: [
+      "• Weak in Linear Algebra & PyTorch matrix calculations",
+      "• Answers lack practical examples and structure",
+      "• Experienced noticeable interview pressure and hesitation"
+    ],
+    recommendation: "Student requires mentor remediation in Linear Algebra & ML basics before scheduling a mandatory retake interview.",
+    nextTopics: ["Linear Algebra", "Python Data Analysis", "Mock Practice"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "01 Sep 2026", score: "54%", status: "Needs Work" }
     ]
   },
   {
     id: 6,
     studentName: "Rohan Verma",
     rollNo: "CSE26-099",
+    department: "CSE",
     batch: "CSE 2026 Alpha Cohort",
     targetRole: "Python Backend Developer",
-    interviewer: "AI Bot v3.2",
-    conductedDate: "2026-08-24",
-    status: "Needs Retake",
-    techScore: 48,
-    behavioralScore: 48,
-    overallScore: 48,
-    grade: "F",
-    weakSpot: "Basic Data Structures (Arrays/Stacks), Time Complexity Analysis, Communication stutter",
-    strengths: ["Attended on time"],
-    summary: "Significant conceptual gaps in Core Data Structures and Algorithms. Failed coding round 1.",
-    detailedScores: {
-      problemSolving: 42,
-      codeQuality: 45,
-      systemDesign: 40,
-      communication: 50,
-      csFundamentals: 52
-    },
-    questionFeedback: [
-      { q: "Invert a Binary Tree", score: "45%", notes: "Stuck on recursion base case." }
+    interviewType: "Core DSA & Problem Solving",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "30 Aug 2026",
+    duration: "30 mins",
+    questionsCount: 4,
+    status: "In Progress",
+    techScore: 68,
+    communicationScore: 66,
+    problemSolvingScore: 65,
+    confidenceScore: 70,
+    overallScore: 67,
+    grade: "Average",
+    strengths: [
+      "✓ Understands basic array manipulation and loops"
+    ],
+    weaknesses: [
+      "• Weak in recursion, trees, and dynamic programming",
+      "• Needs improved articulation during live code walk-through"
+    ],
+    recommendation: "Continue ongoing evaluation module. Focus on recursion base cases and tree traversal problems.",
+    nextTopics: ["Trees & Recursion", "Time Complexity", "Mock Practice"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "12 Aug 2026", score: "48%", status: "Needs Work" },
+      { attempt: "Attempt 2", date: "30 Aug 2026", score: "67%", status: "Average" }
     ]
   },
   {
     id: 7,
-    studentName: "Siddharth Nair",
-    rollNo: "CLOUD-034",
-    batch: "Cloud Native & DevOps",
+    studentName: "Ishita Deshmukh",
+    rollNo: "ECS26-015",
+    department: "ECS",
+    batch: "ECS 2026 Beta Cohort",
+    targetRole: "Embedded & IoT Engineer",
+    interviewType: "C++ & Microcontroller Systems",
+    interviewer: "AI Evaluator v3.2",
+    conductedDate: "05 Sep 2026",
+    duration: "45 mins",
+    questionsCount: 5,
+    status: "Completed",
+    techScore: 88,
+    communicationScore: 86,
+    problemSolvingScore: 87,
+    confidenceScore: 85,
+    overallScore: 87,
+    grade: "Excellent",
+    strengths: [
+      "✓ Excellent clarity on RTOS memory management & interrupt handlers",
+      "✓ Strong C++ pointer arithmetic & memory optimization"
+    ],
+    weaknesses: [
+      "• Minor hesitation on CAN bus protocol edge cases"
+    ],
+    recommendation: "Strong candidate for embedded systems roles. Ready for company-specific technical drives.",
+    nextTopics: ["CAN Bus", "FreeRTOS", "Embedded Linux"],
+    interviewHistory: [
+      { attempt: "Attempt 1", date: "20 Aug 2026", score: "74%", status: "Good" },
+      { attempt: "Attempt 2", date: "05 Sep 2026", score: "87%", status: "Excellent" }
+    ]
+  },
+  {
+    id: 8,
+    studentName: "Siddharth Patil",
+    rollNo: "IT26-033",
+    department: "IT",
+    batch: "IT 2026 Cloud Cohort",
     targetRole: "Cloud & DevOps Specialist",
     interviewer: "AI Bot v3.2",
     conductedDate: "2026-08-31",
@@ -1039,4 +1143,414 @@ export const coordinatorStudentsNeedImprovement = [
     phone: "+91 98123 45678"
   }
 ];
+
+export const coordinatorSkillGapStudents = [
+  {
+    id: 1,
+    studentName: "Neha Reddy",
+    rollNo: "DS25-018",
+    department: "AI & DS",
+    batch: "2025",
+    overallPerformance: 61,
+    weakSkillsCount: 3,
+    priority: "High",
+    trendStatus: "Not Improving",
+    assignedMentor: "Dr. Vikram Seth",
+    weakSkills: [
+      {
+        skillName: "DBMS",
+        currentScore: 45,
+        level: "Critical",
+        source: "Quiz",
+        suggestedImprovement: "Complete Relational Algebra practice module & retake DBMS Quiz #3."
+      },
+      {
+        skillName: "Data Structures",
+        currentScore: 52,
+        level: "High",
+        source: "Coding",
+        suggestedImprovement: "Solve 10 medium Tree traversal problems on Coding Practice portal."
+      },
+      {
+        skillName: "Operating Systems",
+        currentScore: 58,
+        level: "Moderate",
+        source: "Interview",
+        suggestedImprovement: "Review Deadlock prevention and Memory Management notes."
+      }
+    ]
+  },
+  {
+    id: 2,
+    studentName: "Rohan Verma",
+    rollNo: "CSE26-099",
+    department: "CSE",
+    batch: "2026",
+    overallPerformance: 54,
+    weakSkillsCount: 4,
+    priority: "High",
+    trendStatus: "Not Improving",
+    assignedMentor: "Rohan Sharma",
+    weakSkills: [
+      {
+        skillName: "System Design",
+        currentScore: 40,
+        level: "Critical",
+        source: "Interview",
+        suggestedImprovement: "Attend Saturday System Design bootcamp & review Load Balancers video."
+      },
+      {
+        skillName: "DBMS",
+        currentScore: 48,
+        level: "Critical",
+        source: "Quiz",
+        suggestedImprovement: "Practice B-Trees and 3NF normalization exercises."
+      },
+      {
+        skillName: "Data Structures",
+        currentScore: 50,
+        level: "High",
+        source: "Coding",
+        suggestedImprovement: "Work through DP pattern guide (Knapsack, LCS)."
+      },
+      {
+        skillName: "Operating Systems",
+        currentScore: 55,
+        level: "Moderate",
+        source: "Quiz",
+        suggestedImprovement: "Re-take OSI Model & TCP Handshake quick quiz."
+      }
+    ]
+  },
+  {
+    id: 3,
+    studentName: "Student B",
+    rollNo: "102",
+    department: "ECS",
+    batch: "2026",
+    overallPerformance: 58,
+    weakSkillsCount: 3,
+    priority: "High",
+    trendStatus: "Not Improving",
+    assignedMentor: "Anagha Dhavlikar",
+    weakSkills: [
+      {
+        skillName: "DBMS",
+        currentScore: 45,
+        level: "Critical",
+        source: "Quiz",
+        suggestedImprovement: "Complete SQL join assignments & retake DBMS Quiz."
+      },
+      {
+        skillName: "Data Structures",
+        currentScore: 52,
+        level: "High",
+        source: "Coding",
+        suggestedImprovement: "Review Stack & Queue implementation in C++."
+      },
+      {
+        skillName: "Operating Systems",
+        currentScore: 58,
+        level: "Moderate",
+        source: "Interview",
+        suggestedImprovement: "Study Paging & Virtual Memory concepts."
+      }
+    ]
+  },
+  {
+    id: 4,
+    studentName: "Karan Singh",
+    rollNo: "FS04-089",
+    department: "CSE",
+    batch: "2026",
+    overallPerformance: 68,
+    weakSkillsCount: 2,
+    priority: "Medium",
+    trendStatus: "Improving",
+    assignedMentor: "Ananya Gupta",
+    weakSkills: [
+      {
+        skillName: "React State Management",
+        currentScore: 56,
+        level: "High",
+        source: "Coding",
+        suggestedImprovement: "Build 2 mini-projects using Redux Toolkit and React Query."
+      },
+      {
+        skillName: "Node.js Middleware",
+        currentScore: 62,
+        level: "Moderate",
+        source: "Quiz",
+        suggestedImprovement: "Complete JWT authentication & rate-limiting lab practice."
+      }
+    ]
+  },
+  {
+    id: 5,
+    studentName: "Manish Kumar",
+    rollNo: "CLOUD-055",
+    department: "IT",
+    batch: "2026",
+    overallPerformance: 63,
+    weakSkillsCount: 2,
+    priority: "Medium",
+    trendStatus: "Improving",
+    assignedMentor: "Siddharth Roy",
+    weakSkills: [
+      {
+        skillName: "Docker Networking",
+        currentScore: 52,
+        level: "High",
+        source: "Lab",
+        suggestedImprovement: "Complete Docker Compose multi-container lab exercise."
+      },
+      {
+        skillName: "Kubernetes Pods",
+        currentScore: 60,
+        level: "Moderate",
+        source: "Interview",
+        suggestedImprovement: "Practice kubectl deployment & service configurations."
+      }
+    ]
+  },
+  {
+    id: 6,
+    studentName: "Simran Kaur",
+    rollNo: "CSE26-078",
+    department: "CSE",
+    batch: "2026",
+    overallPerformance: 72,
+    weakSkillsCount: 1,
+    priority: "Low",
+    trendStatus: "Improving",
+    assignedMentor: "Rohan Sharma",
+    weakSkills: [
+      {
+        skillName: "Graph Algorithms",
+        currentScore: 62,
+        level: "Moderate",
+        source: "Coding",
+        suggestedImprovement: "Solve Dijkstra & Bellman-Ford problem set."
+      }
+    ]
+  },
+  {
+    id: 7,
+    studentName: "Student A",
+    rollNo: "101",
+    department: "ECS",
+    batch: "2026",
+    overallPerformance: 84,
+    weakSkillsCount: 1,
+    priority: "Low",
+    trendStatus: "Improving",
+    assignedMentor: "Anagha Dhavlikar",
+    weakSkills: [
+      {
+        skillName: "System Architecture",
+        currentScore: 68,
+        level: "Moderate",
+        source: "Quiz",
+        suggestedImprovement: "Read Microservices patterns documentation."
+      }
+    ]
+  }
+];
+
+export const coordinatorAttendanceStudents = [
+  {
+    id: 1,
+    name: "Student A",
+    rollNo: "101",
+    department: "ECS",
+    batch: "2026",
+    present: 42,
+    absent: 8,
+    totalClasses: 50,
+    attendance: 84,
+    status: "Good",
+    riskLevel: "Good",
+    email: "studenta@apex.edu.in",
+    phone: "+91 98100 11101",
+    monthlyAttendance: [
+      { month: "Jun", percent: 88, present: 14, absent: 2 },
+      { month: "Jul", percent: 85, present: 17, absent: 3 },
+      { month: "Aug", percent: 80, present: 11, absent: 3 }
+    ],
+    subjectHistory: [
+      { subject: "DBMS", present: 12, absent: 2, percent: 86 },
+      { subject: "Data Structures", present: 15, absent: 3, percent: 83 },
+      { subject: "Operating Systems", present: 15, absent: 3, percent: 83 }
+    ],
+    dateLogs: [
+      { date: "2026-09-05", subject: "DBMS Lab", status: "Present", remarks: "On time" },
+      { date: "2026-09-03", subject: "Data Structures", status: "Present", remarks: "On time" },
+      { date: "2026-09-01", subject: "Operating Systems", status: "Absent", remarks: "Medical leave submitted" },
+      { date: "2026-08-28", subject: "DBMS Theory", status: "Present", remarks: "On time" },
+      { date: "2026-08-25", subject: "Data Structures Lab", status: "Absent", remarks: "Unexcused" }
+    ],
+    trend: "Stable"
+  },
+  {
+    id: 2,
+    name: "Student B",
+    rollNo: "102",
+    department: "ECS",
+    batch: "2026",
+    present: 32,
+    absent: 18,
+    totalClasses: 50,
+    attendance: 64,
+    status: "Low",
+    riskLevel: "Critical",
+    email: "studentb@apex.edu.in",
+    phone: "+91 98100 11102",
+    monthlyAttendance: [
+      { month: "Jun", percent: 75, present: 12, absent: 4 },
+      { month: "Jul", percent: 65, present: 13, absent: 7 },
+      { month: "Aug", percent: 55, present: 7, absent: 7 }
+    ],
+    subjectHistory: [
+      { subject: "DBMS", present: 9, absent: 6, percent: 60 },
+      { subject: "Data Structures", present: 11, absent: 7, percent: 61 },
+      { subject: "Operating Systems", present: 12, absent: 5, percent: 70 }
+    ],
+    dateLogs: [
+      { date: "2026-09-05", subject: "DBMS Lab", status: "Absent", remarks: "Unexcused" },
+      { date: "2026-09-03", subject: "Data Structures", status: "Absent", remarks: "Unexcused" },
+      { date: "2026-09-01", subject: "Operating Systems", status: "Present", remarks: "Late by 10m" },
+      { date: "2026-08-28", subject: "DBMS Theory", status: "Absent", remarks: "Unexcused" },
+      { date: "2026-08-25", subject: "Data Structures Lab", status: "Present", remarks: "On time" }
+    ],
+    trend: "Declining"
+  },
+  {
+    id: 3,
+    name: "Rohan Verma",
+    rollNo: "CSE26-099",
+    department: "CSE",
+    batch: "2026",
+    present: 34,
+    absent: 16,
+    totalClasses: 50,
+    attendance: 68,
+    status: "Warning",
+    riskLevel: "Warning",
+    email: "rohan.v@apex.edu.in",
+    phone: "+91 98666 77889",
+    monthlyAttendance: [
+      { month: "Jun", percent: 78, present: 14, absent: 4 },
+      { month: "Jul", percent: 70, present: 14, absent: 6 },
+      { month: "Aug", percent: 60, present: 6, absent: 6 }
+    ],
+    subjectHistory: [
+      { subject: "Algorithms", present: 10, absent: 6, percent: 62.5 },
+      { subject: "Fullstack Web", present: 12, absent: 5, percent: 70.5 },
+      { subject: "System Design", present: 12, absent: 5, percent: 70.5 }
+    ],
+    dateLogs: [
+      { date: "2026-09-04", subject: "Algorithms Lab", status: "Absent", remarks: "Unexcused" },
+      { date: "2026-09-02", subject: "Fullstack Web", status: "Present", remarks: "On time" },
+      { date: "2026-08-30", subject: "System Design", status: "Absent", remarks: "Personal emergency" }
+    ],
+    trend: "Declining"
+  },
+  {
+    id: 4,
+    name: "Neha Reddy",
+    rollNo: "DS25-018",
+    department: "AI & DS",
+    batch: "2025",
+    present: 36,
+    absent: 14,
+    totalClasses: 50,
+    attendance: 72,
+    status: "Warning",
+    riskLevel: "Warning",
+    email: "neha.r@apex.edu.in",
+    phone: "+91 98555 66778",
+    monthlyAttendance: [
+      { month: "Jun", percent: 80, present: 16, absent: 4 },
+      { month: "Jul", percent: 72, present: 13, absent: 5 },
+      { month: "Aug", percent: 65, present: 7, absent: 5 }
+    ],
+    subjectHistory: [
+      { subject: "Machine Learning", present: 12, absent: 4, percent: 75 },
+      { subject: "Python for DS", present: 11, absent: 5, percent: 68.7 },
+      { subject: "Linear Algebra", present: 13, absent: 5, percent: 72.2 }
+    ],
+    dateLogs: [
+      { date: "2026-09-04", subject: "Machine Learning Lab", status: "Present", remarks: "On time" },
+      { date: "2026-09-01", subject: "Python for DS", status: "Absent", remarks: "Sick leave" }
+    ],
+    trend: "Improving"
+  },
+  {
+    id: 5,
+    name: "Manish Kumar",
+    rollNo: "CLOUD-055",
+    department: "IT",
+    batch: "2026",
+    present: 31,
+    absent: 19,
+    totalClasses: 50,
+    attendance: 62,
+    status: "Low",
+    riskLevel: "Critical",
+    email: "manish.k@apex.edu.in",
+    phone: "+91 98999 11223",
+    monthlyAttendance: [
+      { month: "Jun", percent: 70, present: 14, absent: 6 },
+      { month: "Jul", percent: 62, present: 11, absent: 7 },
+      { month: "Aug", percent: 54, present: 6, absent: 6 }
+    ],
+    subjectHistory: [
+      { subject: "Cloud Infrastructure", present: 10, absent: 7, percent: 58.8 },
+      { subject: "DevOps & CI/CD", present: 11, absent: 6, percent: 64.7 },
+      { subject: "Linux Admin", present: 10, absent: 6, percent: 62.5 }
+    ],
+    dateLogs: [
+      { date: "2026-09-04", subject: "DevOps Lab", status: "Absent", remarks: "Unexcused" },
+      { date: "2026-09-02", subject: "Cloud Infra", status: "Absent", remarks: "Unexcused" }
+    ],
+    trend: "Declining"
+  },
+  {
+    id: 6,
+    name: "Ananya Sharma",
+    rollNo: "CSE26-009",
+    department: "CSE",
+    batch: "2026",
+    present: 49,
+    absent: 1,
+    totalClasses: 50,
+    attendance: 98,
+    status: "Good",
+    riskLevel: "Good",
+    email: "ananya.s@apex.edu.in",
+    phone: "+91 98111 22334",
+    monthlyAttendance: [
+      { month: "Jun", percent: 100, present: 16, absent: 0 },
+      { month: "Jul", percent: 95, present: 19, absent: 1 },
+      { month: "Aug", percent: 100, present: 14, absent: 0 }
+    ],
+    subjectHistory: [
+      { subject: "Data Structures", present: 18, absent: 0, percent: 100 },
+      { subject: "Web Dev", present: 16, absent: 1, percent: 94.1 },
+      { subject: "Algorithms", present: 15, absent: 0, percent: 100 }
+    ],
+    dateLogs: [
+      { date: "2026-09-05", subject: "Web Dev", status: "Present", remarks: "On time" }
+    ],
+    trend: "Stable"
+  }
+];
+
+export const coordinatorDepartmentAttendanceSummary = [
+  { department: "ECS", totalStudents: 100, presentToday: 84, absentToday: 16, avgAttendance: 84.0, lowAttendanceCount: 18 },
+  { department: "CSE", totalStudents: 120, presentToday: 110, absentToday: 10, avgAttendance: 91.6, lowAttendanceCount: 6 },
+  { department: "IT", totalStudents: 60, presentToday: 52, absentToday: 8, avgAttendance: 86.6, lowAttendanceCount: 10 },
+  { department: "AI & DS", totalStudents: 40, presentToday: 37, absentToday: 3, avgAttendance: 92.5, lowAttendanceCount: 3 }
+];
+
 

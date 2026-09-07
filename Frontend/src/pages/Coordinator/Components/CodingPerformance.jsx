@@ -68,10 +68,6 @@ export default function CodingPerformance() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-xs font-semibold text-indigo-700 mb-2">
-            <Sparkles size={14} className="text-indigo-600" />
-            <span>Department Coding Analytics & Leaderboard Governance</span>
-          </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
             Student Coding Performance
           </h1>
@@ -97,91 +93,99 @@ export default function CodingPerformance() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 hover:border-indigo-200 transition">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-            <Code size={22} />
+        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-indigo-200 transition">
+          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+            <Code size={20} />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Total Solved</p>
-            <p className="text-xl font-bold text-slate-900 mt-0.5">{totalSolvedSum}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">{totalSubmissionsSum} submissions</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 hover:border-indigo-200 transition">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <CheckCircle2 size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Avg Accuracy Rate</p>
-            <p className="text-xl font-bold text-emerald-600 mt-0.5">{avgAccuracy}%</p>
-            <p className="text-[11px] text-emerald-700/70 mt-0.5">+2.4% vs last week</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-500 truncate">Total Solved</p>
+            <p className="text-xl font-extrabold text-slate-900 mt-0.5 tracking-tight">{totalSolvedSum}</p>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">{totalSubmissionsSum} submissions</p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 hover:border-indigo-200 transition">
-          <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-            <Trophy size={22} />
+        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-emerald-200 transition">
+          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+            <CheckCircle2 size={20} />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Hard Solved</p>
-            <p className="text-xl font-bold text-purple-600 mt-0.5">{hardSolvedSum}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">High difficulty problems</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 hover:border-indigo-200 transition">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-            <Flame size={22} />
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Active Coders</p>
-            <p className="text-xl font-bold text-amber-600 mt-0.5">{activeCoders} Students</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Active daily streaks</p>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-500 truncate">Avg Accuracy Rate</p>
+            <p className="text-xl font-extrabold text-emerald-600 mt-0.5 tracking-tight">{avgAccuracy}%</p>
+            <p className="text-[11px] font-medium text-emerald-600/80 mt-0.5 truncate">+2.4% vs last week</p>
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 hover:border-indigo-200 transition">
-          <div className="w-12 h-12 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-            <Zap size={22} />
+        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-purple-200 transition">
+          <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+            <Trophy size={20} />
           </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500">Struggling Coders</p>
-            <p className="text-xl font-bold text-rose-600 mt-0.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-500 truncate">Hard Solved</p>
+            <p className="text-xl font-extrabold text-purple-600 mt-0.5 tracking-tight">{hardSolvedSum}</p>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">High difficulty</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-amber-200 transition">
+          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+            <Flame size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-500 truncate">Active Coders</p>
+            <p className="text-xl font-extrabold text-amber-600 mt-0.5 tracking-tight">{activeCoders}</p>
+            <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">Active daily streaks</p>
+          </div>
+        </div>
+
+        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-rose-200 transition">
+          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold shrink-0">
+            <Zap size={20} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-slate-500 truncate">Struggling Coders</p>
+            <p className="text-xl font-extrabold text-rose-600 mt-0.5 tracking-tight">
               {coordinatorCodingPerformance.filter((s) => s.status === "Struggling").length}
             </p>
-            <p className="text-[11px] text-rose-500 mt-0.5">Requires remediation</p>
+            <p className="text-[11px] font-medium text-rose-500 mt-0.5 truncate">Needs remediation</p>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+      {/* Professional Unified Search & Filter Control Bar */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex flex-wrap items-center gap-3">
           {/* Search Box */}
-          <div className="relative w-full md:w-80">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="relative flex-1 max-w-lg">
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search student or roll number..."
+              placeholder="Search student by name or roll number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal size={14} className="text-slate-400" />
-              <span className="text-xs font-semibold text-slate-600">Filter:</span>
+          {/* Filter Controls */}
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-slate-500">
+              <SlidersHorizontal size={14} className="text-indigo-600" />
+              <span>Filters:</span>
             </div>
 
             {/* Batch Filter */}
             <select
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition cursor-pointer"
             >
               <option value="all">All Batches</option>
               {coordinatorBatches.map((b) => (
@@ -195,7 +199,7 @@ export default function CodingPerformance() {
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition cursor-pointer"
             >
               <option value="all">All Languages</option>
               <option value="C++">C++</option>
@@ -209,7 +213,7 @@ export default function CodingPerformance() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition cursor-pointer"
             >
               <option value="all">All Statuses</option>
               <option value="Top Performer">Top Performer</option>
@@ -217,6 +221,22 @@ export default function CodingPerformance() {
               <option value="Average">Average</option>
               <option value="Struggling">Struggling</option>
             </select>
+
+            {(searchTerm || selectedBatch !== "all" || selectedLanguage !== "all" || selectedStatus !== "all") && (
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedBatch("all");
+                  setSelectedLanguage("all");
+                  setSelectedStatus("all");
+                }}
+                className="h-10 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-xs font-bold text-indigo-600 transition flex items-center gap-1.5"
+                title="Clear all filters"
+              >
+                <RefreshCw size={13} />
+                Clear
+              </button>
+            )}
           </div>
         </div>
       </div>

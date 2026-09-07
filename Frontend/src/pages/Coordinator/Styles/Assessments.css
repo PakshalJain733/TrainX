@@ -1,4 +1,90 @@
 /* Assessments.css */
+@import "./Overview.css";
+
+.coord-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.coord-page-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  margin: 0 0 4px 0;
+}
+
+.coord-page-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0;
+}
+
+.coord-tabs-bar {
+  display: flex;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.coord-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.coord-tab-btn:hover {
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.coord-tab-btn--active {
+  background: #ffffff !important;
+  color: #4f46e5 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.coord-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.coord-btn--primary {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+  border: none !important;
+}
+
+.coord-btn--primary:hover {
+  background: #4338ca !important;
+  transform: translateY(-1px);
+}
+
 .coord-assessment-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -66,3 +152,4 @@
   padding: 2px 8px;
   border-radius: 6px;
 }
+

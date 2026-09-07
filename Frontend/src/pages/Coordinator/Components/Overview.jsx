@@ -12,7 +12,6 @@ import {
   Sparkles,
   Info,
   ChevronRight,
-  UserX,
   BookOpen
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
@@ -40,7 +39,7 @@ export default function CoordinatorOverview() {
 
   const statsList = [
     { label: "Enrolled Students", value: "480", hint: "Active in CSE department", icon: GraduationCap },
-    { label: "Managed Batches", value: "6 Cohorts", hint: "Current active batches", icon: Users },
+    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
     { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
     { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
   ];
@@ -51,32 +50,19 @@ export default function CoordinatorOverview() {
       <div className="overview-hero-card">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">
-            AM
+            HN
           </div>
           <div>
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> COORDINATOR WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, Alok Mishra!
+              Welcome back, Harshad Nandurkar!
             </h1>
             <p className="overview-hero-desc">
-              Department Coordinator · Computer Science & Engineering | Apex Institute of Technology
+              Department Coordinator · Electronics & Computer Science | Apex Institute of Technology
             </p>
           </div>
-        </div>
-
-        <div className="overview-hero-actions">
-          <Link to="/coordinator/batches">
-            <Button className="overview-btn-primary">
-              <PlusCircle size={14} className="overview-btn-icon" /> Create Batch
-            </Button>
-          </Link>
-          <Link to="/coordinator/students">
-            <Button className="overview-btn-secondary">
-              <UserX size={14} className="overview-btn-icon" /> Defaulter Audit
-            </Button>
-          </Link>
         </div>
       </div>
 

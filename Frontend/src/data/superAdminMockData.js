@@ -35,7 +35,7 @@ export const initialAdminVerifications = [
 ];
 
 export const initialCoordinators = [
-  { id: 1, name: 'Alok Mishra', email: 'a.mishra@trainingportal.com', college: 'Apex Institute of Technology', department: 'CSE', assignedBatches: 3, status: 'Active' },
+  { id: 1, name: 'Harshad Nandurkar', email: 'harshadnandurkar851@gmail.com', college: 'Apex Institute of Technology', department: 'Electronics & Computer Science', assignedBatches: 3, status: 'Active' },
   { id: 2, name: 'Sneha Deshmukh', email: 's.deshmukh@trainingportal.com', college: 'Meridian Engineering College', department: 'IT', assignedBatches: 2, status: 'Active' },
   { id: 3, name: 'Rahul Joshi', email: 'r.joshi@trainingportal.com', college: 'Vanguard Academy of Science', department: 'AI & DS', assignedBatches: 4, status: 'Active' },
 ];

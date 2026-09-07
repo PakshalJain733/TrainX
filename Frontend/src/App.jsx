@@ -90,9 +90,10 @@ import CoordinatorAssessments from './pages/Coordinator/Components/Assessments';
 import CoordinatorAttendance from './pages/Coordinator/Components/Attendance';
 import CoordinatorPlacement from './pages/Coordinator/Components/Placement';
 import CoordinatorRequests from './pages/Coordinator/Components/Requests';
-import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
 import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
+import CoordinatorQuizAndCodes from './pages/Coordinator/Components/QuizzesAndCodes';
+import CoordinatorPerformances from './pages/Coordinator/Components/Performances';
 
 function App() {
   return (
@@ -188,17 +189,16 @@ function App() {
             <Route index element={<CoordinatorOverview />} />
             <Route path="batches" element={<CoordinatorBatches />} />
             <Route path="students" element={<CoordinatorStudents />} />
-            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorCodingPractice /></MaintenanceGuard>} />
-            <Route path="coding-performance" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorCodingPerformance /></MaintenanceGuard>} />
+            <Route path="quizzes-and-codes" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="performances" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorPerformances /></MaintenanceGuard>} />
+            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="coding-performance" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorPerformances /></MaintenanceGuard>} />
+            <Route path="assessments" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
             <Route path="interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><CoordinatorInterviewPerformance /></MaintenanceGuard>} />
             <Route path="improvement" element={<MaintenanceGuard moduleKey="defaulters"><CoordinatorStudentsNeedImprovement /></MaintenanceGuard>} />
+            <Route path="attendance" element={<CoordinatorAttendance />} />
             <Route path="mentors" element={<CoordinatorMentors />} />
-            <Route path="assessments" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorAssessments /></MaintenanceGuard>} />
-            <Route path="quizzes" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorAssessments /></MaintenanceGuard>} />
-            <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><CoordinatorAssessments /></MaintenanceGuard>} />
-            <Route path="placement" element={<MaintenanceGuard moduleKey="mockDrives"><CoordinatorAssessments /></MaintenanceGuard>} />
             <Route path="requests" element={<CoordinatorRequests />} />
-            <Route path="reports" element={<MaintenanceGuard moduleKey="weeklyReports"><CoordinatorWeeklyReports /></MaintenanceGuard>} />
             <Route path="notifications" element={<CoordinatorNotifications />} />
             <Route path="profile" element={<CoordinatorProfilePage />} />
             <Route path="settings" element={<CoordinatorProfilePage />} />
