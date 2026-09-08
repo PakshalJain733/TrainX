@@ -168,6 +168,9 @@ export default function CodingPlatform() {
   const [consoleStatus, setConsoleStatus] = useState("normal"); // normal, error, success
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("description"); // description, submissions
+  const [mobileView, setMobileView] = useState("problem"); // problem, code
+  const [submissions, setSubmissions] = useState([]);
+  const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
 
   // Generate line numbers array
   const lineCount = code.split('\n').length;
@@ -223,14 +226,20 @@ export default function CodingPlatform() {
 
   const handleRun = () => {
     setConsoleOutput("Running code...\n\n> Output:\nTests executed successfully in 14ms.\nStatus: Accepted");
+    setConsoleStatus("normal");
+    setMobileView("code");
   };
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
+    setConsoleStatus("normal");
     setConsoleOutput("Evaluating all test cases...\n...");
+    setMobileView("code");
     setTimeout(() => {
       setIsSubmitting(false);
-    }
+      setConsoleStatus("success");
+      setConsoleOutput("Evaluating all test cases...\n\n✅ 15 / 15 test cases passed.\nTime Complexity: O(n)\nSpace Complexity: O(1)\n\nSuccess: Code submitted.");
+    }, 1500);
   };
 
   return (
