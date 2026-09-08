@@ -151,7 +151,7 @@ export default function CodingPlatform() {
 
   const currentTaskNum = taskId ? (parseInt(taskId.replace(/\D/g, ''), 10) || 1) : 1;
   const currentProblemId = currentTaskNum;
-  const problemInfo = problemPresets[currentProblemId] || {
+  const defaultProblemInfo = problemPresets[currentProblemId] || {
     title: `Coding Problem #${currentProblemId}`,
     category: "Algorithms",
     difficulty: "Medium",
@@ -162,6 +162,7 @@ export default function CodingPlatform() {
     constraints: ["Standard time & space limits apply."]
   };
 
+  const [problemInfo, setProblemInfo] = useState(defaultProblemInfo);
   const [language, setLanguage] = useState("python");
   const [code, setCode] = useState(starterCodeTemplates.python);
   const [consoleOutput, setConsoleOutput] = useState("");
@@ -171,6 +172,32 @@ export default function CodingPlatform() {
   const [mobileView, setMobileView] = useState("problem"); // problem, code
   const [submissions, setSubmissions] = useState([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+
+  useEffect(() => {
+    const fetchProblemDetails = async () => {
+      try {
+        const res = await apiFetch("/student/practice-problems");
+        if (res && res.data && res.data.length > 0) {
+          const prob = res.data.find(p => p.id === currentProblemId);
+          if (prob) {
+            setProblemInfo({
+              title: prob.title,
+              category: prob.category || "Algorithms",
+              difficulty: prob.difficulty || "Medium",
+              totalMarks: prob.points || 100,
+              desc: prob.description || defaultProblemInfo.desc,
+              exampleInput: defaultProblemInfo.exampleInput,
+              exampleOutput: defaultProblemInfo.exampleOutput,
+              constraints: defaultProblemInfo.constraints,
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch problem details", err);
+      }
+    };
+    fetchProblemDetails();
+  }, [currentProblemId]);
 
   // Generate line numbers array
   const lineCount = code.split('\n').length;

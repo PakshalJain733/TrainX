@@ -1,5 +1,6 @@
 import {
   findUserByEmailOrMobile,
+  findUserById,
   createUser,
   saveStudentDetails,
   getStudentByUserId,
@@ -178,6 +179,32 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
       roll_number: studentProfile?.roll_number || '',
       studentProfile,
     },
+  };
+};
+
+export const getCurrentUser = async (userId) => {
+  const user = await findUserById(userId);
+  if (!user) {
+    const error = new Error('User not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  const studentProfile = await getStudentByUserId(user.id);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    mobile_number: user.mobile_number,
+    role: user.role,
+    college_id: user.college_id,
+    department: studentProfile?.department || '',
+    year: studentProfile?.year || '',
+    division: studentProfile?.division || '',
+    semester: studentProfile?.semester || '',
+    roll_number: studentProfile?.roll_number || '',
+    cgpa: studentProfile?.cgpa || '',
+    skills: studentProfile?.skills || '',
+    studentProfile,
   };
 };
 

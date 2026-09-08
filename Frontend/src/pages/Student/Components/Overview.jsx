@@ -37,14 +37,9 @@ const getInitials = (name) => {
 const getStoredUserName = () => {
   try {
     const u = JSON.parse(localStorage.getItem("user"));
-    if (!u) return "Pakshal";
-    const name = u.name || "";
-    const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
-    if (isAutoName) {
-      return u.fullName || u.full_name || "Pakshal";
-    }
-    return name;
-  } catch { return "Pakshal"; }
+    if (u && u.name) return u.name;
+    return "Student";
+  } catch { return "Student"; }
 };
 
 const defaultDashboardData = {
