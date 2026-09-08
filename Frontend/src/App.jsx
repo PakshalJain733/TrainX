@@ -55,6 +55,7 @@ import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
 import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
 import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
 import SuperAdminProfilePage from './pages/SuperAdmin/SuperAdminProfile';
+import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
@@ -98,7 +99,6 @@ import CoordinatorNotifications from './pages/Coordinator/Components/Notificatio
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
 import CoordinatorHelp from './pages/Coordinator/Components/Help';
 import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
-import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
 
 function App() {
   return (
