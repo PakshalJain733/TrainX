@@ -20,7 +20,7 @@ import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 import Settings from "./pages/Student/Components/Settings";
-import StudentPerformance from "./pages/Student/Components/Performance";
+import StudentSkillGaps from "./pages/Student/Components/StudentSkillGaps";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -36,26 +36,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
-
-
-// Super Admin Workspace Imports
-import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
-import SuperAdminOverview from './pages/SuperAdmin/Overview';
-import CollegesPage from './pages/SuperAdmin/Colleges';
-import DepartmentsPage from './pages/SuperAdmin/Departments';
-import SuperAdminBatches from './pages/SuperAdmin/Batches';
-import AdminVerificationPage from './pages/SuperAdmin/AdminVerification';
-import CoordinatorsPage from './pages/SuperAdmin/Coordinators';
-import MentorsTrainersPage from './pages/SuperAdmin/MentorsTrainers';
-import StudentsRiskPage from './pages/SuperAdmin/Students';
-import SuperAdminPerformancePage from './pages/SuperAdmin/Performance';
-import SuperAdminAttendancePage from './pages/SuperAdmin/Attendance';
-import SuperAdminAIRoadmapsPage from './pages/SuperAdmin/AIRoadmaps';
-import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
-import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
-import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
-import SuperAdminMaintenanceControls from './pages/SuperAdmin/MaintenanceControls';
-import SuperAdminCodingPracticeMonitoring from './pages/SuperAdmin/CodingPracticeMonitoring';
+import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
@@ -76,6 +57,7 @@ import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
 import MentorNotifications from './pages/Mentor/Components/Notifications';
 import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
 import MentorHelp from './pages/Mentor/Components/Help';
+import MentorQuizzes from './pages/Mentor/Components/MentorQuizzes';
 import MentorPerformance from './pages/Mentor/Components/Performance';
 
 // Coordinator Workspace Imports
@@ -122,6 +104,7 @@ function App() {
             <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><Leaderboard /></MaintenanceGuard>} />
             <Route path="quiz" element={<MaintenanceGuard moduleKey="academicQuizzes"><AcademicQuiz /></MaintenanceGuard>} />
             <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><Attendance /></MaintenanceGuard>} />
+            <Route path="skill-gaps" element={<StudentSkillGaps />} />
             <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><WeeklyReports /></MaintenanceGuard>} />
             <Route path="batches" element={<Batches />} />
             <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><PracticeProblems /></MaintenanceGuard>} />
@@ -133,22 +116,23 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
 
-        {/* Admin Dashboard Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="batches" element={<AdminBatches />} />
-          <Route path="attendance" element={<AdminAttendance />} />
-          <Route path="learning" element={<AdminLearningContent />} />
-          <Route path="quiz" element={<AdminQuizzes />} />
-          <Route path="practice" element={<AdminPracticeProblems />} />
-          <Route path="progress" element={<AdminProgress />} />
-          <Route path="leaderboard" element={<AdminLeaderboard />} />
-          <Route path="weekly-reports" element={<AdminWeeklyReports />} />
-          <Route path="help" element={<AdminHelp />} />
-          <Route path="profile" element={<AdminProfile />} />
-        </Route>
-
+          {/* Admin Dashboard Routes */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOverview />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="batches" element={<AdminBatches />} />
+            <Route path="attendance" element={<AdminAttendance />} />
+            <Route path="learning" element={<AdminLearningContent />} />
+            <Route path="quiz" element={<AdminQuizzes />} />
+            <Route path="practice" element={<AdminPracticeProblems />} />
+            <Route path="coding-practice" element={<AdminPracticeProblems />} />
+            <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="progress" element={<AdminProgress />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+            <Route path="help" element={<AdminHelp />} />
+            <Route path="profile" element={<AdminProfile />} />
+          </Route>
 
           {/* Mentor Workspace Routes */}
           <Route
@@ -161,6 +145,8 @@ function App() {
           >
             <Route index element={<MentorOverview />} />
             <Route path="students" element={<MentorStudents />} />
+            <Route path="quizzes" element={<MentorQuizzes />} />
+            <Route path="assessments" element={<MentorQuizzes />} />
             <Route path="roadmaps" element={<MaintenanceGuard moduleKey="aiRoadmaps"><MentorRoadmaps /></MaintenanceGuard>} />
             <Route path="ai-interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><MentorAIInterviews /></MaintenanceGuard>} />
             <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="skillGapAnalysis"><MentorSkillGaps /></MaintenanceGuard>} />
@@ -206,28 +192,6 @@ function App() {
             <Route path="settings" element={<CoordinatorProfilePage />} />
           </Route>
 
-          {/* Super Admin Workspace Routes */}
-          <Route path="/super-admin" element={<SuperAdminLayout />}>
-            <Route index element={<SuperAdminOverview />} />
-            <Route path="colleges" element={<CollegesPage />} />
-            <Route path="departments" element={<DepartmentsPage />} />
-            <Route path="batches" element={<SuperAdminBatches />} />
-            <Route path="verification" element={<AdminVerificationPage />} />
-            <Route path="coordinators" element={<CoordinatorsPage />} />
-            <Route path="mentors" element={<MentorsTrainersPage />} />
-            <Route path="students" element={<StudentsRiskPage />} />
-            <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
-            <Route path="performance" element={<SuperAdminPerformancePage />} />
-            <Route path="attendance" element={<SuperAdminAttendancePage />} />
-            <Route path="coding-practice" element={<SuperAdminCodingPracticeMonitoring />} />
-            <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
-            <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
-            <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
-            <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
-          </Route>
-          <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
-          <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
-
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -237,4 +201,3 @@ function App() {
 }
 
 export default App;
-

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
-  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight
+  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
+  Plus, X, KeyRound, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -10,6 +11,18 @@ import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Overview.css";
+import "../Styles/Batches.css";
+import "../../Admin/Styles/AdminUsers.css";
+
+const API_BASE = "/api/v1";
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 const getInitials = (name) => {
   if (!name || name.trim().length === 0) return "?";
@@ -55,6 +68,18 @@ export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
   const navigate = useNavigate();
+
+  const dismissNotice = () => {
+    setNoticeDismissed(true);
+    localStorage.setItem("student_profile_notice_dismissed", "true");
+  };
+
+  // Modal State for Joining Batch from Hero Card
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [modalSuccess, setModalSuccess] = useState("");
 
   const loadUserData = () => {
     try {
@@ -120,15 +145,45 @@ export default function Overview() {
     return () => window.removeEventListener("userProfileUpdated", loadUserData);
   }, []);
 
-  const studentName = dashboard.personalDetails.name || getStoredUserName() || "Pakshal";
-  const studentDept = dashboard.personalDetails.department || "Electronics & Computer Science";
-  const studentSem = dashboard.academicOverview.semester || "Semester 6";
-  const studentCgpa = dashboard.academicOverview.cgpa || "8.75";
+  // Submit Join Batch from Hero Card Modal
+  const handleJoinSubmit = async (e) => {
+    e.preventDefault();
+    if (!joinCodeInput.trim()) {
+      setModalError("Please enter a valid batch code.");
+      return;
+    }
 
-  const heroSubtitle = [studentDept, studentSem, studentCgpa ? `CGPA: ${studentCgpa}` : ""]
-    .filter(Boolean)
-    .join(" | ");
+    setJoining(true);
+    setModalError("");
+    setModalSuccess("");
 
+    try {
+      const res = await fetch(`${API_BASE}/batches/join`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ join_code: joinCodeInput.trim() }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setModalSuccess(data.message || "Successfully joined batch!");
+        setJoinCodeInput("");
+        setTimeout(() => {
+          setShowJoinModal(false);
+          setModalSuccess("");
+          navigate("/student/batches");
+        }, 1200);
+      } else {
+        setModalError(data.message || "Failed to join batch. Please check code.");
+      }
+    } catch (err) {
+      setModalError("Server connection error. Please try again.");
+    } finally {
+      setJoining(false);
+    }
+  };
+
+  const studentName = dashboard.personalDetails.name || "";
   const upcoming = dashboard.upcomingDeadlines || [];
   const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
     ? dashboard.leaderboard
@@ -144,10 +199,10 @@ export default function Overview() {
       ];
 
   const studentStats = [
-    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage || 95)}%`, hint: "Active semester attendance", icon: CalendarCheck },
-    { label: "Active Batches", value: "Enrolled", hint: "Assigned training batch", icon: Users },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank || '1/1'}`, hint: "Current cohort rank", icon: TrendingUp },
-    { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Flame },
+    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
+    { label: "Active Batches", value: `${myBatchesCount} Active`, hint: "Assigned training batches", icon: Users },
+    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
+    { label: "Earned Points", value: "0 XP", hint: "Coding & quiz points", icon: Flame },
   ];
 
   return (
@@ -192,19 +247,25 @@ export default function Overview() {
               Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
-              {heroSubtitle}
+              {dashboard.personalDetails.department} | {dashboard.academicOverview.semester} | {dashboard.academicOverview.cgpa ? `CGPA: ${dashboard.academicOverview.cgpa}` : ''}
             </p>
           </div>
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/student/batches">
-            <Button className="overview-btn-primary">
-              <Sparkles size={14} className="overview-btn-icon" /> Batches
-            </Button>
-          </Link>
+          <Button
+            className="overview-btn-primary"
+            onClick={() => {
+              setModalError("");
+              setModalSuccess("");
+              setShowJoinModal(true);
+            }}
+          >
+            <Plus size={16} className="overview-btn-icon" /> Join Batch
+          </Button>
         </div>
       </div>
+
 
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
@@ -293,8 +354,12 @@ export default function Overview() {
                       <AvatarFallback className="text-xs font-bold">{item.initials}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.name}</h5>
-                      <span className="text-xs text-slate-500">{item.score}</span>
+                      <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+                        {item.name}
+                      </h5>
+                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginTop: '2px', display: 'inline-block' }}>
+                        {item.score && !item.score.includes("1,") ? item.score : "0 XP"}
+                      </span>
                     </div>
                   </div>
                   <Badge variant={item.you ? "default" : "outline"} className="text-xs">{item.badge}</Badge>
@@ -304,6 +369,74 @@ export default function Overview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ─── Join Batch Flash Overlay Modal ───────────────────────── */}
+      {showJoinModal && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowJoinModal(false); }}>
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <KeyRound size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Join a Training Batch</h2>
+                  <p className="modal-subtitle">Enter secret join access code assigned to your cohort.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowJoinModal(false)} title="Close Modal">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleJoinSubmit}>
+              <div className="modal-body">
+                {modalError && <div className="modal-feedback-alert modal-feedback--error">{modalError}</div>}
+                {modalSuccess && <div className="modal-feedback-alert modal-feedback--success">{modalSuccess}</div>}
+
+                <div className="form-group-admin">
+                  <label>Enter Batch Join Code *</label>
+                  <input
+                    type="text"
+                    className="form-input-admin"
+                    placeholder="e.g. BTCH-D3BX"
+                    value={joinCodeInput}
+                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                    required
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setShowJoinModal(false)}
+                  disabled={joining}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-modal-submit"
+                  disabled={joining}
+                >
+                  {joining ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Joining...
+                    </>
+                  ) : (
+                    "Join Batch"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
+

@@ -308,6 +308,8 @@ function QuizPlatform({ quiz, mode, onExit }) {
   );
 
   const [attemptId, setAttemptId] = useState(null);
+  const [apiResult, setApiResult] = useState(null);
+  const [resultLoading, setResultLoading] = useState(false);
 
   // Initialize or start assessment attempt with API
   useEffect(() => {
@@ -375,15 +377,18 @@ function QuizPlatform({ quiz, mode, onExit }) {
         selectedIndex !== null && selectedIndex !== undefined ? optKeys[selectedIndex] : null;
       return {
         question_id: q.id || idx + 1,
-        selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : "A",
+        selected_option: selectedOptKey ? selectedOptKey.toUpperCase() : null,
       };
     });
 
+    setResultLoading(true);
     try {
-      if (attemptId) {
-        // Primary path: use the attempt ID from /start
+      let submitAttemptId = attemptId;
+      let resultData = null;
+
+      if (submitAttemptId) {
         const res = await fetch(
-          `${API_BASE}/assessments/attempts/${attemptId}/submit`,
+          `${API_BASE}/assessments/attempts/${submitAttemptId}/submit`,
           {
             method: "POST",
             headers: getAuthHeaders(),
@@ -392,11 +397,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
         );
         const data = await res.json();
         console.log("[Quiz Submit Response]", data);
-        if (!data.success) {
+        if (data.success && data.data) {
+          resultData = data.data;
+        } else {
           console.warn("[Quiz Submit] Backend error:", data.message);
         }
       } else {
-        // Fallback path: use legacy /:id/submit if no attemptId
         console.warn("[Quiz Submit] No attemptId — using legacy submit endpoint");
         const res = await fetch(
           `${API_BASE}/assessments/${quiz.id}/submit`,
@@ -408,9 +414,35 @@ function QuizPlatform({ quiz, mode, onExit }) {
         );
         const data = await res.json();
         console.log("[Quiz Submit Fallback Response]", data);
+        if (data.success && data.data) {
+          resultData = data.data;
+          submitAttemptId = data.data.attemptId;
+        }
+      }
+
+      // Fetch full result with per-question breakdown
+      if (submitAttemptId) {
+        try {
+          const resultRes = await fetch(
+            `${API_BASE}/assessments/attempts/${submitAttemptId}/result`,
+            { headers: getAuthHeaders() }
+          );
+          const resultJson = await resultRes.json();
+          if (resultJson.success && resultJson.data) {
+            setApiResult(resultJson.data);
+          } else if (resultData) {
+            setApiResult(resultData);
+          }
+        } catch (_) {
+          if (resultData) setApiResult(resultData);
+        }
+      } else if (resultData) {
+        setApiResult(resultData);
       }
     } catch (err) {
       console.error("[Quiz Submit] Network error:", err);
+    } finally {
+      setResultLoading(false);
     }
   }
 

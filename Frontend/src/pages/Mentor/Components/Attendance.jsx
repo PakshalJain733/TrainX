@@ -1,17 +1,34 @@
-﻿import React, { useState, useEffect } from 'react';
-import { mentorBatches, mentorStudents } from '../../../data/mentorMockData';
-import { CalendarCheck, Users, Search, CheckCircle2, XCircle, Clock, AlertTriangle, Layers, Filter, Check, Save } from 'lucide-react';
-import { apiFetch } from '../../../utils/api';
-import '../Styles/Attendance.css';
+import React, { useState, useEffect } from "react";
+import { mentorBatches } from "../../../data/mentorMockData";
+import {
+  CalendarCheck, Users, Search, CheckCircle2, XCircle, Clock,
+  AlertTriangle, Layers, Filter, Check, Save, Sparkles, Send,
+  FileCheck2, ChevronRight, UserX, UserCheck
+} from "lucide-react";
+import { apiFetch } from "../../../utils/api";
+import "../Styles/Attendance.css";
+
+// Comprehensive mock data for mentor student attendance register
+const baseStudentsData = [
+  { id: 1, name: "Rahul Verma", rollNo: "CS202601", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 94, totalClasses: 50, attended: 47, status: "Present" },
+  { id: 2, name: "Ananya Patel", rollNo: "CS202604", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 88, totalClasses: 50, attended: 44, status: "Present" },
+  { id: 3, name: "Siddharth Rao", rollNo: "IT202612", department: "Information Technology", batch: "TE-IT-2026-B", attendance: 68, totalClasses: 50, attended: 34, status: "Absent" },
+  { id: 4, name: "Pooja Deshmukh", rollNo: "IT202615", department: "Information Technology", batch: "TE-IT-2026-B", attendance: 96, totalClasses: 50, attended: 48, status: "Present" },
+  { id: 5, name: "Priya Nair", rollNo: "EXT202607", department: "EXTC", batch: "BE-EXTC-2026-C", attendance: 65, totalClasses: 50, attended: 32, status: "Absent" },
+  { id: 6, name: "Vikram Malhotra", rollNo: "CS202609", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 92, totalClasses: 50, attended: 46, status: "Present" },
+  { id: 7, name: "Neha Sharma", rollNo: "CS202611", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 71, totalClasses: 50, attended: 35, status: "Absent" },
+  { id: 8, name: "Aarav Mehta", rollNo: "IT202620", department: "Information Technology", batch: "TE-IT-2026-B", attendance: 85, totalClasses: 50, attended: 42, status: "Present" },
+  { id: 9, name: "Rohan Gupta", rollNo: "EXT202603", department: "EXTC", batch: "BE-EXTC-2026-C", attendance: 90, totalClasses: 50, attended: 45, status: "Present" }
+];
 
 export default function Attendance() {
-  const [selectedBatch, setSelectedBatch] = useState('ALL');
-  const [search, setSearch] = useState('');
-  const [studentList, setStudentList] = useState([]);
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().split('T')[0]);
-  const [sessionTopic, setSessionTopic] = useState('Daily Live Interactive Class');
-  
-  // Quick status state for real-time marking
+  const [activeTab, setActiveTab] = useState("mark"); // "mark" | "monitoring"
+  const [selectedDepartment, setSelectedDepartment] = useState("All");
+  const [selectedBatch, setSelectedBatch] = useState("ALL");
+  const [sessionDate, setSessionDate] = useState("2026-09-08"); // Defaults to 8 September as requested
+  const [sessionSlot, setSessionSlot] = useState("Morning Session (09:00 AM - 11:00 AM)");
+  const [search, setSearch] = useState("");
+  const [students, setStudents] = useState(baseStudentsData);
   const [attendanceRecords, setAttendanceRecords] = useState({});
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [leaveActionMsg, setLeaveActionMsg] = useState('');
@@ -59,59 +76,44 @@ export default function Attendance() {
     }
   ]);
 
-  // Master initial student list load
+  // Load backend students or initialize state map
   useEffect(() => {
-    // Initial mock base students extended with realistic assigned students
-    const mockExtended = [
-      { id: 1, name: "Rahul Verma", rollNo: "CS202601", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 94, totalClasses: 45, attended: 42, status: "Present" },
-      { id: 2, name: "Ananya Patel", rollNo: "CS202604", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 88, totalClasses: 45, attended: 40, status: "Present" },
-      { id: 3, name: "Vikram Malhotra", rollNo: "CS202609", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 96, totalClasses: 45, attended: 43, status: "Present" },
-      { id: 4, name: "Neha Sharma", rollNo: "CS202611", department: "Computer Engineering", batch: "BE-CS-2026-A", attendance: 71, totalClasses: 45, attended: 32, status: "Absent" },
-      { id: 5, name: "Siddharth Rao", rollNo: "IT202612", department: "Information Technology", batch: "TE-IT-2026-B", attendance: 68, totalClasses: 40, attended: 27, status: "Absent" },
-      { id: 6, name: "Pooja Deshmukh", rollNo: "IT202615", department: "Information Technology", batch: "TE-IT-2026-B", attendance: 96, totalClasses: 40, attended: 38, status: "Present" },
-      { id: 7, name: "Aarav Mehta", rollNo: "IT202620", department: "Information Technology", batch: "TE-IT-2026-B", attendance: 85, totalClasses: 40, attended: 34, status: "Present" },
-      { id: 8, name: "Rohan Gupta", rollNo: "EXT202603", department: "EXTC", batch: "BE-EXTC-2026-C", attendance: 90, totalClasses: 38, attended: 34, status: "Present" },
-      { id: 9, name: "Priya Nair", rollNo: "EXT202607", department: "EXTC", batch: "BE-EXTC-2026-C", attendance: 65, totalClasses: 38, attended: 25, status: "Absent" },
-    ];
-
     apiFetch("/students")
       .then((res) => {
         if (res && res.data && res.data.length > 0) {
           const apiStudents = res.data.map((u, idx) => ({
-            id: u.id || idx + 10,
-            name: u.name || u.full_name || "Student User",
-            rollNo: u.roll_number || u.rollNo || `CS2026${idx + 25}`,
-            department: u.department || "Computer Engineering",
+            id: u.id || idx + 1,
+            name: u.name || u.full_name || `Student ${idx + 1}`,
+            rollNo: u.roll_number || u.rollNo || `CS2026${10 + idx}`,
+            department: u.department || (idx % 3 === 0 ? "Computer Engineering" : idx % 3 === 1 ? "Information Technology" : "EXTC"),
             batch: u.batch_code || u.batch_name || (idx % 3 === 0 ? "BE-CS-2026-A" : idx % 3 === 1 ? "TE-IT-2026-B" : "BE-EXTC-2026-C"),
             attendance: u.attendance || (75 + (idx * 7) % 23),
-            totalClasses: 45,
-            attended: Math.round(45 * ((u.attendance || (75 + (idx * 7) % 23)) / 100)),
+            totalClasses: 50,
+            attended: Math.round(50 * ((u.attendance || (75 + (idx * 7) % 23)) / 100)),
             status: (u.attendance || (75 + (idx * 7) % 23)) >= 75 ? "Present" : "Absent"
           }));
-          setStudentList(apiStudents);
-          
-          // Initial status map
+          setStudents(apiStudents);
           const initialMap = {};
-          apiStudents.forEach(s => { initialMap[s.id] = s.status; });
+          apiStudents.forEach((s) => { initialMap[s.id] = s.status; });
           setAttendanceRecords(initialMap);
         } else {
-          setStudentList(mockExtended);
+          setStudents(baseStudentsData);
           const initialMap = {};
-          mockExtended.forEach(s => { initialMap[s.id] = s.status; });
+          baseStudentsData.forEach((s) => { initialMap[s.id] = s.status; });
           setAttendanceRecords(initialMap);
         }
       })
       .catch(() => {
-        setStudentList(mockExtended);
+        setStudents(baseStudentsData);
         const initialMap = {};
-        mockExtended.forEach(s => { initialMap[s.id] = s.status; });
+        baseStudentsData.forEach((s) => { initialMap[s.id] = s.status; });
         setAttendanceRecords(initialMap);
       });
   }, []);
 
   // Handle Marking Status Toggle (Present <-> Absent toggle or Late)
   const handleStatusToggle = (id, newStatus) => {
-    setAttendanceRecords(prev => ({
+    setAttendanceRecords((prev) => ({
       ...prev,
       [id]: newStatus
     }));
@@ -143,36 +145,26 @@ export default function Attendance() {
   };
 
   const handleSaveAttendance = () => {
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    const deptLabel = selectedDepartment === "All" ? "All Departments" : selectedDepartment;
+    const batchLabel = selectedBatch === "ALL" ? "All Batches" : selectedBatch;
+    showToast(`Attendance saved successfully for ${deptLabel} → ${batchLabel} → ${sessionDate}!`);
   };
 
-  // Filter students based on Batch Selection & Search query
-  const filteredStudents = studentList.filter((s) => {
-    const matchesBatch = selectedBatch === 'ALL' || s.batch === selectedBatch;
+  // Filter students based on Department, Batch & Search
+  const filteredStudents = students.filter((s) => {
+    const matchesDept = selectedDepartment === "All" || s.department === selectedDepartment;
+    const matchesBatch = selectedBatch === "ALL" || s.batch === selectedBatch;
     const matchesSearch =
       (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (s.rollNo || "").toLowerCase().includes(search.toLowerCase()) ||
-      (s.department || "").toLowerCase().includes(search.toLowerCase());
-    return matchesBatch && matchesSearch;
+      (s.rollNo || "").toLowerCase().includes(search.toLowerCase());
+    return matchesDept && matchesBatch && matchesSearch;
   });
 
-  // Calculate Batch Level Stats
-  const calculateBatchStats = (batchCode) => {
-    const batchStudents = studentList.filter((s) => s.batch === batchCode);
-    if (batchStudents.length === 0) return { avg: 0, lowCount: 0, total: 0 };
-    const sum = batchStudents.reduce((acc, curr) => acc + curr.attendance, 0);
-    const avg = (sum / batchStudents.length).toFixed(1);
-    const lowCount = batchStudents.filter((s) => s.attendance < 75).length;
-    return { avg, lowCount, total: batchStudents.length };
-  };
-
-  // Global Filtered Stats
-  const totalAssignedInView = filteredStudents.length;
-  const presentCountInView = filteredStudents.filter(s => (attendanceRecords[s.id] || s.status) === 'Present').length;
-  const absentCountInView = filteredStudents.filter(s => (attendanceRecords[s.id] || s.status) === 'Absent').length;
-  const lateCountInView = filteredStudents.filter(s => (attendanceRecords[s.id] || s.status) === 'Late').length;
-  const lowAttendanceCount = filteredStudents.filter(s => s.attendance < 75).length;
+  // Task 5 Monitoring Metrics
+  const totalInView = filteredStudents.length;
+  const presentCountInView = filteredStudents.filter((s) => (attendanceRecords[s.id] || s.status) === "Present").length;
+  const absentCountInView = filteredStudents.filter((s) => (attendanceRecords[s.id] || s.status) === "Absent").length;
+  const lowAttendanceStudents = filteredStudents.filter((s) => s.attendance < 75);
 
   return (
     <div className="mentor-attendance-container">

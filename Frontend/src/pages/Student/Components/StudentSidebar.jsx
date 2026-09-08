@@ -19,7 +19,11 @@ import {
   GraduationCap,
   Settings,
   UserCheck,
-  BarChart3,
+  Bell,
+  ChartBar,
+  ChartLineIcon,
+  ChartBarIncreasing,
+  ChartBarIncreasingIcon,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentSidebar.css";
@@ -51,8 +55,7 @@ const primaryNavItems = [
   { title: "Practice", url: "/student/practice", icon: Terminal },
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
-  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
-  { title: "Progress", url: "/student/performance", icon: BarChart3 },
+  { title: "Progress", url: "/student/progress", icon: LineChart },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
 ];
 
