@@ -42,24 +42,32 @@ export default function WeeklyReports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {reports.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/60 transition">
-                  <td className="px-5 py-3.5 font-bold text-slate-900">{r.title}</td>
-                  <td className="px-5 py-3.5 text-slate-600 font-medium">{r.weekRange}</td>
-                  <td className="px-5 py-3.5 font-semibold text-indigo-600">{r.reportType}</td>
-                  <td className="px-5 py-3.5 text-slate-700">{r.generatedBy}</td>
-                  <td className="px-5 py-3.5">
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-right">
-                    <button className="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 font-semibold rounded-lg transition inline-flex items-center gap-1.5">
-                      <Download className="w-3.5 h-3.5" /> Download ({r.size})
-                    </button>
+              {reports.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-5 py-10 text-center text-slate-400 font-medium">
+                    No weekly compliance reports generated yet.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                reports.map((r) => (
+                  <tr key={r.id} className="hover:bg-slate-50/60 transition">
+                    <td className="px-5 py-3.5 font-bold text-slate-900">{r.title}</td>
+                    <td className="px-5 py-3.5 text-slate-600 font-medium">{r.weekRange}</td>
+                    <td className="px-5 py-3.5 font-semibold text-indigo-600">{r.reportType}</td>
+                    <td className="px-5 py-3.5 text-slate-700">{r.generatedBy}</td>
+                    <td className="px-5 py-3.5">
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {r.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <button className="px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 font-semibold rounded-lg transition inline-flex items-center gap-1.5">
+                        <Download className="w-3.5 h-3.5" /> Download ({r.size})
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

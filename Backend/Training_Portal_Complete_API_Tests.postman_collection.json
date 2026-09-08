@@ -1,0 +1,350 @@
+{
+	"info": {
+		"_postman_id": "training-portal-complete-api-collection",
+		"name": "Training Portal Complete Backend API Test Collection",
+		"description": "Full end-to-end Postman collection for all 17 backend modules: Auth, Students, Admin, Colleges, Departments, Batches, Trainings, Assessments, Attendance, Milestones, Leaderboard, AI Roadmap, AI Interview, AI Skill Gap, Interventions, Placement Drives, and Reports.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Authentication & Users",
+			"item": [
+				{
+					"name": "Student Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"ganesh@student.pvppcoe.ac.in\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/v1/auth/login",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Mentor Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"mentor@pvppcoe.ac.in\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/v1/auth/login",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "auth", "login"]
+						}
+					}
+				},
+				{
+					"name": "Register New Student",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Test Student\",\n  \"email\": \"teststudent@pvppcoe.ac.in\",\n  \"mobile_number\": \"9876543210\",\n  \"role\": \"student\",\n  \"college_id\": 1\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/v1/auth/register",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. AI Skill Gap Analysis (Core AI)",
+			"item": [
+				{
+					"name": "Analyze Performance (POST)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"student_name\": \"Ganesh Shinde\",\n  \"quizMarks\": { \"DBMS\": 42, \"OOP\": 78 },\n  \"codingMarks\": { \"Arrays\": 80, \"Dynamic Programming\": 35 },\n  \"interviewScores\": { \"DBMS\": \"Weak\", \"Communication\": \"Good\" }\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/v1/skill-gaps/analyze",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "skill-gaps", "analyze"]
+						}
+					}
+				},
+				{
+					"name": "Get Saved Skill Gap Analysis (GET)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/skill-gaps",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "skill-gaps"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Assessments & Quizzes",
+			"item": [
+				{
+					"name": "Get Available Quizzes",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/assessments/available",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "assessments", "available"]
+						}
+					}
+				},
+				{
+					"name": "Get My Quiz Attempts",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/assessments/my-attempts",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "assessments", "my-attempts"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Student Dashboard & Profile",
+			"item": [
+				{
+					"name": "Get Student Dashboard Metrics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/student/dashboard",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "student", "dashboard"]
+						}
+					}
+				},
+				{
+					"name": "Get Student Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/student/profile",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "student", "profile"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "5. Batches & Attendance",
+			"item": [
+				{
+					"name": "Get Joined Batches",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/batches/my-batches",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "batches", "my-batches"]
+						}
+					}
+				},
+				{
+					"name": "Get Attendance Summary",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/attendance",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "attendance"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "6. AI Roadmap & Technical Interview",
+			"item": [
+				{
+					"name": "Get AI Learning Roadmap",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/roadmaps",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "roadmaps"]
+						}
+					}
+				},
+				{
+					"name": "Get AI Interview Sessions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/interviews",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "interviews"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "7. Leaderboard & Reports",
+			"item": [
+				{
+					"name": "Get Student Leaderboard",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/leaderboards",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "leaderboards"]
+						}
+					}
+				},
+				{
+					"name": "Get System Reports",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjYsImVtYWlsIjoiZ2FuZXNoQHN0dWRlbnQucHZwcGNvZS5hYy5pbiIsInJvbGUiOiJzdHVkZW50IiwiY29sbGVnZV9pZCI6MSwiaWF0IjoxNzg4Nzk0MzU4LCJleHAiOjE3ODkzOTkxNTh9.O9_KpiTqLT-xHxIuNB2HKMZ3SWE-iwkGEyoujttyfAI"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:5000/api/v1/reports",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "5000",
+							"path": ["api", "v1", "reports"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

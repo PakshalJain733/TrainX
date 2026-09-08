@@ -38,22 +38,30 @@ export default function Defaulters() {
               </tr>
             </thead>
             <tbody>
-              {mentorDefaulters.map((d) => (
-                <tr key={d.id}>
-                  <td className="mentor-student-name">{d.name}</td>
-                  <td className="mentor-student-roll">{d.rollNo}</td>
-                  <td className="mentor-student-batch">{d.batch}</td>
-                  <td className="mentor-student-attendance--rose" style={{ fontWeight: 700 }}>{d.attendance}</td>
-                  <td className="mentor-defaulter-missed">{d.missedAssignments} missed</td>
-                  <td className="mentor-student-score">{d.lastTestScore}</td>
-                  <td className="mentor-defaulter-reason">{d.reason}</td>
-                  <td className="mentor-actions-cell">
-                    <button className="mentor-notify-btn">
-                      Notify Student
-                    </button>
+              {mentorDefaulters.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="mentor-empty-table-cell">
+                    No defaulter students flagged.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                mentorDefaulters.map((d) => (
+                  <tr key={d.id}>
+                    <td className="mentor-student-name">{d.name}</td>
+                    <td className="mentor-student-roll">{d.rollNo}</td>
+                    <td className="mentor-student-batch">{d.batch}</td>
+                    <td className="mentor-student-attendance--rose font-bold">{d.attendance}</td>
+                    <td className="mentor-defaulter-missed">{d.missedAssignments} missed</td>
+                    <td className="mentor-student-score">{d.lastTestScore}</td>
+                    <td className="mentor-defaulter-reason">{d.reason}</td>
+                    <td className="mentor-actions-cell">
+                      <button className="mentor-notify-btn">
+                        Notify Student
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

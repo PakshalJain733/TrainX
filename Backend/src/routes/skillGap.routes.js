@@ -6,6 +6,7 @@ import {
   triggerRemedialAssignment,
   getRemedialInterventions,
   getAIDiagnostics,
+  analyzePerformance,
 } from '../controllers/skillGap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -29,14 +30,10 @@ router.get('/my-gaps', getMySkillGaps);
 router.get('/remedial', getRemedialInterventions);
 
 /**
- * Route: Get batch-wide skill gaps (Mentor, Coordinator, Admin)
+ * Route: Get batch-wide skill gaps or current student skill gap
  * GET /api/v1/skill-gaps
  */
-router.get(
-  '/',
-  authorizeRoles(ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
-  getSkillGapData
-);
+router.get('/', getSkillGapData);
 
 /**
  * Route: Get skill gap report for a specific student
@@ -67,5 +64,13 @@ router.post(
   authorizeRoles(ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
   getAIDiagnostics
 );
+
+/**
+ * Route: Analyze performance data
+ * POST /api/v1/skill-gaps
+ * POST /api/v1/skill-gaps/analyze
+ */
+router.post('/', analyzePerformance);
+router.post('/analyze', analyzePerformance);
 
 export default router;

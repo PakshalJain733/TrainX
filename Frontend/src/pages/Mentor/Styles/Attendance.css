@@ -103,3 +103,16 @@
   color: #4f46e5;
   border-color: #c7d2fe;
 }
+
+.mentor-att-card--active {
+  border-color: #6366f1 !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15) !important;
+  background: #faf5ff !important;
+}
+
+.badge-selected {
+  background: #e0e7ff !important;
+  color: #3730a3 !important;
+  border-color: #c7d2fe !important;
+}
+

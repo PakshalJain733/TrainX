@@ -61,7 +61,7 @@ function Login() {
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
-  const API_BASE_URL = "http://localhost:5000/api/v1/auth";
+  const API_BASE_URL = "/api/v1/auth";
 
   useEffect(() => {
     let interval = null;

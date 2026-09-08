@@ -54,9 +54,9 @@ export default function CoordinatorOverview() {
             <PlusCircle size={16} />
             Create Batch
           </Link>
-          <Link to="/coordinator/schedules" className="coord-btn coord-btn--outline">
+          <Link to="/coordinator/assessments" className="coord-btn coord-btn--outline">
             <Calendar size={16} />
-            Schedule Class
+            Publish Quiz
           </Link>
         </div>
       </div>
@@ -84,27 +84,18 @@ export default function CoordinatorOverview() {
       {/* KPI Stats Grid */}
       <div className="coord-stats-grid">
         {coordinatorStats.map((stat) => {
-          let iconBg = "#eff6ff";
-          let iconColor = "#2563eb";
-          if (stat.color === "purple") {
-            iconBg = "#faf5ff";
-            iconColor = "#9333ea";
-          } else if (stat.color === "emerald") {
-            iconBg = "#ecfdf5";
-            iconColor = "#059669";
-          } else if (stat.color === "amber") {
-            iconBg = "#fffbeb";
-            iconColor = "#d97706";
-          } else if (stat.color === "rose") {
-            iconBg = "#fff1f2";
-            iconColor = "#e11d48";
-          }
+          let themeModifier = "coord-stat-icon-bg--indigo";
+          if (stat.id === "batches") themeModifier = "coord-stat-icon-bg--blue";
+          if (stat.id === "mentors") themeModifier = "coord-stat-icon-bg--emerald";
+          if (stat.id === "attendance") themeModifier = "coord-stat-icon-bg--amber";
+          if (stat.id === "readiness") themeModifier = "coord-stat-icon-bg--purple";
+          if (stat.id === "requests") themeModifier = "coord-stat-icon-bg--rose";
 
           return (
             <div key={stat.id} className="coord-stat-card">
               <div className="coord-stat-top">
                 <span className="coord-stat-label">{stat.label}</span>
-                <div className="coord-stat-icon-bg" style={{ background: iconBg, color: iconColor }}>
+                <div className={`coord-stat-icon-bg ${themeModifier}`}>
                   {stat.id === "students" && <GraduationCap size={18} />}
                   {stat.id === "batches" && <Users size={18} />}
                   {stat.id === "mentors" && <UserCheck size={18} />}
@@ -181,8 +172,8 @@ export default function CoordinatorOverview() {
                 <Video size={18} color="#059669" />
                 Today & Upcoming Live Training Sessions
               </div>
-              <Link to="/coordinator/schedules" className="coord-card-link">
-                Full Timetable →
+              <Link to="/coordinator/assessments" className="coord-card-link">
+                Assessments →
               </Link>
             </div>
 

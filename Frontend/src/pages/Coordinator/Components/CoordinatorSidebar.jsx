@@ -13,9 +13,10 @@ import {
   Bell,
   Settings,
   HelpCircle,
-  Sparkles,
-  Bot,
+  Code,
   Video,
+  Bot,
+  Sparkles,
   Trophy,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
@@ -45,8 +46,6 @@ const primaryNavItems = [
   { title: "Batches", url: "/coordinator/batches", icon: Users },
   { title: "Students", url: "/coordinator/students", icon: GraduationCap },
   { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
-  { title: "Live Classrooms", url: "/coordinator/sessions", icon: Video },
-  { title: "Live Schedules", url: "/coordinator/schedules", icon: CalendarCheck },
   { title: "Assessments & Quiz", url: "/coordinator/assessments", icon: FileCheck2 },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: LineChart },
   { title: "AI Roadmaps", url: "/coordinator/roadmaps", icon: Sparkles },

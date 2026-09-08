@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { apiFetch } from "../../../utils/api";
 import {
   Upload, FileBarChart, MessageSquare,
@@ -26,231 +27,41 @@ import { Input, Label, Textarea } from "../../../components/ui/Form";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/Table";
 import "../Styles/Attendance.css";
 
-const kpiData = [
+const defaultKpiData = [
   {
     title: "Overall Attendance",
-    value: "90%",
-    subtext: "Eligibility Required: 75%",
-    status: "Exam Eligible",
-    variant: "success",
+    value: "89.2%",
+    subtext: "Eligibility Threshold: 75%",
+    status: "Safe Margin",
+    variant: "secondary",
     icon: UserCheck,
+    color: "#2563eb",
+    bgColor: "rgba(37, 99, 235, 0.12)"
+  },
+  {
+    title: "Total Conducted",
+    value: "185 / 207",
+    subtext: "22 total classes missed",
+    status: "89.3% Attended",
+    variant: "secondary",
+    icon: BookOpen,
     color: "#10b981",
     bgColor: "rgba(16, 185, 129, 0.12)"
   },
   {
-    title: "Total Conducted",
-    value: "171 / 192",
-    subtext: "21 total classes missed",
-    status: "89% Attended",
-    variant: "info",
-    icon: BookOpen,
-    color: "#3b82f6",
-    bgColor: "rgba(59, 130, 246, 0.12)"
-  },
-  {
     title: "Approved Leaves",
     value: "3 Days",
-    subtext: "1 pending mentor verification",
-    status: "Covered",
-    variant: "warning",
+    subtext: "0 pending mentor verification",
+    status: "Verified",
+    variant: "secondary",
     icon: ShieldCheck,
     color: "#8b5cf6",
     bgColor: "rgba(139, 92, 246, 0.12)"
   }
 ];
-
-const subjects = [
-  {
-    id: "ds",
-    name: "Data Structures & Algorithms",
-    code: "CS-301",
-    faculty: "Dr. A. Sharma",
-    pct: 94,
-    attended: 47,
-    total: 50,
-    absent: 3,
-    excused: 1,
-    icon: Code2,
-    iconBg: "rgba(79, 70, 229, 0.12)",
-    iconColor: "#4f46e5",
-    badgeVariant: "secondary",
-    statusText: "Excellent",
-    safeMargin: "Can safely skip 11 more classes"
-  },
-  {
-    id: "os",
-    name: "Operating Systems",
-    code: "CS-302",
-    faculty: "Prof. R. Varma",
-    pct: 88,
-    attended: 44,
-    total: 50,
-    absent: 6,
-    excused: 2,
-    icon: Cpu,
-    iconBg: "rgba(14, 165, 233, 0.12)",
-    iconColor: "#0ea5e9",
-    badgeVariant: "secondary",
-    statusText: "Good",
-    safeMargin: "Can safely skip 6 more classes"
-  },
-  {
-    id: "dbms",
-    name: "Database Management Systems",
-    code: "CS-303",
-    faculty: "Prof. S. Kulkarni",
-    pct: 92,
-    attended: 46,
-    total: 50,
-    absent: 4,
-    excused: 0,
-    icon: Database,
-    iconBg: "rgba(16, 185, 129, 0.12)",
-    iconColor: "#10b981",
-    badgeVariant: "secondary",
-    statusText: "Excellent",
-    safeMargin: "Can safely skip 8 more classes"
-  },
-  {
-    id: "cn",
-    name: "Computer Networks",
-    code: "CS-304",
-    faculty: "Dr. P. Nair",
-    pct: 81,
-    attended: 34,
-    total: 42,
-    absent: 8,
-    excused: 0,
-    icon: Network,
-    iconBg: "rgba(245, 158, 11, 0.12)",
-    iconColor: "#f59e0b",
-    badgeVariant: "destructive",
-    statusText: "Attention Needed",
-    safeMargin: "Must attend next 3 consecutive classes"
-  }
-];
-
-const monthlyTrend = [
-  { month: "Aug", attendance: 95, required: 75 },
-  { month: "Sep", attendance: 92, required: 75 },
-  { month: "Oct", attendance: 86, required: 75 },
-  { month: "Nov", attendance: 90, required: 75 },
-  { month: "Dec", attendance: 89.6, required: 75 }
-];
-
-const daywiseAttendance = [
-  { day: "Mon", rate: 94 },
-  { day: "Tue", rate: 88 },
-  { day: "Wed", rate: 92 },
-  { day: "Thu", rate: 82 },
-  { day: "Fri", rate: 91 }
-];
-
-const recentLogs = [
-  { id: 1, date: "Dec 04, 2026", time: "09:30 AM", subject: "Data Structures", slot: "Lab 2", status: "Present", faculty: "Dr. A. Sharma" },
-  { id: 2, date: "Dec 04, 2026", time: "11:30 AM", subject: "Operating Systems", slot: "Lec 4", status: "Present", faculty: "Prof. R. Varma" },
-  { id: 3, date: "Dec 03, 2026", time: "02:00 PM", subject: "Computer Networks", slot: "Lec 1", status: "Absent", faculty: "Dr. P. Nair" },
-  { id: 4, date: "Dec 02, 2026", time: "10:30 AM", subject: "DBMS", slot: "Lec 3", status: "Present", faculty: "Prof. S. Kulkarni" },
-  { id: 5, date: "Dec 01, 2026", time: "01:30 PM", subject: "Operating Systems", slot: "Lab 1", status: "Excused", faculty: "Prof. R. Varma" }
-];
-
-const leaveQuotas = [
-  { type: "Medical Leaves", used: 3, total: 6, color: "#8b5cf6", icon: ShieldCheck },
-  { type: "Duty Leaves", used: 2, total: 4, color: "#3b82f6", icon: BookOpen },
-  { type: "Casual / Personal", used: 1, total: 3, color: "#f59e0b", icon: Clock }
-];
-
-const initialVerifications = [
-  {
-    id: "LV-2026-089",
-    title: "Medical Leave · High Fever & Flu",
-    category: "Medical Leave",
-    startDate: "Nov 12, 2026",
-    endDate: "Nov 14, 2026",
-    days: 3,
-    status: "Approved",
-    ok: true,
-    mentor: "Prof. Reddy (Faculty Advisor)",
-    submittedDate: "Nov 11, 2026",
-    remarks: "Medical certificate verified by college health center. Attendance regularized for 3 days.",
-    attachment: "medical_certificate_nov12.pdf",
-    currentStep: 3
-  },
-  {
-    id: "LV-2026-074",
-    title: "Academic Duty · Inter-College Hackathon",
-    category: "Academic Duty",
-    startDate: "Nov 20, 2026",
-    endDate: "Nov 21, 2026",
-    days: 2,
-    status: "Approved",
-    ok: true,
-    mentor: "Prof. S. Kulkarni",
-    submittedDate: "Nov 18, 2026",
-    remarks: "Event participation confirmed by C2C Cell. Duty leave granted.",
-    attachment: "hackathon_invite_pass.pdf",
-    currentStep: 3
-  },
-  {
-    id: "LV-2026-102",
-    title: "Family Function · Sister's Wedding",
-    category: "Personal / Family",
-    startDate: "Dec 10, 2026",
-    endDate: "Dec 12, 2026",
-    days: 3,
-    status: "Pending",
-    ok: false,
-    mentor: "Prof. Reddy (Faculty Advisor)",
-    submittedDate: "Dec 03, 2026",
-    remarks: "Under review by Mentor. Awaiting HOD final confirmation.",
-    attachment: "wedding_invitation.pdf",
-    currentStep: 2
-  },
-  {
-    id: "LV-2026-045",
-    title: "Personal Emergency · Travel Delay",
-    category: "Personal / Family",
-    startDate: "Oct 05, 2026",
-    endDate: "Oct 05, 2026",
-    days: 1,
-    status: "Rejected",
-    ok: false,
-    mentor: "Prof. Reddy (Faculty Advisor)",
-    submittedDate: "Oct 06, 2026",
-    remarks: "Submitted after deadline without prior notification or valid travel proof.",
-  }
-];
-
-const defaulterSubjects = [
-  {
-    id: "net",
-    name: "Computer Networks & Security",
-    code: "CS-304",
-    faculty: "Dr. R. K. Sen",
-    pct: 68,
-    attended: 24,
-    total: 35,
-    neededTo75: 5,
-    status: "Critical Defaulter",
-    badgeVariant: "destructive",
-    warningDate: "02 Aug 2026",
-    advisorAction: "Counseling Mandatory"
-  },
-  {
-    id: "se",
-    name: "Software Engineering & Testing",
-    code: "CS-305",
-    faculty: "Prof. P. Varma",
-    pct: 72,
-    attended: 26,
-    total: 36,
-    neededTo75: 2,
-    status: "Warning Zone",
-    badgeVariant: "warning",
-    warningDate: "05 Aug 2026",
-    advisorAction: "Attendance Advisory Sent"
-  }
-];
+const leaveQuotas = [];
+const initialVerifications = [];
+const defaulterSubjects = [];
 
 export default function Attendance() {
   const [logFilter, setLogFilter] = useState("All");
@@ -275,10 +86,68 @@ export default function Attendance() {
     }
   }, []);
 
+  const handleScanSuccess = useCallback((codeVal) => {
+    setScanResult(codeVal);
+    setCameraStatus("success");
+    stopCamera();
+
+    // 1. Submit attendance mark request to Backend Database API!
+    apiFetch("/attendance/mark", {
+      method: "POST",
+      body: JSON.stringify({ code: codeVal })
+    })
+      .then((res) => {
+        if (res && res.success) {
+          // Refresh student attendance state live
+          apiFetch("/attendance/history").then((attRes) => {
+            if (attRes && attRes.data) {
+              const { summary, history } = attRes.data;
+              if (summary) setApiSummary(summary);
+              if (history && Array.isArray(history)) {
+                const mapped = history.map((l, idx) => ({
+                  id: l.id || `log-${idx}`,
+                  date: l.session_date ? new Date(l.session_date).toISOString().split('T')[0] : "Today",
+                  time: "10:00 AM",
+                  subject: l.batch_name || l.session_title || "Training Session",
+                  slot: "Validated Session",
+                  faculty: l.marked_by_name || "Lead Mentor",
+                  status: l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1)) : "Present"
+                }));
+                setLogsList(mapped);
+              }
+            }
+          });
+        }
+      })
+      .catch((err) => console.error("MARK ATTENDANCE API ERROR:", err));
+
+    // 2. Dispatch scan completed event for Admin dashboard live feed
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      const scanEvt = {
+        studentName: u.name || "Ganesh Shinde",
+        rollNo: u.rollNo || "JV-01",
+        time: new Date().toLocaleTimeString(),
+        code: codeVal
+      };
+      const existingScans = JSON.parse(localStorage.getItem("admin_live_qr_scans") || "[]");
+      localStorage.setItem("admin_live_qr_scans", JSON.stringify([scanEvt, ...existingScans]));
+      window.dispatchEvent(new CustomEvent("qr_scan_completed", { detail: scanEvt }));
+    } catch (_) {}
+  }, [stopCamera]);
+
   const startCamera = useCallback(async () => {
     setCameraStatus("loading");
     setCameraError("");
     setScanResult("");
+
+    // Check if navigator.mediaDevices is supported on this browser context (mobile browsers require HTTPS or localhost)
+    if (!navigator || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setCameraStatus("error");
+      setCameraError("Camera access requires an HTTPS or localhost connection on mobile browsers. Please enter the attendance code manually below.");
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -297,9 +166,7 @@ export default function Attendance() {
             try {
               const codes = await detector.detect(videoRef.current);
               if (codes.length > 0) {
-                setScanResult(codes[0].rawValue);
-                setCameraStatus("success");
-                stopCamera();
+                handleScanSuccess(codes[0].rawValue);
               }
             } catch (_) {}
           }, 300);
@@ -308,14 +175,20 @@ export default function Attendance() {
     } catch (err) {
       setCameraStatus("error");
       if (err.name === "NotAllowedError") {
-        setCameraError("Camera permission denied. Please allow camera access in your browser settings.");
+        setCameraError("Camera permission denied. Please allow camera access in browser settings.");
       } else if (err.name === "NotFoundError") {
         setCameraError("No camera found on this device.");
       } else {
         setCameraError("Unable to access camera: " + err.message);
       }
     }
-  }, [stopCamera]);
+  }, [stopCamera, handleScanSuccess]);
+
+  const handleManualSubmit = (e) => {
+    e.preventDefault();
+    if (!manualCode.trim()) return;
+    handleScanSuccess(manualCode.trim());
+  };
 
   const closeModal = useCallback(() => {
     stopCamera();
@@ -343,25 +216,132 @@ export default function Attendance() {
   const [attachedFileName, setAttachedFileName] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
 
-  // Verification filter state
+  // Joined batch & Attendance state
+  const [userBatchName, setUserBatchName] = useState("");
+  const [subjectsList, setSubjectsList] = useState([]);
+  const [logsList, setLogsList] = useState([]);
   const [verifyFilter, setVerifyFilter] = useState("All");
   const [verifications, setVerifications] = useState(initialVerifications);
-  const [logsList, setLogsList] = useState(recentLogs);
+  const [apiSummary, setApiSummary] = useState(null);
 
   useEffect(() => {
-    apiFetch("/student/attendance")
+    // 1. Get student user profile info
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      if (u && (u.batch || u.department || u.name)) {
+        const bName = u.batch || u.department || "BTech CSE · Sem 6";
+        setUserBatchName(bName);
+      }
+    } catch (e) {}
+
+    // 2. Fetch enrolled batches to dynamically build subject list with actual joined batch
+    apiFetch("/batches/my-batches")
       .then((res) => {
-        if (res.data) {
-          if (res.data.verifications && res.data.verifications.length > 0) {
-            setVerifications(res.data.verifications);
-          }
-          if (res.data.recentLogs && res.data.recentLogs.length > 0) {
-            setLogsList(res.data.recentLogs);
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const joinedBatches = res.data;
+          const dynamicBatches = joinedBatches.map((b) => {
+            const batchTitle = b.name || b.title || "Joined Training Cohort";
+            const batchCode = b.join_code || b.code || `BATCH-${b.id}`;
+            const total = Number(b.total_sessions || b.totalClasses || 0);
+            const basePct = total > 0 ? (b.attendance_pct || b.attendancePct || 0) : 0;
+            const attended = total > 0 ? Math.round(total * (basePct / 100)) : 0;
+            const absent = total - attended;
+            const excused = b.excused !== undefined ? b.excused : 0;
+            const margin = total > 0 ? Math.round(attended - total * 0.75) : 0;
+
+            return {
+              id: `batch-${b.id}`,
+              code: batchCode,
+              name: batchTitle.toLowerCase().includes("training") ? batchTitle : `${batchTitle} Training`,
+              faculty: b.mentor || b.trainer || b.trainer_name || "Faculty Lead",
+              batch: "Joined Batch",
+              pct: basePct,
+              total,
+              attended,
+              absent,
+              excused,
+              safeMargin: total === 0 ? "No classes conducted yet" : (margin >= 0 ? `Safe (+${margin} training sessions above 75% margin)` : `Low Threshold (-${Math.abs(margin)} sessions below 75% margin)`),
+              icon: Code2
+            };
+          });
+          setSubjectsList(dynamicBatches);
+        }
+      })
+      .catch((err) => console.error("MY BATCHES FETCH ERROR:", err));
+
+    // 3. Fetch attendance logs and verifications
+    apiFetch("/attendance/history")
+      .then((res) => {
+        if (res && res.data) {
+          const { summary, history } = res.data;
+          if (summary) setApiSummary(summary);
+          if (history && Array.isArray(history)) {
+            const mappedLogs = history.map((l, idx) => ({
+              id: l.id || `log-api-${idx}`,
+              date: l.session_date ? new Date(l.session_date).toISOString().split('T')[0] : "Today",
+              time: "10:00 AM",
+              subject: l.batch_name || l.session_title || "Training Session",
+              slot: "Regular Session",
+              faculty: l.marked_by_name || "Faculty Lead",
+              status: l.status ? (l.status.charAt(0).toUpperCase() + l.status.slice(1)) : "Present"
+            }));
+            setLogsList(mappedLogs);
           }
         }
       })
       .catch((err) => console.error("ATTENDANCE FETCH ERROR:", err));
   }, []);
+
+  // Compute live overall KPI metrics
+  const totalConductedFromLogs = logsList.length;
+  const totalAttendedFromLogs = logsList.filter(l => l.status === "Present" || l.status === "Late").length;
+  
+  const totalConductedSum = (apiSummary && Number(apiSummary.total_classes || apiSummary.totalClasses || 0) > 0)
+    ? Number(apiSummary.total_classes || apiSummary.totalClasses)
+    : (totalConductedFromLogs > 0 ? totalConductedFromLogs : subjectsList.reduce((acc, s) => acc + (s.total || 0), 0));
+
+  const totalAttendedSum = (apiSummary && Number(apiSummary.present_count || apiSummary.presentClasses || 0) > 0)
+    ? Number(apiSummary.present_count || apiSummary.presentClasses)
+    : (totalAttendedFromLogs > 0 ? totalAttendedFromLogs : subjectsList.reduce((acc, s) => acc + (s.attended || 0), 0));
+
+  const totalAbsentSum = totalConductedSum - totalAttendedSum;
+  const overallPercentage = totalConductedSum > 0 ? ((totalAttendedSum / totalConductedSum) * 100).toFixed(1) : "0.0";
+
+  const approvedLeavesCount = verifications.filter(v => v.status === "Approved").length;
+  const pendingLeavesCount = verifications.filter(v => v.status === "Pending").length;
+
+  const dynamicKpis = [
+    {
+      title: "Overall Attendance",
+      value: `${overallPercentage}%`,
+      subtext: totalConductedSum === 0 ? "No classes conducted yet" : "Eligibility Threshold: 75%",
+      status: totalConductedSum === 0 ? "No Records" : (Number(overallPercentage) >= 75 ? "Safe Margin" : "Low Margin Alert"),
+      variant: totalConductedSum === 0 ? "secondary" : (Number(overallPercentage) >= 75 ? "secondary" : "destructive"),
+      icon: UserCheck,
+      color: "#2563eb",
+      bgColor: "rgba(37, 99, 235, 0.12)"
+    },
+    {
+      title: "Total Classes Conducted",
+      value: `${totalAttendedSum} / ${totalConductedSum}`,
+      subtext: totalConductedSum === 0 ? "0 total classes missed" : `${totalAbsentSum} total classes missed`,
+      status: totalConductedSum === 0 ? "No Records" : `${overallPercentage}% Attended`,
+      variant: "secondary",
+      icon: BookOpen,
+      color: "#10b981",
+      bgColor: "rgba(16, 185, 129, 0.12)"
+    },
+    {
+      title: "Approved Leaves",
+      value: `${approvedLeavesCount} Days`,
+      subtext: `${pendingLeavesCount} pending verification`,
+      status: approvedLeavesCount > 0 ? "Verified" : "No Leaves",
+      variant: "secondary",
+      icon: ShieldCheck,
+      color: "#8b5cf6",
+      bgColor: "rgba(139, 92, 246, 0.12)"
+    }
+  ];
 
   const filteredLogs = logFilter === "All" 
     ? logsList 
@@ -433,7 +413,7 @@ export default function Attendance() {
   return (
     <div className="student-page-inner stack-6">
       {/* QR Scanner Modal */}
-      {qrModalOpen && (
+      {qrModalOpen && createPortal(
         <div className="qr-modal-backdrop" onClick={closeModal}>
           <div className="qr-modal-box" onClick={e => e.stopPropagation()}>
 
@@ -466,12 +446,29 @@ export default function Attendance() {
                 </div>
               )}
 
-              {/* Error */}
+              {/* Error State with Manual Entry Fallback */}
               {cameraStatus === "error" && (
                 <div className="qr-camera-placeholder qr-camera-error">
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <p>{cameraError}</p>
-                  <button className="qr-retry-btn" onClick={startCamera}>Try Again</button>
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <p style={{ fontSize: "12.5px", padding: "0 16px", color: "#f87171", margin: "4px 0 10px" }}>{cameraError}</p>
+
+                  <div style={{ width: "100%", padding: "12px 16px", background: "rgba(15, 23, 42, 0.6)", borderRadius: "10px", border: "1px solid #334155", display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <p style={{ fontSize: "11.5px", color: "#cbd5e1", margin: 0, textAlign: "left", fontWeight: "600" }}>Or enter session code manually:</p>
+                    <form onSubmit={handleManualSubmit} style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        type="text"
+                        placeholder="Enter Session Code"
+                        value={manualCode}
+                        onChange={(e) => setManualCode(e.target.value)}
+                        style={{ flex: 1, padding: "8px 10px", borderRadius: "6px", border: "1px solid #475569", background: "#0f172a", color: "#ffffff", fontSize: "12.5px" }}
+                      />
+                      <button type="submit" style={{ padding: "8px 14px", background: "#2563eb", color: "#ffffff", border: "none", borderRadius: "6px", fontWeight: "600", fontSize: "12px", cursor: "pointer" }}>
+                        Verify
+                      </button>
+                    </form>
+                  </div>
+
+                  <button className="qr-retry-btn" onClick={startCamera} style={{ marginTop: "10px" }}>Try Camera Again</button>
                 </div>
               )}
 
@@ -480,7 +477,6 @@ export default function Attendance() {
                 <div className="qr-camera-placeholder qr-camera-success">
                   <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                   <p className="qr-scanned-title">QR Code Scanned!</p>
-                  {scanResult && <p className="qr-scanned-code">Code: {scanResult}</p>}
                 </div>
               )}
 
@@ -508,8 +504,6 @@ export default function Attendance() {
               )}
             </div>
 
-            {/* Manual Entry Removed */}
-
             {/* Footer */}
             <div className="qr-modal-footer">
               {cameraStatus === "active" && (
@@ -524,16 +518,16 @@ export default function Attendance() {
                   Attendance Marked!
                 </div>
               )}
-              {(cameraStatus === "idle" || cameraStatus === "error") && <div/>}
-              {cameraStatus === "loading" && <div/>}
+              {cameraStatus !== "active" && cameraStatus !== "success" && <div />}
 
               {cameraStatus === "success" && (
-                <button className="qr-enter-code-btn qr-done-btn" onClick={closeModal}>Done</button>
+                <button className="qr-enter-code-btn qr-done-btn" onClick={closeModal} style={{ padding: "8px 24px", minWidth: "100px" }}>Done</button>
               )}
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <div className="attendance-header-row">
@@ -554,7 +548,7 @@ export default function Attendance() {
       <Tabs defaultValue="reports">
         <TabsList>
           <TabsTrigger value="reports">Reports</TabsTrigger>
-          <TabsTrigger value="leave">Leave / Absence</TabsTrigger>
+          <TabsTrigger value="leave">Leave</TabsTrigger>
           <TabsTrigger value="verify">Verification</TabsTrigger>
         </TabsList>
 
@@ -562,20 +556,20 @@ export default function Attendance() {
         <TabsContent value="reports" className="attendance-reports-container stack-6">
           {/* KPI Summary Cards */}
           <div className="attendance-kpi-grid">
-            {kpiData.map((kpi, idx) => {
+            {dynamicKpis.map((kpi, idx) => {
               const IconComponent = kpi.icon;
               return (
                 <Card key={idx} className="attendance-kpi-card">
                   <CardContent className="attendance-kpi-content">
                     <div className="attendance-kpi-header">
                       <span className="attendance-kpi-title">{kpi.title}</span>
-                      <div className="attendance-kpi-icon-box" style={{ background: kpi.bgColor, color: kpi.color }}>
+                      <div className="attendance-kpi-icon-box">
                         <IconComponent size={18} />
                       </div>
                     </div>
                     <div className="attendance-kpi-value-row">
                       <h3 className="attendance-kpi-value">{kpi.value}</h3>
-                      <Badge className="attendance-kpi-badge" style={{ backgroundColor: kpi.bgColor, color: kpi.color, borderColor: kpi.color + '40' }}>
+                      <Badge className="attendance-kpi-badge" variant={kpi.variant}>
                         {kpi.status}
                       </Badge>
                     </div>
@@ -586,83 +580,127 @@ export default function Attendance() {
             })}
           </div>
 
-          {/* Section Heading for Subject Reports */}
+          {/* Section Heading for Joined Training Batch Attendance */}
           <div className="attendance-section-title-row">
             <div>
-              <h3 className="attendance-section-heading">Subject Wise Attendance</h3>
-              <p className="attendance-section-subheading">Detailed breakdown of attendance per course subject & margin status</p>
+              <h3 className="attendance-section-heading">Joined Training Batch Attendance Breakdown</h3>
+              <p className="attendance-section-subheading">Detailed breakdown of attendance per enrolled training batch & safety threshold status</p>
             </div>
           </div>
 
-          {/* Enhanced Subject Cards Grid */}
+          {/* Enhanced Training Batch Cards Grid */}
           <div className="attendance-subject-grid">
-            {subjects.map((s) => {
-              const SubjectIcon = s.icon;
-              return (
-                <Card key={s.id} className="attendance-subject-card">
-                  <CardContent className="attendance-subject-content">
-                    <div className="attendance-subject-header">
-                      <div className="attendance-subject-info">
-                        <div className="attendance-subject-icon-box" style={{ background: s.iconBg, color: s.iconColor }}>
-                          <SubjectIcon size={20} />
+            {subjectsList.length === 0 ? (
+              <div className="attendance-empty-grid-cell">
+                <BookOpen size={32} className="attendance-empty-icon" />
+                <p className="attendance-empty-title">No joined training batch attendance records found.</p>
+              </div>
+            ) : (
+              subjectsList.map((s) => {
+                const SubjectIcon = s.icon || BookOpen;
+
+                // Dynamically compute card metrics from session logs if batch total is 0
+                const batchLogs = logsList; // session logs for this student
+                const conductedFromLogs = batchLogs.length;
+                const attendedFromLogs = batchLogs.filter(l => l.status === "Present" || l.status === "Late").length;
+                const absentFromLogs = conductedFromLogs - attendedFromLogs;
+
+                const displayTotal = s.total > 0 ? s.total : conductedFromLogs;
+                const displayAttended = s.total > 0 ? s.attended : attendedFromLogs;
+                const displayAbsent = s.total > 0 ? s.absent : absentFromLogs;
+                const displayPct = displayTotal > 0 ? Math.round((displayAttended / displayTotal) * 100) : 0;
+                const margin = displayTotal > 0 ? Math.round(displayAttended - displayTotal * 0.75) : 0;
+                const displayMargin = displayTotal === 0 ? "No classes conducted yet" : (margin >= 0 ? `Safe (+${margin} training sessions above 75% margin)` : `Low Threshold (-${Math.abs(margin)} sessions below 75% margin)`);
+
+                return (
+                  <Card key={s.id} className="attendance-subject-card">
+                    <CardContent className="attendance-subject-content">
+                      <div className="attendance-subject-header">
+                        <div className="attendance-subject-info">
+                          <div className="attendance-subject-icon-box" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                            <SubjectIcon size={20} />
+                          </div>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="attendance-subject-code">{s.code}</span>
+                              {s.batch && <Badge variant="outline" style={{ fontSize: '10px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>{s.batch}</Badge>}
+                            </div>
+                            <h4 className="attendance-subject-name">{s.name}</h4>
+                            <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>{s.faculty}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="attendance-subject-code">{s.code} · {s.faculty}</p>
-                          <h4 className="attendance-subject-name">{s.name}</h4>
+                        <Badge variant={displayPct >= 75 ? "secondary" : "destructive"} className="attendance-pct-badge">
+                          {displayPct}%
+                        </Badge>
+                      </div>
+
+                      {/* Progress bar with custom color styling */}
+                      <div className="attendance-progress-wrapper">
+                        <Progress value={displayPct} className="attendance-custom-progress" />
+                      </div>
+
+                      {/* Subject Class Stats */}
+                      <div className="attendance-subject-stats-row">
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Conducted</span>
+                          <span className="attendance-stat-val">{displayTotal}</span>
+                        </div>
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Attended</span>
+                          <span className="attendance-stat-val attendance-val-green">{displayAttended}</span>
+                        </div>
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Absent</span>
+                          <span className="attendance-stat-val attendance-val-red">{displayAbsent}</span>
+                        </div>
+                        <div className="attendance-stat-box">
+                          <span className="attendance-stat-label">Excused</span>
+                          <span className="attendance-stat-val attendance-val-purple">{s.excused}</span>
                         </div>
                       </div>
-                      <Badge variant={s.pct >= 85 ? "secondary" : "destructive"} className="attendance-pct-badge">
-                        {s.pct}%
-                      </Badge>
-                    </div>
 
-                    {/* Progress bar with custom color styling */}
-                    <div className="attendance-progress-wrapper">
-                      <Progress value={s.pct} className="attendance-custom-progress" />
-                    </div>
-
-                    {/* Subject Class Stats */}
-                    <div className="attendance-subject-stats-row">
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Conducted</span>
-                        <span className="attendance-stat-val">{s.total}</span>
+                      {/* Safety Margin Indicator */}
+                      <div className="attendance-margin-footer">
+                        <Info size={13} className="attendance-info-icon" />
+                        <span>{displayMargin}</span>
                       </div>
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Attended</span>
-                        <span className="attendance-stat-val attendance-val-green">{s.attended}</span>
-                      </div>
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Absent</span>
-                        <span className="attendance-stat-val attendance-val-red">{s.absent}</span>
-                      </div>
-                      <div className="attendance-stat-box">
-                        <span className="attendance-stat-label">Excused</span>
-                        <span className="attendance-stat-val attendance-val-purple">{s.excused}</span>
-                      </div>
-                    </div>
-
-                    {/* Safety Margin Indicator */}
-                    <div className="attendance-margin-footer">
-                      <Info size={13} className="attendance-info-icon" />
-                      <span>{s.safeMargin}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            )}
           </div>
-
-
 
           {/* Recent Attendance Log Table */}
           <Card className="attendance-log-card">
             <CardHeader className="attendance-log-header">
-              <div className="attendance-row-between">
+              <div className="attendance-row-between" style={{ flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <CardTitle className="attendance-chart-title">
                     <Calendar size={16} /> Recent Class Attendance Log
                   </CardTitle>
-                  <CardDescription>Daily automated presence records & verify status</CardDescription>
+                  <CardDescription>Daily automated presence records & faculty verification status</CardDescription>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {["All", "Present", "Absent", "Excused"].map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setLogFilter(f)}
+                      style={{
+                        padding: '4px 12px',
+                        fontSize: '12px',
+                        fontWeight: '600',
+                        borderRadius: '20px',
+                        border: logFilter === f ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                        background: logFilter === f ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#f1f5f9',
+                        color: logFilter === f ? '#ffffff' : '#475569',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {f}
+                    </button>
+                  ))}
                 </div>
               </div>
             </CardHeader>
@@ -679,35 +717,43 @@ export default function Attendance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLogs.map(log => (
-                      <tr key={log.id}>
-                        <td>
-                          <div className="attendance-cell-datetime">
-                            <span className="attendance-date">{log.date}</span>
-                            <span className="attendance-time">{log.time}</span>
-                          </div>
-                        </td>
-                        <td className="attendance-font-medium">{log.subject}</td>
-                        <td><Badge variant="outline">{log.slot}</Badge></td>
-                        <td className="attendance-text-muted">{log.faculty}</td>
-                        <td>
-                          <Badge
-                            className={
-                              log.status === "Present"
-                                ? "attendance-status-badge-present"
-                                : log.status === "Absent"
-                                ? "attendance-status-badge-absent"
-                                : "attendance-status-badge-excused"
-                            }
-                          >
-                            {log.status === "Present" && <CheckCircle2 size={12} />}
-                            {log.status === "Absent" && <XCircle size={12} />}
-                            {log.status === "Excused" && <ShieldCheck size={12} />}
-                            {log.status}
-                          </Badge>
+                    {filteredLogs.length === 0 ? (
+                      <tr>
+                        <td colSpan="5" className="attendance-empty-table-cell">
+                          No recent attendance logs recorded yet.
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredLogs.map(log => (
+                        <tr key={log.id}>
+                          <td>
+                            <div className="attendance-cell-datetime">
+                              <span className="attendance-date">{log.date}</span>
+                              <span className="attendance-time">{log.time}</span>
+                            </div>
+                          </td>
+                          <td className="attendance-font-medium">{log.subject}</td>
+                          <td><Badge variant="outline">{log.slot}</Badge></td>
+                          <td className="attendance-text-muted">{log.faculty}</td>
+                          <td>
+                            <Badge
+                              className={
+                                log.status === "Present"
+                                  ? "attendance-status-badge-present"
+                                  : log.status === "Absent"
+                                  ? "attendance-status-badge-absent"
+                                  : "attendance-status-badge-excused"
+                              }
+                            >
+                              {log.status === "Present" && <CheckCircle2 size={12} />}
+                              {log.status === "Absent" && <XCircle size={12} />}
+                              {log.status === "Excused" && <ShieldCheck size={12} />}
+                              {log.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -729,10 +775,10 @@ export default function Attendance() {
             <Card className="attendance-leave-form-card">
               <CardHeader>
                 <CardTitle className="attendance-card-title flex items-center gap-2">
-                  <FileText size={18} className="text-indigo-600" /> Apply for Leave / Absence
+                  <FileText size={18} className="text-indigo-600" /> Apply for Leave
                 </CardTitle>
                 <CardDescription>
-                  Submit official leave application for mentor verification and attendance regularization.
+                  Submit official leave application for Coordinator/Mentor verification and attendance regularization.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -769,7 +815,7 @@ export default function Attendance() {
                       onChange={(e) => setSelectedSubject(e.target.value)}
                     >
                       <option value="All Subjects">All Subjects (Full Day Leave)</option>
-                      {subjects.map((s) => (
+                      {subjectsList.map((s) => (
                         <option key={s.id} value={s.name}>{s.code} - {s.name}</option>
                       ))}
                     </select>
@@ -863,78 +909,85 @@ export default function Attendance() {
 
           {/* Detailed Verification Cards */}
           <div className="attendance-stack-4">
-            {filteredVerifications.map((v) => (
-              <Card key={v.id} className="attendance-verify-card">
-                <CardContent className="attendance-verify-card-content">
-                  <div className="attendance-verify-card-header">
-                    <div className="attendance-verify-title-block">
-                      <div className="attendance-row gap-2">
-                        <Badge variant="outline" className="attendance-id-badge">{v.id}</Badge>
-                        <Badge variant="secondary" className="attendance-cat-badge">{v.category}</Badge>
+            {filteredVerifications.length === 0 ? (
+              <div className="attendance-empty-verify-box">
+                <Clock3 size={32} className="attendance-empty-icon" />
+                <p className="attendance-empty-title">No verification requests found.</p>
+              </div>
+            ) : (
+              filteredVerifications.map((v) => (
+                <Card key={v.id} className="attendance-verify-card">
+                  <CardContent className="attendance-verify-card-content">
+                    <div className="attendance-verify-card-header">
+                      <div className="attendance-verify-title-block">
+                        <div className="attendance-row gap-2">
+                          <Badge variant="outline" className="attendance-id-badge">{v.id}</Badge>
+                          <Badge variant="secondary" className="attendance-cat-badge">{v.category}</Badge>
+                        </div>
+                        <h4 className="attendance-verify-card-title">{v.title}</h4>
+                        <p className="attendance-verify-dates-text">
+                          <CalendarDays size={13} /> {v.startDate} {v.startDate !== v.endDate ? `to ${v.endDate}` : ''} ({v.days} Day{v.days > 1 ? 's' : ''})
+                        </p>
                       </div>
-                      <h4 className="attendance-verify-card-title">{v.title}</h4>
-                      <p className="attendance-verify-dates-text">
-                        <CalendarDays size={13} /> {v.startDate} {v.startDate !== v.endDate ? `to ${v.endDate}` : ''} ({v.days} Day{v.days > 1 ? 's' : ''})
-                      </p>
-                    </div>
 
-                    <div className="attendance-verify-status-box">
-                      <Badge
-                        className={
-                          v.status === "Approved"
-                            ? "attendance-status-badge-present"
-                            : v.status === "Pending"
-                            ? "attendance-status-badge-excused"
-                            : "attendance-status-badge-absent"
-                        }
-                      >
-                        {v.status === "Approved" && <CheckCircle2 size={13} />}
-                        {v.status === "Pending" && <Clock3 size={13} />}
-                        {v.status === "Rejected" && <XCircle size={13} />}
-                        {v.status}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Multi-step Timeline Progress Bar */}
-                  <div className="attendance-verify-timeline">
-                    <div className={`timeline-step ${v.currentStep >= 1 ? 'step-completed' : ''}`}>
-                      <div className="step-circle">{v.currentStep >= 1 ? <Check size={12} /> : "1"}</div>
-                      <span className="step-label">Submitted ({v.submittedDate})</span>
-                    </div>
-                    <div className="timeline-line"></div>
-                    <div className={`timeline-step ${v.currentStep >= 2 ? (v.status === "Rejected" ? 'step-rejected' : 'step-completed') : ''}`}>
-                      <div className="step-circle">{v.currentStep >= 2 ? <Check size={12} /> : "2"}</div>
-                      <span className="step-label">Mentor Review</span>
-                    </div>
-                    <div className="timeline-line"></div>
-                    <div className={`timeline-step ${v.currentStep >= 3 ? 'step-completed' : ''}`}>
-                      <div className="step-circle">{v.currentStep >= 3 ? <Check size={12} /> : "3"}</div>
-                      <span className="step-label">HOD Approval & Regularized</span>
-                    </div>
-                  </div>
-
-                  {/* Mentor Remarks & Attachment Footer */}
-                  <div className="attendance-verify-card-footer">
-                    <div className="attendance-remarks-box">
-                      <MessageSquare size={15} className="attendance-remarks-icon" />
-                      <div>
-                        <span className="remarks-reviewer">Reviewer Remarks ({v.mentor}):</span>
-                        <p className="remarks-text">{v.remarks}</p>
+                      <div className="attendance-verify-status-box">
+                        <Badge
+                          className={
+                            v.status === "Approved"
+                              ? "attendance-status-badge-present"
+                              : v.status === "Pending"
+                              ? "attendance-status-badge-excused"
+                              : "attendance-status-badge-absent"
+                          }
+                        >
+                          {v.status === "Approved" && <CheckCircle2 size={13} />}
+                          {v.status === "Pending" && <Clock3 size={13} />}
+                          {v.status === "Rejected" && <XCircle size={13} />}
+                          {v.status}
+                        </Badge>
                       </div>
                     </div>
 
-                    {v.attachment && (
-                      <div className="attendance-attachment-pill">
-                        <Paperclip size={13} />
-                        <span>{v.attachment}</span>
-                        <Download size={12} className="ml-1 cursor-pointer hover:text-indigo-600" />
+                    {/* Multi-step Timeline Progress Bar */}
+                    <div className="attendance-verify-timeline">
+                      <div className={`timeline-step ${v.currentStep >= 1 ? 'step-completed' : ''}`}>
+                        <div className="step-circle">{v.currentStep >= 1 ? <Check size={12} /> : "1"}</div>
+                        <span className="step-label">Submitted ({v.submittedDate})</span>
                       </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                      <div className="timeline-line"></div>
+                      <div className={`timeline-step ${v.currentStep >= 2 ? (v.status === "Rejected" ? 'step-rejected' : 'step-completed') : ''}`}>
+                        <div className="step-circle">{v.currentStep >= 2 ? <Check size={12} /> : "2"}</div>
+                        <span className="step-label">Mentor Review</span>
+                      </div>
+                      <div className="timeline-line"></div>
+                      <div className={`timeline-step ${v.currentStep >= 3 ? 'step-completed' : ''}`}>
+                        <div className="step-circle">{v.currentStep >= 3 ? <Check size={12} /> : "3"}</div>
+                        <span className="step-label">HOD Approval & Regularized</span>
+                      </div>
+                    </div>
+
+                    {/* Mentor Remarks & Attachment Footer */}
+                    <div className="attendance-verify-card-footer">
+                      <div className="attendance-remarks-box">
+                        <MessageSquare size={15} className="attendance-remarks-icon" />
+                        <div>
+                          <span className="remarks-reviewer">Reviewer Remarks ({v.mentor}):</span>
+                          <p className="remarks-text">{v.remarks}</p>
+                        </div>
+                      </div>
+
+                      {v.attachment && (
+                        <div className="attendance-attachment-pill">
+                          <Paperclip size={13} />
+                          <span>{v.attachment}</span>
+                          <Download size={12} className="ml-1 cursor-pointer hover:text-indigo-600" />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </div>
         </TabsContent>
       </Tabs>

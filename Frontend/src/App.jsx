@@ -33,6 +33,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
+import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
 
 // Super Admin Workspace Imports
@@ -92,6 +93,8 @@ import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyRepor
 import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
 import CoordinatorHelp from './pages/Coordinator/Components/Help';
+import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
+import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
 
 function App() {
   return (
@@ -110,6 +113,7 @@ function App() {
           <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="quiz" element={<AcademicQuiz />} />
           <Route path="attendance" element={<Attendance />} />
+          <Route path="skill-gaps" element={<MentorSkillGaps />} />
           <Route path="weekly-reports" element={<WeeklyReports />} />
           <Route path="batches" element={<Batches />} />
           <Route path="practice" element={<PracticeProblems />} />
@@ -130,6 +134,8 @@ function App() {
           <Route path="learning" element={<AdminLearningContent />} />
           <Route path="quiz" element={<AdminQuizzes />} />
           <Route path="practice" element={<AdminPracticeProblems />} />
+          <Route path="coding-practice" element={<AdminPracticeProblems />} />
+          <Route path="broadcast" element={<AdminBroadcast />} />
           <Route path="progress" element={<AdminProgress />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="weekly-reports" element={<AdminWeeklyReports />} />
@@ -141,6 +147,8 @@ function App() {
         {/* Mentor Workspace Routes */}
         <Route path="/mentor" element={<MentorLayout />}>
           <Route index element={<MentorOverview />} />
+          <Route path="quizzes" element={<AdminQuizzes />} />
+          <Route path="assessments" element={<AdminQuizzes />} />
           <Route path="students" element={<MentorStudents />} />
           <Route path="roadmaps" element={<MentorRoadmaps />} />
           <Route path="ai-interviews" element={<MentorAIInterviews />} />
@@ -166,9 +174,6 @@ function App() {
           <Route path="batches" element={<CoordinatorBatches />} />
           <Route path="students" element={<CoordinatorStudents />} />
           <Route path="mentors" element={<CoordinatorMentors />} />
-          <Route path="sessions" element={<CoordinatorLiveSessions />} />
-          <Route path="live-sessions" element={<CoordinatorLiveSessions />} />
-          <Route path="schedules" element={<CoordinatorSchedules />} />
           <Route path="assessments" element={<CoordinatorAssessments />} />
           <Route path="quizzes" element={<CoordinatorAssessments />} />
           <Route path="attendance" element={<CoordinatorAttendance />} />
@@ -201,6 +206,7 @@ function App() {
           <Route path="students" element={<StudentsRiskPage />} />
           <Route path="performance" element={<SuperAdminPerformancePage />} />
           <Route path="attendance" element={<SuperAdminAttendancePage />} />
+          <Route path="coding-practice" element={<SuperAdminCodingPractice />} />
           <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
           <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
           <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />

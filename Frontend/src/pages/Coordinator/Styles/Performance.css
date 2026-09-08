@@ -4,6 +4,11 @@
   gap: 20px;
 }
 
+.coord-stat-value--blue { color: #2563eb; }
+.coord-stat-value--amber { color: #d97706; }
+.coord-stat-value--emerald { color: #059669; }
+.coord-stat-value--purple { color: #7c3aed; }
+
 .coord-filter-lbl {
   font-size: 13px;
   font-weight: 600;

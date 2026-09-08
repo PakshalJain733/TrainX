@@ -17,6 +17,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AiInterview.css";
 
 const questionsList = [
@@ -173,7 +174,7 @@ export default function AIInterview() {
   };
 
   return (
-    <div className="ai-interview-page">
+    <div className="ai-interview-page stack-6">
       <div className="ai-interview-split-grid">
         {/* Practice Arena */}
         <div className="interview-practice-card">

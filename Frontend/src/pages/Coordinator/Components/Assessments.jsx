@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Plus,
   FileCheck2,
@@ -26,6 +27,7 @@ import {
   coordinatorStudents,
 } from "../../../data/coordinatorMockData";
 import "../Styles/Assessments.css";
+import "../../Admin/Styles/AdminUsers.css";
 
 export default function CoordinatorAssessments() {
   const [assessments, setAssessments] = useState(coordinatorAssessments);
@@ -39,7 +41,7 @@ export default function CoordinatorAssessments() {
 
   // Create Quiz Form
   const [title, setTitle] = useState("");
-  const [batch, setBatch] = useState(coordinatorBatches[0].name);
+  const [batch, setBatch] = useState(coordinatorBatches[0]?.name || "");
   const [type, setType] = useState("MCQ Quiz");
   const [dueDate, setDueDate] = useState("");
 
@@ -518,71 +520,91 @@ export default function CoordinatorAssessments() {
         </div>
       )}
 
-      {/* CREATE QUIZ MODAL */}
-      {showCreateModal && (
-        <div className="coord-modal-backdrop" onClick={() => setShowCreateModal(false)}>
-          <div className="coord-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="coord-modal-title">Publish New Quiz / Test</h2>
-            <form onSubmit={handleCreate} className="coord-modal-form">
-              <div>
-                <label className="coord-form-label">Quiz Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Dynamic Programming & Recursion Quiz"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="coord-form-input"
-                />
+      {/* CREATE QUIZ MODAL / FLASH SCREEN OVERLAY */}
+      {showCreateModal && createPortal(
+        <div className="quiz-modal-backdrop" onClick={() => setShowCreateModal(false)}>
+          <div className="quiz-modal-content modal-flash-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '750px' }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <FileCheck2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Publish New Quiz Assessment</h2>
+                  <p className="modal-subtitle">Configure quiz parameters and publish to target batch students.</p>
+                </div>
               </div>
+              <button className="modal-close-btn" onClick={() => setShowCreateModal(false)} title="Close Modal">
+                <XCircle size={18} />
+              </button>
+            </div>
 
-              <div>
-                <label className="coord-form-label">Target Batch</label>
-                <select
-                  value={batch}
-                  onChange={(e) => setBatch(e.target.value)}
-                  className="coord-form-input"
-                >
-                  {coordinatorBatches.map((b) => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
+            <div style={{ padding: '24px', overflowY: 'auto' }}>
+              <form onSubmit={handleCreate} className="coord-modal-form">
+                <div>
+                  <label className="coord-form-label">Quiz Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Dynamic Programming & Recursion Quiz"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="coord-form-input"
+                    autoFocus
+                  />
+                </div>
 
-              <div>
-                <label className="coord-form-label">Assessment Format</label>
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="coord-form-input"
-                >
-                  <option value="MCQ Quiz">MCQ Quiz</option>
-                  <option value="Coding Assessment">Coding Assessment</option>
-                  <option value="Hands-on Project">Hands-on Project</option>
-                </select>
-              </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '14px' }}>
+                  <div>
+                    <label className="coord-form-label">Target Batch</label>
+                    <select
+                      value={batch}
+                      onChange={(e) => setBatch(e.target.value)}
+                      className="coord-form-input"
+                    >
+                      {coordinatorBatches.map((b) => (
+                        <option key={b.id} value={b.name}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
 
-              <div>
-                <label className="coord-form-label">Due Date</label>
-                <input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="coord-form-input"
-                />
-              </div>
+                  <div>
+                    <label className="coord-form-label">Assessment Format</label>
+                    <select
+                      value={type}
+                      onChange={(e) => setType(e.target.value)}
+                      className="coord-form-input"
+                    >
+                      <option value="MCQ Quiz">MCQ Quiz</option>
+                      <option value="Coding Assessment">Coding Assessment</option>
+                      <option value="Hands-on Project">Hands-on Project</option>
+                    </select>
+                  </div>
+                </div>
 
-              <div className="coord-modal-actions">
-                <button type="button" className="coord-btn coord-btn--cancel" onClick={() => setShowCreateModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="coord-btn coord-btn--primary">
-                  Publish Quiz
-                </button>
-              </div>
-            </form>
+                <div style={{ marginTop: '14px' }}>
+                  <label className="coord-form-label">Due Date</label>
+                  <input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    className="coord-form-input"
+                  />
+                </div>
+
+                <div className="coord-modal-actions" style={{ marginTop: '20px', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                  <button type="button" className="coord-btn coord-btn--cancel" onClick={() => setShowCreateModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="coord-btn coord-btn--primary">
+                    Publish Quiz
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

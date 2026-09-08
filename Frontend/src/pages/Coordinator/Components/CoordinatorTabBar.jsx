@@ -7,8 +7,6 @@ const coordinatorTabs = [
   { name: "Batches", path: "/coordinator/batches" },
   { name: "Students", path: "/coordinator/students" },
   { name: "Mentors & Trainers", path: "/coordinator/mentors" },
-  { name: "Live Classrooms", path: "/coordinator/sessions" },
-  { name: "Live Schedules", path: "/coordinator/schedules" },
   { name: "Assessments & Quiz", path: "/coordinator/assessments" },
   { name: "Attendance", path: "/coordinator/attendance" },
   { name: "AI Roadmaps", path: "/coordinator/roadmaps" },

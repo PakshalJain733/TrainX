@@ -1,4 +1,9 @@
-import { generateToken } from './src/utils/generateToken.js';
+// @ts-nocheck
+import jwt from 'jsonwebtoken';
+import { config } from './src/config/env.js';
+
+const generateToken = (payload) => jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+
 import { ROLES } from './src/utils/constants.js';
 import app from './src/app.js';
 import http from 'http';
