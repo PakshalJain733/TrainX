@@ -1,149 +1,156 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { PanelLeft, Bell, Search, Sparkles, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2 } from 'lucide-react';
-import Sidebar from '../../components/SuperAdmin/Sidebar';
-import AIRiskAuditModal from '../../components/SuperAdmin/AIRiskAuditModal';
-import './SuperAdmin.css';
+import React, { useState, useEffect, useRef } from "react";
+import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
+import {
+  Bell,
+  PanelLeft,
+  UserCog,
+  LogOut,
+  Shield,
+  Sparkles,
+  SlidersHorizontal,
+  Check,
+  Trash2,
+  Calendar,
+  AlertTriangle,
+  CheckCircle2,
+  FileText,
+} from "lucide-react";
+import Sidebar from "../../components/SuperAdmin/Sidebar";
+import AIRiskAuditModal from "../../components/SuperAdmin/AIRiskAuditModal";
+import "./Styles/SuperAdminLayout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
+  const [activeTab, setActiveTab] = useState("All");
   const [notifications, setNotifications] = useState([
-    { id: 1, type: "alert", title: "4 Admin Verification Requests Pending", time: "10 min ago", unread: true },
-    { id: 2, type: "success", title: "Apex Institute of Tech batch sync complete", time: "1h ago", unread: true },
-    { id: 3, type: "document", title: "Monthly Cross-College Placement Audit ready", time: "3h ago", unread: false },
+    {
+      id: 1,
+      type: "alert",
+      title: "New College Verification Request",
+      desc: "Apex Institute of Technology requested admin access approval.",
+      time: "10 min ago",
+      unread: true,
+    },
+    {
+      id: 2,
+      type: "success",
+      title: "AI Interview Engine Calibrated",
+      desc: "Latest v3.2 model update deployed across 4 colleges.",
+      time: "45 min ago",
+      unread: true,
+    },
+    {
+      id: 3,
+      type: "document",
+      title: "Weekly Governance Audit Ready",
+      desc: "Week 35 platform-wide attendance and defaulter summary generated.",
+      time: "2 hours ago",
+      unread: false,
+    },
+    {
+      id: 4,
+      type: "calendar",
+      title: "Platform Maintenance Schedule",
+      desc: "Scheduled database backup and optimization at 02:00 AM UTC.",
+      time: "5 hours ago",
+      unread: false,
+    },
   ]);
-
-  const [activeTab, setActiveTab] = useState("all");
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
-  const totalCount = notifications.length;
-
-  useEffect(() => {
-    if (onUnreadChange) {
-      onUnreadChange(unreadCount > 0);
-    }
-  }, [unreadCount, onUnreadChange]);
-
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-  };
-
-  const handleDeleteItem = (e, id) => {
-    e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-  };
-
-  const toggleSingleRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n))
-    );
-  };
-
-  const visibleNotifications = notifications.filter((n) => {
-    if (activeTab === "unread") return n.unread;
-    return true;
-  });
 
   const getIcon = (type) => {
     switch (type) {
-      case "calendar": return <Calendar size={16} className="notif-icon-calendar" />;
-      case "alert": return <AlertTriangle size={16} className="notif-icon-alert" />;
-      case "success": return <CheckCircle2 size={16} className="notif-icon-success" />;
-      case "document": return <FileText size={16} className="notif-icon-document" />;
-      default: return <Bell size={16} />;
+      case "calendar":
+        return <Calendar size={16} className="notif-icon-calendar" />;
+      case "alert":
+        return <AlertTriangle size={16} className="notif-icon-alert" />;
+      case "success":
+        return <CheckCircle2 size={16} className="notif-icon-success" />;
+      case "document":
+        return <FileText size={16} className="notif-icon-document" />;
+      default:
+        return <Bell size={16} />;
     }
   };
 
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));
+    if (onUnreadChange) onUnreadChange(false);
+  };
+
+  const deleteNotif = (id) => {
+    setNotifications((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+  const filteredList = notifications.filter((n) =>
+    activeTab === "Unread" ? n.unread : true
+  );
+
   return (
-    <div className="sa-header__profile-dropdown notif-dropdown-box">
+    <div className="superadmin-header__profile-dropdown notif-dropdown-box" style={{ width: "380px", right: 0, padding: "16px" }}>
       {/* Header */}
       <div className="notif-header">
         <div className="notif-header-left">
           <div className="notif-header-icon-wrap">
             <Bell size={18} className="notif-header-icon" />
-            {unreadCount > 0 && <span className="notif-header-dot"></span>}
+            {unreadCount > 0 && <span className="notif-header-dot" />}
           </div>
           <div className="notif-header-text">
             <div className="notif-header-title">Super Admin Alerts</div>
             <div className="notif-header-subtitle">
-              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
+              {unreadCount > 0 ? `${unreadCount} unread alerts` : "All caught up"}
             </div>
           </div>
         </div>
-        <button
-          className="notif-mark-read-btn"
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0}
-          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
-        >
-          <Check size={14} className="notif-check-icon" /> Mark read
-        </button>
+        {unreadCount > 0 && (
+          <button className="notif-mark-read-btn" onClick={markAllRead}>
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
       <div className="notif-tabs">
         <button
-          className={`notif-tab ${activeTab === "all" ? "active" : ""}`}
-          onClick={() => setActiveTab("all")}
+          className={`notif-tab ${activeTab === "All" ? "active" : ""}`}
+          onClick={() => setActiveTab("All")}
         >
-          All ({totalCount})
+          All ({notifications.length})
         </button>
         <button
-          className={`notif-tab ${activeTab === "unread" ? "active" : ""}`}
-          onClick={() => setActiveTab("unread")}
+          className={`notif-tab ${activeTab === "Unread" ? "active" : ""}`}
+          onClick={() => setActiveTab("Unread")}
         >
           Unread ({unreadCount})
         </button>
       </div>
 
       {/* List */}
-      <div className="notif-list-wrap">
-        {visibleNotifications.length === 0 ? (
-          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
-            No notifications to display
-          </div>
-        ) : (
-          visibleNotifications.map((n) => (
-            <div
-              key={n.id}
-              className={`notif-list-card ${n.unread ? "unread" : ""}`}
-              onClick={() => toggleSingleRead(n.id)}
-              style={{ cursor: "pointer" }}
-              title="Click to toggle read status"
-            >
-              <div className={`notif-icon-box type-${n.type}`}>
-                {getIcon(n.type)}
+      <div className="notif-list-wrap" style={{ maxHeight: "320px", overflowY: "auto" }}>
+        {filteredList.map((n) => (
+          <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
+            <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
+            <div className="notif-content">
+              <div className="notif-content-top">
+                <div className="notif-card-title">{n.title}</div>
+                <div className="notif-card-time">{n.time}</div>
+                <button
+                  className="notif-delete-btn"
+                  onClick={() => deleteNotif(n.id)}
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
-              <div className="notif-content">
-                <div className="notif-content-top">
-                  <div className="notif-card-title">{n.title}</div>
-                  <div className="notif-card-time">{n.time}</div>
-                  <button
-                    className="notif-delete-btn"
-                    onClick={(e) => handleDeleteItem(e, n.id)}
-                    title="Delete notification"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
+              <div className="notif-card-desc">{n.desc}</div>
             </div>
-          ))
-        )}
+          </div>
+        ))}
       </div>
 
       {/* Footer */}
       <div className="notif-footer-wrap">
-        <button
-          className="notif-clear-all-btn"
-          onClick={handleClearAll}
-          disabled={totalCount === 0}
-          style={{ opacity: totalCount === 0 ? 0.5 : 1, cursor: totalCount === 0 ? "default" : "pointer" }}
-        >
-          Clear all
+        <button className="notif-clear-all-btn" onClick={() => setNotifications([])}>
+          Clear all alerts
         </button>
       </div>
     </div>
@@ -157,8 +164,8 @@ export default function SuperAdminLayout() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
   const [isAuditOpen, setIsAuditOpen] = useState(false);
-  const headerRightRef = useRef(null);
 
+  const headerRightRef = useRef(null);
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
@@ -180,22 +187,26 @@ export default function SuperAdminLayout() {
   }, [pathname]);
 
   const getPageTitle = (path) => {
-    if (path === "/super-admin" || path === "/super-admin/") return "Super Admin Dashboard";
-    if (path.startsWith("/super-admin/colleges")) return "Institutions & Colleges";
-    if (path.startsWith("/super-admin/departments")) return "Academic Departments";
-    if (path.startsWith("/super-admin/batches")) return "Cross-Campus Batches";
-    if (path.startsWith("/super-admin/verification")) return "Admin Verifications";
-    if (path.startsWith("/super-admin/coordinators")) return "Coordinators Management";
+    if (path === "/super-admin" || path === "/super-admin/") return "Overview Dashboard";
+    if (path.startsWith("/super-admin/colleges")) return "Colleges Governance";
+    if (path.startsWith("/super-admin/departments")) return "Departments Oversight";
+    if (path.startsWith("/super-admin/batches")) return "Batches Governance";
+    if (path.startsWith("/super-admin/verification")) return "Admin Verification";
+    if (path.startsWith("/super-admin/coordinators")) return "Coordinators Governance";
     if (path.startsWith("/super-admin/mentors")) return "Mentors & Trainers";
     if (path.startsWith("/super-admin/students")) return "Student Directory & Risk";
+    if (path.startsWith("/super-admin/maintenance")) return "Maintenance Controls";
     if (path.startsWith("/super-admin/performance")) return "Performance Analytics";
-    if (path.startsWith("/super-admin/attendance")) return "Institutional Attendance";
-    if (path.startsWith("/super-admin/ai-roadmaps")) return "AI Career Roadmaps";
-    if (path.startsWith("/super-admin/ai-interviews")) return "AI Interview Analytics";
+    if (path.startsWith("/super-admin/attendance")) return "Attendance Governance";
+    if (path.startsWith("/super-admin/coding-practice")) return "Global Coding Practice Monitoring";
+    if (path.startsWith("/super-admin/ai-roadmaps")) return "AI Roadmaps System";
+    if (path.startsWith("/super-admin/ai-interviews")) return "AI Mock Interviews";
     if (path.startsWith("/super-admin/mock-drives")) return "Mock Placement Drives";
-    if (path.startsWith("/super-admin/weekly-reports")) return "Weekly Governance Reports";
-    return "Super Admin Dashboard";
+    if (path.startsWith("/super-admin/weekly-reports")) return "Weekly Audit Reports";
+    return "Super Admin Workspace";
   };
+
+  const pageTitle = getPageTitle(pathname);
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -206,26 +217,28 @@ export default function SuperAdminLayout() {
   };
 
   return (
-    <div className="sa-layout">
+    <div className="superadmin-layout">
       {mobileOpen && (
         <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />
       )}
+
+      {/* Navigation Sidebar */}
       <Sidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
       />
 
-      <div className="sa-content">
-        <main className="sa-main">
+      {/* Main Content Workspace Shell */}
+      <div className="superadmin-content">
+        <main className="superadmin-main">
           {/* ONE BIG ROUNDED CORNER CARD CONTAINING HEADER & CONTENT */}
-          <div className="sa-page-card">
-
-            {/* Integrated Header Bar Inside the Card */}
-            <header className="sa-header">
-              <div className="sa-header__left">
+          <div className="superadmin-page-card">
+            {/* Integrated Header Bar inside Card */}
+            <header className="superadmin-header">
+              <div className="superadmin-header__left">
                 <button
-                  className="sa-header__sidebar-toggle"
+                  className="superadmin-header__sidebar-toggle"
                   onClick={toggleSidebar}
                   aria-label="Toggle sidebar"
                   title="Toggle sidebar"
@@ -233,79 +246,77 @@ export default function SuperAdminLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="sa-breadcrumb">
-                  <span className="sa-breadcrumb-active">{getPageTitle(pathname)}</span>
+                <div className="superadmin-breadcrumb">
+                  <span className="superadmin-breadcrumb-active">{pageTitle}</span>
                 </div>
               </div>
 
-              <div className="sa-header__right" ref={headerRightRef}>
+              <div className="superadmin-header__right" ref={headerRightRef}>
+                {/* AI Risk Audit Action */}
                 <button
                   onClick={() => setIsAuditOpen(true)}
-                  className="sa-audit-btn"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition border border-indigo-200/60 cursor-pointer"
                 >
-                  <Sparkles size={15} />
+                  <Sparkles size={14} className="text-indigo-600" />
                   <span>AI Risk Audit</span>
                 </button>
 
-                <div className="sa-header__badges">
-                  <span className="sa-header__badge sa-header__badge--admin">
-                    Platform Owner
-                  </span>
-                </div>
-
-                {/* Notification Bell */}
-                <div className="sa-header__notif-wrap">
+                {/* Notifications Dropdown Wrap */}
+                <div style={{ position: "relative" }}>
                   <button
-                    className="sa-header__icon-btn"
-                    aria-label="Notifications"
+                    className="superadmin-header__icon-btn"
                     onClick={() => {
                       setProfileOpen(false);
                       setNotifOpen((o) => !o);
                     }}
                     title="Notifications"
                   >
-                    <Bell size={21} className="sa-header__bell-icon" />
-                    {hasUnreadNotif && <span className="sa-header__notification-dot"></span>}
+                    <Bell size={20} />
+                    {hasUnreadNotif && <span className="superadmin-header__notification-dot"></span>}
                   </button>
 
                   {notifOpen && (
-                    <NotificationDropdown
-                      onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
-                    />
+                    <NotificationDropdown onClose={() => setNotifOpen(false)} />
                   )}
                 </div>
 
                 {/* Profile section with dropdown */}
-                <div className="sa-header__user-wrap">
+                <div style={{ position: "relative" }}>
                   <button
-                    className="sa-header__user"
+                    className="superadmin-header__user"
                     onClick={() => {
                       setNotifOpen(false);
                       setProfileOpen((o) => !o);
                     }}
-                    aria-label="User menu"
                   >
-                    <div className="sa-header__user-info">
-                      <span className="sa-header__name">Dr. Sara Rao</span>
+                    <div className="superadmin-header__user-info">
+                      <span className="superadmin-header__name">Dr. Sara Rao</span>
                     </div>
-                    <div className="sa-header__avatar" aria-label="Dr. Sara Rao">
-                      SR
-                    </div>
+                    <div className="superadmin-header__avatar">SR</div>
                   </button>
 
                   {profileOpen && (
-                    <div className="sa-header__profile-dropdown">
-                      <div className="sa-header__profile-top">
-                        <div className="sa-header__profile-avatar">SR</div>
-                        <div className="sa-header__profile-info">
-                          <span className="sa-header__profile-name">Dr. Sara Rao</span>
-                          <span className="sa-header__profile-sub">Super Admin</span>
+                    <div className="superadmin-header__profile-dropdown">
+                      <div className="superadmin-header__profile-top">
+                        <div className="superadmin-header__profile-avatar">SR</div>
+                        <div className="superadmin-header__profile-info">
+                          <span className="superadmin-header__profile-name">Dr. Sara Rao</span>
+                          <span className="superadmin-header__profile-sub">Super Admin</span>
                         </div>
                       </div>
-                      <div className="sa-header__profile-divider" />
+                      <div className="superadmin-header__profile-divider" />
                       <button
-                        className="sa-header__profile-item sa-header__profile-item--danger"
+                        className="superadmin-header__profile-item"
+                        onClick={() => {
+                          setProfileOpen(false);
+                          navigate("/super-admin/maintenance");
+                        }}
+                      >
+                        <SlidersHorizontal size={15} />
+                        Maintenance Controls
+                      </button>
+                      <button
+                        className="superadmin-header__profile-item superadmin-header__profile-item--danger"
                         onClick={() => {
                           setProfileOpen(false);
                           navigate("/");
@@ -320,15 +331,15 @@ export default function SuperAdminLayout() {
               </div>
             </header>
 
-            {/* Page Content Body */}
-            <div className="sa-card-body">
+            {/* Scrollable Page Body */}
+            <div className="superadmin-card-body">
               <Outlet />
             </div>
-
           </div>
         </main>
       </div>
 
+      {/* AI Risk Audit Modal */}
       <AIRiskAuditModal isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
     </div>
   );

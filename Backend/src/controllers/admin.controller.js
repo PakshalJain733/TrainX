@@ -367,3 +367,62 @@ export const deleteAdminBroadcast = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getAdminPerformance = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req); // Optional filter
+    
+    // Mock performance payload scoped for College Admin
+    const performanceData = {
+      overview: {
+        totalStudents: 450,
+        averagePerformance: 76,
+        highPerforming: 120,
+        needsImprovement: 45,
+      },
+      departments: [
+        { id: "d1", name: "Computer Science", students: 180, avgPerformance: 82, avgAttendance: 88, avgQuiz: 80, avgCoding: 84, needsAttention: 12 },
+        { id: "d2", name: "Information Tech", students: 150, avgPerformance: 74, avgAttendance: 82, avgQuiz: 75, avgCoding: 73, needsAttention: 20 },
+        { id: "d3", name: "Electronics", students: 120, avgPerformance: 69, avgAttendance: 76, avgQuiz: 70, avgCoding: 68, needsAttention: 13 },
+      ],
+      batches: [
+        { id: "b1", name: "Batch A - 2026", students: 220, avgPerformance: 78, avgProgress: 80, needsAttention: 25 },
+        { id: "b2", name: "Batch B - 2026", students: 230, avgPerformance: 74, avgProgress: 75, needsAttention: 20 },
+      ],
+      students: [
+        {
+          id: "st-1", name: "Ganesh Shinde", roll: "CS-101", department: "Computer Science", batch: "Batch A - 2026",
+          overallScore: 71, quiz: 78, coding: 65, interview: 58, attendance: 82, progress: 74,
+          status: "Average",
+          weakAreas: [{ skill: "AI Mock Interview", score: 58, target: 75 }, { skill: "Coding / DSA", score: 65, target: 80 }],
+          strongAreas: ["Quiz Assessment", "Attendance"]
+        },
+        {
+          id: "st-2", name: "Priya Nair", roll: "CS-102", department: "Computer Science", batch: "Batch A - 2026",
+          overallScore: 85, quiz: 88, coding: 82, interview: 79, attendance: 91, progress: 86,
+          status: "Excellent",
+          weakAreas: [],
+          strongAreas: ["Coding / DSA", "AI Mock Interview", "Quiz Assessment"]
+        },
+        {
+          id: "st-3", name: "Rahul Mehta", roll: "IT-201", department: "Information Tech", batch: "Batch B - 2026",
+          overallScore: 52, quiz: 55, coding: 48, interview: 42, attendance: 68, progress: 50,
+          status: "Needs Work",
+          weakAreas: [{ skill: "AI Mock Interview", score: 42, target: 65 }, { skill: "Coding / DSA", score: 48, target: 70 }, { skill: "Attendance", score: 68, target: 75 }],
+          strongAreas: []
+        },
+        {
+          id: "st-4", name: "Sneha Patil", roll: "EC-301", department: "Electronics", batch: "Batch B - 2026",
+          overallScore: 68, quiz: 72, coding: 60, interview: 64, attendance: 78, progress: 66,
+          status: "Average",
+          weakAreas: [{ skill: "Coding / DSA", score: 60, target: 70 }],
+          strongAreas: ["Quiz Assessment", "Attendance"]
+        },
+      ]
+    };
+    
+    return sendSuccess(res, 'College Admin Performance data retrieved successfully', performanceData);
+  } catch (error) {
+    next(error);
+  }
+};
