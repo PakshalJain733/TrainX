@@ -9,7 +9,6 @@ import {
   Trophy,
   ClipboardCheck,
   AlertCircle,
-  AlertTriangle,
   BookOpen,
   FileCheck2,
   HelpCircle,
