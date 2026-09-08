@@ -5,24 +5,23 @@ import {
   GraduationCap,
   UserCheck,
   LineChart,
-  Award,
-  AlertTriangle,
   PlusCircle,
-  Calendar,
-  ArrowUpRight,
-  Video,
-  CheckCircle,
-  Clock,
+  AlertTriangle,
   Send,
+  CheckCircle,
+  Sparkles,
+  Info,
+  ChevronRight,
+  BookOpen
 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
+import { Badge } from "../../../components/ui/Badge";
+import { Button } from "../../../components/ui/Button";
 import {
   coordinatorStats,
-  coordinatorBatches,
   coordinatorStudents,
-  coordinatorSchedules,
-  coordinatorRequests,
 } from "../../../data/coordinatorMockData";
-import "../Styles/Overview.css";
+import "../../Student/Styles/Overview.css";
 
 export default function CoordinatorOverview() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -38,245 +37,153 @@ export default function CoordinatorOverview() {
     setTimeout(() => setBroadcastSent(false), 3000);
   };
 
+  const statsList = [
+    { label: "Enrolled Students", value: "480", hint: "Active in CSE department", icon: GraduationCap },
+    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
+  ];
+
   return (
-    <div className="coord-overview">
-      {/* Welcome Banner */}
-      <div className="coord-welcome-card">
-        <div>
-          <h1 className="coord-welcome-title">Welcome back, Alok Mishra 👋</h1>
-          <p className="coord-welcome-sub">
-            Department Coordinator · Computer Science & Engineering (Apex Institute of Technology).
-            Here is your daily training governance summary and batch status overview.
-          </p>
-        </div>
-        <div className="coord-welcome-actions">
-          <Link to="/coordinator/batches" className="coord-btn coord-btn--primary">
-            <PlusCircle size={16} />
-            Create Batch
-          </Link>
-          <Link to="/coordinator/assessments" className="coord-btn coord-btn--outline">
-            <Calendar size={16} />
-            Publish Quiz
-          </Link>
+    <div className="student-page-inner stack-6 overview-wrapper">
+      {/* Radiant Welcome Hero Banner */}
+      <div className="overview-hero-card">
+        <div className="overview-hero-left">
+          <div className="overview-hero-avatar">
+            HN
+          </div>
+          <div>
+            <div className="overview-hero-eyebrow">
+              <Sparkles size={13} /> COORDINATOR WORKSPACE DASHBOARD
+            </div>
+            <h1 className="overview-hero-title">
+              Welcome back, Harshad Nandurkar!
+            </h1>
+            <p className="overview-hero-desc">
+              Department Coordinator · Electronics & Computer Science | Apex Institute of Technology
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Risk Alert Banner if any */}
-      {highRiskStudents.length > 0 && (
-        <div className="coord-alert-banner">
-          <div className="coord-alert-left">
-            <AlertTriangle className="coord-alert-icon" size={24} />
-            <div>
-              <div className="coord-alert-title">
-                Attention Required: {highRiskStudents.length} Students Flagged as High Risk
-              </div>
-              <div className="coord-alert-sub">
-                Low attendance (&lt; 75%) or test performance dips detected in Data Science & CSE cohorts.
-              </div>
-            </div>
-          </div>
-          <Link to="/coordinator/students" className="coord-btn coord-btn--danger">
-            Review Defaulters
-          </Link>
-        </div>
-      )}
-
-      {/* KPI Stats Grid */}
-      <div className="coord-stats-grid">
-        {coordinatorStats.map((stat) => {
-          let themeModifier = "coord-stat-icon-bg--indigo";
-          if (stat.id === "batches") themeModifier = "coord-stat-icon-bg--blue";
-          if (stat.id === "mentors") themeModifier = "coord-stat-icon-bg--emerald";
-          if (stat.id === "attendance") themeModifier = "coord-stat-icon-bg--amber";
-          if (stat.id === "readiness") themeModifier = "coord-stat-icon-bg--purple";
-          if (stat.id === "requests") themeModifier = "coord-stat-icon-bg--rose";
-
-          return (
-            <div key={stat.id} className="coord-stat-card">
-              <div className="coord-stat-top">
-                <span className="coord-stat-label">{stat.label}</span>
-                <div className={`coord-stat-icon-bg ${themeModifier}`}>
-                  {stat.id === "students" && <GraduationCap size={18} />}
-                  {stat.id === "batches" && <Users size={18} />}
-                  {stat.id === "mentors" && <UserCheck size={18} />}
-                  {stat.id === "attendance" && <LineChart size={18} />}
-                  {stat.id === "readiness" && <Award size={18} />}
-                  {stat.id === "requests" && <AlertTriangle size={18} />}
+      {/* 4 Stats Cards Row */}
+      <div className="overview-grid-4">
+        {statsList.map((s) => (
+          <Card key={s.label} className="overview-stat-card shadow-sm">
+            <CardContent className="overview-card-content">
+              <div className="overview-stat-top">
+                <div className="overview-icon-container">
+                  <s.icon size={16} />
                 </div>
+                <span className="overview-stat-label">{s.label}</span>
+                <Info size={15} className="overview-info-icon" />
               </div>
-              <div className="coord-stat-value">{stat.value}</div>
-              <div className="coord-stat-subtext">{stat.subtext}</div>
-            </div>
-          );
-        })}
+
+              <p className="overview-stat-value">{s.value}</p>
+
+              <div className="overview-stat-hint-row">
+                <span className="overview-stat-trend-pill">{s.hint}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Split Grid */}
-      <div className="coord-grid-split">
-        {/* Left Column: Active Batches & Schedules */}
-        <div className="coord-col-stack">
-          {/* Batches Overview */}
-          <div className="coord-card">
-            <div className="coord-card-header">
-              <div className="coord-card-title">
-                <Users size={18} color="#4f46e5" />
-                Active Managed Batches ({coordinatorBatches.length})
+      {/* 2-Column Main Arena */}
+      <div className="overview-split-grid">
+        {/* Left: Broadcast Announcement Form */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap">
+                <Send size={18} className="overview-header-icon" />
               </div>
-              <Link to="/coordinator/batches" className="coord-card-link">
-                View All Batches →
-              </Link>
-            </div>
-
-            <div className="coord-batch-list">
-              {coordinatorBatches.map((batch) => (
-                <div key={batch.id} className="coord-batch-item">
-                  <div className="coord-batch-header-row">
-                    <div>
-                      <div className="coord-batch-title">{batch.name}</div>
-                      <div className="coord-batch-mentor-text">
-                        Trainer: <strong className="coord-batch-mentor-name">{batch.mentor}</strong> · {batch.enrolledStudents} Students
-                      </div>
-                    </div>
-                    <span
-                      className={`coord-batch-status-pill ${
-                        batch.status === "Active"
-                          ? "coord-batch-status--active"
-                          : "coord-batch-status--other"
-                      }`}
-                    >
-                      {batch.status}
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className="coord-batch-progress-header">
-                      <span className="coord-batch-progress-label">Syllabus Completion</span>
-                      <span className="coord-batch-progress-val">{batch.progress}%</span>
-                    </div>
-                    <div className="coord-batch-progress-track">
-                      <div
-                        className="coord-batch-progress-bar"
-                        style={{ width: `${batch.progress}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Live Classes Schedule */}
-          <div className="coord-card">
-            <div className="coord-card-header">
-              <div className="coord-card-title">
-                <Video size={18} color="#059669" />
-                Today & Upcoming Live Training Sessions
+              <div>
+                <CardTitle className="overview-card-title">Broadcast Department Notice</CardTitle>
+                <CardDescription className="overview-card-desc">Send instant announcements to students & cohorts</CardDescription>
               </div>
-              <Link to="/coordinator/assessments" className="coord-card-link">
-                Assessments →
-              </Link>
             </div>
-
-            <div className="coord-schedule-list">
-              {coordinatorSchedules.map((session) => (
-                <div key={session.id} className="coord-schedule-item">
-                  <div>
-                    <div className="coord-schedule-title">{session.title}</div>
-                    <div className="coord-schedule-meta">
-                      {session.batch} · {session.time}
-                    </div>
-                  </div>
-                  <a
-                    href={session.meetLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={`coord-schedule-link-btn ${
-                      session.status === "Live Now"
-                        ? "coord-schedule-link--live"
-                        : "coord-schedule-link--upcoming"
-                    }`}
-                  >
-                    {session.status === "Live Now" ? "Join Live" : "View Link"}
-                    <ArrowUpRight size={14} />
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Approvals & Broadcast */}
-        <div className="coord-col-stack">
-          {/* Pending Approvals Widget */}
-          <div className="coord-card">
-            <div className="coord-card-header">
-              <div className="coord-card-title">
-                <Clock size={18} color="#d97706" />
-                Pending Requests ({coordinatorRequests.length})
+            <Badge variant="outline">CSE Dept</Badge>
+          </CardHeader>
+          <CardContent className="p-4">
+            <form onSubmit={handleBroadcast} className="space-y-3">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Target Audience</label>
+                <select
+                  className="w-full p-2.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  <option value="all">All CSE Batches & Students</option>
+                  <option value="cse26">CSE 2026 Alpha Cohort</option>
+                  <option value="fs">Fullstack React & Node Specialization</option>
+                  <option value="ds">Data Science & ML 2025</option>
+                </select>
               </div>
-              <Link to="/coordinator/requests" className="coord-card-link">
-                Review All →
-              </Link>
-            </div>
 
-            <div className="coord-requests-list">
-              {coordinatorRequests.map((req) => (
-                <div key={req.id} className="coord-request-card">
-                  <div className="coord-request-top">
-                    <span>{req.studentName}</span>
-                    <span
-                      className={
-                        req.status === "Pending"
-                          ? "coord-request-status--pending"
-                          : "coord-request-status--approved"
-                      }
-                    >
-                      {req.status}
-                    </span>
-                  </div>
-                  <div className="coord-request-type">{req.requestType}</div>
-                  <div className="coord-request-reason">{req.reason}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">Notice Message</label>
+                <textarea
+                  rows={4}
+                  placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10 AM)..."
+                  value={broadcastMsg}
+                  onChange={(e) => setBroadcastMsg(e.target.value)}
+                  className="w-full p-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-y"
+                />
+              </div>
 
-          {/* Quick Announcement Broadcast */}
-          <div className="coord-card">
-            <div className="coord-card-title">
-              <Send size={18} color="#4f46e5" />
-              Broadcast Department Announcement
-            </div>
-            <form onSubmit={handleBroadcast} className="coord-broadcast-form">
-              <select className="coord-broadcast-select">
-                <option value="all">All CSE Batches & Students</option>
-                <option value="cse26">CSE 2026 Alpha Cohort</option>
-                <option value="fs">Fullstack React & Node Specialization</option>
-                <option value="ds">Data Science & ML 2025</option>
-              </select>
-              <textarea
-                rows={3}
-                placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10 AM)..."
-                value={broadcastMsg}
-                onChange={(e) => setBroadcastMsg(e.target.value)}
-                className="coord-broadcast-textarea"
-              />
-              <button
-                type="submit"
-                className="coord-btn coord-btn--primary coord-btn--full"
-              >
-                <Send size={14} />
-                Send Announcement
-              </button>
-              {broadcastSent && (
-                <div className="coord-broadcast-success-msg">
-                  <CheckCircle size={14} /> Announcement broadcasted to students!
-                </div>
-              )}
+              <div className="flex items-center justify-between pt-1">
+                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs py-2 px-4 rounded-lg flex items-center gap-1.5">
+                  <Send size={14} /> Send Announcement
+                </Button>
+                {broadcastSent && (
+                  <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
+                    <CheckCircle size={15} /> Sent successfully!
+                  </span>
+                )}
+              </div>
             </form>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Right: Flagged High Risk Students */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
+                <AlertTriangle size={18} className="overview-header-icon text-rose-500" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Defaulter & Risk Audit</CardTitle>
+                <CardDescription className="overview-card-desc">Students requiring intervention</CardDescription>
+              </div>
+            </div>
+            <Link to="/coordinator/students" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+              View All <ChevronRight size={14} />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-4 space-y-2.5">
+            {highRiskStudents.length === 0 ? (
+              <div className="py-8 text-center text-slate-500">
+                <CheckCircle size={28} className="mx-auto text-emerald-500 mb-2" />
+                <p className="text-sm font-semibold">No high risk students flagged.</p>
+              </div>
+            ) : (
+              highRiskStudents.map((s) => (
+                <div key={s.id} className="p-3 rounded-xl border border-rose-100 bg-rose-50/40 flex items-center justify-between">
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800">{s.name}</h5>
+                    <p className="text-[11px] text-slate-500">{s.rollNo} · {s.batch}</p>
+                    <span className="text-[10px] text-rose-600 font-semibold mt-0.5 block">
+                      Attendance: {s.attendance} | Performance: {s.testAvg}
+                    </span>
+                  </div>
+                  <Badge variant="destructive" className="text-[10px]">High Risk</Badge>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
 }
+

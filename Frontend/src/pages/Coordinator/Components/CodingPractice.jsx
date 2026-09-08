@@ -1,652 +1,586 @@
-import React, { useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import {
   Code,
   Plus,
-  Edit,
-  Trash2,
-  ListChecks,
-  Send,
-  Eye,
+  Search,
+  Filter,
   CheckCircle2,
   XCircle,
   Clock,
-  Award,
-  Search,
-  Filter,
+  Send,
+  Eye,
+  Edit,
+  Trash2,
+  Sparkles,
+  BookOpen,
+  Users,
+  Check,
   X,
-  FileCode2,
-  Layers,
+  FileCode,
+  SlidersHorizontal,
   ChevronRight,
-  TrendingUp,
+  AlertCircle,
+  BarChart3,
+  Layers,
+  Calendar,
+  Award,
+  Terminal,
+  RefreshCw,
 } from "lucide-react";
 import {
   initialCodingProblems,
-  activeAssignments as mockAssignments,
-  studentSubmissions as mockSubmissions,
+  initialAssignments,
+  initialSubmissions,
 } from "../../../data/codingPracticeMockData";
-import "../../Admin/Styles/AdminUsers.css";
-import "../Styles/Assessments.css";
+import { coordinatorBatches } from "../../../data/coordinatorMockData";
+import CodingPerformance from "./CodingPerformance";
 
-export default function CoordinatorCodingPractice() {
-  const [activeTab, setActiveTab] = useState("bank");
-
-  // Tab 1 States
+export default function CodingPractice() {
+  const [activeTab, setActiveTab] = useState("problems"); // 'problems' | 'assign' | 'submissions' | 'performance'
   const [problems, setProblems] = useState(initialCodingProblems);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showTestCaseModal, setShowTestCaseModal] = useState(false);
-  const [selectedProblem, setSelectedProblem] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [difficultyFilter, setDifficultyFilter] = useState("All");
+  const [assignments, setAssignments] = useState(initialAssignments);
+  const [submissions, setSubmissions] = useState(initialSubmissions);
 
-  const [newProb, setNewProb] = useState({
+  // Search & Filters
+  const [problemSearch, setProblemSearch] = useState("");
+  const [difficultyFilter, setDifficultyFilter] = useState("All");
+  const [topicFilter, setTopicFilter] = useState("All");
+
+  const [submissionSearch, setSubmissionSearch] = useState("");
+  const [verdictFilter, setVerdictFilter] = useState("All");
+  const [batchFilter, setBatchFilter] = useState("All");
+
+  // Modals state
+  const [isProblemModalOpen, setIsProblemModalOpen] = useState(false);
+  const [editingProblem, setEditingProblem] = useState(null);
+
+  const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
+  const [selectedProblemForTestCases, setSelectedProblemForTestCases] = useState(null);
+
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedProblemToAssign, setSelectedProblemToAssign] = useState(null);
+
+  const [selectedSubmissionCode, setSelectedSubmissionCode] = useState(null);
+
+  // Form State for Problem (Create/Edit)
+  const [problemForm, setProblemForm] = useState({
     title: "",
-    topic: "Arrays",
+    topic: "Arrays & Hashing",
     difficulty: "Easy",
-    xp: 50,
-    companies: "",
+    points: 100,
     timeLimit: "1.0s",
-    memoryLimit: "128 MB",
+    memoryLimit: "256MB",
     description: "",
+    inputFormat: "",
+    outputFormat: "",
+    sampleInput: "",
+    sampleOutput: "",
+    tags: "Array, Hash Table",
+    companies: "TCS, Infosys",
   });
 
-  const [newTestCase, setNewTestCase] = useState({ input: "", output: "", isHidden: false });
-
-  // Tab 2 States
-  const [assignments, setAssignments] = useState(mockAssignments);
+  // Form State for Assignment
   const [assignForm, setAssignForm] = useState({
     problemId: "",
     department: "Computer Science",
     batch: "CSE 2026 Alpha Cohort",
     dueDate: "",
-    weightage: "10 Marks",
+    scoreWeightage: 100,
     instructions: "",
   });
-  const [assignSuccessMsg, setAssignSuccessMsg] = useState("");
 
-  // Tab 3 States
-  const [submissions] = useState(mockSubmissions);
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
-
-  // Filtered problems
-  const filteredProblems = problems.filter((p) => {
-    const matchesSearch = p.title.toLowerCase().includes(searchTerm.toLowerCase()) || p.topic.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDiff = difficultyFilter === "All" || p.difficulty === difficultyFilter;
-    return matchesSearch && matchesDiff;
+  // Form State for Test Case creation
+  const [newTestCase, setNewTestCase] = useState({
+    input: "",
+    expectedOutput: "",
+    isHidden: false,
+    description: "",
   });
 
-  const handleCreateProblem = (e) => {
+  // Unique Topics
+  const topicsList = [
+    "All",
+    "Arrays & Hashing",
+    "Sliding Window",
+    "Linked List",
+    "Trees & Graphs",
+    "Heap / Priority Queue",
+    "Dynamic Programming",
+  ];
+
+  // Filtered Problems
+  const filteredProblems = problems.filter((p) => {
+    const matchesSearch =
+      p.title.toLowerCase().includes(problemSearch.toLowerCase()) ||
+      p.topic.toLowerCase().includes(problemSearch.toLowerCase());
+    const matchesDiff = difficultyFilter === "All" || p.difficulty === difficultyFilter;
+    const matchesTopic = topicFilter === "All" || p.topic === topicFilter;
+    return matchesSearch && matchesDiff && matchesTopic;
+  });
+
+  // Filtered Submissions
+  const filteredSubmissions = submissions.filter((sub) => {
+    const matchesSearch =
+      sub.studentName.toLowerCase().includes(submissionSearch.toLowerCase()) ||
+      sub.rollNo.toLowerCase().includes(submissionSearch.toLowerCase()) ||
+      sub.problemTitle.toLowerCase().includes(submissionSearch.toLowerCase());
+    const matchesVerdict = verdictFilter === "All" || sub.status === verdictFilter;
+    const matchesBatch = batchFilter === "All" || sub.batch === batchFilter;
+    return matchesSearch && matchesVerdict && matchesBatch;
+  });
+
+  // Handle Save Problem
+  const handleSaveProblem = (e) => {
     e.preventDefault();
-    const created = {
-      id: `prob-${Date.now()}`,
-      title: newProb.title,
-      topic: newProb.topic,
-      difficulty: newProb.difficulty,
-      xp: Number(newProb.xp),
-      companies: newProb.companies ? newProb.companies.split(",").map((s) => s.trim()) : ["TCS"],
-      timeLimit: newProb.timeLimit,
-      memoryLimit: newProb.memoryLimit,
-      description: newProb.description,
-      starterCode: { cpp: "// Write C++ code", python: "# Write Python code", java: "// Write Java code" },
-      testCases: [
-        { id: `tc-${Date.now()}-1`, input: "Sample input", output: "Sample output", isHidden: false }
-      ],
-    };
-    setProblems([created, ...problems]);
-    setShowAddModal(false);
-    setNewProb({ title: "", topic: "Arrays", difficulty: "Easy", xp: 50, companies: "", timeLimit: "1.0s", memoryLimit: "128 MB", description: "" });
+    if (!problemForm.title.trim()) return;
+
+    if (editingProblem) {
+      setProblems((prev) =>
+        prev.map((p) =>
+          p.id === editingProblem.id
+            ? {
+                ...p,
+                ...problemForm,
+                tags: problemForm.tags.split(",").map((t) => t.trim()),
+                companies: problemForm.companies.split(",").map((c) => c.trim()),
+              }
+            : p
+        )
+      );
+    } else {
+      const newId = `prob-${String(problems.length + 1).padStart(3, "0")}`;
+      const created = {
+        id: newId,
+        ...problemForm,
+        tags: problemForm.tags.split(",").map((t) => t.trim()),
+        companies: problemForm.companies.split(",").map((c) => c.trim()),
+        status: "Active",
+        createdDate: new Date().toISOString().split("T")[0],
+        createdBy: "Coordinator Workspace",
+        college: "Apex Institute of Technology",
+        acceptanceRate: "100%",
+        totalSubmissions: 0,
+        testCases: [
+          {
+            id: `tc-${Date.now()}`,
+            input: problemForm.sampleInput,
+            expectedOutput: problemForm.sampleOutput,
+            isHidden: false,
+            description: "Sample test case",
+          },
+        ],
+        starterCode: {
+          python: "def solution():\n    pass",
+          cpp: "#include <iostream>\nusing namespace std;\nint main() { return 0; }",
+        },
+      };
+      setProblems([created, ...problems]);
+    }
+
+    setIsProblemModalOpen(false);
+    setEditingProblem(null);
+    resetProblemForm();
+  };
+
+  const resetProblemForm = () => {
+    setProblemForm({
+      title: "",
+      topic: "Arrays & Hashing",
+      difficulty: "Easy",
+      points: 100,
+      timeLimit: "1.0s",
+      memoryLimit: "256MB",
+      description: "",
+      inputFormat: "",
+      outputFormat: "",
+      sampleInput: "",
+      sampleOutput: "",
+      tags: "Array, Hash Table",
+      companies: "TCS, Infosys",
+    });
+  };
+
+  const handleEditClick = (p) => {
+    setEditingProblem(p);
+    setProblemForm({
+      title: p.title,
+      topic: p.topic,
+      difficulty: p.difficulty,
+      points: p.points,
+      timeLimit: p.timeLimit,
+      memoryLimit: p.memoryLimit,
+      description: p.description,
+      inputFormat: p.inputFormat || "",
+      outputFormat: p.outputFormat || "",
+      sampleInput: p.sampleInput || "",
+      sampleOutput: p.sampleOutput || "",
+      tags: p.tags ? p.tags.join(", ") : "",
+      companies: p.companies ? p.companies.join(", ") : "",
+    });
+    setIsProblemModalOpen(true);
   };
 
   const handleDeleteProblem = (id) => {
-    setProblems(problems.filter((p) => p.id !== id));
+    if (window.confirm("Are you sure you want to delete this coding problem?")) {
+      setProblems((prev) => prev.filter((p) => p.id !== id));
+    }
   };
 
+  // Add Test Case to Selected Problem
   const handleAddTestCase = (e) => {
     e.preventDefault();
-    if (!selectedProblem || !newTestCase.input.trim() || !newTestCase.output.trim()) return;
+    if (!newTestCase.input.trim() || !newTestCase.expectedOutput.trim()) return;
 
-    const updatedTc = {
+    const tcObj = {
       id: `tc-${Date.now()}`,
-      input: newTestCase.input,
-      output: newTestCase.output,
-      isHidden: newTestCase.isHidden,
+      ...newTestCase,
     };
 
-    setProblems(
-      problems.map((p) =>
-        p.id === selectedProblem.id
-          ? { ...p, testCases: [...p.testCases, updatedTc] }
+    setProblems((prev) =>
+      prev.map((p) =>
+        p.id === selectedProblemForTestCases.id
+          ? { ...p, testCases: [...(p.testCases || []), tcObj] }
           : p
       )
     );
-    setSelectedProblem({ ...selectedProblem, testCases: [...selectedProblem.testCases, updatedTc] });
-    setNewTestCase({ input: "", output: "", isHidden: false });
+
+    setSelectedProblemForTestCases((prev) => ({
+      ...prev,
+      testCases: [...(prev.testCases || []), tcObj],
+    }));
+
+    setNewTestCase({ input: "", expectedOutput: "", isHidden: false, description: "" });
   };
 
-  const handleDeleteTestCase = (tcId) => {
-    const updatedTcList = selectedProblem.testCases.filter((tc) => tc.id !== tcId);
-    setProblems(
-      problems.map((p) =>
-        p.id === selectedProblem.id ? { ...p, testCases: updatedTcList } : p
+  const handleDeleteTestCase = (problemId, tcId) => {
+    setProblems((prev) =>
+      prev.map((p) =>
+        p.id === problemId
+          ? { ...p, testCases: p.testCases.filter((tc) => tc.id !== tcId) }
+          : p
       )
     );
-    setSelectedProblem({ ...selectedProblem, testCases: updatedTcList });
+    setSelectedProblemForTestCases((prev) => ({
+      ...prev,
+      testCases: prev.testCases.filter((tc) => tc.id !== tcId),
+    }));
   };
 
-  const handleAssignSubmit = (e) => {
+  // Assign Problem Submit
+  const handleCreateAssignment = (e) => {
     e.preventDefault();
-    const probObj = problems.find((p) => p.id === assignForm.problemId) || problems[0];
+    const prob = problems.find((p) => p.id === assignForm.problemId);
+    if (!prob) return;
+
     const newAssign = {
       id: `assign-${Date.now()}`,
-      title: probObj ? probObj.title : "Custom Coding Task",
-      batch: assignForm.batch,
+      problemId: prob.id,
+      problemTitle: prob.title,
+      difficulty: prob.difficulty,
       department: assignForm.department,
+      batch: assignForm.batch,
+      assignedDate: new Date().toISOString().split("T")[0],
       dueDate: assignForm.dueDate || "2026-09-20",
-      weightage: assignForm.weightage,
-      submitted: 0,
-      totalStudents: 50,
-      passed: 0,
-      instructions: assignForm.instructions,
+      totalStudents: 120,
+      submittedCount: 0,
+      passCount: 0,
+      scoreWeightage: Number(assignForm.scoreWeightage),
+      instructions: assignForm.instructions || "Solve & submit solution before deadline.",
+      status: "Active",
     };
+
     setAssignments([newAssign, ...assignments]);
-    setAssignSuccessMsg("Practice problem successfully assigned to batch!");
-    setTimeout(() => setAssignSuccessMsg(""), 3000);
+    setIsAssignModalOpen(false);
+    setAssignForm({
+      problemId: "",
+      department: "Computer Science",
+      batch: "CSE 2026 Alpha Cohort",
+      dueDate: "",
+      scoreWeightage: 100,
+      instructions: "",
+    });
+  };
+
+  const openAssignModalForProblem = (p) => {
+    setAssignForm((prev) => ({ ...prev, problemId: p.id }));
+    setSelectedProblemToAssign(p);
+    setIsAssignModalOpen(true);
   };
 
   return (
-    <div style={{ paddingBottom: "32px" }}>
-      {/* Header */}
-      <div className="coord-page-header">
+    <div className="space-y-6">
+      {/* Header Banner */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
         <div>
-          <h1 className="coord-page-title">Coding Practice Management</h1>
-          <p className="coord-page-sub">
-            Create coding challenges, manage test cases, assign problem sets to batches, and inspect student code submissions.
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Coding Practice & Assignment Governance
+          </h1>
+          <p className="text-sm text-slate-500 mt-1 max-w-3xl">
+            Create coding problems, manage test cases, assign practice tracks to departments/batches, and track real-time student submissions & performance.
           </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => {
+              setEditingProblem(null);
+              resetProblemForm();
+              setIsProblemModalOpen(true);
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+          >
+            <Plus size={16} />
+            Create Coding Problem
+          </button>
+          <button
+            onClick={() => setIsAssignModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+          >
+            <Send size={15} />
+            Assign Practice to Batch
+          </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" }}>
-        {[
-          { id: "bank", label: "Problem Bank", icon: Code },
-          { id: "assign", label: "Assign Practice", icon: Send },
-          { id: "submissions", label: "Student Submissions Log", icon: FileCode2 },
-          { id: "diagnostics", label: "Performance & Diagnostics", icon: TrendingUp },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "10px 18px",
-                borderRadius: "12px",
-                border: "none",
-                background: isActive ? "#4f46e5" : "transparent",
-                color: isActive ? "#ffffff" : "#64748b",
-                fontWeight: 700,
-                fontSize: "14px",
-                cursor: "pointer",
-                transition: "all 0.2s ease",
-              }}
-            >
-              <Icon size={16} />
-              {tab.label}
-            </button>
-          );
-        })}
+      {/* Primary Tab Navigation */}
+      <div className="border-b border-slate-200 bg-white rounded-2xl px-4 pt-3 shadow-xs">
+        <div className="flex items-center gap-6 overflow-x-auto text-sm font-semibold">
+          <button
+            onClick={() => setActiveTab("problems")}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "problems"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Code size={18} />
+            <span>Problem Bank ({problems.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("assign")}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "assign"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Send size={18} />
+            <span>Assigned Practice Queue ({assignments.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("submissions")}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "submissions"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <Terminal size={18} />
+            <span>Student Submissions ({submissions.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("performance")}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "performance"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <BarChart3 size={18} />
+            <span>Performance & Diagnostics</span>
+          </button>
+        </div>
       </div>
 
-      {/* TAB 1: PROBLEM BANK */}
-      {activeTab === "bank" && (
-        <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "12px" }}>
-            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-              <div style={{ position: "relative" }}>
-                <Search size={16} style={{ position: "absolute", left: "12px", top: "10px", color: "#94a3b8" }} />
-                <input
-                  type="text"
-                  placeholder="Search problem or topic..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ padding: "8px 12px 8px 36px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px", width: "240px" }}
-                />
+      {/* TAB 1: PROBLEMS BANK & MANAGEMENT */}
+      {activeTab === "problems" && (
+        <div className="space-y-6">
+          {/* Filter Bar */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:w-80">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by title or topic..."
+                value={problemSearch}
+                onChange={(e) => setProblemSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="flex items-center gap-2 text-xs text-slate-500 font-semibold">
+                <SlidersHorizontal size={14} />
+                <span>Filters:</span>
               </div>
 
               <select
                 value={difficultyFilter}
                 onChange={(e) => setDifficultyFilter(e.target.value)}
-                style={{ padding: "8px 12px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
               >
                 <option value="All">All Difficulties</option>
                 <option value="Easy">Easy</option>
                 <option value="Medium">Medium</option>
                 <option value="Hard">Hard</option>
               </select>
-            </div>
 
-            <button
-              onClick={() => setShowAddModal(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                background: "#4f46e5",
-                color: "#ffffff",
-                padding: "10px 18px",
-                borderRadius: "12px",
-                fontWeight: 700,
-                fontSize: "13.5px",
-                border: "none",
-                cursor: "pointer",
-                boxShadow: "0 4px 12px rgba(79,70,229,0.25)",
-              }}
-            >
-              <Plus size={16} /> Add New Problem
-            </button>
-          </div>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {filteredProblems.map((prob) => (
-              <div
-                key={prob.id}
-                style={{
-                  background: "#ffffff",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  border: "1px solid #e2e8f0",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                  flexWrap: "wrap",
-                  gap: "16px",
-                }}
+              <select
+                value={topicFilter}
+                onChange={(e) => setTopicFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
               >
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <span
-                      style={{
-                        padding: "3px 10px",
-                        borderRadius: "20px",
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        background: prob.difficulty === "Easy" ? "#ecfdf5" : prob.difficulty === "Medium" ? "#fffbeb" : "#fef2f2",
-                        color: prob.difficulty === "Easy" ? "#059669" : prob.difficulty === "Medium" ? "#d97706" : "#dc2626",
-                        border: `1px solid ${prob.difficulty === "Easy" ? "#a7f3d0" : prob.difficulty === "Medium" ? "#fde68a" : "#fecaca"}`,
-                      }}
-                    >
-                      {prob.difficulty}
-                    </span>
-                    <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>{prob.topic}</span>
-                    <span style={{ fontSize: "12px", color: "#4f46e5", fontWeight: 700 }}>+{prob.xp} XP</span>
-                  </div>
-
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", margin: "8px 0 4px 0" }}>{prob.title}</h3>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>{prob.description}</p>
-
-                  <div style={{ display: "flex", gap: "8px", marginTop: "10px", alignItems: "center" }}>
-                    <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 700 }}>Targeted Companies:</span>
-                    {prob.companies.map((c, idx) => (
-                      <span key={idx} style={{ background: "#f1f5f9", color: "#334155", padding: "2px 8px", borderRadius: "6px", fontSize: "11px", fontWeight: 600 }}>
-                        {c}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button
-                    onClick={() => {
-                      setSelectedProblem(prob);
-                      setShowTestCaseModal(true);
-                    }}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      background: "#eff6ff",
-                      color: "#2563eb",
-                      border: "1px solid #bfdbfe",
-                      padding: "8px 14px",
-                      borderRadius: "10px",
-                      fontSize: "12.5px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <ListChecks size={15} /> Test Cases ({prob.testCases ? prob.testCases.length : 0})
-                  </button>
-
-                  <button
-                    onClick={() => handleDeleteProblem(prob.id)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "4px",
-                      background: "#fef2f2",
-                      color: "#dc2626",
-                      border: "1px solid #fecaca",
-                      padding: "8px 12px",
-                      borderRadius: "10px",
-                      fontSize: "12.5px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 2: ASSIGN PRACTICE */}
-      {activeTab === "assign" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-          {/* Assign Form */}
-          <div style={{ background: "#ffffff", borderRadius: "20px", padding: "24px", border: "1px solid #e2e8f0" }}>
-            <h2 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-              <Send size={18} color="#4f46e5" /> Assign Problem to Batch
-            </h2>
-
-            {assignSuccessMsg && (
-              <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#059669", padding: "10px 14px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, marginBottom: "14px" }}>
-                {assignSuccessMsg}
-              </div>
-            )}
-
-            <form onSubmit={handleAssignSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Select Coding Problem</label>
-                <select
-                  required
-                  value={assignForm.problemId}
-                  onChange={(e) => setAssignForm({ ...assignForm, problemId: e.target.value })}
-                  style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                >
-                  <option value="">-- Choose Problem from Bank --</option>
-                  {problems.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title} ({p.difficulty})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Department</label>
-                  <select
-                    value={assignForm.department}
-                    onChange={(e) => setAssignForm({ ...assignForm, department: e.target.value })}
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                  >
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Information Technology">Information Technology</option>
-                    <option value="AI & Data Science">AI & Data Science</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Target Batch</label>
-                  <select
-                    value={assignForm.batch}
-                    onChange={(e) => setAssignForm({ ...assignForm, batch: e.target.value })}
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                  >
-                    <option value="CSE 2026 Alpha Cohort">CSE 2026 Alpha Cohort</option>
-                    <option value="CSE 2026 Beta Cohort">CSE 2026 Beta Cohort</option>
-                    <option value="IT 2026 Beta Cohort">IT 2026 Beta Cohort</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Due Date</label>
-                  <input
-                    type="date"
-                    required
-                    value={assignForm.dueDate}
-                    onChange={(e) => setAssignForm({ ...assignForm, dueDate: e.target.value })}
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Score Weightage</label>
-                  <input
-                    type="text"
-                    value={assignForm.weightage}
-                    onChange={(e) => setAssignForm({ ...assignForm, weightage: e.target.value })}
-                    placeholder="e.g. 10 Marks"
-                    style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: "block", fontSize: "12.5px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>Instructions for Students</label>
-                <textarea
-                  rows={3}
-                  value={assignForm.instructions}
-                  onChange={(e) => setAssignForm({ ...assignForm, instructions: e.target.value })}
-                  placeholder="e.g. Time complexity must be within O(N log N)..."
-                  style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "13px", resize: "none" }}
-                />
-              </div>
+                {topicsList.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
 
               <button
-                type="submit"
-                style={{
-                  background: "#4f46e5",
-                  color: "#ffffff",
-                  padding: "12px",
-                  borderRadius: "12px",
-                  fontWeight: 700,
-                  fontSize: "14px",
-                  border: "none",
-                  cursor: "pointer",
+                onClick={() => {
+                  setProblemSearch("");
+                  setDifficultyFilter("All");
+                  setTopicFilter("All");
                 }}
+                className="px-3 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
               >
-                Publish Assignment
+                Reset
               </button>
-            </form>
-          </div>
-
-          {/* Active Assignments List */}
-          <div>
-            <h2 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", marginBottom: "16px" }}>Active Batch Assignments</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {assignments.map((item) => {
-                const pct = Math.round((item.submitted / item.totalStudents) * 100);
-                return (
-                  <div key={item.id} style={{ background: "#ffffff", borderRadius: "18px", padding: "20px", border: "1px solid #e2e8f0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                      <div>
-                        <span style={{ fontSize: "11px", fontWeight: 800, color: "#4f46e5", background: "#e0e7ff", padding: "2px 8px", borderRadius: "6px" }}>
-                          {item.batch}
-                        </span>
-                        <h3 style={{ fontSize: "15px", fontWeight: 800, color: "#0f172a", margin: "6px 0 2px 0" }}>{item.title}</h3>
-                        <div style={{ fontSize: "12px", color: "#64748b" }}>Due: {item.dueDate} • Weightage: {item.weightage}</div>
-                      </div>
-                    </div>
-
-                    <div style={{ marginTop: "14px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>
-                        <span style={{ color: "#334155" }}>Batch Progress</span>
-                        <span style={{ color: "#4f46e5" }}>{item.submitted}/{item.totalStudents} Submitted ({pct}%)</span>
-                      </div>
-                      <div style={{ width: "100%", height: "8px", background: "#f1f5f9", borderRadius: "4px", overflow: "hidden" }}>
-                        <div style={{ width: `${pct}%`, height: "100%", background: "#4f46e5", borderRadius: "4px" }} />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 3: STUDENT SUBMISSIONS LOG */}
-      {activeTab === "submissions" && (
-        <div style={{ background: "#ffffff", borderRadius: "20px", padding: "24px", border: "1px solid #e2e8f0" }}>
-          <h2 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a", marginBottom: "16px" }}>Live Student Code Submissions</h2>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13.5px" }}>
-              <thead>
-                <tr style={{ borderBottom: "2px solid #e2e8f0", color: "#64748b" }}>
-                  <th style={{ padding: "12px" }}>Student Name</th>
-                  <th style={{ padding: "12px" }}>Roll No / Batch</th>
-                  <th style={{ padding: "12px" }}>Problem</th>
-                  <th style={{ padding: "12px" }}>Language</th>
-                  <th style={{ padding: "12px" }}>Status</th>
-                  <th style={{ padding: "12px" }}>Time / Memory</th>
-                  <th style={{ padding: "12px", textAlign: "right" }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {submissions.map((sub) => (
-                  <tr key={sub.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                    <td style={{ padding: "14px 12px", fontWeight: 700, color: "#0f172a" }}>{sub.studentName}</td>
-                    <td style={{ padding: "14px 12px", color: "#64748b" }}>{sub.rollNo} ({sub.batch})</td>
-                    <td style={{ padding: "14px 12px", fontWeight: 600, color: "#334155" }}>{sub.problemTitle}</td>
-                    <td style={{ padding: "14px 12px", fontWeight: 700, color: "#4f46e5" }}>{sub.language}</td>
-                    <td style={{ padding: "14px 12px" }}>
-                      <span
-                        style={{
-                          padding: "3px 10px",
-                          borderRadius: "20px",
-                          fontSize: "11.5px",
-                          fontWeight: 800,
-                          background: sub.status === "Accepted" ? "#ecfdf5" : "#fef2f2",
-                          color: sub.status === "Accepted" ? "#059669" : "#dc2626",
-                          border: `1px solid ${sub.status === "Accepted" ? "#a7f3d0" : "#fecaca"}`,
-                        }}
-                      >
-                        {sub.status}
-                      </span>
-                    </td>
-                    <td style={{ padding: "14px 12px", fontSize: "12px", color: "#64748b" }}>
-                      {sub.executionTime} / {sub.memoryUsed}
-                    </td>
-                    <td style={{ padding: "14px 12px", textAlign: "right" }}>
-                      <button
-                        onClick={() => setSelectedSubmission(sub)}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          background: "#0f172a",
-                          color: "#ffffff",
-                          border: "none",
-                          padding: "6px 14px",
-                          borderRadius: "8px",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Eye size={14} /> View Code
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: DIAGNOSTICS & PERFORMANCE */}
-      {activeTab === "diagnostics" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-          {/* Top KPI Cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
-            <div style={{ background: "#ffffff", padding: "20px", borderRadius: "18px", border: "1px solid #e2e8f0" }}>
-              <div style={{ fontSize: "12.5px", color: "#64748b", fontWeight: 700 }}>Total Solved Submissions</div>
-              <div style={{ fontSize: "26px", fontWeight: 900, color: "#0f172a", marginTop: "4px" }}>4,820 Problems</div>
-              <div style={{ fontSize: "11.5px", color: "#059669", fontWeight: 700, marginTop: "2px" }}>↑ 14% this month</div>
-            </div>
-            <div style={{ background: "#ffffff", padding: "20px", borderRadius: "18px", border: "1px solid #e2e8f0" }}>
-              <div style={{ fontSize: "12.5px", color: "#64748b", fontWeight: 700 }}>Average Acceptance Rate</div>
-              <div style={{ fontSize: "26px", fontWeight: 900, color: "#059669", marginTop: "4px" }}>76.4%</div>
-              <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600, marginTop: "2px" }}>Platform Average: 72%</div>
-            </div>
-            <div style={{ background: "#ffffff", padding: "20px", borderRadius: "18px", border: "1px solid #e2e8f0" }}>
-              <div style={{ fontSize: "12.5px", color: "#64748b", fontWeight: 700 }}>Top Topic Mastered</div>
-              <div style={{ fontSize: "26px", fontWeight: 900, color: "#4f46e5", marginTop: "4px" }}>Arrays & HashMaps</div>
-              <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600, marginTop: "2px" }}>88% Batch Mastery</div>
             </div>
           </div>
 
-          {/* Student Leaderboard */}
-          <div style={{ background: "#ffffff", borderRadius: "20px", padding: "24px", border: "1px solid #e2e8f0" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h2 style={{ fontSize: "17px", fontWeight: 800, color: "#0f172a" }}>Department Student Coding Leaderboard</h2>
-                <p style={{ fontSize: "12.5px", color: "#64748b", margin: 0 }}>Student rankings based on problems solved, XP points, and test case pass rates.</p>
-              </div>
+          {/* Problems Table */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">
+                Department Coding Problem Bank ({filteredProblems.length})
+              </h3>
+              <span className="text-xs text-slate-500">Manage problem definitions, starter code & test suites</span>
             </div>
 
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13.5px" }}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr style={{ borderBottom: "2px solid #e2e8f0", color: "#64748b" }}>
-                    <th style={{ padding: "12px" }}>Rank</th>
-                    <th style={{ padding: "12px" }}>Student Name</th>
-                    <th style={{ padding: "12px" }}>Roll No / Batch</th>
-                    <th style={{ padding: "12px" }}>Problems Solved</th>
-                    <th style={{ padding: "12px" }}>XP Score</th>
-                    <th style={{ padding: "12px" }}>Accuracy</th>
-                    <th style={{ padding: "12px", textAlign: "right" }}>Diagnostic</th>
+                  <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                    <th className="py-3.5 px-6">Problem & Topic</th>
+                    <th className="py-3.5 px-4">Difficulty</th>
+                    <th className="py-3.5 px-4">Points & Limits</th>
+                    <th className="py-3.5 px-4">Test Cases</th>
+                    <th className="py-3.5 px-4">Acceptance Rate</th>
+                    <th className="py-3.5 px-4">Target Companies</th>
+                    <th className="py-3.5 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {[
-                    { rank: 1, name: "Aarav Sharma", rollNo: "CSE-2026-001", batch: "CSE 2026 Alpha", solved: 142, xp: 2840, accuracy: "92.4%", status: "Top Performer" },
-                    { rank: 2, name: "Ananya Iyer", rollNo: "IT-2026-031", batch: "IT 2026 Beta", solved: 135, xp: 2710, accuracy: "88.6%", status: "Top Performer" },
-                    { rank: 3, name: "Riya Patel", rollNo: "CSE-2026-014", batch: "CSE 2026 Alpha", solved: 128, xp: 2590, accuracy: "86.1%", status: "Consistent" },
-                    { rank: 4, name: "Rohan Kulkarni", rollNo: "CSE-2026-045", batch: "CSE 2026 Beta", solved: 119, xp: 2420, accuracy: "79.5%", status: "Good" },
-                    { rank: 5, name: "Siddharth Verma", rollNo: "AI-2026-009", batch: "AI 2026 Alpha", solved: 112, xp: 2310, accuracy: "75.2%", status: "Needs Practice" },
-                  ].map((s) => (
-                    <tr key={s.rank} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                      <td style={{ padding: "14px 12px", fontWeight: 800, color: s.rank <= 3 ? "#d97706" : "#475569" }}>
-                        {s.rank === 1 ? "🥇 #1" : s.rank === 2 ? "🥈 #2" : s.rank === 3 ? "🥉 #3" : `#${s.rank}`}
+                <tbody className="divide-y divide-slate-100">
+                  {filteredProblems.map((prob) => (
+                    <tr key={prob.id} className="hover:bg-slate-50/70 transition">
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{prob.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-semibold text-[10px]">
+                              {prob.topic}
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono">{prob.id}</span>
+                          </div>
+                        </div>
                       </td>
-                      <td style={{ padding: "14px 12px", fontWeight: 800, color: "#0f172a" }}>{s.name}</td>
-                      <td style={{ padding: "14px 12px", color: "#64748b" }}>{s.rollNo} ({s.batch})</td>
-                      <td style={{ padding: "14px 12px", fontWeight: 700, color: "#334155" }}>{s.solved} Solved</td>
-                      <td style={{ padding: "14px 12px", fontWeight: 800, color: "#4f46e5" }}>{s.xp} XP</td>
-                      <td style={{ padding: "14px 12px", fontWeight: 700, color: "#059669" }}>{s.accuracy}</td>
-                      <td style={{ padding: "14px 12px", textAlign: "right" }}>
-                        <button
-                          onClick={() => setSelectedSubmission({ studentName: s.name, rollNo: s.rollNo, batch: s.batch, accuracy: s.accuracy, solved: s.solved, isDiagnostic: true })}
-                          style={{
-                            padding: "6px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid #c7d2fe",
-                            background: "#eff6ff",
-                            color: "#4f46e5",
-                            fontSize: "12px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                          }}
+
+                      <td className="py-4 px-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            prob.difficulty === "Easy"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : prob.difficulty === "Medium"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-purple-50 text-purple-700 border border-purple-200"
+                          }`}
                         >
-                          Diagnostic Report
+                          {prob.difficulty}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-4 text-slate-600 font-medium">
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-slate-900">+{prob.points} XP</p>
+                          <p className="text-[10px] text-slate-400">
+                            {prob.timeLimit} · {prob.memoryLimit}
+                          </p>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <button
+                          onClick={() => {
+                            setSelectedProblemForTestCases(prob);
+                            setIsTestCaseModalOpen(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg text-slate-700 font-semibold transition"
+                        >
+                          <FileCode size={14} />
+                          <span>{prob.testCases ? prob.testCases.length : 0} Cases</span>
                         </button>
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <div className="space-y-0.5">
+                          <p className="font-bold text-slate-800">{prob.acceptanceRate}</p>
+                          <p className="text-[10px] text-slate-400">{prob.totalSubmissions} attempts</p>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4">
+                        <div className="flex flex-wrap gap-1">
+                          {prob.companies &&
+                            prob.companies.slice(0, 3).map((comp, idx) => (
+                              <span
+                                key={idx}
+                                className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-medium"
+                              >
+                                {comp}
+                              </span>
+                            ))}
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openAssignModalForProblem(prob)}
+                            className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition"
+                            title="Assign to Batch"
+                          >
+                            <Send size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleEditClick(prob)}
+                            className="p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition"
+                            title="Edit Problem"
+                          >
+                            <Edit size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProblem(prob.id)}
+                            className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition"
+                            title="Delete Problem"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
+
+                  {filteredProblems.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="py-10 text-center text-slate-400">
+                        No coding problems match your search filters.
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -654,242 +588,689 @@ export default function CoordinatorCodingPractice() {
         </div>
       )}
 
-      {/* ADD PROBLEM MODAL */}
-      {showAddModal && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddModal(false); }}>
-          <div className="modal-dialog" style={{ maxWidth: "600px" }}>
-            <div className="modal-header">
-              <div className="modal-header-left">
-                <div className="modal-header-icon-wrap modal-header-icon--indigo">
-                  <Code size={20} />
-                </div>
+      {/* TAB 2: ASSIGNED PRACTICE QUEUE */}
+      {activeTab === "assign" && (
+        <div className="space-y-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Active Department Practice Assignments</h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Monitor coding problem deadlines, submission rates, and pass ratios per student batch.
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAssignModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold transition"
+            >
+              <Plus size={15} /> Assign New Problem
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {assignments.map((asgn) => (
+              <div
+                key={asgn.id}
+                className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between hover:border-indigo-200 transition space-y-4"
+              >
                 <div>
-                  <h2 className="modal-title">Add New Coding Problem</h2>
-                  <p className="modal-subtitle">Create algorithmic practice challenges for student cohorts.</p>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        asgn.status === "Active"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                    >
+                      {asgn.status}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium">Due: {asgn.dueDate}</span>
+                  </div>
+
+                  <h4 className="text-base font-bold text-slate-900 leading-snug">{asgn.problemTitle}</h4>
+                  <p className="text-xs text-indigo-600 font-medium mt-1">
+                    {asgn.batch} ({asgn.department})
+                  </p>
+
+                  <p className="text-xs text-slate-500 mt-3 line-clamp-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                    {asgn.instructions}
+                  </p>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between text-xs font-medium text-slate-600">
+                    <span>Submission Progress</span>
+                    <span className="font-bold text-slate-900">
+                      {asgn.submittedCount} / {asgn.totalStudents} ({Math.round((asgn.submittedCount / asgn.totalStudents) * 100)}%)
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                      style={{ width: `${(asgn.submittedCount / asgn.totalStudents) * 100}%` }}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs font-semibold text-emerald-600">
+                      {asgn.passCount} Students Passed
+                    </span>
+                    <button
+                      onClick={() => {
+                        setBatchFilter(asgn.batch);
+                        setActiveTab("submissions");
+                      }}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                    >
+                      View Submissions <ChevronRight size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
-              <button className="modal-close-btn" onClick={() => setShowAddModal(false)} title="Close Modal">
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: STUDENT SUBMISSIONS LOG */}
+      {activeTab === "submissions" && (
+        <div className="space-y-6">
+          {/* Submissions Filter */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:w-80">
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search student, roll no, problem..."
+                value={submissionSearch}
+                onChange={(e) => setSubmissionSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <select
+                value={verdictFilter}
+                onChange={(e) => setVerdictFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+              >
+                <option value="All">All Verdicts</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Wrong Answer">Wrong Answer</option>
+                <option value="Time Limit Exceeded">Time Limit Exceeded</option>
+              </select>
+
+              <select
+                value={batchFilter}
+                onChange={(e) => setBatchFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+              >
+                <option value="All">All Batches</option>
+                {coordinatorBatches.map((b) => (
+                  <option key={b.id} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                onClick={() => {
+                  setSubmissionSearch("");
+                  setVerdictFilter("All");
+                  setBatchFilter("All");
+                }}
+                className="px-3 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          {/* Submissions Table */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900">
+                Live Submissions Log ({filteredSubmissions.length})
+              </h3>
+              <span className="text-xs text-slate-500">Real-time compiler results & verdict breakdowns</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
+                    <th className="py-3.5 px-6">Student</th>
+                    <th className="py-3.5 px-4">Batch</th>
+                    <th className="py-3.5 px-4">Problem</th>
+                    <th className="py-3.5 px-4">Language</th>
+                    <th className="py-3.5 px-4">Verdict</th>
+                    <th className="py-3.5 px-4">Test Cases Passed</th>
+                    <th className="py-3.5 px-4">Runtime / Mem</th>
+                    <th className="py-3.5 px-6 text-right">Submitted Code</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredSubmissions.map((sub) => (
+                    <tr key={sub.id} className="hover:bg-slate-50/70 transition">
+                      <td className="py-4 px-6">
+                        <div>
+                          <p className="font-bold text-slate-900">{sub.studentName}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">{sub.rollNo}</p>
+                        </div>
+                      </td>
+
+                      <td className="py-4 px-4 text-slate-600 font-medium">{sub.batch}</td>
+
+                      <td className="py-4 px-4 font-semibold text-slate-800">{sub.problemTitle}</td>
+
+                      <td className="py-4 px-4 font-mono text-indigo-600 font-semibold">{sub.language}</td>
+
+                      <td className="py-4 px-4">
+                        <span
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            sub.status === "Accepted"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : sub.status === "Time Limit Exceeded"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-rose-50 text-rose-700 border border-rose-200"
+                          }`}
+                        >
+                          {sub.status}
+                        </span>
+                      </td>
+
+                      <td className="py-4 px-4 font-semibold text-slate-700">
+                        {sub.passedTestCases} / {sub.totalTestCases}
+                      </td>
+
+                      <td className="py-4 px-4 font-mono text-slate-500 text-[11px]">
+                        {sub.runtime} · {sub.memory}
+                      </td>
+
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => setSelectedSubmissionCode(sub)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl text-slate-700 font-semibold transition"
+                        >
+                          <Eye size={14} /> View Code
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {filteredSubmissions.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-10 text-center text-slate-400">
+                        No submissions match your active filter parameters.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: PERFORMANCE & DIAGNOSTICS */}
+      {activeTab === "performance" && <CodingPerformance />}
+
+      {/* MODAL 1: CREATE / EDIT CODING PROBLEM */}
+      {isProblemModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in fade-in duration-200">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Code size={20} className="text-indigo-400" />
+                <h3 className="text-lg font-bold">
+                  {editingProblem ? "Edit Coding Problem" : "Create New Coding Problem"}
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsProblemModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProblem}>
-              <div className="modal-body">
-                <div className="form-group-admin">
-                  <label>Problem Title *</label>
+            <form onSubmit={handleSaveProblem} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Problem Title *</label>
                   <input
-                    required
                     type="text"
-                    placeholder="e.g. Valid Palindrome"
-                    value={newProb.title}
-                    onChange={(e) => setNewProb({ ...newProb, title: e.target.value })}
-                    className="form-input-admin"
-                    autoFocus
+                    required
+                    placeholder="e.g. Two Sum Target Index Pair"
+                    value={problemForm.title}
+                    onChange={(e) => setProblemForm({ ...problemForm, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
                   />
                 </div>
 
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Topic / Category</label>
-                    <input
-                      type="text"
-                      value={newProb.topic}
-                      onChange={(e) => setNewProb({ ...newProb, topic: e.target.value })}
-                      className="form-input-admin"
-                    />
-                  </div>
-                  <div className="form-group-admin">
-                    <label>Difficulty</label>
-                    <select
-                      value={newProb.difficulty}
-                      onChange={(e) => setNewProb({ ...newProb, difficulty: e.target.value })}
-                      className="form-select-admin"
-                    >
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Topic Category *</label>
+                  <select
+                    value={problemForm.topic}
+                    onChange={(e) => setProblemForm({ ...problemForm, topic: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                  >
+                    {topicsList.filter((t) => t !== "All").map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>XP Points</label>
-                    <input
-                      type="number"
-                      value={newProb.xp}
-                      onChange={(e) => setNewProb({ ...newProb, xp: e.target.value })}
-                      className="form-input-admin"
-                    />
-                  </div>
-                  <div className="form-group-admin">
-                    <label>Target Companies</label>
-                    <input
-                      type="text"
-                      placeholder="TCS, Infosys, Wipro"
-                      value={newProb.companies}
-                      onChange={(e) => setNewProb({ ...newProb, companies: e.target.value })}
-                      className="form-input-admin"
-                    />
-                  </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Difficulty Level</label>
+                  <select
+                    value={problemForm.difficulty}
+                    onChange={(e) => setProblemForm({ ...problemForm, difficulty: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
                 </div>
 
-                <div className="form-group-admin">
-                  <label>Problem Description</label>
-                  <textarea
-                    rows={4}
-                    required
-                    placeholder="Explain problem statement..."
-                    value={newProb.description}
-                    onChange={(e) => setNewProb({ ...newProb, description: e.target.value })}
-                    className="form-input-admin"
-                    style={{ height: "auto", padding: "10px", resize: "none" }}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">XP Points</label>
+                  <input
+                    type="number"
+                    value={problemForm.points}
+                    onChange={(e) => setProblemForm({ ...problemForm, points: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Time Limit</label>
+                  <input
+                    type="text"
+                    value={problemForm.timeLimit}
+                    onChange={(e) => setProblemForm({ ...problemForm, timeLimit: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Memory Limit</label>
+                  <input
+                    type="text"
+                    value={problemForm.memoryLimit}
+                    onChange={(e) => setProblemForm({ ...problemForm, memoryLimit: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
                   />
                 </div>
               </div>
 
-              <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddModal(false)}>
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Problem Description *</label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Describe the problem, constraints, and requirements..."
+                  value={problemForm.description}
+                  onChange={(e) => setProblemForm({ ...problemForm, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Sample Input</label>
+                  <textarea
+                    rows={2}
+                    placeholder="2 7 11 15\n9"
+                    value={problemForm.sampleInput}
+                    onChange={(e) => setProblemForm({ ...problemForm, sampleInput: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Sample Output</label>
+                  <textarea
+                    rows={2}
+                    placeholder="0 1"
+                    value={problemForm.sampleOutput}
+                    onChange={(e) => setProblemForm({ ...problemForm, sampleOutput: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-mono text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Tags (Comma separated)</label>
+                  <input
+                    type="text"
+                    placeholder="Array, Hash Table"
+                    value={problemForm.tags}
+                    onChange={(e) => setProblemForm({ ...problemForm, tags: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Companies (Comma separated)</label>
+                  <input
+                    type="text"
+                    placeholder="TCS, Infosys, Amazon"
+                    value={problemForm.companies}
+                    onChange={(e) => setProblemForm({ ...problemForm, companies: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsProblemModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn-modal-submit">
-                  Save Problem
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-xs"
+                >
+                  {editingProblem ? "Update Problem" : "Save Problem"}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>,
-        document.body
-      )}
-
-      {/* TEST CASES MODAL */}
-      {showTestCaseModal && selectedProblem && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.65)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: "#ffffff", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "600px", maxHeight: "90vh", overflowY: "auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <div>
-                <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Test Case Manager</h2>
-                <div style={{ fontSize: "12px", color: "#64748b" }}>{selectedProblem.title}</div>
-              </div>
-              <button onClick={() => setShowTestCaseModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* List Existing Test Cases */}
-            <div style={{ marginBottom: "20px" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "#334155", marginBottom: "10px" }}>Configured Test Cases</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                {selectedProblem.testCases && selectedProblem.testCases.map((tc, idx) => (
-                  <div key={tc.id} style={{ background: "#f8fafc", borderRadius: "10px", padding: "12px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div>
-                      <span style={{ fontSize: "11px", fontWeight: 800, color: tc.isHidden ? "#dc2626" : "#059669", background: tc.isHidden ? "#fef2f2" : "#ecfdf5", padding: "2px 6px", borderRadius: "4px" }}>
-                        {tc.isHidden ? "Hidden" : "Public"} Case #{idx + 1}
-                      </span>
-                      <div style={{ fontSize: "12px", color: "#334155", marginTop: "4px" }}>In: <code>{tc.input}</code> | Out: <code>{tc.output}</code></div>
-                    </div>
-                    <button onClick={() => handleDeleteTestCase(tc.id)} style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer" }}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Add New Test Case Form */}
-            <form onSubmit={handleAddTestCase} style={{ borderTop: "2px dashed #e2e8f0", paddingTop: "16px" }}>
-              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "#334155", marginBottom: "10px" }}>Add New Test Case</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                <input
-                  type="text"
-                  placeholder="Input (e.g. [2,7], 9)"
-                  value={newTestCase.input}
-                  onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
-                  style={{ padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "12.5px" }}
-                />
-                <input
-                  type="text"
-                  placeholder="Expected Output (e.g. [0,1])"
-                  value={newTestCase.output}
-                  onChange={(e) => setNewTestCase({ ...newTestCase, output: e.target.value })}
-                  style={{ padding: "10px", borderRadius: "10px", border: "1px solid #cbd5e1", fontSize: "12.5px" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "10px" }}>
-                <input
-                  type="checkbox"
-                  id="isHidden"
-                  checked={newTestCase.isHidden}
-                  onChange={(e) => setNewTestCase({ ...newTestCase, isHidden: e.target.checked })}
-                />
-                <label htmlFor="isHidden" style={{ fontSize: "12.5px", color: "#334155", fontWeight: 600 }}>Mark as Hidden Test Case (For Evaluation Only)</label>
-              </div>
-
-              <button
-                type="submit"
-                style={{ marginTop: "14px", width: "100%", background: "#0f172a", color: "#ffffff", padding: "10px", borderRadius: "10px", fontWeight: 700, border: "none", cursor: "pointer" }}
-              >
-                + Add Test Case
-              </button>
             </form>
           </div>
         </div>
       )}
 
-      {/* VIEW CODE & DIAGNOSTIC MODAL */}
-      {selectedSubmission && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(15,23,42,0.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: selectedSubmission.isDiagnostic ? "#ffffff" : "#0f172a", borderRadius: "24px", padding: "28px", width: "90%", maxWidth: "680px", color: selectedSubmission.isDiagnostic ? "#0f172a" : "#ffffff" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: `1px solid ${selectedSubmission.isDiagnostic ? "#e2e8f0" : "#1e293b"}`, paddingBottom: "12px" }}>
+      {/* MODAL 2: MANAGE TEST CASES */}
+      {isTestCaseModalOpen && selectedProblemForTestCases && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in fade-in duration-200">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
               <div>
-                <h2 style={{ fontSize: "16px", fontWeight: 800, color: selectedSubmission.isDiagnostic ? "#0f172a" : "#f8fafc" }}>
-                  {selectedSubmission.isDiagnostic ? `Diagnostic Summary — ${selectedSubmission.studentName}` : `${selectedSubmission.studentName} — Code Snippet`}
-                </h2>
-                <div style={{ fontSize: "12px", color: "#94a3b8" }}>
-                  {selectedSubmission.rollNo} • {selectedSubmission.batch}
-                </div>
+                <h3 className="text-lg font-bold">Manage Test Cases</h3>
+                <p className="text-xs text-slate-400">{selectedProblemForTestCases.title}</p>
               </div>
-              <button onClick={() => setSelectedSubmission(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}>
-                <X size={20} />
+              <button
+                onClick={() => setIsTestCaseModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X size={18} />
               </button>
             </div>
 
-            {selectedSubmission.isDiagnostic ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 700 }}>Total Problems Solved</div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginTop: "2px" }}>{selectedSubmission.solved} Problems</div>
+            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
+              {/* Add Test Case Form */}
+              <form onSubmit={handleAddTestCase} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                  <Plus size={14} className="text-indigo-600" /> Add New Test Case
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Input Data *</label>
+                    <textarea
+                      rows={2}
+                      required
+                      placeholder="Input format..."
+                      value={newTestCase.input}
+                      onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 font-mono text-xs"
+                    />
                   </div>
-                  <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                    <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 700 }}>Submission Accuracy</div>
-                    <div style={{ fontSize: "20px", fontWeight: 800, color: "#059669", marginTop: "2px" }}>{selectedSubmission.accuracy}</div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Expected Output *</label>
+                    <textarea
+                      rows={2}
+                      required
+                      placeholder="Expected output format..."
+                      value={newTestCase.expectedOutput}
+                      onChange={(e) => setNewTestCase({ ...newTestCase, expectedOutput: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 font-mono text-xs"
+                    />
                   </div>
                 </div>
 
-                <div style={{ background: "#f1f5f9", padding: "14px", borderRadius: "12px" }}>
-                  <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#334155", margin: "0 0 6px 0" }}>Topic Mastery Diagnostic</h4>
-                  <div style={{ fontSize: "12.5px", color: "#475569" }}>
-                    • Arrays & HashMaps: <strong style={{ color: "#059669" }}>95% Mastery</strong><br />
-                    • Dynamic Programming: <strong style={{ color: "#d97706" }}>62% Mastery (Needs Practice)</strong><br />
-                    • Graph Algorithms: <strong style={{ color: "#2563eb" }}>78% Mastery</strong>
-                  </div>
+                <div className="flex items-center justify-between pt-1">
+                  <label className="inline-flex items-center gap-2 cursor-pointer text-slate-700 font-semibold">
+                    <input
+                      type="checkbox"
+                      checked={newTestCase.isHidden}
+                      onChange={(e) => setNewTestCase({ ...newTestCase, isHidden: e.target.checked })}
+                      className="rounded text-indigo-600"
+                    />
+                    <span>Hidden Test Case (Used for evaluation only)</span>
+                  </label>
+
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl"
+                  >
+                    Add Test Case
+                  </button>
+                </div>
+              </form>
+
+              {/* Existing Test Cases List */}
+              <div>
+                <h4 className="font-bold text-slate-900 mb-3">
+                  Existing Test Suite ({selectedProblemForTestCases.testCases ? selectedProblemForTestCases.testCases.length : 0})
+                </h4>
+
+                <div className="space-y-3">
+                  {selectedProblemForTestCases.testCases && selectedProblemForTestCases.testCases.map((tc, idx) => (
+                    <div key={tc.id} className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-900">Case #{idx + 1}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              tc.isHidden ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {tc.isHidden ? "Hidden" : "Public"}
+                          </span>
+                        </div>
+                        <p className="font-mono text-slate-600 text-[11px]">
+                          <strong>Input:</strong> {tc.input} | <strong>Output:</strong> {tc.expectedOutput}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteTestCase(selectedProblemForTestCases.id, tc.id)}
+                        className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ) : (
-              <>
-                <pre style={{ background: "#020617", padding: "16px", borderRadius: "14px", border: "1px solid #1e293b", color: "#38bdf8", fontFamily: "monospace", fontSize: "13px", overflowX: "auto", maxHeight: "350px" }}>
-                  {selectedSubmission.codeSnippet}
-                </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
-                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px", fontSize: "12px", color: "#94a3b8" }}>
-                  <span>Execution Time: <strong style={{ color: "#ffffff" }}>{selectedSubmission.executionTime}</strong></span>
-                  <span>Memory Used: <strong style={{ color: "#ffffff" }}>{selectedSubmission.memoryUsed}</strong></span>
-                  <span>Status: <strong style={{ color: selectedSubmission.status === "Accepted" ? "#4ade80" : "#f87171" }}>{selectedSubmission.status}</strong></span>
+      {/* MODAL 3: ASSIGN PRACTICE TO BATCH */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in duration-200">
+            <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Send size={18} className="text-indigo-400" />
+                <h3 className="text-base font-bold">Assign Coding Practice to Batch</h3>
+              </div>
+              <button
+                onClick={() => setIsAssignModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAssignment} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Select Coding Problem *</label>
+                <select
+                  required
+                  value={assignForm.problemId}
+                  onChange={(e) => setAssignForm({ ...assignForm, problemId: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">-- Choose Problem --</option>
+                  {problems.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.title} ({p.difficulty} · {p.topic})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Department</label>
+                  <select
+                    value={assignForm.department}
+                    onChange={(e) => setAssignForm({ ...assignForm, department: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                  >
+                    <option value="Computer Science">Computer Science</option>
+                    <option value="Information Technology">Information Technology</option>
+                    <option value="AI & DS">AI & DS</option>
+                    <option value="ECE">ECE</option>
+                  </select>
                 </div>
-              </>
-            )}
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Target Batch *</label>
+                  <select
+                    value={assignForm.batch}
+                    onChange={(e) => setAssignForm({ ...assignForm, batch: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                  >
+                    {coordinatorBatches.map((b) => (
+                      <option key={b.id} value={b.name}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={assignForm.dueDate}
+                    onChange={(e) => setAssignForm({ ...assignForm, dueDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Score Weightage (XP)</label>
+                  <input
+                    type="number"
+                    value={assignForm.scoreWeightage}
+                    onChange={(e) => setAssignForm({ ...assignForm, scoreWeightage: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Special Instructions</label>
+                <textarea
+                  rows={3}
+                  placeholder="Instructions for students (e.g. time complexity constraint, recursion requirements)..."
+                  value={assignForm.instructions}
+                  onChange={(e) => setAssignForm({ ...assignForm, instructions: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
+                />
+              </div>
+
+              <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAssignModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-xs"
+                >
+                  Assign to Batch
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 4: VIEW SUBMITTED CODE */}
+      {selectedSubmissionCode && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 text-white w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-800 overflow-hidden animate-in fade-in duration-200">
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-white">
+                  Submitted Code: {selectedSubmissionCode.studentName}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {selectedSubmissionCode.problemTitle} · {selectedSubmissionCode.language}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedSubmissionCode(null)}
+                className="p-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 text-xs">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${
+                      selectedSubmissionCode.status === "Accepted"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                    }`}
+                  >
+                    {selectedSubmissionCode.status}
+                  </span>
+                  <span className="text-slate-300">
+                    Passed: {selectedSubmissionCode.passedTestCases}/{selectedSubmissionCode.totalTestCases}
+                  </span>
+                </div>
+                <span className="font-mono text-slate-400">
+                  {selectedSubmissionCode.runtime} | {selectedSubmissionCode.memory}
+                </span>
+              </div>
+
+              <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 font-mono text-xs text-indigo-300 overflow-x-auto">
+                <pre>{selectedSubmissionCode.codeSnippet}</pre>
+              </div>
+            </div>
+
+            <div className="bg-slate-800/40 px-6 py-3 border-t border-slate-800 flex justify-end">
+              <button
+                onClick={() => setSelectedSubmissionCode(null)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl"
+              >
+                Close Viewer
+              </button>
+            </div>
           </div>
         </div>
       )}

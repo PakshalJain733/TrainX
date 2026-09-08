@@ -245,10 +245,10 @@ export default function StudentLayout() {
   }, []);
 
   const resolveUser = (rawUser) => {
-    if (!rawUser) return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
+    if (!rawUser) return { name: "Pakshal", department: "ECS", semester: 6 };
     let name = rawUser.name;
     if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
-      name = rawUser.fullName || rawUser.full_name || (rawUser.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? rawUser.name : "Ganesh Shinde");
+      name = rawUser.fullName || rawUser.full_name || (rawUser.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? rawUser.name : "Pakshal");
     }
     return { ...rawUser, name };
   };
@@ -258,7 +258,7 @@ export default function StudentLayout() {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) return resolveUser(u);
     } catch (e) {}
-    return { name: "Ganesh Shinde", department: "ECS", semester: 6 };
+    return { name: "Pakshal", department: "ECS", semester: 6 };
   });
 
   const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(() => {
