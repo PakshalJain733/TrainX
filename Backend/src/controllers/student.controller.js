@@ -113,19 +113,6 @@ import { getPracticeProblemsModel } from '../models/practiceProblem.model.js';
 
 export const getStudentPracticeProblems = async (req, res, next) => {
   try {
-    const dbProblems = await getPracticeProblemsModel();
-    if (dbProblems && dbProblems.length > 0) {
-      const mapped = dbProblems.map((p) => ({
-        id: p.id,
-        title: p.title,
-        category: p.category || 'General DSA',
-        difficulty: p.difficulty,
-        points: p.points || 100,
-        solve_status: 'Unsolved',
-      }));
-      return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
-    }
-
     const fallbackProblems = [
       { id: 1, title: 'Two Sum', category: 'Arrays & Hashing', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
       { id: 2, title: 'Valid Palindrome', category: 'Two Pointers', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
@@ -136,7 +123,33 @@ export const getStudentPracticeProblems = async (req, res, next) => {
       { id: 7, title: 'Merge k Sorted Lists', category: 'Heap / Priority Queue', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
       { id: 8, title: 'Trapping Rain Water', category: 'Two Pointers', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
     ];
-    return sendSuccess(res, 'Practice problems retrieved successfully', fallbackProblems);
+
+    let dbProblems = [];
+    try {
+      dbProblems = await getPracticeProblemsModel();
+    } catch (err) {
+      console.warn("Failed to fetch practice problems from DB", err);
+    }
+
+    let mappedDbProblems = [];
+    if (dbProblems && dbProblems.length > 0) {
+      mappedDbProblems = dbProblems.map((p) => ({
+        id: p.id,
+        title: p.title,
+        category: p.category || 'General DSA',
+        difficulty: p.difficulty,
+        points: p.points || 100,
+        solve_status: 'Unsolved',
+      }));
+    }
+
+    const existingIds = new Set(mappedDbProblems.map(p => p.id));
+    const mergedProblems = [
+      ...mappedDbProblems,
+      ...fallbackProblems.filter(p => !existingIds.has(p.id))
+    ];
+
+    return sendSuccess(res, 'Practice problems retrieved successfully', mergedProblems);
   } catch (error) {
     next(error);
   }
