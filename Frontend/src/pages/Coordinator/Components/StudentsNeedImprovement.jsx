@@ -2,10 +2,6 @@ import { useState } from "react";
 import {
   AlertTriangle,
   Search,
-  UserX,
-  UserCheck,
-  CheckCircle2,
-  Clock,
   ShieldAlert,
   Sparkles,
   RefreshCw,
@@ -14,18 +10,14 @@ import {
   PlusCircle,
   TrendingUp,
   TrendingDown,
-  BookOpen,
-  Award,
-  ChevronRight,
   Eye,
   BarChart3,
   BrainCircuit,
-  Filter,
   CheckCircle,
-  HelpCircle,
-  GraduationCap
+  Filter,
 } from "lucide-react";
-import { coordinatorSkillGapStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
+import { coordinatorSkillGapStudents } from "../../../data/coordinatorMockData";
+import "../Styles/CodingPerformance.css";
 
 export default function StudentsNeedImprovement() {
   const [dataList, setDataList] = useState(coordinatorSkillGapStudents);
@@ -37,7 +29,7 @@ export default function StudentsNeedImprovement() {
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
   
-  // Detail Modal State (Task 2)
+  // Detail Modal State
   const [selectedSkillGapStudent, setSelectedSkillGapStudent] = useState(null);
   
   // Remediation Plan Modal State
@@ -74,7 +66,7 @@ export default function StudentsNeedImprovement() {
     return matchesSearch && matchesDept && matchesBatch && matchesPriority;
   });
 
-  // Calculate Improvement Monitoring Metrics (Task 3)
+  // Calculate Metrics
   const immediateAttentionStudents = dataList.filter((s) => s.priority === "High");
   const improvingStudents = dataList.filter((s) => s.trendStatus === "Improving");
   const notImprovingStudents = dataList.filter((s) => s.trendStatus === "Not Improving");
@@ -132,409 +124,358 @@ export default function StudentsNeedImprovement() {
   const getPriorityBadgeClass = (priority) => {
     switch (priority) {
       case "High":
-        return "bg-rose-50 text-rose-700 border-rose-200";
+        return "coord-perf-status--struggling";
       case "Medium":
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "coord-perf-status--avg";
       case "Low":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        return "coord-perf-status--top";
       default:
-        return "bg-slate-50 text-slate-700 border-slate-200";
+        return "coord-perf-status--default";
     }
   };
 
   const getWeaknessLevelBadge = (level) => {
     switch (level) {
       case "Critical":
-        return "bg-red-100 text-red-800 border-red-200 font-bold";
+        return "coord-perf-diff-pill coord-perf-diff-pill--hard";
       case "High":
-        return "bg-orange-100 text-orange-800 border-orange-200 font-semibold";
+        return "coord-perf-diff-pill coord-perf-diff-pill--medium";
       case "Moderate":
-        return "bg-amber-100 text-amber-800 border-amber-200 font-medium";
       default:
-        return "bg-slate-100 text-slate-800 border-slate-200";
+        return "coord-perf-diff-pill coord-perf-diff-pill--easy";
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="coord-perf-container">
       {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/80 pb-5">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+      <div className="coord-perf-header-bar">
+        <div className="coord-perf-header-left">
+          <div style={{ display: "flex", itemsCenter: "center", gap: "10px" }}>
+            <h1 className="coord-perf-title">
               Coordinator Skill-Gap Analysis
             </h1>
-            <span className="bg-rose-100 text-rose-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-rose-200">
+            <span className="coord-perf-status-badge coord-perf-status--struggling" style={{ fontSize: "11px" }}>
               Harshad Workflow
             </span>
           </div>
-          <p className="text-sm text-slate-500 mt-1 max-w-3xl">
+          <p className="coord-perf-sub">
             Identify students with weak skill areas, inspect granular scores across quizzes, coding & interviews, and assign targeted remediation plans.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedDept("all");
-              setSelectedBatch("all");
-              setSelectedPriority("all");
-              setActiveTab("all");
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 transition cursor-pointer"
-          >
-            <RefreshCw size={14} />
-            Reset All Filters
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setSearchTerm("");
+            setSelectedDept("all");
+            setSelectedBatch("all");
+            setSelectedPriority("all");
+            setActiveTab("all");
+          }}
+          className="coord-perf-btn coord-perf-btn--secondary"
+        >
+          <RefreshCw size={14} />
+          Reset All Filters
+        </button>
       </div>
 
-      {/* Task 3: Improvement Monitoring Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Stats Grid */}
+      <div className="coord-perf-kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
         <div 
           onClick={() => setActiveTab("immediate")}
-          className={`p-5 rounded-2xl border transition cursor-pointer ${
-            activeTab === "immediate"
-              ? "bg-rose-50/90 border-rose-400 ring-2 ring-rose-400/20 shadow-sm"
-              : "bg-white border-slate-200/80 hover:border-rose-300 shadow-xs"
-          }`}
+          className={`coord-perf-kpi-card ${activeTab === "immediate" ? "coord-perf-kpi-card--active" : ""}`}
+          style={{ cursor: "pointer", borderColor: activeTab === "immediate" ? "#e11d48" : "#e2e8f0" }}
         >
-          <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
-              <ShieldAlert size={22} />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-rose-100 text-rose-800">
-              High Priority
-            </span>
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
+            <ShieldAlert size={22} />
           </div>
-          <div className="mt-3">
-            <p className="text-xs font-medium text-slate-500">Needing Immediate Attention</p>
-            <p className="text-2xl font-black text-rose-700 mt-0.5">{immediateAttentionStudents.length} Students</p>
-            <p className="text-[11px] text-rose-600 mt-1 font-medium flex items-center gap-1">
+          <div className="coord-perf-kpi-info">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="coord-perf-kpi-label">Needing Immediate Attention</span>
+              <span className="coord-perf-status-badge coord-perf-status--struggling" style={{ fontSize: "10px" }}>High Priority</span>
+            </div>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{immediateAttentionStudents.length} Students</span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#e11d48", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
               <AlertTriangle size={12} /> High risk priority skills
-            </p>
+            </span>
           </div>
         </div>
 
         <div 
           onClick={() => setActiveTab("commonSkills")}
-          className={`p-5 rounded-2xl border transition cursor-pointer ${
-            activeTab === "commonSkills"
-              ? "bg-indigo-50/90 border-indigo-400 ring-2 ring-indigo-400/20 shadow-sm"
-              : "bg-white border-slate-200/80 hover:border-indigo-300 shadow-xs"
-          }`}
+          className="coord-perf-kpi-card"
+          style={{ cursor: "pointer", borderColor: activeTab === "commonSkills" ? "#4f46e5" : "#e2e8f0" }}
         >
-          <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-              <BrainCircuit size={22} />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800">
-              {commonWeakSkills.length} Topics
-            </span>
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--indigo">
+            <BrainCircuit size={22} />
           </div>
-          <div className="mt-3">
-            <p className="text-xs font-medium text-slate-500">Most Common Weak Skills</p>
-            <p className="text-2xl font-black text-indigo-700 mt-0.5">
+          <div className="coord-perf-kpi-info">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="coord-perf-kpi-label">Most Common Weak Skills</span>
+              <span className="coord-perf-status-badge coord-perf-status--good" style={{ fontSize: "10px" }}>{commonWeakSkills.length} Topics</span>
+            </div>
+            <span className="coord-perf-kpi-value" style={{ color: "#4f46e5" }}>
               {commonWeakSkills[0]?.skillName || "DBMS"}
-            </p>
-            <p className="text-[11px] text-indigo-600 mt-1 font-medium">
+            </span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#4f46e5", fontWeight: 600 }}>
               Affecting {commonWeakSkills[0]?.count || 0} students
-            </p>
+            </span>
           </div>
         </div>
 
         <div 
           onClick={() => setActiveTab("improving")}
-          className={`p-5 rounded-2xl border transition cursor-pointer ${
-            activeTab === "improving"
-              ? "bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-400/20 shadow-sm"
-              : "bg-white border-slate-200/80 hover:border-emerald-300 shadow-xs"
-          }`}
+          className="coord-perf-kpi-card"
+          style={{ cursor: "pointer", borderColor: activeTab === "improving" ? "#059669" : "#e2e8f0" }}
         >
-          <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-              <TrendingUp size={22} />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-              Positive Growth
-            </span>
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--emerald">
+            <TrendingUp size={22} />
           </div>
-          <div className="mt-3">
-            <p className="text-xs font-medium text-slate-500">Students Improving</p>
-            <p className="text-2xl font-black text-emerald-700 mt-0.5">{improvingStudents.length} Students</p>
-            <p className="text-[11px] text-emerald-600 mt-1 font-medium flex items-center gap-1">
+          <div className="coord-perf-kpi-info">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="coord-perf-kpi-label">Students Improving</span>
+              <span className="coord-perf-status-badge coord-perf-status--top" style={{ fontSize: "10px" }}>Positive Growth</span>
+            </div>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{improvingStudents.length} Students</span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
               <CheckCircle size={12} /> Positive response to practice
-            </p>
+            </span>
           </div>
         </div>
 
         <div 
           onClick={() => setActiveTab("notImproving")}
-          className={`p-5 rounded-2xl border transition cursor-pointer ${
-            activeTab === "notImproving"
-              ? "bg-amber-50/90 border-amber-400 ring-2 ring-amber-400/20 shadow-sm"
-              : "bg-white border-slate-200/80 hover:border-amber-300 shadow-xs"
-          }`}
+          className="coord-perf-kpi-card"
+          style={{ cursor: "pointer", borderColor: activeTab === "notImproving" ? "#d97706" : "#e2e8f0" }}
         >
-          <div className="flex items-center justify-between">
-            <div className="w-11 h-11 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-              <TrendingDown size={22} />
-            </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
-              Action Needed
-            </span>
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--amber">
+            <TrendingDown size={22} />
           </div>
-          <div className="mt-3">
-            <p className="text-xs font-medium text-slate-500">Performance Not Improving</p>
-            <p className="text-2xl font-black text-amber-700 mt-0.5">{notImprovingStudents.length} Students</p>
-            <p className="text-[11px] text-amber-600 mt-1 font-medium">
+          <div className="coord-perf-kpi-info">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="coord-perf-kpi-label">Performance Not Improving</span>
+              <span className="coord-perf-status-badge coord-perf-status--avg" style={{ fontSize: "10px" }}>Action Needed</span>
+            </div>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--amber">{notImprovingStudents.length} Students</span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#d97706", fontWeight: 600 }}>
               Stagnant or declining trend
-            </p>
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2">
+      {/* Navigation Sub-Tabs */}
+      <div className="coord-perf-tabs-nav">
         <button
           onClick={() => setActiveTab("all")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-            activeTab === "all"
-              ? "bg-slate-900 text-white shadow-xs"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }`}
+          className={`coord-perf-tab-btn ${activeTab === "all" ? "coord-perf-tab-btn--active" : ""}`}
         >
           Students Needing Improvement ({dataList.length})
         </button>
         <button
           onClick={() => setActiveTab("immediate")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeTab === "immediate"
-              ? "bg-rose-700 text-white shadow-xs"
-              : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-          }`}
+          className={`coord-perf-tab-btn ${activeTab === "immediate" ? "coord-perf-tab-btn--active" : ""}`}
         >
-          <ShieldAlert size={14} />
-          Immediate Attention ({immediateAttentionStudents.length})
+          <ShieldAlert size={14} /> Immediate Attention ({immediateAttentionStudents.length})
         </button>
         <button
           onClick={() => setActiveTab("commonSkills")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeTab === "commonSkills"
-              ? "bg-indigo-700 text-white shadow-xs"
-              : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-          }`}
+          className={`coord-perf-tab-btn ${activeTab === "commonSkills" ? "coord-perf-tab-btn--active" : ""}`}
         >
-          <BarChart3 size={14} />
-          Most Common Weak Skills
+          <BarChart3 size={14} /> Most Common Weak Skills
         </button>
         <button
           onClick={() => setActiveTab("improving")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeTab === "improving"
-              ? "bg-emerald-700 text-white shadow-xs"
-              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-          }`}
+          className={`coord-perf-tab-btn ${activeTab === "improving" ? "coord-perf-tab-btn--active" : ""}`}
         >
-          <TrendingUp size={14} />
-          Improving ({improvingStudents.length})
+          <TrendingUp size={14} /> Improving ({improvingStudents.length})
         </button>
         <button
           onClick={() => setActiveTab("notImproving")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-            activeTab === "notImproving"
-              ? "bg-amber-700 text-white shadow-xs"
-              : "bg-amber-50 text-amber-700 hover:bg-amber-100"
-          }`}
+          className={`coord-perf-tab-btn ${activeTab === "notImproving" ? "coord-perf-tab-btn--active" : ""}`}
         >
-          <TrendingDown size={14} />
-          Not Improving ({notImprovingStudents.length})
+          <TrendingDown size={14} /> Not Improving ({notImprovingStudents.length})
         </button>
       </div>
 
       {/* View Content based on Tab */}
       {activeTab === "commonSkills" ? (
-        /* Task 3: Most Common Weak Skills Analysis Breakdown */
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-6">
+        /* Most Common Weak Skills Analysis Breakdown */
+        <div className="coord-perf-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <BrainCircuit className="text-indigo-600" size={20} />
+            <h2 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <BrainCircuit style={{ color: "#4f46e5" }} size={20} />
               Most Common Weak Skills Analysis across Department
             </h2>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="coord-perf-card-sub">
               Aggregated frequency of skill gaps to guide department workshop scheduling and faculty interventions.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
             {commonWeakSkills.map((skill, idx) => (
-              <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 hover:shadow-md transition space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-slate-900 text-sm">{skill.skillName}</h3>
-                  <span className="px-2.5 py-1 bg-indigo-100 text-indigo-800 text-xs font-bold rounded-lg border border-indigo-200">
+              <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{skill.skillName}</h3>
+                  <span className="coord-perf-status-badge coord-perf-status--good">
                     {skill.count} Students Weak
                   </span>
                 </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs font-semibold text-slate-600">
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 600, color: "#475569" }}>
                     <span>Average Student Score:</span>
-                    <span className={skill.avgScore < 50 ? "text-rose-600 font-bold" : "text-amber-600"}>
+                    <span style={{ fontWeight: 800, color: skill.avgScore < 50 ? "#e11d48" : "#d97706" }}>
                       {skill.avgScore}%
                     </span>
                   </div>
-                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                  <div className="coord-perf-progress-track">
                     <div
-                      className={`h-full rounded-full ${
-                        skill.avgScore < 50 ? "bg-rose-500" : "bg-amber-500"
-                      }`}
+                      className={`coord-perf-progress-bar ${skill.avgScore < 50 ? "coord-perf-progress-bar--rose" : "coord-perf-progress-bar--indigo"}`}
                       style={{ width: `${skill.avgScore}%` }}
                     />
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-slate-200/70 text-xs space-y-1 text-slate-500">
-                  <p>
-                    <strong>Primary Sources:</strong> {skill.sourcesList}
-                  </p>
-                  <p className="flex items-center gap-2">
+                <div style={{ paddingTop: "8px", borderTop: "1px solid #e2e8f0", fontSize: "11px", color: "#64748b", display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <div>
+                    <strong style={{ color: "#334155" }}>Primary Sources:</strong> {skill.sourcesList}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <span>Severity:</span>
-                    <span className="text-rose-600 font-semibold">{skill.levels.Critical} Critical</span> · 
-                    <span className="text-amber-600 font-semibold">{skill.levels.High} High</span>
-                  </p>
+                    <span style={{ color: "#e11d48", fontWeight: 700 }}>{skill.levels.Critical} Critical</span> · 
+                    <span style={{ color: "#d97706", fontWeight: 700 }}>{skill.levels.High} High</span>
+                  </div>
                 </div>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        /* Task 1 & Task 3: Filterable Students List */
-        <div className="space-y-4">
+        /* Filterable Students List */
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Filters Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex flex-wrap items-center justify-start gap-3">
+          <div className="coord-perf-filter-card">
+            <div className="coord-perf-filter-row">
               {/* Search Box */}
-              <div className="relative w-full sm:w-72">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <div className="coord-perf-search-wrap">
+                <Search size={16} className="coord-perf-search-icon" />
                 <input
                   type="text"
                   placeholder="Search student, roll no, mentor..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-rose-500 transition"
+                  className="coord-perf-search-input"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 ml-1">
-                <Filter size={14} />
-                <span>Filters:</span>
+              <div className="coord-perf-filters-group">
+                <div className="coord-perf-filter-label">
+                  <Filter size={14} />
+                  <span>Filters:</span>
+                </div>
+
+                {/* Department Filter */}
+                <select
+                  value={selectedDept}
+                  onChange={(e) => setSelectedDept(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept} Department
+                    </option>
+                  ))}
+                </select>
+
+                {/* Batch Filter */}
+                <select
+                  value={selectedBatch}
+                  onChange={(e) => setSelectedBatch(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Batches</option>
+                  {batches.map((b) => (
+                    <option key={b} value={b}>
+                      Batch {b}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Priority Filter */}
+                <select
+                  value={selectedPriority}
+                  onChange={(e) => setSelectedPriority(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="High">High Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="Low">Low Priority</option>
+                </select>
               </div>
-
-              {/* Department Filter */}
-              <select
-                value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="all">All Departments</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept} Department
-                  </option>
-                ))}
-              </select>
-
-              {/* Batch Filter */}
-              <select
-                value={selectedBatch}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="all">All Batches</option>
-                {batches.map((b) => (
-                  <option key={b} value={b}>
-                    Batch {b}
-                  </option>
-                ))}
-              </select>
-
-              {/* Priority Filter */}
-              <select
-                value={selectedPriority}
-                onChange={(e) => setSelectedPriority(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="all">All Priorities</option>
-                <option value="High">High Priority</option>
-                <option value="Medium">Medium Priority</option>
-                <option value="Low">Low Priority</option>
-              </select>
             </div>
           </div>
 
-          {/* Task 1 Table View for Students Needing Improvement */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+          {/* Table View for Students Needing Improvement */}
+          <div className="coord-perf-card">
+            <div className="coord-perf-table-wrap">
+              <table className="coord-perf-table">
+                <thead>
                   <tr>
-                    <th className="py-3.5 px-4">Student Name</th>
-                    <th className="py-3.5 px-4">Roll Number</th>
-                    <th className="py-3.5 px-4">Department</th>
-                    <th className="py-3.5 px-4">Batch</th>
-                    <th className="py-3.5 px-4 text-center">Overall Performance</th>
-                    <th className="py-3.5 px-4 text-center">Weak Skills</th>
-                    <th className="py-3.5 px-4 text-center">Improvement Priority</th>
-                    <th className="py-3.5 px-4 text-right">Action</th>
+                    <th>Student Name</th>
+                    <th>Roll Number</th>
+                    <th>Department</th>
+                    <th>Batch</th>
+                    <th style={{ textAlign: "center" }}>Overall Performance</th>
+                    <th style={{ textAlign: "center" }}>Weak Skills</th>
+                    <th style={{ textAlign: "center" }}>Improvement Priority</th>
+                    <th style={{ textAlign: "right" }}>Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {filteredStudents.map((student) => (
-                    <tr key={student.id} className="hover:bg-slate-50/80 transition">
+                    <tr key={student.id}>
                       {/* Student Name */}
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-200 text-xs">
+                      <td>
+                        <div className="coord-perf-student-cell">
+                          <div className="coord-perf-avatar-lg" style={{ width: "36px", height: "36px", fontSize: "12px", borderRadius: "10px" }}>
                             {student.studentName.split(" ").map(n => n[0]).join("")}
                           </div>
                           <div>
-                            <span className="block font-bold text-slate-900">{student.studentName}</span>
-                            <span className="text-[11px] text-slate-400 font-normal">Mentor: {student.assignedMentor || "Assigned"}</span>
+                            <div className="coord-perf-student-name">{student.studentName}</div>
+                            <div className="coord-perf-roll">Mentor: {student.assignedMentor || "Assigned"}</div>
                           </div>
                         </div>
                       </td>
 
                       {/* Roll Number */}
-                      <td className="py-3.5 px-4 font-mono font-semibold text-slate-800">
+                      <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#334155" }}>
                         {student.rollNo}
                       </td>
 
                       {/* Department */}
-                      <td className="py-3.5 px-4 font-medium text-slate-700">
-                        <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
+                      <td>
+                        <span className="coord-perf-status-badge coord-perf-status--default">
                           {student.department}
                         </span>
                       </td>
 
                       {/* Batch */}
-                      <td className="py-3.5 px-4 font-medium text-slate-700">
+                      <td style={{ fontWeight: 600, color: "#475569" }}>
                         {student.batch}
                       </td>
 
                       {/* Overall Performance */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex flex-col items-center">
-                          <span className={`font-bold text-sm ${
-                            student.overallPerformance < 65 ? "text-rose-600" : "text-amber-600"
-                          }`}>
+                      <td style={{ textAlign: "center" }}>
+                        <div className="coord-perf-progress-wrap" style={{ margin: "0 auto" }}>
+                          <div style={{ textAlign: "center", fontWeight: 800, color: student.overallPerformance < 65 ? "#e11d48" : "#d97706", fontSize: "13px" }}>
                             {student.overallPerformance}%
-                          </span>
-                          <div className="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1">
+                          </div>
+                          <div className="coord-perf-progress-track">
                             <div
-                              className={`h-full rounded-full ${
-                                student.overallPerformance < 65 ? "bg-rose-500" : "bg-amber-500"
-                              }`}
+                              className={`coord-perf-progress-bar ${student.overallPerformance < 65 ? "coord-perf-progress-bar--rose" : "coord-perf-progress-bar--amber"}`}
                               style={{ width: `${student.overallPerformance}%` }}
                             />
                           </div>
@@ -542,32 +483,33 @@ export default function StudentsNeedImprovement() {
                       </td>
 
                       {/* Number of Weak Skills */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className="px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-bold text-xs">
+                      <td style={{ textAlign: "center" }}>
+                        <span className="coord-perf-status-badge coord-perf-status--struggling">
                           {student.weakSkillsCount} Weak Skills
                         </span>
                       </td>
 
                       {/* Priority Badge */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getPriorityBadgeClass(student.priority)}`}>
+                      <td style={{ textAlign: "center" }}>
+                        <span className={`coord-perf-status-badge ${getPriorityBadgeClass(student.priority)}`}>
                           {student.priority} Priority
                         </span>
                       </td>
 
                       {/* View Skill Gap Button */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "8px" }}>
                           <button
                             onClick={() => setSelectedSkillGapStudent(student)}
-                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+                            className="coord-perf-btn coord-perf-btn--indigo-light"
                           >
                             <Eye size={14} />
                             View Skill Gap
                           </button>
                           <button
                             onClick={() => setRemediationStudent(student)}
-                            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition cursor-pointer"
+                            className="coord-perf-btn coord-perf-btn--secondary"
+                            style={{ padding: "0 10px" }}
                             title="Assign Remediation Plan"
                           >
                             <PlusCircle size={15} />
@@ -579,7 +521,7 @@ export default function StudentsNeedImprovement() {
 
                   {filteredStudents.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-slate-400 text-xs">
+                      <td colSpan={8} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
                         No students found matching your selected filters.
                       </td>
                     </tr>
@@ -591,90 +533,86 @@ export default function StudentsNeedImprovement() {
         </div>
       )}
 
-      {/* Task 2: Student Skill-Gap Details Modal */}
+      {/* Student Skill-Gap Details Modal */}
       {selectedSkillGapStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 space-y-0">
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white p-6 relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold text-white">Student Skill-Gap Details</h3>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getPriorityBadgeClass(selectedSkillGapStudent.priority)}`}>
-                    {selectedSkillGapStudent.priority} Priority
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 mt-1">
-                  Student: <strong className="text-white">{selectedSkillGapStudent.studentName}</strong> (Roll: {selectedSkillGapStudent.rollNo}) · Dept: {selectedSkillGapStudent.department} · Batch: {selectedSkillGapStudent.batch}
-                </p>
-              </div>
+            <div className="coord-perf-modal-header">
+              <button
+                onClick={() => setSelectedSkillGapStudent(null)}
+                className="coord-perf-modal-close"
+              >
+                <X size={18} />
+              </button>
 
-              <div className="flex items-center gap-4">
-                <div className="bg-slate-800 px-4 py-2 rounded-2xl border border-slate-700 text-center">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Overall Performance</span>
-                  <span className="text-xl font-black text-rose-400">{selectedSkillGapStudent.overallPerformance}%</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Student Skill-Gap Details</h3>
+                    <span className={`coord-perf-status-badge ${getPriorityBadgeClass(selectedSkillGapStudent.priority)}`}>
+                      {selectedSkillGapStudent.priority} Priority
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "4px 0 0 0" }}>
+                    Student: <strong style={{ color: "#ffffff" }}>{selectedSkillGapStudent.studentName}</strong> ({selectedSkillGapStudent.rollNo}) · Dept: {selectedSkillGapStudent.department} · Batch: {selectedSkillGapStudent.batch}
+                  </p>
                 </div>
-                <button
-                  onClick={() => setSelectedSkillGapStudent(null)}
-                  className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
+
+                <div style={{ background: "rgba(255,255,255,0.1)", padding: "8px 16px", borderRadius: "12px", textAlign: "center" }}>
+                  <span style={{ fontSize: "10px", color: "#cbd5e1", textTransform: "uppercase", display: "block" }}>Overall Performance</span>
+                  <span style={{ fontSize: "20px", fontWeight: 800, color: "#f43f5e" }}>{selectedSkillGapStudent.overallPerformance}%</span>
+                </div>
               </div>
             </div>
 
-            {/* Task 2 Content Body */}
-            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <h4 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                  <ShieldAlert className="text-rose-600" size={18} />
+            {/* Content Body */}
+            <div className="coord-perf-modal-body">
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "12px", borderBottom: "1px solid #f1f5f9" }}>
+                <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ShieldAlert style={{ color: "#e11d48" }} size={18} />
                   Identified Weak Skills ({selectedSkillGapStudent.weakSkills.length})
                 </h4>
-                <span className="text-xs text-slate-500">
-                  Assigned Mentor: <strong className="text-slate-800">{selectedSkillGapStudent.assignedMentor || "Not Assigned"}</strong>
+                <span style={{ fontSize: "12px", color: "#64748b" }}>
+                  Assigned Mentor: <strong style={{ color: "#0f172a" }}>{selectedSkillGapStudent.assignedMentor || "Not Assigned"}</strong>
                 </span>
               </div>
 
-              {/* Weak Skills Cards / Table */}
-              <div className="space-y-4">
+              {/* Weak Skills Cards */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {selectedSkillGapStudent.weakSkills.map((skill, idx) => (
-                  <div key={idx} className="bg-slate-50 border border-slate-200/90 rounded-2xl p-5 space-y-3">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
+                  <div key={idx} style={{ padding: "16px", background: "#f8fafc", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h5 className="font-bold text-slate-900 text-sm">{skill.skillName}</h5>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[11px] border ${getWeaknessLevelBadge(skill.level)}`}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <h5 style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{skill.skillName}</h5>
+                          <span className={getWeaknessLevelBadge(skill.level)}>
                             {skill.level} Weakness
                           </span>
                         </div>
-                        <p className="text-xs text-slate-500 mt-0.5">
-                          Source of Weakness: <strong className="text-slate-700">{skill.source}</strong> (Quizzes, Submissions & Interviews)
+                        <p style={{ fontSize: "11px", color: "#64748b", margin: "2px 0 0 0" }}>
+                          Source: <strong style={{ color: "#334155" }}>{skill.source}</strong>
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <span className="text-xs text-slate-500">Current Score:</span>
-                        <span className="text-base font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-xl border border-rose-200">
-                          {skill.currentScore}%
-                        </span>
+                      <div style={{ textAlign: "right" }}>
+                        <span style={{ fontSize: "16px", fontWeight: 800, color: "#e11d48" }}>{skill.currentScore}%</span>
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div className="coord-perf-progress-track">
                       <div
-                        className="h-full bg-rose-500 rounded-full"
+                        className="coord-perf-progress-bar coord-perf-progress-bar--rose"
                         style={{ width: `${skill.currentScore}%` }}
                       />
                     </div>
 
-                    {/* Task 2: Suggested Improvement */}
-                    <div className="bg-amber-50/80 border border-amber-200/80 p-3.5 rounded-xl text-xs space-y-1">
-                      <span className="font-bold text-amber-900 flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-amber-600" />
+                    <div style={{ padding: "10px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "10px", fontSize: "12px" }}>
+                      <span style={{ fontWeight: 800, color: "#92400e", display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
+                        <Sparkles size={14} style={{ color: "#d97706" }} />
                         Suggested Actionable Improvement:
                       </span>
-                      <p className="text-amber-800 leading-relaxed">
+                      <p style={{ margin: 0, color: "#78350f", lineHeight: 1.5 }}>
                         {skill.suggestedImprovement}
                       </p>
                     </div>
@@ -684,16 +622,17 @@ export default function StudentsNeedImprovement() {
             </div>
 
             {/* Modal Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                Harshad Flow: <strong className="text-slate-700">Coordinator → Skill-Gap → Student → Weak Skills + Scores → Improvement Suggestions</strong>
+            <div className="coord-perf-modal-footer">
+              <span style={{ fontSize: "12px", color: "#64748b" }}>
+                Target Flow: <strong style={{ color: "#0f172a" }}>Skill-Gap → Weak Skills + Scores → Support Plan</strong>
               </span>
               <button
                 onClick={() => {
                   setRemediationStudent(selectedSkillGapStudent);
                   setSelectedSkillGapStudent(null);
                 }}
-                className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
+                className="coord-perf-btn coord-perf-btn--indigo-light"
+                style={{ background: "#e11d48", color: "#ffffff", border: "none" }}
               >
                 <PlusCircle size={15} />
                 Assign Formal Support Plan
@@ -705,29 +644,30 @@ export default function StudentsNeedImprovement() {
 
       {/* Remediation Plan Assignment Modal */}
       {remediationStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="bg-slate-900 text-white p-6 relative">
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card" style={{ maxWidth: "520px" }}>
+            <div className="coord-perf-modal-header">
               <button
                 onClick={() => setRemediationStudent(null)}
-                className="absolute right-5 top-5 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
+                className="coord-perf-modal-close"
               >
                 <X size={18} />
               </button>
 
-              <h3 className="text-xl font-bold text-white">Assign Remedial Support Plan</h3>
-              <p className="text-xs text-rose-200 mt-1">
+              <h3 style={{ fontSize: "18px", fontWeight: 800, margin: 0 }}>Assign Remedial Support Plan</h3>
+              <p style={{ fontSize: "12px", color: "#fda4af", margin: "4px 0 0 0" }}>
                 Student: <strong>{remediationStudent.studentName}</strong> ({remediationStudent.rollNo})
               </p>
             </div>
 
-            <form onSubmit={handleAssignPlan} className="p-6 space-y-4 text-xs">
+            <form onSubmit={handleAssignPlan} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", fontSize: "12.5px" }}>
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Select Action Plan Type</label>
+                <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Select Action Plan Type</label>
                 <select
                   value={planType}
                   onChange={(e) => setPlanType(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="coord-perf-select"
+                  style={{ width: "100%" }}
                 >
                   <option value="Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling">
                     Custom Practice Set & Mentor Counseling
@@ -745,38 +685,41 @@ export default function StudentsNeedImprovement() {
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Target Remediation Deadline</label>
+                <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Target Remediation Deadline</label>
                 <input
                   type="date"
                   value={planDeadline}
                   onChange={(e) => setPlanDeadline(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="coord-perf-search-input"
+                  style={{ width: "100%", paddingLeft: "12px" }}
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-bold text-slate-700 mb-1">Coordinator Directives & Notes</label>
+                <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Coordinator Directives & Notes</label>
                 <textarea
                   rows={3}
                   value={planNotes}
                   onChange={(e) => setPlanNotes(e.target.value)}
                   placeholder="Enter specific instructions for student and assigned mentor..."
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="coord-perf-search-input"
+                  style={{ width: "100%", paddingLeft: "12px", height: "auto", paddingTop: "8px", resize: "none" }}
                 />
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
+              <div style={{ paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
                 <button
                   type="button"
                   onClick={() => setRemediationStudent(null)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition cursor-pointer"
+                  className="coord-perf-btn coord-perf-btn--secondary"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-xs transition cursor-pointer"
+                  className="coord-perf-btn coord-perf-btn--indigo-light"
+                  style={{ background: "#e11d48", color: "#ffffff", border: "none" }}
                 >
                   Confirm & Trigger Remediation
                 </button>

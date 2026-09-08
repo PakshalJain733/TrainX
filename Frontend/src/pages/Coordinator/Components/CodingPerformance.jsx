@@ -2,23 +2,17 @@ import { useState } from "react";
 import {
   Code,
   Search,
-  Filter,
   CheckCircle2,
   Zap,
   Flame,
   Trophy,
-  BarChart3,
   Eye,
   X,
-  Sparkles,
-  TrendingUp,
-  BookOpen,
-  Award,
-  ChevronRight,
   RefreshCw,
   SlidersHorizontal,
 } from "lucide-react";
 import { coordinatorCodingPerformance, coordinatorBatches } from "../../../data/coordinatorMockData";
+import "../Styles/CodingPerformance.css";
 
 export default function CodingPerformance() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,123 +45,121 @@ export default function CodingPerformance() {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case "Top Performer":
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+        return "coord-perf-status--top";
       case "Good":
-        return "bg-blue-50 text-blue-700 border-blue-200";
+        return "coord-perf-status--good";
       case "Average":
-        return "bg-amber-50 text-amber-700 border-amber-200";
+        return "coord-perf-status--avg";
       case "Struggling":
-        return "bg-rose-50 text-rose-700 border-rose-200";
+        return "coord-perf-status--struggling";
       default:
-        return "bg-slate-50 text-slate-700 border-slate-200";
+        return "coord-perf-status--default";
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="coord-perf-container">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+      <div className="coord-perf-header-bar">
+        <div className="coord-perf-header-left">
+          <h1 className="coord-perf-title">
             Student Coding Performance
           </h1>
-          <p className="text-sm text-slate-500 mt-1 max-w-2xl">
+          <p className="coord-perf-sub">
             Track algorithm submission metrics, problem accuracy rates, language proficiency, and target coders needing remediation.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedBatch("all");
-              setSelectedLanguage("all");
-              setSelectedStatus("all");
-            }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-xl text-xs font-medium text-slate-700 transition"
-          >
-            <RefreshCw size={14} />
-            Reset Filters
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            setSearchTerm("");
+            setSelectedBatch("all");
+            setSelectedLanguage("all");
+            setSelectedStatus("all");
+          }}
+          className="coord-perf-btn coord-perf-btn--secondary"
+        >
+          <RefreshCw size={14} />
+          Reset Filters
+        </button>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-indigo-200 transition">
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shrink-0">
+      <div className="coord-perf-kpi-grid">
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--indigo">
             <Code size={20} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-500 truncate">Total Solved</p>
-            <p className="text-xl font-extrabold text-slate-900 mt-0.5 tracking-tight">{totalSolvedSum}</p>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">{totalSubmissionsSum} submissions</p>
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Total Solved</span>
+            <span className="coord-perf-kpi-value">{totalSolvedSum}</span>
+            <span className="coord-perf-kpi-sub">{totalSubmissionsSum} submissions</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-emerald-200 transition">
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0">
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--emerald">
             <CheckCircle2 size={20} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-500 truncate">Avg Accuracy Rate</p>
-            <p className="text-xl font-extrabold text-emerald-600 mt-0.5 tracking-tight">{avgAccuracy}%</p>
-            <p className="text-[11px] font-medium text-emerald-600/80 mt-0.5 truncate">+2.4% vs last week</p>
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Avg Accuracy Rate</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{avgAccuracy}%</span>
+            <span className="coord-perf-kpi-sub">+2.4% vs last week</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-purple-200 transition">
-          <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold shrink-0">
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--purple">
             <Trophy size={20} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-500 truncate">Hard Solved</p>
-            <p className="text-xl font-extrabold text-purple-600 mt-0.5 tracking-tight">{hardSolvedSum}</p>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">High difficulty</p>
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Hard Solved</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--purple">{hardSolvedSum}</span>
+            <span className="coord-perf-kpi-sub">High difficulty</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-amber-200 transition">
-          <div className="w-11 h-11 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold shrink-0">
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--amber">
             <Flame size={20} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-500 truncate">Active Coders</p>
-            <p className="text-xl font-extrabold text-amber-600 mt-0.5 tracking-tight">{activeCoders}</p>
-            <p className="text-[11px] font-medium text-slate-400 mt-0.5 truncate">Active daily streaks</p>
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Active Coders</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--amber">{activeCoders}</span>
+            <span className="coord-perf-kpi-sub">Active daily streaks</span>
           </div>
         </div>
 
-        <div className="bg-white p-4.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-3.5 hover:border-rose-200 transition">
-          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold shrink-0">
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
             <Zap size={20} />
           </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-slate-500 truncate">Struggling Coders</p>
-            <p className="text-xl font-extrabold text-rose-600 mt-0.5 tracking-tight">
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Struggling Coders</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">
               {coordinatorCodingPerformance.filter((s) => s.status === "Struggling").length}
-            </p>
-            <p className="text-[11px] font-medium text-rose-500 mt-0.5 truncate">Needs remediation</p>
+            </span>
+            <span className="coord-perf-kpi-sub">Needs remediation</span>
           </div>
         </div>
       </div>
 
-      {/* Professional Unified Search & Filter Control Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Search & Filter Control Bar */}
+      <div className="coord-perf-filter-card">
+        <div className="coord-perf-filter-row">
           {/* Search Box */}
-          <div className="relative flex-1 max-w-lg">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <div className="coord-perf-search-wrap">
+            <Search size={16} className="coord-perf-search-icon" />
             <input
               type="text"
               placeholder="Search student by name or roll number..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 bg-slate-50/50 text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+              className="coord-perf-search-input"
             />
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 hover:text-slate-600"
+                className="coord-perf-search-clear"
               >
                 ✕
               </button>
@@ -175,9 +167,9 @@ export default function CodingPerformance() {
           </div>
 
           {/* Filter Controls */}
-          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div className="flex items-center gap-1.5 px-2.5 py-2 text-xs font-semibold text-slate-500">
-              <SlidersHorizontal size={14} className="text-indigo-600" />
+          <div className="coord-perf-filters-group">
+            <div className="coord-perf-filter-label">
+              <SlidersHorizontal size={14} style={{ color: "#4f46e5" }} />
               <span>Filters:</span>
             </div>
 
@@ -185,7 +177,7 @@ export default function CodingPerformance() {
             <select
               value={selectedBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition cursor-pointer"
+              className="coord-perf-select"
             >
               <option value="all">All Batches</option>
               {coordinatorBatches.map((b) => (
@@ -199,7 +191,7 @@ export default function CodingPerformance() {
             <select
               value={selectedLanguage}
               onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition cursor-pointer"
+              className="coord-perf-select"
             >
               <option value="all">All Languages</option>
               <option value="C++">C++</option>
@@ -213,7 +205,7 @@ export default function CodingPerformance() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="h-10 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100/70 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition cursor-pointer"
+              className="coord-perf-select"
             >
               <option value="all">All Statuses</option>
               <option value="Top Performer">Top Performer</option>
@@ -230,7 +222,7 @@ export default function CodingPerformance() {
                   setSelectedLanguage("all");
                   setSelectedStatus("all");
                 }}
-                className="h-10 px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-xl text-xs font-bold text-indigo-600 transition flex items-center gap-1.5"
+                className="coord-perf-btn coord-perf-btn--indigo-light"
                 title="Clear all filters"
               >
                 <RefreshCw size={13} />
@@ -242,68 +234,68 @@ export default function CodingPerformance() {
       </div>
 
       {/* Main Student Coding Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="coord-perf-card">
+        <div className="coord-perf-card-header">
           <div>
-            <h3 className="text-sm font-bold text-slate-900">Student Coding Matrix</h3>
-            <p className="text-xs text-slate-500">
+            <h3 className="coord-perf-card-title">Student Coding Matrix</h3>
+            <p className="coord-perf-card-sub">
               Showing {filteredData.length} of {coordinatorCodingPerformance.length} enrolled coders
             </p>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+        <div className="coord-perf-table-wrap">
+          <table className="coord-perf-table">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
-                <th className="py-3.5 px-6">Rank & Student</th>
-                <th className="py-3.5 px-4">Batch</th>
-                <th className="py-3.5 px-4">Problems Solved</th>
-                <th className="py-3.5 px-4">Accuracy Rate</th>
-                <th className="py-3.5 px-4">Top Language</th>
-                <th className="py-3.5 px-4">Streak</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-6 text-right">Actions</th>
+              <tr>
+                <th>Rank & Student</th>
+                <th>Batch</th>
+                <th>Problems Solved</th>
+                <th>Accuracy Rate</th>
+                <th>Top Language</th>
+                <th>Streak</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
+            <tbody>
               {filteredData.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50/70 transition">
+                <tr key={s.id}>
                   {/* Student */}
-                  <td className="py-4 px-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+                  <td>
+                    <div className="coord-perf-student-cell">
+                      <div className="coord-perf-rank-badge">
                         #{s.leaderboardRank}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900 hover:text-indigo-600 transition cursor-pointer" onClick={() => setSelectedStudent(s)}>
+                        <div className="coord-perf-student-name" onClick={() => setSelectedStudent(s)}>
                           {s.studentName}
-                        </p>
-                        <p className="text-[11px] text-slate-400 font-mono">{s.rollNo}</p>
+                        </div>
+                        <div className="coord-perf-roll">{s.rollNo}</div>
                       </div>
                     </div>
                   </td>
 
                   {/* Batch */}
-                  <td className="py-4 px-4 text-slate-600 font-medium">
+                  <td style={{ fontWeight: 600 }}>
                     {s.batch}
                   </td>
 
                   {/* Solved pills */}
-                  <td className="py-4 px-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-xs">
-                        <span className="font-bold text-slate-900">{s.totalSolved}</span>
-                        <span className="text-[11px] text-slate-400">total</span>
+                  <td>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontWeight: 800, color: "#0f172a" }}>{s.totalSolved}</span>
+                        <span style={{ fontSize: "11px", color: "#94a3b8" }}>total</span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-[10px]">
-                        <span className="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-semibold" title="Easy">
+                      <div className="coord-perf-diff-group">
+                        <span className="coord-perf-diff-pill coord-perf-diff-pill--easy" title="Easy">
                           E: {s.easySolved}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 font-semibold" title="Medium">
+                        <span className="coord-perf-diff-pill coord-perf-diff-pill--medium" title="Medium">
                           M: {s.mediumSolved}
                         </span>
-                        <span className="px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 font-semibold" title="Hard">
+                        <span className="coord-perf-diff-pill coord-perf-diff-pill--hard" title="Hard">
                           H: {s.hardSolved}
                         </span>
                       </div>
@@ -311,20 +303,20 @@ export default function CodingPerformance() {
                   </td>
 
                   {/* Accuracy */}
-                  <td className="py-4 px-4">
-                    <div className="w-28">
-                      <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-1">
+                  <td>
+                    <div className="coord-perf-progress-wrap">
+                      <div className="coord-perf-progress-meta">
                         <span>{s.accuracyRate}%</span>
-                        <span className="text-[10px] text-slate-400 font-normal">{s.totalSubmissions} subs</span>
+                        <span style={{ color: "#94a3b8", fontWeight: 400 }}>{s.totalSubmissions} subs</span>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div className="coord-perf-progress-track">
                         <div
-                          className={`h-full rounded-full ${
+                          className={`coord-perf-progress-bar ${
                             s.accuracyRate >= 85
-                              ? "bg-emerald-500"
+                              ? "coord-perf-progress-bar--emerald"
                               : s.accuracyRate >= 70
-                              ? "bg-blue-500"
-                              : "bg-rose-500"
+                              ? "coord-perf-progress-bar--blue"
+                              : "coord-perf-progress-bar--rose"
                           }`}
                           style={{ width: `${s.accuracyRate}%` }}
                         />
@@ -333,40 +325,36 @@ export default function CodingPerformance() {
                   </td>
 
                   {/* Primary Language */}
-                  <td className="py-4 px-4">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                  <td>
+                    <span className="coord-perf-status-badge coord-perf-status--good">
                       {s.primaryLanguage}
                     </span>
                   </td>
 
                   {/* Streak */}
-                  <td className="py-4 px-4">
+                  <td>
                     {s.streakDays > 0 ? (
-                      <span className="inline-flex items-center gap-1 text-amber-600 font-bold text-xs">
-                        <Flame size={14} className="fill-amber-500" />
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: "#d97706", fontWeight: 700 }}>
+                        <Flame size={14} style={{ fill: "#f59e0b" }} />
                         {s.streakDays} days
                       </span>
                     ) : (
-                      <span className="text-slate-400 text-xs">0 days</span>
+                      <span style={{ color: "#94a3b8" }}>0 days</span>
                     )}
                   </td>
 
                   {/* Status */}
-                  <td className="py-4 px-4">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${getStatusBadgeClass(
-                        s.status
-                      )}`}
-                    >
+                  <td>
+                    <span className={`coord-perf-status-badge ${getStatusBadgeClass(s.status)}`}>
                       {s.status}
                     </span>
                   </td>
 
                   {/* Actions */}
-                  <td className="py-4 px-6 text-right">
+                  <td style={{ textAlign: "right" }}>
                     <button
                       onClick={() => setSelectedStudent(s)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-700 text-xs font-semibold transition"
+                      className="coord-perf-btn coord-perf-btn--secondary"
                     >
                       <Eye size={14} />
                       Diagnostics
@@ -377,7 +365,7 @@ export default function CodingPerformance() {
 
               {filteredData.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan={8} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
                     No coding performance records match your active search filters.
                   </td>
                 </tr>
@@ -389,75 +377,75 @@ export default function CodingPerformance() {
 
       {/* Student Coding Diagnostic Modal */}
       {selectedStudent && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card">
             {/* Modal Header */}
-            <div className="bg-slate-900 text-white p-6 relative">
+            <div className="coord-perf-modal-header">
               <button
                 onClick={() => setSelectedStudent(null)}
-                className="absolute right-5 top-5 p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition"
+                className="coord-perf-modal-close"
               >
                 <X size={18} />
               </button>
 
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white font-bold text-xl flex items-center justify-center shadow-lg">
+              <div className="coord-perf-modal-user">
+                <div className="coord-perf-avatar-lg">
                   {selectedStudent.studentName
                     .split(" ")
                     .map((n) => n[0])
                     .join("")}
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-bold text-white">{selectedStudent.studentName}</h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/30 border border-indigo-400/30 text-indigo-200">
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudent.studentName}</h3>
+                    <span className="coord-perf-status-badge coord-perf-status--good">
                       Rank #{selectedStudent.leaderboardRank}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-300 mt-0.5">
+                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "4px 0 0 0" }}>
                     {selectedStudent.rollNo} · {selectedStudent.batch}
                   </p>
                 </div>
               </div>
 
               {/* Stats overview banner */}
-              <div className="grid grid-cols-4 gap-3 mt-6 pt-4 border-t border-slate-800 text-center">
+              <div className="coord-perf-modal-banner-grid">
                 <div>
-                  <p className="text-[11px] text-slate-400">Total Solved</p>
-                  <p className="text-lg font-bold text-white mt-0.5">{selectedStudent.totalSolved}</p>
+                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Total Solved</p>
+                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#ffffff", margin: "2px 0 0 0" }}>{selectedStudent.totalSolved}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400">Accuracy Rate</p>
-                  <p className="text-lg font-bold text-emerald-400 mt-0.5">{selectedStudent.accuracyRate}%</p>
+                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Accuracy Rate</p>
+                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#34d399", margin: "2px 0 0 0" }}>{selectedStudent.accuracyRate}%</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400">Current Streak</p>
-                  <p className="text-lg font-bold text-amber-400 mt-0.5">{selectedStudent.streakDays} Days</p>
+                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Current Streak</p>
+                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#fbbf24", margin: "2px 0 0 0" }}>{selectedStudent.streakDays} Days</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-400">Primary Lang</p>
-                  <p className="text-lg font-bold text-indigo-300 mt-0.5">{selectedStudent.primaryLanguage}</p>
+                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Primary Lang</p>
+                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#a5b4fc", margin: "2px 0 0 0" }}>{selectedStudent.primaryLanguage}</p>
                 </div>
               </div>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+            <div className="coord-perf-modal-body">
               {/* Topic Mastery breakdown */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                <h4 style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "12px" }}>
                   Topic Mastery & Skill Breakdown
                 </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>
                   {Object.entries(selectedStudent.topics).map(([topic, pct]) => (
-                    <div key={topic} className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="flex items-center justify-between text-xs font-semibold text-slate-700 mb-1.5">
+                    <div key={topic} style={{ padding: "12px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
                         <span>{topic}</span>
-                        <span className="font-bold text-indigo-600">{pct}%</span>
+                        <span style={{ color: "#4f46e5" }}>{pct}%</span>
                       </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div className="coord-perf-progress-track" style={{ height: "8px" }}>
                         <div
-                          className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                          className="coord-perf-progress-bar coord-perf-progress-bar--indigo"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -468,54 +456,56 @@ export default function CodingPerformance() {
 
               {/* Recent Submissions */}
               <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
+                <h4 style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "12px" }}>
                   Recent Code Submissions
                 </h4>
-                <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden">
-                  <table className="w-full text-left border-collapse text-xs">
+                <div className="coord-perf-card" style={{ border: "1px solid #e2e8f0" }}>
+                  <table className="coord-perf-table">
                     <thead>
-                      <tr className="bg-slate-100 border-b border-slate-200 text-[11px] uppercase font-semibold text-slate-500">
-                        <th className="py-2.5 px-4">Problem</th>
-                        <th className="py-2.5 px-3">Difficulty</th>
-                        <th className="py-2.5 px-3">Lang</th>
-                        <th className="py-2.5 px-3">Verdict</th>
-                        <th className="py-2.5 px-3">Runtime</th>
-                        <th className="py-2.5 px-4 text-right">Time</th>
+                      <tr>
+                        <th>Problem</th>
+                        <th>Difficulty</th>
+                        <th>Lang</th>
+                        <th>Verdict</th>
+                        <th>Runtime</th>
+                        <th style={{ textAlign: "right" }}>Time</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200">
+                    <tbody>
                       {selectedStudent.recentSubmissions.map((sub) => (
-                        <tr key={sub.id} className="hover:bg-white transition">
-                          <td className="py-3 px-4 font-semibold text-slate-800">{sub.problem}</td>
-                          <td className="py-3 px-3">
+                        <tr key={sub.id}>
+                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{sub.problem}</td>
+                          <td>
                             <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                              className={`coord-perf-diff-pill ${
                                 sub.difficulty === "Easy"
-                                  ? "bg-emerald-100 text-emerald-800"
+                                  ? "coord-perf-diff-pill--easy"
                                   : sub.difficulty === "Medium"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-purple-100 text-purple-800"
+                                  ? "coord-perf-diff-pill--medium"
+                                  : "coord-perf-diff-pill--hard"
                               }`}
                             >
                               {sub.difficulty}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-slate-600 font-mono">{sub.language}</td>
-                          <td className="py-3 px-3">
+                          <td style={{ fontFamily: "monospace", color: "#475569" }}>{sub.language}</td>
+                          <td>
                             <span
-                              className={`font-semibold ${
-                                sub.status === "Accepted"
-                                  ? "text-emerald-600"
-                                  : sub.status === "Time Limit Exceeded"
-                                  ? "text-amber-600"
-                                  : "text-rose-600"
-                              }`}
+                              style={{
+                                fontWeight: 700,
+                                color:
+                                  sub.status === "Accepted"
+                                    ? "#059669"
+                                    : sub.status === "Time Limit Exceeded"
+                                    ? "#d97706"
+                                    : "#e11d48"
+                              }}
                             >
                               {sub.status}
                             </span>
                           </td>
-                          <td className="py-3 px-3 font-mono text-slate-500">{sub.time}</td>
-                          <td className="py-3 px-4 text-right text-slate-400 text-[11px]">
+                          <td style={{ fontFamily: "monospace", color: "#64748b" }}>{sub.time}</td>
+                          <td style={{ textAlign: "right", color: "#94a3b8", fontSize: "11px" }}>
                             {sub.submittedAt}
                           </td>
                         </tr>
@@ -527,13 +517,14 @@ export default function CodingPerformance() {
             </div>
 
             {/* Modal Footer */}
-            <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                Last active: <strong className="text-slate-700">{selectedStudent.lastActive}</strong>
+            <div className="coord-perf-modal-footer">
+              <span style={{ fontSize: "12px", color: "#64748b" }}>
+                Last active: <strong style={{ color: "#0f172a" }}>{selectedStudent.lastActive}</strong>
               </span>
               <button
                 onClick={() => setSelectedStudent(null)}
-                className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl shadow-xs transition"
+                className="coord-perf-btn coord-perf-btn--indigo-light"
+                style={{ background: "#4f46e5", color: "#ffffff", border: "none" }}
               >
                 Close Diagnostic
               </button>

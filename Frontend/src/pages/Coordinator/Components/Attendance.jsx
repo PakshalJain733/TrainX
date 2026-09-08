@@ -8,15 +8,11 @@ import {
   Filter,
   Download,
   Calendar,
-  CheckCircle,
-  XCircle,
   TrendingUp,
   TrendingDown,
   Clock,
   Eye,
   Sliders,
-  ChevronRight,
-  Sparkles,
   RefreshCw,
   X,
   Building2,
@@ -26,6 +22,7 @@ import {
   coordinatorAttendanceStudents,
   coordinatorDepartmentAttendanceSummary
 } from "../../../data/coordinatorMockData";
+import "../Styles/CodingPerformance.css";
 
 export default function CoordinatorAttendance({ hideHeader }) {
   // Navigation Tabs: "overview", "list", "defaulters"
@@ -35,38 +32,37 @@ export default function CoordinatorAttendance({ hideHeader }) {
   const [studentsList, setStudentsList] = useState(coordinatorAttendanceStudents);
   const [deptSummaries, setDeptSummaries] = useState(coordinatorDepartmentAttendanceSummary);
 
-  // Dynamic Backend/Configuration Threshold State (Task 3 Requirement)
+  // Dynamic Threshold State
   const [attendanceThreshold, setAttendanceThreshold] = useState(75);
 
-  // Filter States (Task 2)
+  // Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState("all");
-  const [selectedPercentFilter, setSelectedPercentFilter] = useState("all"); // "all", "below65", "65to74", "above75"
+  const [selectedPercentFilter, setSelectedPercentFilter] = useState("all");
   const [lowAttendanceOnly, setLowAttendanceOnly] = useState(false);
 
-  // Detail Modal State (Task 4)
+  // Detail Modal State
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
 
-  // Dynamic Metrics Calculation (Task 1)
+  // Dynamic Metrics Calculation
   const totalStudentsCount = 320;
   const presentTodayCount = 287;
   const absentTodayCount = 33;
   const avgAttendancePercent = 82;
   const lowAttendanceCount = studentsList.filter((s) => s.attendance < attendanceThreshold).length;
 
-  // Extract unique departments & batches for dropdowns
+  // Extract unique departments & batches
   const departments = Array.from(new Set(studentsList.map((s) => s.department)));
   const batches = Array.from(new Set(studentsList.map((s) => s.batch)));
 
-  // Dynamic Status evaluator based on threshold
   const getDynamicStatus = (attendancePct) => {
     if (attendancePct >= attendanceThreshold) {
-      return { label: "Good", colorClass: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+      return { label: "Good", badgeClass: "coord-perf-status--top" };
     } else if (attendancePct >= 65) {
-      return { label: "Warning", colorClass: "bg-amber-50 text-amber-700 border-amber-200" };
+      return { label: "Warning", badgeClass: "coord-perf-status--avg" };
     } else {
-      return { label: "Critical", colorClass: "bg-rose-50 text-rose-700 border-rose-200 font-bold" };
+      return { label: "Critical", badgeClass: "coord-perf-status--struggling" };
     }
   };
 
@@ -89,147 +85,132 @@ export default function CoordinatorAttendance({ hideHeader }) {
     return matchesSearch && matchesDept && matchesBatch && matchesPercent && matchesDefaulterToggle;
   });
 
-  // Task 3 Defaulter List
   const defaulterStudents = studentsList.filter((s) => s.attendance < attendanceThreshold);
 
   return (
-    <div className="space-y-6">
+    <div className="coord-perf-container">
       {/* Page Header */}
       {!hideHeader && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2 border-b border-slate-200/80 pb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+        <div className="coord-perf-header-bar">
+          <div className="coord-perf-header-left">
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <h1 className="coord-perf-title">
                 Attendance Governance & Analytics
               </h1>
-              <span className="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-indigo-200">
+              <span className="coord-perf-status-badge coord-perf-status--good">
                 Coordinator Workspace
               </span>
             </div>
-            <p className="text-sm text-slate-500 mt-1 max-w-3xl">
+            <p className="coord-perf-sub">
               Track daily attendance across departments, monitor defaulters (&lt;{attendanceThreshold}%), and view complete student attendance history logs.
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => alert("Downloading Department Attendance Audit CSV Report...")}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
-            >
-              <Download size={15} /> Export Attendance Report
-            </button>
-          </div>
+          <button
+            onClick={() => alert("Downloading Department Attendance Audit CSV Report...")}
+            className="coord-perf-btn coord-perf-btn--indigo-light"
+            style={{ background: "#0f172a", color: "#ffffff", border: "none" }}
+          >
+            <Download size={15} /> Export Attendance Report
+          </button>
         </div>
       )}
 
-      {/* Task 1: Attendance Overview Dashboard KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      {/* KPI Cards Grid */}
+      <div className="coord-perf-kpi-grid">
         {/* Total Students */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Total Students</p>
-            <p className="text-2xl font-black text-slate-900 mt-1">{totalStudentsCount}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Enrolled across 4 departments</p>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--indigo">
+            <Users size={20} />
           </div>
-          <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <Users size={22} />
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Total Students</span>
+            <span className="coord-perf-kpi-value">{totalStudentsCount}</span>
+            <span className="coord-perf-kpi-sub">Enrolled across 4 departments</span>
           </div>
         </div>
 
         {/* Present Today */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Present Today</p>
-            <p className="text-2xl font-black text-emerald-600 mt-1">{presentTodayCount}</p>
-            <p className="text-[11px] text-emerald-700 mt-0.5 font-medium">89.6% Attendance Rate</p>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--emerald">
+            <UserCheck size={20} />
           </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <UserCheck size={22} />
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Present Today</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{presentTodayCount}</span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#059669", fontWeight: 600 }}>89.6% Attendance Rate</span>
           </div>
         </div>
 
         {/* Absent Today */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Absent Today</p>
-            <p className="text-2xl font-black text-rose-600 mt-1">{absentTodayCount}</p>
-            <p className="text-[11px] text-rose-500 mt-0.5">33 Absentees logged</p>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
+            <UserX size={20} />
           </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-            <UserX size={22} />
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Absent Today</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{absentTodayCount}</span>
+            <span className="coord-perf-kpi-sub">33 Absentees logged</span>
           </div>
         </div>
 
         {/* Average Attendance % */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Average Attendance</p>
-            <p className="text-2xl font-black text-indigo-600 mt-1">{avgAttendancePercent}%</p>
-            <p className="text-[11px] text-indigo-500 mt-0.5 font-medium">Monthly overall avg</p>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--purple">
+            <TrendingUp size={20} />
           </div>
-          <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-            <TrendingUp size={22} />
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Average Attendance</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--purple">{avgAttendancePercent}%</span>
+            <span className="coord-perf-kpi-sub">Monthly overall avg</span>
           </div>
         </div>
 
         {/* Low Attendance Students */}
-        <div className="bg-white p-5 rounded-2xl border border-rose-200 shadow-xs flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-slate-500">Low Attendance (&lt;{attendanceThreshold}%)</p>
-            <p className="text-2xl font-black text-rose-700 mt-1">{lowAttendanceCount}</p>
-            <p className="text-[11px] text-rose-600 mt-0.5 font-bold">Requires intervention</p>
+        <div className="coord-perf-kpi-card" style={{ borderColor: "#fecdd3" }}>
+          <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
+            <AlertTriangle size={20} />
           </div>
-          <div className="w-11 h-11 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
-            <AlertTriangle size={22} />
+          <div className="coord-perf-kpi-info">
+            <span className="coord-perf-kpi-label">Low Attendance (&lt;{attendanceThreshold}%)</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{lowAttendanceCount}</span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#e11d48", fontWeight: 700 }}>Requires intervention</span>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-2">
-        <div className="flex items-center gap-2">
+      {/* Navigation Sub-Tabs & Threshold Control Bar */}
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div className="coord-perf-tabs-nav">
           <button
             onClick={() => setActiveTab("overview")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
-              activeTab === "overview"
-                ? "bg-slate-900 text-white shadow-xs"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
+            className={`coord-perf-tab-btn ${activeTab === "overview" ? "coord-perf-tab-btn--active" : ""}`}
           >
             Attendance Overview & Dept Summary
           </button>
           <button
             onClick={() => setActiveTab("list")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-              activeTab === "list"
-                ? "bg-indigo-700 text-white shadow-xs"
-                : "bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-            }`}
+            className={`coord-perf-tab-btn ${activeTab === "list" ? "coord-perf-tab-btn--active" : ""}`}
           >
-            <Users size={14} />
-            Student Attendance List
+            <Users size={14} /> Student Attendance List
           </button>
           <button
             onClick={() => setActiveTab("defaulters")}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-              activeTab === "defaulters"
-                ? "bg-rose-700 text-white shadow-xs"
-                : "bg-rose-50 text-rose-700 hover:bg-rose-100"
-            }`}
+            className={`coord-perf-tab-btn ${activeTab === "defaulters" ? "coord-perf-tab-btn--active" : ""}`}
           >
-            <AlertTriangle size={14} />
-            Low Attendance / Defaulter View ({defaulterStudents.length})
+            <AlertTriangle size={14} /> Defaulter View ({defaulterStudents.length})
           </button>
         </div>
 
-        {/* Task 3 Requirement: Configurable Backend Threshold Control */}
-        <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700">
-          <Sliders size={14} className="text-slate-500" />
+        {/* Configurable Threshold Control */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f8fafc", padding: "6px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 600, color: "#475569" }}>
+          <Sliders size={14} style={{ color: "#64748b" }} />
           <span>Configured Threshold:</span>
           <select
             value={attendanceThreshold}
             onChange={(e) => setAttendanceThreshold(Number(e.target.value))}
-            className="bg-white border border-slate-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="coord-perf-select"
+            style={{ height: "30px", padding: "0 8px" }}
           >
             <option value={75}>75% (Standard Default)</option>
             <option value={70}>70% (Relaxed Threshold)</option>
@@ -238,226 +219,221 @@ export default function CoordinatorAttendance({ hideHeader }) {
         </div>
       </div>
 
-      {/* VIEW 1: Attendance Overview & Department Summary (Task 1) */}
+      {/* VIEW 1: Attendance Overview & Department Summary */}
       {activeTab === "overview" && (
-        <div className="space-y-6">
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <Building2 size={20} className="text-indigo-600" />
-                  Department-Wise Attendance Summary
-                </h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Aggregate breakdown of daily presence, absentees, and defaulter counts across department tracks.
-                </p>
-              </div>
-            </div>
+        <div className="coord-perf-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+          <div style={{ paddingBottom: "12px", borderBottom: "1px solid #f1f5f9" }}>
+            <h2 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <Building2 style={{ color: "#4f46e5" }} size={20} />
+              Department-Wise Attendance Summary
+            </h2>
+            <p className="coord-perf-card-sub">
+              Aggregate breakdown of daily presence, absentees, and defaulter counts across department tracks.
+            </p>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {deptSummaries.map((dept, idx) => (
-                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-2xl p-5 hover:shadow-md transition space-y-3">
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-bold text-slate-900 text-base">{dept.department} Track</h3>
-                    <span className="px-2.5 py-0.5 bg-slate-200 text-slate-800 text-xs font-bold rounded-lg">
-                      {dept.totalStudents} Students
-                    </span>
+          <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
+            {deptSummaries.map((dept, idx) => (
+              <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{dept.department} Track</h3>
+                  <span className="coord-perf-status-badge coord-perf-status--default">
+                    {dept.totalStudents} Students
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
+                    <span>Present Today:</span>
+                    <strong style={{ color: "#059669", fontWeight: 700 }}>{dept.presentToday} Students</strong>
                   </div>
-
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between text-slate-600">
-                      <span>Present Today:</span>
-                      <strong className="text-emerald-700 font-bold">{dept.presentToday} Students</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-600">
-                      <span>Absent Today:</span>
-                      <strong className="text-rose-600 font-bold">{dept.absentToday} Students</strong>
-                    </div>
-                    <div className="flex justify-between text-slate-600 pt-1 border-t border-slate-200">
-                      <span>Avg Attendance:</span>
-                      <strong className={dept.avgAttendance >= 85 ? "text-emerald-700 font-bold" : "text-amber-600 font-bold"}>
-                        {dept.avgAttendance}%
-                      </strong>
-                    </div>
-                    <div className="flex justify-between text-rose-700 bg-rose-50 p-2 rounded-xl border border-rose-100 font-semibold">
-                      <span>Defaulters (&lt;75%):</span>
-                      <strong className="font-black">{dept.lowAttendanceCount} Flagged</strong>
-                    </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
+                    <span>Absent Today:</span>
+                    <strong style={{ color: "#e11d48", fontWeight: 700 }}>{dept.absentToday} Students</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569", paddingTop: "4px", borderTop: "1px solid #e2e8f0" }}>
+                    <span>Avg Attendance:</span>
+                    <strong style={{ color: dept.avgAttendance >= 85 ? "#059669" : "#d97706", fontWeight: 800 }}>
+                      {dept.avgAttendance}%
+                    </strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", background: "#fff1f2", color: "#be123c", padding: "8px 10px", borderRadius: "10px", border: "1px solid #fecdd3", fontWeight: 600 }}>
+                    <span>Defaulters (&lt;75%):</span>
+                    <strong style={{ fontWeight: 800 }}>{dept.lowAttendanceCount} Flagged</strong>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* VIEW 2 & 3: Student Attendance List (Task 2) & Defaulter View (Task 3) */}
+      {/* VIEW 2 & 3: Student Attendance List & Defaulter View */}
       {(activeTab === "list" || activeTab === "defaulters") && (
-        <div className="space-y-4">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           {/* Filters Bar */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex flex-wrap items-center justify-start gap-3">
+          <div className="coord-perf-filter-card">
+            <div className="coord-perf-filter-row">
               {/* Search Box */}
-              <div className="relative w-full sm:w-72">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <div className="coord-perf-search-wrap">
+                <Search size={16} className="coord-perf-search-icon" />
                 <input
                   type="text"
                   placeholder="Search by student name or roll no..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+                  className="coord-perf-search-input"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 ml-1">
-                <Filter size={14} />
-                <span>Filter:</span>
+              <div className="coord-perf-filters-group">
+                <div className="coord-perf-filter-label">
+                  <Filter size={14} />
+                  <span>Filter:</span>
+                </div>
+
+                {/* Department Filter */}
+                <select
+                  value={selectedDept}
+                  onChange={(e) => setSelectedDept(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d} Department
+                    </option>
+                  ))}
+                </select>
+
+                {/* Batch Filter */}
+                <select
+                  value={selectedBatch}
+                  onChange={(e) => setSelectedBatch(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Batches</option>
+                  {batches.map((b) => (
+                    <option key={b} value={b}>
+                      Batch {b}
+                    </option>
+                  ))}
+                </select>
+
+                {/* Attendance % Filter */}
+                <select
+                  value={selectedPercentFilter}
+                  onChange={(e) => setSelectedPercentFilter(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Attendance Range</option>
+                  <option value="above75">75%+ (Good)</option>
+                  <option value="65to74">65–74% (Warning)</option>
+                  <option value="below65">Below 65% (Critical)</option>
+                </select>
+
+                {/* Defaulter Toggle */}
+                <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", padding: "0 12px", height: "38px", borderRadius: "10px", cursor: "pointer" }}>
+                  <input
+                    type="checkbox"
+                    checked={lowAttendanceOnly || activeTab === "defaulters"}
+                    onChange={(e) => {
+                      setLowAttendanceOnly(e.target.checked);
+                      if (e.target.checked) setActiveTab("defaulters");
+                      else setActiveTab("list");
+                    }}
+                  />
+                  <span>Defaulters Only (&lt;{attendanceThreshold}%)</span>
+                </label>
               </div>
-
-              {/* Department Filter */}
-              <select
-                value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="all">All Departments</option>
-                {departments.map((d) => (
-                  <option key={d} value={d}>
-                    {d} Department
-                  </option>
-                ))}
-              </select>
-
-              {/* Batch Filter */}
-              <select
-                value={selectedBatch}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="all">All Batches</option>
-                {batches.map((b) => (
-                  <option key={b} value={b}>
-                    Batch {b}
-                  </option>
-                ))}
-              </select>
-
-              {/* Attendance % Filter */}
-              <select
-                value={selectedPercentFilter}
-                onChange={(e) => setSelectedPercentFilter(e.target.value)}
-                className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="all">All Attendance Range</option>
-                <option value="above75">75%+ (Good)</option>
-                <option value="65to74">65–74% (Warning)</option>
-                <option value="below65">Below 65% (Critical)</option>
-              </select>
-
-              {/* Low-Attendance-Only Filter Toggle (Task 2) */}
-              <label className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 bg-rose-50 border border-rose-200 px-3 py-2 rounded-xl cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={lowAttendanceOnly || activeTab === "defaulters"}
-                  onChange={(e) => {
-                    setLowAttendanceOnly(e.target.checked);
-                    if (e.target.checked) setActiveTab("defaulters");
-                    else setActiveTab("list");
-                  }}
-                  className="rounded text-rose-600 focus:ring-rose-500"
-                />
-                <span className="text-rose-800">Defaulters Only (&lt;{attendanceThreshold}%)</span>
-              </label>
             </div>
           </div>
 
-          {/* Task 2 & Task 3 Table */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs text-slate-600">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-700 font-bold uppercase tracking-wider text-[11px]">
+          {/* Table */}
+          <div className="coord-perf-card">
+            <div className="coord-perf-table-wrap">
+              <table className="coord-perf-table">
+                <thead>
                   <tr>
-                    <th className="py-3.5 px-4">Student</th>
-                    <th className="py-3.5 px-4">Roll No.</th>
-                    <th className="py-3.5 px-4">Department</th>
-                    <th className="py-3.5 px-4">Batch</th>
-                    <th className="py-3.5 px-4 text-center">Present</th>
-                    <th className="py-3.5 px-4 text-center">Absent</th>
-                    <th className="py-3.5 px-4 text-center">Attendance %</th>
-                    <th className="py-3.5 px-4 text-center">Status / Risk Level</th>
-                    <th className="py-3.5 px-4 text-right">Action</th>
+                    <th>Student</th>
+                    <th>Roll No.</th>
+                    <th>Department</th>
+                    <th>Batch</th>
+                    <th style={{ textAlign: "center" }}>Present</th>
+                    <th style={{ textAlign: "center" }}>Absent</th>
+                    <th style={{ textAlign: "center" }}>Attendance %</th>
+                    <th style={{ textAlign: "center" }}>Status / Risk Level</th>
+                    <th style={{ textAlign: "right" }}>Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                   {(activeTab === "defaulters" ? defaulterStudents : filteredStudents).map((student) => {
                     const statusObj = getDynamicStatus(student.attendance);
                     return (
-                      <tr key={student.id} className="hover:bg-slate-50/80 transition">
+                      <tr key={student.id}>
                         {/* Student Name */}
-                        <td className="py-3.5 px-4 font-bold text-slate-900">
-                          <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-700 font-bold flex items-center justify-center border border-slate-200 text-xs">
+                        <td>
+                          <div className="coord-perf-student-cell">
+                            <div className="coord-perf-avatar-lg" style={{ width: "36px", height: "36px", fontSize: "12px", borderRadius: "10px" }}>
                               {student.name.split(" ").map((n) => n[0]).join("")}
                             </div>
                             <div>
-                              <span className="block font-bold text-slate-900">{student.name}</span>
-                              <span className="text-[11px] text-slate-400 font-normal">{student.email}</span>
+                              <div className="coord-perf-student-name">{student.name}</div>
+                              <div className="coord-perf-roll">{student.email}</div>
                             </div>
                           </div>
                         </td>
 
                         {/* Roll No. */}
-                        <td className="py-3.5 px-4 font-mono font-semibold text-slate-800">
+                        <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#334155" }}>
                           {student.rollNo}
                         </td>
 
                         {/* Department */}
-                        <td className="py-3.5 px-4 font-medium text-slate-700">
-                          <span className="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md font-semibold text-[11px]">
+                        <td>
+                          <span className="coord-perf-status-badge coord-perf-status--default">
                             {student.department}
                           </span>
                         </td>
 
                         {/* Batch */}
-                        <td className="py-3.5 px-4 font-medium text-slate-700">
+                        <td style={{ fontWeight: 600, color: "#475569" }}>
                           {student.batch}
                         </td>
 
                         {/* Present */}
-                        <td className="py-3.5 px-4 text-center font-bold text-emerald-700">
+                        <td style={{ textAlign: "center", fontWeight: 800, color: "#059669" }}>
                           {student.present}
                         </td>
 
                         {/* Absent */}
-                        <td className="py-3.5 px-4 text-center font-bold text-rose-600">
+                        <td style={{ textAlign: "center", fontWeight: 800, color: "#e11d48" }}>
                           {student.absent}
                         </td>
 
                         {/* Attendance % */}
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`font-black text-sm ${
-                            student.attendance < 65
-                              ? "text-rose-600"
-                              : student.attendance < attendanceThreshold
-                              ? "text-amber-600"
-                              : "text-emerald-700"
-                          }`}>
+                        <td style={{ textAlign: "center" }}>
+                          <span style={{
+                            fontWeight: 800,
+                            fontSize: "14px",
+                            color: student.attendance < 65 ? "#e11d48" : student.attendance < attendanceThreshold ? "#d97706" : "#059669"
+                          }}>
                             {student.attendance}%
                           </span>
                         </td>
 
-                        {/* Task 3 Status Rules (75%+ Good, 65-74% Warning, Below 65% Critical) */}
-                        <td className="py-3.5 px-4 text-center">
-                          <span className={`px-3 py-1 rounded-full text-xs border ${statusObj.colorClass}`}>
+                        {/* Status */}
+                        <td style={{ textAlign: "center" }}>
+                          <span className={`coord-perf-status-badge ${statusObj.badgeClass}`}>
                             {student.attendance >= 75 ? "75%+ Good" : student.attendance >= 65 ? "65–74% Warning" : "Below 65% Critical"}
                           </span>
                         </td>
 
-                        {/* Action: View Details (Task 4) */}
-                        <td className="py-3.5 px-4 text-right">
+                        {/* Action */}
+                        <td style={{ textAlign: "right" }}>
                           <button
                             onClick={() => setSelectedStudentForDetail(student)}
-                            className="px-3.5 py-2 bg-slate-900 hover:bg-indigo-600 text-white font-semibold text-xs rounded-xl shadow-xs transition inline-flex items-center gap-1.5 cursor-pointer"
+                            className="coord-perf-btn coord-perf-btn--secondary"
                           >
                             <Eye size={14} />
                             View Details
@@ -469,7 +445,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
                   {(activeTab === "defaulters" ? defaulterStudents : filteredStudents).length === 0 && (
                     <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-400 text-xs">
+                      <td colSpan={9} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
                         No student attendance records match your active search filter settings.
                       </td>
                     </tr>
@@ -481,152 +457,113 @@ export default function CoordinatorAttendance({ hideHeader }) {
         </div>
       )}
 
-      {/* Task 4: Student Attendance Details Modal */}
+      {/* Student Attendance Details Modal */}
       {selectedStudentForDetail && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card">
             {/* Header */}
-            <div className="bg-slate-900 text-white p-6 relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xl font-bold text-white">{selectedStudentForDetail.name}</h3>
-                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${getDynamicStatus(selectedStudentForDetail.attendance).colorClass}`}>
-                    {selectedStudentForDetail.attendance >= 75 ? "Good" : selectedStudentForDetail.attendance >= 65 ? "Warning" : "Critical"}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-300 mt-1">
-                  Roll No: <strong className="text-white">{selectedStudentForDetail.rollNo}</strong> · Dept: {selectedStudentForDetail.department} · Batch: {selectedStudentForDetail.batch}
-                </p>
-              </div>
+            <div className="coord-perf-modal-header">
+              <button
+                onClick={() => setSelectedStudentForDetail(null)}
+                className="coord-perf-modal-close"
+              >
+                <X size={18} />
+              </button>
 
-              <div className="flex items-center gap-4">
-                <div className="bg-slate-800 px-4 py-2 rounded-2xl border border-slate-700 text-center">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Overall Attendance</span>
-                  <span className={`text-xl font-black ${
-                    selectedStudentForDetail.attendance < 65 ? "text-rose-400" : "text-emerald-400"
-                  }`}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudentForDetail.name}</h3>
+                    <span className={`coord-perf-status-badge ${getDynamicStatus(selectedStudentForDetail.attendance).badgeClass}`}>
+                      {selectedStudentForDetail.attendance >= 75 ? "Good" : selectedStudentForDetail.attendance >= 65 ? "Warning" : "Critical"}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "4px 0 0 0" }}>
+                    Roll No: <strong style={{ color: "#ffffff" }}>{selectedStudentForDetail.rollNo}</strong> · Dept: {selectedStudentForDetail.department} · Batch: {selectedStudentForDetail.batch}
+                  </p>
+                </div>
+
+                <div style={{ background: "rgba(255,255,255,0.1)", padding: "8px 16px", borderRadius: "12px", textAlign: "center" }}>
+                  <span style={{ fontSize: "10px", color: "#cbd5e1", textTransform: "uppercase", display: "block" }}>Overall Attendance</span>
+                  <span style={{ fontSize: "20px", fontWeight: 800, color: selectedStudentForDetail.attendance < 65 ? "#f43f5e" : "#34d399" }}>
                     {selectedStudentForDetail.attendance}%
                   </span>
                 </div>
-                <button
-                  onClick={() => setSelectedStudentForDetail(null)}
-                  className="p-2 text-slate-400 hover:text-white rounded-full bg-slate-800 hover:bg-slate-700 transition cursor-pointer"
-                >
-                  <X size={18} />
-                </button>
               </div>
             </div>
 
             {/* Content Body */}
-            <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto text-xs">
-              {/* Profile Bar & Attendance Trend */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="coord-perf-modal-body">
+              {/* Profile Bar */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
                 <div>
-                  <span className="text-[11px] text-slate-400 block font-semibold">Total Classes Conducted</span>
-                  <span className="text-base font-bold text-slate-800">{selectedStudentForDetail.totalClasses} Sessions</span>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Total Sessions</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>{selectedStudentForDetail.totalClasses} Sessions</span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 block font-semibold">Present / Absent</span>
-                  <span className="text-base font-bold text-slate-800">
-                    <span className="text-emerald-700">{selectedStudentForDetail.present} Present</span> / <span className="text-rose-600">{selectedStudentForDetail.absent} Absent</span>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Present / Absent</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>
+                    <span style={{ color: "#059669" }}>{selectedStudentForDetail.present} Present</span> / <span style={{ color: "#e11d48" }}>{selectedStudentForDetail.absent} Absent</span>
                   </span>
                 </div>
                 <div>
-                  <span className="text-[11px] text-slate-400 block font-semibold">Attendance Trend</span>
-                  <span className="text-base font-bold text-slate-800 flex items-center gap-1.5 mt-0.5">
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Attendance Trend</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
                     {selectedStudentForDetail.trend === "Declining" ? (
-                      <span className="text-rose-600 flex items-center gap-1"><TrendingDown size={16} /> Declining (-6%)</span>
+                      <span style={{ color: "#e11d48", display: "flex", alignItems: "center", gap: "4px" }}><TrendingDown size={16} /> Declining (-6%)</span>
                     ) : selectedStudentForDetail.trend === "Improving" ? (
-                      <span className="text-emerald-600 flex items-center gap-1"><TrendingUp size={16} /> Improving (+4%)</span>
+                      <span style={{ color: "#059669", display: "flex", alignItems: "center", gap: "4px" }}><TrendingUp size={16} /> Improving (+4%)</span>
                     ) : (
-                      <span className="text-slate-600">Stable</span>
+                      <span style={{ color: "#64748b" }}>Stable</span>
                     )}
                   </span>
                 </div>
               </div>
 
-              {/* Monthly Attendance Breakdown */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <Calendar size={16} className="text-indigo-600" />
+              {/* Monthly Breakdown */}
+              <div>
+                <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <Calendar size={16} style={{ color: "#4f46e5" }} />
                   Monthly Attendance History
                 </h4>
-                <div className="grid grid-cols-3 gap-3">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
                   {selectedStudentForDetail.monthlyAttendance.map((m, idx) => (
-                    <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-center">
-                      <span className="text-xs font-bold text-slate-700 block">{m.month}</span>
-                      <span className={`text-base font-black ${m.percent < 75 ? "text-rose-600" : "text-emerald-700"}`}>
+                    <div key={idx} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block" }}>{m.month}</span>
+                      <span style={{ fontSize: "16px", fontWeight: 800, color: m.percent < 75 ? "#e11d48" : "#059669" }}>
                         {m.percent}%
                       </span>
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        {m.present} Present / {m.absent} Absent
+                      <span style={{ fontSize: "10px", color: "#94a3b8", display: "block", marginTop: "2px" }}>
+                        {m.present} P / {m.absent} A
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Subject / Session-Wise History */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <FileSpreadsheet size={16} className="text-indigo-600" />
+              {/* Subject Breakdown */}
+              <div>
+                <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <FileSpreadsheet size={16} style={{ color: "#4f46e5" }} />
                   Subject / Session-Wise Attendance Breakdown
                 </h4>
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
+                <div className="coord-perf-card" style={{ border: "1px solid #e2e8f0" }}>
+                  <table className="coord-perf-table">
+                    <thead>
                       <tr>
-                        <th className="py-2.5 px-3">Subject / Module</th>
-                        <th className="py-2.5 px-3 text-center">Present Sessions</th>
-                        <th className="py-2.5 px-3 text-center">Absent Sessions</th>
-                        <th className="py-2.5 px-3 text-right">Attendance %</th>
+                        <th>Subject / Module</th>
+                        <th style={{ textAlign: "center" }}>Present</th>
+                        <th style={{ textAlign: "center" }}>Absent</th>
+                        <th style={{ textAlign: "right" }}>Attendance %</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">
+                    <tbody>
                       {selectedStudentForDetail.subjectHistory.map((sub, idx) => (
                         <tr key={idx}>
-                          <td className="py-2.5 px-3 font-bold text-slate-800">{sub.subject}</td>
-                          <td className="py-2.5 px-3 text-center text-emerald-700 font-semibold">{sub.present}</td>
-                          <td className="py-2.5 px-3 text-center text-rose-600 font-semibold">{sub.absent}</td>
-                          <td className="py-2.5 px-3 text-right font-black text-slate-900">{sub.percent}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Complete Present/Absent Dates Log */}
-              <div className="space-y-3">
-                <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <Clock size={16} className="text-indigo-600" />
-                  Recent Present / Absent Session Log
-                </h4>
-                <div className="border border-slate-200 rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px]">
-                      <tr>
-                        <th className="py-2.5 px-3">Date</th>
-                        <th className="py-2.5 px-3">Session Title</th>
-                        <th className="py-2.5 px-3 text-center">Status</th>
-                        <th className="py-2.5 px-3">Remarks / Reason</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedStudentForDetail.dateLogs.map((log, idx) => (
-                        <tr key={idx}>
-                          <td className="py-2.5 px-3 font-mono text-slate-700">{log.date}</td>
-                          <td className="py-2.5 px-3 font-medium text-slate-800">{log.subject}</td>
-                          <td className="py-2.5 px-3 text-center">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              log.status === "Present"
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-rose-100 text-rose-800"
-                            }`}>
-                              {log.status}
-                            </span>
-                          </td>
-                          <td className="py-2.5 px-3 text-slate-500">{log.remarks}</td>
+                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{sub.subject}</td>
+                          <td style={{ textAlign: "center", color: "#059669", fontWeight: 700 }}>{sub.present}</td>
+                          <td style={{ textAlign: "center", color: "#e11d48", fontWeight: 700 }}>{sub.absent}</td>
+                          <td style={{ textAlign: "right", fontWeight: 800, color: "#0f172a" }}>{sub.percent}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -636,13 +573,14 @@ export default function CoordinatorAttendance({ hideHeader }) {
             </div>
 
             {/* Footer */}
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
-                Harshad Flow: <strong className="text-slate-700">Coordinator → Attendance → Student List → Select Student → Complete Attendance History</strong>
+            <div className="coord-perf-modal-footer">
+              <span style={{ fontSize: "12px", color: "#64748b" }}>
+                Target Flow: <strong style={{ color: "#0f172a" }}>Attendance → Student History Logs</strong>
               </span>
               <button
                 onClick={() => setSelectedStudentForDetail(null)}
-                className="px-4 py-2 bg-slate-900 text-white font-semibold text-xs rounded-xl transition cursor-pointer"
+                className="coord-perf-btn coord-perf-btn--indigo-light"
+                style={{ background: "#0f172a", color: "#ffffff", border: "none" }}
               >
                 Close History View
               </button>
