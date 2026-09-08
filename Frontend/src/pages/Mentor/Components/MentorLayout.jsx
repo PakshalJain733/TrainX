@@ -158,12 +158,6 @@ export default function MentorLayout() {
               </div>
 
               <div className="mentor-header__right" ref={headerRightRef}>
-                <div className="mentor-header__badges">
-                  <span className="mentor-header__badge mentor-header__badge--success">
-                    Senior Trainer
-                  </span>
-                </div>
-
                 {/* Notification Bell Dropdown Wrap */}
                 <div className="mentor-header__notif-wrap">
                   <button

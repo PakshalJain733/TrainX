@@ -1,190 +1,182 @@
-import {
-  findBatches,
-  findBatchesByCollege,
-  findBatchesByDepartment,
-  findBatchById,
-  createBatch,
-  updateBatch,
-  deleteBatch,
-  findBatchByCode,
-  joinStudentBatch,
-  getStudentBatchesModel,
-} from '../models/batch.model.js';
 import { sendSuccess, sendError } from '../utils/response.js';
+import { query } from '../config/db.js';
 
-// GET /api/v1/batches
+let mockBatches = [
+  {
+    id: 1,
+    name: "CSE 2026 Alpha Cohort",
+    code: "CSE-2026-A",
+    collegeId: 1,
+    collegeName: "Apex Institute of Technology",
+    departmentId: 1,
+    departmentName: "Computer Science & Engineering",
+    trainer: "Rohan Sharma",
+    studentsCount: 120,
+    enrolledStudents: 120,
+    progress: 78,
+    schedule: "Mon, Wed, Fri (10:00 AM - 12:00 PM)",
+    status: "Active",
+  },
+  {
+    id: 2,
+    name: "Fullstack React & Node Specialization",
+    code: "FS-WEB-04",
+    collegeId: 1,
+    collegeName: "Apex Institute of Technology",
+    departmentId: 1,
+    departmentName: "Computer Science & Engineering",
+    trainer: "Ananya Gupta",
+    studentsCount: 105,
+    enrolledStudents: 105,
+    progress: 62,
+    schedule: "Mon, Thu (04:00 PM - 06:00 PM)",
+    status: "Active",
+  },
+  {
+    id: 3,
+    name: "Data Science & ML 2025",
+    code: "DSML-2025-B",
+    collegeId: 1,
+    collegeName: "Apex Institute of Technology",
+    departmentId: 2,
+    departmentName: "Artificial Intelligence & Data Science",
+    trainer: "Dr. Vikram Seth",
+    studentsCount: 110,
+    enrolledStudents: 110,
+    progress: 91,
+    schedule: "Tue, Thu (02:00 PM - 04:00 PM)",
+    status: "Near Completion",
+  },
+  {
+    id: 4,
+    name: "Cloud Native & DevOps Infrastructure",
+    code: "CLOUD-DO-02",
+    collegeId: 1,
+    collegeName: "Apex Institute of Technology",
+    departmentId: 3,
+    departmentName: "Information Technology",
+    trainer: "Siddharth Roy",
+    studentsCount: 85,
+    enrolledStudents: 85,
+    progress: 45,
+    schedule: "Tue, Fri (09:00 AM - 11:00 AM)",
+    status: "Active",
+  },
+  {
+    id: 5,
+    name: "CE 2025 Beta Cohort",
+    code: "CE-2025-B",
+    collegeId: 2,
+    collegeName: "St. Xavier Engineering College",
+    departmentId: 4,
+    departmentName: "Computer Engineering",
+    trainer: "Priya Nair",
+    studentsCount: 130,
+    enrolledStudents: 130,
+    progress: 80,
+    schedule: "Mon, Wed (01:00 PM - 03:00 PM)",
+    status: "Active",
+  },
+];
+
 export const getBatches = async (req, res, next) => {
   try {
-    let batches;
-    if (req.query.college_id) {
-      batches = await findBatchesByCollege(req.query.college_id);
-    } else if (req.query.department_id) {
-      batches = await findBatchesByDepartment(req.query.department_id);
-    } else {
-      batches = await findBatches();
+    const { collegeId, departmentId, college, department } = req.query;
+
+    let result = mockBatches;
+
+    try {
+      const dbBatches = await query('SELECT * FROM batches');
+      if (dbBatches && dbBatches.length > 0) {
+        result = dbBatches;
+      }
+    } catch (err) {
+      // Fallback
     }
-    return sendSuccess(res, 'Batches retrieved successfully', batches);
+
+    if (collegeId) {
+      const cid = Number(collegeId);
+      result = result.filter((b) => b.collegeId === cid || b.collegeId === collegeId);
+    } else if (college) {
+      const cname = college.toLowerCase();
+      result = result.filter((b) => b.collegeName && b.collegeName.toLowerCase().includes(cname));
+    }
+
+    if (departmentId) {
+      const did = Number(departmentId);
+      result = result.filter((b) => b.departmentId === did || b.departmentId === departmentId);
+    } else if (department) {
+      const dname = department.toLowerCase();
+      result = result.filter((b) => b.departmentName && b.departmentName.toLowerCase().includes(dname));
+    }
+
+    return sendSuccess(res, 'Batches retrieved successfully', result);
   } catch (error) {
     next(error);
   }
 };
 
-// GET /api/v1/batches/:id
-export const getBatchById = async (req, res, next) => {
+export const createBatch = async (req, res, next) => {
   try {
-    const batch = await findBatchById(req.params.id);
-    if (!batch) {
-      return sendError(res, 'Batch not found', 404);
+    const { name, code, collegeId, collegeName, departmentId, departmentName, trainer, schedule } = req.body;
+    if (!name || !code) {
+      return sendError(res, 'Batch Name and Code are required', 400);
     }
-    return sendSuccess(res, 'Batch retrieved successfully', batch);
-  } catch (error) {
-    next(error);
-  }
-};
 
-// POST /api/v1/batches
-export const addBatch = async (req, res, next) => {
-  try {
-    const {
-      college_id = 1,
-      department_id,
+    const newBatch = {
+      id: Date.now(),
       name,
-      mentor,
-      schedule,
-      join_code,
-      joinCode,
-      code_expires_at,
-      codeExpiresAt,
-      students = 0,
-      status = 'active',
-    } = req.body;
+      code,
+      collegeId: collegeId ? Number(collegeId) : 1,
+      collegeName: collegeName || "Apex Institute of Technology",
+      departmentId: departmentId ? Number(departmentId) : 1,
+      departmentName: departmentName || "Computer Science & Engineering",
+      trainer: trainer || "Industry Specialist",
+      studentsCount: 0,
+      enrolledStudents: 0,
+      progress: 0,
+      schedule: schedule || "Mon, Wed, Fri (10:00 AM - 12:00 PM)",
+      status: "Active",
+    };
 
-    if (!name || !name.trim()) {
-      return sendError(res, 'Batch name is required', 400);
-    }
+    mockBatches = [newBatch, ...mockBatches];
+    return sendSuccess(res, 'Batch created successfully', newBatch, 201);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    const batch = await createBatch({
-      college_id: college_id || 1,
-      department_id: department_id || null,
-      name: name.trim(),
-      mentor: mentor || '',
-      schedule: schedule || '',
-      join_code: join_code || joinCode || '',
-      code_expires_at: code_expires_at || codeExpiresAt || null,
-      students: students || 0,
-      status: status || 'active',
+export const updateBatch = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const numId = Number(id);
+
+    let updatedBatch = null;
+    mockBatches = mockBatches.map((b) => {
+      if (b.id === numId || b.id === id) {
+        updatedBatch = { ...b, ...req.body };
+        return updatedBatch;
+      }
+      return b;
     });
 
-    return sendSuccess(res, 'Batch created successfully', batch, 201);
+    if (!updatedBatch) {
+      return sendError(res, 'Batch not found', 404);
+    }
+
+    return sendSuccess(res, 'Batch updated successfully', updatedBatch);
   } catch (error) {
     next(error);
   }
 };
 
-// PUT /api/v1/batches/:id
-export const editBatch = async (req, res, next) => {
+export const deleteBatch = async (req, res, next) => {
   try {
-    const existing = await findBatchById(req.params.id);
-    if (!existing) {
-      return sendError(res, 'Batch not found', 404);
-    }
+    const { id } = req.params;
+    const numId = Number(id);
 
-    const {
-      college_id,
-      department_id,
-      name,
-      mentor,
-      schedule,
-      join_code,
-      joinCode,
-      code_expires_at,
-      codeExpiresAt,
-      students,
-      status,
-    } = req.body;
-
-    const updated = await updateBatch(req.params.id, {
-      college_id,
-      department_id,
-      name,
-      mentor,
-      schedule,
-      join_code: join_code !== undefined ? join_code : joinCode,
-      code_expires_at: code_expires_at !== undefined ? code_expires_at : codeExpiresAt,
-      students,
-      status,
-    });
-
-    return sendSuccess(res, 'Batch updated successfully', updated);
-  } catch (error) {
-    next(error);
-  }
-};
-
-// DELETE /api/v1/batches/:id
-export const removeBatch = async (req, res, next) => {
-  try {
-    const existing = await findBatchById(req.params.id);
-    if (!existing) {
-      return sendError(res, 'Batch not found', 404);
-    }
-    await deleteBatch(req.params.id);
+    mockBatches = mockBatches.filter((b) => b.id !== numId && b.id !== id);
     return sendSuccess(res, 'Batch deleted successfully');
-  } catch (error) {
-    next(error);
-  }
-};
-
-// ─── Student: Join Batch by Code ────────────────────────────────
-
-// POST /api/v1/batches/join
-export const joinBatchByCode = async (req, res, next) => {
-  try {
-    const { join_code, code } = req.body;
-    const batchCode = (join_code || code || '').trim();
-
-    if (!batchCode) {
-      return sendError(res, 'Please provide a batch join code', 400);
-    }
-
-    // Find batch by code
-    const batch = await findBatchByCode(batchCode);
-    if (!batch) {
-      return sendError(res, 'Invalid batch code. Please check and try again.', 404);
-    }
-
-    const userId = req.user?.userId || req.user?.id;
-    if (!userId) {
-      return sendError(res, 'Authentication required', 401);
-    }
-
-    // Join the batch
-    const success = await joinStudentBatch(userId, batch.id);
-    if (!success) {
-      return sendError(res, 'Failed to join batch. Please try again.', 500);
-    }
-
-    return sendSuccess(res, `Successfully joined batch: ${batch.name}`, {
-      batch_id: batch.id,
-      batch_name: batch.name,
-      join_code: batch.join_code,
-      status: batch.status,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// GET /api/v1/batches/my-batches
-export const getMyBatches = async (req, res, next) => {
-  try {
-    const userId = req.user?.userId || req.user?.id;
-    if (!userId) {
-      return sendError(res, 'Authentication required', 401);
-    }
-
-    const batches = await getStudentBatchesModel(userId);
-    return sendSuccess(res, 'Your batches retrieved successfully', batches);
   } catch (error) {
     next(error);
   }

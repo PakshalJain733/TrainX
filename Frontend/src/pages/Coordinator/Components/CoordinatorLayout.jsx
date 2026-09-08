@@ -1,58 +1,160 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, ShieldCheck } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2 } from "lucide-react";
 import { CoordinatorSidebar } from "./CoordinatorSidebar";
-import CoordinatorTabBar from "./CoordinatorTabBar";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import "../Styles/CoordinatorLayout.css";
 
-function NotificationDropdown({ onClose }) {
-  const sampleNotifications = [
+function NotificationDropdown({ onClose, onUnreadChange }) {
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
-      title: "2 New Leave Applications Pending Review",
-      time: "15 min ago",
+      type: "calendar",
+      title: "Department Meeting Schedule",
+      desc: "HOD CSE has requested an urgent faculty meeting at 3:30 PM in Conference Room...",
+      time: "5 min ago",
       unread: true,
     },
     {
       id: 2,
-      title: "Goldman Sachs Mock Drive Registrations Cross 140",
-      time: "1h ago",
+      type: "alert",
+      title: "New Student Grievance",
+      desc: "Student Aarav Patel (BTech CSE, Sem 6) submitted a grade re-evaluation request.",
+      time: "25 min ago",
       unread: true,
     },
     {
       id: 3,
-      title: "Week 35 Governance Progress Audit Due Tomorrow",
-      time: "3h ago",
+      type: "success",
+      title: "Attendance Report Approved",
+      desc: "Monthly attendance report for Semester 6 Data Structures has been generated.",
+      time: "1 hour ago",
+      unread: true,
+    },
+    {
+      id: 4,
+      type: "document",
+      title: "Curriculum Syllabus Update",
+      desc: "Revised syllabus for AI & Machine Learning module has been published by...",
+      time: "3 hours ago",
       unread: false,
     },
-  ];
+    {
+      id: 5,
+      type: "calendar",
+      title: "Exam Duty Allocation",
+      desc: "Your invigilation schedule for upcoming Mid-term exams has been published.",
+      time: "Yesterday",
+      unread: false,
+    }
+  ]);
+
+  const [activeTab, setActiveTab] = useState("all");
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+
+  const handleMarkRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    if (onUnreadChange) onUnreadChange(false);
+  };
+
+  const handleDelete = (id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+    if (onUnreadChange) onUnreadChange(false);
+  };
+
+  const filteredNotifs = activeTab === "unread" ? notifications.filter((n) => n.unread) : notifications;
+
+  const getIcon = (type) => {
+    switch (type) {
+      case "calendar":
+        return <Calendar size={16} className="notif-icon-calendar" />;
+      case "alert":
+        return <AlertTriangle size={16} className="notif-icon-alert" />;
+      case "success":
+        return <CheckCircle2 size={16} className="notif-icon-success" />;
+      case "document":
+        return <FileText size={16} className="notif-icon-document" />;
+      default:
+        return <Bell size={16} />;
+    }
+  };
 
   return (
-    <div className="coordinator-header__profile-dropdown coordinator-header__notif-dropdown">
-      <div className="coordinator-header__notif-header">
-        <span className="coordinator-header__notif-title">Coordinator Alerts</span>
-        <span className="coordinator-header__notif-mark-btn">Mark all read</span>
-      </div>
-      <div className="coordinator-header__notif-list">
-        {sampleNotifications.map((n) => (
-          <div
-            key={n.id}
-            className={`coordinator-header__notif-card ${n.unread ? "coordinator-header__notif-card--unread" : ""}`}
-          >
-            <div className="coordinator-header__notif-card-title">{n.title}</div>
-            <div className="coordinator-header__notif-card-time">{n.time}</div>
+    <div className="coordinator-header__profile-dropdown notif-dropdown-box">
+      {/* Header */}
+      <div className="notif-header">
+        <div className="notif-header-left">
+          <div className="notif-header-icon-wrap">
+            <Bell size={18} className="notif-header-icon" />
+            {unreadCount > 0 && <span className="notif-header-dot"></span>}
           </div>
-        ))}
+          <div className="notif-header-text">
+            <div className="notif-header-title">Notifications</div>
+            <div className="notif-header-subtitle">
+              {unreadCount > 0 ? `${unreadCount} unread alerts` : "No unread alerts"}
+            </div>
+          </div>
+        </div>
+        <button className="notif-mark-read-btn" onClick={handleMarkRead}>
+          <Check size={14} className="notif-check-icon" /> Mark read
+        </button>
       </div>
-      <div className="coordinator-header__notif-footer">
-        <Link
-          to="/coordinator/notifications"
-          className="coordinator-header__notif-footer-link"
-          onClick={onClose}
+
+      {/* Tabs */}
+      <div className="notif-tabs">
+        <button
+          className={`notif-tab ${activeTab === "all" ? "active" : ""}`}
+          onClick={() => setActiveTab("all")}
         >
-          View All Notifications
-        </Link>
+          All ({notifications.length})
+        </button>
+        <button
+          className={`notif-tab ${activeTab === "unread" ? "active" : ""}`}
+          onClick={() => setActiveTab("unread")}
+        >
+          Unread ({unreadCount})
+        </button>
+      </div>
+
+      {/* List */}
+      <div className="notif-list-wrap">
+        {filteredNotifs.length === 0 ? (
+          <div style={{ padding: "20px", textAlign: "center", color: "#64748b", fontSize: "13px" }}>
+            No notifications
+          </div>
+        ) : (
+          filteredNotifs.map((n) => (
+            <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
+              <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
+              <div className="notif-content">
+                <div className="notif-content-top">
+                  <div className="notif-card-title">{n.title}</div>
+                  <div className="notif-card-time">{n.time}</div>
+                  <button
+                    className="notif-delete-btn"
+                    onClick={() => handleDelete(n.id)}
+                    title="Delete notification"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="notif-card-desc">{n.desc}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="notif-footer-wrap">
+        <button className="notif-clear-all-btn" onClick={handleClearAll}>
+          Clear all
+        </button>
       </div>
     </div>
   );
@@ -90,21 +192,14 @@ export default function CoordinatorLayout() {
     if (path === "/coordinator" || path === "/coordinator/") return "Overview Dashboard";
     if (path.startsWith("/coordinator/batches")) return "Batches Governance";
     if (path.startsWith("/coordinator/students")) return "Student Directory & Risk Audit";
+    if (path.startsWith("/coordinator/quizzes-and-codes") || path.startsWith("/coordinator/assessments") || path.startsWith("/coordinator/practice")) return "Quizzes and Codes";
+    if (path.startsWith("/coordinator/performances") || path.startsWith("/coordinator/coding-performance")) return "Performances";
+    if (path.startsWith("/coordinator/interviews")) return "AI Mock Interview Completion & Feedback";
+    if (path.startsWith("/coordinator/improvement")) return "Students Needing Improvement & Support Hub";
     if (path.startsWith("/coordinator/mentors")) return "Industry Trainers & Mentors";
-    if (path.startsWith("/coordinator/sessions")) return "Live Classrooms & Training";
-    if (path.startsWith("/coordinator/schedules")) return "Live Schedules & Timetable";
-    if (path.startsWith("/coordinator/assessments")) return "Assessments & Quiz Governance";
-    if (path.startsWith("/coordinator/attendance")) return "Attendance Governance";
-    if (path.startsWith("/coordinator/roadmaps")) return "AI Career Roadmaps";
-    if (path.startsWith("/coordinator/interviews")) return "AI Mock Interviews & Viva";
-    if (path.startsWith("/coordinator/performance")) return "Performance & Skill Gap Analytics";
-    if (path.startsWith("/coordinator/placement")) return "Placement Readiness & Drives";
-    if (path.startsWith("/coordinator/leaderboard")) return "Department Leaderboard";
     if (path.startsWith("/coordinator/requests")) return "Requests & Approvals Center";
-    if (path.startsWith("/coordinator/reports")) return "Governance & Audit Reports";
     if (path.startsWith("/coordinator/notifications")) return "Broadcast Notifications";
-    if (path.startsWith("/coordinator/profile")) return "Coordinator Profile & Settings";
-    if (path.startsWith("/coordinator/help")) return "Help & Support";
+    if (path.startsWith("/coordinator/profile")) return "Profile";
     return "Coordinator Workspace";
   };
 
@@ -145,21 +240,12 @@ export default function CoordinatorLayout() {
                 </button>
 
                 <div className="coordinator-breadcrumb">
-                  <span className="coordinator-breadcrumb-item">AcadNexus</span>
-                  <span className="coordinator-breadcrumb-sep">/</span>
-                  <span className="coordinator-breadcrumb-item">Coordinator</span>
-                  <span className="coordinator-breadcrumb-sep">/</span>
                   <span className="coordinator-breadcrumb-active">{pageTitle}</span>
                 </div>
               </div>
 
               <div className="coordinator-header__right" ref={headerRightRef}>
-                <div className="coordinator-header__badge">
-                  <ShieldCheck size={13} className="coordinator-header__badge-icon" />
-                  CSE Coordinator
-                </div>
-
-                <div className="coordinator-header__notif-wrap">
+                <div className="coordinator-header__notif-wrap" style={{ position: "relative" }}>
                   <button
                     className="coordinator-header__icon-btn"
                     aria-label="Notifications"
@@ -174,7 +260,10 @@ export default function CoordinatorLayout() {
                   </button>
 
                   {notifOpen && (
-                    <NotificationDropdown onClose={() => setNotifOpen(false)} />
+                    <NotificationDropdown
+                      onClose={() => setNotifOpen(false)}
+                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                    />
                   )}
                 </div>
 
@@ -189,7 +278,6 @@ export default function CoordinatorLayout() {
                   >
                     <div className="coordinator-header__user-info">
                       <span className="coordinator-header__name">{coordinatorProfile.name}</span>
-                      <span className="coordinator-header__sub">CSE Dept · Apex Inst</span>
                     </div>
                     <div className="coordinator-header__avatar">
                       AM
@@ -216,7 +304,7 @@ export default function CoordinatorLayout() {
                         }}
                       >
                         <UserCog size={15} />
-                        Profile Settings
+                        Edit Profile
                       </button>
                       <button
                         className="coordinator-header__profile-item coordinator-header__profile-item--danger"
