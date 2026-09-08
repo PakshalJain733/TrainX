@@ -20,34 +20,17 @@ import "../Styles/Attendance.css";
 
 // Fallback data structure for student attendance
 const defaultAttendanceData = {
-  overallPercentage: 78,
-  attendedClasses: 39,
-  missedClasses: 11,
-  totalClasses: 50,
+  overallPercentage: 0,
+  attendedClasses: 0,
+  missedClasses: 0,
+  totalClasses: 0,
   requiredThreshold: 75,
-  status: "Good",
+  status: "No Records",
   isLowAttendance: false,
-  warningMessage: "⚠ Attendance is below the required level. You need to improve your attendance.",
-  subjects: [
-    { id: "sub-1", code: "CS-301", name: "Java & OOP", attended: 14, total: 16, pct: 88, status: "Good", safeMargin: "4 classes safe margin" },
-    { id: "sub-2", code: "CS-302", name: "DBMS", attended: 11, total: 15, pct: 73, status: "Warning", safeMargin: "Must attend next 2 classes" },
-    { id: "sub-3", code: "CS-303", name: "DSA", attended: 14, total: 19, pct: 74, status: "Warning", safeMargin: "Must attend next 1 class" }
-  ],
-  attendanceHistory: [
-    { id: 1, date: "8 Sep 2026", month: "September", subject: "DBMS", status: "Present", slot: "09:00 AM - 11:00 AM", faculty: "Dr. Vikram Sharma" },
-    { id: 2, date: "7 Sep 2026", month: "September", subject: "Java", status: "Absent", slot: "11:15 AM - 01:15 PM", faculty: "Prof. Reddy" },
-    { id: 3, date: "6 Sep 2026", month: "September", subject: "DSA", status: "Present", slot: "02:00 PM - 04:00 PM", faculty: "Dr. Vikram Sharma" },
-    { id: 4, date: "5 Sep 2026", month: "September", subject: "System Design", status: "Present", slot: "09:00 AM - 11:00 AM", faculty: "Prof. Ananya" },
-    { id: 5, date: "4 Sep 2026", month: "September", subject: "DBMS", status: "Present", slot: "11:15 AM - 01:15 PM", faculty: "Dr. Vikram Sharma" },
-    { id: 6, date: "3 Sep 2026", month: "September", subject: "Java", status: "Absent", slot: "02:00 PM - 04:00 PM", faculty: "Prof. Reddy" },
-    { id: 7, date: "28 Aug 2026", month: "August", subject: "DSA", status: "Present", slot: "09:00 AM - 11:00 AM", faculty: "Dr. Vikram Sharma" },
-    { id: 8, date: "27 Aug 2026", month: "August", subject: "System Design", status: "Present", slot: "11:15 AM - 01:15 PM", faculty: "Prof. Ananya" },
-    { id: 9, date: "25 Aug 2026", month: "August", subject: "DBMS", status: "Absent", slot: "09:00 AM - 11:00 AM", faculty: "Dr. Vikram Sharma" }
-  ],
-  verifications: [
-    { id: "LV-2026-101", title: "Medical Leave · Viral fever", category: "Medical Leave", status: "Approved", days: 2, startDate: "2026-09-01", endDate: "2026-09-02", currentStep: 3, mentor: "Prof. Reddy", remarks: "Approved with medical certificate verified." },
-    { id: "LV-2026-102", title: "On-Duty Leave · Smart India Hackathon", category: "On-Duty", status: "Pending", days: 1, startDate: "2026-09-07", endDate: "2026-09-07", currentStep: 2, mentor: "Prof. Reddy", remarks: "Under mentor verification." }
-  ]
+  warningMessage: "",
+  subjects: [],
+  attendanceHistory: [],
+  verifications: []
 };
 
 export default function Attendance() {
@@ -80,7 +63,7 @@ export default function Attendance() {
   const [attachedFileName, setAttachedFileName] = useState("");
   const [formSubmitted, setFormSubmitted] = useState(false);
 
-  const [verifications, setVerifications] = useState(defaultAttendanceData.verifications);
+  const [verifications, setVerifications] = useState([]);
 
   // Fetch Attendance Data from Backend API
   useEffect(() => {
