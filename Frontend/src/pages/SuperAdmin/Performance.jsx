@@ -1,6 +1,7 @@
 import React from 'react';
 import { initialPerformanceData } from '../../data/superAdminMockData';
 import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import './SuperAdmin.css';
 
 export default function Performance() {
   const data = initialPerformanceData;
@@ -8,96 +9,114 @@ export default function Performance() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="sa-page-header">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-indigo-600" />
-            <span>Platform Performance & Benchmarks</span>
+          <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "8px", margin: "0 0 4px 0" }}>
+            <TrendingUp size={20} style={{ color: "#4f46e5" }} />
+            Platform Performance &amp; Benchmarks
           </h2>
-          <p className="text-xs text-slate-500">Cross-college pass rate analytics, subject proficiency, and institutional readiness</p>
+          <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+            Cross-college pass rate analytics, subject proficiency, and institutional readiness
+          </p>
         </div>
-
-        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2">
-          <Award className="w-4 h-4" />
+        <button className="sa-btn-primary">
+          <Award size={16} />
           <span>Export Analytics Summary</span>
         </button>
       </div>
 
       {/* Top Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px" }}>
+        {/* Card 1 */}
+        <div className="sa-stats-card" style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: "auto" }}>
           <div>
-            <p className="text-xs text-slate-500 font-medium">Overall Institutional Pass Rate</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">{data.overallPassRate}%</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 mt-2">
-              <ArrowUpRight className="w-3.5 h-3.5" /> +3.8% vs last month
+            <p style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, margin: "0 0 6px 0" }}>Overall Institutional Pass Rate</p>
+            <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>{data.overallPassRate}%</h3>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 700, color: "#059669" }}>
+              <ArrowUpRight size={13} /> +3.8% vs last month
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-            <CheckCircle2 className="w-6 h-6" />
+          <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#eef2ff", border: "1px solid #c7d2fe", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5", flexShrink: 0 }}>
+            <CheckCircle2 size={22} />
           </div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between">
+        {/* Card 2 */}
+        <div className="sa-stats-card" style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: "auto" }}>
           <div>
-            <p className="text-xs text-slate-500 font-medium">Avg Placement Readiness Score</p>
-            <h3 className="text-2xl font-bold text-slate-900 mt-1">{data.avgPlacementReadiness} / 100</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-600 mt-2">
-              <ShieldCheck className="w-3.5 h-3.5" /> Top Tier Benchmark
+            <p style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, margin: "0 0 6px 0" }}>Avg Placement Readiness Score</p>
+            <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>{data.avgPlacementReadiness} / 100</h3>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 700, color: "#4f46e5" }}>
+              <ShieldCheck size={13} /> Top Tier Benchmark
             </span>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-            <BarChart2 className="w-6 h-6" />
+          <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669", flexShrink: 0 }}>
+            <BarChart2 size={22} />
           </div>
         </div>
       </div>
 
       {/* Subject Proficiency */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-        <h3 className="text-sm font-bold text-slate-900">Domain Proficiency Breakdown</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {data.subjectProficiency.map((item) => (
-            <div key={item.subject} className="p-3 bg-slate-50 rounded-xl space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">{item.subject}</span>
-                <span className="text-indigo-600">{item.score}%</span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-2">
-                <div
-                  className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${item.score}%` }}
-                ></div>
-              </div>
+      <div className="sa-widget-card">
+        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", margin: "0 0 16px 0" }}>Domain Proficiency Breakdown</h3>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px" }}>
+          {(!data.subjectProficiency || data.subjectProficiency.length === 0) ? (
+            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: "13px" }}>
+              No subject proficiency data calculated yet.
             </div>
-          ))}
+          ) : (
+            data.subjectProficiency.map((item) => (
+              <div key={item.subject} style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", fontWeight: 600, marginBottom: "8px" }}>
+                  <span style={{ color: "#0f172a" }}>{item.subject}</span>
+                  <span style={{ color: "#4f46e5" }}>{item.score}%</span>
+                </div>
+                <div style={{ width: "100%", background: "#e2e8f0", borderRadius: "999px", height: "6px" }}>
+                  <div style={{ width: `${item.score}%`, background: "linear-gradient(90deg, #4f46e5 0%, #6366f1 100%)", height: "100%", borderRadius: "999px", transition: "width 0.4s ease" }} />
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
-      {/* College Comparison Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900">College Performance Leaderboard</h3>
-          <span className="text-xs text-slate-400">Updated today</span>
+      {/* College Performance Leaderboard */}
+      <div className="sa-widget-card" style={{ padding: 0, overflow: "hidden" }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", margin: 0 }}>College Performance Leaderboard</h3>
+          <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>Updated today</span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider font-semibold">
-              <tr>
-                <th className="px-5 py-3">College Name</th>
-                <th className="px-5 py-3">Pass Rate</th>
-                <th className="px-5 py-3">Readiness Index</th>
-                <th className="px-5 py-3">Active Students</th>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
+                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>College Name</th>
+                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pass Rate</th>
+                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Readiness Index</th>
+                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Students</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {data.collegeBenchmarks.map((c) => (
-                <tr key={c.college} className="hover:bg-slate-50/60 transition">
-                  <td className="px-5 py-3.5 font-bold text-slate-900">{c.college}</td>
-                  <td className="px-5 py-3.5 text-emerald-600 font-semibold">{c.passRate}%</td>
-                  <td className="px-5 py-3.5 font-semibold text-slate-700">{c.readinessScore} / 100</td>
-                  <td className="px-5 py-3.5 text-slate-500">{c.activeStudents}</td>
+            <tbody>
+              {(!data.collegeBenchmarks || data.collegeBenchmarks.length === 0) ? (
+                <tr>
+                  <td colSpan={4} style={{ padding: "32px 20px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
+                    No institutional benchmark data available.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                data.collegeBenchmarks.map((c, i) => (
+                  <tr key={c.college}
+                    style={{ borderBottom: i < data.collegeBenchmarks.length - 1 ? "1px solid #f1f5f9" : "none", transition: "background 0.1s" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    <td style={{ padding: "13px 20px", fontWeight: 700, color: "#0f172a" }}>{c.college}</td>
+                    <td style={{ padding: "13px 20px", color: "#059669", fontWeight: 700 }}>{c.passRate}%</td>
+                    <td style={{ padding: "13px 20px", fontWeight: 600, color: "#475569" }}>{c.readinessScore} / 100</td>
+                    <td style={{ padding: "13px 20px", color: "#64748b" }}>{c.activeStudents}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

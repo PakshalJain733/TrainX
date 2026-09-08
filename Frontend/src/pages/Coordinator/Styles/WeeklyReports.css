@@ -1,4 +1,3 @@
-/* WeeklyReports.css */
 .coord-report-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -8,4 +7,60 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 12px;
+}
+
+.coord-reports-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coord-report-card__left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.coord-report-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coord-report-card__title {
+  font-weight: 800;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.coord-report-card__sub {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.coord-report-card__right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.coord-report-card__status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.coord-report-card__download-btn {
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 12px;
 }

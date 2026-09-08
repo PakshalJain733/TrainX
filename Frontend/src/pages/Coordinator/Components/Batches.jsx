@@ -1,18 +1,29 @@
-import { useState } from "react";
-import { Plus, Search, Users, UserCheck, Calendar, CheckCircle } from "lucide-react";
-import { coordinatorBatches, coordinatorMentors } from "../../../data/coordinatorMockData";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square } from "lucide-react";
+import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../../../data/coordinatorMockData";
 import "../Styles/Batches.css";
 
 export default function CoordinatorBatches() {
+  const location = useLocation();
   const [batches, setBatches] = useState(coordinatorBatches);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("create") === "true" || location.state?.openCreateModal) {
+      setShowCreateModal(true);
+    }
+  }, [location]);
+
   // New batch form state
   const [newBatchName, setNewBatchName] = useState("");
   const [newBatchCode, setNewBatchCode] = useState("");
   const [newMentor, setNewMentor] = useState(coordinatorMentors[0].name);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [studentSearch, setStudentSearch] = useState("");
 
   const filteredBatches = batches.filter((b) => {
     const matchesSearch =
@@ -22,6 +33,29 @@ export default function CoordinatorBatches() {
     const matchesStatus = statusFilter === "All" || b.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const filteredStudents = coordinatorStudents.filter(
+    (s) =>
+      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      s.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
+      (s.department && s.department.toLowerCase().includes(studentSearch.toLowerCase()))
+  );
+
+  const toggleStudentSelection = (studentId) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((id) => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleSelectAllStudents = () => {
+    if (selectedStudentIds.length === coordinatorStudents.length) {
+      setSelectedStudentIds([]);
+    } else {
+      setSelectedStudentIds(coordinatorStudents.map((s) => s.id));
+    }
+  };
 
   const handleCreateBatch = (e) => {
     e.preventDefault();
@@ -33,7 +67,8 @@ export default function CoordinatorBatches() {
       code: newBatchCode,
       college: "Apex Institute of Technology",
       department: "Computer Science & Engineering",
-      enrolledStudents: 60,
+      enrolledStudents: selectedStudentIds.length,
+      selectedStudentIds: selectedStudentIds,
       progress: 0,
       schedule: "Mon, Wed, Fri (02:00 PM - 04:00 PM)",
       nextSession: "Next Mon at 02:00 PM",
@@ -49,6 +84,8 @@ export default function CoordinatorBatches() {
     setShowCreateModal(false);
     setNewBatchName("");
     setNewBatchCode("");
+    setSelectedStudentIds([]);
+    setStudentSearch("");
   };
 
   return (
@@ -68,8 +105,8 @@ export default function CoordinatorBatches() {
         </button>
       </div>
 
-      <div className="coord-filter-bar">
-        <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
+      <div className="coord-filter-bar" style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ position: "relative", width: "300px" }}>
           <Search size={16} style={{ position: "absolute", left: "12px", top: "10px", color: "#64748b" }} />
           <input
             type="text"
@@ -77,7 +114,7 @@ export default function CoordinatorBatches() {
             placeholder="Search batch name, code or mentor..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            style={{ paddingLeft: "36px" }}
+            style={{ paddingLeft: "36px", width: "100%" }}
           />
         </div>
         <select
@@ -239,6 +276,104 @@ export default function CoordinatorBatches() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>
+                    Select Students ({selectedStudentIds.length} Selected)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleSelectAllStudents}
+                    style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", background: "none", border: "none", cursor: "pointer" }}
+                  >
+                    {selectedStudentIds.length === coordinatorStudents.length ? "Deselect All" : "Select All"}
+                  </button>
+                </div>
+
+                <div style={{ position: "relative", marginBottom: "6px" }}>
+                  <Search size={14} style={{ position: "absolute", left: "10px", top: "8px", color: "#64748b" }} />
+                  <input
+                    type="text"
+                    placeholder="Search student by name, roll no..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "6px 10px 6px 30px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "12px",
+                      outline: "none",
+                    }}
+                  />
+                </div>
+
+                <div
+                  style={{
+                    maxHeight: "180px",
+                    overflowY: "auto",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "10px",
+                    padding: "6px",
+                    background: "#f8fafc",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "4px",
+                  }}
+                >
+                  {filteredStudents.length === 0 ? (
+                    <div style={{ fontSize: "12px", color: "#94a3b8", textAlign: "center", padding: "16px" }}>
+                      No matching students found
+                    </div>
+                  ) : (
+                    filteredStudents.map((s) => {
+                      const isSelected = selectedStudentIds.includes(s.id);
+                      return (
+                        <div
+                          key={s.id}
+                          onClick={() => toggleStudentSelection(s.id)}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 10px",
+                            borderRadius: "8px",
+                            background: isSelected ? "#eef2ff" : "#ffffff",
+                            border: isSelected ? "1px solid #818cf8" : "1px solid #e2e8f0",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            {isSelected ? (
+                              <CheckSquare size={16} style={{ color: "#4f46e5" }} />
+                            ) : (
+                              <Square size={16} style={{ color: "#cbd5e1" }} />
+                            )}
+                            <div>
+                              <div style={{ fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>{s.name}</div>
+                              <div style={{ fontSize: "11px", color: "#64748b" }}>{s.rollNo} · {s.department || "CSE"}</div>
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: 700,
+                              padding: "2px 8px",
+                              borderRadius: "999px",
+                              background: isSelected ? "#e0e7ff" : "#f1f5f9",
+                              color: isSelected ? "#3730a3" : "#64748b",
+                            }}
+                          >
+                            {isSelected ? "Selected" : "Add"}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
 
               <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "12px" }}>

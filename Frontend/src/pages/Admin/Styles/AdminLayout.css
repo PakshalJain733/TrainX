@@ -116,7 +116,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .stack-8 {
@@ -239,6 +239,22 @@ body {
   max-width: min(440px, 92vw);
   padding: 16px;
   border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .notif-dropdown-box {
+    position: fixed !important;
+    top: 64px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 80px) !important;
+    z-index: 99999 !important;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25) !important;
+    border-radius: 16px !important;
+  }
 }
 
 .notif-header {
@@ -410,6 +426,7 @@ body {
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -454,8 +471,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 68px;
-  padding: 0 20px;
+  height: var(--navbar-height, 64px);
+  padding: 0 24px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -850,7 +867,7 @@ body {
 .admin-page-inner {
   width: 100%;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: var(--main-page-padding, 24px);
   box-sizing: border-box;
 }
 
@@ -870,7 +887,14 @@ body {
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .admin-header__user-info {
-    display: none;
+    display: none !important;
+  }
+  .admin-header__user {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    height: auto !important;
   }
 }
 
@@ -1688,4 +1712,45 @@ button:active:not(:disabled),
   .overview-stat-value {
     font-size: 20px !important;
   }
-}
+}
+
+/* ── Admin Shared Empty State Card & Table Classes ── */
+.admin-empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-empty-state-icon {
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.admin-empty-state-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0 0 4px 0;
+}
+
+.admin-empty-state-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.admin-table-empty-cell {
+  text-align: center !important;
+  color: #94a3b8 !important;
+  font-size: 14px !important;
+  padding: 48px 16px !important;
+}
+

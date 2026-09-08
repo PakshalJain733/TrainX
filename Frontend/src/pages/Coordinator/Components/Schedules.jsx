@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { Plus, Video, Calendar, UserCheck, Users, ExternalLink } from "lucide-react";
+import { Plus, Video, Calendar, UserCheck, Users, ExternalLink, X } from "lucide-react";
 import { coordinatorSchedules, coordinatorBatches, coordinatorMentors } from "../../../data/coordinatorMockData";
 import "../Styles/Schedules.css";
+import "../../Admin/Styles/AdminUsers.css";
 
 export default function CoordinatorSchedules() {
   const [schedules, setSchedules] = useState(coordinatorSchedules);
   const [showModal, setShowModal] = useState(false);
 
   const [title, setTitle] = useState("");
-  const [batch, setBatch] = useState(coordinatorBatches[0].name);
-  const [trainer, setTrainer] = useState(coordinatorMentors[0].name);
+  const [batch, setBatch] = useState(coordinatorBatches[0]?.name || "");
+  const [trainer, setTrainer] = useState(coordinatorMentors[0]?.name || "");
   const [time, setTime] = useState("");
   const [meetLink, setMeetLink] = useState("");
 
@@ -50,26 +51,19 @@ export default function CoordinatorSchedules() {
         </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div className="coord-schedules-list">
         {schedules.map((s) => (
           <div key={s.id} className="coord-schedule-card">
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <span style={{ fontWeight: 800, fontSize: "15px", color: "#0f172a" }}>{s.title}</span>
+              <div className="coord-sched-header">
+                <span className="coord-sched-title">{s.title}</span>
                 <span
-                  style={{
-                    padding: "2px 8px",
-                    borderRadius: "999px",
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    background: s.status === "Live Now" ? "#ef4444" : "#eff6ff",
-                    color: s.status === "Live Now" ? "#ffffff" : "#1d4ed8",
-                  }}
+                  className={s.status === "Live Now" ? "coord-sched-status--live" : "coord-sched-status--default"}
                 >
                   {s.status}
                 </span>
               </div>
-              <div style={{ fontSize: "12px", color: "#64748b", marginTop: "4px", display: "flex", gap: "14px" }}>
+              <div className="coord-sched-meta">
                 <span>Batch: <strong>{s.batch}</strong></span>
                 <span>Trainer: <strong>{s.trainer}</strong></span>
                 <span>Time: <strong>{s.time}</strong></span>
@@ -80,8 +74,7 @@ export default function CoordinatorSchedules() {
               href={s.meetLink}
               target="_blank"
               rel="noreferrer"
-              className="coord-btn coord-btn--primary"
-              style={{ padding: "8px 16px", textDecoration: "none" }}
+              className="coord-btn coord-btn--primary coord-sched-join-btn"
             >
               <Video size={14} /> Join Meeting
             </a>
@@ -90,75 +83,94 @@ export default function CoordinatorSchedules() {
       </div>
 
       {showModal && (
-        <div className="coord-modal-backdrop" onClick={() => setShowModal(false)}>
-          <div className="coord-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a" }}>Schedule Live Training Session</h2>
-            <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Session Topic</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., Graph Algorithms Deep Dive"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                />
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+          <div className="modal-dialog">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Video size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Schedule Live Training Session</h2>
+                  <p className="modal-subtitle">Schedule interactive classes and generate video meeting links.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowModal(false)} title="Close Modal">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreate}>
+              <div className="modal-body">
+                <div className="form-group-admin">
+                  <label>Session Topic *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Graph Algorithms Deep Dive"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="form-input-admin"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Target Batch</label>
+                    <select
+                      value={batch}
+                      onChange={(e) => setBatch(e.target.value)}
+                      className="form-select-admin"
+                    >
+                      {coordinatorBatches.map((b) => (
+                        <option key={b.id} value={b.name}>{b.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-group-admin">
+                    <label>Trainer / Instructor</label>
+                    <select
+                      value={trainer}
+                      onChange={(e) => setTrainer(e.target.value)}
+                      className="form-select-admin"
+                    >
+                      {coordinatorMentors.map((m) => (
+                        <option key={m.id} value={m.name}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Date & Time Slot</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Tomorrow, 10:00 AM - 12:00 PM"
+                    value={time}
+                    onChange={(e) => setTime(e.target.value)}
+                    className="form-input-admin"
+                  />
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Google Meet / Zoom URL</label>
+                  <input
+                    type="url"
+                    placeholder="https://meet.google.com/..."
+                    value={meetLink}
+                    onChange={(e) => setMeetLink(e.target.value)}
+                    className="form-input-admin"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Target Batch</label>
-                <select
-                  value={batch}
-                  onChange={(e) => setBatch(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                >
-                  {coordinatorBatches.map((b) => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Trainer / Instructor</label>
-                <select
-                  value={trainer}
-                  onChange={(e) => setTrainer(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                >
-                  {coordinatorMentors.map((m) => (
-                    <option key={m.id} value={m.name}>{m.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Date & Time Slot</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Tomorrow, 10:00 AM - 12:00 PM"
-                  value={time}
-                  onChange={(e) => setTime(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Google Meet / Zoom URL</label>
-                <input
-                  type="url"
-                  placeholder="https://meet.google.com/..."
-                  value={meetLink}
-                  onChange={(e) => setMeetLink(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "8px" }}>
-                <button type="button" className="coord-btn" style={{ background: "#f1f5f9" }} onClick={() => setShowModal(false)}>
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="coord-btn coord-btn--primary">
+                <button type="submit" className="btn-modal-submit">
                   Confirm Schedule
                 </button>
               </div>

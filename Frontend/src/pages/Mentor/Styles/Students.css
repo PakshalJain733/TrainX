@@ -1,0 +1,227 @@
+/* Students.css - Mentor Students Roster Styles */
+.mentor-students-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mentor-page-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .mentor-page-header {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.mentor-page-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.mentor-page-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.mentor-search-card {
+  background: #ffffff;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.mentor-search-wrap {
+  position: relative;
+  max-width: 400px;
+}
+
+.mentor-search-icon {
+  width: 16px;
+  height: 16px;
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.mentor-search-input {
+  width: 100%;
+  padding: 8px 16px 8px 36px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.mentor-search-input:focus {
+  background: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+/* Table Card */
+.mentor-table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.mentor-table-responsive {
+  overflow-x: auto;
+}
+
+.mentor-table {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.mentor-table thead {
+  background: #f8fafc;
+  color: #64748b;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.mentor-table th {
+  padding: 12px 20px;
+}
+
+.mentor-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.mentor-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.mentor-table td {
+  padding: 14px 20px;
+}
+
+.mentor-student-name {
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mentor-student-college {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 2px 0 0 0;
+}
+
+.mentor-student-roll {
+  font-family: monospace;
+  color: #475569;
+  font-weight: 600;
+}
+
+.mentor-student-batch {
+  color: #334155;
+  font-weight: 500;
+}
+
+.mentor-student-attendance {
+  font-weight: 700;
+}
+
+.mentor-student-attendance--green {
+  color: #059669;
+}
+
+.mentor-student-attendance--amber {
+  color: #d97706;
+}
+
+.mentor-student-attendance--rose {
+  color: #dc2626;
+}
+
+.mentor-student-score {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.mentor-risk-pill {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-block;
+  border: 1px solid transparent;
+}
+
+.mentor-risk-pill--top {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.mentor-risk-pill--good {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.mentor-risk-pill--moderate {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.mentor-risk-pill--high {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.mentor-actions-cell {
+  text-align: right;
+}
+
+.mentor-action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 11px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mentor-action-btn:hover {
+  background: #eff6ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}

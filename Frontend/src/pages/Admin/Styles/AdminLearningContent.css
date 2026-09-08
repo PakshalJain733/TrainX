@@ -41,3 +41,8 @@
 }
 .admin-lc-delete-btn:hover { background: #fee2e2; color: #dc2626; }
 
+.learning-badge-pill {
+  width: max-content;
+}
+
+

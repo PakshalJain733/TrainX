@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { initialAdminVerifications } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
+import EmptyState from '../../components/ui/EmptyState';
 import { ShieldCheck, CheckCircle2, XCircle, Mail, Building2, Calendar, Clock } from 'lucide-react';
 
 export default function AdminVerification() {
@@ -34,73 +35,79 @@ export default function AdminVerification() {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px]">
-                <th className="py-3 px-4">Applicant Name</th>
-                <th className="py-3 px-4">Institution / College</th>
-                <th className="py-3 px-4">Designation</th>
-                <th className="py-3 px-4">Requested On</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">Governance Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {requests.map((req) => (
-                <tr key={req.id} className="hover:bg-slate-50/70 transition">
-                  <td className="py-3.5 px-4">
-                    <div className="font-bold text-slate-900">{req.name}</div>
-                    <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                      <Mail className="w-3 h-3 text-slate-400" />
-                      <span>{req.email}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                      <Building2 className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>{req.college}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">{req.designation}</td>
-                  <td className="py-3.5 px-4 text-slate-500">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{req.requestedAt}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <StatusBadge status={req.status} />
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    {req.status === 'Pending' ? (
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleReject(req.id)}
-                          className="px-2.5 py-1 text-[11px] font-semibold text-rose-600 hover:bg-rose-50 rounded-lg transition border border-rose-200"
-                        >
-                          Reject
-                        </button>
-                        <button
-                          onClick={() => handleVerify(req.id)}
-                          className="px-3 py-1 text-[11px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition shadow-xs flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Approve Access</span>
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-semibold text-emerald-600 flex items-center justify-end gap-1">
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Verified</span>
-                      </span>
-                    )}
-                  </td>
+        {requests.length === 0 ? (
+          <EmptyState
+            icon={ShieldCheck}
+            title="All Verification Requests Handled"
+            description="There are currently no college dean or administrator sign-ups pending verification."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <th className="py-3 px-4">Applicant Name</th>
+                  <th className="py-3 px-4">Institution / College</th>
+                  <th className="py-3 px-4">Designation</th>
+                  <th className="py-3 px-4">Requested On</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Governance Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                {requests.map((req) => (
+                  <tr key={req.id} className="hover:bg-slate-50/70 transition">
+                    <td className="py-3.5 px-4">
+                      <div className="font-bold text-slate-900">{req.name}</div>
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-slate-400" />
+                        <span>{req.email}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{req.college}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{req.designation}</td>
+                    <td className="py-3.5 px-4 text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{req.date}</span>
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <StatusBadge status={req.status} />
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      {req.status === 'Pending' ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleVerify(req.id)}
+                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold rounded-lg text-xs border border-emerald-200 transition flex items-center gap-1"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Verify Access</span>
+                          </button>
+                          <button
+                            onClick={() => handleReject(req.id)}
+                            className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs border border-rose-200 transition flex items-center gap-1"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium italic">Approved</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

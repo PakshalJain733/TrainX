@@ -1,0 +1,57 @@
+/* StudyMaterial.css - Mentor Study Material Tab Styles */
+.mentor-studymaterial-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mentor-material-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mentor-material-batch {
+  font-weight: 500;
+  color: #334155;
+}
+
+.mentor-material-tag {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #4338ca;
+  border: 1px solid #bfdbfe;
+  display: inline-block;
+}
+
+.mentor-material-date {
+  color: #64748b;
+}
+
+.mentor-material-downloads {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.mentor-btn-download {
+  padding: 6px 12px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mentor-btn-download:hover {
+  background: #eff6ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}

@@ -4,14 +4,14 @@ import {
   Users,
   Target,
   Bot,
-  AlertTriangle,
   CalendarCheck,
   Trophy,
-  ClipboardCheck,
   AlertCircle,
+  AlertTriangle,
   BookOpen,
   FileCheck2,
   HelpCircle,
+  Layers,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/MentorSidebar.css";
@@ -25,8 +25,8 @@ function SidebarBrand({ collapsed }) {
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
           <span className="sidebar-brand-sub">Mentor Workspace</span>
         </div>
@@ -37,13 +37,14 @@ function SidebarBrand({ collapsed }) {
 
 const primaryNavItems = [
   { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true },
+  { title: "Allocated Batches", url: "/mentor/batches", icon: Layers },
+  { title: "Quizzes", url: "/mentor/quizzes", icon: FileCheck2 },
   { title: "Students", url: "/mentor/students", icon: Users },
   { title: "Roadmaps", url: "/mentor/roadmaps", icon: Target },
   { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot },
   { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle },
   { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
   { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy },
-  { title: "Mock Drives", url: "/mentor/mock-drives", icon: ClipboardCheck },
   { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle },
   { title: "Study Material", url: "/mentor/study-material", icon: BookOpen },
   { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2 },

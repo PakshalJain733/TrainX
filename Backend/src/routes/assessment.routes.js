@@ -1,7 +1,12 @@
 import { Router } from 'express';
-import { getAssessmentData } from '../controllers/assessment.controller.js';
+import {
+  getAssessments,
+  createAssessment,
+} from '../controllers/assessment.controller.js';
 
 const router = Router();
-router.get('/', getAssessmentData);
+
+router.get('/', getAssessments);
+router.post('/', createAssessment);
 
 export default router;

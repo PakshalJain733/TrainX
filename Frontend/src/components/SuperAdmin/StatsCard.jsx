@@ -1,5 +1,6 @@
 import React from 'react';
 import { Building2, Users, GraduationCap, ShieldAlert, ArrowUpRight, TrendingUp } from 'lucide-react';
+import '../../pages/SuperAdmin/SuperAdmin.css';
 
 const iconMap = {
   Building2,
@@ -15,20 +16,20 @@ export default function StatsCard({ label, value, change, trend = 'up', icon = '
   const isUp = trend === 'up';
 
   return (
-    <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs hover:shadow-md transition duration-200 flex flex-col justify-between">
+    <div className="sa-stats-card">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{label}</span>
+        <span className="sa-stats-label">{label}</span>
         <div className={`p-2.5 rounded-xl ${
           isWarning
             ? 'bg-amber-50 text-amber-600 border border-amber-200'
             : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
         }`}>
-          <IconComponent className="w-5 h-5" />
+          <IconComponent className="w-4 h-4" />
         </div>
       </div>
 
       <div className="mt-3">
-        <h3 className="text-2xl font-bold text-slate-900 tracking-tight">{value}</h3>
+        <h3 className="sa-stats-val">{value}</h3>
         <p className="mt-1 text-xs flex items-center gap-1 font-medium">
           {isUp && <ArrowUpRight className="w-3.5 h-3.5 text-emerald-500" />}
           {isWarning && <TrendingUp className="w-3.5 h-3.5 text-amber-500" />}

@@ -104,24 +104,72 @@ export default function Notifications() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    apiFetch("/student/notifications")
+    // Load local storage broadcast notifications
+    try {
+      const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
+      if (stored.length > 0) {
+        const storedMapped = stored.map((s) => ({
+          id: s.id,
+          title: s.title,
+          body: s.desc || s.body,
+          time: s.time || "Recently",
+          category: "Broadcast",
+          icon: Bell,
+          iconColor: "#7c3aed",
+          iconBg: "#f5f3ff",
+          unread: s.unread !== undefined ? s.unread : true,
+        }));
+        setNotifications((prev) => {
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newNotifs = storedMapped.filter((n) => !existingIds.has(n.id));
+          return [...newNotifs, ...prev];
+        });
+      }
+    } catch (e) {}
+
+    // Fetch live broadcast announcements from admin
+    apiFetch("/admin/broadcast")
       .then((res) => {
-        if (res.data && res.data.length > 0) {
-          const mapped = res.data.map((n) => ({
-            id: n.id,
-            title: n.title,
-            body: n.body,
-            time: "Recently",
-            category: "System",
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const broadcastMapped = res.data.map((b) => ({
+            id: `broadcast-${b.id}`,
+            title: `📢 [Notice] ${b.title}`,
+            body: b.message,
+            time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
+            category: "Broadcast",
             icon: Bell,
-            iconColor: "#2563eb",
-            iconBg: "#eff6ff",
-            unread: !n.read,
+            iconColor: "#7c3aed",
+            iconBg: "#f5f3ff",
+            unread: true,
           }));
-          setNotifications((prev) => [...mapped, ...prev]);
+          setNotifications((prev) => {
+            const existingIds = new Set(prev.map((p) => p.id));
+            const newNotifs = broadcastMapped.filter((n) => !existingIds.has(n.id));
+            return [...newNotifs, ...prev];
+          });
         }
       })
-      .catch((err) => console.error("NOTIFICATIONS FETCH ERROR:", err));
+      .catch((err) => console.error("BROADCAST FETCH ERROR:", err));
+
+    const handleNewBroadcast = (e) => {
+      if (e.detail) {
+        const newNotifItem = {
+          id: e.detail.id,
+          title: e.detail.title,
+          body: e.detail.desc || e.detail.body,
+          time: "Just now",
+          category: "Broadcast",
+          icon: Bell,
+          iconColor: "#7c3aed",
+          iconBg: "#f5f3ff",
+          unread: true,
+        };
+        setNotifications((prev) => [newNotifItem, ...prev.filter((p) => p.id !== e.detail.id)]);
+      }
+    };
+
+    window.addEventListener("new_broadcast_notification", handleNewBroadcast);
+    return () => window.removeEventListener("new_broadcast_notification", handleNewBroadcast);
   }, []);
 
   const markAllRead = () => {
@@ -140,12 +188,13 @@ export default function Notifications() {
 
   const unreadCount = notifications.filter((n) => n.unread).length;
 
-  const categories = ["All", "Unread", "Milestones", "Weekly Reports", "AI Interview", "Practice", "Attendance", "System"];
+  const categories = ["All", "Unread", "Broadcast", "Important"];
 
   const filteredNotifs = notifications.filter((n) => {
     if (filter === "Unread") return n.unread;
-    if (filter === "All") return true;
-    return n.category === filter;
+    if (filter === "Broadcast") return n.category === "Broadcast" || (n.title && n.title.includes("Broadcast")) || (n.title && n.title.includes("[Notice]"));
+    if (filter === "Important") return n.unread || n.category === "Broadcast" || n.type === "alert" || n.priority === "Urgent Notice";
+    return true;
   });
 
   return (

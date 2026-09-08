@@ -11,6 +11,8 @@ import {
   Trophy,
   FileCheck2,
   HelpCircle,
+  Megaphone,
+  Code,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/AdminSidebar.css";
@@ -41,12 +43,13 @@ const primaryNavItems = [
   { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpen },
   { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
-  { title: "Coding Tasks", url: "/admin/practice", icon: Terminal },
+  { title: "Coding Practice", url: "/admin/practice", icon: Code },
   { title: "Student Progress", url: "/admin/progress", icon: LineChart },
   { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
 ];
 
 const footerNavItems = [
+  { title: "Broadcast Notice", url: "/admin/broadcast", icon: Megaphone },
   { title: "Support Tickets", url: "/admin/help", icon: HelpCircle },
 ];
 

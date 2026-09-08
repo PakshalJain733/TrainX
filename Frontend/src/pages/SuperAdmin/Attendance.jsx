@@ -1,86 +1,80 @@
-import React from 'react';
-import { initialAttendanceData } from '../../data/superAdminMockData';
-import { CalendarCheck, AlertCircle, CheckCircle, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { CalendarCheck, Search, CheckCircle2, XCircle, Clock, Building2, Filter } from 'lucide-react';
+
+const mockAttendanceData = [
+  { id: 1, college: "PVPPCOE Mumbai", department: "Computer Engineering", batch: "CSE 2026 Alpha", totalSessions: 48, avgAttendance: "94.2%", status: "Good" },
+  { id: 2, college: "Apex Institute", department: "Information Technology", batch: "IT 2026 Beta", totalSessions: 42, avgAttendance: "68.5%", status: "Needs Support" },
+  { id: 3, college: "Meridian College", department: "AI & Data Science", batch: "AI 2026 Cohort", totalSessions: 45, avgAttendance: "88.0%", status: "Good" },
+  { id: 4, college: "Vanguard Institute", department: "Electronics Engineering", batch: "ECE 2026", totalSessions: 40, avgAttendance: "82.4%", status: "Good" }
+];
 
 export default function Attendance() {
-  const data = initialAttendanceData;
+  const [attendanceList] = useState(mockAttendanceData);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filtered = attendanceList.filter(item =>
+    item.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.batch.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 text-slate-100">
+      <div className="sa-page-header flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <CalendarCheck className="w-5 h-5 text-indigo-600" />
-            <span>Attendance Monitoring & Analytics</span>
+            <span>Attendance Governance & Monitoring</span>
           </h2>
-          <p className="text-xs text-slate-500">Cross-institutional batch attendance rate, daily logs, and low-attendance alerts</p>
+          <p className="text-xs text-slate-500">Institutional attendance tracking and session logs</p>
         </div>
       </div>
 
-      {/* Grid Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <p className="text-xs text-slate-500 font-medium">Avg Portal Attendance</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">91.5%</h3>
-          <p className="text-[11px] text-emerald-600 font-medium mt-1">Above institutional threshold (75%)</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <p className="text-xs text-slate-500 font-medium">Flagged Batches</p>
-          <h3 className="text-2xl font-bold text-amber-600 mt-1">1 Batch</h3>
-          <p className="text-[11px] text-amber-600 font-medium mt-1">Cloud DevOps (&lt;80% attendance)</p>
-        </div>
-
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-          <p className="text-xs text-slate-500 font-medium">Daily Active Logins</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">3,420</h3>
-          <p className="text-[11px] text-slate-500 mt-1">89% of enrolled students active today</p>
+      <div className="sa-search-card flex items-center justify-between gap-4">
+        <div className="sa-search-wrap flex-1 relative">
+          <Search className="sa-search-icon absolute left-3 top-3 text-slate-400" size={16} />
+          <input
+            type="text"
+            placeholder="Search college, department, or batch..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none"
+          />
         </div>
       </div>
 
-      {/* Attendance Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-900">Batch Attendance Audit</h3>
-          <span className="text-xs text-slate-400">Live data sync</span>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider font-semibold">
-              <tr>
-                <th className="px-5 py-3">College & Batch</th>
-                <th className="px-5 py-3">Enrolled Students</th>
-                <th className="px-5 py-3">Avg Attendance</th>
-                <th className="px-5 py-3">Flagged Students</th>
-                <th className="px-5 py-3">Status</th>
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden">
+        <table className="w-full text-left text-sm text-slate-300">
+          <thead className="text-xs text-slate-400 border-b border-slate-800 uppercase font-mono bg-slate-950/40">
+            <tr>
+              <th className="py-3 px-4">College / Department</th>
+              <th className="py-3 px-4">Target Batch</th>
+              <th className="py-3 px-4">Total Sessions</th>
+              <th className="py-3 px-4">Avg Attendance Rate</th>
+              <th className="py-3 px-4 text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/60">
+            {filtered.map((item) => (
+              <tr key={item.id} className="hover:bg-slate-800/40">
+                <td className="py-3.5 px-4 font-bold text-white">
+                  <div>{item.college}</div>
+                  <div className="text-xs text-indigo-400 font-normal">{item.department}</div>
+                </td>
+                <td className="py-3.5 px-4 text-slate-300 font-medium">{item.batch}</td>
+                <td className="py-3.5 px-4 text-slate-300 font-mono">{item.totalSessions} Sessions</td>
+                <td className="py-3.5 px-4 font-bold text-emerald-400">{item.avgAttendance}</td>
+                <td className="py-3.5 px-4 text-right">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                    item.status === 'Good' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                  }`}>
+                    {item.status}
+                  </span>
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {data.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/60 transition">
-                  <td className="px-5 py-3.5">
-                    <p className="font-bold text-slate-900">{item.batch}</p>
-                    <p className="text-[11px] text-slate-400">{item.college}</p>
-                  </td>
-                  <td className="px-5 py-3.5 font-medium text-slate-700">{item.totalStudents}</td>
-                  <td className="px-5 py-3.5 font-bold text-indigo-600">{item.avgAttendance}</td>
-                  <td className="px-5 py-3.5 font-medium text-slate-600">{item.flaggedStudents} students</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${item.status === 'Healthy'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : item.status === 'Moderate'
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}>
-                      {item.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import {
   FileCheck,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AiInterview.css";
 
 const questionsList = [
@@ -173,7 +174,7 @@ export default function AIInterview() {
   };
 
   return (
-    <div className="ai-interview-page">
+    <div className="ai-interview-page stack-6">
       <div className="ai-interview-split-grid">
         {/* Practice Arena */}
         <div className="interview-practice-card">
@@ -305,10 +306,10 @@ export default function AIInterview() {
                   <Bot size={24} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>
+                  <h3 className="ai-modal-heading">
                     Live AI Technical Interview Simulation
                   </h3>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>
+                  <span className="ai-modal-subheading">
                     Interactive Voice & Coding Drill Phase
                   </span>
                 </div>
@@ -326,9 +327,9 @@ export default function AIInterview() {
                 <>
                   {/* AI Interviewer Audio Visualizer */}
                   <div className="ai-speak-bubble">
-                    <Volume2 size={22} style={{ color: "#2563eb", flexShrink: 0 }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, color: "#2563eb", fontWeight: 700, marginBottom: 4 }}>
+                    <Volume2 size={22} className="ai-speak-icon" />
+                    <div className="ai-speak-content">
+                      <div className="ai-speak-label">
                         {isAiSpeaking ? "AI INTERVIEWER SPEAKING..." : "AI INTERVIEWER PROMPT"}
                       </div>
                       <div>{currentQ.question}</div>
@@ -345,22 +346,21 @@ export default function AIInterview() {
                   </div>
 
                   {/* Question & Answer Inputs */}
-                  <div style={{ background: "#f8fafc", padding: 16, borderRadius: 14, border: "1px solid #e2e8f0" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 13, fontWeight: 700 }}>
+                  <div className="ai-qa-box">
+                    <div className="ai-qa-header">
                       <span>Your Response (Question {currentIdx + 1} of {questionsList.length})</span>
-                      <span style={{ color: "#2563eb" }}>{currentQ.topic}</span>
+                      <span className="ai-qa-topic">{currentQ.topic}</span>
                     </div>
 
                     <textarea
-                      className="interview-textarea"
+                      className="interview-textarea interview-textarea-min"
                       placeholder="Speak using the mic button below or type your answer..."
                       value={answer}
                       onChange={(e) => setAnswer(e.target.value)}
-                      style={{ minHeight: 120 }}
                     />
 
                     <div className="ai-modal-controls">
-                      <div style={{ display: "flex", gap: 8 }}>
+                      <div className="ai-controls-btn-group">
                         <button
                           type="button"
                           className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
@@ -396,54 +396,53 @@ export default function AIInterview() {
                 </>
               ) : (
                 /* FINAL DIAGNOSTIC SCORECARD REPORT */
-                <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                <div className="ai-scorecard-column">
                   <div className="ai-scorecard-hero">
-                    <Award size={48} style={{ color: "#60a5fa" }} />
-                    <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>
+                    <Award size={48} className="ai-award-icon" />
+                    <h2 className="ai-scorecard-title">
                       Live AI Interview Completed!
                     </h2>
-                    <p style={{ margin: 0, fontSize: 13, color: "#94a3b8" }}>
+                    <p className="ai-scorecard-subtitle">
                       Overall Technical Evaluation & Readiness Score
                     </p>
                     <div className="ai-score-big">{overallScorecard?.score}%</div>
 
                     <div className="ai-score-breakdown-grid">
                       <div className="ai-score-mini-card">
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#34d399" }}>
+                        <div className="ai-mini-score-val-green">
                           {overallScorecard?.technical}%
                         </div>
-                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Technical Depth</div>
+                        <div className="ai-mini-score-label">Technical Depth</div>
                       </div>
                       <div className="ai-score-mini-card">
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#60a5fa" }}>
+                        <div className="ai-mini-score-val-blue">
                           {overallScorecard?.problemSolving}%
                         </div>
-                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Problem Solving</div>
+                        <div className="ai-mini-score-label">Problem Solving</div>
                       </div>
                       <div className="ai-score-mini-card">
-                        <div style={{ fontSize: 18, fontWeight: 800, color: "#c084fc" }}>
+                        <div className="ai-mini-score-val-purple">
                           {overallScorecard?.communication}%
                         </div>
-                        <div style={{ fontSize: 11, color: "#cbd5e1" }}>Communication</div>
+                        <div className="ai-mini-score-label">Communication</div>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ background: "#f8fafc", padding: 18, borderRadius: 14, border: "1px solid #e2e8f0" }}>
-                    <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: "#0f172a", display: "flex", alignItems: "center", gap: 6 }}>
+                  <div className="ai-diagnostic-box">
+                    <h4 className="ai-diagnostic-title">
                       <TrendingUp size={16} className="text-blue-600" /> AI Diagnostic Feedback
                     </h4>
-                    <p style={{ margin: 0, fontSize: 13.5, color: "#475569", lineHeight: 1.5 }}>
+                    <p className="ai-diagnostic-text">
                       {overallScorecard?.feedback}
                     </p>
                   </div>
 
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div className="ai-action-row">
                     <button
                       type="button"
-                      className="ai-autofill-btn"
+                      className="ai-autofill-btn ai-retake-btn"
                       onClick={resetInterview}
-                      style={{ padding: "10px 20px" }}
                     >
                       <RotateCcw size={16} /> Retake AI Interview
                     </button>

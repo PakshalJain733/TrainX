@@ -7,6 +7,7 @@ import {
   LineChart,
   Trophy,
   CalendarCheck,
+  AlertTriangle,
   FileCheck2,
   CalendarDays,
   Award,
@@ -18,9 +19,16 @@ import {
   HelpCircle,
   GraduationCap,
   Settings,
+  UserCheck,
+  Bell,
+  ChartBar,
+  ChartLineIcon,
+  ChartBarIncreasing,
+  ChartBarIncreasingIcon,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentSidebar.css";
+import Progress from "../../../components/ui/Progress";
 
 function SidebarBrand({ collapsed, subtitle }) {
   return (
@@ -44,18 +52,17 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Dashboard", url: "/student", icon: LayoutDashboard, exact: true },
   { title: "Batches", url: "/student/batches", icon: Code2 },
-  { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles },
+  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
+  { title: "AI Roadmap", url: "/student/roadmap", icon: ChartBar },
   { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck },
   { title: "Practice", url: "/student/practice", icon: Terminal },
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
   { title: "Progress", url: "/student/progress", icon: LineChart },
-  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
 ];
 
 const footerNavItems = [
-  { title: "Settings", url: "/student/settings", icon: Settings },
   { title: "Support", url: "/student/help", icon: HelpCircle },
 ];
 
@@ -90,7 +97,6 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
 
   return (
     <aside className={`student-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-
       {/* Header */}
       <div className="sidebar-header">
         <SidebarBrand collapsed={collapsed} subtitle="Student Workspace" />
@@ -103,13 +109,12 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
         </ul>
       </div>
 
-      {/* Pinned Bottom Account Section with Divider */}
+      {/* Pinned Bottom Account Section */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
           {footerNavItems.map(renderItem)}
         </ul>
       </div>
-
     </aside>
   );
 }

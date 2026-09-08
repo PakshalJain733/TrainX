@@ -117,7 +117,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 .stack-8 {
@@ -240,6 +240,22 @@ body {
   max-width: min(440px, 92vw);
   padding: 16px;
   border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .notif-dropdown-box {
+    position: fixed !important;
+    top: 64px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 80px) !important;
+    z-index: 99999 !important;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25) !important;
+    border-radius: 16px !important;
+  }
 }
 
 .notif-header {
@@ -456,8 +472,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  height: 68px;
-  padding: 0 20px;
+  height: var(--navbar-height, 64px);
+  padding: 0 24px;
   background: #ffffff;
   border-bottom: 1px solid var(--border);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
@@ -852,7 +868,7 @@ body {
 .mentor-page-inner {
   width: 100%;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: var(--main-page-padding, 24px);
   box-sizing: border-box;
 }
 
@@ -872,7 +888,14 @@ body {
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .mentor-header__user-info {
-    display: none;
+    display: none !important;
+  }
+  .mentor-header__user {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    height: auto !important;
   }
 }
 

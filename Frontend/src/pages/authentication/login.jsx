@@ -58,11 +58,10 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [otpHint, setOtpHint] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
-  const API_BASE_URL = "http://localhost:5000/api/v1/auth";
+  const API_BASE_URL = "/api/v1/auth";
 
   useEffect(() => {
     let interval = null;
@@ -91,9 +90,6 @@ function Login() {
       if (data.success) {
         setStep("otp");
         setResendTimer(30);
-        if (data.data?.otp) {
-          setOtpHint(`Demo OTP: ${data.data.otp}`);
-        }
       } else {
         setErrorMsg(data.message || "Failed to send OTP. Please ensure your account is registered.");
       }
@@ -121,9 +117,6 @@ function Login() {
       const data = await response.json();
       if (data.success) {
         setSuccessMsg("A new OTP has been sent to your email!");
-        if (data.data?.otp) {
-          setOtpHint(`New Demo OTP: ${data.data.otp}`);
-        }
         setResendTimer(30);
       } else {
         setErrorMsg(data.message || "Failed to resend OTP");
@@ -182,9 +175,32 @@ function Login() {
       const data = await response.json();
       if (data.success && data.data?.token) {
         localStorage.setItem("token", data.data.token);
-        localStorage.setItem("user", JSON.stringify(data.data.user));
-        
-        const role = data.data.user?.role?.toLowerCase() || "";
+
+        const serverUser = data.data.user || {};
+        let existingUser = {};
+        try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+
+        const isAutoName = (n) => !n || /^\d+$/.test(n.trim()) || n.startsWith("User_") || /^vu\d/i.test(n.trim());
+
+        let finalName = serverUser.name;
+        if (isAutoName(finalName)) {
+          if (existingUser.name && !isAutoName(existingUser.name)) {
+            finalName = existingUser.name;
+          } else {
+            // Default friendly name instead of raw roll code Vu3f2425047
+            finalName = "Pakshal";
+          }
+        }
+
+        const mergedUser = {
+          ...existingUser,
+          ...serverUser,
+          name: finalName,
+        };
+
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+
+        const role = mergedUser.role?.toLowerCase() || "";
         if (role.includes("coordinator")) {
           navigate("/coordinator");
         } else if (role.includes("admin") || role.includes("hod")) {
@@ -243,21 +259,15 @@ function Login() {
           <img src={Logo} alt="Logo" className="login-logo" />
 
           {errorMsg && (
-            <div style={{ color: "#ef4444", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+            <div className="auth-error-msg">
               {errorMsg}
             </div>
           )}
           {successMsg && (
-            <div style={{ color: "#10b981", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem" }}>
+            <div className="auth-success-msg">
               {successMsg}
             </div>
           )}
-          {otpHint && step === "otp" && (
-            <div style={{ color: "#3b82f6", marginBottom: "0.8rem", textAlign: "center", fontSize: "0.85rem", fontWeight: "600" }}>
-              {otpHint}
-            </div>
-          )}
-
           {/* STEP 1: EMAIL INPUT SCREEN */}
           {step === "email" && (
             <>
@@ -275,12 +285,12 @@ function Login() {
 
               <form onSubmit={handleSendOtp}>
                 <div className="login-input-group">
-                  <FieldLabel htmlFor="email" icon={Icons.email}>Email / Mobile</FieldLabel>
+                  <FieldLabel htmlFor="email" icon={Icons.email}>Email</FieldLabel>
                   <input
                     id="email"
                     type="text"
                     required
-                    placeholder="user@pvppcoe.ac.in or 9876543210"
+                    placeholder="user@pvppcoe.ac.in"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />

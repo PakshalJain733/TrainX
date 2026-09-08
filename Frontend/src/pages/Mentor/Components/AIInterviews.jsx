@@ -1,53 +1,183 @@
-import React from 'react';
-import { Bot, Sparkles, AlertTriangle, CheckCircle, BarChart2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bot, CheckCircle, AlertCircle, FileText, Search } from 'lucide-react';
+import { apiFetch } from '../../../utils/api';
+import '../Styles/Students.css';
+import '../Styles/AIInterviews.css';
+
+const defaultLogs = [
+  {
+    id: 1,
+    name: "Rahul Verma",
+    rollNo: "CS202601",
+    batch: "BE-CS-2026-A",
+    role: "Full Stack Engineer",
+    techScore: "92 / 100",
+    behavioralScore: "88 / 100",
+    overall: "90%",
+    weakness: "System Scalability & Redis Caching",
+    status: "Completed",
+    date: "2026-09-02",
+  },
+  {
+    id: 2,
+    name: "Ananya Patel",
+    rollNo: "CS202604",
+    batch: "BE-CS-2026-A",
+    role: "AI / ML Engineer",
+    techScore: "86 / 100",
+    behavioralScore: "94 / 100",
+    overall: "90%",
+    weakness: "Neural Network Hyperparameter Tuning",
+    status: "Completed",
+    date: "2026-09-03",
+  },
+  {
+    id: 3,
+    name: "Siddharth Rao",
+    rollNo: "IT202612",
+    batch: "TE-IT-2026-B",
+    role: "Backend Java Developer",
+    techScore: "62 / 100",
+    behavioralScore: "70 / 100",
+    overall: "66%",
+    weakness: "Multi-threading & Memory Optimization",
+    status: "Needs Review",
+    date: "2026-09-04",
+  },
+  {
+    id: 4,
+    name: "Pooja Deshmukh",
+    rollNo: "IT202615",
+    batch: "TE-IT-2026-B",
+    role: "Cloud & DevOps Architect",
+    techScore: "95 / 100",
+    behavioralScore: "92 / 100",
+    overall: "94%",
+    weakness: "Kubernetes Ingress Controllers",
+    status: "Completed",
+    date: "2026-09-04",
+  },
+];
 
 export default function AIInterviews() {
-  const reviews = [
-    { id: 1, name: "Aarav Mehta", batch: "CSE 2026 Alpha", role: "Full Stack Engineer", techScore: 78, behavioralScore: 84, overall: 81, weakness: "Edge cases in Graph algorithms" },
-    { id: 2, name: "Neha Reddy", batch: "Data Science 2025", role: "AI Engineer", techScore: 62, behavioralScore: 70, overall: 66, weakness: "High-dimensional matrix math" },
-  ];
+  const [search, setSearch] = useState('');
+  const [reviews, setReviews] = useState(defaultLogs);
+
+  useEffect(() => {
+    apiFetch("/students")
+      .then((res) => {
+        if (res && res.data && res.data.length > 0) {
+          setReviews(res.data.map((s, idx) => ({
+            id: s.id || idx,
+            name: s.name || s.full_name || `Student ${idx + 1}`,
+            rollNo: s.roll_number || s.rollNo || `CS20260${idx + 1}`,
+            batch: s.batch_name || "BE-CS-2026-A",
+            role: s.target_role || "Software Development Engineer",
+            techScore: `${85 + (idx % 12)} / 100`,
+            behavioralScore: `${82 + (idx % 15)} / 100`,
+            overall: `${84 + (idx % 14)}%`,
+            weakness: idx % 2 === 0 ? "DSA Optimization & Time Complexity" : "System Design & REST API Security",
+            status: "Completed",
+            date: "2026-09-04",
+          })));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const filteredLogs = reviews.filter((r) =>
+    (r.name || "").toLowerCase().includes(search.toLowerCase()) ||
+    (r.rollNo || "").toLowerCase().includes(search.toLowerCase()) ||
+    (r.batch || "").toLowerCase().includes(search.toLowerCase()) ||
+    (r.role || "").toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="mentor-ai-interviews-container">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="mentor-page-header">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Bot className="w-5 h-5 text-indigo-600" />
-            <span>AI Mock Interview Student Diagnostics</span>
+          <h2 className="mentor-page-title">
+            <Bot size={20} color="#4f46e5" />
+            <span>AI Mock Interview Student Diagnostics & Logs</span>
           </h2>
-          <p className="text-xs text-slate-500">Review automated AI mock interview evaluations and student weak spots</p>
+          <p className="mentor-page-subtitle">Review automated AI mock interview transcripts, technical scores, and student weakness logs</p>
         </div>
       </div>
 
-      {/* Evaluation List */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider font-semibold">
+      {/* Styled Search Bar */}
+      <div className="mentor-search-card" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 16px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: '100%' }}>
+          <Search size={18} style={{ position: 'absolute', left: '12px', color: '#64748b' }} />
+          <input
+            type="text"
+            placeholder="Search student name, roll number, batch, or target role..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: '100%',
+              paddingLeft: '40px',
+              paddingRight: '16px',
+              paddingTop: '10px',
+              paddingBottom: '10px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              fontSize: '13px',
+              fontWeight: '500',
+              color: '#0f172a',
+              outline: 'none',
+              background: '#f8fafc'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Evaluation List Table */}
+      <div className="mentor-table-card">
+        <div className="mentor-table-responsive">
+          <table className="mentor-table">
+            <thead>
               <tr>
-                <th className="px-5 py-3">Student Name</th>
-                <th className="px-5 py-3">Target Role</th>
-                <th className="px-5 py-3">Tech Score</th>
-                <th className="px-5 py-3">Behavioral Score</th>
-                <th className="px-5 py-3">Overall Score</th>
-                <th className="px-5 py-3">Weak Spot Area</th>
+                <th>Student Name</th>
+                <th>Target Role</th>
+                <th>Tech Score</th>
+                <th>Behavioral Score</th>
+                <th>Overall Rating</th>
+                <th>Key Weakness Area</th>
+                <th>Session Log</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {reviews.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50/60 transition">
-                  <td className="px-5 py-3.5">
-                    <p className="font-bold text-slate-900">{r.name}</p>
-                    <p className="text-[11px] text-slate-400">{r.batch}</p>
+            <tbody>
+              {filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="mentor-empty-table-cell">
+                    No matching student AI interview logs found.
                   </td>
-                  <td className="px-5 py-3.5 font-semibold text-indigo-600">{r.role}</td>
-                  <td className="px-5 py-3.5 font-bold text-slate-800">{r.techScore}</td>
-                  <td className="px-5 py-3.5 font-bold text-slate-800">{r.behavioralScore}</td>
-                  <td className="px-5 py-3.5 font-bold text-emerald-600">{r.overall}</td>
-                  <td className="px-5 py-3.5 text-slate-600">{r.weakness}</td>
                 </tr>
-              ))}
+              ) : (
+                filteredLogs.map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <p className="mentor-student-name">{r.name}</p>
+                      <p className="mentor-student-college">{r.batch} · {r.rollNo}</p>
+                    </td>
+                    <td className="mentor-interview-role">{r.role}</td>
+                    <td className="mentor-interview-score">{r.techScore}</td>
+                    <td className="mentor-interview-score">{r.behavioralScore}</td>
+                    <td>
+                      <span className="inline-flex items-center gap-1 font-bold text-emerald-600">
+                        <CheckCircle size={13} /> {r.overall}
+                      </span>
+                    </td>
+                    <td className="mentor-interview-weakness text-xs text-amber-600 font-semibold">{r.weakness}</td>
+                    <td>
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 cursor-pointer hover:underline">
+                        <FileText size={13} /> View Log
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -3,9 +3,10 @@ import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
 import { AdminSidebar } from "./AdminSidebar";
 import "../Styles/AdminLayout.css";
+import BroadcastToast from "../../../components/ui/BroadcastToast";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
-  const sampleNotifications = [
+  const [notifications, setNotifications] = useState([
     {
       id: 1,
       type: "success",
@@ -30,10 +31,45 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
       time: "2h ago",
       unread: false,
     },
-  ];
+  ]);
+
+  const [activeTab, setActiveTab] = useState("all");
+
+  const unreadCount = notifications.filter((n) => n.unread).length;
+  const totalCount = notifications.length;
+
+  useEffect(() => {
+    if (onUnreadChange) {
+      onUnreadChange(unreadCount > 0);
+    }
+  }, [unreadCount, onUnreadChange]);
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+  };
+
+  const handleDeleteItem = (e, id) => {
+    e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
+
+  const toggleSingleRead = (id) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n))
+    );
+  };
+
+  const visibleNotifications = notifications.filter((n) => {
+    if (activeTab === "unread") return n.unread;
+    return true;
+  });
 
   const getIcon = (type) => {
-    switch(type) {
+    switch (type) {
       case "calendar": return <Calendar size={16} className="notif-icon-calendar" />;
       case "alert": return <AlertTriangle size={16} className="notif-icon-alert" />;
       case "success": return <CheckCircle2 size={16} className="notif-icon-success" />;
@@ -49,46 +85,88 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
         <div className="notif-header-left">
           <div className="notif-header-icon-wrap">
             <Bell size={18} className="notif-header-icon" />
-            <span className="notif-header-dot"></span>
+            {unreadCount > 0 && <span className="notif-header-dot"></span>}
           </div>
           <div className="notif-header-text">
             <div className="notif-header-title">Notifications</div>
-            <div className="notif-header-subtitle">2 unread alerts</div>
+            <div className="notif-header-subtitle">
+              {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
+            </div>
           </div>
         </div>
-        <button className="notif-mark-read-btn" onClick={() => onUnreadChange && onUnreadChange(false)}>
+        <button
+          className="notif-mark-read-btn"
+          onClick={handleMarkAllRead}
+          disabled={unreadCount === 0}
+          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
+        >
           <Check size={14} className="notif-check-icon" /> Mark read
         </button>
       </div>
 
       {/* Tabs */}
       <div className="notif-tabs">
-        <button className="notif-tab active">All (3)</button>
-        <button className="notif-tab">Unread (2)</button>
+        <button
+          className={`notif-tab ${activeTab === "all" ? "active" : ""}`}
+          onClick={() => setActiveTab("all")}
+        >
+          All ({totalCount})
+        </button>
+        <button
+          className={`notif-tab ${activeTab === "unread" ? "active" : ""}`}
+          onClick={() => setActiveTab("unread")}
+        >
+          Unread ({unreadCount})
+        </button>
       </div>
 
       {/* List */}
       <div className="notif-list-wrap">
-        {sampleNotifications.map((n) => (
-          <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
-            <div className={`notif-icon-box type-${n.type}`}>
-              {getIcon(n.type)}
-            </div>
-            <div className="notif-content">
-              <div className="notif-content-top">
-                <div className="notif-card-title">{n.title}</div>
-                <div className="notif-card-time">{n.time}</div>
-                <button className="notif-delete-btn"><Trash2 size={14}/></button>
-              </div>
-              <div className="notif-card-desc">{n.desc}</div>
-            </div>
+        {visibleNotifications.length === 0 ? (
+          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
+            No notifications to display
           </div>
-        ))}
+        ) : (
+          visibleNotifications.map((n) => (
+            <div
+              key={n.id}
+              className={`notif-list-card ${n.unread ? "unread" : ""}`}
+              onClick={() => toggleSingleRead(n.id)}
+              style={{ cursor: "pointer" }}
+              title="Click to toggle read status"
+            >
+              <div className={`notif-icon-box type-${n.type}`}>
+                {getIcon(n.type)}
+              </div>
+              <div className="notif-content">
+                <div className="notif-content-top">
+                  <div className="notif-card-title">{n.title}</div>
+                  <div className="notif-card-time">{n.time}</div>
+                  <button
+                    className="notif-delete-btn"
+                    onClick={(e) => handleDeleteItem(e, n.id)}
+                    title="Delete notification"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="notif-card-desc">{n.desc}</div>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Footer */}
       <div className="notif-footer-wrap">
-        <button className="notif-clear-all-btn">Clear all</button>
+        <button
+          className="notif-clear-all-btn"
+          onClick={handleClearAll}
+          disabled={totalCount === 0}
+          style={{ opacity: totalCount === 0 ? 0.5 : 1, cursor: totalCount === 0 ? "default" : "pointer" }}
+        >
+          Clear all
+        </button>
       </div>
     </div>
   );
@@ -131,7 +209,8 @@ export default function AdminLayout() {
     if (path.startsWith("/admin/attendance")) return "Track Attendance";
     if (path.startsWith("/admin/learning")) return "Manage Learning Content";
     if (path.startsWith("/admin/quiz")) return "Manage Quizzes";
-    if (path.startsWith("/admin/practice")) return "Coding Tasks";
+    if (path.startsWith("/admin/practice")) return "Coding Practice";
+    if (path.startsWith("/admin/broadcast")) return "Broadcast Notice Center";
     if (path.startsWith("/admin/progress")) return "Student Progress Analytics";
     if (path.startsWith("/admin/leaderboard")) return "Leaderboard";
     if (path.startsWith("/admin/weekly-reports")) return "Weekly Reports";
@@ -273,6 +352,7 @@ export default function AdminLayout() {
           </div>
         </main>
       </div>
+      <BroadcastToast />
     </div>
   );
 }

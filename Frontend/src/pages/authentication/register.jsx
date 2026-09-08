@@ -106,7 +106,7 @@ function Register() {
     setSuccessMsg("");
 
     try {
-      const response = await fetch("http://localhost:5000/api/v1/auth/register", {
+      const response = await fetch("/api/v1/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -159,8 +159,8 @@ function Register() {
 
         <p className="subtitle">Create your account to get started.</p>
 
-        {errorMsg && <div style={{ color: "#ef4444", marginBottom: "1rem", textAlign: "center", fontSize: "0.9rem" }}>{errorMsg}</div>}
-        {successMsg && <div style={{ color: "#10b981", marginBottom: "1rem", textAlign: "center", fontSize: "0.9rem" }}>{successMsg}</div>}
+        {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
+        {successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         <form onSubmit={handleSubmit}>
           {/* ── Select Role ── */}
