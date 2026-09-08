@@ -188,7 +188,9 @@ function Login() {
         localStorage.setItem("user", JSON.stringify(mergedUser));
 
         const role = mergedUser.role?.toLowerCase() || "";
-        if (role.includes("coordinator")) {
+        if (role.includes("super")) {
+          navigate("/super-admin");
+        } else if (role.includes("coordinator")) {
           navigate("/coordinator");
         } else if (role.includes("admin") || role.includes("hod")) {
           navigate("/admin");
