@@ -2,109 +2,8 @@ import { query } from '../config/db.js';
 import { ROLES } from '../utils/constants.js';
 
 // Pre-seeded mock data for fallback mode
-const mockUsers = [
-  {
-    id: 1,
-    name: 'Super Administrator',
-    email: 'superadmin@trainingportal.com',
-    mobile_number: '9999999999',
-    role: ROLES.SUPER_ADMIN,
-    college_id: null,
-    is_active: 1,
-    created_at: new Date('2026-01-01'),
-  },
-  {
-    id: 2,
-    name: 'PVPPCOE College Admin',
-    email: 'admin@pvppcoe.ac.in',
-    mobile_number: '9888888881',
-    role: ROLES.COLLEGE_ADMIN,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-01-05'),
-  },
-  {
-    id: 3,
-    name: 'DBIT College Admin',
-    email: 'admin@dbit.ac.in',
-    mobile_number: '9888888882',
-    role: ROLES.COLLEGE_ADMIN,
-    college_id: 2,
-    is_active: 1,
-    created_at: new Date('2026-01-05'),
-  },
-  {
-    id: 4,
-    name: 'Dr. Coordinator PVPPCOE',
-    email: 'coordinator@pvppcoe.ac.in',
-    mobile_number: '9777777771',
-    role: ROLES.COORDINATOR,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-01-10'),
-  },
-  {
-    id: 5,
-    name: 'Prof. Mentor PVPPCOE',
-    email: 'mentor@pvppcoe.ac.in',
-    mobile_number: '9666666661',
-    role: ROLES.MENTOR,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-01-15'),
-  },
-  {
-    id: 6,
-    name: 'Ganesh Shinde',
-    email: 'ganesh@student.pvppcoe.ac.in',
-    mobile_number: '9555555551',
-    role: ROLES.STUDENT,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-02-01'),
-  },
-  {
-    id: 7,
-    name: 'DBIT Student',
-    email: 'rahul@student.dbit.ac.in',
-    mobile_number: '9555555552',
-    role: ROLES.STUDENT,
-    college_id: 2,
-    is_active: 1,
-    created_at: new Date('2026-02-01'),
-  },
-];
-
-const mockStudents = [
-  {
-    id: 1,
-    user_id: 6,
-    college_id: 1,
-    department_id: 1,
-    batch_id: 1,
-    roll_number: '2026COMP042',
-    department: 'Computer Engineering',
-    year: 'TE',
-    division: 'A',
-    semester: 'Semester 6',
-    cgpa: '8.85',
-    skills: 'JavaScript, React, Node.js, Python, SQL',
-  },
-  {
-    id: 2,
-    user_id: 7,
-    college_id: 2,
-    department_id: 5,
-    batch_id: 3,
-    roll_number: '2026DBIT018',
-    department: 'Computer Engineering',
-    year: 'TE',
-    division: 'A',
-    semester: 'Semester 6',
-    cgpa: '8.40',
-    skills: 'Java, Spring Boot, MySQL',
-  },
-];
+const mockUsers = [];
+const mockStudents = [];
 
 const mockOtps = {};
 
@@ -285,7 +184,7 @@ export const getAllUsersModel = async (collegeId = null) => {
     sql += ' ORDER BY u.id DESC';
 
     const results = await query(sql, params);
-    if (results && Array.isArray(results) && results.length > 0) {
+    if (results && Array.isArray(results)) {
       return results;
     }
   } catch (error) {
