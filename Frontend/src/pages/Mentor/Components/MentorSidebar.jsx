@@ -12,6 +12,7 @@ import {
   BookOpen,
   FileCheck2,
   HelpCircle,
+  BarChart3,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/MentorSidebar.css";
@@ -42,6 +43,7 @@ const primaryNavItems = [
   { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot },
   { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle },
   { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
+  { title: "Progress", url: "/mentor/performance", icon: BarChart3 },
   { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy },
   { title: "Mock Drives", url: "/mentor/mock-drives", icon: ClipboardCheck },
   { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle },

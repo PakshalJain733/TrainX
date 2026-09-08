@@ -26,46 +26,9 @@ import { Input, Label, Textarea } from "../../../components/ui/Form";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../components/ui/Table";
 import "../Styles/Attendance.css";
 
-const kpiData = [
-  {
-    title: "Overall Attendance",
-    value: "0%",
-    subtext: "Eligibility Required: 75%",
-    status: "No Records",
-    variant: "info",
-    icon: UserCheck,
-    color: "#3b82f6",
-    bgColor: "rgba(59, 130, 246, 0.12)"
-  },
-  {
-    title: "Total Conducted",
-    value: "0 / 0",
-    subtext: "0 total classes missed",
-    status: "0% Attended",
-    variant: "info",
-    icon: BookOpen,
-    color: "#3b82f6",
-    bgColor: "rgba(59, 130, 246, 0.12)"
-  },
-  {
-    title: "Approved Leaves",
-    value: "0 Days",
-    subtext: "0 pending mentor verification",
-    status: "None",
-    variant: "warning",
-    icon: ShieldCheck,
-    color: "#8b5cf6",
-    bgColor: "rgba(139, 92, 246, 0.12)"
-  }
-];
-
-const subjects = [];
-const monthlyTrend = [];
-const daywiseAttendance = [];
-const recentLogs = [];
-const leaveQuotas = [];
-const initialVerifications = [];
-const defaulterSubjects = [];
+const fallbackSubjects = [];
+const fallbackLogs = [];
+const fallbackVerifications = [];
 
 export default function Attendance() {
   const [logFilter, setLogFilter] = useState("All");
@@ -160,10 +123,22 @@ export default function Attendance() {
 
   // Verification filter state
   const [verifyFilter, setVerifyFilter] = useState("All");
-  const [verifications, setVerifications] = useState(initialVerifications);
-  const [logsList, setLogsList] = useState(recentLogs);
+  const [verifications, setVerifications] = useState(fallbackVerifications);
+  const [logsList, setLogsList] = useState(fallbackLogs);
+  const [subjectsList, setSubjectsList] = useState(fallbackSubjects);
+  
+  const [kpiStats, setKpiStats] = useState({
+    percentage: 0,
+    totalClasses: 0,
+    presentClasses: 0,
+    absentClasses: 0,
+    excusedClasses: 0,
+    status: "Loading..."
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    setIsLoading(true);
     apiFetch("/student/attendance")
       .then((res) => {
         if (res.data) {
@@ -173,9 +148,21 @@ export default function Attendance() {
           if (res.data.recentLogs && res.data.recentLogs.length > 0) {
             setLogsList(res.data.recentLogs);
           }
+          if (res.data.subjects && res.data.subjects.length > 0) {
+            setSubjectsList(res.data.subjects);
+          }
+          setKpiStats({
+            percentage: res.data.percentage || 0,
+            totalClasses: res.data.totalClasses || 0,
+            presentClasses: res.data.presentClasses || 0,
+            absentClasses: res.data.absentClasses || 0,
+            excusedClasses: res.data.excusedClasses || 0,
+            status: res.data.status || "Safe",
+          });
         }
       })
-      .catch((err) => console.error("ATTENDANCE FETCH ERROR:", err));
+      .catch((err) => console.error("ATTENDANCE FETCH ERROR:", err))
+      .finally(() => setIsLoading(false));
   }, []);
 
   const filteredLogs = logFilter === "All" 
@@ -375,30 +362,73 @@ export default function Attendance() {
 
         {/* Reports */}
         <TabsContent value="reports" className="attendance-reports-container stack-6">
+          
+          {/* Warning Banner */}
+          {kpiStats.percentage < 75 && !isLoading && (
+            <div className="attendance-warning-banner" style={{ display: 'flex', alignItems: 'center', backgroundColor: '#fef2f2', border: '1px solid #fecaca', padding: '16px 20px', borderRadius: '8px', color: '#b91c1c', marginBottom: '20px', gap: '12px' }}>
+              <AlertTriangle size={24} />
+              <div>
+                <h4 style={{ margin: 0, fontWeight: 600, fontSize: '15px' }}>Attendance Warning</h4>
+                <p style={{ margin: 0, fontSize: '14px', marginTop: '4px' }}>Your attendance is below the required level ({kpiStats.percentage}% vs 75%). Please improve your attendance to ensure placement eligibility.</p>
+              </div>
+            </div>
+          )}
+
           {/* KPI Summary Cards */}
           <div className="attendance-kpi-grid">
-            {kpiData.map((kpi, idx) => {
-              const IconComponent = kpi.icon;
-              return (
-                <Card key={idx} className="attendance-kpi-card">
-                  <CardContent className="attendance-kpi-content">
-                    <div className="attendance-kpi-header">
-                      <span className="attendance-kpi-title">{kpi.title}</span>
-                      <div className="attendance-kpi-icon-box">
-                        <IconComponent size={18} />
-                      </div>
-                    </div>
-                    <div className="attendance-kpi-value-row">
-                      <h3 className="attendance-kpi-value">{kpi.value}</h3>
-                      <Badge className="attendance-kpi-badge" variant={kpi.variant}>
-                        {kpi.status}
-                      </Badge>
-                    </div>
-                    <p className="attendance-kpi-subtext">{kpi.subtext}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            <Card className="attendance-kpi-card">
+              <CardContent className="attendance-kpi-content">
+                <div className="attendance-kpi-header">
+                  <span className="attendance-kpi-title">Overall Attendance</span>
+                  <div className="attendance-kpi-icon-box" style={{ color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.12)' }}>
+                    <UserCheck size={18} />
+                  </div>
+                </div>
+                <div className="attendance-kpi-value-row">
+                  <h3 className="attendance-kpi-value">{kpiStats.percentage}%</h3>
+                  <Badge className="attendance-kpi-badge" variant={kpiStats.percentage >= 75 ? "secondary" : "destructive"}>
+                    {kpiStats.status}
+                  </Badge>
+                </div>
+                <p className="attendance-kpi-subtext">Eligibility Required: 75%</p>
+              </CardContent>
+            </Card>
+
+            <Card className="attendance-kpi-card">
+              <CardContent className="attendance-kpi-content">
+                <div className="attendance-kpi-header">
+                  <span className="attendance-kpi-title">Total Conducted</span>
+                  <div className="attendance-kpi-icon-box" style={{ color: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.12)' }}>
+                    <BookOpen size={18} />
+                  </div>
+                </div>
+                <div className="attendance-kpi-value-row">
+                  <h3 className="attendance-kpi-value">{kpiStats.presentClasses} / {kpiStats.totalClasses}</h3>
+                  <Badge className="attendance-kpi-badge" variant="info">
+                    {Math.round((kpiStats.presentClasses / (kpiStats.totalClasses || 1)) * 100)}% Attended
+                  </Badge>
+                </div>
+                <p className="attendance-kpi-subtext">{kpiStats.absentClasses} total classes missed</p>
+              </CardContent>
+            </Card>
+
+            <Card className="attendance-kpi-card">
+              <CardContent className="attendance-kpi-content">
+                <div className="attendance-kpi-header">
+                  <span className="attendance-kpi-title">Approved Leaves</span>
+                  <div className="attendance-kpi-icon-box" style={{ color: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.12)' }}>
+                    <ShieldCheck size={18} />
+                  </div>
+                </div>
+                <div className="attendance-kpi-value-row">
+                  <h3 className="attendance-kpi-value">{kpiStats.excusedClasses} Days</h3>
+                  <Badge className="attendance-kpi-badge" variant="warning">
+                    {verifications.filter(v => v.status === "Pending").length} Pending
+                  </Badge>
+                </div>
+                <p className="attendance-kpi-subtext">Pending mentor verification</p>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Section Heading for Subject Reports */}
@@ -411,21 +441,20 @@ export default function Attendance() {
 
           {/* Enhanced Subject Cards Grid */}
           <div className="attendance-subject-grid">
-            {subjects.length === 0 ? (
+            {subjectsList.length === 0 ? (
               <div className="attendance-empty-grid-cell">
                 <BookOpen size={32} className="attendance-empty-icon" />
                 <p className="attendance-empty-title">No subject attendance records found.</p>
               </div>
             ) : (
-              subjects.map((s) => {
-                const SubjectIcon = s.icon;
+              subjectsList.map((s) => {
                 return (
                   <Card key={s.id} className="attendance-subject-card">
                     <CardContent className="attendance-subject-content">
                       <div className="attendance-subject-header">
                         <div className="attendance-subject-info">
                           <div className="attendance-subject-icon-box">
-                            <SubjectIcon size={20} />
+                            <BookOpen size={20} />
                           </div>
                           <div>
                             <p className="attendance-subject-code">{s.code} · {s.faculty}</p>
@@ -599,7 +628,7 @@ export default function Attendance() {
                       onChange={(e) => setSelectedSubject(e.target.value)}
                     >
                       <option value="All Subjects">All Subjects (Full Day Leave)</option>
-                      {subjects.map((s) => (
+                      {subjectsList.map((s) => (
                         <option key={s.id} value={s.name}>{s.code} - {s.name}</option>
                       ))}
                     </select>

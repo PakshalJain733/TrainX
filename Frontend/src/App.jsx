@@ -18,6 +18,7 @@ import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 import Settings from "./pages/Student/Components/Settings";
+import StudentPerformance from "./pages/Student/Components/Performance";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -72,6 +73,7 @@ import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
 import MentorNotifications from './pages/Mentor/Components/Notifications';
 import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
 import MentorHelp from './pages/Mentor/Components/Help';
+import MentorPerformance from './pages/Mentor/Components/Performance';
 
 // Coordinator Workspace Imports
 import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
@@ -113,6 +115,7 @@ function App() {
           <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="quiz" element={<AcademicQuiz />} />
           <Route path="attendance" element={<Attendance />} />
+          <Route path="performance" element={<StudentPerformance />} />
           <Route path="weekly-reports" element={<WeeklyReports />} />
           <Route path="batches" element={<Batches />} />
           <Route path="practice" element={<PracticeProblems />} />
@@ -150,6 +153,7 @@ function App() {
           <Route path="ai-interviews" element={<MentorAIInterviews />} />
           <Route path="skill-gaps" element={<MentorSkillGaps />} />
           <Route path="attendance" element={<MentorAttendance />} />
+          <Route path="performance" element={<MentorPerformance />} />
           <Route path="leaderboard" element={<MentorLeaderboard />} />
           <Route path="mock-drives" element={<MentorMockDrives />} />
           <Route path="defaulters" element={<MentorDefaulters />} />

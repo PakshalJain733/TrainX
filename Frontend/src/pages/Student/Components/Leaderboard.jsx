@@ -1,8 +1,9 @@
-import React, { useState } from "react";
-import { Trophy, Medal, Award, Flame, Users, Sparkles } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Trophy, Medal, Award, Flame, Users, Sparkles, RefreshCw } from "lucide-react";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/Leaderboard.css";
 
-const leaderboardData = {
+const defaultLeaderboardData = {
   overall: [],
   department: [],
   milestone: [],
@@ -10,8 +11,24 @@ const leaderboardData = {
 
 export default function Leaderboard() {
   const [activeTab, setActiveTab] = useState("overall");
+  const [data, setData] = useState(defaultLeaderboardData);
+  const [loading, setLoading] = useState(true);
 
-  const students = leaderboardData[activeTab] || leaderboardData.overall;
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/leaderboards")
+      .then((res) => {
+        if (res && res.data) {
+          setData(res.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load leaderboard:", err);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const students = data[activeTab] || [];
 
   const getRankClass = (r) => {
     if (r === 1) return "rank-1";
@@ -19,6 +36,16 @@ export default function Leaderboard() {
     if (r === 3) return "rank-3";
     return "";
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', color: '#64748b' }}>
+        <RefreshCw size={28} style={{ animation: 'spin 1.2s linear infinite', color: '#4f46e5', marginBottom: 14 }} />
+        <p>Loading leaderboard rankings...</p>
+        <style>{"@keyframes spin { to { transform: rotate(360deg); } }"}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="leaderboard-page">
@@ -30,8 +57,8 @@ export default function Leaderboard() {
           </div>
           <div>
             <div className="leaderboard-kpi-label">Overall Rank</div>
-            <p className="leaderboard-kpi-val">#12</p>
-            <p className="leaderboard-kpi-sub">of 420 students</p>
+            <p className="leaderboard-kpi-val">#{data.overall.find(s => s.isCurrentUser)?.rank || '--'}</p>
+            <p className="leaderboard-kpi-sub">College-wide ranking</p>
           </div>
         </div>
 
@@ -41,8 +68,8 @@ export default function Leaderboard() {
           </div>
           <div>
             <div className="leaderboard-kpi-label">Department Rank</div>
-            <p className="leaderboard-kpi-val">#3</p>
-            <p className="leaderboard-kpi-sub">Electronics & Computer Science</p>
+            <p className="leaderboard-kpi-val">#{data.department.find(s => s.isCurrentUser)?.rank || '--'}</p>
+            <p className="leaderboard-kpi-sub">Within your department</p>
           </div>
         </div>
 
@@ -52,7 +79,7 @@ export default function Leaderboard() {
           </div>
           <div>
             <div className="leaderboard-kpi-label">Milestone Rank</div>
-            <p className="leaderboard-kpi-val">#7</p>
+            <p className="leaderboard-kpi-val">#{data.milestone.find(s => s.isCurrentUser)?.rank || '--'}</p>
             <p className="leaderboard-kpi-sub">Milestone completion board</p>
           </div>
         </div>
@@ -96,31 +123,41 @@ export default function Leaderboard() {
               No leaderboard rankings available yet.
             </div>
           ) : (
-            students.map((st) => (
-              <div
-                key={st.name}
-                className={`leaderboard-row-item ${st.isCurrentUser ? "is-current-user" : ""}`}
-              >
-                <div className="leaderboard-row-left">
-                  <span className={`leaderboard-rank-num ${getRankClass(st.rank)}`}>
-                    #{st.rank}
-                  </span>
-                  <div className="leaderboard-avatar">{st.initials}</div>
-                  <div className="leaderboard-user-meta">
-                    <div className="leaderboard-user-name">
-                      {st.name}
-                      {st.isCurrentUser && <span className="you-pill">You</span>}
-                    </div>
-                    <div className="leaderboard-user-sub">{st.sub}</div>
-                  </div>
-                </div>
-
-                <div className="leaderboard-score-val">{st.score}</div>
+            <>
+              {/* Header Row for clarity */}
+              <div style={{ display: 'flex', alignItems: 'center', padding: '0 24px 10px', fontSize: '11.5px', fontWeight: 700, textTransform: 'uppercase', color: '#64748b', borderBottom: '1px solid #f1f5f9', marginBottom: '8px' }}>
+                <div style={{ width: '40px', paddingRight: '8px' }}>Rank</div>
+                <div style={{ flex: 1 }}>Student</div>
+                <div style={{ paddingLeft: '20px' }}>Score</div>
               </div>
-            ))
+              
+              {students.map((st) => (
+                <div
+                  key={st.name + st.rank}
+                  className={`leaderboard-row-item ${st.isCurrentUser ? "is-current-user" : ""}`}
+                >
+                  <div className="leaderboard-row-left">
+                    <span className={`leaderboard-rank-num ${getRankClass(st.rank)}`}>
+                      #{st.rank}
+                    </span>
+                    <div className="leaderboard-avatar">{st.initials}</div>
+                    <div className="leaderboard-user-meta">
+                      <div className="leaderboard-user-name">
+                        {st.name}
+                        {st.isCurrentUser && <span className="you-pill">You</span>}
+                      </div>
+                      <div className="leaderboard-user-sub">{st.sub}</div>
+                    </div>
+                  </div>
+
+                  <div className="leaderboard-score-val">{st.score}</div>
+                </div>
+              ))}
+            </>
           )}
         </div>
       </div>
     </div>
   );
 }
+

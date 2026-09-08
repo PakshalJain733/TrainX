@@ -8,6 +8,7 @@ import {
   getStudentAttendance,
   applyStudentLeave,
   getStudentNotifications,
+  getStudentPerformance,
 } from '../controllers/student.controller.js';
 import { getRoadmapData, generateRoadmap } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
@@ -29,6 +30,7 @@ router.get('/practice-problems', getStudentPracticeProblems);
 router.get('/attendance', getStudentAttendance);
 router.post('/attendance/leave', applyStudentLeave);
 router.get('/notifications', getStudentNotifications);
+router.get('/performance', getStudentPerformance);
 
 // Section 11 Roadmap Endpoints
 router.get('/:id/roadmap', getRoadmapData);

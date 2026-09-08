@@ -18,6 +18,7 @@ import skillGapRoutes from './routes/skillGap.routes.js';
 import interventionRoutes from './routes/intervention.routes.js';
 import driveRoutes from './routes/drive.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import mentorRoutes from './routes/mentor.routes.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
@@ -42,6 +43,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/mentor', mentorRoutes);
 
 app.use('/api/v1/colleges', collegeRoutes);
 app.use('/api/v1/departments', departmentRoutes);
