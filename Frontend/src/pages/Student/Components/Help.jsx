@@ -61,24 +61,7 @@ const defaultFaqs = [
   }
 ];
 
-const initialTickets = [
-  {
-    id: "TICK-8042",
-    subject: "Attendance record missing for OS Lecture on Aug 08",
-    category: "Attendance & QR",
-    priority: "High",
-    status: "In Progress",
-    created: "2026-08-08"
-  },
-  {
-    id: "TICK-7910",
-    subject: "Unable to submit FreeRTOS assignment file",
-    category: "Academics & Labs",
-    priority: "Normal",
-    status: "Resolved",
-    created: "2026-08-04"
-  }
-];
+const initialTickets = [];
 
 const kbGuides = [
   {
@@ -279,7 +262,7 @@ export default function Help() {
                         <HelpCircle size={18} color="#3b82f6" />
                         {faq.q}
                       </h4>
-                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <div className="help-faq-actions">
                         <span className="help-faq-category-tag">{faq.category}</span>
                         <ChevronDown size={18} className="help-faq-toggle-icon" />
                       </div>
@@ -331,32 +314,40 @@ export default function Help() {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t) => (
-                  <tr key={t.id}>
-                    <td><span className="help-ticket-id">{t.id}</span></td>
-                    <td className="help-table-subject">{t.subject}</td>
-                    <td><span className="help-faq-category-tag">{t.category}</span></td>
-                    <td>
-                      <span className={`help-priority-pill ${t.priority === "High" ? "help-priority-high" : "help-priority-normal"}`}>
-                        {t.priority}
-                      </span>
-                    </td>
-                    <td className="help-table-date">{t.created}</td>
-                    <td>
-                      <span className={`help-ticket-status-pill ${t.status === "In Progress"
-                          ? "help-status-in-progress"
-                          : t.status === "Resolved"
-                            ? "help-status-resolved"
-                            : "help-status-open"
-                        }`}>
-                        {t.status === "In Progress" && "⏳ "}
-                        {t.status === "Resolved" && "✓ "}
-                        {t.status === "Open" && "● "}
-                        {t.status}
-                      </span>
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="help-table-empty-cell">
+                      No support tickets raised yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  tickets.map((t) => (
+                    <tr key={t.id}>
+                      <td><span className="help-ticket-id">{t.id}</span></td>
+                      <td className="help-table-subject">{t.subject}</td>
+                      <td><span className="help-faq-category-tag">{t.category}</span></td>
+                      <td>
+                        <span className={`help-priority-pill ${t.priority === "High" ? "help-priority-high" : "help-priority-normal"}`}>
+                          {t.priority}
+                        </span>
+                      </td>
+                      <td className="help-table-date">{t.created}</td>
+                      <td>
+                        <span className={`help-ticket-status-pill ${t.status === "In Progress"
+                            ? "help-status-in-progress"
+                            : t.status === "Resolved"
+                              ? "help-status-resolved"
+                              : "help-status-open"
+                          }`}>
+                          {t.status === "In Progress" && "⏳ "}
+                          {t.status === "Resolved" && "✓ "}
+                          {t.status === "Open" && "● "}
+                          {t.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

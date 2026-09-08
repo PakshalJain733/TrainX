@@ -11,141 +11,7 @@ import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import "../Styles/PracticeProblems.css";
-
-const practiceProblemsData = [
-  {
-    id: 1,
-    title: "Two Sum",
-    topic: "Arrays & Hashing",
-    difficulty: "Easy",
-    acceptance: "49.2%",
-    points: 100,
-    solved: true,
-    companies: ["TCS", "Infosys", "Amazon"],
-    solutionAvailable: true
-  },
-  {
-    id: 2,
-    title: "Longest Substring Without Repeating Characters",
-    topic: "Sliding Window",
-    difficulty: "Medium",
-    acceptance: "33.8%",
-    points: 200,
-    solved: true,
-    companies: ["Wipro", "Capgemini", "Google"],
-    solutionAvailable: true
-  },
-  {
-    id: 3,
-    title: "Reverse Linked List",
-    topic: "Linked List",
-    difficulty: "Easy",
-    acceptance: "72.4%",
-    points: 100,
-    solved: true,
-    companies: ["Cognizant", "TCS"],
-    solutionAvailable: true
-  },
-  {
-    id: 4,
-    title: "Binary Tree Level Order Traversal",
-    topic: "Trees & Graphs",
-    difficulty: "Medium",
-    acceptance: "64.1%",
-    points: 150,
-    solved: false,
-    companies: ["Accenture", "Microsoft"],
-    solutionAvailable: true
-  },
-  {
-    id: 5,
-    title: "Container With Most Water",
-    topic: "Two Pointers",
-    difficulty: "Medium",
-    acceptance: "54.3%",
-    points: 180,
-    solved: false,
-    companies: ["Tech Mahindra", "Amazon"],
-    solutionAvailable: true
-  },
-  {
-    id: 12,
-    title: "Longest Path in a DAG",
-    topic: "Graphs",
-    difficulty: "Hard",
-    acceptance: "27.5%",
-    points: 350,
-    solved: false,
-    companies: ["Microsoft", "Amazon", "Netflix"],
-    solutionAvailable: true
-  },
-  {
-    id: 6,
-    title: "Merge K Sorted Lists",
-    topic: "Heap / Priority Queue",
-    difficulty: "Hard",
-    acceptance: "51.0%",
-    points: 300,
-    solved: false,
-    companies: ["Goldman Sachs", "Google"],
-    solutionAvailable: true
-  },
-  {
-    id: 7,
-    title: "Valid Anagram",
-    topic: "Arrays & Hashing",
-    difficulty: "Easy",
-    acceptance: "63.2%",
-    points: 100,
-    solved: true,
-    companies: ["LTI Mindtree", "TCS"],
-    solutionAvailable: true
-  },
-  {
-    id: 8,
-    title: "Climbing Stairs",
-    topic: "Dynamic Programming",
-    difficulty: "Easy",
-    acceptance: "52.1%",
-    points: 120,
-    solved: true,
-    companies: ["Infosys", "Wipro"],
-    solutionAvailable: true
-  },
-  {
-    id: 9,
-    title: "Course Schedule (Graph Cycle Detection)",
-    topic: "Trees & Graphs",
-    difficulty: "Medium",
-    acceptance: "46.8%",
-    points: 220,
-    solved: false,
-    companies: ["Amazon", "Uber"],
-    solutionAvailable: true
-  },
-  {
-    id: 10,
-    title: "Word Break",
-    topic: "Dynamic Programming",
-    difficulty: "Medium",
-    acceptance: "45.9%",
-    points: 250,
-    solved: false,
-    companies: ["Oracle", "Microsoft"],
-    solutionAvailable: true
-  },
-  {
-    id: 11,
-    title: "Median of Two Sorted Arrays",
-    topic: "Binary Search",
-    difficulty: "Hard",
-    acceptance: "39.1%",
-    points: 400,
-    solved: false,
-    companies: ["Google", "Amazon", "Apple"],
-    solutionAvailable: true
-  }
-];
+const practiceProblemsData = [];
 
 const practiceTracks = [
   {
@@ -154,8 +20,7 @@ const practiceTracks = [
     level: "All Levels",
     desc: "Most frequently asked DSA questions for campus recruitment placements.",
     icon: Flame,
-    color: "#f59e0b",
-    bg: "#fef3c7"
+    themeClass: "track-icon-amber"
   },
   {
     title: "Product Based Company Track",
@@ -163,8 +28,7 @@ const practiceTracks = [
     level: "Medium - Hard",
     desc: "Curated problem set targeted for Tier-1 technology companies.",
     icon: Trophy,
-    color: "#2563eb",
-    bg: "#dbeafe"
+    themeClass: "track-icon-blue"
   },
   {
     title: "Service Based Company Essentials",
@@ -172,8 +36,7 @@ const practiceTracks = [
     level: "Easy - Medium",
     desc: "Pattern-based coding questions for TCS NQT, Wipro NLTH, Infosys DSE.",
     icon: Award,
-    color: "#10b981",
-    bg: "#d1fae5"
+    themeClass: "track-icon-emerald"
   }
 ];
 
@@ -350,7 +213,7 @@ export default function PracticeProblems() {
             return (
               <div key={i} className="track-card">
                 <div className="track-card-header">
-                  <div className="track-icon-box" style={{ background: track.bg, color: track.color }}>
+                  <div className={`track-icon-box ${track.themeClass}`}>
                     <Icon size={22} />
                   </div>
                   <span className="track-level-tag">{track.level}</span>
@@ -445,18 +308,18 @@ export default function PracticeProblems() {
           <table className="problems-table">
             <thead>
               <tr>
-                <th style={{ width: "60px" }}>Status</th>
+                <th className="pp-th-status">Status</th>
                 <th>Title</th>
                 <th>Topic</th>
                 <th>Difficulty</th>
                 <th>Acceptance</th>
-                <th style={{ textAlign: "right" }}>Action</th>
+                <th className="pp-th-action">Action</th>
               </tr>
             </thead>
             <tbody>
               {filteredProblems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                  <td colSpan={6} className="pp-empty-cell">
                     No practice problems found matching your filters.
                   </td>
                 </tr>
@@ -496,7 +359,7 @@ export default function PracticeProblems() {
                     </td>
                     <td className="acceptance-cell">{prob.acceptance}</td>
 
-                    <td style={{ textAlign: "right" }}>
+                    <td className="pp-td-action">
                       <Button
                         size="sm"
                         className="solve-btn"

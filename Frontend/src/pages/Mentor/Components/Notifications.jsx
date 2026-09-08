@@ -1,5 +1,6 @@
 import React from 'react';
-import { Bell, CheckCircle2, Clock } from 'lucide-react';
+import { Bell } from 'lucide-react';
+import '../Styles/Notifications.css';
 
 export default function Notifications() {
   const alerts = [
@@ -9,22 +10,27 @@ export default function Notifications() {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <Bell className="w-5 h-5 text-indigo-600" />
+    <div className="mentor-notifications-container">
+      <div className="mentor-page-header">
+        <h2 className="mentor-page-title">
+          <Bell size={20} color="#4f46e5" />
           <span>Notifications & Activity Stream</span>
         </h2>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 space-y-3">
+      <div className="mentor-notifications-card">
         {alerts.map((a) => (
-          <div key={a.id} className={`p-4 rounded-xl border ${a.unread ? 'bg-indigo-50/40 border-indigo-200' : 'bg-slate-50 border-slate-100'} space-y-1`}>
-            <div className="flex justify-between items-center">
-              <h3 className="font-bold text-slate-900 text-sm">{a.title}</h3>
-              <span className="text-[11px] text-slate-400 font-medium">{a.time}</span>
+          <div
+            key={a.id}
+            className={`mentor-notif-item ${
+              a.unread ? 'mentor-notif-item--unread' : 'mentor-notif-item--read'
+            }`}
+          >
+            <div className="mentor-notif-top">
+              <h3 className="mentor-notif-title">{a.title}</h3>
+              <span className="mentor-notif-time">{a.time}</span>
             </div>
-            <p className="text-xs text-slate-600">{a.body}</p>
+            <p className="mentor-notif-body">{a.body}</p>
           </div>
         ))}
       </div>

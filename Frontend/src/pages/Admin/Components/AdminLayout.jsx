@@ -132,6 +132,7 @@ export default function AdminLayout() {
     if (path.startsWith("/admin/learning")) return "Manage Learning Content";
     if (path.startsWith("/admin/quiz")) return "Manage Quizzes";
     if (path.startsWith("/admin/practice")) return "Coding Tasks";
+    if (path.startsWith("/admin/broadcast")) return "Broadcast Notice Center";
     if (path.startsWith("/admin/progress")) return "Student Progress Analytics";
     if (path.startsWith("/admin/leaderboard")) return "Leaderboard";
     if (path.startsWith("/admin/weekly-reports")) return "Weekly Reports";

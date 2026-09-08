@@ -34,6 +34,6 @@ export const config = {
   },
   ai: {
     apiKey: process.env.AI_API_KEY || '',
-    model: process.env.AI_MODEL || 'gemini-2.5-flash',
+    model: process.env.AI_MODEL || 'gemini-flash-latest',
   },
 };

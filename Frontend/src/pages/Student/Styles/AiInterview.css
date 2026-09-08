@@ -642,3 +642,43 @@
   color: #cbd5e1;
 }
 
+/* Classes moved from inline styles */
+.ai-mini-score-val-purple {
+  font-size: 18px;
+  font-weight: 800;
+  color: #c084fc;
+}
+
+.ai-diagnostic-box {
+  background: #f8fafc;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.ai-diagnostic-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-diagnostic-text {
+  margin: 0;
+  font-size: 13.5px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.ai-action-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-retake-btn {
+  padding: 10px 20px;
+}

@@ -604,13 +604,22 @@
     padding: 9px 12px;
     font-size: 13px;
   }
-  .login-send-otp-btn {
-    padding: 10px;
-    font-size: 14.5px;
-    margin-top: 8px;
-  }
   .login-links p,
   .login-links a {
     font-size: 13px;
   }
+}
+
+.auth-error-msg {
+  color: #ef4444;
+  margin-bottom: 0.8rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.auth-success-msg {
+  color: #10b981;
+  margin-bottom: 0.8rem;
+  text-align: center;
+  font-size: 0.85rem;
 }

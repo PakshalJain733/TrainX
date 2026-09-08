@@ -23,48 +23,27 @@ export default function CoordinatorWeeklyReports() {
         </button>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      <div className="coord-reports-list">
         {reports.map((rep) => (
           <div key={rep.id} className="coord-report-card">
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <div
-                style={{
-                  width: "40px",
-                  height: "40px",
-                  borderRadius: "10px",
-                  background: "#eff6ff",
-                  color: "#2563eb",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
+            <div className="coord-report-card__left">
+              <div className="coord-report-card__icon">
                 <FileText size={20} />
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: "15px", color: "#0f172a" }}>{rep.title}</div>
-                <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                <div className="coord-report-card__title">{rep.title}</div>
+                <div className="coord-report-card__sub">
                   Target: {rep.batch} · Date: {rep.date} · Size: {rep.fileSize}
                 </div>
               </div>
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <span
-                style={{
-                  padding: "4px 10px",
-                  borderRadius: "999px",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  background: "#ecfdf5",
-                  color: "#047857",
-                }}
-              >
+            <div className="coord-report-card__right">
+              <span className="coord-report-card__status">
                 {rep.status}
               </span>
               <button
-                className="coord-btn"
-                style={{ background: "#f1f5f9", color: "#334155", fontSize: "12px" }}
+                className="coord-btn coord-report-card__download-btn"
                 onClick={() => alert(`Downloading ${rep.title}`)}
               >
                 <Download size={14} /> Download

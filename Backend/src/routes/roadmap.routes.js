@@ -8,6 +8,9 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
+// Protect roadmap routes
+router.use(authenticateToken);
+
 // Retrieve student active roadmap
 router.get('/', getRoadmapData);
 router.get('/my-roadmap', getRoadmapData);

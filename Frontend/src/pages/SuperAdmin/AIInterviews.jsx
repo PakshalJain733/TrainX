@@ -22,18 +22,18 @@ export default function AIInterviews() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <p className="text-xs text-slate-500 font-medium">Interviews Completed</p>
-          <h3 className="text-2xl font-bold text-slate-900 mt-1">1,280 sessions</h3>
-          <p className="text-[11px] text-emerald-600 font-medium mt-1">+140 this week</p>
+          <h3 className="text-2xl font-bold text-slate-900 mt-1">{interviews.length} sessions</h3>
+          <p className="text-[11px] text-slate-400 font-medium mt-1">Live recorded sessions</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <p className="text-xs text-slate-500 font-medium">Avg Technical Score</p>
-          <h3 className="text-2xl font-bold text-indigo-600 mt-1">80.5 / 100</h3>
-          <p className="text-[11px] text-indigo-600 font-medium mt-1">Strong coding proficiency</p>
+          <h3 className="text-2xl font-bold text-indigo-600 mt-1">0.0 / 100</h3>
+          <p className="text-[11px] text-slate-400 font-medium mt-1">Awaiting interview submissions</p>
         </div>
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
           <p className="text-xs text-slate-500 font-medium">Primary Focus Area</p>
-          <h3 className="text-2xl font-bold text-amber-600 mt-1">System Design</h3>
-          <p className="text-[11px] text-amber-600 font-medium mt-1">Recommended for additional workshops</p>
+          <h3 className="text-2xl font-bold text-amber-600 mt-1">None</h3>
+          <p className="text-[11px] text-slate-400 font-medium mt-1">No diagnostic alerts</p>
         </div>
       </div>
 
@@ -56,19 +56,27 @@ export default function AIInterviews() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {interviews.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/60 transition">
-                  <td className="px-5 py-3.5">
-                    <p className="font-bold text-slate-900">{item.studentName}</p>
-                    <p className="text-[11px] text-slate-400">{item.college}</p>
+              {interviews.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-5 py-10 text-center text-slate-400 font-medium">
+                    No mock interview evaluations recorded yet.
                   </td>
-                  <td className="px-5 py-3.5 font-semibold text-indigo-600">{item.role}</td>
-                  <td className="px-5 py-3.5 font-bold text-slate-800">{item.technicalScore}</td>
-                  <td className="px-5 py-3.5 font-bold text-slate-800">{item.behavioralScore}</td>
-                  <td className="px-5 py-3.5 font-bold text-emerald-600">{item.overallScore}</td>
-                  <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">{item.weakAreas}</td>
                 </tr>
-              ))}
+              ) : (
+                interviews.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/60 transition">
+                    <td className="px-5 py-3.5">
+                      <p className="font-bold text-slate-900">{item.studentName}</p>
+                      <p className="text-[11px] text-slate-400">{item.college}</p>
+                    </td>
+                    <td className="px-5 py-3.5 font-semibold text-indigo-600">{item.role}</td>
+                    <td className="px-5 py-3.5 font-bold text-slate-800">{item.technicalScore}</td>
+                    <td className="px-5 py-3.5 font-bold text-slate-800">{item.behavioralScore}</td>
+                    <td className="px-5 py-3.5 font-bold text-emerald-600">{item.overallScore}</td>
+                    <td className="px-5 py-3.5 text-slate-600 max-w-xs truncate">{item.weakAreas}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
