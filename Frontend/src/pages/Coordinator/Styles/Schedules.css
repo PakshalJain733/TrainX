@@ -1,0 +1,97 @@
+.coord-schedule-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.coord-schedules-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coord-sched-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-sched-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.coord-sched-status--live {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.coord-sched-status--default {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.coord-sched-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+  display: flex;
+  gap: 14px;
+}
+
+.coord-sched-join-btn {
+  padding: 8px 16px;
+  text-decoration: none;
+}
+
+.coord-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.coord-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.coord-form-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.coord-form-input {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  margin-top: 4px;
+}
+
+.coord-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.coord-btn--cancel {
+  background: #f1f5f9;
+  color: #475569;
+}
