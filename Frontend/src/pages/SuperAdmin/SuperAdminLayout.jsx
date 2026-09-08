@@ -131,8 +131,8 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );

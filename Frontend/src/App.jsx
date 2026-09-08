@@ -21,6 +21,7 @@ import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 import Settings from "./pages/Student/Components/Settings";
 import StudentPerformance from "./pages/Student/Components/Performance";
+import StudentSkillGaps from "./pages/Student/Components/StudentSkillGaps";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -77,6 +78,7 @@ import MentorNotifications from './pages/Mentor/Components/Notifications';
 import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
 import MentorHelp from './pages/Mentor/Components/Help';
 import MentorPerformance from './pages/Mentor/Components/Performance';
+import MentorQuizzes from './pages/Mentor/Components/MentorQuizzes';
 
 // Coordinator Workspace Imports
 import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
@@ -213,7 +215,6 @@ function App() {
           <Route path="/super-admin" element={<SuperAdminLayout />}>
             <Route index element={<SuperAdminOverview />} />
             <Route path="colleges" element={<CollegesPage />} />
-            <Route path="colleges/:collegeId" element={<CollegeDepartments />} />
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="batches" element={<SuperAdminBatches />} />
             <Route path="verification" element={<AdminVerificationPage />} />
@@ -228,7 +229,6 @@ function App() {
             <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
             <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
             <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
-            <Route path="profile" element={<SuperAdminProfilePage />} />
           </Route>
           <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
           <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />

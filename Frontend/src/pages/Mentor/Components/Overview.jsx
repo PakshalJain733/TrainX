@@ -131,8 +131,8 @@ export default function Overview() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Right: Upcoming Live Session & Trainer Stats */}
         <Card className="overview-subcard">
