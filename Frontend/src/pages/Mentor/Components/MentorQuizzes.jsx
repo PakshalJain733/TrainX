@@ -68,17 +68,17 @@ function QuizResultsPanel({ quiz, onBack }) {
   return (
     <div className="admin-quizzes-container">
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#1e293b', border: '1px solid #334155', color: '#94a3b8', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: '0.875rem' }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#ffffff', border: '1px solid #e2e8f0', color: '#64748b', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: '0.875rem' }}>
           <ChevronLeft size={16} /> Back
         </button>
         <div>
-          <h2 style={{ color: '#f1f5f9', fontWeight: 700, fontSize: '1.1rem', margin: 0 }}>{quiz.title} — Results</h2>
+          <h2 style={{ color: '#0f172a', fontWeight: 700, fontSize: '1.1rem', margin: 0 }}>{quiz.title} — Results</h2>
           <p style={{ color: '#64748b', fontSize: '0.8rem', margin: 0 }}>{results.length} submission(s)</p>
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 24 }}>
         {[{ l: 'Submissions', v: results.length, c: '#6366f1' }, { l: 'Avg Score', v: `${avg}%`, c: '#f59e0b' }, { l: 'Passed', v: passCount, c: '#10b981' }].map(s => (
-          <div key={s.l} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 12, padding: '16px 20px' }}>
+          <div key={s.l} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 20px' }}>
             <div style={{ fontSize: '1.6rem', fontWeight: 800, color: s.c }}>{s.v}</div>
             <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{s.l}</div>
           </div>
@@ -87,17 +87,17 @@ function QuizResultsPanel({ quiz, onBack }) {
       {loading ? (
         <div style={{ textAlign: 'center', color: '#64748b', padding: 40 }}>Loading…</div>
       ) : results.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: '#1e293b', borderRadius: 12, border: '1px solid #334155' }}>
-          <GraduationCap size={36} style={{ color: '#475569', marginBottom: 10 }} />
+        <div style={{ textAlign: 'center', padding: 60, background: '#ffffff', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          <GraduationCap size={36} style={{ color: '#64748b', marginBottom: 10 }} />
           <p style={{ color: '#64748b', margin: 0 }}>No submissions yet.</p>
         </div>
       ) : (
-        <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
+        <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#0f172a' }}>
+              <tr style={{ background: '#f8fafc' }}>
                 {['Student', 'Score', 'Percentage', 'Correct', 'Status', 'Submitted'].map(h => (
-                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid #334155' }}>{h}</th>
+                  <th key={h} style={{ padding: '10px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -106,18 +106,18 @@ function QuizResultsPanel({ quiz, onBack }) {
                 const pct = parseFloat(r.percentage || 0);
                 const passed = pct >= 60 || r.status === 'passed';
                 return (
-                  <tr key={r.id || i} style={{ borderBottom: '1px solid #0f172a' }}>
+                  <tr key={r.id || i} style={{ borderBottom: '1px solid #e2e8f0' }}>
                     <td style={{ padding: '10px 14px' }}>
-                      <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.85rem' }}>{r.student_name || `Student #${r.user_id}`}</div>
+                      <div style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.85rem' }}>{r.student_name || `Student #${r.user_id}`}</div>
                       <div style={{ color: '#64748b', fontSize: '0.72rem' }}>{r.student_email || ''}</div>
                     </td>
-                    <td style={{ padding: '10px 14px', color: '#94a3b8', fontSize: '0.85rem' }}>{r.marks_obtained ?? r.score ?? '—'} / {r.total_marks ?? quiz.total_marks ?? '—'}</td>
+                    <td style={{ padding: '10px 14px', color: '#475569', fontSize: '0.85rem' }}>{r.marks_obtained ?? r.score ?? '—'} / {r.total_marks ?? quiz.total_marks ?? '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <span style={{ fontWeight: 700, color: pct >= 60 ? '#10b981' : '#ef4444', fontSize: '0.875rem' }}>{pct}%</span>
                     </td>
-                    <td style={{ padding: '10px 14px', color: '#94a3b8', fontSize: '0.85rem' }}>{r.correct_count ?? '—'}</td>
+                    <td style={{ padding: '10px 14px', color: '#475569', fontSize: '0.85rem' }}>{r.correct_count ?? '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
-                      <span style={{ padding: '2px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, background: passed ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: passed ? '#6ee7b7' : '#fca5a5' }}>
+                      <span style={{ padding: '2px 10px', borderRadius: 999, fontSize: '0.7rem', fontWeight: 600, background: passed ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: passed ? '#059669' : '#dc2626' }}>
                         {passed ? 'PASSED' : 'FAILED'}
                       </span>
                     </td>
@@ -156,14 +156,14 @@ function QuestionsModal({ quiz, onClose }) {
           {quiz.questionsList.length === 0 ? (
             <p style={{ color: '#64748b', textAlign: 'center', padding: 32 }}>No questions available.</p>
           ) : quiz.questionsList.map((q, i) => (
-            <div key={q.id || i} style={{ background: '#0f172a', borderRadius: 10, padding: '12px 14px', marginBottom: 10, border: '1px solid #1e293b' }}>
-              <p style={{ color: '#e2e8f0', fontWeight: 600, margin: '0 0 8px', fontSize: '0.875rem' }}>Q{i + 1}. {q.text}</p>
+            <div key={q.id || i} style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 14px', marginBottom: 10, border: '1px solid #e2e8f0' }}>
+              <p style={{ color: '#1e293b', fontWeight: 600, margin: '0 0 8px', fontSize: '0.875rem' }}>Q{i + 1}. {q.text}</p>
               {['a', 'b', 'c', 'd'].filter(k => q.options[k] && q.options[k] !== 'N/A').map(opt => (
                 <div key={opt} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
-                  <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, background: q.correct === opt ? 'rgba(16,185,129,0.2)' : '#1e293b', color: q.correct === opt ? '#6ee7b7' : '#64748b', border: q.correct === opt ? '1px solid #10b981' : '1px solid #334155', flexShrink: 0 }}>
+                  <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700, background: q.correct === opt ? 'rgba(16,185,129,0.1)' : '#ffffff', color: q.correct === opt ? '#059669' : '#64748b', border: q.correct === opt ? '1px solid #34d399' : '1px solid #cbd5e1', flexShrink: 0 }}>
                     {opt.toUpperCase()}
                   </span>
-                  <span style={{ color: q.correct === opt ? '#6ee7b7' : '#94a3b8', fontSize: '0.83rem', fontWeight: q.correct === opt ? 600 : 400 }}>{q.options[opt]}</span>
+                  <span style={{ color: q.correct === opt ? '#059669' : '#475569', fontSize: '0.83rem', fontWeight: q.correct === opt ? 600 : 400 }}>{q.options[opt]}</span>
                   {q.correct === opt && <CheckCircle2 size={13} style={{ color: '#10b981' }} />}
                 </div>
               ))}
@@ -366,8 +366,8 @@ export default function MentorQuizzes() {
                       </button>
                     </div>
                     {manualQuestions.map((q, i) => (
-                      <div key={q.id} style={{ background: '#0f172a', borderRadius: 7, padding: '8px 12px', marginBottom: 7, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #1e293b' }}>
-                        <span style={{ color: '#cbd5e1', fontSize: '0.82rem' }}>Q{i + 1}. {q.text.substring(0, 65)}{q.text.length > 65 ? '…' : ''}</span>
+                      <div key={q.id} style={{ background: '#f8fafc', borderRadius: 7, padding: '8px 12px', marginBottom: 7, display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid #e2e8f0' }}>
+                        <span style={{ color: '#475569', fontSize: '0.82rem' }}>Q{i + 1}. {q.text.substring(0, 65)}{q.text.length > 65 ? '…' : ''}</span>
                         <button type="button" onClick={() => setManualQuestions(manualQuestions.filter(x => x.id !== q.id))} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 3 }}><Trash2 size={13} /></button>
                       </div>
                     ))}
@@ -435,51 +435,51 @@ export default function MentorQuizzes() {
           <p style={{ margin: 0 }}>Loading quizzes…</p>
         </div>
       ) : quizzes.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 60, background: '#1e293b', borderRadius: 12, border: '1px solid #334155' }}>
-          <FileCheck2 size={40} style={{ color: '#475569', marginBottom: 12 }} />
+        <div style={{ textAlign: 'center', padding: 60, background: '#ffffff', borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          <FileCheck2 size={40} style={{ color: '#94a3b8', marginBottom: 12 }} />
           <p style={{ color: '#64748b', margin: 0 }}>No quizzes yet. Click "Create Quiz" to get started!</p>
         </div>
       ) : (
-        <div style={{ background: '#1e293b', borderRadius: 12, border: '1px solid #334155', overflow: 'hidden' }}>
+        <div style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ background: '#0f172a' }}>
+              <tr style={{ background: '#f8fafc' }}>
                 {['Quiz Title', 'Batch', 'Questions', 'Type', 'Status', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '11px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #334155' }}>{h}</th>
+                  <th key={h} style={{ padding: '11px 14px', textAlign: 'left', color: '#64748b', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #e2e8f0' }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {quizzes.map(q => (
                 <tr key={q.id}
-                  style={{ borderBottom: '1px solid #0f172a', transition: 'background 0.12s', cursor: 'default' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#0f172a'}
+                  style={{ borderBottom: '1px solid #e2e8f0', transition: 'background 0.12s', cursor: 'default' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <td style={{ padding: '12px 14px' }}>
-                    <div style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.875rem' }}>{q.title}</div>
+                    <div style={{ color: '#0f172a', fontWeight: 600, fontSize: '0.875rem' }}>{q.title}</div>
                     <div style={{ color: '#64748b', fontSize: '0.72rem', marginTop: 2 }}>{q.description?.substring(0, 50) || '—'}</div>
                   </td>
-                  <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.85rem' }}>{q.batch}</td>
-                  <td style={{ padding: '12px 14px', color: '#94a3b8', fontSize: '0.85rem' }}>{q.questionsCount}</td>
+                  <td style={{ padding: '12px 14px', color: '#475569', fontSize: '0.85rem' }}>{q.batch}</td>
+                  <td style={{ padding: '12px 14px', color: '#475569', fontSize: '0.85rem' }}>{q.questionsCount}</td>
                   <td style={{ padding: '12px 14px' }}>
                     <span style={{ padding: '3px 9px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600, background: q.type === 'AI Generated' ? 'rgba(139,92,246,0.15)' : 'rgba(59,130,246,0.15)', color: q.type === 'AI Generated' ? '#c4b5fd' : '#93c5fd', border: '1px solid transparent' }}>
                       {q.type === 'AI Generated' ? '✨ AI' : '📝 Manual'}
                     </span>
                   </td>
                   <td style={{ padding: '12px 14px' }}>
-                    <span style={{ padding: '3px 9px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600, background: q.status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(100,116,139,0.15)', color: q.status === 'Active' ? '#6ee7b7' : '#94a3b8' }}>
+                    <span style={{ padding: '3px 9px', borderRadius: 999, fontSize: '0.72rem', fontWeight: 600, background: q.status === 'Active' ? 'rgba(16,185,129,0.1)' : '#f1f5f9', color: q.status === 'Active' ? '#059669' : '#64748b' }}>
                       {q.status}
                     </span>
                   </td>
                   <td style={{ padding: '12px 14px' }}>
                     <div style={{ display: 'flex', gap: 5 }}>
-                      <button onClick={() => setViewQuestionsFor(q)} title="View Questions" style={{ padding: '5px 9px', background: '#0f172a', border: '1px solid #334155', borderRadius: 6, color: '#6366f1', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem' }}>
+                      <button onClick={() => setViewQuestionsFor(q)} title="View Questions" style={{ padding: '5px 9px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, color: '#4f46e5', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem' }}>
                         <Eye size={13} /> Questions
                       </button>
-                      <button onClick={() => setViewResultsFor(q)} title="View Results" style={{ padding: '5px 9px', background: '#0f172a', border: '1px solid #334155', borderRadius: 6, color: '#f59e0b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem' }}>
+                      <button onClick={() => setViewResultsFor(q)} title="View Results" style={{ padding: '5px 9px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, color: '#d97706', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.72rem' }}>
                         <BarChart2 size={13} /> Results
                       </button>
-                      <button onClick={() => handleDelete(q.id)} title="Delete" style={{ padding: '5px 9px', background: '#0f172a', border: '1px solid #334155', borderRadius: 6, color: '#ef4444', cursor: 'pointer' }}>
+                      <button onClick={() => handleDelete(q.id)} title="Delete" style={{ padding: '5px 9px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, color: '#dc2626', cursor: 'pointer' }}>
                         <Trash2 size={13} />
                       </button>
                     </div>

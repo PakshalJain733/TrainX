@@ -19,7 +19,7 @@ export default function Coordinators() {
   );
 
   return (
-    <div className="space-y-6 text-slate-100">
+    <div className="space-y-6 text-slate-800">
       <div className="sa-page-header flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
@@ -30,22 +30,22 @@ export default function Coordinators() {
         </div>
       </div>
 
-      <div className="sa-search-card flex items-center justify-between gap-4">
-        <div className="sa-search-wrap flex-1 relative">
-          <Search className="sa-search-icon absolute left-3 top-3 text-slate-400" size={16} />
+      <div className="sa-search-card">
+        <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
+          <Search className="sa-search-icon" size={16} />
           <input
             type="text"
             placeholder="Search coordinator name, college, department..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none"
+            className="sa-search-input"
           />
         </div>
       </div>
 
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-300">
-          <thead className="text-xs text-slate-400 border-b border-slate-800 uppercase font-mono bg-slate-950/40">
+      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+        <table className="w-full text-left text-sm text-slate-700">
+          <thead className="text-xs text-slate-500 border-b border-slate-200 uppercase font-mono bg-slate-50">
             <tr>
               <th className="py-3 px-4">Coordinator Name</th>
               <th className="py-3 px-4">College</th>
@@ -54,23 +54,25 @@ export default function Coordinators() {
               <th className="py-3 px-4 text-right">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60">
+          <tbody className="divide-y divide-slate-200">
             {filtered.map((c) => (
-              <tr key={c.id} className="hover:bg-slate-800/40">
-                <td className="py-3.5 px-4 font-bold text-white flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-xs">
-                    {c.name.split(' ').map(n=>n[0]).join('')}
+              <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                <td className="py-3.5 px-4 font-bold text-slate-900">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex flex-shrink-0 items-center justify-center font-bold text-xs border border-indigo-100">
+                      {c.name.split(' ').map(n=>n[0]).join('')}
+                    </div>
+                    <span>{c.name}</span>
                   </div>
-                  {c.name}
                 </td>
-                <td className="py-3.5 px-4 text-slate-300 font-medium">{c.college}</td>
-                <td className="py-3.5 px-4 text-indigo-400 font-medium">{c.department}</td>
-                <td className="py-3.5 px-4 text-xs text-slate-400">
+                <td className="py-3.5 px-4 text-slate-600 font-medium">{c.college}</td>
+                <td className="py-3.5 px-4 text-indigo-600 font-medium">{c.department}</td>
+                <td className="py-3.5 px-4 text-xs text-slate-500">
                   <div>{c.email}</div>
                   <div>{c.phone}</div>
                 </td>
                 <td className="py-3.5 px-4 text-right">
-                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
                     {c.status}
                   </span>
                 </td>
