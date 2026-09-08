@@ -1,27 +1,8 @@
 import { Router } from 'express';
 import {
   getAssessments,
-  getAssessmentById,
-  addAssessment,
-  editAssessment,
-  removeAssessment,
-  publishAssessmentCtrl,
-  getQuestions,
-  addQuestion,
-  editQuestion,
-  removeQuestion,
-  getPublishedAssessments,
-  startAssessment,
-  submitAssessment,
-  getMyResult,
-  getMyAttempts,
-  getAttemptResult,
-  getAssessmentResults,
-  submitAssessmentAttempt,
-  generateAIQuestionsCtrl,
+  createAssessment,
 } from '../controllers/assessment.controller.js';
-import { authenticateToken } from '../middleware/auth.middleware.js';
-import { authorizeRoles } from '../middleware/role.middleware.js';
 
 const router = Router();
 
@@ -31,7 +12,7 @@ router.use(authenticateToken);
 // Generate questions using Google Gemini AI
 router.post(
   '/generate-ai-questions',
-  authorizeRoles('student', 'super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
   generateAIQuestionsCtrl
 );
 
@@ -86,7 +67,7 @@ router.get(
 // Create assessment
 router.post(
   '/',
-  authorizeRoles('student', 'super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
   addAssessment
 );
 
@@ -114,7 +95,7 @@ router.patch(
 // ─── Questions CRUD ──────────────────────────────────────────────────────────
 
 router.get('/:id/questions', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), getQuestions);
-router.post('/:id/questions', authorizeRoles('student', 'super_admin', 'college_admin', 'coordinator', 'mentor'), addQuestion);
+router.post('/:id/questions', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), addQuestion);
 router.put('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), editQuestion);
 router.delete('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), removeQuestion);
 

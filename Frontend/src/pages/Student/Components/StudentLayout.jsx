@@ -244,35 +244,22 @@ export default function StudentLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const resolveUser = (rawUser) => {
+    if (!rawUser) return { name: "Pakshal", department: "ECS", semester: 6 };
+    let name = rawUser.name;
+    if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
+      name = rawUser.fullName || rawUser.full_name || (rawUser.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? rawUser.name : "Pakshal");
+    }
+    return { ...rawUser, name };
+  };
+
   const [user, setUser] = useState(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
-      if (u) return u;
+      if (u) return resolveUser(u);
     } catch (e) {}
-    return { name: "Student", department: "ECS", semester: 6 };
+    return { name: "Pakshal", department: "ECS", semester: 6 };
   });
-
-  useEffect(() => {
-    const fetchFreshUser = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/auth/me`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.data) {
-            setUser(data.data);
-            localStorage.setItem("user", JSON.stringify(data.data));
-          }
-        }
-      } catch (err) {
-        console.warn("Failed to fetch fresh profile in StudentLayout:", err);
-      }
-    };
-    fetchFreshUser();
-  }, []);
 
   const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(() => {
     return localStorage.getItem("student_profile_notice_dismissed") === "true";

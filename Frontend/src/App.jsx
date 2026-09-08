@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { SystemMaintenanceProvider } from './context/SystemMaintenanceContext';
+import MaintenanceGuard from './components/Common/MaintenanceGuard';
 import Login from './pages/authentication/login';
 import Register from './pages/authentication/register';
 import StudentLayout from './pages/Student/Components/StudentLayout';
@@ -18,7 +20,7 @@ import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 import Settings from "./pages/Student/Components/Settings";
-import StudentSkillGaps from "./pages/Student/Components/StudentSkillGaps";
+import StudentPerformance from "./pages/Student/Components/Performance";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -34,14 +36,12 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
-import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
 
 // Super Admin Workspace Imports
 import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
 import SuperAdminOverview from './pages/SuperAdmin/Overview';
 import CollegesPage from './pages/SuperAdmin/Colleges';
-import CollegeDepartments from './pages/SuperAdmin/CollegeDepartments';
 import DepartmentsPage from './pages/SuperAdmin/Departments';
 import SuperAdminBatches from './pages/SuperAdmin/Batches';
 import AdminVerificationPage from './pages/SuperAdmin/AdminVerification';
@@ -54,8 +54,8 @@ import SuperAdminAIRoadmapsPage from './pages/SuperAdmin/AIRoadmaps';
 import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
 import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
 import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
-import SuperAdminProfilePage from './pages/SuperAdmin/SuperAdminProfile';
-import SuperAdminCodingPractice from './pages/SuperAdmin/CodingPractice';
+import SuperAdminMaintenanceControls from './pages/SuperAdmin/MaintenanceControls';
+import SuperAdminCodingPracticeMonitoring from './pages/SuperAdmin/CodingPracticeMonitoring';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
@@ -76,58 +76,62 @@ import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
 import MentorNotifications from './pages/Mentor/Components/Notifications';
 import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
 import MentorHelp from './pages/Mentor/Components/Help';
-import MentorQuizzes from './pages/Mentor/Components/MentorQuizzes';
+import MentorPerformance from './pages/Mentor/Components/Performance';
 
 // Coordinator Workspace Imports
 import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
 import CoordinatorOverview from './pages/Coordinator/Components/Overview';
 import CoordinatorBatches from './pages/Coordinator/Components/Batches';
 import CoordinatorStudents from './pages/Coordinator/Components/Students';
+import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
+import CoordinatorCodingPerformance from './pages/Coordinator/Components/CodingPerformance';
+import CoordinatorInterviewPerformance from './pages/Coordinator/Components/InterviewPerformance';
+import CoordinatorStudentsNeedImprovement from './pages/Coordinator/Components/StudentsNeedImprovement';
 import CoordinatorMentors from './pages/Coordinator/Components/Mentors';
-import CoordinatorLiveSessions from './pages/Coordinator/Components/LiveSessions';
-import CoordinatorSchedules from './pages/Coordinator/Components/Schedules';
 import CoordinatorAssessments from './pages/Coordinator/Components/Assessments';
 import CoordinatorAttendance from './pages/Coordinator/Components/Attendance';
-import CoordinatorAIRoadmaps from './pages/Coordinator/Components/AIRoadmaps';
-import CoordinatorAIInterviews from './pages/Coordinator/Components/AIInterviews';
-import CoordinatorPerformance from './pages/Coordinator/Components/Performance';
 import CoordinatorPlacement from './pages/Coordinator/Components/Placement';
-import CoordinatorLeaderboard from './pages/Coordinator/Components/Leaderboard';
 import CoordinatorRequests from './pages/Coordinator/Components/Requests';
-import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
 import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
-import CoordinatorHelp from './pages/Coordinator/Components/Help';
-import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
+import CoordinatorQuizAndCodes from './pages/Coordinator/Components/QuizzesAndCodes';
+import CoordinatorPerformances from './pages/Coordinator/Components/Performances';
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        
-        {/* Student Workspace Routes */}
-        <Route path="/student" element={<StudentLayout />}>
-          <Route index element={<Overview />} />
-          <Route path="roadmap" element={<AIRoadmap />} />
-          <Route path="learning" element={<LearningContent />} />
-          <Route path="ai-interview" element={<AIInterview />} />
-          <Route path="progress" element={<ProgressAnalytics />} />
-          <Route path="leaderboard" element={<Leaderboard />} />
-          <Route path="quiz" element={<AcademicQuiz />} />
-          <Route path="attendance" element={<Attendance />} />
-          <Route path="skill-gaps" element={<StudentSkillGaps />} />
-          <Route path="weekly-reports" element={<WeeklyReports />} />
-          <Route path="batches" element={<Batches />} />
-          <Route path="practice" element={<PracticeProblems />} />
-          <Route path="coding-platform/:taskId" element={<CodingPlatform />} />
-          <Route path="coding-platform" element={<CodingPlatform />} />
-          <Route path="help" element={<Help />} />
-          <Route path="notifications" element={<Notifications />} />
-          <Route path="profile" element={<ProfilePage />} />
-          <Route path="settings" element={<Settings />} />
-        </Route>
+    <SystemMaintenanceProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          
+          {/* Student Workspace Routes */}
+          <Route
+            path="/student"
+            element={
+              <MaintenanceGuard moduleKey="studentDashboard">
+                <StudentLayout />
+              </MaintenanceGuard>
+            }
+          >
+            <Route index element={<Overview />} />
+            <Route path="roadmap" element={<MaintenanceGuard moduleKey="aiRoadmaps"><AIRoadmap /></MaintenanceGuard>} />
+            <Route path="learning" element={<MaintenanceGuard moduleKey="learningContent"><LearningContent /></MaintenanceGuard>} />
+            <Route path="ai-interview" element={<MaintenanceGuard moduleKey="aiInterviews"><AIInterview /></MaintenanceGuard>} />
+            <Route path="progress" element={<MaintenanceGuard moduleKey="skillGapAnalysis"><ProgressAnalytics /></MaintenanceGuard>} />
+            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><Leaderboard /></MaintenanceGuard>} />
+            <Route path="quiz" element={<MaintenanceGuard moduleKey="academicQuizzes"><AcademicQuiz /></MaintenanceGuard>} />
+            <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><Attendance /></MaintenanceGuard>} />
+            <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><WeeklyReports /></MaintenanceGuard>} />
+            <Route path="batches" element={<Batches />} />
+            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><PracticeProblems /></MaintenanceGuard>} />
+            <Route path="coding-platform/:taskId" element={<MaintenanceGuard moduleKey="practiceCoding"><CodingPlatform /></MaintenanceGuard>} />
+            <Route path="coding-platform" element={<MaintenanceGuard moduleKey="practiceCoding"><CodingPlatform /></MaintenanceGuard>} />
+            <Route path="help" element={<Help />} />
+            <Route path="notifications" element={<Notifications />} />
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="settings" element={<Settings />} />
+          </Route>
 
         {/* Admin Dashboard Routes */}
         <Route path="/admin" element={<AdminLayout />}>
@@ -138,8 +142,6 @@ function App() {
           <Route path="learning" element={<AdminLearningContent />} />
           <Route path="quiz" element={<AdminQuizzes />} />
           <Route path="practice" element={<AdminPracticeProblems />} />
-          <Route path="coding-practice" element={<AdminPracticeProblems />} />
-          <Route path="broadcast" element={<AdminBroadcast />} />
           <Route path="progress" element={<AdminProgress />} />
           <Route path="leaderboard" element={<AdminLeaderboard />} />
           <Route path="weekly-reports" element={<AdminWeeklyReports />} />
@@ -148,84 +150,91 @@ function App() {
         </Route>
 
 
-        {/* Mentor Workspace Routes */}
-        <Route path="/mentor" element={<MentorLayout />}>
-          <Route index element={<MentorOverview />} />
-          <Route path="quizzes" element={<MentorQuizzes />} />
-          <Route path="assessments" element={<MentorQuizzes />} />
-          <Route path="students" element={<MentorStudents />} />
-          <Route path="roadmaps" element={<MentorRoadmaps />} />
-          <Route path="ai-interviews" element={<MentorAIInterviews />} />
-          <Route path="skill-gaps" element={<MentorSkillGaps />} />
-          <Route path="attendance" element={<MentorAttendance />} />
-          <Route path="leaderboard" element={<MentorLeaderboard />} />
-          <Route path="mock-drives" element={<MentorMockDrives />} />
-          <Route path="defaulters" element={<MentorDefaulters />} />
-          <Route path="study-material" element={<MentorStudyMaterial />} />
-          <Route path="weekly-reports" element={<MentorWeeklyReports />} />
-          <Route path="batches" element={<MentorBatches />} />
-          <Route path="assignments" element={<MentorAssignments />} />
-          <Route path="sessions" element={<MentorLiveSessions />} />
-          <Route path="notifications" element={<MentorNotifications />} />
-          <Route path="profile" element={<MentorProfilePage />} />
-          <Route path="settings" element={<MentorProfilePage />} />
-          <Route path="help" element={<MentorHelp />} />
-        </Route>
+          {/* Mentor Workspace Routes */}
+          <Route
+            path="/mentor"
+            element={
+              <MaintenanceGuard moduleKey="mentorDashboard">
+                <MentorLayout />
+              </MaintenanceGuard>
+            }
+          >
+            <Route index element={<MentorOverview />} />
+            <Route path="students" element={<MentorStudents />} />
+            <Route path="roadmaps" element={<MaintenanceGuard moduleKey="aiRoadmaps"><MentorRoadmaps /></MaintenanceGuard>} />
+            <Route path="ai-interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><MentorAIInterviews /></MaintenanceGuard>} />
+            <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="skillGapAnalysis"><MentorSkillGaps /></MaintenanceGuard>} />
+            <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><MentorAttendance /></MaintenanceGuard>} />
+            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><MentorLeaderboard /></MaintenanceGuard>} />
+            <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mockDrives"><MentorMockDrives /></MaintenanceGuard>} />
+            <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
+            <Route path="study-material" element={<MaintenanceGuard moduleKey="learningContent"><MentorStudyMaterial /></MaintenanceGuard>} />
+            <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><MentorWeeklyReports /></MaintenanceGuard>} />
+            <Route path="batches" element={<MentorBatches />} />
+            <Route path="assignments" element={<MentorAssignments />} />
+            <Route path="sessions" element={<MentorLiveSessions />} />
+            <Route path="notifications" element={<MentorNotifications />} />
+            <Route path="profile" element={<MentorProfilePage />} />
+            <Route path="settings" element={<MentorProfilePage />} />
+            <Route path="help" element={<MentorHelp />} />
+          </Route>
 
-        {/* Coordinator Workspace Routes */}
-        <Route path="/coordinator" element={<CoordinatorLayout />}>
-          <Route index element={<CoordinatorOverview />} />
-          <Route path="batches" element={<CoordinatorBatches />} />
-          <Route path="students" element={<CoordinatorStudents />} />
-          <Route path="mentors" element={<CoordinatorMentors />} />
-          <Route path="assessments" element={<CoordinatorAssessments />} />
-          <Route path="quizzes" element={<CoordinatorAssessments />} />
-          <Route path="attendance" element={<CoordinatorAttendance />} />
-          <Route path="roadmaps" element={<CoordinatorAIRoadmaps />} />
-          <Route path="ai-roadmaps" element={<CoordinatorAIRoadmaps />} />
-          <Route path="interviews" element={<CoordinatorAIInterviews />} />
-          <Route path="ai-interviews" element={<CoordinatorAIInterviews />} />
-          <Route path="performance" element={<CoordinatorPerformance />} />
-          <Route path="skills" element={<CoordinatorPerformance />} />
-          <Route path="placement" element={<CoordinatorPlacement />} />
-          <Route path="leaderboard" element={<CoordinatorLeaderboard />} />
-          <Route path="requests" element={<CoordinatorRequests />} />
-          <Route path="reports" element={<CoordinatorWeeklyReports />} />
-          <Route path="weekly-reports" element={<CoordinatorWeeklyReports />} />
-          <Route path="notifications" element={<CoordinatorNotifications />} />
-          <Route path="profile" element={<CoordinatorProfilePage />} />
-          <Route path="settings" element={<CoordinatorProfilePage />} />
-          <Route path="help" element={<CoordinatorHelp />} />
-        </Route>
+          {/* Coordinator Workspace Routes */}
+          <Route
+            path="/coordinator"
+            element={
+              <MaintenanceGuard moduleKey="coordinatorDashboard">
+                <CoordinatorLayout />
+              </MaintenanceGuard>
+            }
+          >
+            <Route index element={<CoordinatorOverview />} />
+            <Route path="batches" element={<CoordinatorBatches />} />
+            <Route path="students" element={<CoordinatorStudents />} />
+            <Route path="quizzes-and-codes" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="performances" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorPerformances /></MaintenanceGuard>} />
+            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="coding-performance" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorPerformances /></MaintenanceGuard>} />
+            <Route path="assessments" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><CoordinatorInterviewPerformance /></MaintenanceGuard>} />
+            <Route path="improvement" element={<MaintenanceGuard moduleKey="defaulters"><CoordinatorStudentsNeedImprovement /></MaintenanceGuard>} />
+            <Route path="attendance" element={<CoordinatorAttendance />} />
+            <Route path="mentors" element={<CoordinatorMentors />} />
+            <Route path="requests" element={<CoordinatorRequests />} />
+            <Route path="notifications" element={<CoordinatorNotifications />} />
+            <Route path="profile" element={<CoordinatorProfilePage />} />
+            <Route path="settings" element={<CoordinatorProfilePage />} />
+          </Route>
 
-        {/* Super Admin Workspace Routes */}
-        <Route path="/super-admin" element={<SuperAdminLayout />}>
-          <Route index element={<SuperAdminOverview />} />
-          <Route path="colleges" element={<CollegesPage />} />
-          <Route path="colleges/:collegeId" element={<CollegeDepartments />} />
-          <Route path="departments" element={<DepartmentsPage />} />
-          <Route path="batches" element={<SuperAdminBatches />} />
-          <Route path="verification" element={<AdminVerificationPage />} />
-          <Route path="coordinators" element={<CoordinatorsPage />} />
-          <Route path="mentors" element={<MentorsTrainersPage />} />
-          <Route path="students" element={<StudentsRiskPage />} />
-          <Route path="performance" element={<SuperAdminPerformancePage />} />
-          <Route path="attendance" element={<SuperAdminAttendancePage />} />
-          <Route path="coding-practice" element={<SuperAdminCodingPractice />} />
-          <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
-          <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
-          <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
-          <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
-          <Route path="profile" element={<SuperAdminProfilePage />} />
-        </Route>
-        <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
-        <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
+          {/* Super Admin Workspace Routes */}
+          <Route path="/super-admin" element={<SuperAdminLayout />}>
+            <Route index element={<SuperAdminOverview />} />
+            <Route path="colleges" element={<CollegesPage />} />
+            <Route path="departments" element={<DepartmentsPage />} />
+            <Route path="batches" element={<SuperAdminBatches />} />
+            <Route path="verification" element={<AdminVerificationPage />} />
+            <Route path="coordinators" element={<CoordinatorsPage />} />
+            <Route path="mentors" element={<MentorsTrainersPage />} />
+            <Route path="students" element={<StudentsRiskPage />} />
+            <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
+            <Route path="performance" element={<SuperAdminPerformancePage />} />
+            <Route path="attendance" element={<SuperAdminAttendancePage />} />
+            <Route path="coding-practice" element={<SuperAdminCodingPracticeMonitoring />} />
+            <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
+            <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
+            <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
+            <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
+          </Route>
+          <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
+          <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
 
-        {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </SystemMaintenanceProvider>
   );
 }
 
 export default App;
+

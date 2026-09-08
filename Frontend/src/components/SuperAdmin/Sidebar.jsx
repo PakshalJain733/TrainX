@@ -1,3 +1,4 @@
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -16,104 +17,141 @@ import {
   FileText,
   SlidersHorizontal,
   Shield,
+  Settings,
   HelpCircle,
   Code,
-  UserCog,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
-import "../../pages/SuperAdmin/SuperAdmin.css";
+import "../../pages/SuperAdmin/Styles/SuperAdminSidebar.css";
 
-function SidebarBrand({ collapsed }) {
+function SidebarBrand({ collapsed, subtitle }) {
   return (
     <div className="sidebar-brand">
       <div className="sidebar-brand-logo-container">
-        <img src={logoImg} alt="Logo" className="sidebar-brand-logo" />
+        <img src={logoImg} alt="AcadNexus" className="sidebar-brand-logo" />
       </div>
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
-          <span className="sidebar-brand-sub">Super Admin</span>
+          {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
         </div>
       )}
     </div>
   );
 }
 
-const primaryNavItems = [
-  { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
-  { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
-  { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
-  { title: "Batches", url: "/super-admin/batches", icon: Calendar },
-  { title: "Admin Verification", url: "/super-admin/verification", icon: ShieldCheck },
-  { title: "Coordinators", url: "/super-admin/coordinators", icon: UserCheck },
-  { title: "Mentors & Trainers", url: "/super-admin/mentors", icon: GraduationCap },
-  { title: "Students", url: "/super-admin/students", icon: Users },
-  { title: "Performance", url: "/super-admin/performance", icon: TrendingUp },
-  { title: "Attendance", url: "/super-admin/attendance", icon: CalendarCheck },
-  { title: "Coding Practice", url: "/super-admin/coding-practice", icon: Code },
-  { title: "AI Roadmaps", url: "/super-admin/ai-roadmaps", icon: Target },
-  { title: "AI Interviews", url: "/super-admin/ai-interviews", icon: Sparkles },
-  { title: "Mock Drives", url: "/super-admin/mock-drives", icon: ClipboardCheck },
-  { title: "Weekly Reports", url: "/super-admin/weekly-reports", icon: FileText },
+const navigationGroups = [
+  {
+    title: "ORGANIZATION",
+    items: [
+      { name: "Overview", path: "/super-admin", exact: true, icon: LayoutDashboard },
+      { name: "Colleges", path: "/super-admin/colleges", icon: Building2 },
+      { name: "Departments", path: "/super-admin/departments", icon: Briefcase, badge: "86" },
+      { name: "Batches", path: "/super-admin/batches", icon: Calendar, badge: "96" },
+    ],
+  },
+  {
+    title: "PEOPLE & ACCESS",
+    items: [
+      { name: "Admin verification", path: "/super-admin/verification", icon: ShieldCheck, badge: "04" },
+      { name: "Coordinators", path: "/super-admin/coordinators", icon: UserCheck, badge: "42" },
+      { name: "Mentors & trainers", path: "/super-admin/mentors", icon: GraduationCap, badge: "86" },
+      { name: "Students", path: "/super-admin/students", icon: Users, badge: "3.8k" },
+    ],
+  },
+  {
+    title: "MONITORING",
+    items: [
+      { name: "Performance", path: "/super-admin/performance", icon: TrendingUp },
+      { name: "Attendance", path: "/super-admin/attendance", icon: CalendarCheck },
+      { name: "Coding practice", path: "/super-admin/coding-practice", icon: Code },
+    ],
+  },
+  {
+    title: "SYSTEM CONTROL",
+    items: [
+      { name: "Maintenance controls", path: "/super-admin/maintenance", icon: SlidersHorizontal, badge: "On/Off" },
+    ],
+  },
+  {
+    title: "AI SYSTEMS",
+    items: [
+      { name: "AI roadmaps", path: "/super-admin/ai-roadmaps", icon: Target },
+      { name: "AI interviews", path: "/super-admin/ai-interviews", icon: Sparkles },
+      { name: "Mock drives", path: "/super-admin/mock-drives", icon: ClipboardCheck },
+      { name: "Weekly reports", path: "/super-admin/weekly-reports", icon: FileText },
+    ],
+  },
 ];
 
-const footerNavItems = [
-  { title: "Edit Profile", url: "/super-admin/profile", icon: UserCog },
-  { title: "Settings", url: "/super-admin/performance", icon: SlidersHorizontal },
-];
-
-export default function Sidebar({ collapsed, mobileOpen, onClose }) {
+export function Sidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
 
-  const isActive = (url, exact) =>
-    exact
-      ? pathname === url
-      : pathname === url || pathname.startsWith(url + "/");
+  const isActive = (item) => {
+    if (item.exact) {
+      return pathname === item.path;
+    }
+    return pathname === item.path || pathname.startsWith(item.path + "/");
+  };
 
   const handleNavClick = () => {
     if (onClose) onClose();
   };
 
-  const renderItem = (item) => {
-    const active = isActive(item.url, item.exact);
-    return (
-      <li key={item.url} className="sidebar-menu-item">
-        <Link
-          to={item.url}
-          className={`sidebar-menu-btn ${active ? "sidebar-menu-btn--active" : ""}`}
-          title={collapsed ? item.title : undefined}
-          onClick={handleNavClick}
-        >
-          <item.icon size={18} className="sidebar-icon" />
-          {(!collapsed || mobileOpen) && <span className="sidebar-label">{item.title}</span>}
-        </Link>
-      </li>
-    );
-  };
-
   return (
-    <aside className={`sa-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
-      {/* Header */}
+    <aside
+      className={`superadmin-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${
+        mobileOpen ? "mobile-open" : ""
+      }`}
+    >
+      {/* Brand Header */}
       <div className="sidebar-header">
-        <SidebarBrand collapsed={collapsed} />
+        <SidebarBrand collapsed={collapsed} subtitle="Super Admin Workspace" />
       </div>
 
-      {/* Nav */}
+      {/* Navigation List */}
       <div className="sidebar-content">
-        <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
-        </ul>
-      </div>
-
-      {/* Pinned Bottom */}
-      <div className="sidebar-footer">
-        <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
-        </ul>
+        {navigationGroups.map((group) => (
+          <div key={group.title} className="sidebar-group">
+            {(!collapsed || mobileOpen) && (
+              <div className="sidebar-group-title">{group.title}</div>
+            )}
+            <ul className="sidebar-menu">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item);
+                return (
+                  <li key={item.path} className="sidebar-menu-item">
+                    <Link
+                      to={item.path}
+                      className={`sidebar-menu-btn ${
+                        active ? "sidebar-menu-btn--active" : ""
+                      }`}
+                      title={collapsed ? item.name : undefined}
+                      onClick={handleNavClick}
+                    >
+                      <div className="flex items-center">
+                        <Icon size={18} className="sidebar-icon" />
+                        {(!collapsed || mobileOpen) && (
+                          <span className="sidebar-label">{item.name}</span>
+                        )}
+                      </div>
+                      {(!collapsed || mobileOpen) && item.badge && (
+                        <span className="sidebar-badge">{item.badge}</span>
+                      )}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </div>
     </aside>
   );
 }
+
+export default Sidebar;

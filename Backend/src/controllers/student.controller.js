@@ -6,8 +6,6 @@ import {
   updateUserModel,
 } from '../models/user.model.js';
 import { ROLES } from '../utils/constants.js';
-import { calculateAttendancePercentage } from '../services/attendance.service.js';
-import { getStudentAttendanceCounts } from '../models/attendance.model.js';
 
 export const getStudentData = async (req, res, next) => {
   try {
@@ -44,61 +42,36 @@ export const updateStudentProfile = async (req, res, next) => {
   }
 };
 
-import { findAssessments } from '../models/assessment.model.js';
-
 export const getStudentDashboard = async (req, res, next) => {
   try {
-    const collegeId = req.user.collegeId || req.user.college_id || 1;
+    const collegeId = req.user.collegeId || 1;
     // Multi-college isolation: retrieve students from the same college
     const allUsers = await getAllUsersModel(collegeId);
     const students = allUsers.filter((u) => u.role === ROLES.STUDENT);
 
     const callerId = req.user.userId || req.user.id;
 
-    // Fetch published assessments for this student's college
-    let publishedAssessments = [];
-    try {
-      publishedAssessments = await findAssessments({ status: 'published', college_id: collegeId });
-    } catch (_) {}
-
     // Build real leaderboard from registered students in this college
-    const realLeaderboard = students.map((s, idx) => {
-      const xpPoints = s.points || s.score || 0;
-      return {
-        rank: idx + 1,
-        name: s.name,
-        score: `${xpPoints.toLocaleString()} XP`,
-        initials: s.name ? s.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'ST',
-        badge: idx === 0 ? '🥇 Rank 1' : idx === 1 ? '🥈 Rank 2' : idx === 2 ? '🥉 Rank 3' : `Top ${Math.min(20, (idx + 1) * 5)}%`,
-        you: s.id === callerId,
-      };
-    });
+    const realLeaderboard = students.map((s, idx) => ({
+      rank: idx + 1,
+      name: s.name,
+      score: `${(1500 + (students.length - idx) * 75).toLocaleString()} XP`,
+      initials: s.name ? s.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'ST',
+      badge: idx === 0 ? '🥇 Rank 1' : idx === 1 ? '🥈 Rank 2' : idx === 2 ? '🥉 Rank 3' : `Top ${Math.min(20, (idx + 1) * 5)}%`,
+      you: s.id === callerId,
+    }));
 
     const currentStudentIdx = students.findIndex((s) => s.id === callerId);
     const currentRank = currentStudentIdx !== -1 ? `${currentStudentIdx + 1} / ${students.length}` : `1 / ${Math.max(1, students.length)}`;
 
-    const upcomingDeadlines = publishedAssessments.map((a) => ({
-      title: a.title,
-      dueDate: a.duration_minutes ? `${a.duration_minutes} Mins · ${a.total_marks || 0} Marks` : 'Live Quiz',
-      status: 'Pending',
-    }));
-
-    let attendancePct = 0;
-    try {
-      const counts = await getStudentAttendanceCounts(callerId);
-      attendancePct = calculateAttendancePercentage(counts.present_count, counts.total_classes);
-    } catch (_) {}
-
     const dashboardData = {
       attendanceSummary: {
-        percentage: attendancePct,
+        percentage: 95,
       },
       codingProgress: {
         currentRank,
       },
-      upcomingDeadlines: upcomingDeadlines.length > 0 ? upcomingDeadlines : [
-        { title: 'Data Structures Sprint Quiz', dueDate: '30 Mins · 50 Marks', status: 'Pending' }
-      ],
+      upcomingDeadlines: [],
       leaderboard: realLeaderboard,
     };
 
@@ -107,7 +80,6 @@ export const getStudentDashboard = async (req, res, next) => {
     next(error);
   }
 };
-
 
 import { getPracticeProblemsModel } from '../models/practiceProblem.model.js';
 
@@ -224,35 +196,14 @@ export const getStudentAttendance = async (req, res, next) => {
     }
 
     const percentage = calculateAttendancePercentage(presentClasses, totalClasses);
-    const effPercentage = totalClasses > 0 ? percentage : 0;
-    const effAttended = presentClasses;
-    const effMissed = absentClasses;
-    const effTotal = totalClasses;
 
     const attendanceData = {
-      overallPercentage: effPercentage,
-      attendedClasses: effAttended,
-      missedClasses: effMissed,
-      totalClasses: effTotal,
-      requiredThreshold: 75,
-      status: effTotal === 0 ? 'No Records' : effPercentage >= 75 ? 'Good' : 'Low',
-      isLowAttendance: effTotal > 0 && effPercentage < 75,
-      warningMessage: effTotal > 0 && effPercentage < 75 ? '⚠ Attendance is below the required level. You need to improve your attendance.' : '',
-      percentage: effPercentage,
-      presentClasses: effAttended,
-      absentClasses: effMissed,
-      verifications: verifications,
-      recentLogs: recentLogs,
-      subjects: [],
-      attendanceHistory: recentLogs.map(l => ({
-        id: l.id,
-        date: l.date,
-        month: l.date.includes('Sep') ? 'September' : 'August',
-        subject: l.session,
-        status: l.status,
-        slot: l.time || '10:00 AM - 12:00 PM',
-        faculty: l.faculty || 'Faculty Lead'
-      }))
+      percentage,
+      totalClasses,
+      presentClasses,
+      absentClasses,
+      verifications,
+      recentLogs,
     };
     return sendSuccess(res, 'Attendance data retrieved successfully', attendanceData);
   } catch (error) {
@@ -262,25 +213,9 @@ export const getStudentAttendance = async (req, res, next) => {
 
 export const applyStudentLeave = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id;
     const { category, startDate, endDate, days, reason, attachment } = req.body;
-
-    let insertedId = null;
-    if (userId) {
-      try {
-        const result = await query(
-          `INSERT INTO leave_requests (user_id, category, start_date, end_date, days, reason, attachment, status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')`,
-          [userId, category || 'Medical Leave', startDate || new Date().toISOString().split('T')[0], endDate || startDate || new Date().toISOString().split('T')[0], days || 1, reason || '', attachment || null]
-        );
-        insertedId = result.insertId;
-      } catch (e) {
-        console.error("[applyStudentLeave DB error]", e.message);
-      }
-    }
-
     const newLeave = {
-      id: insertedId ? `LV-2026-${insertedId}` : `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
       category: category || 'Medical Leave',
       startDate,
       endDate: endDate || startDate,
@@ -329,3 +264,68 @@ export const getStudentNotifications = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getStudentPerformance = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const user = await findUserById(userId);
+
+    const performanceData = {
+      studentName: user?.name || 'Student',
+      department: user?.department || 'ECS',
+      batch: 'Batch A – 2026',
+      overallScore: 71,
+      status: 'Average',
+      trend: 'up',
+      trendDelta: '+4%',
+      lastUpdated: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
+      scores: {
+        assessment: 78,
+        coding: 65,
+        interview: 58,
+        attendance: 82,
+        milestone: 74,
+      },
+      weakAreas: [
+        {
+          id: 'wa-1',
+          skill: 'AI Mock Interview',
+          score: 58,
+          target: 75,
+          reason: 'Low scores across last 3 AI interviews – confidence and problem articulation need improvement.',
+          topics: ['STAR method', 'DSA explanation', 'Behavioural Q&A'],
+          actions: ['Practice 2 mock interviews this week', 'Review recorded sessions', 'Attempt Interview Feedback module'],
+          priority: 'Critical',
+        },
+        {
+          id: 'wa-2',
+          skill: 'Coding / DSA',
+          score: 65,
+          target: 80,
+          reason: 'Struggling with dynamic programming and graph-based problems in practice submissions.',
+          topics: ['Dynamic Programming', 'Graph traversal (BFS/DFS)', 'Recursion & Backtracking'],
+          actions: ['Solve 5 DP problems this week', 'Complete Graph module on Learning Content', 'Join Weekend Coding Sprint'],
+          priority: 'High',
+        },
+      ],
+      suggestions: [
+        { id: 's-1', icon: 'interview', text: 'Schedule 2 AI Mock Interview sessions before the next assessment cycle.', action: 'Go to AI Interview', link: '/student/ai-interview' },
+        { id: 's-2', icon: 'coding', text: 'Complete the Dynamic Programming practice set (8 problems pending).', action: 'Open Practice', link: '/student/practice' },
+        { id: 's-3', icon: 'learning', text: 'Watch the DBMS Normalization video and complete the follow-up quiz.', action: 'Open Learning', link: '/student/learning' },
+        { id: 's-4', icon: 'attendance', text: 'Maintain 80%+ attendance to protect your eligibility for placements.', action: 'View Attendance', link: '/student/attendance' },
+      ],
+      scoreHistory: [
+        { week: 'W1', assessment: 62, coding: 50, interview: 45 },
+        { week: 'W2', assessment: 67, coding: 55, interview: 50 },
+        { week: 'W3', assessment: 72, coding: 60, interview: 52 },
+        { week: 'W4', assessment: 75, coding: 62, interview: 55 },
+        { week: 'W5', assessment: 78, coding: 65, interview: 58 },
+      ],
+    };
+
+    return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
+  } catch (error) {
+    next(error);
+  }
+};
+

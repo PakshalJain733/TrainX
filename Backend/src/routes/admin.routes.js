@@ -14,6 +14,7 @@ import {
   getAdminBroadcasts,
   createAdminBroadcast,
   deleteAdminBroadcast,
+  getAdminPerformance,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -45,5 +46,8 @@ router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 router.get('/broadcast', getAdminBroadcasts);
 router.post('/broadcast', createAdminBroadcast);
 router.delete('/broadcast/:id', deleteAdminBroadcast);
+
+// Performance Analysis
+router.get('/performance', getAdminPerformance);
 
 export default router;
