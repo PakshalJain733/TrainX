@@ -7,6 +7,7 @@ import {
   CheckCircle,
   AlertTriangle,
 } from "lucide-react";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/WeeklyReports.css";
 
 const reportsData = [
@@ -70,7 +71,13 @@ export default function WeeklyReports() {
   };
 
   return (
-    <div className="weekly-reports-page">
+    <div className="weekly-reports-page stack-6">
+      <SectionHeader
+        eyebrow="GOVERNANCE & AUDIT"
+        title="Weekly Performance Reports"
+        description="Review weekly mentor scorecards, attendance logs, technical evaluation notes, and recommended action steps."
+      />
+
       {/* Reviewer / Current Status Banner */}
       <div className="weekly-status-banner">
         <div className="weekly-status-header">

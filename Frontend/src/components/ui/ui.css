@@ -353,6 +353,12 @@
     transition: all 0.2s ease;
 }
 
+.ui-tabs-trigger:hover:not(.ui-tabs-trigger--active) {
+    background: #e2e8f0;
+    color: #1e293b;
+    border-color: #cbd5e1;
+}
+
 .ui-tabs-trigger--active {
     background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
     color: #ffffff;
@@ -362,12 +368,12 @@
 }
 
 .ui-tabs-content {
-  margin-top: 24px;
+  margin-top: 12px;
 }
 
 /* --- Section Header --- */
 .ui-section-header {
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .ui-section-eyebrow {
@@ -385,6 +391,7 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .ui-section-title {
@@ -408,4 +415,17 @@
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .ui-section-title {
+    font-size: 18px;
+  }
+  .ui-section-desc {
+    font-size: 12px;
+  }
+  .ui-section-main {
+    align-items: flex-start;
+    gap: 12px;
+  }
 }

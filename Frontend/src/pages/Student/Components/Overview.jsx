@@ -15,7 +15,7 @@ import "../Styles/Overview.css";
 import "../Styles/Batches.css";
 import "../../Admin/Styles/AdminUsers.css";
 
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
@@ -68,7 +68,15 @@ const defaultDashboardData = {
 export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
+  const [noticeDismissed, setNoticeDismissed] = useState(() => {
+    return localStorage.getItem("student_profile_notice_dismissed") === "true";
+  });
   const navigate = useNavigate();
+
+  const dismissNotice = () => {
+    setNoticeDismissed(true);
+    localStorage.setItem("student_profile_notice_dismissed", "true");
+  };
 
   // Modal State for Joining Batch from Hero Card
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -115,6 +123,9 @@ export default function Overview() {
     } catch (e) {}
   };
 
+  const [myBatchesCount, setMyBatchesCount] = useState(1);
+  const [completedQuizIds, setCompletedQuizIds] = useState(new Set());
+
   useEffect(() => {
     loadUserData();
     window.addEventListener("userProfileUpdated", loadUserData);
@@ -138,7 +149,52 @@ export default function Overview() {
       })
       .catch(() => {});
 
-    return () => window.removeEventListener("userProfileUpdated", loadUserData);
+    // Fetch joined batches to display exact active batch count
+    fetch(`${API_BASE}/batches/my-batches`, { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && Array.isArray(res.data)) {
+          setMyBatchesCount(res.data.length);
+        } else {
+          setMyBatchesCount(0);
+        }
+      })
+      .catch(() => setMyBatchesCount(0));
+
+    const syncCompletedQuizzes = () => {
+      const completedSet = new Set();
+      // Read local storage
+      try {
+        const stored = JSON.parse(localStorage.getItem('student_completed_quizzes') || '[]');
+        stored.forEach(id => completedSet.add(String(id)));
+      } catch (e) {}
+
+      // Fetch backend attempts
+      fetch(`${API_BASE}/assessments/my-attempts`, { headers: getAuthHeaders() })
+        .then(res => res.json())
+        .then(res => {
+          if (res.success && Array.isArray(res.data)) {
+            res.data.forEach(att => {
+              if (att.status === 'completed' || att.status === 'finished' || att.status === 'passed' || att.submitted_at) {
+                completedSet.add(String(att.assessment_id));
+                completedSet.add(String(att.title || '').toLowerCase());
+              }
+            });
+          }
+          setCompletedQuizIds(new Set(completedSet));
+        })
+        .catch(() => {
+          setCompletedQuizIds(completedSet);
+        });
+    };
+
+    syncCompletedQuizzes();
+    window.addEventListener("quizCompletedUpdated", syncCompletedQuizzes);
+
+    return () => {
+      window.removeEventListener("userProfileUpdated", loadUserData);
+      window.removeEventListener("quizCompletedUpdated", syncCompletedQuizzes);
+    };
   }, []);
 
   // Submit Join Batch from Hero Card Modal
@@ -181,53 +237,40 @@ export default function Overview() {
 
   const studentName = dashboard.personalDetails.name || "";
   const upcoming = dashboard.upcomingDeadlines || [];
-  const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
+  const rawLeaderboard = dashboard.leaderboard && dashboard.leaderboard.length > 0
     ? dashboard.leaderboard
     : [
         {
           rank: 1,
           name: `${studentName} (You)`,
-          score: "1,875 XP",
+          score: "0 XP",
           initials: getInitials(studentName),
           badge: "Your Position",
           you: true,
         },
       ];
 
+  const leaderboardList = rawLeaderboard.map((item) => {
+    // Ensure all XP values are cleanly formatted to 0 XP by default
+    let displayScore = item.score;
+    if (!displayScore || displayScore.includes("1,875") || displayScore.includes("1,800") || displayScore.includes("1,725") || displayScore.includes("1,650") || displayScore.includes("1,575")) {
+      displayScore = "0 XP";
+    }
+    return {
+      ...item,
+      score: displayScore,
+    };
+  });
+
   const studentStats = [
     { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
-    { label: "Active Batches", value: "Enrolled", hint: "Assigned training batch", icon: Users },
+    { label: "Active Batches", value: `${myBatchesCount} Active`, hint: "Assigned training batches", icon: Users },
     { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
-    { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Flame },
+    { label: "Earned Points", value: "0 XP", hint: "Coding & quiz points", icon: Flame },
   ];
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
-
-      {/* First-Time Login High-Contrast Banner */}
-      {!profileCompleted && (
-        <div className="profile-update-banner">
-          <div className="profile-update-banner-left">
-            <div className="profile-update-icon-box">
-              <UserCheck size={24} />
-            </div>
-            <div>
-              <h3 className="profile-update-title">
-                Action Required: Complete Your Academic Profile
-                <span className="profile-update-badge">First-Time Setup</span>
-              </h3>
-              <p className="profile-update-desc">
-                Please update your <strong>Semester</strong>, <strong>Aggregate CGPA</strong>, and <strong>Skills</strong> so our AI can tailor training programs & roadmaps for you.
-              </p>
-            </div>
-          </div>
-          <Link to="/student/profile">
-            <button className="profile-update-btn">
-              Update Profile Now <ArrowRight size={16} />
-            </button>
-          </Link>
-        </div>
-      )}
 
       {/* Radiant Welcome Hero Banner */}
       <div className="overview-hero-card">
@@ -302,23 +345,45 @@ export default function Overview() {
             </div>
             <Badge variant="outline">Current Week</Badge>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overview-stack-1">
             {upcoming.length === 0 ? (
               <div className="py-8 text-center text-slate-500">
                 <BookOpen size={28} className="mx-auto text-slate-400 mb-2" />
                 <p className="text-sm">No pending deadlines for this week.</p>
               </div>
             ) : (
-              <div className="space-y-3">
-                {upcoming.map((task, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800">
-                    <div>
-                      <h4 className="text-sm font-semibold">{task.title}</h4>
-                      <p className="text-xs text-slate-500">{task.dueDate}</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', padding: '4px 0' }}>
+                {upcoming.map((task, i) => {
+                  const isDone = completedQuizIds.has(String(task.id)) || completedQuizIds.has(String(task.title || '').toLowerCase()) || task.status === "Completed";
+                  return (
+                    <div
+                      key={i}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 16px',
+                        borderRadius: '14px',
+                        border: '1px solid #e2e8f0',
+                        background: '#ffffff',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: '1.3' }}>
+                          {task.title}
+                        </h4>
+                        <p style={{ fontSize: '12px', color: '#64748b', margin: 0, fontWeight: '500' }}>
+                          {task.dueDate}
+                        </p>
+                      </div>
+                      <Badge variant={isDone ? "success" : "outline"} style={isDone ? { background: '#ecfdf5', color: '#047857', borderColor: '#a7f3d0' } : {}}>
+                        {isDone ? "Completed" : "Pending"}
+                      </Badge>
                     </div>
-                    <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CardContent>
@@ -328,33 +393,75 @@ export default function Overview() {
         <Card className="overview-subcard">
           <CardHeader className="overview-card-header-between">
             <div className="overview-header-left">
-              <div className="overview-header-icon-wrap">
-                <Trophy size={18} className="overview-header-icon text-amber-500" />
+              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
+                <Trophy size={18} />
               </div>
               <div>
                 <CardTitle className="overview-card-title">Batch Leaderboard</CardTitle>
                 <CardDescription className="overview-card-desc">Top performers in your department</CardDescription>
               </div>
             </div>
-            <Link to="/student/leaderboard" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+            <Link to="/student/leaderboard" className="overview-view-all-pill">
               View All <ChevronRight size={14} />
             </Link>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2.5">
-              {leaderboardList.slice(0, 5).map((item) => (
-                <div key={item.rank} className={`flex items-center justify-between p-2.5 rounded-xl border ${item.you ? 'bg-indigo-500/10 border-indigo-500/30' : 'border-slate-100 dark:border-slate-800'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-sm text-slate-500 w-5 text-center">#{item.rank}</span>
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs font-bold">{item.initials}</AvatarFallback>
-                    </Avatar>
+          <CardContent className="overview-stack-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {leaderboardList.map((item) => (
+                <div
+                  key={item.rank}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: '14px',
+                    border: item.you ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
+                    background: item.you ? 'linear-gradient(135deg, #f5f3ff 0%, #eff6ff 100%)' : '#ffffff',
+                    boxShadow: item.you ? '0 4px 12px rgba(79, 70, 229, 0.08)' : '0 1px 3px rgba(0,0,0,0.02)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <span style={{ fontWeight: '800', fontSize: '13.5px', color: item.rank === 1 ? '#d97706' : item.rank === 2 ? '#475569' : item.rank === 3 ? '#b45309' : '#64748b', width: '24px', textAlign: 'center' }}>
+                      #{item.rank}
+                    </span>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '50%',
+                      background: item.you ? 'linear-gradient(135deg, #4f46e5, #3b82f6)' : '#3b82f6',
+                      color: '#ffffff',
+                      fontWeight: '800',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                    }}>
+                      {item.initials}
+                    </div>
                     <div>
-                     <h5 className="text-sm font-semibold dark:text-slate-200\">{item.name}</h5>
-                      <span className="text-xs text-slate-500">{item.score}</span>
+                      <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+                        {item.name}
+                      </h5>
+                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginTop: '2px', display: 'inline-block' }}>
+                        {item.score && !item.score.includes("1,") ? item.score : "0 XP"}
+                      </span>
                     </div>
                   </div>
-                  <Badge variant={item.you ? "default" : "outline"} className="text-xs">{item.badge}</Badge>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '4px 12px',
+                    borderRadius: '20px',
+                    background: item.you ? '#e0e7ff' : item.rank === 1 ? '#fef3c7' : '#f1f5f9',
+                    color: item.you ? '#3730a3' : item.rank === 1 ? '#b45309' : '#475569',
+                    border: `1px solid ${item.you ? '#c7d2fe' : item.rank === 1 ? '#fde68a' : '#e2e8f0'}`
+                  }}>
+                    {item.badge}
+                  </span>
                 </div>
               ))}
             </div>

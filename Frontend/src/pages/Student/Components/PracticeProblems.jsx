@@ -13,33 +13,6 @@ import { Button } from "../../../components/ui/Button";
 import "../Styles/PracticeProblems.css";
 const practiceProblemsData = [];
 
-const practiceTracks = [
-  {
-    title: "Top 75 Blind Coding Essentials",
-    count: "75 Problems",
-    level: "All Levels",
-    desc: "Most frequently asked DSA questions for campus recruitment placements.",
-    icon: Flame,
-    themeClass: "track-icon-amber"
-  },
-  {
-    title: "Product Based Company Track",
-    count: "50 Problems",
-    level: "Medium - Hard",
-    desc: "Curated problem set targeted for Tier-1 technology companies.",
-    icon: Trophy,
-    themeClass: "track-icon-blue"
-  },
-  {
-    title: "Service Based Company Essentials",
-    count: "40 Problems",
-    level: "Easy - Medium",
-    desc: "Pattern-based coding questions for TCS NQT, Wipro NLTH, Infosys DSE.",
-    icon: Award,
-    themeClass: "track-icon-emerald"
-  }
-];
-
 export default function PracticeProblems() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -202,36 +175,7 @@ export default function PracticeProblems() {
       </div>
 
 
-      {/* Recommended Practice Tracks */}
-      <div className="tracks-section">
-        <h3 className="section-title">
-          <Trophy size={18} className="text-amber" /> Recommended Practice Tracks
-        </h3>
-        <div className="tracks-grid">
-          {practiceTracks.map((track, i) => {
-            const Icon = track.icon;
-            return (
-              <div key={i} className="track-card">
-                <div className="track-card-header">
-                  <div className={`track-icon-box ${track.themeClass}`}>
-                    <Icon size={22} />
-                  </div>
-                  <span className="track-level-tag">{track.level}</span>
-                </div>
-                <h4 className="track-title">{track.title}</h4>
-                <p className="track-desc">{track.desc}</p>
-                <div className="track-card-footer">
-                  <span className="track-count">{track.count}</span>
-                  <button className="track-start-btn" onClick={() => navigate("/student/coding-platform")}>
-                    Start Track <ChevronRight size={14} />
-                  </button>
-                </div>
 
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Filter & Search Controls */}
       <div className="practice-controls-card">
@@ -298,7 +242,7 @@ export default function PracticeProblems() {
       </div>
 
       {/* Problems List Table */}
-      <div className="problems-table-card">
+      <div id="problems-table-section" className="problems-table-card">
         <div className="table-header-info">
           <h3>All Practice Problems ({filteredProblems.length})</h3>
           <span className="table-sub">Click 'Solve' to launch live compiler and test cases</span>

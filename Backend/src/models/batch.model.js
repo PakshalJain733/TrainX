@@ -205,3 +205,106 @@ export const getStudentBatchesModel = async (userId) => {
     return [];
   }
 };
+
+// Get all enrolled students for a specific batch
+export const getBatchStudentsModel = async (batchId) => {
+  try {
+    const rows = await query(
+      `SELECT s.id, s.user_id, u.name, u.email, s.roll_number, s.department, s.year, s.division, s.cgpa
+       FROM students s
+       JOIN users u ON s.user_id = u.id
+       WHERE s.batch_id = ?
+       ORDER BY u.name ASC`,
+      [parseInt(batchId, 10)]
+    );
+    return rows || [];
+  } catch (error) {
+    console.error(`[Batch Model] getBatchStudentsModel error: ${error.message}`);
+    return [];
+  }
+};
+
+export const createBatchTaskModel = async (taskData) => {
+  try {
+    const bId = parseInt(taskData.batch_id || taskData.batchId, 10);
+    const testCasesJson = taskData.testCases || taskData.test_cases ? JSON.stringify(taskData.testCases || taskData.test_cases) : null;
+    
+    const res = await query(
+      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, test_cases)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        bId,
+        taskData.title,
+        taskData.topic || '',
+        taskData.difficulty || 'Medium',
+        parseInt(taskData.points || 100, 10),
+        taskData.deadline || '',
+        taskData.desc || taskData.description || '',
+        testCasesJson
+      ]
+    );
+
+    if (res && res.insertId) {
+      const rows = await query('SELECT * FROM batch_tasks WHERE id = ?', [res.insertId]);
+      if (rows && rows.length > 0) return rows[0];
+    }
+  } catch (error) {
+    console.error(`[Batch Model] createBatchTaskModel error: ${error.message}`);
+  }
+  return {
+    batch_id: parseInt(taskData.batch_id || taskData.batchId, 10),
+    title: taskData.title,
+    topic: taskData.topic || '',
+    difficulty: taskData.difficulty || 'Medium',
+    points: parseInt(taskData.points || 100, 10),
+    deadline: taskData.deadline || '',
+    description: taskData.desc || taskData.description || '',
+  };
+};
+
+export const getBatchTasksModel = async (batchId) => {
+  const bId = parseInt(batchId, 10);
+  try {
+    const rows = await query('SELECT * FROM batch_tasks WHERE batch_id = ? ORDER BY id DESC', [bId]);
+    if (rows && Array.isArray(rows)) {
+      return rows.map(r => ({
+        ...r,
+        desc: r.description || r.desc,
+        testCases: typeof r.test_cases === 'string' ? JSON.parse(r.test_cases) : (r.test_cases || [])
+      }));
+    }
+  } catch (error) {
+    console.error(`[Batch Model] getBatchTasksModel error: ${error.message}`);
+  }
+  return [];
+};
+
+export const deleteBatchTaskModel = async (taskId) => {
+  const tId = parseInt(taskId, 10);
+  try {
+    await query('DELETE FROM batch_tasks WHERE id = ?', [tId]);
+    return true;
+  } catch (error) {
+    console.error(`[Batch Model] deleteBatchTaskModel error: ${error.message}`);
+    return false;
+  }
+};
+
+export const getTaskSubmissionsModel = async (taskId) => {
+  const tId = parseInt(taskId, 10);
+  try {
+    const rows = await query(
+      `SELECT ts.*, u.name, u.email, s.roll_number, s.department
+       FROM task_submissions ts
+       JOIN users u ON ts.user_id = u.id
+       LEFT JOIN students s ON s.user_id = u.id
+       WHERE ts.task_id = ?
+       ORDER BY ts.submitted_at DESC`,
+      [tId]
+    );
+    return rows || [];
+  } catch (error) {
+    console.error(`[Batch Model] getTaskSubmissionsModel error: ${error.message}`);
+    return [];
+  }
+};

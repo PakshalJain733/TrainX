@@ -375,6 +375,53 @@
   margin: 2px 0 0 0;
 }
 
+@media (max-width: 768px) {
+  .coursework-header-banner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px 18px;
+  }
+
+  .coursework-header-left {
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .coursework-header-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .coursework-header-title {
+    font-size: 17px;
+    margin-bottom: 2px;
+  }
+
+  .coursework-header-subtitle {
+    font-size: 12px;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+
+  .coursework-header-meta {
+    width: 100%;
+    justify-content: space-between;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 12px;
+    gap: 12px;
+  }
+
+  .coursework-meta-stat {
+    align-items: flex-start;
+  }
+
+  .coursework-meta-stat:last-child {
+    align-items: flex-end;
+  }
+}
+
 /* ── 4 Coursework Stats Grid (Tasks stats & Due date alert) ── */
 .cw-stats-row {
   display: grid;

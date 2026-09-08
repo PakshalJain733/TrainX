@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   GraduationCap,
   Clock,
@@ -22,6 +23,7 @@ import {
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card, CardContent } from "../../../components/ui/Card";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AcademicQuiz.css";
 
 /* ─── Admin-provided questions (mock) ─────────────────────────── */
@@ -137,55 +139,9 @@ const completedAnswers = {
   3: [0, 0, 1],          // answers for quiz 3
 };
 
-const builtInQuizzes = [
-  {
-    id: 1,
-    title: "Mid-Term Evaluation: Data Structures",
-    subject: "Computer Science",
-    topic: "Arrays, Linked Lists, Trees",
-    date: "August 28, 2026",
-    duration: "5 mins",
-    durationSecs: 5 * 60,
-    marks: "50 Marks",
-    status: "Upcoming",
-    difficulty: "Medium",
-    questions: 5,
-    source: "builtin"
-  },
-  {
-    id: 2,
-    title: "Operating Systems Core Concepts",
-    subject: "Computer Science",
-    topic: "Processes, Threads, Scheduling",
-    date: "August 25, 2026",
-    duration: "30 mins",
-    durationSecs: 30 * 60,
-    marks: "30 Marks",
-    status: "Completed",
-    score: "26/30",
-    difficulty: "Hard",
-    questions: 3,
-    source: "builtin"
-  },
-  {
-    id: 3,
-    title: "Database Normalization Quiz",
-    subject: "Database Management",
-    topic: "1NF, 2NF, 3NF, BCNF",
-    date: "August 20, 2026",
-    duration: "20 mins",
-    durationSecs: 20 * 60,
-    marks: "20 Marks",
-    status: "Completed",
-    score: "18/20",
-    difficulty: "Medium",
-    questions: 3,
-    source: "builtin"
-  },
-];
 
 /* ─── Fetch quizzes from Database ─────────────────────────────── */
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
@@ -302,12 +258,41 @@ function normalizeAdminQuestion(q, idx) {
   };
 }
 
+const defaultQuizQuestions = [
+  {
+    id: 1,
+    question: "What is the primary function of an Operating System?",
+    options: [
+      "To manage computer hardware and software resources",
+      "To compile high-level programming code",
+      "To connect directly to the internet",
+      "To design database schemas"
+    ],
+    correct: 0,
+    explanation: "Operating System acts as an interface between user and hardware, managing memory, processes, and storage."
+  },
+  {
+    id: 2,
+    question: "Which data structure operates on LIFO (Last In First Out) principle?",
+    options: ["Queue", "Stack", "Array", "Linked List"],
+    correct: 1,
+    explanation: "Stack follows LIFO principle where the element inserted last is removed first."
+  },
+  {
+    id: 3,
+    question: "What is the average time complexity of searching in a Hash Table?",
+    options: ["O(n)", "O(log n)", "O(1)", "O(n²)"],
+    correct: 2,
+    explanation: "Hash Table lookup takes O(1) average time complexity using key-value hashing."
+  }
+];
+
 function QuizPlatform({ quiz, mode, onExit }) {
-  // For admin quizzes use quiz.questionsList; for built-in use quizQuestions lookup
-  const rawQuestions = quiz.source === "admin" && quiz.questionsList?.length
-    ? quiz.questionsList.map(normalizeAdminQuestion)
-    : (quizQuestions[quiz.id] || []);
-  const questions = rawQuestions;
+  // Normalize questions from admin DB, practice preset, or fallback
+  const adminQs = quiz.questionsList?.length ? quiz.questionsList.map(normalizeAdminQuestion) : null;
+  const builtinQs = (quizQuestions[quiz.id] && quizQuestions[quiz.id].length) ? quizQuestions[quiz.id] : null;
+  const questions = adminQs || builtinQs || defaultQuizQuestions;
+
   const isReview = mode === "review";
   const savedAnswers = isReview ? completedAnswers[quiz.id] || [] : [];
 
@@ -371,7 +356,17 @@ function QuizPlatform({ quiz, mode, onExit }) {
   async function handleSubmit() {
     if (submitted) return;
     setSubmitted(true);
-    setWasSubmitted(true);
+    setWasSubmitted(true); // Always mark as submitted locally
+
+    try {
+      const stored = JSON.parse(localStorage.getItem('student_completed_quizzes') || '[]');
+      if (!stored.includes(String(quiz.id))) {
+        stored.push(String(quiz.id));
+        stored.push(String(quiz.title || '').toLowerCase());
+        localStorage.setItem('student_completed_quizzes', JSON.stringify(stored));
+      }
+      window.dispatchEvent(new Event('quizCompletedUpdated'));
+    } catch (e) {}
 
     if (quiz.source !== "admin") return; // builtin quizzes don't need backend
 
@@ -452,11 +447,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
   }
 
   const answered = answers.filter((a) => a !== null).length;
-  const q = questions[current];
-  const userAnswer = answers[current];
+  const safeCurrent = Math.min(Math.max(0, current), questions.length - 1);
+  const q = questions[safeCurrent] || questions[0] || defaultQuizQuestions[0];
+  const userAnswer = answers[safeCurrent];
 
   const score = submitted
-    ? questions.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0)
+    ? questions.reduce((acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0), 0)
     : 0;
 
   // Determine status for review sidebar
@@ -465,180 +461,10 @@ function QuizPlatform({ quiz, mode, onExit }) {
       if (reviewMarks[idx]) return "review";
       return answers[idx] !== null ? "completed" : "unattempted";
     }
-    return answers[idx] === questions[idx].correct ? "correct" : "wrong";
+    return answers[idx] === questions[idx]?.correct ? "correct" : "wrong";
   }
 
-  // ─── Full Result Screen (after submission for admin quizzes) ──────────────
-  if (submitted && wasSubmitted && quiz.source === "admin" && !isReview) {
-    if (resultLoading) {
-      return (
-        <div className="qp-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ textAlign: 'center', color: '#94a3b8' }}>
-            <div style={{ width: 44, height: 44, border: '4px solid #334155', borderTopColor: '#6366f1', borderRadius: '50%', animation: 'qp-spin 0.8s linear infinite', margin: '0 auto 16px' }} />
-            <p style={{ fontSize: '1rem' }}>Grading your answers…</p>
-          </div>
-        </div>
-      );
-    }
-
-    const scoring = apiResult?.scoring || {};
-    const breakdown = apiResult?.breakdown || [];
-    const marksObtained = scoring.marks_obtained ?? (score * 10);
-    const totalMarks = scoring.total_marks ?? (questions.length * 10);
-    const rawPct = scoring.percentage ? parseFloat(scoring.percentage) : Math.round((score / questions.length) * 100);
-    const pct = isNaN(rawPct) ? 0 : rawPct;
-    const passStatus = apiResult?.result?.final_result || scoring.status || (pct >= 60 ? 'passed' : 'failed');
-    const isPassed = passStatus === 'passed';
-    const correctCount = scoring.correct_count ?? score;
-    const incorrectCount = scoring.incorrect_count ?? (answers.filter((a, i) => a !== null && a !== questions[i].correct).length);
-    const unattemptedCount = scoring.unattempted_count ?? answers.filter(a => a === null).length;
-
-    return (
-      <div className="qp-overlay">
-        <div className="qp-header">
-          <div className="qp-header-left">
-            <button className="qp-back-btn" onClick={() => onExit(true)}>
-              <ChevronLeft size={18} /> Back to Quizzes
-            </button>
-            <div className="qp-header-title-block">
-              <span className="qp-header-quiz-name">{quiz.title}</span>
-              <span className="qp-header-meta">Result Summary</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="qp-result-page">
-          {/* Hero score card */}
-          <div className={`qpr-hero ${isPassed ? 'qpr-hero--pass' : 'qpr-hero--fail'}`}>
-            <div className="qpr-hero-icon">
-              {isPassed ? <Trophy size={48} /> : <AlertCircle size={48} />}
-            </div>
-            <h1 className="qpr-hero-title">{isPassed ? '🎉 Congratulations! You Passed!' : 'Quiz Completed'}</h1>
-            <div className="qpr-hero-score">
-              <span className="qpr-pct">{pct}%</span>
-              <span className="qpr-marks">{marksObtained} / {totalMarks} marks</span>
-            </div>
-            <div className={`qpr-badge ${isPassed ? 'qpr-badge--pass' : 'qpr-badge--fail'}`}>
-              {isPassed ? '✓ PASSED' : '✗ FAILED'}
-            </div>
-          </div>
-
-          {/* Stats row */}
-          <div className="qpr-stats-row">
-            <div className="qpr-stat qpr-stat--correct">
-              <CheckCircle2 size={24} />
-              <span className="qpr-stat-val">{correctCount}</span>
-              <span className="qpr-stat-lbl">Correct</span>
-            </div>
-            <div className="qpr-stat qpr-stat--wrong">
-              <X size={24} />
-              <span className="qpr-stat-val">{incorrectCount}</span>
-              <span className="qpr-stat-lbl">Wrong</span>
-            </div>
-            <div className="qpr-stat qpr-stat--skip">
-              <Circle size={24} />
-              <span className="qpr-stat-val">{unattemptedCount}</span>
-              <span className="qpr-stat-lbl">Skipped</span>
-            </div>
-            <div className="qpr-stat qpr-stat--total">
-              <Target size={24} />
-              <span className="qpr-stat-val">{questions.length}</span>
-              <span className="qpr-stat-lbl">Total Qs</span>
-            </div>
-          </div>
-
-          {/* Per-question breakdown from API */}
-          {breakdown.length > 0 && (
-            <div className="qpr-breakdown">
-              <h2 className="qpr-breakdown-title">Answer Breakdown</h2>
-              {breakdown.map((item, idx) => (
-                <div key={idx} className={`qpr-q-card ${item.is_correct ? 'qpr-q-correct' : item.selected_option ? 'qpr-q-wrong' : 'qpr-q-skip'}`}>
-                  <div className="qpr-q-header">
-                    <span className="qpr-q-num">Q{idx + 1}</span>
-                    <span className={`qpr-q-badge ${item.is_correct ? 'badge-correct' : item.selected_option ? 'badge-wrong' : 'badge-skip'}`}>
-                      {item.is_correct ? `+${item.marks_awarded || 0} pts ✓` : item.selected_option ? '✗ Wrong' : '— Skipped'}
-                    </span>
-                  </div>
-                  <p className="qpr-q-text">{item.question_text || `Question ${idx + 1}`}</p>
-                  <div className="qpr-q-answers">
-                    {item.selected_option && (
-                      <span className={`qpr-ans-chip ${item.is_correct ? 'qpr-ans-correct' : 'qpr-ans-yours'}`}>
-                        Your answer: <strong>{item.selected_option}</strong>
-                      </span>
-                    )}
-                    {!item.is_correct && (
-                      <span className="qpr-ans-chip qpr-ans-correct">
-                        Correct: <strong>{item.correct_option}</strong>
-                      </span>
-                    )}
-                  </div>
-                  {item.explanation && (
-                    <div className="qpr-explanation">
-                      <span className="qp-explanation-label">Explanation</span>
-                      <p>{item.explanation}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Fallback local results when no API breakdown */}
-          {breakdown.length === 0 && questions.length > 0 && (
-            <div className="qpr-breakdown">
-              <h2 className="qpr-breakdown-title">Your Answers</h2>
-              {questions.map((q, idx) => {
-                const userAns = answers[idx];
-                const isCorrect = userAns === q.correct;
-                const optKeys = ['A', 'B', 'C', 'D'];
-                return (
-                  <div key={idx} className={`qpr-q-card ${isCorrect ? 'qpr-q-correct' : userAns !== null ? 'qpr-q-wrong' : 'qpr-q-skip'}`}>
-                    <div className="qpr-q-header">
-                      <span className="qpr-q-num">Q{idx + 1}</span>
-                      <span className={`qpr-q-badge ${isCorrect ? 'badge-correct' : userAns !== null ? 'badge-wrong' : 'badge-skip'}`}>
-                        {isCorrect ? '+10 pts ✓' : userAns !== null ? '✗ Wrong' : '— Skipped'}
-                      </span>
-                    </div>
-                    <p className="qpr-q-text">{q.question}</p>
-                    <div className="qpr-q-answers">
-                      {userAns !== null && (
-                        <span className={`qpr-ans-chip ${isCorrect ? 'qpr-ans-correct' : 'qpr-ans-yours'}`}>
-                          Your answer: <strong>{optKeys[userAns]}</strong>
-                        </span>
-                      )}
-                      {!isCorrect && (
-                        <span className="qpr-ans-chip qpr-ans-correct">
-                          Correct: <strong>{optKeys[q.correct]}</strong>
-                        </span>
-                      )}
-                    </div>
-                    {q.explanation && (
-                      <div className="qpr-explanation">
-                        <span className="qp-explanation-label">Explanation</span>
-                        <p>{q.explanation}</p>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0 48px' }}>
-            <button
-              className="qp-nav-arrow qp-nav-arrow--submit"
-              onClick={() => onExit(true)}
-              style={{ backgroundColor: '#10b981', borderColor: '#10b981', fontSize: '1rem', padding: '12px 32px', borderRadius: 12 }}
-            >
-              <CheckCircle2 size={18} /> Return to Quiz Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  return createPortal(
     <div className="qp-overlay">
       {/* Header */}
       <div className="qp-header">
@@ -842,9 +668,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
           </div>
         </main>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+
+const practiceQuizzes = [];
 
 /* ─── Main AcademicQuiz page ───────────────────────────────────── */
 export default function AcademicQuiz() {
@@ -856,9 +685,7 @@ export default function AcademicQuiz() {
   // Fetch admin-created DB quizzes when page mounts
   const refreshQuizzes = () => {
     fetchApiQuizzes().then((apiQuizzes) => {
-      const apiIds = new Set(apiQuizzes.map((q) => String(q.id)));
-      const filteredBuiltIn = builtInQuizzes.filter((b) => !apiIds.has(String(b.id)));
-      setAllQuizzes([...apiQuizzes, ...filteredBuiltIn]);
+      setAllQuizzes(apiQuizzes || []);
     });
   };
 
@@ -902,6 +729,12 @@ export default function AcademicQuiz() {
 
   return (
     <div className="academic-quiz-page stack-6">
+      <SectionHeader
+        eyebrow="ACADEMIC EVALUATION"
+        title="Academic & Practice Quizzes"
+        description="Attempt your scheduled faculty assessments, evaluate core technical concepts, and review past test scores."
+      />
+
       <div className="quiz-filters">
         <button className={`quiz-filter-btn ${activeTab === "All" ? "active" : ""}`} onClick={() => setActiveTab("All")}>
           All Quizzes

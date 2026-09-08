@@ -34,7 +34,7 @@ import { Badge } from "../../../components/ui/Badge";
 import "../Styles/Batches.css";
 import "../../Admin/Styles/AdminUsers.css";
 
-const API_BASE = "http://localhost:5000/api/v1";
+const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
@@ -71,8 +71,7 @@ const defaultBatchTemplates = [
     ],
     stats: { completedTasks: 5, pendingTasks: 3, urgentTaskNumber: "Task 04", urgentTaskDeadline: "Tomorrow, 11:59 PM" },
     leaderboard: [
-      { rank: 1, name: "Ganesh Shinde (You)", xp: 2650, initials: "GS", self: true },
-      { rank: 2, name: "Riya Shah", xp: 2590, initials: "RS" },
+      { rank: 1, name: "Student (You)", xp: 0, initials: "YO", self: true },
     ]
   },
   {
@@ -81,18 +80,10 @@ const defaultBatchTemplates = [
     color: "#7c3aed",
     bg: "#f5f3ff",
     description: "Graph traversals, Dynamic Programming, Segment Trees, and real-time LeetCode medium/hard patterns.",
-    modules: [
-      {
-        number: 1,
-        title: "Advanced Graphs & Network Flow",
-        tasks: [
-          { taskNumber: "Task 01", title: "Dijkstra Priority Queue Implementation", type: "Algorithm Lab", due: "Completed", status: "Completed" },
-        ],
-      },
-    ],
-    stats: { completedTasks: 6, pendingTasks: 1, urgentTaskNumber: "Task 07", urgentTaskDeadline: "Due Saturday, 11:59 PM" },
+    modules: [],
+    stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
-      { rank: 1, name: "Ganesh Shinde (You)", xp: 2650, initials: "GS", self: true },
+      { rank: 1, name: "Student (You)", xp: 0, initials: "YO", self: true },
     ]
   }
 ];
@@ -104,19 +95,10 @@ function mapApiBatch(b) {
     color: "#2563eb",
     bg: "#eff6ff",
     description: b.description || `${b.name} training cohort curriculum and assignments.`,
-    modules: [
-      {
-        number: 1,
-        title: "Core Training Modules",
-        tasks: [
-          { taskNumber: "Task 01", title: "Cohort Onboarding & Orientation", type: "Lab Exercise", due: "Completed", status: "Completed" },
-          { taskNumber: "Task 02", title: "Practical Assessment Task", type: "Graded Assignment", due: "Due Next Week", status: "Pending", urgent: true },
-        ],
-      },
-    ],
-    stats: { completedTasks: 3, pendingTasks: 2, urgentTaskNumber: "Task 02", urgentTaskDeadline: "Due Next Week" },
+    modules: [],
+    stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
-      { rank: 1, name: "Ganesh Shinde (You)", xp: 2400, initials: "GS", self: true },
+      { rank: 1, name: "Student", xp: 0, initials: "ST", self: true },
     ]
   };
 
@@ -128,7 +110,7 @@ function mapApiBatch(b) {
     trainer: b.mentor || b.trainer || "Faculty Lead",
     timing: b.schedule || b.timing || "Regular Sessions",
     studentsEnrolled: b.students || b.studentsEnrolled || 1,
-    progress: b.progress || 65,
+    progress: b.progress || 0,
     status: b.status === "active" ? "Active" : b.status || "Active",
     color: template.color,
     bg: template.bg,
@@ -136,7 +118,7 @@ function mapApiBatch(b) {
     description: template.description,
     stats: template.stats,
     leaderboard: template.leaderboard,
-    modules: template.modules,
+    modules: [],
   };
 }
 
@@ -169,6 +151,31 @@ export default function Batches() {
       setEnrolledBatches([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle batch selection and load assigned tasks dynamically
+  const handleOpenBatch = async (batch) => {
+    setSelectedBatch(batch);
+    try {
+      const res = await fetch(`${API_BASE}/batches/${batch.id}/tasks`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+        const customTasks = data.data.map((t, idx) => ({
+          taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
+          title: t.title,
+          type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} XP)`,
+          due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
+          status: "Pending",
+          platform: "coding",
+        }));
+        setSelectedBatch((prev) => ({
+          ...prev,
+          apiTasks: customTasks,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to load batch tasks:", err);
     }
   };
 
@@ -216,7 +223,8 @@ export default function Batches() {
 
   if (selectedBatch) {
     const Icon = selectedBatch.icon;
-    const totalBatchTasks = selectedBatch.stats.completedTasks + selectedBatch.stats.pendingTasks;
+    const batchTasksList = selectedBatch.apiTasks || selectedBatch.modules.flatMap(m => m.tasks);
+    const totalBatchTasks = batchTasksList.length;
     return (
       <div className="student-page-inner coursework-view-container">
         <button
@@ -324,55 +332,63 @@ export default function Batches() {
 
               <div className="cw-unified-modules-stack">
                 <div className="cw-module-items-stack">
-                  {selectedBatch.modules.flatMap(m => m.tasks).map((task) => {
-                    const taskSlug = task.taskNumber.replace(/\s+/g, '-').toLowerCase();
-                    const platform = task.platform || "coding";
-                    let taskHref = `/student/coding-platform/${taskSlug}`;
-                    if (platform === "mcq") taskHref = `/student/mcq-exam`;
-                    else if (platform === "gd") taskHref = `/student/ai-interview`;
-                    else if (platform === "submission") taskHref = `/student/notes`;
+                  {batchTasksList.length === 0 ? (
+                    <div className="admin-empty-state-card" style={{ padding: "40px 20px" }}>
+                      <BookOpen size={36} className="admin-empty-state-icon" style={{ margin: "0 auto 8px" }} />
+                      <p className="admin-empty-state-title">No tasks currently assigned</p>
+                      <p className="admin-empty-state-sub">Your mentor/admin will post new problem sets and assignments here.</p>
+                    </div>
+                  ) : (
+                    batchTasksList.map((task, idx) => {
+                      const taskSlug = task.taskNumber.replace(/\s+/g, '-').toLowerCase();
+                      const platform = task.platform || "coding";
+                      let taskHref = `/student/coding-platform/${taskSlug}`;
+                      if (platform === "mcq") taskHref = `/student/mcq-exam`;
+                      else if (platform === "gd") taskHref = `/student/ai-interview`;
+                      else if (platform === "submission") taskHref = `/student/notes`;
 
-                    return (
-                      <Link
-                        to={taskHref}
-                        key={task.taskNumber}
-                        className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
-                      >
-                        <div className="cw-item-left">
-                          <span className="cw-task-num-badge">{task.taskNumber}</span>
-                          {task.status === "Completed" ? (
-                            <CheckCircle2 size={18} className="cw-item-icon-done" />
-                          ) : (
-                            <Clock3 size={18} className="cw-item-icon-pending" />
-                          )}
-                          <div className="cw-item-title-col">
-                            <h5 className="cw-item-title">{task.title}</h5>
-                            <p className="cw-item-meta-sub">
-                              <span>{task.type}</span>
-                              <span>•</span>
-                              <span className={task.urgent ? "cw-item-due--urgent" : ""}>
-                                {task.due}
-                              </span>
-                            </p>
+                      return (
+                        <Link
+                          to={taskHref}
+                          key={idx}
+                          className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
+                        >
+                          <div className="cw-item-left">
+                            <span className="cw-task-num-badge">{task.taskNumber}</span>
+                            {task.status === "Completed" ? (
+                              <CheckCircle2 size={18} className="cw-item-icon-done" />
+                            ) : (
+                              <Clock3 size={18} className="cw-item-icon-pending" />
+                            )}
+                            <div className="cw-item-title-col">
+                              <h5 className="cw-item-title">{task.title}</h5>
+                              <p className="cw-item-meta-sub">
+                                <span>{task.type}</span>
+                                <span>•</span>
+                                <span className={task.urgent ? "cw-item-due--urgent" : ""}>
+                                  {task.due}
+                                </span>
+                              </p>
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="cw-item-right">
-                          <Badge
-                            variant={
-                              task.status === "Completed"
-                                ? "success"
-                                : task.urgent
-                                ? "danger"
-                                : "warning"
-                            }
-                          >
-                            {task.status}
-                          </Badge>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                          <div className="cw-item-right">
+                            <Badge
+                              variant={
+                                task.status === "Completed"
+                                  ? "success"
+                                  : task.urgent
+                                  ? "danger"
+                                  : "warning"
+                              }
+                            >
+                              {task.status}
+                            </Badge>
+                          </div>
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>
@@ -557,7 +573,7 @@ export default function Batches() {
                   <button
                     type="button"
                     className="batch-open-btn"
-                    onClick={() => setSelectedBatch(b)}
+                    onClick={() => handleOpenBatch(b)}
                   >
                     <span>Open Coursework</span>
                     <ArrowUpRight size={15} />

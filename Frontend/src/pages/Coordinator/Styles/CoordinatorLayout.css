@@ -344,7 +344,14 @@ body {
     padding: 16px !important;
   }
   .coordinator-header__user-info {
-    display: none;
+    display: none !important;
+  }
+  .coordinator-header__user {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    height: auto !important;
   }
 }
 
@@ -352,6 +359,22 @@ body {
 .coordinator-header__notif-dropdown {
   width: 320px;
   padding: 12px;
+}
+
+@media (max-width: 640px) {
+  .coordinator-header__notif-dropdown {
+    position: fixed !important;
+    top: 64px !important;
+    left: 12px !important;
+    right: 12px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 80px) !important;
+    z-index: 99999 !important;
+    box-shadow: 0 12px 40px rgba(15, 23, 42, 0.25) !important;
+    border-radius: 16px !important;
+  }
 }
 
 .coordinator-header__notif-header {
