@@ -1,181 +1,232 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mentorProfile, mentorBatches, mentorStudents, mentorAssignments, mentorLiveSessions } from '../../../data/mentorMockData';
-import {
-  Layers, Users, CalendarCheck, FileCode, Video, ArrowUpRight, CheckCircle2,
-  Clock, Star, Sparkles, Info, BookOpen, ChevronRight
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
-import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
-import '../../Student/Styles/Overview.css';
+import { mentorProfile, mentorBatches, mentorAssignments, mentorLiveSessions } from '../../../data/mentorMockData';
+import { Layers, Users, Video, FileCode, Clock, Star, Sparkles, Layers3, Calendar, PlusCircle, ArrowUpRight } from 'lucide-react';
+import { apiFetch } from '../../../utils/api';
+import '../Styles/Overview.css';
 
 const getInitials = (name) => {
-  if (!name) return "VS";
+  if (!name || name.trim().length === 0) return "VS";
   const parts = name.trim().split(" ");
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
   return name.slice(0, 2).toUpperCase();
 };
 
 export default function Overview() {
-  const mentorStats = [
-    { label: "Active Batches", value: `${mentorProfile.allocatedBatchesCount} Cohorts`, hint: "All cohorts on track", icon: Layers },
-    { label: "Total Students", value: `${mentorProfile.totalStudentsAssigned}`, hint: "94% active participation", icon: Users },
-    { label: "Live Classes Today", value: "1 Session", hint: "Starts 02:00 PM", icon: Video },
-    { label: "Pending Reviews", value: `${mentorProfile.pendingEvaluationsCount} Code Reviews`, hint: "Require trainer feedback", icon: FileCode },
-  ];
+  const [user, setUser] = useState(() => {
+    try {
+      const u = JSON.parse(localStorage.getItem("user"));
+      if (u) return u;
+    } catch (e) {}
+    return mentorProfile;
+  });
+
+  const [batches, setBatches] = useState(mentorBatches);
+  const [assessments, setAssessments] = useState([]);
+  const [studentCount, setStudentCount] = useState(mentorProfile.totalStudentsAssigned);
+  const [liveSessions, setLiveSessions] = useState(() => {
+    try {
+      const stored = localStorage.getItem('mentor_live_sessions');
+      if (stored) return JSON.parse(stored);
+    } catch (e) {}
+    return mentorLiveSessions;
+  });
+
+  useEffect(() => {
+    // Sync Batches
+    apiFetch("/batches")
+      .then((res) => {
+        if (res && res.data && res.data.length > 0) {
+          setBatches(res.data.map((b, idx) => ({
+            id: b.id || idx,
+            code: b.code || b.batch_code || `BATCH-0${idx + 1}`,
+            name: b.name || b.batch_name || "Training Cohort",
+            college: b.college_name || "PVPPCOE",
+            department: b.department || "Computer Engineering",
+            progress: b.progress || 70,
+            status: "Active",
+          })));
+        }
+      })
+      .catch(() => {});
+
+    // Sync Quizzes/Assessments
+    apiFetch("/assessments")
+      .then((res) => {
+        if (res && res.data) {
+          setAssessments(res.data);
+        }
+      })
+      .catch(() => {});
+
+    const handleUpdate = () => {
+      try {
+        const u = JSON.parse(localStorage.getItem("user"));
+        if (u) setUser(u);
+      } catch (e) {}
+    };
+
+    const handleSessionsUpdate = () => {
+      try {
+        const stored = localStorage.getItem('mentor_live_sessions');
+        if (stored) setLiveSessions(JSON.parse(stored));
+      } catch (e) {}
+    };
+
+    window.addEventListener("userProfileUpdated", handleUpdate);
+    window.addEventListener("mentorSessionsUpdated", handleSessionsUpdate);
+    return () => {
+      window.removeEventListener("userProfileUpdated", handleUpdate);
+      window.removeEventListener("mentorSessionsUpdated", handleSessionsUpdate);
+    };
+  }, []);
+
+  const userName = user.name || mentorProfile.name || "Vikram Sharma";
+  const userDept = user.department || mentorProfile.department || "Computer Engineering & IT";
+  const userSpec = user.specialization || mentorProfile.specialization || "Full Stack & System Architecture";
+  const userRating = user.rating || mentorProfile.rating || 4.9;
 
   return (
-    <div className="student-page-inner stack-6 overview-wrapper">
-      {/* Radiant Welcome Hero Banner */}
+    <div className="mentor-overview-container">
+      {/* Radiant Welcome Hero Banner - Identical to Student Overview */}
       <div className="overview-hero-card">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">
-            {getInitials(mentorProfile.name)}
+            {getInitials(userName)}
           </div>
           <div>
             <div className="overview-hero-eyebrow">
-              <Sparkles size={13} /> MENTOR WORKSPACE DASHBOARD
+              <Sparkles size={13} /> MENTOR & INSTRUCTOR WORKSPACE
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, {mentorProfile.name}!
+              Welcome back, {userName}!
             </h1>
             <p className="overview-hero-desc">
-              Senior Technical Trainer | {mentorProfile.allocatedBatchesCount} Active Batches | {mentorProfile.totalStudentsAssigned} Assigned Students
+              {userDept} | {userSpec} | Rating: {userRating} / 5.0
             </p>
           </div>
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/mentor/batches">
-            <Button className="overview-btn-primary">
-              <Layers size={14} className="overview-btn-icon" /> View Batches
-            </Button>
-          </Link>
-          <Link to="/mentor/sessions">
-            <Button className="overview-btn-secondary">
-              <Video size={14} className="overview-btn-icon" /> Live Sessions
-            </Button>
-          </Link>
+          <div className="mentor-hero-stat-badge">
+            <span className="mentor-stat-badge-num">{mentorProfile.allocatedBatchesCount || 3}</span>
+            <span className="mentor-stat-badge-lbl">Active Cohorts</span>
+          </div>
+          <div className="mentor-hero-stat-badge">
+            <span className="mentor-stat-badge-num">{mentorProfile.totalStudentsAssigned || 140}</span>
+            <span className="mentor-stat-badge-lbl">Students</span>
+          </div>
         </div>
       </div>
 
-      {/* 4 Stats Cards Row */}
-      <div className="overview-grid-4">
-        {mentorStats.map((s) => (
-          <Card key={s.label} className="overview-stat-card shadow-sm">
-            <CardContent className="overview-card-content">
-              <div className="overview-stat-top">
-                <div className="overview-icon-container">
-                  <s.icon size={16} />
-                </div>
-                <span className="overview-stat-label">{s.label}</span>
-                <Info size={15} className="overview-info-icon" />
-              </div>
 
-              <p className="overview-stat-value">{s.value}</p>
+      {/* Top Quick Metric Cards */}
+      <div className="mentor-kpi-grid">
+        <div className="mentor-kpi-card">
+          <div>
+            <p className="mentor-kpi-label">Active Batches</p>
+            <h3 className="mentor-kpi-value">{mentorProfile.allocatedBatchesCount}</h3>
+            <span className="mentor-kpi-sub mentor-kpi-sub--emerald">All cohorts on track</span>
+          </div>
+        </div>
 
-              <div className="overview-stat-hint-row">
-                <span className="overview-stat-trend-pill">{s.hint}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="mentor-kpi-card">
+          <div>
+            <p className="mentor-kpi-label">Total Students</p>
+            <h3 className="mentor-kpi-value">{mentorProfile.totalStudentsAssigned}</h3>
+            <span className="mentor-kpi-sub mentor-kpi-sub--indigo">94% active participation</span>
+          </div>
+        </div>
+
+        <div className="mentor-kpi-card">
+          <div>
+            <p className="mentor-kpi-label">Defaulters</p>
+            <h3 className="mentor-kpi-value">2 Students</h3>
+            <span className="mentor-kpi-sub mentor-kpi-sub--amber">Low Attendance</span>
+          </div>
+        </div>
+
+        <div className="mentor-kpi-card">
+          <div>
+            <p className="mentor-kpi-label">Pending Code Reviews</p>
+            <h3 className="mentor-kpi-value">14 Submissions</h3>
+            <span className="mentor-kpi-sub mentor-kpi-sub--rose">Require feedback</span>
+          </div>
+        </div>
       </div>
 
-      {/* 2-Column Main Arena */}
-      <div className="overview-split-grid">
-        {/* Left: Allocated Training Batches */}
-        <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
-            <div className="overview-header-left">
-              <div className="overview-header-icon-wrap">
-                <Layers size={18} className="overview-header-icon" />
-              </div>
-              <div>
-                <CardTitle className="overview-card-title">Allocated Training Batches</CardTitle>
-                <CardDescription className="overview-card-desc">Active cohort syllabus completion & health</CardDescription>
-              </div>
-            </div>
-            <Link to="/mentor/batches" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
-              View All <ChevronRight size={14} />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-4 space-y-3">
-            {mentorBatches.map((b) => (
-              <div key={b.id} className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 hover:bg-slate-50 transition space-y-2.5">
-                <div className="flex items-center justify-between">
+      {/* Two Column Grid */}
+      <div className="mentor-grid-split">
+        {/* Left: Batches Overview */}
+        <div className="mentor-section-card">
+          <div className="mentor-section-header">
+            <h3 className="mentor-section-title">Allocated Training Batches</h3>
+            <Link to="/mentor/batches" className="mentor-link-arrow">View All Batches</Link>
+          </div>
+
+          <div className="mentor-card-list">
+            {batches.map((b) => (
+              <div key={b.id} className="mentor-batch-card">
+                <div className="mentor-batch-header">
                   <div>
-                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                      {b.code}
-                    </span>
-                    <h4 className="font-bold text-slate-900 text-sm mt-1">{b.name}</h4>
-                    <p className="text-xs text-slate-500">{b.college} · {b.department}</p>
+                    <span className="mentor-batch-code-tag">{b.code}</span>
+                    <h4 className="mentor-batch-name">{b.name}</h4>
+                    <p className="mentor-batch-dept">{b.college} · {b.department}</p>
                   </div>
-                  <Badge variant="success" className="text-xs">{b.status}</Badge>
-                </div>
-
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-600">Syllabus Progress</span>
-                    <span className="text-indigo-600">{b.progress}%</span>
-                  </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div
-                      className="bg-indigo-600 h-2 rounded-full transition-all"
-                      style={{ width: `${b.progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Right: Upcoming Live Session & Trainer Stats */}
-        <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
-            <div className="overview-header-left">
-              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
-                <Video size={18} className="overview-header-icon text-amber-500" />
-              </div>
-              <div>
-                <CardTitle className="overview-card-title">Live Session & Evaluation</CardTitle>
-                <CardDescription className="overview-card-desc">Scheduled instructor sessions & rating</CardDescription>
-              </div>
-            </div>
-            <Badge variant="outline">Today</Badge>
-          </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            {mentorLiveSessions.map((s) => (
-              <div key={s.id} className="p-4 bg-gradient-to-br from-indigo-50 to-slate-50 rounded-xl border border-indigo-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-600 text-white uppercase tracking-wider">
-                    {s.status}
+                  <span className="mentor-status-tag mentor-status-tag--emerald">
+                    {b.status}
                   </span>
-                  <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
-                    <Star size={14} className="fill-amber-400" /> Rating {mentorProfile.rating}
+                </div>
+
+                <div className="mentor-progress-section">
+                  <div className="mentor-progress-head">
+                    <span className="mentor-progress-label">Syllabus Progress</span>
+                    <span className="mentor-progress-val">{b.progress}%</span>
+                  </div>
+                  <div className="mentor-progress-track">
+                    <div
+                      className="mentor-progress-fill"
+                      style={{ width: `${b.progress}%` }}
+                    />
                   </div>
                 </div>
-                <h4 className="font-bold text-slate-900 text-sm">{s.title}</h4>
-                <p className="text-xs text-slate-600 font-medium">{s.batch}</p>
-                <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                  <Clock size={14} className="text-indigo-600" /> {s.time}
-                </div>
-                <a
-                  href={s.link}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition inline-flex items-center justify-center gap-1.5 shadow-xs text-center"
-                >
-                  Join Meeting Room
-                </a>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Right: Upcoming Training Sessions */}
+        <div className="mentor-section-card">
+          <div className="mentor-section-header">
+            <h3 className="mentor-section-title">
+              <Video size={18} color="#4f46e5" />
+              <span>Upcoming Training Sessions</span>
+            </h3>
+            <Link to="/mentor/sessions" className="mentor-link-arrow">View Schedule</Link>
+          </div>
+
+          <div className="mentor-card-list">
+            {liveSessions.length === 0 ? (
+              <p style={{ color: '#94a3b8', fontSize: '13px', textAlign: 'center', padding: '16px 0' }}>
+                No upcoming training sessions scheduled.
+              </p>
+            ) : (
+              liveSessions.map((s) => (
+                <div key={s.id} className="mentor-live-card">
+                  <span className="mentor-live-badge">{s.status}</span>
+                  <h4 className="mentor-live-title">{s.title}</h4>
+                  <p className="mentor-live-batch">{s.batch}</p>
+                  <p className="mentor-live-time">
+                    <Clock size={14} color="#4f46e5" /> {s.time || `${s.date} ${s.time}`}
+                  </p>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
