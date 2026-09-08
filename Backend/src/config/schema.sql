@@ -405,4 +405,16 @@ CREATE TABLE IF NOT EXISTS remedial_interventions (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
+-- 16. Student Batches Junction Table (Multi-batch enrollment support)
+CREATE TABLE IF NOT EXISTS student_batches (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  batch_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_batch (user_id, batch_id),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+);
+
+
 
