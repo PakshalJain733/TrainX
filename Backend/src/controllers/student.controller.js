@@ -343,3 +343,25 @@ export const getStudentNotifications = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getStudentPerformance = async (req, res, next) => {
+  try {
+    const performanceData = {
+      overallScore: 85,
+      codingScore: 88,
+      quizScore: 82,
+      interviewScore: 84,
+      ranking: 12,
+      totalStudents: 150,
+      monthlyProgress: [
+        { month: 'Jan', score: 75 },
+        { month: 'Feb', score: 80 },
+        { month: 'Mar', score: 85 },
+      ],
+    };
+    return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
+  } catch (error) {
+    next(error);
+  }
+};
+
