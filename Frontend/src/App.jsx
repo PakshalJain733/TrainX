@@ -18,6 +18,7 @@ import Notifications from "./pages/Student/Components/Notifications";
 import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 import Settings from "./pages/Student/Components/Settings";
+import StudentSkillGaps from "./pages/Student/Components/StudentSkillGaps";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -40,6 +41,7 @@ import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
 import SuperAdminOverview from './pages/SuperAdmin/Overview';
 import CollegesPage from './pages/SuperAdmin/Colleges';
+import CollegeDepartments from './pages/SuperAdmin/CollegeDepartments';
 import DepartmentsPage from './pages/SuperAdmin/Departments';
 import SuperAdminBatches from './pages/SuperAdmin/Batches';
 import AdminVerificationPage from './pages/SuperAdmin/AdminVerification';
@@ -52,6 +54,7 @@ import SuperAdminAIRoadmapsPage from './pages/SuperAdmin/AIRoadmaps';
 import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
 import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
 import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
+import SuperAdminProfilePage from './pages/SuperAdmin/SuperAdminProfile';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
@@ -72,6 +75,7 @@ import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
 import MentorNotifications from './pages/Mentor/Components/Notifications';
 import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
 import MentorHelp from './pages/Mentor/Components/Help';
+import MentorQuizzes from './pages/Mentor/Components/MentorQuizzes';
 
 // Coordinator Workspace Imports
 import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
@@ -113,7 +117,7 @@ function App() {
           <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="quiz" element={<AcademicQuiz />} />
           <Route path="attendance" element={<Attendance />} />
-          <Route path="skill-gaps" element={<MentorSkillGaps />} />
+          <Route path="skill-gaps" element={<StudentSkillGaps />} />
           <Route path="weekly-reports" element={<WeeklyReports />} />
           <Route path="batches" element={<Batches />} />
           <Route path="practice" element={<PracticeProblems />} />
@@ -147,8 +151,8 @@ function App() {
         {/* Mentor Workspace Routes */}
         <Route path="/mentor" element={<MentorLayout />}>
           <Route index element={<MentorOverview />} />
-          <Route path="quizzes" element={<AdminQuizzes />} />
-          <Route path="assessments" element={<AdminQuizzes />} />
+          <Route path="quizzes" element={<MentorQuizzes />} />
+          <Route path="assessments" element={<MentorQuizzes />} />
           <Route path="students" element={<MentorStudents />} />
           <Route path="roadmaps" element={<MentorRoadmaps />} />
           <Route path="ai-interviews" element={<MentorAIInterviews />} />
@@ -198,6 +202,7 @@ function App() {
         <Route path="/super-admin" element={<SuperAdminLayout />}>
           <Route index element={<SuperAdminOverview />} />
           <Route path="colleges" element={<CollegesPage />} />
+          <Route path="colleges/:collegeId" element={<CollegeDepartments />} />
           <Route path="departments" element={<DepartmentsPage />} />
           <Route path="batches" element={<SuperAdminBatches />} />
           <Route path="verification" element={<AdminVerificationPage />} />
@@ -211,6 +216,7 @@ function App() {
           <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
           <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
           <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
+          <Route path="profile" element={<SuperAdminProfilePage />} />
         </Route>
         <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
         <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />

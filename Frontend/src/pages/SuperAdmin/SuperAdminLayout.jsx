@@ -194,6 +194,7 @@ export default function SuperAdminLayout() {
     if (path.startsWith("/super-admin/ai-interviews")) return "AI Interview Analytics";
     if (path.startsWith("/super-admin/mock-drives")) return "Mock Placement Drives";
     if (path.startsWith("/super-admin/weekly-reports")) return "Weekly Governance Reports";
+    if (path.startsWith("/super-admin/profile")) return "Edit Profile";
     return "Super Admin Dashboard";
   };
 
@@ -239,20 +240,6 @@ export default function SuperAdminLayout() {
               </div>
 
               <div className="sa-header__right" ref={headerRightRef}>
-                <button
-                  onClick={() => setIsAuditOpen(true)}
-                  className="sa-audit-btn"
-                >
-                  <Sparkles size={15} />
-                  <span>AI Risk Audit</span>
-                </button>
-
-                <div className="sa-header__badges">
-                  <span className="sa-header__badge sa-header__badge--admin">
-                    Platform Owner
-                  </span>
-                </div>
-
                 {/* Notification Bell */}
                 <div className="sa-header__notif-wrap">
                   <button
@@ -303,6 +290,16 @@ export default function SuperAdminLayout() {
                           <span className="sa-header__profile-sub">Super Admin</span>
                         </div>
                       </div>
+                      <div className="sa-header__profile-divider" />
+                      <Link
+                        to="/super-admin/profile"
+                        className="sa-header__profile-item"
+                        style={{ textDecoration: 'none' }}
+                        onClick={() => setProfileOpen(false)}
+                      >
+                        <UserCog size={15} />
+                        Edit Profile
+                      </Link>
                       <div className="sa-header__profile-divider" />
                       <button
                         className="sa-header__profile-item sa-header__profile-item--danger"

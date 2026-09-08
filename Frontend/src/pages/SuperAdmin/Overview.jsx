@@ -20,9 +20,7 @@ export default function Overview() {
       {/* Radiant Welcome Hero Banner */}
       <div className="overview-hero-card">
         <div className="overview-hero-left">
-          <div className="overview-hero-avatar">
-            SR
-          </div>
+          <div className="overview-hero-avatar">SR</div>
           <div>
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> INSTITUTIONAL SUPER ADMIN CONTROL HUB
@@ -39,37 +37,43 @@ export default function Overview() {
         <div className="overview-hero-actions">
           <Link
             to="/super-admin/verification"
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-2"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '10px 18px', background: '#f59e0b', color: '#1c1917',
+              fontWeight: 700, borderRadius: '10px', fontSize: '13px',
+              textDecoration: 'none', boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
+              transition: 'all 0.15s ease', whiteSpace: 'nowrap'
+            }}
           >
-            <Clock className="w-4 h-4" />
+            <Clock size={16} />
             <span>Review Requests (0)</span>
           </Link>
         </div>
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 sa-kpi-grid">
+      <div className="sa-kpi-grid">
         {stats.map((stat) => (
           <StatsCard key={stat.id} {...stat} />
         ))}
       </div>
 
       {/* Recent Verifications & Colleges Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 sa-bottom-grid">
+      <div className="sa-bottom-grid">
         {/* Pending Verification Requests Widget */}
-        <div className="lg:col-span-1 bg-white border border-slate-200 flex flex-col sa-widget-card">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <ShieldAlert className="w-4 h-4 text-amber-500" />
-              <h3 className="font-bold text-slate-800 text-sm">Pending Admin Requests</h3>
+        <div className="sa-widget-card" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldAlert size={16} style={{ color: '#f59e0b' }} />
+              <h3 style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px', margin: 0 }}>Pending Admin Requests</h3>
             </div>
-            <Link to="/super-admin/verification" className="text-xs font-semibold text-indigo-600 hover:underline">
+            <Link to="/super-admin/verification" style={{ fontSize: '12px', fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}>
               View All
             </Link>
           </div>
 
           {initialAdminVerifications.length === 0 ? (
-            <div className="py-8 flex-1 flex items-center justify-center">
+            <div style={{ padding: '24px 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <EmptyState
                 icon={ShieldAlert}
                 title="No Pending Requests"
@@ -77,13 +81,13 @@ export default function Overview() {
               />
             </div>
           ) : (
-            <div className="divide-y divide-slate-100 flex-1">
+            <div style={{ flex: 1 }}>
               {initialAdminVerifications.slice(0, 3).map((req) => (
-                <div key={req.id} className="py-3 flex items-center justify-between gap-3">
+                <div key={req.id} style={{ padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid #f8fafc' }}>
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-800">{req.name}</h4>
-                    <p className="text-[11px] text-slate-500">{req.college}</p>
-                    <span className="text-[10px] text-indigo-600 font-medium">{req.designation}</span>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>{req.name}</h4>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 2px 0' }}>{req.college}</p>
+                    <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: 600 }}>{req.designation}</span>
                   </div>
                   <StatusBadge status={req.status} />
                 </div>
@@ -93,20 +97,20 @@ export default function Overview() {
         </div>
 
         {/* Top Active Colleges Widget */}
-        <div className="lg:col-span-2 bg-white border border-slate-200 sa-widget-card flex flex-col">
-          <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-indigo-600" />
-              <h3 className="font-bold text-slate-800 text-sm">Connected Institutions Overview</h3>
+        <div className="sa-widget-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Building2 size={16} style={{ color: '#4f46e5' }} />
+              <h3 style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px', margin: 0 }}>Connected Institutions Overview</h3>
             </div>
-            <Link to="/super-admin/colleges" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+            <Link to="/super-admin/colleges" style={{ fontSize: '12px', fontWeight: 600, color: '#4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span>All Colleges</span>
-              <ArrowUpRight className="w-3.5 h-3.5" />
+              <ArrowUpRight size={13} />
             </Link>
           </div>
 
           {initialColleges.length === 0 ? (
-            <div className="py-8 flex-1 flex items-center justify-center">
+            <div style={{ padding: '24px 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <EmptyState
                 icon={Building2}
                 title="No Colleges Connected"
@@ -116,26 +120,29 @@ export default function Overview() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto mt-2">
-              <table className="w-full text-left text-xs">
+            <div style={{ overflowX: 'auto', marginTop: '4px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
-                  <tr className="text-slate-400 font-semibold border-b border-slate-100 uppercase text-[10px]">
-                    <th className="py-2.5 px-3">Institution</th>
-                    <th className="py-2.5 px-3">Location</th>
-                    <th className="py-2.5 px-3">Active Students</th>
-                    <th className="py-2.5 px-3">Status</th>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Institution</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Location</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Students</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', fontSize: '10px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                <tbody>
                   {initialColleges.slice(0, 4).map((college) => (
-                    <tr key={college.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-800">{college.name}</div>
-                        <div className="text-[10px] text-slate-400">{college.code}</div>
+                    <tr key={college.id} style={{ borderBottom: '1px solid #f8fafc', transition: 'background 0.1s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '12px 12px' }}>
+                        <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>{college.name}</div>
+                        <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>{college.code}</div>
                       </td>
-                      <td className="py-3 px-3 text-slate-500">{college.location}</td>
-                      <td className="py-3 px-3 font-semibold text-slate-900">{college.studentsCount}</td>
-                      <td className="py-3 px-3">
+                      <td style={{ padding: '12px 12px', color: '#475569', fontSize: '12.5px' }}>{college.location}</td>
+                      <td style={{ padding: '12px 12px', fontWeight: 700, color: '#0f172a', fontSize: '13px' }}>{college.studentsCount}</td>
+                      <td style={{ padding: '12px 12px' }}>
                         <StatusBadge status={college.status} />
                       </td>
                     </tr>
@@ -149,4 +156,3 @@ export default function Overview() {
     </div>
   );
 }
-

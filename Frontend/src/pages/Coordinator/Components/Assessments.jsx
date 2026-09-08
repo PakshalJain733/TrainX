@@ -1,36 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
-  Plus,
-  FileCheck2,
-  Award,
-  Clock,
-  Search,
-  CheckCircle,
-  AlertTriangle,
-  Download,
-  Users,
-  BarChart2,
-  Zap,
-  BookOpen,
-  Filter,
-  CheckCircle2,
-  XCircle,
-  HelpCircle,
-  Send,
+  Plus, FileCheck2, Award, Clock, Search, CheckCircle, AlertTriangle, Download,
+  Users, BarChart2, Zap, BookOpen, Filter, CheckCircle2, XCircle, HelpCircle, Send
 } from "lucide-react";
 import {
-  coordinatorAssessments,
-  coordinatorBatches,
-  coordinatorQuizActivityLogs,
-  coordinatorDetailedQuizScorecards,
-  coordinatorStudents,
+  coordinatorBatches, coordinatorQuizActivityLogs, coordinatorDetailedQuizScorecards
 } from "../../../data/coordinatorMockData";
 import "../Styles/Assessments.css";
 import "../../Admin/Styles/AdminUsers.css";
 
+const API_BASE = "http://localhost:5000/api/v1";
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
 export default function CoordinatorAssessments() {
-  const [assessments, setAssessments] = useState(coordinatorAssessments);
+  const [assessments, setAssessments] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [activityLogs, setActivityLogs] = useState(coordinatorQuizActivityLogs);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [activeTab, setActiveTab] = useState("directory"); // 'directory', 'live_feed', 'analytics'
@@ -45,6 +37,37 @@ export default function CoordinatorAssessments() {
   const [type, setType] = useState("MCQ Quiz");
   const [dueDate, setDueDate] = useState("");
 
+  const fetchQuizzes = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/assessments`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        const formatted = data.data.map(a => ({
+          id: a.id,
+          title: a.title,
+          batch: a.batch_name || "All Batches",
+          type: a.category || "MCQ Quiz",
+          dueDate: new Date(a.created_at).toLocaleDateString(),
+          submissions: a.submission_count || 0,
+          avgScore: "--",
+          passRate: "--",
+          status: a.status === "published" ? "Active" : a.status === "draft" ? "Draft" : a.status,
+          apiData: a
+        }));
+        setAssessments(formatted);
+      }
+    } catch (err) {
+      console.error("Failed to load assessments:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchQuizzes();
+  }, []);
+
   const filteredAssessments = assessments.filter((a) => {
     const matchesSearch =
       a.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -55,28 +78,50 @@ export default function CoordinatorAssessments() {
 
   const handleCreate = (e) => {
     e.preventDefault();
-    if (!title.trim()) return;
-
-    const newAssessment = {
-      id: Date.now(),
-      title,
-      batch,
-      type,
-      dueDate: dueDate || "2026-09-10",
-      submissions: "0 / 120",
-      avgScore: "--",
-      passRate: "--",
-      status: "Active",
-    };
-
-    setAssessments([newAssessment, ...assessments]);
+    // In a real implementation this would call the API
     setShowCreateModal(false);
-    setTitle("");
   };
 
-  const currentScorecard = selectedQuiz
-    ? coordinatorDetailedQuizScorecards[selectedQuiz.id] || coordinatorDetailedQuizScorecards[1]
-    : null;
+  // When a quiz is selected, try to load its results
+  const [realScorecard, setRealScorecard] = useState(null);
+  
+  useEffect(() => {
+    if (selectedQuiz?.id) {
+      fetch(`${API_BASE}/assessments/${selectedQuiz.id}/results`, { headers: getAuthHeaders() })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            const results = data.data?.results || data.data || [];
+            // Map to scorecard format
+            const attempted = results.length;
+            const avg = attempted ? Math.round(results.reduce((acc, r) => acc + parseFloat(r.percentage || 0), 0) / attempted) : 0;
+            const passed = results.filter(r => parseFloat(r.percentage || 0) >= 60 || r.status === 'passed').length;
+            
+            setRealScorecard({
+              attempted,
+              totalEnrolled: attempted > 0 ? attempted : 120, // dummy fallback
+              avgScore: `${avg}%`,
+              highestScore: `${Math.max(0, ...results.map(r => parseFloat(r.percentage || 0)))}%`,
+              passedCount: passed,
+              studentSubmissions: results.map((r, i) => ({
+                id: r.id || i,
+                name: r.student_name || `Student #${r.user_id}`,
+                rollNo: r.student_email || "N/A",
+                score: parseFloat(r.percentage || 0),
+                correctCount: r.correct_count || 0,
+                timeSpent: "25m 12s", // mock
+                status: (parseFloat(r.percentage || 0) >= 60 || r.status === 'passed') ? "Passed" : "Retake"
+              })),
+              questionAnalytics: []
+            });
+          }
+        });
+    } else {
+      setRealScorecard(null);
+    }
+  }, [selectedQuiz]);
+
+  const currentScorecard = realScorecard || (selectedQuiz ? (coordinatorDetailedQuizScorecards[selectedQuiz.id] || coordinatorDetailedQuizScorecards[1]) : null);
 
   return (
     <div>

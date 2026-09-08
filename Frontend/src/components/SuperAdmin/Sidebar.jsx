@@ -18,6 +18,7 @@ import {
   Shield,
   HelpCircle,
   Code,
+  UserCog,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
 import "../../pages/SuperAdmin/SuperAdmin.css";
@@ -60,6 +61,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "Edit Profile", url: "/super-admin/profile", icon: UserCog },
   { title: "Settings", url: "/super-admin/performance", icon: SlidersHorizontal },
 ];
 
