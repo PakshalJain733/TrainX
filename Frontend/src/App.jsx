@@ -36,7 +36,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
 import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
-
+import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
 // Super Admin Workspace Imports
 import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
@@ -122,6 +122,7 @@ function App() {
             <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><Leaderboard /></MaintenanceGuard>} />
             <Route path="quiz" element={<MaintenanceGuard moduleKey="academicQuizzes"><AcademicQuiz /></MaintenanceGuard>} />
             <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><Attendance /></MaintenanceGuard>} />
+            <Route path="skill-gaps" element={<StudentSkillGaps />} />
             <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><WeeklyReports /></MaintenanceGuard>} />
             <Route path="batches" element={<Batches />} />
             <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><PracticeProblems /></MaintenanceGuard>} />
@@ -161,6 +162,8 @@ function App() {
           >
             <Route index element={<MentorOverview />} />
             <Route path="students" element={<MentorStudents />} />
+            <Route path="quizzes" element={<MentorQuizzes />} />
+            <Route path="assessments" element={<MentorQuizzes />} />
             <Route path="roadmaps" element={<MaintenanceGuard moduleKey="aiRoadmaps"><MentorRoadmaps /></MaintenanceGuard>} />
             <Route path="ai-interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><MentorAIInterviews /></MaintenanceGuard>} />
             <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="skillGapAnalysis"><MentorSkillGaps /></MaintenanceGuard>} />
@@ -210,6 +213,7 @@ function App() {
           <Route path="/super-admin" element={<SuperAdminLayout />}>
             <Route index element={<SuperAdminOverview />} />
             <Route path="colleges" element={<CollegesPage />} />
+            <Route path="colleges/:collegeId" element={<CollegeDepartments />} />
             <Route path="departments" element={<DepartmentsPage />} />
             <Route path="batches" element={<SuperAdminBatches />} />
             <Route path="verification" element={<AdminVerificationPage />} />
@@ -224,6 +228,7 @@ function App() {
             <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
             <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
             <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
+            <Route path="profile" element={<SuperAdminProfilePage />} />
           </Route>
           <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
           <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
@@ -237,4 +242,3 @@ function App() {
 }
 
 export default App;
-

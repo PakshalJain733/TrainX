@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
-  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight
+  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
+  Plus, X, KeyRound, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -187,19 +188,25 @@ export default function Overview() {
               Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
-              {heroSubtitle}
+              {dashboard.personalDetails.department} | {dashboard.academicOverview.semester} | {dashboard.academicOverview.cgpa ? `CGPA: ${dashboard.academicOverview.cgpa}` : ''}
             </p>
           </div>
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/student/batches">
-            <Button className="overview-btn-primary">
-              <Sparkles size={14} className="overview-btn-icon" /> Batches
-            </Button>
-          </Link>
+          <Button
+            className="overview-btn-primary"
+            onClick={() => {
+              setModalError("");
+              setModalSuccess("");
+              setShowJoinModal(true);
+            }}
+          >
+            <Plus size={16} className="overview-btn-icon" /> Join Batch
+          </Button>
         </div>
       </div>
+
 
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
@@ -302,3 +309,4 @@ export default function Overview() {
     </div>
   );
 }
+

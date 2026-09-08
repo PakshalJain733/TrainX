@@ -267,62 +267,19 @@ export const getStudentNotifications = async (req, res, next) => {
 
 export const getStudentPerformance = async (req, res, next) => {
   try {
-    const userId = req.user.userId || req.user.id;
-    const user = await findUserById(userId);
-
     const performanceData = {
-      studentName: user?.name || 'Student',
-      department: user?.department || 'ECS',
-      batch: 'Batch A – 2026',
-      overallScore: 71,
-      status: 'Average',
-      trend: 'up',
-      trendDelta: '+4%',
-      lastUpdated: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }),
-      scores: {
-        assessment: 78,
-        coding: 65,
-        interview: 58,
-        attendance: 82,
-        milestone: 74,
-      },
-      weakAreas: [
-        {
-          id: 'wa-1',
-          skill: 'AI Mock Interview',
-          score: 58,
-          target: 75,
-          reason: 'Low scores across last 3 AI interviews – confidence and problem articulation need improvement.',
-          topics: ['STAR method', 'DSA explanation', 'Behavioural Q&A'],
-          actions: ['Practice 2 mock interviews this week', 'Review recorded sessions', 'Attempt Interview Feedback module'],
-          priority: 'Critical',
-        },
-        {
-          id: 'wa-2',
-          skill: 'Coding / DSA',
-          score: 65,
-          target: 80,
-          reason: 'Struggling with dynamic programming and graph-based problems in practice submissions.',
-          topics: ['Dynamic Programming', 'Graph traversal (BFS/DFS)', 'Recursion & Backtracking'],
-          actions: ['Solve 5 DP problems this week', 'Complete Graph module on Learning Content', 'Join Weekend Coding Sprint'],
-          priority: 'High',
-        },
-      ],
-      suggestions: [
-        { id: 's-1', icon: 'interview', text: 'Schedule 2 AI Mock Interview sessions before the next assessment cycle.', action: 'Go to AI Interview', link: '/student/ai-interview' },
-        { id: 's-2', icon: 'coding', text: 'Complete the Dynamic Programming practice set (8 problems pending).', action: 'Open Practice', link: '/student/practice' },
-        { id: 's-3', icon: 'learning', text: 'Watch the DBMS Normalization video and complete the follow-up quiz.', action: 'Open Learning', link: '/student/learning' },
-        { id: 's-4', icon: 'attendance', text: 'Maintain 80%+ attendance to protect your eligibility for placements.', action: 'View Attendance', link: '/student/attendance' },
-      ],
-      scoreHistory: [
-        { week: 'W1', assessment: 62, coding: 50, interview: 45 },
-        { week: 'W2', assessment: 67, coding: 55, interview: 50 },
-        { week: 'W3', assessment: 72, coding: 60, interview: 52 },
-        { week: 'W4', assessment: 75, coding: 62, interview: 55 },
-        { week: 'W5', assessment: 78, coding: 65, interview: 58 },
+      overallScore: 85,
+      codingScore: 88,
+      quizScore: 82,
+      interviewScore: 84,
+      ranking: 12,
+      totalStudents: 150,
+      monthlyProgress: [
+        { month: 'Jan', score: 75 },
+        { month: 'Feb', score: 80 },
+        { month: 'Mar', score: 85 },
       ],
     };
-
     return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
   } catch (error) {
     next(error);

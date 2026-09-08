@@ -1,25 +1,22 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import StatsCard from '../../components/SuperAdmin/StatsCard';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import { overviewStats, initialColleges, initialAdminVerifications } from '../../data/superAdminMockData';
-import {
-  Building2, ShieldAlert, ArrowUpRight, CheckCircle2, Clock, Sparkles, Info, Users, Shield, ChevronRight
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
-import { Badge } from '../../components/ui/Badge';
-import { Button } from '../../components/ui/Button';
-import '../Student/Styles/Overview.css';
+import { Building2, ShieldAlert, ArrowUpRight, CheckCircle2, Clock, Shield, Sparkles, FolderOpen, Layers } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import EmptyState from '../../components/ui/EmptyState';
+import './SuperAdmin.css';
 
 export default function Overview() {
-  const superAdminStats = [
-    { label: "Connected Colleges", value: "4 Institutions", hint: "Active partner campuses", icon: Building2 },
-    { label: "Total Active Students", value: "4,850", hint: "Enrolled in campus portal", icon: Users },
-    { label: "Coordinators & Heads", value: "18 Members", hint: "Department oversight", icon: ShieldAlert },
-    { label: "System Health", value: "99.9%", hint: "All systems operational", icon: CheckCircle2 },
+  const stats = overviewStats.length > 0 ? overviewStats : [
+    { id: 1, label: "Total Partner Colleges", value: "0", change: "No colleges registered", trend: "up", icon: "Building2" },
+    { id: 2, label: "Enrolled Students", value: "0", change: "Awaiting student sync", trend: "up", icon: "Users" },
+    { id: 3, label: "Active Trainers / Mentors", value: "0", change: "No active mentors", trend: "up", icon: "GraduationCap" },
+    { id: 4, label: "Pending Admin Requests", value: "0", change: "All verifications clear", trend: "up", icon: "ShieldAlert" },
   ];
 
   return (
-    <div className="student-page-inner stack-6 overview-wrapper">
+    <div className="space-y-6">
       {/* Radiant Welcome Hero Banner */}
       <div className="overview-hero-card">
         <div className="overview-hero-left">
@@ -28,75 +25,105 @@ export default function Overview() {
           </div>
           <div>
             <div className="overview-hero-eyebrow">
-              <Sparkles size={13} /> SUPER ADMIN CONTROL HUB
+              <Sparkles size={13} /> INSTITUTIONAL SUPER ADMIN CONTROL HUB
             </div>
             <h1 className="overview-hero-title">
               Welcome back, Dr. Sara Rao!
             </h1>
             <p className="overview-hero-desc">
-              Platform Owner · Cross-college portal status, active student engagement analytics, and governance verification.
+              Cross-college portal status, active student engagement analytics, and faculty allocations.
             </p>
           </div>
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/super-admin/verification">
-            <Button className="overview-btn-primary">
-              <Clock size={14} className="overview-btn-icon" /> Review Requests (5)
-            </Button>
-          </Link>
-          <Link to="/super-admin/colleges">
-            <Button className="overview-btn-secondary">
-              <Building2 size={14} className="overview-btn-icon" /> All Colleges
-            </Button>
+          <Link
+            to="/super-admin/verification"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '10px 18px', background: '#f59e0b', color: '#1c1917',
+              fontWeight: 700, borderRadius: '10px', fontSize: '13px',
+              textDecoration: 'none', boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
+              transition: 'all 0.15s ease', whiteSpace: 'nowrap'
+            }}
+          >
+            <Clock size={16} />
+            <span>Review Requests (0)</span>
           </Link>
         </div>
       </div>
 
-      {/* 4 Stats Cards Row */}
-      <div className="overview-grid-4">
-        {superAdminStats.map((s) => (
-          <Card key={s.label} className="overview-stat-card shadow-sm">
-            <CardContent className="overview-card-content">
-              <div className="overview-stat-top">
-                <div className="overview-icon-container">
-                  <s.icon size={16} />
-                </div>
-                <span className="overview-stat-label">{s.label}</span>
-                <Info size={15} className="overview-info-icon" />
-              </div>
-
-              <p className="overview-stat-value">{s.value}</p>
-
-              <div className="overview-stat-hint-row">
-                <span className="overview-stat-trend-pill">{s.hint}</span>
-              </div>
-            </CardContent>
-          </Card>
+      {/* KPI Cards Grid */}
+      <div className="sa-kpi-grid">
+        {stats.map((stat) => (
+          <StatsCard key={stat.id} {...stat} />
         ))}
       </div>
 
-      {/* 2-Column Main Arena */}
-      <div className="overview-split-grid">
-        {/* Left: Connected Institutions Table */}
-        <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
-            <div className="overview-header-left">
-              <div className="overview-header-icon-wrap">
-                <Building2 size={18} className="overview-header-icon" />
-              </div>
-              <div>
-                <CardTitle className="overview-card-title">Connected Institutions</CardTitle>
-                <CardDescription className="overview-card-desc">Active partner colleges & student count</CardDescription>
-              </div>
+      {/* Recent Verifications & Colleges Grid */}
+      <div className="sa-bottom-grid">
+        {/* Pending Verification Requests Widget */}
+        <div className="sa-widget-card" style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ShieldAlert size={16} style={{ color: '#f59e0b' }} />
+              <h3 style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px', margin: 0 }}>Pending Admin Requests</h3>
             </div>
-            <Link to="/super-admin/colleges" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
-              View All <ChevronRight size={14} />
+            <Link to="/super-admin/verification" style={{ fontSize: '12px', fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}>
+              View All
             </Link>
-          </CardHeader>
-          <CardContent className="p-4">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+          </div>
+
+          {initialAdminVerifications.length === 0 ? (
+            <div style={{ padding: '24px 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <EmptyState
+                icon={ShieldAlert}
+                title="No Pending Requests"
+                description="There are currently no college admin verification requests pending review."
+              />
+            </div>
+          ) : (
+            <div style={{ flex: 1 }}>
+              {initialAdminVerifications.slice(0, 3).map((req) => (
+                <div key={req.id} style={{ padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid #f8fafc' }}>
+                  <div>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>{req.name}</h4>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 2px 0' }}>{req.college}</p>
+                    <span style={{ fontSize: '10px', color: '#4f46e5', fontWeight: 600 }}>{req.designation}</span>
+                  </div>
+                  <StatusBadge status={req.status} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Top Active Colleges Widget */}
+        <div className="sa-widget-card" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '16px', borderBottom: '1px solid #f1f5f9', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Building2 size={16} style={{ color: '#4f46e5' }} />
+              <h3 style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px', margin: 0 }}>Connected Institutions Overview</h3>
+            </div>
+            <Link to="/super-admin/colleges" style={{ fontSize: '12px', fontWeight: 600, color: '#4f46e5', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>All Colleges</span>
+              <ArrowUpRight size={13} />
+            </Link>
+          </div>
+
+          {initialColleges.length === 0 ? (
+            <div style={{ padding: '24px 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <EmptyState
+                icon={Building2}
+                title="No Colleges Connected"
+                description="No institutions or universities are registered on the platform yet."
+                actionText="Add New College"
+                onAction={() => window.location.href = '/super-admin/colleges'}
+              />
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto', marginTop: '4px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr className="text-slate-400 font-semibold border-b border-slate-100 uppercase text-[10px]">
                     <th className="py-2.5 px-3">Institution</th>
@@ -122,38 +149,8 @@ export default function Overview() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Right: Pending Admin Requests Queue */}
-        <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
-            <div className="overview-header-left">
-              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
-                <ShieldAlert size={18} className="overview-header-icon text-amber-500" />
-              </div>
-              <div>
-                <CardTitle className="overview-card-title">Pending Verification Requests</CardTitle>
-                <CardDescription className="overview-card-desc">Admin access approvals pending review</CardDescription>
-              </div>
-            </div>
-            <Link to="/super-admin/verification" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
-              Review Queue <ChevronRight size={14} />
-            </Link>
-          </CardHeader>
-          <CardContent className="p-4 space-y-3">
-            {initialAdminVerifications.slice(0, 3).map((req) => (
-              <div key={req.id} className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 flex items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-xs font-semibold text-slate-800">{req.name}</h4>
-                  <p className="text-[11px] text-slate-500">{req.college}</p>
-                  <span className="text-[10px] text-indigo-600 font-medium">{req.designation}</span>
-                </div>
-                <StatusBadge status={req.status} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
     </div>
   );

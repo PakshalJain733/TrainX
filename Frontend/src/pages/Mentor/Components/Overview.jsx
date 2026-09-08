@@ -11,9 +11,11 @@ import { Button } from '../../../components/ui/Button';
 import '../../Student/Styles/Overview.css';
 
 const getInitials = (name) => {
-  if (!name) return "VS";
+  if (!name || name.trim().length === 0) return "VS";
   const parts = name.trim().split(" ");
-  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
   return name.slice(0, 2).toUpperCase();
 };
 
@@ -26,8 +28,8 @@ export default function Overview() {
   ];
 
   return (
-    <div className="student-page-inner stack-6 overview-wrapper">
-      {/* Radiant Welcome Hero Banner */}
+    <div className="mentor-overview-container">
+      {/* Radiant Welcome Hero Banner - Identical to Student Overview */}
       <div className="overview-hero-card">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">
@@ -35,7 +37,7 @@ export default function Overview() {
           </div>
           <div>
             <div className="overview-hero-eyebrow">
-              <Sparkles size={13} /> MENTOR WORKSPACE DASHBOARD
+              <Sparkles size={13} /> MENTOR & INSTRUCTOR WORKSPACE
             </div>
             <h1 className="overview-hero-title">
               Welcome back, {mentorProfile.name}!
@@ -106,31 +108,31 @@ export default function Overview() {
               <div key={b.id} className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 hover:bg-slate-50 transition space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                      {b.code}
-                    </span>
-                    <h4 className="font-bold text-slate-900 text-sm mt-1">{b.name}</h4>
-                    <p className="text-xs text-slate-500">{b.college} · {b.department}</p>
+                    <span className="mentor-batch-code-tag">{b.code}</span>
+                    <h4 className="mentor-batch-name">{b.name}</h4>
+                    <p className="mentor-batch-dept">{b.college} · {b.department}</p>
                   </div>
-                  <Badge variant="success" className="text-xs">{b.status}</Badge>
+                  <span className="mentor-status-tag mentor-status-tag--emerald">
+                    {b.status}
+                  </span>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs font-semibold">
-                    <span className="text-slate-600">Syllabus Progress</span>
-                    <span className="text-indigo-600">{b.progress}%</span>
+                <div className="mentor-progress-section">
+                  <div className="mentor-progress-head">
+                    <span className="mentor-progress-label">Syllabus Progress</span>
+                    <span className="mentor-progress-val">{b.progress}%</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div className="mentor-progress-track">
                     <div
-                      className="bg-indigo-600 h-2 rounded-full transition-all"
+                      className="mentor-progress-fill"
                       style={{ width: `${b.progress}%` }}
-                    ></div>
+                    />
                   </div>
                 </div>
               </div>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Right: Upcoming Live Session & Trainer Stats */}
         <Card className="overview-subcard">
@@ -178,4 +180,3 @@ export default function Overview() {
     </div>
   );
 }
-
