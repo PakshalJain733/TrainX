@@ -1,0 +1,224 @@
+/* MaintenanceControls.css - Dedicated Stylesheet for SuperAdmin MaintenanceControls & Feature Switches Module */
+
+.maintenancecontrols-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.maintenancecontrols-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.maintenancecontrols-header-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.maintenancecontrols-header-icon {
+  width: 22px;
+  height: 22px;
+  color: #4f46e5;
+}
+
+.maintenancecontrols-header-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Category Filter Bar */
+.maintenancecontrols-categories-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  overflow-x: auto;
+}
+
+.maintenancecontrols-category-pill {
+  height: 38px;
+  padding: 0 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  border: none;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.maintenancecontrols-category-pill:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.maintenancecontrols-category-pill--active {
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+/* Emergency Mode Button */
+.maintenancecontrols-btn-emergency {
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.maintenancecontrols-btn-emergency:hover {
+  background: #f8fafc;
+}
+
+.maintenancecontrols-btn-emergency--on {
+  background: #fff1f2 !important;
+  color: #be123c !important;
+  border-color: #fecdd3 !important;
+}
+
+/* Module Table Card */
+.maintenancecontrols-table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.maintenancecontrols-table-wrap {
+  overflow-x: auto;
+}
+
+.maintenancecontrols-table {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.maintenancecontrols-thead-row {
+  background: rgba(248, 250, 252, 0.8);
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.maintenancecontrols-th {
+  padding: 14px 16px;
+}
+
+.maintenancecontrols-th-right {
+  padding: 14px 16px;
+  text-align: right;
+}
+
+.maintenancecontrols-tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.maintenancecontrols-tr:hover {
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.maintenancecontrols-td {
+  padding: 14px 16px;
+}
+
+.maintenancecontrols-td-right {
+  padding: 14px 16px;
+  text-align: right;
+}
+
+/* Custom High-Contrast Toggle Switch Button */
+.maintenancecontrols-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.maintenancecontrols-switch-btn--enabled {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.maintenancecontrols-switch-btn--enabled:hover {
+  background: #d1fae5;
+}
+
+.maintenancecontrols-switch-btn--disabled {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.maintenancecontrols-switch-btn--disabled:hover {
+  background: #ffe4e6;
+}
+
+.maintenancecontrols-switch-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.maintenancecontrols-switch-dot--enabled {
+  background: #059669;
+}
+
+.maintenancecontrols-switch-dot--disabled {
+  background: #e11d48;
+}
+
+/* Action Icon Buttons */
+.maintenancecontrols-action-icon-btn {
+  padding: 6px;
+  border-radius: 8px;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.maintenancecontrols-action-icon-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}

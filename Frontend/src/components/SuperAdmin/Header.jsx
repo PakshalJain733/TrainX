@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Bell, Sparkles } from 'lucide-react';
 import AIRiskAuditModal from './AIRiskAuditModal';
-import '../../pages/SuperAdmin/SuperAdmin.css';
+import '../../pages/SuperAdmin/Styles/SuperAdmin.css';
 
 export default function Header({ title = 'Super Admin Control Center', subtitle = 'Manage institutional training across colleges' }) {
   const [isAuditOpen, setIsAuditOpen] = useState(false);

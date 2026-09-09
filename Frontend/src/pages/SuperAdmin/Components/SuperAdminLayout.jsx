@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PanelLeft, Bell, Search, Sparkles, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2 } from 'lucide-react';
-import Sidebar from '../../components/SuperAdmin/Sidebar';
-import AIRiskAuditModal from '../../components/SuperAdmin/AIRiskAuditModal';
-import './SuperAdmin.css';
+import Sidebar from '../../../components/SuperAdmin/Sidebar';
+import AIRiskAuditModal from '../../../components/SuperAdmin/AIRiskAuditModal';
+import '../Styles/SuperAdmin.css';
+import '../Styles/SuperAdminLayout.css';
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
   const [notifications, setNotifications] = useState([

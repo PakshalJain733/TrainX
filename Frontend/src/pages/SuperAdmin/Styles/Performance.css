@@ -1,0 +1,209 @@
+/* Performance.css - Dedicated Stylesheet for SuperAdmin Performance Analytics Module */
+
+.performance-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.performance-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.performance-header-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.performance-header-icon {
+  width: 22px;
+  height: 22px;
+  color: #4f46e5;
+}
+
+.performance-header-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Feature Cards Grid */
+.perf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.perf-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.perf-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.12);
+  border-color: #c7d2fe;
+}
+
+.perf-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.perf-icon-indigo {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.perf-icon-purple {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #faf5ff;
+  color: #9333ea;
+  border: 1px solid #f3e8ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.perf-icon-amber {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.perf-icon-emerald {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #d1fae5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.perf-icon-blue {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.perf-card-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 3px 0;
+}
+
+.perf-card-desc {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.perf-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.perf-metric-pill {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+
+.perf-metric-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.perf-metric-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-top: 2px;
+}
+
+/* Progress bar */
+.perf-progress-section {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.perf-progress-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.perf-progress-bar-bg {
+  width: 100%;
+  height: 7px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.perf-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  border-radius: 999px;
+}

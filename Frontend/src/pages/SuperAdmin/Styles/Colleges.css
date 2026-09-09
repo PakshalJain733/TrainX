@@ -1,0 +1,194 @@
+/* Colleges.css - Dedicated Stylesheet for SuperAdmin Colleges Page */
+
+.colleges-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.colleges-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.colleges-header-icon {
+  width: 20px;
+  height: 20px;
+  color: #4f46e5;
+}
+
+.colleges-header-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.015em;
+}
+
+.colleges-header-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.colleges-search-card {
+  background: #ffffff;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.colleges-search-wrap {
+  position: relative;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.colleges-filter-btn {
+  padding: 8px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.colleges-filter-btn:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.colleges-filter-icon {
+  width: 14px;
+  height: 14px;
+  color: #4f46e5;
+}
+
+.colleges-table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.colleges-table-wrap {
+  overflow-x: auto;
+}
+
+.colleges-table {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.colleges-table-thead {
+  background: rgba(248, 250, 252, 0.8);
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.colleges-th {
+  padding: 12px 16px;
+}
+
+.colleges-th-right {
+  padding: 12px 16px;
+  text-align: right;
+}
+
+.colleges-tbody {
+  color: #334155;
+  font-weight: 500;
+}
+
+.colleges-tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.colleges-tr:hover {
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.colleges-td {
+  padding: 14px 16px;
+}
+
+.colleges-td-right {
+  padding: 14px 16px;
+  text-align: right;
+}
+
+.colleges-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.colleges-code {
+  font-size: 10px;
+  color: #4f46e5;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.colleges-location-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #475569;
+}
+
+.colleges-location-icon {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+.colleges-admin-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.colleges-admin-email-wrap {
+  font-size: 10px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.colleges-students-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.colleges-students-icon {
+  width: 14px;
+  height: 14px;
+  color: #6366f1;
+}
+
+.colleges-modal-dialog {
+  max-width: 540px;
+}

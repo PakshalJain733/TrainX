@@ -9,8 +9,9 @@ import {
   Save,
   ShieldCheck,
 } from "lucide-react";
-import { SectionHeader } from "../../components/ui/SectionHeader";
-import "../Student/Styles/ProfilePage.css";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
+import "../../Student/Styles/ProfilePage.css";
+import '../Styles/SuperAdminProfile.css';
 
 export default function SuperAdminProfile() {
   const fileInputRef = useRef(null);

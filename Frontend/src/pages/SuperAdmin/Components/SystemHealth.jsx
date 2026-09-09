@@ -5,16 +5,11 @@ import {
   Zap,
   Clock,
   CheckCircle2,
-  AlertTriangle,
   RefreshCw,
-  Database,
-  Cpu,
-  Globe,
-  Shield,
-  Wifi,
   Search
 } from 'lucide-react';
-import './SuperAdmin.css';
+import '../Styles/SuperAdmin.css';
+import '../Styles/SystemHealth.css';
 
 const mockSystemHealth = {
   overallStatus: "Operational",
@@ -39,7 +34,7 @@ const mockSystemHealth = {
 };
 
 export default function SystemHealth() {
-  const [healthData, setHealthData] = useState(mockSystemHealth);
+  const [healthData] = useState(mockSystemHealth);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -56,19 +51,19 @@ export default function SystemHealth() {
   );
 
   return (
-    <div className="space-y-6 text-slate-800">
+    <div className="system-health-wrap">
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Activity className="w-5 h-5 text-indigo-600" />
-            <span>System Health & Infrastructure Monitoring</span>
-          </h2>
-          <p className="text-xs text-slate-500">
+          <div className="system-health-title-wrap">
+            <Activity className="system-health-title-icon" />
+            <span className="system-health-title">System Health & Infrastructure Monitoring</span>
+          </div>
+          <p className="system-health-subtitle">
             Real-time server latency, service status, database load, and API uptime monitoring
           </p>
         </div>
-        <button onClick={handleRefresh} className="sa-btn-primary ml-auto" disabled={isRefreshing}>
+        <button onClick={handleRefresh} className="sa-btn-primary" disabled={isRefreshing}>
           <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
           <span>{isRefreshing ? "Refreshing..." : "Refresh Health Status"}</span>
         </button>
@@ -77,60 +72,60 @@ export default function SystemHealth() {
       {/* KPI Cards Grid */}
       <div className="sa-kpi-grid">
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">System Uptime</span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+            <div className="system-health-icon-emerald">
               <CheckCircle2 size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val">{healthData.uptime}</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+            <span className="system-health-tag-emerald">
               ● All Systems Functional
             </span>
           </div>
         </div>
 
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">Avg API Latency</span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+            <div className="system-health-icon-indigo">
               <Clock size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val">{healthData.avgLatency}</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 mt-1">
+            <span className="system-health-tag-indigo">
               ⚡ Optimal Response Speed
             </span>
           </div>
         </div>
 
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">Error Rate</span>
-            <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+            <div className="system-health-icon-amber">
               <Zap size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val">{healthData.errorRate}</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+            <span className="system-health-tag-emerald">
               Within Normal Limits
             </span>
           </div>
         </div>
 
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">API Throughput</span>
-            <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+            <div className="system-health-icon-purple">
               <Server size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val">{healthData.systemMetrics.apiReqPerSec}</h3>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 mt-1">
+            <span className="system-health-tag-purple">
               Active Sockets: {healthData.systemMetrics.activeSockets}
             </span>
           </div>
@@ -139,7 +134,7 @@ export default function SystemHealth() {
 
       {/* Search Input */}
       <div className="sa-search-card">
-        <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
+        <div className="sa-search-wrap system-health-search-wrap">
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
@@ -152,66 +147,66 @@ export default function SystemHealth() {
       </div>
 
       {/* Infrastructure Services Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
-            <Server className="w-4 h-4 text-indigo-600" />
+      <div className="system-health-card">
+        <div className="system-health-card-header">
+          <h3 className="system-health-card-title">
+            <Server size={16} className="system-health-title-icon" />
             <span>Microservice & Endpoint Status</span>
           </h3>
-          <span className="text-xs text-slate-500 font-medium">Live status ping</span>
+          <span className="system-health-card-sub">Live status ping</span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+        <div className="system-health-table-wrap">
+          <table className="system-health-table">
             <thead>
-              <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
-                <th className="py-3.5 px-5">Service Name</th>
-                <th className="py-3.5 px-5">Subsystem Category</th>
-                <th className="py-3.5 px-5">Latency</th>
-                <th className="py-3.5 px-5">30-Day Uptime</th>
-                <th className="py-3.5 px-5">Resource Load</th>
-                <th className="py-3.5 px-5 text-right">Status</th>
+              <tr className="system-health-thead-row">
+                <th className="system-health-th">Service Name</th>
+                <th className="system-health-th">Subsystem Category</th>
+                <th className="system-health-th">Latency</th>
+                <th className="system-health-th">30-Day Uptime</th>
+                <th className="system-health-th">Resource Load</th>
+                <th className="system-health-th-right">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+            <tbody>
               {filteredServices.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-4 px-5">
-                    <div className="font-bold text-slate-900 text-sm">{s.name}</div>
+                <tr key={s.id} className="system-health-tr">
+                  <td className="system-health-td">
+                    <div className="system-health-service-name">{s.name}</div>
                   </td>
-                  <td className="py-4 px-5">
-                    <span className="px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                  <td className="system-health-td">
+                    <span className="system-health-category-pill">
                       {s.category}
                     </span>
                   </td>
-                  <td className="py-4 px-5">
-                    <span className={`font-bold text-xs ${
-                      parseInt(s.latency) < 50 ? 'text-emerald-700' :
-                      parseInt(s.latency) < 200 ? 'text-indigo-700' : 'text-amber-700'
-                    }`}>
+                  <td className="system-health-td">
+                    <span className={
+                      parseInt(s.latency) < 50 ? 'system-health-latency-green' :
+                      parseInt(s.latency) < 200 ? 'system-health-latency-indigo' : 'system-health-latency-amber'
+                    }>
                       {s.latency}
                     </span>
                   </td>
-                  <td className="py-4 px-5 font-bold text-slate-800">{s.uptime}</td>
-                  <td className="py-4 px-5">
-                    <div className="flex items-center gap-2">
-                      <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+                  <td className="system-health-td system-health-uptime-val">{s.uptime}</td>
+                  <td className="system-health-td">
+                    <div className="system-health-load-wrap">
+                      <div className="system-health-load-bar-bg">
                         <div
-                          className={`h-full rounded-full ${parseInt(s.load) > 80 ? 'bg-amber-500' : 'bg-indigo-600'}`}
+                          className={`system-health-load-bar-fill ${parseInt(s.load) > 80 ? 'system-health-load-bar-fill--high' : 'system-health-load-bar-fill--normal'}`}
                           style={{ width: s.load }}
                         ></div>
                       </div>
-                      <span className="font-bold text-xs text-slate-700">{s.load}</span>
+                      <span className="system-health-load-text">{s.load}</span>
                     </div>
                   </td>
-                  <td className="py-4 px-5 text-right">
+                  <td className="system-health-td-right">
                     {s.status === "Operational" ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Operational
+                      <span className="system-health-status-op">
+                        <span className="system-health-status-dot-op"></span> Operational
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> Degraded
+                      <span className="system-health-status-deg">
+                        <span className="system-health-status-dot-deg"></span> Degraded
                       </span>
                     )}
                   </td>

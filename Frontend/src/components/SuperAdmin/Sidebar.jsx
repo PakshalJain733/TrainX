@@ -4,25 +4,14 @@ import {
   Building2,
   Briefcase,
   Calendar,
-  ShieldCheck,
-  UserCheck,
-  GraduationCap,
   Users,
   TrendingUp,
-  CalendarCheck,
-  Target,
-  Sparkles,
-  ClipboardCheck,
-  FileText,
   SlidersHorizontal,
-  Shield,
-  HelpCircle,
-  Code,
-  UserCog,
   Activity,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
-import "../../pages/SuperAdmin/SuperAdmin.css";
+import "../../pages/SuperAdmin/Styles/SuperAdmin.css";
+import '../../pages/SuperAdmin/Styles/SuperAdminSidebar.css';
 
 function SidebarBrand({ collapsed }) {
   return (
@@ -52,11 +41,6 @@ const primaryNavItems = [
   { title: "Performance", url: "/super-admin/performance", icon: TrendingUp },
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },
-];
-
-const footerNavItems = [
-  { title: "Edit Profile", url: "/super-admin/profile", icon: UserCog },
-  { title: "Settings", url: "/super-admin/performance", icon: SlidersHorizontal },
 ];
 
 export default function Sidebar({ collapsed, mobileOpen, onClose }) {
@@ -99,13 +83,6 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
       <div className="sidebar-content">
         <ul className="sidebar-menu">
           {primaryNavItems.map(renderItem)}
-        </ul>
-      </div>
-
-      {/* Pinned Bottom */}
-      <div className="sidebar-footer">
-        <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
         </ul>
       </div>
     </aside>

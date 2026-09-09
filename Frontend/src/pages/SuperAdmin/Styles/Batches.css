@@ -1,0 +1,256 @@
+/* Batches.css - Dedicated Stylesheet for SuperAdmin Batches Module */
+
+.batches-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.batches-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.batches-header-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.batches-header-icon {
+  width: 22px;
+  height: 22px;
+  color: #4f46e5;
+}
+
+.batches-header-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.batches-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* Cascading Filter Bar */
+.batches-filter-card {
+  background: #ffffff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.batches-search-box {
+  position: relative;
+  width: 220px;
+  flex-shrink: 0;
+}
+
+.batches-select-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.batches-select-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 36px 0 12px;
+  height: 38px;
+  width: 210px;
+  transition: all 0.2s ease;
+}
+
+.batches-select-box:hover {
+  background: #ffffff;
+  border-color: #a5b4fc;
+}
+
+.batches-select-icon {
+  width: 16px;
+  height: 16px;
+  color: #4f46e5;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.batches-select-element {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  appearance: none;
+}
+
+.batches-select-arrow {
+  position: absolute;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+/* Table Card */
+.batches-table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.batches-table-wrap {
+  overflow-x: auto;
+}
+
+.batches-table {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.batches-thead-row {
+  background: rgba(248, 250, 252, 0.8);
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.batches-th {
+  padding: 12px 16px;
+}
+
+.batches-th-right {
+  padding: 12px 16px;
+  text-align: right;
+}
+
+.batches-tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.batches-tr:hover {
+  background: rgba(248, 250, 252, 0.7);
+}
+
+.batches-td {
+  padding: 14px 16px;
+}
+
+.batches-td-right {
+  padding: 14px 16px;
+  text-align: right;
+}
+
+.batches-cohort-title {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.batches-cohort-sub {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.batches-institution {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.batches-dept-tag {
+  font-size: 10px;
+  color: #4f46e5;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+.batches-trainer-name {
+  font-weight: 600;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.batches-trainer-icon {
+  width: 14px;
+  height: 14px;
+  color: #6366f1;
+}
+
+.batches-students-count {
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.batches-schedule {
+  color: #475569;
+  font-size: 11.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.batches-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batches-progress-bar-bg {
+  width: 70px;
+  background: #f1f5f9;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.batches-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  border-radius: 999px;
+}
+
+.batches-progress-text {
+  font-weight: 700;
+  font-size: 11px;
+  color: #4f46e5;
+}

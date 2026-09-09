@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Users,
@@ -21,11 +22,12 @@ import {
   X,
   Sparkles
 } from 'lucide-react';
-import StatusBadge from '../../components/SuperAdmin/StatusBadge';
-import EmptyState from '../../components/ui/EmptyState';
-import { initialAdminVerifications } from '../../data/superAdminMockData';
-import './SuperAdmin.css';
-import '../Admin/Styles/AdminUsers.css';
+import StatusBadge from '../../../components/SuperAdmin/StatusBadge';
+import EmptyState from '../../../components/ui/EmptyState';
+import { initialAdminVerifications } from '../../../data/superAdminMockData';
+import '../Styles/SuperAdmin.css';
+import '../../Admin/Styles/AdminUsers.css';
+import '../Styles/ManageUsers.css';
 
 // Mock Data for Coordinators
 const mockCoordinators = [
@@ -68,6 +70,7 @@ function RiskBadge({ risk }) {
 }
 
 export default function ManageUsers() {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState("admins"); // 'admins' | 'coordinators' | 'mentors' | 'students'
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -76,6 +79,19 @@ export default function ManageUsers() {
   const [coordinators, setCoordinators] = useState(mockCoordinators);
   const [mentors, setMentors] = useState(mockMentors);
   const [students, setStudents] = useState(mockStudentsRisk);
+
+  useEffect(() => {
+    const path = location.pathname;
+    if (path.includes("/super-admin/coordinators")) {
+      setActiveTab("coordinators");
+    } else if (path.includes("/super-admin/mentors")) {
+      setActiveTab("mentors");
+    } else if (path.includes("/super-admin/students")) {
+      setActiveTab("students");
+    } else if (path.includes("/super-admin/verification")) {
+      setActiveTab("admins");
+    }
+  }, [location.pathname]);
 
   // Admin Verification handlers
   const handleVerifyAdmin = (id) => {
@@ -264,17 +280,7 @@ export default function ManageUsers() {
               setGeneratedCode(null);
               setIsGenerateCodeModalOpen(true);
             }}
-            style={{
-              background: "#eef2ff",
-              color: "#4338ca",
-              border: "1px solid #c7d2fe",
-              borderRadius: "10px",
-              padding: "8px 16px",
-              fontWeight: 700,
-              fontSize: "12px",
-              cursor: "pointer"
-            }}
-            className="flex items-center gap-2 transition hover:bg-indigo-100"
+            className="manageusers-btn-secondary"
           >
             <BookOpen className="w-4 h-4 text-indigo-600" />
             <span>Generate Code</span>
@@ -290,8 +296,8 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Navigation Tabs - Enhanced Premium Pill Tabs */}
-      <div className="flex items-center gap-2.5 pb-2 overflow-x-auto">
+      {/* Navigation Tabs */}
+      <div className="manageusers-tabs-bar">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -303,39 +309,11 @@ export default function ManageUsers() {
                 setActiveTab(tab.id);
                 setSearchQuery('');
               }}
-              style={{
-                borderRadius: "20px",
-                border: "none",
-                outline: "none",
-                boxShadow: isActive ? "0 4px 12px rgba(79, 70, 229, 0.25)" : "none",
-                background: isActive
-                  ? "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
-                  : "#f1f5f9",
-                color: isActive ? "#ffffff" : "#475569",
-                height: "38px",
-                padding: "0 16px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-              className="text-xs font-bold transition-all duration-200 select-none whitespace-nowrap cursor-pointer hover:opacity-95"
+              className={`manageusers-tab-btn ${isActive ? 'manageusers-tab-btn--active' : ''}`}
             >
-              <Icon size={15} style={{ color: isActive ? '#ffffff' : '#64748b', flexShrink: 0 }} />
+              <Icon size={15} />
               <span>{tab.label}</span>
-              <span
-                style={{
-                  background: isActive ? "rgba(255, 255, 255, 0.22)" : "#cbd5e1",
-                  color: isActive ? "#ffffff" : "#1e293b",
-                  borderRadius: "12px",
-                  padding: "1px 7px",
-                  fontSize: "11px",
-                  fontWeight: 800,
-                  lineHeight: "1.3",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
+              <span className="manageusers-tab-badge">
                 {tab.count}
               </span>
             </button>
@@ -367,7 +345,7 @@ export default function ManageUsers() {
             </p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="manageusers-table-card">
             {filteredAdmins.length === 0 ? (
               <EmptyState
                 icon={ShieldCheck}
@@ -375,62 +353,51 @@ export default function ManageUsers() {
                 description="There are currently no college administrator sign-ups matching your query."
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
+              <div className="manageusers-table-wrap">
+                <table className="manageusers-table">
                   <thead>
-                    <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px]">
-                      <th className="py-3 px-4">Applicant Name</th>
-                      <th className="py-3 px-4">Institution / College</th>
-                      <th className="py-3 px-4">Designation</th>
-                      <th className="py-3 px-4">Requested On</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Governance Actions</th>
+                    <tr className="manageusers-thead-row">
+                      <th className="manageusers-th">Applicant Name</th>
+                      <th className="manageusers-th">Institution / College</th>
+                      <th className="manageusers-th">Designation</th>
+                      <th className="manageusers-th">Requested On</th>
+                      <th className="manageusers-th">Status</th>
+                      <th className="manageusers-th-right">Governance Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  <tbody>
                     {filteredAdmins.map((req) => (
-                      <tr key={req.id} className="hover:bg-slate-50/70 transition">
-                        <td className="py-3.5 px-4">
+                      <tr key={req.id} className="manageusers-tr">
+                        <td className="manageusers-td">
                           <div className="font-bold text-slate-900">{req.name}</div>
-                          <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-slate-400" />
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
+                            <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{req.email}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-1.5 font-semibold text-slate-800">
-                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        <td className="manageusers-td">
+                          <div className="flex items-center gap-2 font-semibold text-slate-800">
+                            <Building2 className="w-4 h-4 text-indigo-500 shrink-0" />
                             <span>{req.college}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 text-slate-600 font-medium">{req.designation}</td>
-                        <td className="py-3.5 px-4 text-slate-500">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <td className="manageusers-td font-medium text-slate-700">{req.designation}</td>
+                        <td className="manageusers-td text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                             <span>{req.date}</span>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="manageusers-td">
                           <StatusBadge status={req.status} />
                         </td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="manageusers-td-right">
                           {req.status === 'Pending' ? (
                             <div className="flex items-center justify-end gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleVerifyAdmin(req.id)}
-                                style={{
-                                  background: "#059669",
-                                  color: "#ffffff",
-                                  border: "none",
-                                  outline: "none",
-                                  borderRadius: "10px",
-                                  padding: "8px 14px",
-                                  fontWeight: 700,
-                                  fontSize: "12px",
-                                  cursor: "pointer"
-                                }}
-                                className="flex items-center gap-1.5 transition-transform active:scale-95 shadow-xs"
+                                className="manageusers-btn-verify"
                               >
                                 <CheckCircle2 className="w-4 h-4 text-white" />
                                 <span>Verify Access</span>
@@ -438,18 +405,7 @@ export default function ManageUsers() {
                               <button
                                 type="button"
                                 onClick={() => handleRejectAdmin(req.id)}
-                                style={{
-                                  background: "#fff1f2",
-                                  color: "#e11d48",
-                                  border: "1px solid #fecdd3",
-                                  outline: "none",
-                                  borderRadius: "10px",
-                                  padding: "8px 14px",
-                                  fontWeight: 700,
-                                  fontSize: "12px",
-                                  cursor: "pointer"
-                                }}
-                                className="flex items-center gap-1.5 transition-transform active:scale-95"
+                                className="manageusers-btn-reject"
                               >
                                 <XCircle className="w-4 h-4 text-rose-600" />
                                 <span>Reject</span>
@@ -473,45 +429,53 @@ export default function ManageUsers() {
 
       {/* TAB CONTENT: Coordinators */}
       {activeTab === "coordinators" && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="text-xs text-slate-500 border-b border-slate-200 uppercase font-mono bg-slate-50">
-              <tr>
-                <th className="py-3 px-4">Coordinator Name</th>
-                <th className="py-3 px-4">College</th>
-                <th className="py-3 px-4">Department</th>
-                <th className="py-3 px-4">Contact Details</th>
-                <th className="py-3 px-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredCoordinators.map((c) => (
-                <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-slate-900">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex flex-shrink-0 items-center justify-center font-bold text-xs border border-indigo-100">
-                        {c.name.split(' ').map(n=>n[0]).join('')}
-                      </div>
-                      <span>{c.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">{c.college}</td>
-                  <td className="py-3.5 px-4 text-indigo-600 font-medium">{c.department}</td>
-                  <td className="py-3.5 px-4 text-xs text-slate-500">
-                    <div>{c.email}</div>
-                    <div>{c.phone}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-right">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                      {c.status}
-                    </span>
-                  </td>
+        <div className="manageusers-table-card">
+          <div className="manageusers-table-wrap">
+            <table className="manageusers-table">
+              <thead>
+                <tr className="manageusers-thead-row">
+                  <th className="manageusers-th">Coordinator Name</th>
+                  <th className="manageusers-th">College</th>
+                  <th className="manageusers-th">Department</th>
+                  <th className="manageusers-th">Contact Details</th>
+                  <th className="manageusers-th-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredCoordinators.map((c) => (
+                  <tr key={c.id} className="manageusers-tr">
+                    <td className="manageusers-td font-bold text-slate-900">
+                      <div className="manageusers-user-flex">
+                        <div className="manageusers-avatar">
+                          {c.name.split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        <span>{c.name}</span>
+                      </div>
+                    </td>
+                    <td className="manageusers-td text-slate-600 font-medium">{c.college}</td>
+                    <td className="manageusers-td text-indigo-600 font-medium">{c.department}</td>
+                    <td className="manageusers-td text-xs text-slate-500">
+                      <div className="flex items-center gap-1">
+                        <Mail className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{c.email}</span>
+                      </div>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <Phone className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{c.phone}</span>
+                      </div>
+                    </td>
+                    <td className="manageusers-td-right">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        {c.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {filteredCoordinators.length === 0 && (
-            <div className="p-8 text-center text-slate-400">
+            <div className="p-8 text-center text-slate-400 font-medium">
               No coordinators match your search.
             </div>
           )}
@@ -520,45 +484,47 @@ export default function ManageUsers() {
 
       {/* TAB CONTENT: Mentors */}
       {activeTab === "mentors" && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-          <table className="w-full text-left text-sm text-slate-700">
-            <thead className="text-xs text-slate-500 border-b border-slate-200 uppercase font-mono bg-slate-50">
-              <tr>
-                <th className="py-3 px-4">Mentor Name</th>
-                <th className="py-3 px-4">Domain Track</th>
-                <th className="py-3 px-4">College</th>
-                <th className="py-3 px-4">Mentees Enrolled</th>
-                <th className="py-3 px-4 text-right">Rating</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200">
-              {filteredMentors.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-slate-900">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex flex-shrink-0 items-center justify-center font-bold text-xs border border-emerald-100">
-                        {m.name.split(' ').map(n=>n[0]).join('')}
-                      </div>
-                      <div>
-                        <div>{m.name}</div>
-                        <div className="text-xs text-slate-500 font-normal">{m.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-indigo-600 font-medium">{m.track}</td>
-                  <td className="py-3.5 px-4 text-slate-600 font-medium">{m.college}</td>
-                  <td className="py-3.5 px-4 text-slate-600 font-bold">{m.studentsAssigned} Students</td>
-                  <td className="py-3.5 px-4 text-right">
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200">
-                      ★ {m.rating}
-                    </span>
-                  </td>
+        <div className="manageusers-table-card">
+          <div className="manageusers-table-wrap">
+            <table className="manageusers-table">
+              <thead>
+                <tr className="manageusers-thead-row">
+                  <th className="manageusers-th">Mentor Name</th>
+                  <th className="manageusers-th">Domain Track</th>
+                  <th className="manageusers-th">College</th>
+                  <th className="manageusers-th">Mentees Enrolled</th>
+                  <th className="manageusers-th-right">Rating</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredMentors.map((m) => (
+                  <tr key={m.id} className="manageusers-tr">
+                    <td className="manageusers-td font-bold text-slate-900">
+                      <div className="manageusers-user-flex">
+                        <div className="manageusers-avatar manageusers-avatar--emerald">
+                          {m.name.split(' ').map(n=>n[0]).join('')}
+                        </div>
+                        <div>
+                          <div>{m.name}</div>
+                          <div className="text-xs text-slate-400 font-normal">{m.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="manageusers-td text-indigo-600 font-medium">{m.track}</td>
+                    <td className="manageusers-td text-slate-600 font-medium">{m.college}</td>
+                    <td className="manageusers-td text-slate-700 font-bold">{m.studentsAssigned} Students</td>
+                    <td className="manageusers-td-right">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                        ★ {m.rating}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {filteredMentors.length === 0 && (
-            <div className="p-8 text-center text-slate-400">
+            <div className="p-8 text-center text-slate-400 font-medium">
               No mentors or trainers match your search.
             </div>
           )}
@@ -567,43 +533,35 @@ export default function ManageUsers() {
 
       {/* TAB CONTENT: Students Risk */}
       {activeTab === "students" && (
-        <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+        <div className="manageusers-risk-card">
+          <table className="manageusers-table">
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Student Name</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Roll No / Batch</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>College</th>
-                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Attendance</th>
-                <th style={{ padding: "12px 16px", textAlign: "right", fontSize: "11px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Risk Level</th>
+              <tr className="manageusers-thead-row">
+                <th className="manageusers-th">Student Name</th>
+                <th className="manageusers-th">Roll No / Batch</th>
+                <th className="manageusers-th">College</th>
+                <th className="manageusers-th">Attendance</th>
+                <th className="manageusers-th-right">Risk Level</th>
               </tr>
             </thead>
             <tbody>
-              {filteredStudents.map((s, i) => (
-                <tr key={s.id} style={{ borderBottom: i < filteredStudents.length - 1 ? "1px solid #f1f5f9" : "none", transition: "background 0.1s" }}
-                  onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
-                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                >
-                  <td style={{ padding: "14px 16px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{
-                        width: "34px", height: "34px", borderRadius: "10px",
-                        background: "#eef2ff", color: "#4f46e5",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontWeight: 800, fontSize: "12px", flexShrink: 0
-                      }}>
+              {filteredStudents.map((s) => (
+                <tr key={s.id} className="manageusers-tr">
+                  <td className="manageusers-td">
+                    <div className="manageusers-user-flex">
+                      <div className="manageusers-avatar">
                         {s.name.split(' ').map(n => n[0]).join('')}
                       </div>
-                      <span style={{ fontWeight: 700, color: "#0f172a" }}>{s.name}</span>
+                      <span className="manageusers-name">{s.name}</span>
                     </div>
                   </td>
-                  <td style={{ padding: "14px 16px", color: "#475569", fontSize: "12px" }}>
-                    <div style={{ fontWeight: 600 }}>{s.rollNo}</div>
-                    <div style={{ color: "#94a3b8", marginTop: "2px" }}>{s.batch}</div>
+                  <td className="manageusers-td">
+                    <div className="font-semibold text-slate-800">{s.rollNo}</div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">{s.batch}</div>
                   </td>
-                  <td style={{ padding: "14px 16px", color: "#475569", fontWeight: 500 }}>{s.college}</td>
-                  <td style={{ padding: "14px 16px", color: "#059669", fontWeight: 700 }}>{s.attendance}</td>
-                  <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                  <td className="manageusers-td font-medium text-slate-700">{s.college}</td>
+                  <td className="manageusers-td font-bold text-emerald-600">{s.attendance}</td>
+                  <td className="manageusers-td-right">
                     <RiskBadge risk={s.risk} />
                   </td>
                 </tr>
@@ -612,9 +570,9 @@ export default function ManageUsers() {
           </table>
 
           {filteredStudents.length === 0 && (
-            <div style={{ textAlign: "center", padding: "48px 24px", color: "#94a3b8" }}>
-              <Users size={32} style={{ margin: "0 auto 10px", opacity: 0.4 }} />
-              <p style={{ fontWeight: 600, margin: 0 }}>No students found</p>
+            <div className="p-12 text-center text-slate-400">
+              <Users size={32} className="mx-auto mb-2 opacity-40" />
+              <p className="font-semibold text-slate-600">No students found</p>
             </div>
           )}
         </div>
@@ -687,32 +645,18 @@ export default function ManageUsers() {
 
                 {/* Display Newly Generated Code Hero Banner */}
                 {generatedCode && (
-                  <div style={{ padding: "16px 18px", borderRadius: "12px", background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)", color: "#ffffff", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "14px", marginTop: "4px" }}>
+                  <div className="manageusers-token-hero">
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <div className="manageusers-token-label">
                         <Sparkles size={13} style={{ color: "#a5b4fc" }} />
-                        <span style={{ fontSize: "10px", textTransform: "uppercase", fontWeight: 800, color: "#c7d2fe", letterSpacing: "0.08em" }}>Newly Issued Token</span>
+                        <span className="manageusers-token-tag">Newly Issued Token</span>
                       </div>
-                      <div style={{ fontSize: "18px", fontWeight: 800, color: "#ffffff", fontFamily: "monospace", letterSpacing: "0.1em", marginTop: "2px" }}>{generatedCode}</div>
+                      <div className="manageusers-token-code">{generatedCode}</div>
                     </div>
                     <button
                       type="button"
                       onClick={() => handleCopyCode(generatedCode, 'hero')}
-                      style={{
-                        background: copiedCodeId === 'hero' ? "#10b981" : "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)",
-                        color: "#ffffff",
-                        border: "none",
-                        outline: "none",
-                        borderRadius: "8px",
-                        padding: "8px 16px",
-                        fontWeight: 700,
-                        fontSize: "12.5px",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        transition: "all 0.15s ease"
-                      }}
+                      className={`manageusers-hero-copy-btn ${copiedCodeId === 'hero' ? 'manageusers-hero-copy-btn--copied' : ''}`}
                     >
                       {copiedCodeId === 'hero' ? <Check size={15} /> : <Copy size={15} />}
                       <span>{copiedCodeId === 'hero' ? 'Copied!' : 'Copy Token'}</span>
@@ -721,35 +665,22 @@ export default function ManageUsers() {
                 )}
 
                 {/* Recent Active Codes List */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "4px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: "11px", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Recently Issued Tokens</span>
-                    <span style={{ fontSize: "11px", fontWeight: 800, color: "#4f46e5", background: "#eef2ff", padding: "2px 8px", borderRadius: "12px" }}>{generatedCodesList.length} Active</span>
+                <div className="flex flex-col gap-2.5 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Recently Issued Tokens</span>
+                    <span className="text-[11px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{generatedCodesList.length} Active</span>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "160px", overflowY: "auto", paddingRight: "4px" }}>
+                  <div className="manageusers-token-list">
                     {generatedCodesList.map((c) => (
-                      <div key={c.id} style={{ padding: "10px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontFamily: "monospace", fontWeight: 800, color: "#0f172a", fontSize: "13.5px", letterSpacing: "0.05em" }}>{c.code}</span>
-                          <span style={{ fontSize: "10.5px", fontWeight: 800, padding: "2px 8px", borderRadius: "6px", background: "#e0e7ff", color: "#4338ca" }}>{c.role}</span>
+                      <div key={c.id} className="manageusers-token-item">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono font-bold text-slate-900 text-[13.5px] tracking-wide">{c.code}</span>
+                          <span className="text-[10.5px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">{c.role}</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleCopyCode(c.code, c.id)}
-                          style={{
-                            background: copiedCodeId === c.id ? "#059669" : "#ffffff",
-                            border: copiedCodeId === c.id ? "1px solid #059669" : "1px solid #cbd5e1",
-                            borderRadius: "7px",
-                            padding: "4px 12px",
-                            fontWeight: 700,
-                            color: copiedCodeId === c.id ? "#ffffff" : "#4338ca",
-                            fontSize: "12px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            transition: "all 0.15s ease"
-                          }}
+                          className={`manageusers-item-copy-btn ${copiedCodeId === c.id ? 'manageusers-item-copy-btn--copied' : ''}`}
                         >
                           {copiedCodeId === c.id ? <Check size={13} /> : <Copy size={13} />}
                           <span>{copiedCodeId === c.id ? 'Copied' : 'Copy'}</span>
@@ -764,7 +695,7 @@ export default function ManageUsers() {
                 <button type="button" className="btn-modal-cancel" onClick={() => setIsGenerateCodeModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-modal-submit" style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <button type="submit" className="btn-modal-submit inline-flex items-center gap-1.5">
                   <Sparkles size={16} />
                   <span>Generate Code</span>
                 </button>
@@ -773,7 +704,9 @@ export default function ManageUsers() {
           </div>
         </div>,
         document.body
-      )}      {/* Create New User Modal */}
+      )}
+
+      {/* Create New User Modal */}
       {isAddUserModalOpen && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddUserModalOpen(false); }}>
           <div className="modal-dialog">

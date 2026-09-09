@@ -1,0 +1,394 @@
+/* ManageUsers.css - Dedicated Stylesheet for SuperAdmin ManageUsers Module */
+
+.manageusers-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.manageusers-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.manageusers-header-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.manageusers-header-icon {
+  width: 22px;
+  height: 22px;
+  color: #4f46e5;
+}
+
+.manageusers-header-subtitle {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* User Role Tabs */
+.manageusers-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow-x: auto;
+}
+
+.manageusers-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.manageusers-tab-btn:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.manageusers-tab-btn--active {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+}
+
+.manageusers-tab-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.06);
+  color: currentColor;
+}
+
+.manageusers-tab-btn--active .manageusers-tab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Search Bar */
+.manageusers-search-card {
+  background: #ffffff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.manageusers-search-wrap {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Data Table Card */
+.manageusers-table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.manageusers-table-wrap {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.manageusers-table {
+  width: 100%;
+  min-width: 900px;
+  text-align: left;
+  font-size: 13px;
+  border-collapse: collapse;
+}
+
+.manageusers-thead-row {
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.manageusers-th {
+  padding: 14px 18px;
+  white-space: nowrap;
+}
+
+.manageusers-th-right {
+  padding: 14px 18px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.manageusers-tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background 0.15s ease;
+}
+
+.manageusers-tr:hover {
+  background: #f8fafc;
+}
+
+.manageusers-td {
+  padding: 16px 18px;
+  vertical-align: middle;
+}
+
+.manageusers-td-right {
+  padding: 16px 18px;
+  text-align: right;
+  vertical-align: middle;
+}
+
+.manageusers-user-flex {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.manageusers-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e0e7ff;
+  color: #3730a3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.manageusers-avatar--emerald {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.manageusers-name {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.manageusers-email {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.manageusers-college-name {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.manageusers-dept-name {
+  font-size: 11px;
+  color: #4f46e5;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* Secondary Button Styling */
+.manageusers-btn-secondary {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.manageusers-btn-secondary:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+/* Action Buttons */
+.manageusers-btn-verify {
+  background: #059669;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.manageusers-btn-verify:hover {
+  background: #047857;
+}
+
+.manageusers-btn-verify:active {
+  transform: scale(0.96);
+}
+
+.manageusers-btn-reject {
+  background: #fff1f2;
+  color: #e11d48;
+  border: 1px solid #fecdd3;
+  border-radius: 10px;
+  padding: 7px 14px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.manageusers-btn-reject:hover {
+  background: #ffe4e6;
+}
+
+.manageusers-btn-reject:active {
+  transform: scale(0.96);
+}
+
+/* Token Generation Card & Banners */
+.manageusers-token-hero {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.manageusers-token-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manageusers-token-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #c7d2fe;
+  letter-spacing: 0.08em;
+}
+
+.manageusers-token-code {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: monospace;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+.manageusers-hero-copy-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: #ffffff;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.manageusers-hero-copy-btn--copied {
+  background: #10b981 !important;
+}
+
+.manageusers-token-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.manageusers-token-item {
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.manageusers-item-copy-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 4px 12px;
+  font-weight: 700;
+  color: #4338ca;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.manageusers-item-copy-btn--copied {
+  background: #059669 !important;
+  border-color: #059669 !important;
+  color: #ffffff !important;
+}
+
+/* Students Risk Table Card */
+.manageusers-risk-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}

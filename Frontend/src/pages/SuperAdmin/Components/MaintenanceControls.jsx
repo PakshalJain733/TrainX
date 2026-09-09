@@ -15,7 +15,8 @@ import {
   Eye,
   Shield
 } from "lucide-react";
-import { useSystemMaintenance } from "../../context/SystemMaintenanceContext";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
+import '../Styles/MaintenanceControls.css';
 
 export default function MaintenanceControls() {
   const {
@@ -81,31 +82,28 @@ export default function MaintenanceControls() {
   ];
 
   return (
-    <div className="space-y-6 text-slate-800">
-      {/* Standard SuperAdmin Header */}
-      <div className="sa-page-header">
+    <div className="maintenancecontrols-page-wrap">
+      {/* Page Header */}
+      <div className="maintenancecontrols-header-wrap">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <SlidersHorizontal className="w-5 h-5 text-indigo-600" />
+          <h2 className="maintenancecontrols-header-title">
+            <SlidersHorizontal className="maintenancecontrols-header-icon" />
             <span>Feature Switches &amp; Module Controls</span>
           </h2>
-          <p className="text-xs text-slate-500">
+          <p className="maintenancecontrols-header-subtitle">
             Manage live accessibility for all 18 platform modules across Student, Coordinator, Mentor, and Admin roles
           </p>
         </div>
         <div className="flex items-center gap-2 ml-auto">
           <button
+            type="button"
             onClick={toggleGlobalEmergencyMode}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1.5 ${
-              config.globalEmergencyMode
-                ? "bg-rose-50 text-rose-700 border-rose-200"
-                : "bg-white text-slate-600 hover:bg-slate-50 border-slate-200"
-            }`}
+            className={`maintenancecontrols-btn-emergency ${config.globalEmergencyMode ? 'maintenancecontrols-btn-emergency--on' : ''}`}
           >
             <Power size={14} />
             <span>{config.globalEmergencyMode ? "Emergency ON" : "Emergency Maintenance"}</span>
           </button>
-          <button onClick={turnAllModulesOn} className="sa-btn-primary">
+          <button type="button" onClick={turnAllModulesOn} className="sa-btn-primary">
             <RefreshCw size={14} />
             <span>Restore All Systems ON</span>
           </button>
@@ -122,8 +120,9 @@ export default function MaintenanceControls() {
             </p>
           </div>
           <button
+            type="button"
             onClick={toggleGlobalEmergencyMode}
-            className="px-2.5 py-1 bg-amber-600 text-white font-semibold text-xs rounded-lg transition shrink-0"
+            className="px-2.5 py-1 bg-amber-600 text-white font-semibold text-xs rounded-lg transition shrink-0 cursor-pointer"
           >
             Turn Off Emergency
           </button>
@@ -188,7 +187,7 @@ export default function MaintenanceControls() {
       </div>
 
       {/* Sub-Tab Navigation Bar */}
-      <div className="flex items-center gap-2.5 pb-2 overflow-x-auto">
+      <div className="maintenancecontrols-categories-wrap">
         {categories.map((tab) => {
           const isActive = activeCategory === tab.id;
           return (
@@ -196,22 +195,7 @@ export default function MaintenanceControls() {
               key={tab.id}
               type="button"
               onClick={() => setActiveCategory(tab.id)}
-              style={{
-                borderRadius: "20px",
-                border: "none",
-                outline: "none",
-                boxShadow: isActive ? "0 4px 12px rgba(79, 70, 229, 0.25)" : "none",
-                background: isActive
-                  ? "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)"
-                  : "#f1f5f9",
-                color: isActive ? "#ffffff" : "#475569",
-                height: "38px",
-                padding: "0 18px",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-              className="text-xs font-bold transition-all duration-200 select-none whitespace-nowrap cursor-pointer hover:opacity-95"
+              className={`maintenancecontrols-category-pill ${isActive ? 'maintenancecontrols-category-pill--active' : ''}`}
             >
               <span>{tab.label}</span>
             </button>
@@ -219,7 +203,7 @@ export default function MaintenanceControls() {
         })}
       </div>
 
-      {/* Standard Search Card */}
+      {/* Search Input Card */}
       <div className="sa-search-card">
         <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
           <Search className="sa-search-icon" size={16} />
@@ -234,19 +218,19 @@ export default function MaintenanceControls() {
       </div>
 
       {/* Clean Table Card Layout */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="text-[10px] text-slate-500 border-b border-slate-200 uppercase tracking-wider font-semibold bg-slate-50">
-              <tr>
-                <th className="py-3.5 px-4">Module Details</th>
-                <th className="py-3.5 px-4">Category</th>
-                <th className="py-3.5 px-4">Target Role</th>
-                <th className="py-3.5 px-4">Live Status</th>
-                <th className="py-3.5 px-4 text-right">Switch Action</th>
+      <div className="maintenancecontrols-table-card">
+        <div className="maintenancecontrols-table-wrap">
+          <table className="maintenancecontrols-table">
+            <thead>
+              <tr className="maintenancecontrols-thead-row">
+                <th className="maintenancecontrols-th">Module Details</th>
+                <th className="maintenancecontrols-th">Category</th>
+                <th className="maintenancecontrols-th">Target Role</th>
+                <th className="maintenancecontrols-th">Live Status</th>
+                <th className="maintenancecontrols-th-right">Switch Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody>
               {filteredModules.map((mod) => {
                 const CategoryIcon = getCategoryIcon(mod.category);
                 const isCurrentlyActive = mod.active && !config.globalEmergencyMode;
@@ -254,8 +238,8 @@ export default function MaintenanceControls() {
 
                 return (
                   <React.Fragment key={mod.key}>
-                    <tr className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4">
+                    <tr className="maintenancecontrols-tr">
+                      <td className="maintenancecontrols-td">
                         <div className="flex items-center gap-3">
                           <div className={`w-8 h-8 rounded-lg flex flex-shrink-0 items-center justify-center font-bold text-xs border ${
                             isCurrentlyActive
@@ -278,17 +262,17 @@ export default function MaintenanceControls() {
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="maintenancecontrols-td">
                         <span className="inline-block whitespace-nowrap px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                           {mod.category}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4 font-medium text-slate-700">
+                      <td className="maintenancecontrols-td font-medium text-slate-700">
                         {mod.role}
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="maintenancecontrols-td">
                         {isCurrentlyActive ? (
                           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 inline-flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
@@ -300,21 +284,23 @@ export default function MaintenanceControls() {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="maintenancecontrols-td-right">
                         <div className="flex items-center justify-end gap-2">
                           {/* Clean High-Contrast Toggle Switch Button */}
                           <button
                             type="button"
                             onClick={() => toggleModule(mod.key)}
-                            style={{
-                              border: isCurrentlyActive ? "1px solid #a7f3d0" : "1px solid #fecdd3",
-                              outline: "none",
-                              background: isCurrentlyActive ? "#ecfdf5" : "#fff1f2",
-                              color: isCurrentlyActive ? "#047857" : "#be123c"
-                            }}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer select-none"
+                            className={`maintenancecontrols-switch-btn ${
+                              isCurrentlyActive
+                                ? 'maintenancecontrols-switch-btn--enabled'
+                                : 'maintenancecontrols-switch-btn--disabled'
+                            }`}
                           >
-                            <span className="w-2 h-2 rounded-full" style={{ background: isCurrentlyActive ? "#059669" : "#e11d48" }}></span>
+                            <span className={`maintenancecontrols-switch-dot ${
+                              isCurrentlyActive
+                                ? 'maintenancecontrols-switch-dot--enabled'
+                                : 'maintenancecontrols-switch-dot--disabled'
+                            }`}></span>
                             <span>{isCurrentlyActive ? "Enabled" : "Disabled"}</span>
                           </button>
 
@@ -328,7 +314,7 @@ export default function MaintenanceControls() {
                                 setMessageInput(mod.message);
                               }
                             }}
-                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 border border-slate-200 transition cursor-pointer"
+                            className="maintenancecontrols-action-icon-btn"
                             title="Edit Maintenance Message"
                           >
                             <Edit3 size={15} />
@@ -336,7 +322,7 @@ export default function MaintenanceControls() {
                           <button
                             type="button"
                             onClick={() => setPreviewModuleKey(previewModuleKey === mod.key ? null : mod.key)}
-                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-600 border border-slate-200 transition cursor-pointer"
+                            className="maintenancecontrols-action-icon-btn"
                             title="Preview Screen"
                           >
                             <Eye size={15} />

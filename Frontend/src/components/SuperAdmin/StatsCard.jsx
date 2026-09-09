@@ -1,6 +1,6 @@
 import React from 'react';
 import { Building2, Users, GraduationCap, ShieldAlert, ArrowUpRight, TrendingUp } from 'lucide-react';
-import '../../pages/SuperAdmin/SuperAdmin.css';
+import '../../pages/SuperAdmin/Styles/SuperAdmin.css';
 
 const iconMap = {
   Building2,
