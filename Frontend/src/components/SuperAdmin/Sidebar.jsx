@@ -19,6 +19,7 @@ import {
   HelpCircle,
   Code,
   UserCog,
+  Activity,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
 import "../../pages/SuperAdmin/SuperAdmin.css";
@@ -47,17 +48,10 @@ const primaryNavItems = [
   { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
   { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
   { title: "Batches", url: "/super-admin/batches", icon: Calendar },
-  { title: "Admin Verification", url: "/super-admin/verification", icon: ShieldCheck },
-  { title: "Coordinators", url: "/super-admin/coordinators", icon: UserCheck },
-  { title: "Mentors & Trainers", url: "/super-admin/mentors", icon: GraduationCap },
-  { title: "Students", url: "/super-admin/students", icon: Users },
+  { title: "Manage Users", url: "/super-admin/users", icon: Users },
   { title: "Performance", url: "/super-admin/performance", icon: TrendingUp },
-  { title: "Attendance", url: "/super-admin/attendance", icon: CalendarCheck },
-  { title: "Coding Practice", url: "/super-admin/coding-practice", icon: Code },
-  { title: "AI Roadmaps", url: "/super-admin/ai-roadmaps", icon: Target },
-  { title: "AI Interviews", url: "/super-admin/ai-interviews", icon: Sparkles },
-  { title: "Mock Drives", url: "/super-admin/mock-drives", icon: ClipboardCheck },
-  { title: "Weekly Reports", url: "/super-admin/weekly-reports", icon: FileText },
+  { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
+  { title: "System Health", url: "/super-admin/health", icon: Activity },
 ];
 
 const footerNavItems = [

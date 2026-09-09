@@ -1,22 +1,51 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { initialDepartments } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
-import { GraduationCap, Search, Plus, ArrowLeft } from 'lucide-react';
-import './SuperAdmin.css';
+import { GraduationCap, Search, Plus, ArrowLeft, X } from 'lucide-react';
+import '../Admin/Styles/AdminUsers.css';
 
 export default function CollegeDepartments() {
   const { collegeId } = useParams();
   const navigate = useNavigate();
-  // Filter or fetch based on collegeId in a real app
-  const [departments] = useState(initialDepartments);
+  const [departments, setDepartments] = useState(initialDepartments);
   const [search, setSearch] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [deptForm, setDeptForm] = useState({
+    name: '',
+    code: '',
+    hodName: '',
+    hodEmail: '',
+  });
 
   const filtered = departments.filter((d) =>
     d.name.toLowerCase().includes(search.toLowerCase()) ||
     d.code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleAddDepartment = (e) => {
+    e.preventDefault();
+    if (!deptForm.name || !deptForm.code) return;
+
+    const newDept = {
+      id: Date.now(),
+      name: deptForm.name,
+      code: deptForm.code,
+      collegeId: collegeId || 1,
+      collegeName: "College Campus",
+      hodName: deptForm.hodName || "Dr. Department HOD",
+      hodEmail: deptForm.hodEmail || `hod.${deptForm.code.toLowerCase()}@college.edu.in`,
+      activeStudents: 0,
+      batchesCount: 0,
+      status: "Active",
+    };
+
+    setDepartments([newDept, ...departments]);
+    setIsAddModalOpen(false);
+    setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
+  };
 
   return (
     <div className="space-y-6">
@@ -37,7 +66,7 @@ export default function CollegeDepartments() {
           <p className="text-xs text-slate-500 ml-9">Manage departments inside this specific college</p>
         </div>
 
-        <button className="sa-btn-primary">
+        <button className="sa-btn-primary ml-auto" onClick={() => setIsAddModalOpen(true)}>
           <Plus className="w-4 h-4" />
           <span>Add Department</span>
         </button>
@@ -85,6 +114,90 @@ export default function CollegeDepartments() {
           </div>
         ))}
       </div>
+
+      {/* Add Department Modal */}
+      {isAddModalOpen && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
+          <div className="modal-dialog" style={{ maxWidth: "540px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <GraduationCap size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Add New Department</h2>
+                  <p className="modal-subtitle">Create an academic department for this college.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsAddModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddDepartment}>
+              <div className="modal-body">
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Department Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Computer Science & Engineering"
+                      value={deptForm.name}
+                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Department Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. CSE"
+                      value={deptForm.code}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>HOD Name</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="Dr. Arvind Kulkarni"
+                      value={deptForm.hodName}
+                      onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>HOD Email</label>
+                    <input
+                      type="email"
+                      className="form-input-admin"
+                      placeholder="hod.cse@college.edu.in"
+                      value={deptForm.hodEmail}
+                      onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setIsAddModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-submit">
+                  Save Department
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -623,23 +623,59 @@
   height: 38px !important;
   width: auto !important;
   max-width: fit-content !important;
-  background-color: #4f46e5 !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%) !important;
   color: #ffffff !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   border-radius: 10px !important;
-  border: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
   cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25) !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
+  user-select: none !important;
 }
 
 .sa-btn-primary:hover {
-  background-color: #4338ca !important;
+  background: linear-gradient(135deg, #4338ca 0%, #3730a3 100%) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.38) !important;
+}
+
+.sa-btn-primary:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.2) !important;
+}
+
+.sa-btn-secondary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 8px 16px !important;
+  height: 38px !important;
+  background: #ffffff !important;
+  color: #334155 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  border: 1px solid #cbd5e1 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+}
+
+.sa-btn-secondary:hover {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border-color: #94a3b8 !important;
   transform: translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08) !important;
+}
+
+.sa-btn-secondary:active {
+  transform: translateY(0) scale(0.98) !important;
 }
 
 .sa-page-header {
@@ -661,7 +697,7 @@
 
 .sa-search-wrap {
   position: relative;
-  max-width: 420px;
+  width: 100%;
   display: flex;
   align-items: center;
 }

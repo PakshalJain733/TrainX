@@ -1,122 +1,305 @@
-import React from 'react';
+import React, { useState } from 'react';
+import {
+  TrendingUp,
+  Award,
+  CheckCircle2,
+  BarChart2,
+  ArrowUpRight,
+  ShieldCheck,
+  Code,
+  Target,
+  Sparkles,
+  ClipboardCheck,
+  CalendarCheck,
+  Building2,
+  Search,
+  Activity,
+  Zap,
+  ChevronRight
+} from 'lucide-react';
 import { initialPerformanceData } from '../../data/superAdminMockData';
-import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import './SuperAdmin.css';
 
+// Enhanced Mock Data for Feature Performance Analytics
+const featurePerformanceData = {
+  overall: initialPerformanceData,
+  features: [
+    {
+      id: 'coding',
+      name: 'Coding Practice & Monitoring',
+      description: 'Algorithm challenges, live test runner & submissions',
+      icon: Code,
+      color: 'indigo',
+      activeUsers: 1240,
+      totalSubmissions: '42.8K',
+      avgAccuracy: 78.4,
+      completionRate: 84.2,
+      trend: '+5.4%',
+      topPerformer: 'PVPPCOE Mumbai',
+      metricLabel: 'Problems Solved',
+      metricValue: '1,890',
+    },
+    {
+      id: 'roadmaps',
+      name: 'AI Learning Roadmaps',
+      description: 'Personalized student career & skill progression',
+      icon: Target,
+      color: 'purple',
+      activeUsers: 980,
+      totalSubmissions: '12.4K',
+      avgAccuracy: 88.1,
+      completionRate: 79.6,
+      trend: '+8.2%',
+      topPerformer: 'Apex Institute of Tech',
+      metricLabel: 'Milestones Achieved',
+      metricValue: '3,450',
+    },
+    {
+      id: 'interviews',
+      name: 'AI Mock Interviews',
+      description: 'Automated technical & HR mock interview sessions',
+      icon: Sparkles,
+      color: 'amber',
+      activeUsers: 640,
+      totalSubmissions: '3.1K',
+      avgAccuracy: 74.2,
+      completionRate: 71.5,
+      trend: '+12.1%',
+      topPerformer: 'Meridian College',
+      metricLabel: 'Sessions Cleared',
+      metricValue: '512',
+    },
+    {
+      id: 'drives',
+      name: 'Mock Placement Drives',
+      description: 'Simulated campus recruitment & company tests',
+      icon: ClipboardCheck,
+      color: 'emerald',
+      activeUsers: 890,
+      totalSubmissions: '8.7K',
+      avgAccuracy: 81.9,
+      completionRate: 89.0,
+      trend: '+3.8%',
+      topPerformer: 'PVPPCOE Mumbai',
+      metricLabel: 'Drive Qualification',
+      metricValue: '64%',
+    },
+    {
+      id: 'attendance',
+      name: 'Attendance & Tracking',
+      description: 'Institutional class presence & defaulter monitoring',
+      icon: CalendarCheck,
+      color: 'blue',
+      activeUsers: 2450,
+      totalSubmissions: '94.2K',
+      avgAccuracy: 91.5,
+      completionRate: 92.8,
+      trend: '+1.2%',
+      topPerformer: 'Vanguard Institute',
+      metricLabel: 'Overall Attendance',
+      metricValue: '91.5%',
+    },
+  ]
+};
+
 export default function Performance() {
-  const data = initialPerformanceData;
+  const [searchQuery, setSearchQuery] = useState('');
+  const { features, overall } = featurePerformanceData;
+
+  const filteredFeatures = features.filter((f) =>
+    f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    f.topPerformer.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-6 text-slate-800">
+      {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <h2 style={{ fontSize: "18px", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "8px", margin: "0 0 4px 0" }}>
-            <TrendingUp size={20} style={{ color: "#4f46e5" }} />
-            Platform Performance &amp; Benchmarks
+          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-indigo-600" />
+            <span>Platform Performance &amp; Analytics</span>
           </h2>
-          <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-            Cross-college pass rate analytics, subject proficiency, and institutional readiness
+          <p className="text-xs text-slate-500">
+            Cross-feature student engagement, completion rates, and institutional benchmarks
           </p>
         </div>
-        <button className="sa-btn-primary">
+        <button className="sa-btn-primary ml-auto">
           <Award size={16} />
           <span>Export Analytics Summary</span>
         </button>
       </div>
 
-      {/* Top Metric Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px" }}>
-        {/* Card 1 */}
-        <div className="sa-stats-card" style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: "auto" }}>
-          <div>
-            <p style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, margin: "0 0 6px 0" }}>Overall Institutional Pass Rate</p>
-            <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>{data.overallPassRate}%</h3>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 700, color: "#059669" }}>
+      {/* Standardized 3-Card Metric Grid */}
+      <div className="sa-kpi-grid">
+        <div className="sa-stats-card">
+          <div className="flex items-center justify-between">
+            <span className="sa-stats-label">Institutional Pass Rate</span>
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+              <CheckCircle2 size={18} />
+            </div>
+          </div>
+          <div className="mt-2">
+            <h3 className="sa-stats-val">{overall.overallPassRate}%</h3>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
               <ArrowUpRight size={13} /> +3.8% vs last month
             </span>
           </div>
-          <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#eef2ff", border: "1px solid #c7d2fe", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5", flexShrink: 0 }}>
-            <CheckCircle2 size={22} />
-          </div>
         </div>
 
-        {/* Card 2 */}
-        <div className="sa-stats-card" style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: "auto" }}>
-          <div>
-            <p style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, margin: "0 0 6px 0" }}>Avg Placement Readiness Score</p>
-            <h3 style={{ fontSize: "28px", fontWeight: 800, color: "#0f172a", margin: "0 0 6px 0", letterSpacing: "-0.02em" }}>{data.avgPlacementReadiness} / 100</h3>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontWeight: 700, color: "#4f46e5" }}>
+        <div className="sa-stats-card">
+          <div className="flex items-center justify-between">
+            <span className="sa-stats-label">Avg Readiness Score</span>
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+              <BarChart2 size={18} />
+            </div>
+          </div>
+          <div className="mt-2">
+            <h3 className="sa-stats-val">{overall.avgPlacementReadiness} / 100</h3>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 mt-1">
               <ShieldCheck size={13} /> Top Tier Benchmark
             </span>
           </div>
-          <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "#f0fdf4", border: "1px solid #bbf7d0", display: "flex", alignItems: "center", justifyContent: "center", color: "#059669", flexShrink: 0 }}>
-            <BarChart2 size={22} />
+        </div>
+
+        <div className="sa-stats-card">
+          <div className="flex items-center justify-between">
+            <span className="sa-stats-label">Active Modules</span>
+            <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+              <Zap size={18} />
+            </div>
+          </div>
+          <div className="mt-2">
+            <h3 className="sa-stats-val">{features.length} Features</h3>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-purple-600 mt-1">
+              <Activity size={13} /> 100% Operational
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Subject Proficiency */}
-      <div className="sa-widget-card">
-        <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", margin: "0 0 16px 0" }}>Domain Proficiency Breakdown</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "16px" }}>
-          {(!data.subjectProficiency || data.subjectProficiency.length === 0) ? (
-            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "24px 0", color: "#94a3b8", fontSize: "13px" }}>
-              No subject proficiency data calculated yet.
-            </div>
-          ) : (
-            data.subjectProficiency.map((item) => (
-              <div key={item.subject} style={{ padding: "12px 14px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12.5px", fontWeight: 600, marginBottom: "8px" }}>
-                  <span style={{ color: "#0f172a" }}>{item.subject}</span>
-                  <span style={{ color: "#4f46e5" }}>{item.score}%</span>
-                </div>
-                <div style={{ width: "100%", background: "#e2e8f0", borderRadius: "999px", height: "6px" }}>
-                  <div style={{ width: `${item.score}%`, background: "linear-gradient(90deg, #4f46e5 0%, #6366f1 100%)", height: "100%", borderRadius: "999px", transition: "width 0.4s ease" }} />
-                </div>
-              </div>
-            ))
-          )}
+      {/* Standard Search Bar */}
+      <div className="sa-search-card">
+        <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
+          <Search className="sa-search-icon" size={16} />
+          <input
+            type="text"
+            placeholder="Search feature module or college name..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="sa-search-input"
+          />
         </div>
       </div>
 
-      {/* College Performance Leaderboard */}
-      <div className="sa-widget-card" style={{ padding: 0, overflow: "hidden" }}>
-        <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <h3 style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", margin: 0 }}>College Performance Leaderboard</h3>
-          <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 500 }}>Updated today</span>
+      {/* Feature Performance Table Card */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <Activity className="w-4 h-4 text-indigo-600" />
+            <span>Feature-Wise Performance Breakdown</span>
+          </h3>
+          <span className="text-xs text-slate-500 font-medium">Real-time metrics</span>
         </div>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0" }}>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>College Name</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Pass Rate</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Readiness Index</th>
-                <th style={{ padding: "10px 20px", textAlign: "left", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Active Students</th>
+              <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                <th className="py-3.5 px-5">Feature Module</th>
+                <th className="py-3.5 px-5">Active Students</th>
+                <th className="py-3.5 px-5">Completion Rate</th>
+                <th className="py-3.5 px-5">Avg Accuracy</th>
+                <th className="py-3.5 px-5">Leading Institution</th>
+                <th className="py-3.5 px-5 text-right">Growth Trend</th>
               </tr>
             </thead>
-            <tbody>
-              {(!data.collegeBenchmarks || data.collegeBenchmarks.length === 0) ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: "32px 20px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
-                    No institutional benchmark data available.
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {filteredFeatures.map((feat) => {
+                const Icon = feat.icon;
+                return (
+                  <tr key={feat.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
+                          <Icon size={18} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900 text-sm">{feat.name}</div>
+                          <div className="text-[11px] text-slate-400 font-normal">{feat.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-5">
+                      <div className="font-bold text-slate-900">{feat.activeUsers.toLocaleString()}</div>
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase">{feat.metricLabel}: {feat.metricValue}</div>
+                    </td>
+                    <td className="py-4 px-5">
+                      <div className="flex items-center gap-2">
+                        <div className="w-20 bg-slate-100 h-2 rounded-full overflow-hidden border border-slate-200">
+                          <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${feat.completionRate}%` }}></div>
+                        </div>
+                        <span className="font-bold text-slate-800">{feat.completionRate}%</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        {feat.avgAccuracy}%
+                      </span>
+                    </td>
+                    <td className="py-4 px-5 font-bold text-slate-800">
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span>{feat.topPerformer}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-5 text-right">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <ArrowUpRight size={13} /> {feat.trend}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* College Benchmark Leaderboard Table */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+          <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+            <Building2 className="w-4 h-4 text-indigo-600" />
+            <span>Institutional Benchmark Leaderboard</span>
+          </h3>
+          <span className="text-xs text-slate-500 font-medium">Updated today</span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+                <th className="py-3.5 px-5">College Name</th>
+                <th className="py-3.5 px-5">Pass Rate</th>
+                <th className="py-3.5 px-5">Readiness Index</th>
+                <th className="py-3.5 px-5">Enrolled Students</th>
+                <th className="py-3.5 px-5 text-right">Top Performing Module</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {overall.collegeBenchmarks.map((c) => (
+                <tr key={c.college} className="hover:bg-slate-50/80 transition-colors">
+                  <td className="py-4 px-5 font-bold text-slate-900 text-sm">{c.college}</td>
+                  <td className="py-4 px-5 text-emerald-600 font-extrabold text-sm">{c.passRate}%</td>
+                  <td className="py-4 px-5 font-bold text-slate-800">{c.readinessScore} / 100</td>
+                  <td className="py-4 px-5 text-slate-600 font-medium">{c.activeStudents} Students</td>
+                  <td className="py-4 px-5 text-right">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      Coding Practice
+                    </span>
                   </td>
                 </tr>
-              ) : (
-                data.collegeBenchmarks.map((c, i) => (
-                  <tr key={c.college}
-                    style={{ borderBottom: i < data.collegeBenchmarks.length - 1 ? "1px solid #f1f5f9" : "none", transition: "background 0.1s" }}
-                    onMouseEnter={e => e.currentTarget.style.background = "#f8fafc"}
-                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                  >
-                    <td style={{ padding: "13px 20px", fontWeight: 700, color: "#0f172a" }}>{c.college}</td>
-                    <td style={{ padding: "13px 20px", color: "#059669", fontWeight: 700 }}>{c.passRate}%</td>
-                    <td style={{ padding: "13px 20px", fontWeight: 600, color: "#475569" }}>{c.readinessScore} / 100</td>
-                    <td style={{ padding: "13px 20px", color: "#64748b" }}>{c.activeStudents}</td>
-                  </tr>
-                ))
-              )}
+              ))}
             </tbody>
           </table>
         </div>
