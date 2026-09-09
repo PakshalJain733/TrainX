@@ -67,6 +67,7 @@ const defaultDashboardData = {
 export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
+  const [myBatchesCount, setMyBatchesCount] = useState(0);
   const navigate = useNavigate();
 
   const dismissNotice = () => {
@@ -140,6 +141,12 @@ export default function Overview() {
           }));
         }
       })
+    apiFetch("/batches/my-batches")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setMyBatchesCount(res.data.length);
+        }
+      })
       .catch(() => {});
 
     return () => window.removeEventListener("userProfileUpdated", loadUserData);
@@ -208,30 +215,7 @@ export default function Overview() {
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
 
-      {/* First-Time Login High-Contrast Banner */}
-      {!profileCompleted && (
-        <div className="profile-update-banner">
-          <div className="profile-update-banner-left">
-            <div className="profile-update-icon-box">
-              <UserCheck size={24} />
-            </div>
-            <div>
-              <h3 className="profile-update-title">
-                Action Required: Complete Your Academic Profile
-                <span className="profile-update-badge">First-Time Setup</span>
-              </h3>
-              <p className="profile-update-desc">
-                Please update your <strong>Semester</strong>, <strong>Aggregate CGPA</strong>, and <strong>Skills</strong> so our AI can tailor training programs & roadmaps for you.
-              </p>
-            </div>
-          </div>
-          <Link to="/student/profile">
-            <button className="profile-update-btn">
-              Update Profile Now <ArrowRight size={16} />
-            </button>
-          </Link>
-        </div>
-      )}
+
 
       {/* Radiant Welcome Hero Banner */}
       <div className="overview-hero-card">
@@ -289,6 +273,8 @@ export default function Overview() {
           </Card>
         ))}
       </div>
+
+
 
       {/* 2-Column Main Arena */}
       <div className="overview-split-grid">

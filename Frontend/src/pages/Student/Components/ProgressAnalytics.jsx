@@ -85,13 +85,23 @@ function SkillGapAnalyticsSection() {
     fetchLiveSkillGapData();
   }, []);
 
-  const allEvaluatedSkills = analysis?.all_evaluated_skills || [];
+  const rawAllEvaluatedSkills = analysis?.all_evaluated_skills || [];
   const suggestionsList = analysis?.suggestions || [];
-  const weakSkillsOnly = allEvaluatedSkills.filter((s) => s.is_weak || s.score < 60);
+  const rawWeakSkillsOnly = rawAllEvaluatedSkills.filter((s) => s.is_weak || s.score < 60);
+
+  const query = searchQuery.trim().toLowerCase();
+
+  const allEvaluatedSkills = rawAllEvaluatedSkills.filter((item) =>
+    query ? item.skill.toLowerCase().includes(query) : true
+  );
+
+  const weakSkillsOnly = rawWeakSkillsOnly.filter((item) =>
+    query ? item.skill.toLowerCase().includes(query) : true
+  );
 
   const filteredSuggestions = suggestionsList.filter((item) => {
-    if (searchQuery.trim()) {
-      return item.skill.toLowerCase().includes(searchQuery.toLowerCase());
+    if (query) {
+      return item.skill.toLowerCase().includes(query);
     }
     return true;
   });
@@ -110,6 +120,9 @@ function SkillGapAnalyticsSection() {
               <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
             </div>
             <h3 className="sg-title">AI Performance & Weak Area Detection</h3>
+            <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
+              Evaluated across your Coding Practice Sums, Coding Tasks, Quizzes & AI Technical Interviews.
+            </p>
           </div>
         </div>
 
@@ -130,7 +143,7 @@ function SkillGapAnalyticsSection() {
       {loading ? (
         <div className="sg-loading-state">
           <RefreshCw className="w-7 h-7 animate-spin text-indigo-600" />
-          <span>Fetching live student performance across Quizzes, Coding & Interviews...</span>
+          <span>Analyzing performance across Coding Practice Sums, Coding Tasks, Quizzes & AI Interviews...</span>
         </div>
       ) : allEvaluatedSkills.length === 0 ? (
         <div className="empty-state-box">

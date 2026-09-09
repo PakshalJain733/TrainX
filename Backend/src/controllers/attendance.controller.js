@@ -186,8 +186,20 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       if (firstBatch && firstBatch.length > 0) {
         targetBatchId = firstBatch[0].id;
       } else {
-        const newBatch = await query(`INSERT INTO batches (college_id, name) VALUES (?, 'General Training Batch')`, [collegeId]);
+        const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
         targetBatchId = newBatch.insertId;
+      }
+    } else {
+      // Check if targetBatchId actually exists in batches table
+      const batchCheck = await query(`SELECT id FROM batches WHERE id = ?`, [targetBatchId]);
+      if (!batchCheck || batchCheck.length === 0) {
+        const fallbackBatch = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
+        if (fallbackBatch && fallbackBatch.length > 0) {
+          targetBatchId = fallbackBatch[0].id;
+        } else {
+          const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
+          targetBatchId = newBatch.insertId;
+        }
       }
     }
 
@@ -200,13 +212,37 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       sessionDate: todayStr,
     });
 
-    // Insert or update attendance record linked to session_id
-    await query(
-      `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
-       VALUES (?, ?, ?, ?, ?, 'present', ?)
-       ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
-      [collegeId, targetBatchId, userId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
-    );
+    // Find user email/mobile to ensure attendance is recorded for all linked account user IDs
+    let userEmail = req.user?.email || '';
+    let userMobile = req.user?.mobile || '';
+    try {
+      const userRows = await query(`SELECT email, mobile_number FROM users WHERE id = ?`, [userId]);
+      if (userRows && userRows.length > 0) {
+        userEmail = userRows[0].email || userEmail;
+        userMobile = userRows[0].mobile_number || userMobile;
+      }
+    } catch (e) {}
+
+    let uIdsToMark = [userId];
+    try {
+      const matchingUsers = await query(
+        `SELECT id FROM users WHERE id = ? OR (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)`,
+        [userId, userEmail, userMobile]
+      );
+      if (matchingUsers && matchingUsers.length > 0) {
+        uIdsToMark = matchingUsers.map(u => u.id);
+      }
+    } catch (e) {}
+
+    for (const uId of uIdsToMark) {
+      await query(
+        `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
+         VALUES (?, ?, ?, ?, ?, 'present', ?)
+         ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
+        [collegeId, targetBatchId, uId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
+      );
+    }
+
 
     const summary = await getStudentAttendanceSummaryService(userId);
 

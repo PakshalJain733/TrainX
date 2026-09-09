@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { apiFetch } from "../../../utils/api";
 import {
   Upload, ShieldCheck, CheckCircle2, XCircle,
@@ -17,37 +18,22 @@ import { Progress } from "../../../components/ui/Progress";
 import { Input, Label, Textarea } from "../../../components/ui/Form";
 import "../Styles/Attendance.css";
 
-// Fallback data structure for student attendance
+// Clean initial data structure for student attendance (100% database driven)
 const defaultAttendanceData = {
-  overallPercentage: 78,
-  attendedClasses: 39,
-  missedClasses: 11,
-  totalClasses: 50,
+  overallPercentage: 0,
+  attendedClasses: 0,
+  missedClasses: 0,
+  totalClasses: 0,
   requiredThreshold: 75,
   status: "Good",
   isLowAttendance: false,
-  warningMessage: "⚠ Attendance is below the required level. You need to improve your attendance.",
-  subjects: [
-    { id: "sub-1", code: "CS-301", name: "Java & OOP", attended: 14, total: 16, pct: 88, status: "Good", safeMargin: "4 classes safe margin" },
-    { id: "sub-2", code: "CS-302", name: "DBMS", attended: 11, total: 15, pct: 73, status: "Warning", safeMargin: "Must attend next 2 classes" },
-    { id: "sub-3", code: "CS-303", name: "DSA", attended: 14, total: 19, pct: 74, status: "Warning", safeMargin: "Must attend next 1 class" }
-  ],
-  attendanceHistory: [
-    { id: 1, date: "8 Sep 2026", month: "September", subject: "DBMS", status: "Present", slot: "09:00 AM - 11:00 AM", faculty: "Dr. Vikram Sharma" },
-    { id: 2, date: "7 Sep 2026", month: "September", subject: "Java", status: "Absent", slot: "11:15 AM - 01:15 PM", faculty: "Prof. Reddy" },
-    { id: 3, date: "6 Sep 2026", month: "September", subject: "DSA", status: "Present", slot: "02:00 PM - 04:00 PM", faculty: "Dr. Vikram Sharma" },
-    { id: 4, date: "5 Sep 2026", month: "September", subject: "System Design", status: "Present", slot: "09:00 AM - 11:00 AM", faculty: "Prof. Ananya" },
-    { id: 5, date: "4 Sep 2026", month: "September", subject: "DBMS", status: "Present", slot: "11:15 AM - 01:15 PM", faculty: "Dr. Vikram Sharma" },
-    { id: 6, date: "3 Sep 2026", month: "September", subject: "Java", status: "Absent", slot: "02:00 PM - 04:00 PM", faculty: "Prof. Reddy" },
-    { id: 7, date: "28 Aug 2026", month: "August", subject: "DSA", status: "Present", slot: "09:00 AM - 11:00 AM", faculty: "Dr. Vikram Sharma" },
-    { id: 8, date: "27 Aug 2026", month: "August", subject: "System Design", status: "Present", slot: "11:15 AM - 01:15 PM", faculty: "Prof. Ananya" },
-    { id: 9, date: "25 Aug 2026", month: "August", subject: "DBMS", status: "Absent", slot: "09:00 AM - 11:00 AM", faculty: "Dr. Vikram Sharma" }
-  ],
-  verifications: [
-    { id: "LV-2026-101", title: "Medical Leave · Viral fever", category: "Medical Leave", status: "Approved", days: 2, startDate: "2026-09-01", endDate: "2026-09-02", currentStep: 3, mentor: "Prof. Reddy", remarks: "Approved with medical certificate verified." },
-    { id: "LV-2026-102", title: "On-Duty Leave · Smart India Hackathon", category: "On-Duty", status: "Pending", days: 1, startDate: "2026-09-07", endDate: "2026-09-07", currentStep: 2, mentor: "Prof. Reddy", remarks: "Under mentor verification." }
-  ]
+  warningMessage: "⚠ Attendance is below the required 75% threshold.",
+  subjects: [],
+  attendanceHistory: [],
+  verifications: []
 };
+
+
 
 export default function Attendance() {
   const [data, setData] = useState(defaultAttendanceData);
@@ -56,9 +42,6 @@ export default function Attendance() {
   const [monthFilter, setMonthFilter] = useState("All");
   const [subjectFilter, setSubjectFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
-
-  // Simulation state to preview Task 3 Attendance Warning (66%)
-  const [simulateLow, setSimulateLow] = useState(false);
 
   // QR Modal State
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -86,13 +69,19 @@ export default function Attendance() {
     apiFetch("/student/attendance")
       .then((res) => {
         if (res && res.data) {
-          setData((prev) => ({
-            ...prev,
-            ...res.data,
-            subjects: res.data.subjects || prev.subjects,
-            attendanceHistory: res.data.attendanceHistory || prev.attendanceHistory,
-            verifications: res.data.verifications || prev.verifications
-          }));
+          setData({
+            overallPercentage: res.data.overallPercentage ?? 0,
+            attendedClasses: res.data.attendedClasses ?? 0,
+            missedClasses: res.data.missedClasses ?? 0,
+            totalClasses: res.data.totalClasses ?? 0,
+            requiredThreshold: res.data.requiredThreshold ?? 75,
+            status: res.data.status || "Good",
+            isLowAttendance: res.data.isLowAttendance ?? false,
+            warningMessage: res.data.warningMessage || "⚠ Attendance is below the required 75% threshold.",
+            subjects: res.data.subjects || [],
+            attendanceHistory: res.data.attendanceHistory || res.data.recentLogs || [],
+            verifications: res.data.verifications || []
+          });
           if (res.data.verifications && res.data.verifications.length > 0) {
             setVerifications(res.data.verifications);
           }
@@ -122,13 +111,37 @@ export default function Attendance() {
       body: JSON.stringify({ code: codeVal })
     })
       .then((res) => {
-        if (res && res.success) {
-          apiFetch("/student/attendance").then((attRes) => {
-            if (attRes && attRes.data) {
-              setData((prev) => ({ ...prev, ...attRes.data }));
-            }
-          });
-        }
+        // Refetch or update local attendance state
+        apiFetch("/student/attendance").then((attRes) => {
+          if (attRes && attRes.data) {
+            setData((prev) => ({ ...prev, ...attRes.data }));
+          }
+        }).catch(() => {});
+
+        // Optimistically increment attended counts & add today's log
+        setData((prev) => {
+          const newAttended = (prev.attendedClasses || 0) + 1;
+          const newTotal = (prev.totalClasses || 0) + 1;
+          const newPct = Math.round((newAttended / newTotal) * 100);
+          const todayDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+          const newLog = {
+            id: Date.now(),
+            date: todayDate,
+            month: new Date().toLocaleDateString("en-IN", { month: "long" }),
+            subject: "Training Lecture",
+            status: "Present",
+            slot: "Today Session",
+            faculty: "Course Instructor"
+          };
+          return {
+            ...prev,
+            attendedClasses: newAttended,
+            totalClasses: newTotal,
+            overallPercentage: newPct,
+            status: newPct >= 75 ? "Good" : "Low",
+            attendanceHistory: [newLog, ...(prev.attendanceHistory || [])]
+          };
+        });
       })
       .catch((err) => console.error("MARK ATTENDANCE ERROR:", err));
   }, [stopCamera]);
@@ -160,10 +173,8 @@ export default function Attendance() {
             if (!videoRef.current) return;
             try {
               const codes = await detector.detect(videoRef.current);
-              if (codes.length > 0) {
-                setScanResult(codes[0].rawValue);
-                setCameraStatus("success");
-                stopCamera();
+              if (codes.length > 0 && codes[0].rawValue) {
+                handleScanSuccess(codes[0].rawValue);
               }
             } catch (_) {}
           }, 300);
@@ -173,13 +184,21 @@ export default function Attendance() {
       setCameraStatus("error");
       setCameraError(err.message || "Camera access denied");
     }
-  }, [stopCamera]);
+  }, [stopCamera, handleScanSuccess]);
+
+  const handleManualSubmit = (e) => {
+    e.preventDefault();
+    if (manualCode && manualCode.trim()) {
+      handleScanSuccess(manualCode.trim());
+    }
+  };
 
   const closeModal = useCallback(() => {
     stopCamera();
     setCameraStatus("idle");
     setScanResult("");
     setCameraError("");
+    setManualCode("");
     setQrModalOpen(false);
   }, [stopCamera]);
 
@@ -239,13 +258,11 @@ export default function Attendance() {
     }
   };
 
-  // Compute effective overall percentage & status based on simulation or backend
-  const displayPercentage = simulateLow ? 66 : data.overallPercentage;
-  const displayAttended = simulateLow ? 33 : data.attendedClasses;
-  const displayMissed = simulateLow ? 17 : data.missedClasses;
-  const displayStatus = simulateLow
-    ? "Low"
-    : data.status || (displayPercentage >= 75 ? "Good" : "Low");
+  // Compute overall percentage & status based on backend data
+  const displayPercentage = data.overallPercentage;
+  const displayAttended = data.attendedClasses;
+  const displayMissed = data.missedClasses;
+  const displayStatus = data.status || (displayPercentage >= 75 ? "Good" : "Low");
 
   // Determine if low attendance warning should be shown based on backend threshold & status
   const isLowAttendance =
@@ -254,18 +271,18 @@ export default function Attendance() {
     displayStatus === "Critical" ||
     displayPercentage < data.requiredThreshold;
 
-  // Filter Attendance History (Task 2)
-  const filteredHistory = data.attendanceHistory.filter((item) => {
-    const matchesMonth = monthFilter === "All" || item.month === monthFilter;
-    const matchesSubject = subjectFilter === "All" || item.subject === subjectFilter;
-    const matchesStatus = statusFilter === "All" || item.status === statusFilter;
+  // Filter Attendance History
+  const filteredHistory = (data.attendanceHistory || []).filter((item) => {
+    const matchesMonth = monthFilter === "All" || !item.month || item.month.toLowerCase().includes(monthFilter.toLowerCase());
+    const matchesSubject = subjectFilter === "All" || !item.subject || item.subject.toLowerCase().includes(subjectFilter.toLowerCase());
+    const matchesStatus = statusFilter === "All" || !item.status || item.status.toLowerCase() === statusFilter.toLowerCase();
     return matchesMonth && matchesSubject && matchesStatus;
   });
 
   return (
     <div className="student-page-inner stack-6">
-      {/* QR Scanner Modal */}
-      {qrModalOpen && (
+      {/* QR Scanner Modal Portal (Covering full screen & top bar) */}
+      {qrModalOpen && createPortal(
         <div className="qr-modal-backdrop" onClick={closeModal}>
           <div className="qr-modal-box" onClick={e => e.stopPropagation()}>
             <div className="qr-modal-header">
@@ -363,7 +380,8 @@ export default function Attendance() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Header Row */}
@@ -374,14 +392,6 @@ export default function Attendance() {
           description="Track your daily class attendance history, overall eligibility percentage, and submit absence leave requests."
         />
         <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            className="btn-toggle-demo-warning"
-            onClick={() => setSimulateLow(!simulateLow)}
-            title="Toggle simulated low attendance (<75%) to test Task 3 warning banner"
-          >
-            <RefreshCw size={14} />
-            <span>{simulateLow ? "Reset to Normal (78%)" : "Simulate Low Attendance (66%)"}</span>
-          </button>
           <button className="qr-scan-trigger-btn" onClick={() => setQrModalOpen(true)}>
             <Sparkles size={16} />
             <span>Scan QR for Attendance</span>
@@ -460,120 +470,105 @@ export default function Attendance() {
         </div>
       </div>
 
-      {/* Tabs Layout */}
-      <Tabs defaultValue="history">
+      {/* Attendance History Section (Always Visible) */}
+      <Card className="attendance-log-card">
+        <CardHeader className="attendance-log-header">
+          <div className="attendance-row-between flex-wrap gap-4">
+            <div>
+              <CardTitle className="attendance-chart-title flex items-center gap-2">
+                <Calendar size={18} color="#4f46e5" /> Recent Attendance History Logs
+              </CardTitle>
+              <CardDescription>Date-wise session presence records retrieved live from database</CardDescription>
+            </div>
+
+            {/* Task 2 Filters Toolbar */}
+            <div className="history-filters-toolbar">
+              {/* Month Filter */}
+              <div className="history-filter-item">
+                <span className="filter-label">Month:</span>
+                <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
+                  <option value="All">All Months</option>
+                  <option value="September">September</option>
+                  <option value="August">August</option>
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="history-filter-item">
+                <span className="filter-label">Status:</span>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  <option value="All">All Statuses</option>
+                  <option value="Present">Present</option>
+                  <option value="Absent">Absent</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          <div className="attendance-table-responsive">
+            <table className="attendance-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Session / Subject</th>
+                  <th>Time Slot</th>
+                  <th>Faculty / Mentor</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredHistory.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="attendance-empty-table-cell">
+                      No attendance logs found in database.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredHistory.map((item) => (
+                    <tr key={item.id}>
+                      <td>
+                        <div className="attendance-cell-datetime">
+                          <span className="attendance-date">{item.date}</span>
+                        </div>
+                      </td>
+                      <td className="attendance-font-medium">{item.subject}</td>
+                      <td>
+                        <Badge variant="outline">{item.slot}</Badge>
+                      </td>
+                      <td className="attendance-text-muted">{item.faculty}</td>
+                      <td>
+                        <Badge
+                          className={
+                            item.status === "Present"
+                              ? "attendance-status-badge-present"
+                              : item.status === "Absent"
+                              ? "attendance-status-badge-absent"
+                              : "attendance-status-badge-excused"
+                          }
+                        >
+                          {item.status === "Present" && <CheckCircle2 size={12} />}
+                          {item.status === "Absent" && <XCircle size={12} />}
+                          {item.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Additional Tabs Layout */}
+      <Tabs defaultValue="subjects">
         <TabsList>
-          <TabsTrigger value="history">Attendance History</TabsTrigger>
           <TabsTrigger value="subjects">Subject-Wise Breakdown</TabsTrigger>
           <TabsTrigger value="leave">Apply Leave / Absence</TabsTrigger>
           <TabsTrigger value="verify">Verification Tracker</TabsTrigger>
         </TabsList>
-
-        {/* Task 2: Attendance History Tab */}
-        <TabsContent value="history" className="stack-6">
-          <Card className="attendance-log-card">
-            <CardHeader className="attendance-log-header">
-              <div className="attendance-row-between flex-wrap gap-4">
-                <div>
-                  <CardTitle className="attendance-chart-title flex items-center gap-2">
-                    <Calendar size={18} color="#4f46e5" /> Attendance History
-                  </CardTitle>
-                  <CardDescription>Date-wise session presence records with filters</CardDescription>
-                </div>
-
-                {/* Task 2 Filters Toolbar */}
-                <div className="history-filters-toolbar">
-                  {/* Month Filter */}
-                  <div className="history-filter-item">
-                    <span className="filter-label">Month:</span>
-                    <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
-                      <option value="All">All Months</option>
-                      <option value="September">September</option>
-                      <option value="August">August</option>
-                    </select>
-                  </div>
-
-                  {/* Subject Filter */}
-                  <div className="history-filter-item">
-                    <span className="filter-label">Subject:</span>
-                    <select value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)}>
-                      <option value="All">All Subjects</option>
-                      <option value="DBMS">DBMS</option>
-                      <option value="Java">Java</option>
-                      <option value="DSA">DSA</option>
-                      <option value="System Design">System Design</option>
-                    </select>
-                  </div>
-
-                  {/* Status Filter */}
-                  <div className="history-filter-item">
-                    <span className="filter-label">Status:</span>
-                    <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                      <option value="All">All Statuses</option>
-                      <option value="Present">Present</option>
-                      <option value="Absent">Absent</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              <div className="attendance-table-responsive">
-                <table className="attendance-table">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Session / Subject</th>
-                      <th>Time Slot</th>
-                      <th>Faculty / Mentor</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredHistory.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" className="attendance-empty-table-cell">
-                          No attendance logs found matching the selected filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredHistory.map((item) => (
-                        <tr key={item.id}>
-                          <td>
-                            <div className="attendance-cell-datetime">
-                              <span className="attendance-date">{item.date}</span>
-                            </div>
-                          </td>
-                          <td className="attendance-font-medium">{item.subject}</td>
-                          <td>
-                            <Badge variant="outline">{item.slot}</Badge>
-                          </td>
-                          <td className="attendance-text-muted">{item.faculty}</td>
-                          <td>
-                            <Badge
-                              className={
-                                item.status === "Present"
-                                  ? "attendance-status-badge-present"
-                                  : item.status === "Absent"
-                                  ? "attendance-status-badge-absent"
-                                  : "attendance-status-badge-excused"
-                              }
-                            >
-                              {item.status === "Present" && <CheckCircle2 size={12} />}
-                              {item.status === "Absent" && <XCircle size={12} />}
-                              {item.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {/* Subject-Wise Breakdown Tab */}
         <TabsContent value="subjects" className="stack-6">

@@ -4,13 +4,29 @@ import {
   createBatch,
   updateBatch,
   deleteBatch,
+  joinBatch,
+  getMyBatches,
+  getBatchStudents,
+  getBatchTasks,
+  getTaskById,
+  createBatchTask,
+  deleteBatchTask,
 } from '../controllers/batch.controller.js';
 
 const router = Router();
 
 router.get('/', getBatches);
 router.post('/', createBatch);
+router.post('/join', joinBatch);
+router.get('/my-batches', getMyBatches);
+router.get('/:id/students', getBatchStudents);
+router.get('/tasks/detail/:taskId', getTaskById);
+router.get('/:id/tasks', getBatchTasks);
+router.post('/:id/tasks', createBatchTask);
+router.delete('/tasks/:taskId', deleteBatchTask);
 router.put('/:id', updateBatch);
 router.delete('/:id', deleteBatch);
 
 export default router;
+
+

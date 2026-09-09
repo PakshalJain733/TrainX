@@ -24,14 +24,43 @@ CREATE TABLE IF NOT EXISTS departments (
 -- 3. Batches Table
 CREATE TABLE IF NOT EXISTS batches (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  college_id INT NOT NULL,
+  college_id INT DEFAULT 1,
+  department_id INT DEFAULT 1,
   name VARCHAR(100) NOT NULL,
+  code VARCHAR(50) NULL,
+  join_code VARCHAR(50) NULL,
+  code_expires_at VARCHAR(100) NULL,
+  trainer VARCHAR(100) DEFAULT 'Faculty Instructor',
+  schedule VARCHAR(100) DEFAULT 'Mon, Wed, Fri (10:00 AM - 12:00 PM)',
+  students INT DEFAULT 0,
+  progress INT DEFAULT 0,
   year VARCHAR(20) DEFAULT 'TE',
   academic_year VARCHAR(20) DEFAULT '2025-2026',
-  status ENUM('active', 'inactive') DEFAULT 'active',
+  status VARCHAR(50) DEFAULT 'Active',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 3b. Student Batches (Enrollments)
+CREATE TABLE IF NOT EXISTS student_batches (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  batch_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_batch (user_id, batch_id)
+);
+
+-- 3c. Batch Tasks Table
+CREATE TABLE IF NOT EXISTS batch_tasks (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  batch_id INT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  topic VARCHAR(100) DEFAULT 'General Assignment',
+  difficulty VARCHAR(50) DEFAULT 'Medium',
+  points INT DEFAULT 100,
+  deadline VARCHAR(100) NULL,
+  description TEXT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 4. Users Table

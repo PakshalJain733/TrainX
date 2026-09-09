@@ -20,6 +20,7 @@ import {
   X,
   Check,
   Target,
+  Bell,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
@@ -60,75 +61,55 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [customSkillInput, setCustomSkillInput] = useState("");
 
-  const [form, setForm] = useState(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) {
-        let name = u.name || "";
-        const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
-        if (isAutoName) {
-          name = u.fullName || u.full_name || "";
-        }
-        return {
-          name: name,
-          email: u.email || "",
-          phone: u.phone || u.mobile_number || "",
-          rollNo: u.rollNo || u.roll_number || "",
-          department: u.department || "",
-          semester: u.semester || "",
-          cgpa: u.cgpa || u.aggregate_cgpa || "",
-          skills: u.skills || "",
-          profileCompleted: u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills),
-          gender: u.gender || "",
-          city: u.city || "",
-          guardianContact: u.guardianContact || u.emergency_contact || "",
-          linkedinUrl: u.linkedinUrl || u.linkedin_url || "",
-          batch: u.batch || "",
-          college: u.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-          coordinator: u.coordinator || "",
-          mentor: u.mentor || "",
-          track: u.track || u.target_track || "",
-        };
-      }
-    } catch (e) {}
-
-    return {
-      name: "",
-      email: "",
-      phone: "",
-      rollNo: "",
-      department: "",
-      gender: "",
-      city: "",
-      guardianContact: "",
-      linkedinUrl: "",
-      semester: "",
-      cgpa: "",
-      skills: "",
-      profileCompleted: true,
-      batch: "",
-      college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-      coordinator: "",
-      mentor: "",
-      track: "",
-    };
+  // Initial empty state — all data is fetched from backend API on mount
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    rollNo: "",
+    department: "",
+    gender: "",
+    city: "",
+    guardianContact: "",
+    linkedinUrl: "",
+    semester: "",
+    cgpa: "",
+    skills: "",
+    profileCompleted: true,
+    batch: "",
+    college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+    coordinator: "",
+    mentor: "",
+    track: "",
+    notifMilestones: true,
+    notifWeeklyReport: true,
+    notifInterview: true,
   });
 
   useEffect(() => {
     apiFetch("/student/profile")
       .then((res) => {
-        if (res.data) {
+        if (res && res.data) {
           const user = res.data;
+          const sp = user.studentProfile || {};
           setForm((prev) => ({
             ...prev,
             name: user.name || prev.name,
             email: user.email || prev.email,
-            department: user.department || prev.department,
-            rollNo: user.roll_number || prev.rollNo,
             phone: user.mobile_number || prev.phone,
-            semester: user.semester || prev.semester,
-            cgpa: user.cgpa || user.aggregate_cgpa || prev.cgpa,
-            skills: user.skills || prev.skills,
+            rollNo: sp.roll_number || user.roll_number || prev.rollNo,
+            department: sp.department || user.department || prev.department,
+            semester: sp.semester || user.semester || prev.semester,
+            cgpa: sp.cgpa || user.cgpa || user.aggregate_cgpa || prev.cgpa,
+            skills: sp.skills || user.skills || prev.skills,
+            gender: sp.gender || user.gender || prev.gender,
+            city: sp.city || user.city || prev.city,
+            guardianContact: sp.emergency_contact || user.emergency_contact || prev.guardianContact,
+            linkedinUrl: sp.linkedin_url || user.linkedin_url || prev.linkedinUrl,
+            track: sp.target_track || user.target_track || prev.track,
+            notifMilestones: sp.notif_milestones !== undefined ? Boolean(sp.notif_milestones) : prev.notifMilestones,
+            notifWeeklyReport: sp.notif_weekly_report !== undefined ? Boolean(sp.notif_weekly_report) : prev.notifWeeklyReport,
+            notifInterview: sp.notif_interview !== undefined ? Boolean(sp.notif_interview) : prev.notifInterview,
           }));
         }
       })
@@ -172,31 +153,42 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    const updatedUser = {
-      ...form,
-      profileCompleted: true,
-    };
-    
-    setForm(updatedUser);
-    localStorage.setItem("user", JSON.stringify(updatedUser));
+    setForm((prev) => ({ ...prev, profileCompleted: true }));
     window.dispatchEvent(new Event("userProfileUpdated"));
 
-    // Async backend save
-    apiFetch("/students/profile", {
-      method: "PATCH",
-      body: JSON.stringify({
-        semester: form.semester,
-        cgpa: form.cgpa,
-        skills: form.skills,
-        track: form.track,
-      }),
-    }).catch(() => {});
+    // Save exclusively to MySQL DB — no localStorage
+    try {
+      await apiFetch("/student/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          mobile_number: form.phone,
+          roll_number: form.rollNo,
+          department: form.department,
+          semester: form.semester,
+          cgpa: form.cgpa,
+          skills: form.skills,
+          gender: form.gender,
+          city: form.city,
+          emergency_contact: form.guardianContact,
+          linkedin_url: form.linkedinUrl,
+          target_track: form.track,
+          notif_milestones: form.notifMilestones,
+          notif_weekly_report: form.notifWeeklyReport,
+          notif_interview: form.notifInterview,
+        }),
+      });
+    } catch (err) {
+      console.error("[ProfilePage] Save error:", err);
+    }
 
     setSaved(true);
     setTimeout(() => setSaved(false), 3500);
   };
+
 
   return (
     <div className="student-page-inner profile-container">
@@ -324,8 +316,90 @@ export default function ProfilePage() {
         {/* RIGHT COLUMN: Edit Academic Profile Form */}
         <div className="profile-form-card">
           <form onSubmit={handleSave}>
-            {/* Section 1: Update Academic Profile */}
+            {/* Section 1: Personal & Contact Details (TOP) */}
             <div className="profile-form-section">
+              <div className="profile-section-heading">
+                <User size={18} className="profile-heading-icon text-indigo-500" />
+                <div>
+                  <h3 className="profile-heading-title">Personal & Contact Details</h3>
+                  <p className="profile-heading-desc">Used for mentor notifications, personal contact, and training drive updates.</p>
+                </div>
+              </div>
+
+              <div className="profile-form-grid">
+                <div className="profile-field">
+                  <label className="profile-label">Full Name *</label>
+                  <input
+                    type="text"
+                    className="profile-input"
+                    value={form.name}
+                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="profile-field">
+                  <label className="profile-label">Email Address *</label>
+                  <input
+                    type="email"
+                    className="profile-input"
+                    value={form.email}
+                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="profile-field">
+                  <label className="profile-label">Phone Number *</label>
+                  <input
+                    type="text"
+                    className="profile-input"
+                    value={form.phone}
+                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    required
+                  />
+                </div>
+
+                <div className="profile-field">
+                  <label className="profile-label">Gender</label>
+                  <select
+                    className="profile-input profile-select"
+                    value={form.gender}
+                    onChange={(e) => setForm((p) => ({ ...p, gender: e.target.value }))}
+                  >
+                    <option value="">-- Select Gender --</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div className="profile-field">
+                  <label className="profile-label">Parent / Emergency Contact Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 9876543210"
+                    className="profile-input"
+                    value={form.guardianContact}
+                    onChange={(e) => setForm((p) => ({ ...p, guardianContact: e.target.value }))}
+                  />
+                </div>
+
+                <div className="profile-field">
+                  <label className="profile-label">City / Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Mumbai"
+                    className="profile-input"
+                    value={form.city}
+                    onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 2: Academic & Skill Details (MIDDLE) */}
+            <div className="profile-form-section mt-6">
               <div className="profile-section-heading">
                 <Sparkles size={18} className="profile-heading-icon text-indigo-500" />
                 <div>
@@ -466,47 +540,106 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Section 2: Personal Contact Details */}
+            {/* Section 3: Personal Projects & Social Links */}
             <div className="profile-form-section mt-6">
               <div className="profile-section-heading">
-                <User size={18} className="profile-heading-icon" />
+                <Code2 size={18} className="profile-heading-icon text-indigo-500" />
                 <div>
-                  <h3 className="profile-heading-title">Personal Contact Details</h3>
-                  <p className="profile-heading-desc">Used for mentor notifications and training drive updates.</p>
+                  <h3 className="profile-heading-title">Personal Projects & Online Profiles</h3>
+                  <p className="profile-heading-desc">Showcase your personal projects, GitHub repository, and LinkedIn profile to mentors.</p>
                 </div>
               </div>
 
               <div className="profile-form-grid">
-                <div className="profile-field">
-                  <label className="profile-label">Full Name</label>
-                  <input
-                    type="text"
+                <div className="profile-field full-width">
+                  <label className="profile-label">Personal Projects Overview</label>
+                  <textarea
+                    rows="3"
+                    placeholder="Describe your top personal projects (e.g. E-commerce web app using React & Node.js, AI Image Classifier using PyTorch)..."
                     className="profile-input"
-                    value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    required
+                    value={form.personalProjects || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, personalProjects: e.target.value }))}
                   />
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Email Address</label>
+                  <label className="profile-label">LinkedIn Profile URL</label>
                   <input
-                    type="email"
+                    type="url"
+                    placeholder="https://linkedin.com/in/yourprofile"
                     className="profile-input"
-                    value={form.email}
-                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                    required
+                    value={form.linkedinUrl}
+                    onChange={(e) => setForm((p) => ({ ...p, linkedinUrl: e.target.value }))}
                   />
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Phone Number</label>
+                  <label className="profile-label">GitHub / Portfolio URL</label>
                   <input
-                    type="text"
+                    type="url"
+                    placeholder="https://github.com/yourusername"
                     className="profile-input"
-                    value={form.phone}
-                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    value={form.githubUrl || ""}
+                    onChange={(e) => setForm((p) => ({ ...p, githubUrl: e.target.value }))}
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Section 4: Account Settings & Preferences */}
+            <div className="profile-form-section mt-6">
+              <div className="profile-section-heading">
+                <Bell size={18} className="profile-heading-icon text-indigo-500" />
+                <div>
+                  <h3 className="profile-heading-title">Account Settings & Alert Preferences</h3>
+                  <p className="profile-heading-desc">Control automated reports, mock interview reminders, and milestone alerts.</p>
+                </div>
+              </div>
+
+              <div className="profile-toggle-list">
+                <div className="profile-toggle-item">
+                  <div className="profile-toggle-text">
+                    <span className="profile-toggle-title">Milestone Progress Alerts</span>
+                    <span className="profile-toggle-desc">Receive real-time notifications when a milestone is completed or unlocked.</span>
+                  </div>
+                  <label className="profile-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.notifMilestones}
+                      onChange={(e) => setForm((p) => ({ ...p, notifMilestones: e.target.checked }))}
+                    />
+                    <span className="profile-slider round" />
+                  </label>
+                </div>
+
+                <div className="profile-toggle-item">
+                  <div className="profile-toggle-text">
+                    <span className="profile-toggle-title">Weekly Mentor Report Digest</span>
+                    <span className="profile-toggle-desc">Get a PDF scorecard summary of your attendance, quizzes, and mentor feedback every Friday.</span>
+                  </div>
+                  <label className="profile-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.notifWeeklyReport}
+                      onChange={(e) => setForm((p) => ({ ...p, notifWeeklyReport: e.target.checked }))}
+                    />
+                    <span className="profile-slider round" />
+                  </label>
+                </div>
+
+                <div className="profile-toggle-item">
+                  <div className="profile-toggle-text">
+                    <span className="profile-toggle-title">AI Mock Interview Drill Reminders</span>
+                    <span className="profile-toggle-desc">Remind you 1 hour before scheduled AI technical mock drills & gap evaluation sessions.</span>
+                  </div>
+                  <label className="profile-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.notifInterview}
+                      onChange={(e) => setForm((p) => ({ ...p, notifInterview: e.target.checked }))}
+                    />
+                    <span className="profile-slider round" />
+                  </label>
                 </div>
               </div>
             </div>
@@ -514,7 +647,7 @@ export default function ProfilePage() {
             {/* Bottom Actions */}
             <div className="profile-actions-bar">
               <button type="submit" className="profile-save-btn">
-                <Save size={16} /> Save Profile Details
+                <Save size={16} /> Save All Profile & Preferences
               </button>
             </div>
           </form>

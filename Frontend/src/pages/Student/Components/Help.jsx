@@ -20,6 +20,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/Help.css";
 
 const defaultFaqs = [
@@ -91,12 +92,9 @@ export default function Help() {
   const [openFaqId, setOpenFaqId] = useState(1);
   const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
-  // Ticket Modal & List State
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
-  const [tickets, setTickets] = useState(() => {
-    const saved = localStorage.getItem("acadnexus_support_tickets");
-    return saved ? JSON.parse(saved) : initialTickets;
-  });
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
 
   const [newTicket, setNewTicket] = useState({
     subject: "",
@@ -105,9 +103,23 @@ export default function Help() {
     description: ""
   });
 
+  const fetchTickets = async () => {
+    setLoadingTickets(true);
+    try {
+      const res = await apiFetch('/student/support/tickets');
+      if (res && res.success && Array.isArray(res.data)) {
+        setTickets(res.data);
+      }
+    } catch (err) {
+      console.error('[Help.jsx fetchTickets error]', err);
+    } finally {
+      setLoadingTickets(false);
+    }
+  };
+
   useEffect(() => {
-    localStorage.setItem("acadnexus_support_tickets", JSON.stringify(tickets));
-  }, [tickets]);
+    fetchTickets();
+  }, []);
 
   // Categories list
   const categories = ["All", "Attendance & QR", "Academics & Labs", "Account & Security", "Exams & Marks"];
@@ -121,23 +133,24 @@ export default function Help() {
     return matchesCat && matchesQuery;
   });
 
-  const handleCreateTicket = (e) => {
+  const handleCreateTicket = async (e) => {
     e.preventDefault();
     if (!newTicket.subject.trim() || !newTicket.description.trim()) return;
 
-    const createdTicket = {
-      id: `TICK-${Math.floor(1000 + Math.random() * 9000)}`,
-      subject: newTicket.subject,
-      category: newTicket.category,
-      priority: newTicket.priority,
-      status: "Open",
-      created: new Date().toISOString().split("T")[0]
-    };
-
-    setTickets([createdTicket, ...tickets]);
-    setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
-    setIsTicketModalOpen(false);
-    setActiveTab("tickets");
+    try {
+      const res = await apiFetch('/student/support/tickets', {
+        method: 'POST',
+        body: JSON.stringify(newTicket)
+      });
+      if (res && res.success) {
+        setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
+        setIsTicketModalOpen(false);
+        setActiveTab("tickets");
+        fetchTickets();
+      }
+    } catch (err) {
+      console.error('[Help.jsx createTicket error]', err);
+    }
   };
 
   const toggleFaq = (id) => {

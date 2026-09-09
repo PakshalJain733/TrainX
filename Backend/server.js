@@ -11,12 +11,20 @@ const startServer = async () => {
 
 
     const PORT = config.port;
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`==================================================`);
       console.log(`🚀 Training Portal Backend Server running on port ${PORT}`);
       console.log(`📡 Environment: ${config.nodeEnv}`);
       console.log(`🔗 Health Check: http://localhost:${PORT}/api/v1/health`);
       console.log(`==================================================`);
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        console.error(`❌ Port ${PORT} is already in use by another process.`);
+      } else {
+        console.error(`❌ Server error: ${err.message}`);
+      }
     });
   } catch (error) {
     console.error(`❌ Fatal Startup Error: ${error.message}`);

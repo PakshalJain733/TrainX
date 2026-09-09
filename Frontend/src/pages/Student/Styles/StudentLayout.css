@@ -29,20 +29,21 @@
 @media (max-width: 768px) {
   .student-content {
     padding: 0 !important;
-    background: #f1f5f9 !important;
+    background: #ffffff !important;
   }
   .student-page-card {
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: #f1f5f9 !important;
+    background: #ffffff !important;
   }
   .student-main {
     padding: 0 !important;
-    background: #f1f5f9 !important;
+    background: #ffffff !important;
   }
   .student-header {
     border-radius: 0 !important;
+    background: #ffffff !important;
   }
   .student-page-inner {
     padding: 12px !important;
@@ -1416,14 +1417,14 @@ body {
     max-width: 100vw !important;
     overflow-x: hidden !important;
     padding: 0 !important;
-    background: #f1f5f9 !important;
+    background: #ffffff !important;
   }
 
   .student-page-card {
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background: #f1f5f9 !important;
+    background: #ffffff !important;
   }
 
   .student-header {

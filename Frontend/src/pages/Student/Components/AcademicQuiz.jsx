@@ -181,9 +181,10 @@ async function fetchApiQuizzes() {
     return list.map((q) => {
       const pastAttempt = attemptMap[String(q.id)];
       const isCompleted = Boolean(pastAttempt);
-      const totalQs = q.total_questions || (q.questions ? q.questions.length : 5);
+      const totalQs = pastAttempt?.total_questions || q.total_questions || (q.questions ? q.questions.length : 5);
       const correctCount = pastAttempt ? (pastAttempt.correct_count !== undefined && pastAttempt.correct_count !== null ? pastAttempt.correct_count : Math.round((pastAttempt.marks_obtained || 0) / 10)) : 0;
-      const scoreStr = isCompleted ? `Score: ${correctCount}/${totalQs}` : null;
+      const safeCorrect = Math.min(Math.max(correctCount, 0), totalQs);
+      const scoreStr = isCompleted ? `Score: ${safeCorrect}/${totalQs}` : null;
 
       return {
         id: q.id,
@@ -288,8 +289,38 @@ const defaultQuizQuestions = [
 ];
 
 function QuizPlatform({ quiz, mode, onExit }) {
+  const [loadedQuestions, setLoadedQuestions] = useState(null);
+  const [fetchingQs, setFetchingQs] = useState(false);
+
+  // Fetch full assessment details if questionsList is missing or incomplete
+  useEffect(() => {
+    if (quiz.source === "admin" && quiz.id && (!quiz.questionsList || quiz.questionsList.length === 0)) {
+      setFetchingQs(true);
+      fetch(`${API_BASE}/assessments/${quiz.id}`, { headers: getAuthHeaders() })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.data && Array.isArray(data.data.questions)) {
+            const parsedList = data.data.questions.map((item) => ({
+              id: item.id,
+              text: item.question_text || item.text || "Question",
+              options: item.options ? item.options : {
+                a: item.option_a || "",
+                b: item.option_b || "",
+                c: item.option_c || "N/A",
+                d: item.option_d || "N/A"
+              },
+              correct: (item.correct_option || item.correct || "a").toString().toLowerCase().trim()
+            }));
+            setLoadedQuestions(parsedList.map(normalizeAdminQuestion));
+          }
+        })
+        .catch((err) => console.error("Failed to fetch full assessment questions:", err))
+        .finally(() => setFetchingQs(false));
+    }
+  }, [quiz.id, quiz.source, quiz.questionsList]);
+
   // Normalize questions from admin DB, practice preset, or fallback
-  const adminQs = quiz.questionsList?.length ? quiz.questionsList.map(normalizeAdminQuestion) : null;
+  const adminQs = loadedQuestions || (quiz.questionsList?.length ? quiz.questionsList.map(normalizeAdminQuestion) : null);
   const builtinQs = (quizQuestions[quiz.id] && quizQuestions[quiz.id].length) ? quizQuestions[quiz.id] : null;
   const questions = adminQs || builtinQs || defaultQuizQuestions;
 
@@ -298,9 +329,17 @@ function QuizPlatform({ quiz, mode, onExit }) {
 
   const [answers, setAnswers] = useState(isReview ? savedAnswers : Array(questions.length).fill(null));
   const [reviewMarks, setReviewMarks] = useState(Array(questions.length).fill(false));
+
+  // Sync answers and reviewMarks length whenever questions list is loaded asynchronously
+  useEffect(() => {
+    if (questions && questions.length > 0) {
+      setAnswers(Array(questions.length).fill(null));
+      setReviewMarks(Array(questions.length).fill(false));
+    }
+  }, [questions.length]);
+
   const [current, setCurrent] = useState(0);
   const [submitted, setSubmitted] = useState(isReview);
-
 
   const { display: timeDisplay, secs: timeLeft } = useTimer(
     isReview ? 0 : quiz.durationSecs,
@@ -359,12 +398,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
     setWasSubmitted(true); // Always mark as submitted locally
 
     try {
-      const stored = JSON.parse(localStorage.getItem('student_completed_quizzes') || '[]');
-      if (!stored.includes(String(quiz.id))) {
-        stored.push(String(quiz.id));
-        stored.push(String(quiz.title || '').toLowerCase());
-        localStorage.setItem('student_completed_quizzes', JSON.stringify(stored));
-      }
+      // Record quiz completion in the database (device-independent sync)
+      await fetch(`${API_BASE}/assessments/mark-completed`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ quiz_id: quiz.id, quiz_title: quiz.title }),
+      }).catch(() => {});
       window.dispatchEvent(new Event('quizCompletedUpdated'));
     } catch (e) {}
 
@@ -641,7 +680,14 @@ function QuizPlatform({ quiz, mode, onExit }) {
             >
               <ArrowLeft size={16} /> Previous
             </button>
-            {submitted ? (
+            {current < questions.length - 1 ? (
+              <button
+                className="qp-nav-arrow qp-nav-arrow--next"
+                onClick={() => setCurrent((c) => c + 1)}
+              >
+                Next <ArrowRight size={16} />
+              </button>
+            ) : submitted ? (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit"
                 onClick={() => onExit(true)}
@@ -649,20 +695,12 @@ function QuizPlatform({ quiz, mode, onExit }) {
               >
                 <CheckCircle2 size={16} /> Finish & Return to Dashboard
               </button>
-            ) : current === questions.length - 1 ? (
+            ) : (
               <button
                 className="qp-nav-arrow qp-nav-arrow--submit"
                 onClick={handleSubmit}
               >
                 <Send size={16} /> Submit Quiz
-              </button>
-            ) : (
-              <button
-                className="qp-nav-arrow qp-nav-arrow--next"
-                disabled={current === questions.length - 1}
-                onClick={() => setCurrent((c) => c + 1)}
-              >
-                Next <ArrowRight size={16} />
               </button>
             )}
           </div>

@@ -1,38 +1,51 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Bell, Save, CheckCircle2 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/ProfilePage.css";
 import "../Styles/Settings.css";
 
 export default function Settings() {
   const [saved, setSaved] = useState(false);
-  const [form, setForm] = useState(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) {
-        return {
-          notifMilestones: u.notifMilestones !== undefined ? u.notifMilestones : true,
-          notifWeeklyReport: u.notifWeeklyReport !== undefined ? u.notifWeeklyReport : true,
-          notifInterview: u.notifInterview !== undefined ? u.notifInterview : true,
-        };
-      }
-    } catch (e) {}
-
-    return {
-      notifMilestones: true,
-      notifWeeklyReport: true,
-      notifInterview: true,
-    };
+  const [form, setForm] = useState({
+    notifMilestones: true,
+    notifWeeklyReport: true,
+    notifInterview: true,
   });
 
-  const handleSave = (e) => {
+  // Load preferences from backend on mount
+  useEffect(() => {
+    apiFetch("/student/profile")
+      .then((res) => {
+        if (res && res.data) {
+          const sp = res.data.studentProfile || res.data;
+          setForm((prev) => ({
+            notifMilestones: sp.notif_milestones !== undefined ? Boolean(sp.notif_milestones) : prev.notifMilestones,
+            notifWeeklyReport: sp.notif_weekly_report !== undefined ? Boolean(sp.notif_weekly_report) : prev.notifWeeklyReport,
+            notifInterview: sp.notif_interview !== undefined ? Boolean(sp.notif_interview) : prev.notifInterview,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async (e) => {
     e.preventDefault();
+
+    // Save exclusively to MySQL DB — no localStorage
     try {
-      const u = JSON.parse(localStorage.getItem("user")) || {};
-      const updatedUser = { ...u, ...form };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
-    } catch(e) {}
-    
+      await apiFetch("/student/profile", {
+        method: "PATCH",
+        body: JSON.stringify({
+          notif_milestones: form.notifMilestones,
+          notif_weekly_report: form.notifWeeklyReport,
+          notif_interview: form.notifInterview,
+        }),
+      });
+    } catch (err) {
+      console.error("[Settings] Save error:", err);
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };

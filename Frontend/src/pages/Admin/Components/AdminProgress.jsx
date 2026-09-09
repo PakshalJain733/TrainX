@@ -115,7 +115,7 @@ export default function AdminProgress() {
                     <td><span className="progress-xp">{s.xp.toLocaleString()} XP</span></td>
                     <td>
                       <div className="progress-bar-wrap">
-                        <div className="progress-bar-fill" style={{ width: `${Math.min(s.xp / 25, 100)}%` }} />
+                        <div className="progress-bar-fill" style={{ '--progress-fill': `${Math.min(s.xp / 25, 100)}%` }} />
                       </div>
                     </td>
                   </tr>

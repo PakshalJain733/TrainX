@@ -45,62 +45,10 @@ function getAuthHeaders() {
 }
 
 // Built-in catalog details map to enrich API batches
-const defaultBatchTemplates = [
-  {
-    codeMatch: "PY-BE",
-    icon: Code2,
-    color: "#2563eb",
-    bg: "#eff6ff",
-    description: "FastAPI, PostgreSQL indexing, Celery distributed tasks, Docker containers, and AWS Cloud deployment.",
-    modules: [
-      {
-        number: 1,
-        title: "FastAPI Architecture & Async Endpoints",
-        tasks: [
-          { taskNumber: "Task 01", title: "Async Handlers & Event Loop Optimization", type: "Lab Code Submission", due: "Completed on Aug 15", status: "Completed" },
-          { taskNumber: "Task 02", title: "Pydantic v2 Custom Schema Validators", type: "Coding Assessment", due: "Completed on Aug 18", status: "Completed" },
-        ],
-      },
-      {
-        number: 2,
-        title: "Relational Storage & PostgreSQL ORM",
-        tasks: [
-          { taskNumber: "Task 04", title: "Custom HashMap & Key Collision Resolution", type: "Graded Assignment", due: "Due Tomorrow, 11:59 PM", status: "Pending", urgent: true },
-        ],
-      },
-    ],
-    stats: { completedTasks: 5, pendingTasks: 3, urgentTaskNumber: "Task 04", urgentTaskDeadline: "Tomorrow, 11:59 PM" },
-    leaderboard: [
-      { rank: 1, name: "Student (You)", xp: 0, initials: "YO", self: true },
-    ]
-  },
-  {
-    codeMatch: "DSA-ADV",
-    icon: Layers,
-    color: "#7c3aed",
-    bg: "#f5f3ff",
-    description: "Graph traversals, Dynamic Programming, Segment Trees, and real-time LeetCode medium/hard patterns.",
-    modules: [],
-    stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
-    leaderboard: [
-      { rank: 1, name: "Student (You)", xp: 0, initials: "YO", self: true },
-    ]
-  }
-];
+const defaultBatchTemplates = [];
 
 function mapApiBatch(b) {
   const code = b.join_code || b.code || `BATCH-${b.id}`;
-  const template = defaultBatchTemplates.find(t => code.startsWith(t.codeMatch)) || {
-    icon: Code2,
-    color: "#2563eb",
-    bg: "#eff6ff",
-    description: b.description || `${b.name} training cohort curriculum and assignments.`,
-    modules: [],
-    stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
-    leaderboard: [
-      { rank: 1, name: "Student", xp: 0, initials: "ST", self: true },
-    ]
-  };
 
   return {
     id: b.id || `batch-${b.id}`,
@@ -112,13 +60,16 @@ function mapApiBatch(b) {
     studentsEnrolled: b.students || b.studentsEnrolled || 1,
     progress: b.progress || 0,
     status: b.status === "active" ? "Active" : b.status || "Active",
-    color: template.color,
-    bg: template.bg,
-    icon: template.icon,
-    description: template.description,
-    stats: template.stats,
-    leaderboard: template.leaderboard,
+    color: "#2563eb",
+    bg: "#eff6ff",
+    icon: Code2,
+    description: b.description || `${b.name} training cohort curriculum and assignments.`,
+    stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
+    leaderboard: [
+      { rank: 1, name: "Student (You)", xp: 0, initials: "ST", self: true },
+    ],
     modules: [],
+    apiTasks: [],
   };
 }
 
@@ -160,18 +111,26 @@ export default function Batches() {
     try {
       const res = await fetch(`${API_BASE}/batches/${batch.id}/tasks`, { headers: getAuthHeaders() });
       const data = await res.json();
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+      if (data.success && Array.isArray(data.data)) {
         const customTasks = data.data.map((t, idx) => ({
+          id: t.id,
           taskNumber: `Task ${String(idx + 1).padStart(2, "0")}`,
           title: t.title,
           type: `${t.difficulty || "Medium"} · ${t.topic || "Assignment"} (${t.points || 100} XP)`,
           due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
-          status: "Pending",
-          platform: "coding",
+          status: t.status || "Pending",
+          platform: t.platform || "coding",
         }));
         setSelectedBatch((prev) => ({
           ...prev,
           apiTasks: customTasks,
+          stats: {
+            ...prev.stats,
+            pendingTasks: customTasks.filter(t => t.status !== "Completed").length,
+            completedTasks: customTasks.filter(t => t.status === "Completed").length,
+            urgentTaskNumber: customTasks.length > 0 ? customTasks[0].taskNumber : "None",
+            urgentTaskDeadline: customTasks.length > 0 ? customTasks[0].due : "No Deadline",
+          }
         }));
       }
     } catch (err) {
@@ -350,6 +309,7 @@ export default function Batches() {
                       return (
                         <Link
                           to={taskHref}
+                          state={{ task }}
                           key={idx}
                           className={`cw-item-row ${task.urgent ? "cw-item-row--urgent" : ""}`}
                         >

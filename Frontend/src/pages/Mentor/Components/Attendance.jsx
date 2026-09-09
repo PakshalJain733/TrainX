@@ -78,38 +78,55 @@ export default function Attendance() {
 
   // Load backend students or initialize state map
   useEffect(() => {
-    apiFetch("/students")
-      .then((res) => {
-        if (res && res.data && res.data.length > 0) {
-          const apiStudents = res.data.map((u, idx) => ({
-            id: u.id || idx + 1,
-            name: u.name || u.full_name || `Student ${idx + 1}`,
-            rollNo: u.roll_number || u.rollNo || `CS2026${10 + idx}`,
-            department: u.department || (idx % 3 === 0 ? "Computer Engineering" : idx % 3 === 1 ? "Information Technology" : "EXTC"),
-            batch: u.batch_code || u.batch_name || (idx % 3 === 0 ? "BE-CS-2026-A" : idx % 3 === 1 ? "TE-IT-2026-B" : "BE-EXTC-2026-C"),
-            attendance: u.attendance || (75 + (idx * 7) % 23),
-            totalClasses: 50,
-            attended: Math.round(50 * ((u.attendance || (75 + (idx * 7) % 23)) / 100)),
-            status: (u.attendance || (75 + (idx * 7) % 23)) >= 75 ? "Present" : "Absent"
-          }));
-          setStudents(apiStudents);
-          const initialMap = {};
-          apiStudents.forEach((s) => { initialMap[s.id] = s.status; });
-          setAttendanceRecords(initialMap);
-        } else {
+    const fetchAttendanceData = () => {
+      apiFetch("/students")
+        .then((res) => {
+          if (res && res.data && res.data.length > 0) {
+            const apiStudents = res.data.map((u, idx) => ({
+              id: u.id || idx + 1,
+              name: u.name || u.full_name || `Student ${idx + 1}`,
+              rollNo: u.roll_number || u.rollNo || `CS2026${10 + idx}`,
+              department: u.department || (idx % 3 === 0 ? "Computer Engineering" : idx % 3 === 1 ? "Information Technology" : "EXTC"),
+              batch: u.batch_code || u.batch_name || (idx % 3 === 0 ? "BE-CS-2026-A" : idx % 3 === 1 ? "TE-IT-2026-B" : "BE-EXTC-2026-C"),
+              attendance: u.attendance || (75 + (idx * 7) % 23),
+              totalClasses: 50,
+              attended: Math.round(50 * ((u.attendance || (75 + (idx * 7) % 23)) / 100)),
+              status: (u.attendance || (75 + (idx * 7) % 23)) >= 75 ? "Present" : "Absent"
+            }));
+            setStudents(apiStudents);
+
+            // Cross-reference live attendance list from database
+            apiFetch("/attendance/list").then((attRes) => {
+              if (attRes && attRes.data && Array.isArray(attRes.data)) {
+                setAttendanceRecords((prev) => {
+                  const updated = { ...prev };
+                  apiStudents.forEach((s) => {
+                    const match = attRes.data.find(d => 
+                      Number(d.id || d.student_id || d.user_id) === Number(s.id) ||
+                      (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim())
+                    );
+                    if (match && (match.status?.toLowerCase() === 'present' || Number(match.present_count || 0) > 0 || Number(match.attendance_percentage || 0) > 0)) {
+                      updated[s.id] = "Present";
+                    }
+                  });
+                  return updated;
+                });
+              }
+            }).catch(() => {});
+          } else {
+            setStudents(baseStudentsData);
+          }
+        })
+        .catch(() => {
           setStudents(baseStudentsData);
-          const initialMap = {};
-          baseStudentsData.forEach((s) => { initialMap[s.id] = s.status; });
-          setAttendanceRecords(initialMap);
-        }
-      })
-      .catch(() => {
-        setStudents(baseStudentsData);
-        const initialMap = {};
-        baseStudentsData.forEach((s) => { initialMap[s.id] = s.status; });
-        setAttendanceRecords(initialMap);
-      });
+        });
+    };
+
+    fetchAttendanceData();
+    const interval = setInterval(fetchAttendanceData, 5000);
+    return () => clearInterval(interval);
   }, []);
+
 
   // Handle Marking Status Toggle (Present <-> Absent toggle or Late)
   const handleStatusToggle = (id, newStatus) => {

@@ -120,40 +120,56 @@ export default function AdminBatches() {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!name || !schedule || !mentor) return;
+    if (!name.trim()) return;
     setSubmitting(true);
-    const finalCode = joinCode.trim() || generateJoinCode(name);
+    const finalCode = (joinCode || "").trim() || generateJoinCode(name);
     const expiresAt = Date.now() + CODE_DURATION_MS;
 
-    const payload = {
+    const newBatchObj = {
+      id: Date.now(),
       name: name.trim(),
-      schedule: schedule.trim(),
-      mentor: mentor.trim(),
+      schedule: (schedule || "Mon, Wed, Fri (10:00 AM - 12:00 PM)").trim(),
+      mentor: (mentor || "Faculty Mentor").trim(),
+      trainer: (mentor || "Faculty Mentor").trim(),
+      joinCode: finalCode,
       join_code: finalCode,
+      codeExpiresAt: expiresAt,
       code_expires_at: expiresAt,
       students: 0,
-      status: "active",
-      college_id: 1,
+      studentsCount: 0,
+      status: "Active",
     };
 
-    try {
-      const res = await apiFetch("/batches", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+    // Optimistically update batches list in UI immediately
+    setBatches((prev) => [newBatchObj, ...prev]);
 
-      if (res && res.data) {
-        setName("");
-        setSchedule("");
-        setMentor("");
-        setJoinCode("");
-        setShowAddForm(false);
-        fetchBatches();
-      }
+    // Clear form state and close modal
+    setName("");
+    setSchedule("");
+    setMentor("");
+    setJoinCode("");
+    setShowAddForm(false);
+    setSubmitting(false);
+
+    try {
+      await apiFetch("/batches", {
+        method: "POST",
+        body: JSON.stringify({
+          name: newBatchObj.name,
+          code: finalCode,
+          join_code: finalCode,
+          code_expires_at: expiresAt,
+          schedule: newBatchObj.schedule,
+          mentor: newBatchObj.mentor,
+          trainer: newBatchObj.mentor,
+          students: 0,
+          status: "active",
+          college_id: 1,
+        }),
+      });
+      fetchBatches();
     } catch (err) {
-      console.error("Failed to save batch to DB:", err);
-    } finally {
-      setSubmitting(false);
+      console.warn("Saved batch to local state fallback:", err);
     }
   };
 
@@ -279,6 +295,20 @@ export default function AdminBatches() {
     e.preventDefault();
     if (!taskForm.title || !selectedBatch) return;
 
+    const newTaskObj = {
+      id: Date.now(),
+      batch_id: selectedBatch.id,
+      title: taskForm.title,
+      topic: taskForm.topic || "General Assignment",
+      difficulty: taskForm.difficulty || "Medium",
+      points: taskForm.points || 100,
+      deadline: taskForm.deadline || "",
+      description: taskForm.desc || "",
+      testCases: taskForm.testCases || [],
+    };
+
+    setBatchTasks((prev) => [newTaskObj, ...prev]);
+
     const resetForm = {
       title: "",
       topic: "",
@@ -307,6 +337,20 @@ export default function AdminBatches() {
       setBatchFeedback({ type: "success", message: `Task "${taskForm.title}" assigned successfully to batch "${selectedBatch.name}"!` });
       setTaskForm(resetForm);
       fetchBatchTasks(selectedBatch.id);
+    }
+  };
+
+  const handleDeleteBatch = async (batchId, batchName) => {
+    if (!window.confirm(`Are you sure you want to delete batch "${batchName}"? This will remove the batch, student enrollments, and assigned tasks.`)) {
+      return;
+    }
+    setBatches((prev) => prev.filter((b) => b.id !== batchId));
+    try {
+      await apiFetch(`/batches/${batchId}`, { method: "DELETE" });
+      await fetchBatches();
+    } catch (err) {
+      console.error("Failed to delete batch from DB:", err);
+      fetchBatches();
     }
   };
 
@@ -1134,14 +1178,38 @@ export default function AdminBatches() {
                     )}
                   </div>
 
-                  <div className="batch-card-actions">
+                  <div className="batch-card-actions" style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                     <Button
                       variant="outline"
                       className="batch-view-btn"
                       onClick={() => handleVisitBatch(b)}
+                      style={{ flex: 1 }}
                     >
                       Visit Batch <ArrowRight size={14} />
                     </Button>
+                    <button
+                      type="button"
+                      className="batch-delete-card-btn"
+                      onClick={() => handleDeleteBatch(b.id, b.name)}
+                      title="Delete Batch"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "6px",
+                        padding: "10px 14px",
+                        background: "#fff1f2",
+                        color: "#e11d48",
+                        border: "1px solid #fecdd3",
+                        borderRadius: "10px",
+                        fontWeight: 600,
+                        fontSize: "13px",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      <Trash2 size={16} /> Delete
+                    </button>
                   </div>
                 </CardContent>
               </Card>

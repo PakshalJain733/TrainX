@@ -1,32 +1,76 @@
-import React, { useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Play, CheckCircle2, Terminal, Code2, 
   FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight
 } from "lucide-react";
 import "../Styles/CodingPlatform.css";
 
-const defaultCode = `def solution():
-    # Write your code here
-    pass
+const API_BASE = "/api/v1";
 
-if __name__ == '__main__':
-    solution()`;
+function getAuthHeaders() {
+  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
 
 export default function CodingPlatform() {
   const { taskId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
-  const [code, setCode] = useState(defaultCode);
+
+  const [taskData, setTaskData] = useState(location.state?.task || null);
+  const [loading, setLoading] = useState(!location.state?.task);
+  const [code, setCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("description"); // description, submissions
   const [mobileView, setMobileView] = useState("problem"); // problem, code
 
-  // Generate line numbers array
+  useEffect(() => {
+    if (location.state?.task) {
+      setTaskData(location.state.task);
+      setLoading(false);
+      return;
+    }
+
+    const fetchTaskDetails = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
+        const data = await res.json();
+        if (data.success && data.data) {
+          const t = data.data;
+          setTaskData({
+            id: t.id,
+            title: t.title,
+            topic: t.topic || "General Assignment",
+            difficulty: t.difficulty || "Medium",
+            points: t.points || 100,
+            deadline: t.deadline || "",
+            description: t.description || t.desc || "No problem description provided.",
+            testCases: t.testCases || t.test_cases || [],
+          });
+        }
+      } catch (err) {
+        console.error("Failed to fetch task details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (taskId) {
+      fetchTaskDetails();
+    }
+  }, [taskId, location.state]);
+
+  // Line numbers array
   const lineCount = code.split('\n').length;
   const lines = Array.from({ length: Math.max(15, lineCount) }, (_, i) => i + 1);
 
-  const currentTaskNum = taskId ? parseInt(taskId.replace('task-', '')) : 1;
+  const currentTaskNum = taskId ? parseInt(taskId.replace(/[^0-9]/g, '')) || 1 : 1;
   
   const handleRun = () => {
     setConsoleOutput("Running code...\n\n> Output:\nTests executed successfully in 14ms.\nStatus: Accepted");
@@ -43,6 +87,8 @@ export default function CodingPlatform() {
     }, 1200);
   };
 
+  const testCasesList = taskData?.testCases || taskData?.test_cases || [];
+
   return (
     <div className="student-page-inner">
       <div className="coding-platform-container">
@@ -55,8 +101,8 @@ export default function CodingPlatform() {
             </Link>
             <h1 className="cp-task-title">
               <Code2 size={18} />
-              <span className="cp-task-name">{taskId ? `Task ID: ${taskId.toUpperCase()}` : "Coding Task"}</span>
-              <span className="cp-task-badge">Backend</span>
+              <span className="cp-task-name">{taskData?.title || (taskId ? `Task ID: ${taskId.toUpperCase()}` : "Coding Task")}</span>
+              <span className="cp-task-badge">{taskData?.difficulty || taskData?.topic || "Assignment"}</span>
             </h1>
           </div>
           
@@ -101,7 +147,7 @@ export default function CodingPlatform() {
           </div>
         </div>
 
-        {/* Mobile Segmented View Switcher (Visible on mobile screens) */}
+        {/* Mobile Segmented View Switcher */}
         <div className="cp-mobile-tab-bar">
           <button
             type="button"
@@ -139,30 +185,48 @@ export default function CodingPlatform() {
             </div>
 
             <div className="cp-problem-content">
-              {activeTab === 'description' ? (
+              {loading ? (
+                <div style={{ padding: "30px", color: "#64748b", textAlign: "center" }}>
+                  Loading problem statement...
+                </div>
+              ) : activeTab === 'description' ? (
                 <>
                   <h3 className="cp-req-heading">
-                    Problem Requirements
+                    {taskData?.title || "Problem Requirements"}
                   </h3>
                   <div className="cp-problem-desc">
-                    <p>Write an optimized function to solve the given coding problem. Ensure your logic handles edge cases and runs within the required time complexity.</p>
-                    <p><strong>Note:</strong> Standard input/output libraries are pre-imported. Do not alter the function signature.</p>
+                    <p style={{ whiteSpace: "pre-wrap" }}>
+                      {taskData?.description || taskData?.desc || "Write a clean and optimized solution to solve this problem statement."}
+                    </p>
                   </div>
                   
-                  <div className="cp-test-case">
-                    <p className="cp-test-title">Example 1:</p>
-                    <div className="cp-test-code">Input: nums = [2,7,11,15], target = 9</div>
-                    <div className="cp-test-code">Output: [0,1]</div>
+                  <div style={{ marginTop: "20px" }}>
+                    <p className="cp-test-title" style={{ fontWeight: "600", color: "#0f172a", marginBottom: "8px" }}>
+                      Sample Test Cases:
+                    </p>
+                    {testCasesList && testCasesList.length > 0 ? (
+                      testCasesList.map((tc, idx) => (
+                        <div key={idx} className="cp-test-case" style={{ marginBottom: "12px" }}>
+                          <p className="cp-test-title">Example {idx + 1}:</p>
+                          {tc.input ? <div className="cp-test-code">Input: {tc.input}</div> : null}
+                          {(tc.expectedOutput || tc.output) ? (
+                            <div className="cp-test-code">Output: {tc.expectedOutput || tc.output}</div>
+                          ) : null}
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                        No sample test cases specified for this task.
+                      </p>
+                    )}
                   </div>
-                  
-                  <div className="cp-test-case">
-                    <p className="cp-test-title">Constraints:</p>
-                    <ul className="cp-constraints-list">
-                      <li><code>2 &lt;= nums.length &lt;= 10^4</code></li>
-                      <li><code>-10^9 &lt;= nums[i] &lt;= 10^9</code></li>
-                      <li>Only one valid answer exists.</li>
-                    </ul>
-                  </div>
+
+                  {taskData?.deadline && (
+                    <div className="cp-test-case" style={{ marginTop: "16px" }}>
+                      <p className="cp-test-title">Submission Deadline:</p>
+                      <div className="cp-test-code">{taskData.deadline}</div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="cp-no-submissions">
@@ -183,6 +247,7 @@ export default function CodingPlatform() {
                 className="cp-textarea"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                placeholder="// Write your solution code here..."
                 spellCheck={false}
               />
             </div>

@@ -20,12 +20,17 @@ import batchRoutes from './routes/batch.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
 
+import path from 'path';
+
 const app = express();
 
 // Global Middlewares
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // Health Check Endpoint (Section 28)
 app.get('/api/v1/health', (req, res) => {

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink } from "lucide-react";
 import { StudentSidebar } from "./StudentSidebar";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/StudentLayout.css";
 
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -54,16 +55,26 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
   const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
-      if (stored.length > 0) {
-        setNotifications((prev) => {
-          const ids = new Set(prev.map((p) => p.id));
-          const newItems = stored.filter((s) => !ids.has(s.id));
-          return [...newItems, ...prev];
-        });
-      }
-    } catch (e) {}
+    // Fetch broadcast notifications from database (device-synced)
+    apiFetch("/student/notifications")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((b) => ({
+            id: `broadcast-${b.id}`,
+            type: "alert",
+            title: b.title,
+            desc: b.message,
+            time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
+            unread: true,
+          }));
+          setNotifications((prev) => {
+            const ids = new Set(prev.map((p) => p.id));
+            const newItems = mapped.filter((s) => !ids.has(s.id));
+            return [...newItems, ...prev];
+          });
+        }
+      })
+      .catch(() => {});
 
     const handleNewNotif = (e) => {
       if (e.detail) {
@@ -253,24 +264,28 @@ export default function StudentLayout() {
     return { ...rawUser, name };
   };
 
-  const [user, setUser] = useState(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) return resolveUser(u);
-    } catch (e) {}
-    return { name: "Pakshal", department: "ECS", semester: 6 };
-  });
+  const [user, setUser] = useState({ name: "", department: "", semester: "" });
+  const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(false);
 
-  const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(() => {
-    return localStorage.getItem("student_profile_notice_dismissed") === "true";
-  });
+  // Load user profile from backend on mount (device-synced)
+  useEffect(() => {
+    apiFetch("/student/profile")
+      .then((res) => {
+        if (res && res.data) {
+          setUser(resolveUser(res.data));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
+    // Re-fetch user profile from backend whenever profile is updated
     const handleUpdate = () => {
-      try {
-        const u = JSON.parse(localStorage.getItem("user"));
-        if (u) setUser(resolveUser(u));
-      } catch (e) {}
+      apiFetch("/student/profile")
+        .then((res) => {
+          if (res && res.data) setUser(resolveUser(res.data));
+        })
+        .catch(() => {});
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
     return () => window.removeEventListener("userProfileUpdated", handleUpdate);
@@ -375,29 +390,7 @@ export default function StudentLayout() {
                   <span className="student-breadcrumb-active">{pageTitle}</span>
                 </div>
 
-                {/* Horizontal Marquee Ticker Notice right after Dashboard */}
-                {(!user.profileCompleted && !user.cgpa) && !headerNoticeDismissed && (
-                  <div className="header-marquee-ticker">
-                    <div className="header-marquee-track">
-                      <span className="header-marquee-text">
-                        📢 <strong>Action Required: Complete Your Academic Profile</strong> — Please update your Semester, Aggregate CGPA, and Skills in Profile for AI roadmaps.
-                      </span>
-                    </div>
-                    <Link to="/student/profile" className="header-ticker-link">
-                      Update Profile →
-                    </Link>
-                    <button 
-                      className="header-ticker-dismiss" 
-                      onClick={() => {
-                        setHeaderNoticeDismissed(true);
-                        localStorage.setItem("student_profile_notice_dismissed", "true");
-                      }}
-                      title="Dismiss notice"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
+
               </div>
 
               <div className="student-header__right" ref={headerRightRef}>

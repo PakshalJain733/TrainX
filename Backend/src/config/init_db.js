@@ -275,14 +275,23 @@ export async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         uploaded_by INT NOT NULL,
         title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
         subject VARCHAR(100) NOT NULL,
         batch VARCHAR(100) DEFAULT 'All Batches',
         type VARCHAR(50) DEFAULT 'PDF',
         file_url VARCHAR(500) NULL,
+        link VARCHAR(500) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    try {
+      await conn.query(`ALTER TABLE study_materials ADD COLUMN description TEXT NULL`);
+    } catch (_) {}
+    try {
+      await conn.query(`ALTER TABLE study_materials ADD COLUMN link VARCHAR(500) NULL`);
+    } catch (_) {}
 
     // 13. Ensure Support Tickets Table
     await conn.query(`

@@ -13,7 +13,7 @@ export const processroadmapAI = async (inputData) => {
   } = inputData;
 
   const apiKey = config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-  const configuredModel = config.ai?.model || 'gemini-3.1-flash-lite';
+  const configuredModel = config.ai?.model || 'gemini-3.6-flash';
   const skillsListStr = Array.isArray(currentSkills) ? currentSkills.join(', ') : currentSkills;
 
   if (!apiKey) {
@@ -22,7 +22,7 @@ export const processroadmapAI = async (inputData) => {
 
   // Active Google Gemini models to cycle through if Google experiences temporary 503 high demand
   const modelsToTry = Array.from(
-    new Set([configuredModel, 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest'])
+    new Set([configuredModel, 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-3.1-flash-lite'])
   );
 
   const prompt = `You are a high-level Curriculum Architect AI. Design a detailed, progressive 5 to 6 milestone technical learning roadmap for a student targeting the following goal:

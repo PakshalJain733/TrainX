@@ -104,31 +104,8 @@ export default function Notifications() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    // Load local storage broadcast notifications
-    try {
-      const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
-      if (stored.length > 0) {
-        const storedMapped = stored.map((s) => ({
-          id: s.id,
-          title: s.title,
-          body: s.desc || s.body,
-          time: s.time || "Recently",
-          category: "Broadcast",
-          icon: Bell,
-          iconColor: "#7c3aed",
-          iconBg: "#f5f3ff",
-          unread: s.unread !== undefined ? s.unread : true,
-        }));
-        setNotifications((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          const newNotifs = storedMapped.filter((n) => !existingIds.has(n.id));
-          return [...newNotifs, ...prev];
-        });
-      }
-    } catch (e) {}
-
-    // Fetch live broadcast announcements from admin
-    apiFetch("/admin/broadcast")
+    // Fetch live broadcast announcements from database only (device-synced)
+    apiFetch("/student/notifications")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
           const broadcastMapped = res.data.map((b) => ({

@@ -23,20 +23,7 @@ export const getStudentSkillGapAnalysis = async (studentId, customData = null) =
 
   const numericId = parseInt(studentId, 10) || 1;
 
-  // 1. First check if saved analysis exists in SQL DB
-  const storedDbResult = await getSkillGapByUserId(numericId);
-  if (storedDbResult) {
-    return {
-      student_id: numericId,
-      overall_status: storedDbResult.overall_status,
-      weak_areas_count: storedDbResult.weak_areas_count,
-      weak_areas: storedDbResult.weak_areas,
-      all_evaluated_skills: storedDbResult.all_evaluated_skills,
-      suggestions: storedDbResult.suggestions,
-    };
-  }
-
-  // 2. Query actual assessment attempts from DB
+  // 2. Query actual assessment, coding, task & interview performance from DB
   let user = null;
   try {
     user = await findUserById(numericId);
@@ -48,22 +35,68 @@ export const getStudentSkillGapAnalysis = async (studentId, customData = null) =
   const interviewScores = {};
   const milestoneProgress = {};
 
+  // 2a. Quizzes (Assessment attempts)
   try {
     const attempts = await query(
-      `SELECT a.percentage, q.title 
+      `SELECT a.percentage, a.correct_count, a.total_questions, q.title 
        FROM assessment_attempts a 
        LEFT JOIN assessments q ON a.assessment_id = q.id 
-       WHERE a.user_id = ? AND a.status IN ('completed', 'finished', 'passed')`,
+       WHERE a.user_id = ? AND a.status IN ('completed', 'finished', 'passed', 'failed')`,
       [numericId]
     );
 
     if (Array.isArray(attempts) && attempts.length > 0) {
       for (const att of attempts) {
-        const topic = att.title || 'General';
-        quizMarks[topic] = Math.round(att.percentage || 0);
+        const topic = att.title || 'Technical Quiz';
+        const pct = att.percentage !== undefined ? att.percentage : (att.total_questions ? Math.round((att.correct_count / att.total_questions) * 100) : 50);
+        quizMarks[topic] = Math.round(pct);
       }
     }
   } catch (err) {}
+
+  // 2b. Coding Practice Sums & Coding Tasks
+  try {
+    const codingSubs = await query(
+      `SELECT ts.score, ts.task_title, ts.status
+       FROM task_submissions ts
+       WHERE ts.user_id = ? OR ts.student_id = ?`,
+      [numericId, numericId]
+    );
+
+    if (Array.isArray(codingSubs) && codingSubs.length > 0) {
+      for (const sub of codingSubs) {
+        const topic = sub.task_title || 'Coding Practice & Tasks';
+        codingMarks[topic] = Math.round(sub.score || (sub.status === 'completed' ? 85 : 40));
+      }
+    }
+  } catch (err) {}
+
+  // 2c. AI Technical Interviews
+  try {
+    const interviewAttempts = await query(
+      `SELECT score, topic, overall_score
+       FROM interview_sessions
+       WHERE user_id = ? OR student_id = ?`,
+      [numericId, numericId]
+    );
+
+    if (Array.isArray(interviewAttempts) && interviewAttempts.length > 0) {
+      for (const inv of interviewAttempts) {
+        const topic = inv.topic || 'AI Technical Interview';
+        interviewScores[topic] = Math.round(inv.overall_score || inv.score || 70);
+      }
+    }
+  } catch (err) {}
+
+  // 2d. Default balanced fallback performance across all 4 evaluation categories
+  if (Object.keys(quizMarks).length === 0 && Object.keys(codingMarks).length === 0 && Object.keys(interviewScores).length === 0) {
+    quizMarks['MySQL & Database Systems'] = 40;
+    quizMarks['Java Programming & Syntax'] = 85;
+    codingMarks['Coding Practice Sums (Algorithms)'] = 55;
+    codingMarks['Coding Tasks & Submissions'] = 75;
+    interviewScores['AI Technical Interview (Databases & SQL)'] = 30;
+    interviewScores['AI Technical Interview (Java & OOP)'] = 80;
+  }
 
   const performancePayload = {
     student_id: numericId,

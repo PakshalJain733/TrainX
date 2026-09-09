@@ -495,10 +495,34 @@
   box-sizing: border-box;
 }
 
+textarea.form-input-admin,
+.form-textarea-admin {
+  height: auto !important;
+  min-height: 95px;
+  padding: 10px 14px !important;
+  font-family: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  resize: vertical;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  transition: all 0.2s ease;
+}
+
 .form-input-admin:focus, .form-select-admin:focus {
   border-color: #4f46e5;
   background: #ffffff;
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+textarea.form-input-admin:focus,
+.form-textarea-admin:focus {
+  border-color: #6366f1;
+  background: #ffffff;
+  box-shadow: 0 0 0 3.5px rgba(99, 102, 241, 0.15);
+  outline: none;
 }
 
 .form-row-2 {

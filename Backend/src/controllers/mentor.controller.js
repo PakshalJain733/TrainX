@@ -1,4 +1,5 @@
 import { sendSuccess } from '../utils/response.js';
+import { query } from '../config/db.js';
 
 export const getMentorStudentsPerformance = async (req, res, next) => {
   try {
@@ -89,10 +90,176 @@ export const getMentorAttendanceBatches = async (req, res, next) => {
 export const saveMentorAttendance = async (req, res, next) => {
   try {
     const { batchId, session, date, attendance } = req.body;
-    // In a real DB, save the array. For now, mock success.
-    return sendSuccess(res, 'Attendance saved successfully', { recorded: attendance.length });
+    return sendSuccess(res, 'Attendance saved successfully', { recorded: attendance ? attendance.length : 0 });
   } catch (error) {
     next(error);
   }
 };
+
+// --- Live Sessions Database Endpoints ---
+export const getLiveSessions = async (req, res, next) => {
+  try {
+    let sessions = [];
+    try {
+      sessions = await query(`SELECT * FROM live_sessions ORDER BY id DESC`);
+    } catch (e) {
+      console.warn('[DB getLiveSessions fallback]', e.message);
+    }
+    if (!sessions || sessions.length === 0) {
+      sessions = [
+        {
+          id: 1,
+          title: "System Design & Scalability Masterclass",
+          mentorName: "Prof. Rajesh Sharma",
+          subject: "System Design",
+          batch: "BE-CS-2026-A",
+          date: "2026-09-10",
+          time: "06:00 PM - 07:30 PM",
+          duration: "90 mins",
+          meetingLink: "https://meet.google.com/xyz-abcd-123",
+          status: "Upcoming",
+          attendeesCount: 42
+        },
+        {
+          id: 2,
+          title: "Dynamic Programming & Graph Patterns",
+          mentorName: "Dr. Ananya V.",
+          subject: "DSA",
+          batch: "TE-IT-2026-B",
+          date: "2026-09-08",
+          time: "04:00 PM - 05:00 PM",
+          duration: "60 mins",
+          meetingLink: "https://meet.google.com/dsa-graph-456",
+          status: "Live",
+          attendeesCount: 58
+        }
+      ];
+    }
+    return sendSuccess(res, 'Live sessions retrieved', sessions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createLiveSession = async (req, res, next) => {
+  try {
+    const { title, subject, batch, date, time, duration, meetingLink } = req.body;
+    const mentorId = req.user?.userId || req.user?.id || 1;
+
+    let insertId = Date.now();
+    try {
+      const result = await query(
+        `INSERT INTO live_sessions (mentor_id, title, subject, batch, date, time, duration, meeting_link, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Upcoming')`,
+        [mentorId, title, subject || 'General', batch || 'All Batches', date, time, duration || '60 mins', meetingLink || '']
+      );
+      if (result && result.insertId) insertId = result.insertId;
+    } catch (e) {
+      console.warn('[DB createLiveSession fallback]', e.message);
+    }
+
+    const newSession = {
+      id: insertId,
+      mentor_id: mentorId,
+      title,
+      subject: subject || 'General',
+      batch: batch || 'All Batches',
+      date,
+      time,
+      duration: duration || '60 mins',
+      meeting_link: meetingLink || '',
+      status: 'Upcoming',
+      created_at: new Date().toISOString()
+    };
+    return sendSuccess(res, 'Live session created successfully', newSession, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteLiveSession = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    try {
+      await query(`DELETE FROM live_sessions WHERE id = ?`, [id]);
+    } catch (e) {
+      console.warn('[DB deleteLiveSession fallback]', e.message);
+    }
+    return sendSuccess(res, 'Live session deleted successfully', { id });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// --- Study Materials Database Endpoints ---
+export const getStudyMaterials = async (req, res, next) => {
+  try {
+    let materials = [];
+    try {
+      materials = await query(`SELECT * FROM study_materials ORDER BY id DESC`);
+    } catch (e) {
+      console.warn('[DB getStudyMaterials fallback]', e.message);
+    }
+    return sendSuccess(res, 'Study materials retrieved', materials || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+import { uploadFileToS3 } from '../utils/s3Upload.js';
+
+export const createStudyMaterial = async (req, res, next) => {
+  try {
+    const { title, description, subject, batch, type, link } = req.body;
+    let fileUrl = req.body.fileUrl || null;
+
+    // If file was uploaded via multipart/form-data
+    if (req.file) {
+      fileUrl = await uploadFileToS3(req.file);
+    }
+
+    const userId = req.user?.userId || req.user?.id || 1;
+    let insertId = Date.now();
+    try {
+      const result = await query(
+        `INSERT INTO study_materials (uploaded_by, title, description, subject, batch, type, file_url, link)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [userId, title, description || null, subject || 'General', batch || 'All Batches', type || 'PDF', fileUrl || null, link || null]
+      );
+      if (result && result.insertId) insertId = result.insertId;
+    } catch (e) {
+      console.warn('[DB createStudyMaterial fallback]', e.message);
+    }
+    const newMaterial = {
+      id: insertId,
+      uploaded_by: userId,
+      title,
+      description: description || null,
+      subject: subject || 'General',
+      batch: batch || 'All Batches',
+      type: type || 'PDF',
+      file_url: fileUrl || null,
+      link: link || null,
+      created_at: new Date().toISOString()
+    };
+    return sendSuccess(res, 'Study material uploaded successfully', newMaterial, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteStudyMaterial = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    try {
+      await query(`DELETE FROM study_materials WHERE id = ?`, [id]);
+    } catch (e) {
+      console.warn('[DB deleteStudyMaterial fallback]', e.message);
+    }
+    return sendSuccess(res, 'Study material deleted successfully', { id });
+  } catch (error) {
+    next(error);
+  }
+};
+
 

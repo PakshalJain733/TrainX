@@ -36,4 +36,9 @@ export const config = {
     apiKey: process.env.AI_API_KEY || '',
     model: process.env.AI_MODEL || 'gemini-flash-latest',
   },
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '',
+    bucketName: process.env.SUPABASE_STORAGE_BUCKET || 'learning-materials',
+  },
 };

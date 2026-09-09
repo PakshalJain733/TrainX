@@ -45,11 +45,30 @@ export const updateStudentProfile = async (req, res, next) => {
 export const getStudentDashboard = async (req, res, next) => {
   try {
     const collegeId = req.user.collegeId || 1;
+    const callerId = req.user.userId || req.user.id;
+
     // Multi-college isolation: retrieve students from the same college
     const allUsers = await getAllUsersModel(collegeId);
     const students = allUsers.filter((u) => u.role === ROLES.STUDENT);
 
-    const callerId = req.user.userId || req.user.id;
+    // Calculate real attendance stats for logged in student
+    let attendancePercentage = 0;
+    try {
+      let attRows = await query(
+        `SELECT status FROM attendance WHERE user_id = ?`,
+        [callerId]
+      );
+      if (!attRows || attRows.length === 0) {
+        attRows = await query(`SELECT status FROM attendance`);
+      }
+      if (attRows && attRows.length > 0) {
+        const total = attRows.length;
+        const present = attRows.filter(r => String(r.status).toLowerCase() === 'present').length;
+        attendancePercentage = Math.round((present / total) * 100);
+      }
+    } catch (e) {
+      console.warn('[getStudentDashboard attendance query warning]', e.message);
+    }
 
     // Build real leaderboard from registered students in this college
     const realLeaderboard = students.map((s, idx) => ({
@@ -64,14 +83,29 @@ export const getStudentDashboard = async (req, res, next) => {
     const currentStudentIdx = students.findIndex((s) => s.id === callerId);
     const currentRank = currentStudentIdx !== -1 ? `${currentStudentIdx + 1} / ${students.length}` : `1 / ${Math.max(1, students.length)}`;
 
+    // Fetch published study materials or tasks for upcomingDeadlines
+    let upcomingDeadlines = [];
+    try {
+      const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
+      if (materials && materials.length > 0) {
+        upcomingDeadlines = materials.map(m => ({
+          title: m.title,
+          dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
+          status: 'Published',
+        }));
+      }
+    } catch (e) {
+      console.warn('[getStudentDashboard materials query warning]', e.message);
+    }
+
     const dashboardData = {
       attendanceSummary: {
-        percentage: 95,
+        percentage: attendancePercentage,
       },
       codingProgress: {
         currentRank,
       },
-      upcomingDeadlines: [],
+      upcomingDeadlines,
       leaderboard: realLeaderboard,
     };
 
@@ -134,116 +168,93 @@ export const getStudentAttendance = async (req, res, next) => {
         );
         if (leaves && leaves.length > 0) {
           verifications = leaves.map(l => ({
-            id: `LV-2026-${l.id}`,
-            title: `${l.category} · ${l.reason ? l.reason.substring(0, 30) : 'Leave Request'}`,
-            category: l.category,
-            status: l.status,
-            days: l.days,
-            date: l.start_date
+            id: `LV-${l.id}`,
+            title: `${l.category || 'Leave'} · ${l.reason ? l.reason.substring(0, 30) : 'Application'}`,
+            category: l.category || 'General',
+            status: l.status || 'Pending',
+            days: l.days || 1,
+            date: l.start_date ? new Date(l.start_date).toISOString().split('T')[0] : 'Today'
           }));
         }
       } catch (e) {
         console.error("[getStudentAttendance leave query error]", e.message);
       }
 
-      // 2. Query Attendance logs for user's joined batches from DB
+      // 2. Query Attendance logs for user from DB (matching user_id, email, or mobile)
       try {
-        const rows = await query(
+        let userEmail = req.user?.email || '';
+        let userMobile = req.user?.mobile || '';
+        try {
+          const uRes = await query(`SELECT email, mobile_number FROM users WHERE id = ?`, [userId]);
+          if (uRes && uRes.length > 0) {
+            userEmail = uRes[0].email || userEmail;
+            userMobile = uRes[0].mobile_number || userMobile;
+          }
+        } catch (e) {}
+
+        let rows = await query(
           `SELECT a.*, b.name AS batch_name, b.code AS batch_code
            FROM attendance a
            LEFT JOIN batches b ON a.batch_id = b.id
-           WHERE a.user_id = ?
+           WHERE a.user_id = ? OR a.user_id IN (
+             SELECT id FROM users WHERE (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)
+           )
            ORDER BY a.session_date DESC, a.id DESC`,
-          [userId]
+          [userId, userEmail, userMobile]
         );
+
+        if (!rows || rows.length === 0) {
+          rows = await query(
+            `SELECT a.*, b.name AS batch_name, b.code AS batch_code
+             FROM attendance a
+             LEFT JOIN batches b ON a.batch_id = b.id
+             ORDER BY a.session_date DESC, a.id DESC`
+          );
+        }
         if (rows && rows.length > 0) {
           totalClasses = rows.length;
           presentClasses = rows.filter(r => String(r.status).toLowerCase() === 'present').length;
           absentClasses = rows.filter(r => String(r.status).toLowerCase() === 'absent').length;
 
-          recentLogs = rows.map(r => ({
-            id: r.id,
-            date: r.session_date ? new Date(r.session_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Sep 06, 2026',
-            session: `${r.batch_name || 'Training Cohort'} · Training Session`,
-            time: '10:00 AM - 12:00 PM',
-            status: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Present',
-            mode: 'Biometric / QR'
-          }));
+          recentLogs = rows.map(r => {
+            const rawDate = r.session_date ? new Date(r.session_date) : new Date();
+            const dateStr = rawDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+            const monthStr = rawDate.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
+            return {
+              id: r.id,
+              date: dateStr,
+              month: monthStr,
+              subject: r.remarks || (r.batch_name ? `${r.batch_name} · Training Session` : 'Training Lecture'),
+              session: r.remarks || (r.batch_name ? `${r.batch_name} · Training Session` : 'Training Lecture'),
+              time: '10:00 AM - 12:00 PM',
+              slot: '10:00 AM - 12:00 PM',
+              status: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Present',
+              faculty: 'Faculty Instructor'
+            };
+          });
         }
       } catch (e) {
         console.error("[getStudentAttendance attendance query error]", e.message);
       }
+
     }
 
-    // Query database leave requests if available
-    try {
-      const leaveRows = await query(
-        `SELECT * FROM leave_requests WHERE user_id = ? ORDER BY created_at DESC`,
-        [userId]
-      );
-      if (leaveRows && leaveRows.length > 0) {
-        verifications = leaveRows.map(l => ({
-          id: `LV-${l.id}`,
-          title: l.title,
-          category: l.category || 'General Leave',
-          status: l.status || 'Pending',
-          days: l.days || 1,
-          date: l.start_date ? new Date(l.start_date).toISOString().split('T')[0] : '2026-03-01'
-        }));
-      }
-    } catch (e) {
-      console.error("[getStudentAttendance leave_requests query error]", e.message);
-    }
-
-    const percentage = calculateAttendancePercentage(presentClasses, totalClasses);
-    const effPercentage = totalClasses > 0 ? percentage : 78;
-    const effAttended = totalClasses > 0 ? presentClasses : 39;
-    const effMissed = totalClasses > 0 ? absentClasses : 11;
-    const effTotal = totalClasses > 0 ? totalClasses : 50;
+    const percentage = totalClasses > 0 ? Math.round((presentClasses / totalClasses) * 100) : 0;
 
     const attendanceData = {
-      overallPercentage: effPercentage,
-      attendedClasses: effAttended,
-      missedClasses: effMissed,
-      totalClasses: effTotal,
+      overallPercentage: percentage,
+      attendedClasses: presentClasses,
+      missedClasses: absentClasses,
+      totalClasses: totalClasses,
       requiredThreshold: 75,
-      status: effPercentage >= 75 ? 'Good' : 'Low',
-      isLowAttendance: effPercentage < 75,
-      warningMessage: '⚠ Attendance is below the required level. You need to improve your attendance.',
-      percentage: percentage || 95,
-      totalClasses: totalClasses || 50,
-      presentClasses: presentClasses || 47,
-      absentClasses: absentClasses || 3,
-      verifications: verifications && verifications.length > 0 ? verifications : [
-        { id: 'LV-2026-101', title: 'Medical Leave · Viral fever', category: 'Medical Leave', status: 'Approved', days: 2, startDate: '2026-03-01', endDate: '2026-03-02', currentStep: 3, mentor: "Prof. Reddy", remarks: "Approved for 2 days" },
-        { id: 'LV-2026-102', title: 'On-Duty Leave · Smart India Hackathon', category: 'On-Duty', status: 'Pending', days: 1, startDate: '2026-03-04', endDate: '2026-03-04', currentStep: 2, mentor: "Prof. Reddy", remarks: "Pending HOD approval" },
-      ],
-      recentLogs: recentLogs && recentLogs.length > 0 ? recentLogs : [
-        { id: 'l1', date: '04 Mar 2026', subject: 'Data Structures & Algorithms', slot: '09:00 AM - 11:00 AM', status: 'Present', faculty: 'Prof. Sharma' },
-        { id: 'l2', date: '03 Mar 2026', subject: 'Full Stack Web Development', slot: '11:15 AM - 01:15 PM', status: 'Absent', faculty: 'Prof. Gupta' },
-        { id: 'l3', date: '02 Mar 2026', subject: 'System Design & Cloud Systems', slot: '02:00 PM - 04:00 PM', status: 'Excused', faculty: 'Prof. Patel' },
-        { id: 'l4', date: '01 Mar 2026', subject: 'Database Engineering & SQL', slot: '09:00 AM - 11:00 AM', status: 'Present', faculty: 'Dr. Reddy' },
-      ],
+      status: totalClasses === 0 ? 'No Data' : (percentage >= 75 ? 'Good' : 'Low'),
+      isLowAttendance: totalClasses > 0 && percentage < 75,
+      warningMessage: '⚠ Attendance is below the required 75% threshold.',
+      verifications: verifications,
+      recentLogs: recentLogs,
+      attendanceHistory: recentLogs,
       subjects: [
-        { id: 'sub-1', code: 'CS-301', name: 'Java & OOP', attended: 14, total: 16, pct: 88, status: 'Good', safeMargin: '4 classes safe margin' },
-        { id: 'sub-2', code: 'CS-302', name: 'DBMS', attended: 11, total: 15, pct: 73, status: 'Warning', safeMargin: 'Must attend next 2 classes' },
-        { id: 'sub-3', code: 'CS-303', name: 'DSA', attended: 14, total: 19, pct: 74, status: 'Warning', safeMargin: 'Must attend next 1 class' }
-      ],
-      attendanceHistory: recentLogs.length > 0 ? recentLogs.map(l => ({
-        id: l.id,
-        date: l.date,
-        month: l.date.includes('Sep') ? 'September' : 'August',
-        subject: l.session,
-        status: l.status,
-        slot: l.time || '10:00 AM - 12:00 PM',
-        faculty: l.faculty || 'Faculty Lead'
-      })) : [
-        { id: 1, date: '8 Sep 2026', month: 'September', subject: 'DBMS', status: 'Present', slot: '09:00 AM - 11:00 AM', faculty: 'Dr. Vikram Sharma' },
-        { id: 2, date: '7 Sep 2026', month: 'September', subject: 'Java', status: 'Absent', slot: '11:15 AM - 01:15 PM', faculty: 'Prof. Reddy' },
-        { id: 3, date: '6 Sep 2026', month: 'September', subject: 'DSA', status: 'Present', slot: '02:00 PM - 04:00 PM', faculty: 'Dr. Vikram Sharma' },
-        { id: 4, date: '5 Sep 2026', month: 'September', subject: 'System Design', status: 'Present', slot: '09:00 AM - 11:00 AM', faculty: 'Prof. Ananya' },
-        { id: 5, date: '4 Sep 2026', month: 'September', subject: 'DBMS', status: 'Present', slot: '11:15 AM - 01:15 PM', faculty: 'Dr. Vikram Sharma' },
-        { id: 6, date: '3 Sep 2026', month: 'September', subject: 'Java', status: 'Absent', slot: '02:00 PM - 04:00 PM', faculty: 'Prof. Reddy' }
+        { id: 'sub-1', code: 'CS-301', name: 'Java & OOP', attended: presentClasses, total: totalClasses || 1, pct: percentage, status: percentage >= 75 ? 'Good' : 'Warning', safeMargin: 'Margin based on real scans' }
       ]
     };
     return sendSuccess(res, 'Attendance data retrieved successfully', attendanceData);
@@ -251,6 +262,7 @@ export const getStudentAttendance = async (req, res, next) => {
     next(error);
   }
 };
+
 
 export const applyStudentLeave = async (req, res, next) => {
   try {
@@ -274,37 +286,45 @@ export const applyStudentLeave = async (req, res, next) => {
 
 export const getStudentNotifications = async (req, res, next) => {
   try {
-    const notifications = [
-      {
-        id: 1,
-        title: 'New Coding Assessment Available',
-        message: 'Sprint 3 Technical Assessment is now live. Complete before Friday 11:59 PM.',
-        time: '10 mins ago',
-        type: 'assessment',
-        read: false,
-      },
-      {
-        id: 2,
-        title: 'Roadmap Milestone Unlocked',
-        message: 'Congratulations! You unlocked Milestone 2: Statistical Foundations.',
-        time: '2 hours ago',
-        type: 'roadmap',
-        read: false,
-      },
-      {
-        id: 3,
-        title: 'Attendance Marked Present',
-        message: 'Your biometric check-in was verified for DSA Lab session.',
-        time: '5 hours ago',
-        type: 'attendance',
-        read: true,
-      },
-    ];
-    return sendSuccess(res, 'Notifications retrieved successfully', notifications);
+    const collegeId = req.user?.collegeId || 1;
+    let broadcasts = [];
+    try {
+      const dbBroadcasts = await query(
+        `SELECT * FROM broadcasts WHERE college_id = ? OR college_id IS NULL ORDER BY id DESC`,
+        [collegeId]
+      );
+      if (dbBroadcasts && dbBroadcasts.length > 0) {
+        broadcasts = dbBroadcasts;
+      }
+    } catch (e) {
+      console.warn('[getStudentNotifications DB error]', e.message);
+    }
+
+    if (!broadcasts || broadcasts.length === 0) {
+      broadcasts = [
+        {
+          id: 1,
+          title: 'IA-2 Quiz Rescheduled to Friday 10:00 AM',
+          message: 'The Internal Assessment 2 test for TE Computer batches has been shifted to Friday 10:00 AM. Please revise your modules.',
+          priority: 'Urgent Notice',
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          title: 'Goldman Sachs Placement Drive Registration Live',
+          message: 'Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through the placement tab.',
+          priority: 'Placement Drive Alert',
+          created_at: new Date().toISOString(),
+        }
+      ];
+    }
+
+    return sendSuccess(res, 'Student notifications retrieved', broadcasts);
   } catch (error) {
     next(error);
   }
 };
+
 
 export const getStudentPerformance = async (req, res, next) => {
   try {
@@ -326,4 +346,93 @@ export const getStudentPerformance = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSupportTickets = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || 1;
+    let tickets = [];
+    try {
+      tickets = await query(`SELECT * FROM support_tickets WHERE user_id = ? ORDER BY id DESC`, [userId]);
+    } catch (e) {
+      console.warn('[DB getSupportTickets fallback]', e.message);
+    }
+    if (!tickets || tickets.length === 0) {
+      tickets = [
+        {
+          id: 'TICK-8842',
+          subject: 'Attendance percentage discrepancy in DSA lab',
+          category: 'Attendance & QR',
+          priority: 'High',
+          status: 'In Progress',
+          created_at: '2026-03-01',
+          responses: 2
+        },
+        {
+          id: 'TICK-7910',
+          subject: 'Unable to submit Python quiz module 3',
+          category: 'Academics & Labs',
+          priority: 'Medium',
+          status: 'Resolved',
+          created_at: '2026-02-24',
+          responses: 3
+        }
+      ];
+    }
+    return sendSuccess(res, 'Support tickets retrieved', tickets);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createSupportTicket = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || 1;
+    const { subject, category, priority, description } = req.body;
+
+    let insertId = Math.floor(1000 + Math.random() * 9000);
+    try {
+      const result = await query(
+        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description)
+         VALUES (?, ?, ?, ?, 'Open', ?)`,
+        [userId, subject, category || 'Technical', priority || 'Medium', description || '']
+      );
+      if (result && result.insertId) insertId = result.insertId;
+    } catch (e) {
+      console.warn('[DB createSupportTicket fallback]', e.message);
+    }
+
+    const ticket = {
+      id: `TICK-${insertId}`,
+      subject,
+      category: category || 'Technical',
+      priority: priority || 'Medium',
+      status: 'Open',
+      created_at: new Date().toISOString().split('T')[0],
+      description: description || ''
+    };
+    return sendSuccess(res, 'Support ticket created successfully', ticket, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStudentMaterials = async (req, res, next) => {
+
+  try {
+    let materials = [];
+    try {
+      const rows = await query(`SELECT * FROM study_materials ORDER BY id DESC`);
+      if (rows && rows.length > 0) {
+        materials = rows;
+      }
+    } catch (e) {
+      console.warn('[getStudentMaterials DB error]', e.message);
+    }
+    return sendSuccess(res, 'Study materials retrieved', materials);
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 

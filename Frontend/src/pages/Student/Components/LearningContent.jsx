@@ -1,27 +1,69 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
   BookOpen,
   FileText,
   Video,
   Sparkles,
-  CheckCircle,
+  ExternalLink,
+  Download,
   CheckCircle2,
-  Clock,
+  Eye,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/LearningContent.css";
 
-const initialResources = [];
-const allTopics = [];
-
 export default function LearningContent() {
-  const [resources, setResources] = useState(initialResources);
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All resources");
 
-  const categories = ["All resources", "SQL & Databases", "REST APIs with FastAPI", "Object Oriented Programming"];
+  const loadResources = async () => {
+    setLoading(true);
+    let loadedItems = [];
+    try {
+      const res = await apiFetch("/student/materials");
+      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        loadedItems = res.data;
+      } else {
+        const fallbackRes = await apiFetch("/mentor/materials");
+        if (fallbackRes && fallbackRes.data && Array.isArray(fallbackRes.data)) {
+          loadedItems = fallbackRes.data;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load student learning content:", err);
+    }
+
+    if (loadedItems.length > 0) {
+      const mapped = loadedItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        category: item.batch || item.category || "All Batches",
+        subject: item.subject || "General",
+        type: item.type || "Document",
+        file_url: item.file_url,
+        link: item.link,
+        status: "Published",
+      }));
+      setResources(mapped);
+    }
+    setLoading(false);
+  };
+
+
+  useEffect(() => {
+    loadResources();
+  }, []);
+
+  const categories = useMemo(() => {
+    const cats = Array.from(new Set(resources.map(r => r.category).filter(Boolean)));
+    return ["All resources", ...cats];
+  }, [resources]);
 
   const toggleStatus = (id) => {
     setResources((prev) =>
@@ -43,6 +85,10 @@ export default function LearningContent() {
       return matchesSearch && matchesFilter;
     });
   }, [resources, searchQuery, selectedFilter]);
+
+  const allTopics = useMemo(() => {
+    return Array.from(new Set(resources.map(r => r.subject).filter(Boolean)));
+  }, [resources]);
 
   return (
     <div className="learning-content-page stack-6">
@@ -81,43 +127,84 @@ export default function LearningContent() {
 
       {/* Resource Cards Grid */}
       <div className="learning-resources-grid">
-        {filteredResources.length === 0 ? (
+        {loading ? (
+          <div className="learning-empty-state">
+            <p className="learning-empty-title">Loading study materials...</p>
+          </div>
+        ) : filteredResources.length === 0 ? (
           <div className="learning-empty-state">
             <BookOpen size={36} className="learning-empty-icon" />
             <p className="learning-empty-title">No learning resources available yet.</p>
           </div>
         ) : (
           filteredResources.map((item) => {
-            const IconComponent = item.icon;
+            const iconMap = { Video: Video, Document: FileText, Link: ExternalLink, "AI Notes": Sparkles };
+            const IconComponent = iconMap[item.type] || FileText;
             const isCompleted = item.status === "Completed";
+            const fileName = item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null;
+
             return (
               <div key={item.id} className="learning-resource-card">
-                <div className="learning-card-top">
-                  <div className="learning-type-icon-wrap">
-                    {IconComponent ? <IconComponent size={18} /> : <FileText size={18} />}
+                <div className="learning-card-header-row">
+                  <div className="learning-card-title-group">
+                    <div className="learning-type-icon-wrap">
+                      <IconComponent size={22} />
+                    </div>
+                    <div className="learning-title-meta-col">
+                      <h3 className="learning-card-title">{item.title}</h3>
+                      <div className="learning-card-sub-pills">
+                        <span className="learning-batch-badge">{item.category}</span>
+                        <span className="learning-type-chip">{item.type}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="learning-card-body">
-                  <h3 className="learning-card-title">{item.title}</h3>
-                  <p className="learning-card-meta">
-                    {item.category} · {item.type} · {item.duration}
-                  </p>
+                <div className="learning-card-body-box">
+                  {item.description && (
+                    <p className="learning-card-description-text" style={{ fontSize: "13px", color: "#475569", margin: "0 0 8px 0", lineHeight: "1.4" }}>
+                      {item.description}
+                    </p>
+                  )}
+                  <div className="learning-file-info-row">
+                    <FileText size={14} className="learning-file-info-icon" />
+                    <span className="learning-file-name-text">
+                      {fileName ? fileName : (item.link ? item.link : "Curriculum Learning Document")}
+                    </span>
+                  </div>
                 </div>
 
-                {isCompleted ? (
-                  <div className="learning-completed-label">
-                    <CheckCircle2 size={15} className="learning-completed-icon" />
-                    Completed
-                  </div>
-                ) : (
-                  <button
-                    className="learning-toggle-btn btn-mark-complete"
-                    onClick={() => toggleStatus(item.id)}
-                  >
-                    Mark complete
-                  </button>
-                )}
+                <div className="learning-card-footer">
+                  {item.link ? (
+                    <a
+                      href={item.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="resource-download-btn"
+                    >
+                      <Eye size={14} /> View Link
+                    </a>
+                  ) : item.file_url ? (
+                    <button
+                      type="button"
+                      className="resource-download-btn"
+                      onClick={() => {
+                        let targetUrl = item.file_url;
+                        if (!targetUrl.startsWith("http") && !targetUrl.startsWith("blob:")) {
+                          targetUrl = targetUrl.startsWith("/") ? targetUrl : `/${targetUrl}`;
+                        }
+                        window.open(targetUrl, "_blank");
+                      }}
+                    >
+                      <Eye size={14} /> View Document
+                    </button>
+                  ) : (
+                    <span className="resource-no-link">No Attachment</span>
+                  )}
+                  <Badge variant="success" className="learning-status-pill">
+                    Published
+                  </Badge>
+                </div>
               </div>
             );
           })

@@ -78,9 +78,9 @@ const exportAllHistoryToExcel = (records) => {
 };
 
 export default function AdminAttendance() {
-  const [batches, setBatches] = useState(defaultBatches);
+  const [batches, setBatches] = useState([]);
   const [selectedBatchCode, setSelectedBatchCode] = useState(() => {
-    return localStorage.getItem("admin_selected_batch_code") || "JAVA-QRVL";
+    return localStorage.getItem("admin_selected_batch_code") || "";
   });
 
   const handleBatchChange = (newCode) => {
@@ -115,19 +115,35 @@ export default function AdminAttendance() {
   const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
   const canvasRef = useRef(null);
 
-  // Fetch batches from backend API
+  // Fetch all active system & enrolled batches from backend API
   useEffect(() => {
-    apiFetch("/batches")
-      .then((res) => {
+    const loadBatches = async () => {
+      try {
+        let fetchedList = [];
+        const res = await apiFetch("/batches");
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const mapped = res.data.map(b => ({
+          fetchedList = res.data;
+        }
+
+        const myRes = await apiFetch("/batches/my-batches");
+        if (myRes && myRes.data && Array.isArray(myRes.data) && myRes.data.length > 0) {
+          const combined = [...fetchedList];
+          myRes.data.forEach(mb => {
+            if (!combined.some(b => b.id === mb.id || b.code === mb.code || b.join_code === mb.join_code)) {
+              combined.push(mb);
+            }
+          });
+          fetchedList = combined;
+        }
+
+        if (fetchedList.length > 0) {
+          const mapped = fetchedList.map(b => ({
             id: b.id,
             name: b.name || b.title || "Training Cohort",
             code: b.join_code || b.code || `BATCH-${b.id}`
           }));
           setBatches(mapped);
-          
-          // Check if user's last selected batch is in the fetched list
+
           const savedCode = localStorage.getItem("admin_selected_batch_code");
           const exists = mapped.some(b => b.code === savedCode);
           if (exists) {
@@ -137,16 +153,20 @@ export default function AdminAttendance() {
             localStorage.setItem("admin_selected_batch_code", mapped[0].code);
           }
         }
-      })
-      .catch(() => {});
+      } catch (err) {
+        console.error("Failed to load batches:", err);
+      }
+    };
+
+    loadBatches();
   }, []);
 
-  // Update student roster from API when batch changes
+  // Update student roster & live attendance records from API when batch or date changes
   useEffect(() => {
     const currentBatch = batches.find(b => b.code === selectedBatchCode);
     const batchId = currentBatch ? currentBatch.id : null;
 
-    const fetchStudentsForBatch = async () => {
+    const fetchStudentsAndAttendance = async () => {
       let fetchedStudents = [];
       if (batchId) {
         try {
@@ -156,7 +176,7 @@ export default function AdminAttendance() {
               id: s.id || s.user_id || `S-${idx + 1}`,
               rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
               name: s.name || s.full_name || "Student User",
-              status: true
+              status: false
             }));
           }
         } catch (_) {}
@@ -171,22 +191,52 @@ export default function AdminAttendance() {
               id: s.id || s.user_id || `S-${idx + 1}`,
               rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
               name: s.name || s.full_name || "Student User",
-              status: true
+              status: false
             }));
           }
         } catch (_) {}
       }
 
       setStudents(fetchedStudents);
-      const initialMap = {};
-      fetchedStudents.forEach(s => { initialMap[s.id] = s.status; });
-      setAttendance(initialMap);
-      setQrScannedMap({});
+
+      // Query database for attendance marked on the selected date or present via live scan
+      try {
+        const attRes = await apiFetch('/attendance/list');
+        const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
+        
+        const attendanceMap = {};
+        const scannedMap = {};
+
+        fetchedStudents.forEach((s) => {
+          // Check if student has marked attendance present on DB (by ID or student name)
+          const record = dbList.find(d => 
+            Number(d.id || d.student_id || d.user_id) === Number(s.id) ||
+            (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim())
+          );
+          const isPresentInDb = record ? (
+            record.status?.toLowerCase() === 'present' || 
+            Number(record.attendance_percentage || 0) > 0 || 
+            Number(record.present_count || 0) > 0
+          ) : false;
+          attendanceMap[s.id] = isPresentInDb;
+          if (isPresentInDb) scannedMap[s.id] = true;
+        });
+
+
+        setAttendance(attendanceMap);
+        setQrScannedMap(scannedMap);
+      } catch (_) {
+        const initialMap = {};
+        fetchedStudents.forEach(s => { initialMap[s.id] = false; });
+        setAttendance(initialMap);
+      }
       setSaved(false);
     };
 
-    fetchStudentsForBatch();
-  }, [selectedBatchCode, batches]);
+    fetchStudentsAndAttendance();
+    const interval = setInterval(fetchStudentsAndAttendance, 5000); // 5 sec live sync poll
+    return () => clearInterval(interval);
+  }, [selectedBatchCode, batches, sessionDate]);
 
   // Real-time QR Scan listener (window event & storage sync)
   const handleQrScanCheckIn = useCallback((scannedStudentName) => {

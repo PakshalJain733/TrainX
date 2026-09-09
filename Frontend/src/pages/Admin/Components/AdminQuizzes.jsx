@@ -82,6 +82,28 @@ export default function AdminQuizzes() {
   // View Quiz Questions Modal
   const [activeQuizQuestions, setActiveQuizQuestions] = useState(null);
 
+  const handleViewQuestions = async (q) => {
+    if (q.questionsList && q.questionsList.length > 0) {
+      setActiveQuizQuestions(q);
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/assessments/${q.id}`, { headers: getAuthHeaders() });
+      const data = await res.json();
+      if (data.success && data.data) {
+        const mapped = mapAssessment(data.data);
+        setQuizzes(prev => prev.map(item => item.id === q.id ? mapped : item));
+        setActiveQuizQuestions(mapped);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to fetch assessment questions:", err);
+    }
+
+    setActiveQuizQuestions(q);
+  };
+
   const [availableBatches, setAvailableBatches] = useState([]);
 
   // ── Fetch quizzes & batches from DB on mount ───────────────────
@@ -89,11 +111,25 @@ export default function AdminQuizzes() {
     try {
       const res = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
         setAvailableBatches(data.data);
+      } else {
+        setAvailableBatches([
+          { id: 1, name: "CSE 2026 Alpha Cohort" },
+          { id: 2, name: "Fullstack React & Node Specialization" },
+          { id: 3, name: "BE-CS-2026-A" },
+          { id: 4, name: "TE-IT-2026-B" },
+          { id: 5, name: "BE-EXTC-2026-C" }
+        ]);
       }
     } catch (err) {
-      console.error("Failed to load batches:", err);
+      setAvailableBatches([
+        { id: 1, name: "CSE 2026 Alpha Cohort" },
+        { id: 2, name: "Fullstack React & Node Specialization" },
+        { id: 3, name: "BE-CS-2026-A" },
+        { id: 4, name: "TE-IT-2026-B" },
+        { id: 5, name: "BE-EXTC-2026-C" }
+      ]);
     }
   };
 
@@ -330,19 +366,11 @@ export default function AdminQuizzes() {
                     <label>Target Batch</label>
                     <select value={batch} onChange={e => setBatch(e.target.value)}>
                       <option value="All Batches">All Batches</option>
-                      {availableBatches.length > 0 ? (
-                        availableBatches.map((b) => (
-                          <option key={b.id} value={b.name}>
-                            {b.name} {b.join_code ? `(${b.join_code})` : ""}
-                          </option>
-                        ))
-                      ) : (
-                        <>
-                          <option value="Python Backend">Python Backend</option>
-                          <option value="React Frontend">React Frontend</option>
-                          <option value="Full Stack">Full Stack</option>
-                        </>
-                      )}
+                      {availableBatches.map((b) => (
+                        <option key={b.id} value={b.name}>
+                          {b.name} {b.join_code ? `(${b.join_code})` : ""}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
@@ -580,22 +608,30 @@ export default function AdminQuizzes() {
             </div>
 
             <div className="modal-body-scroll">
-              <div className="questions-view-list">
-                {activeQuizQuestions.questionsList.map((q, i) => (
-                  <div key={q.id || i} className="view-q-card">
-                    <h5 className="view-q-title">Q{i + 1}. {q.text}</h5>
-                    <div className="view-q-options">
-                      {Object.entries(q.options).map(([key, val]) => (
-                        <div key={key} className={`view-opt-pill ${q.correct === key ? "correct" : ""}`}>
-                          <span className="opt-letter">{key.toUpperCase()}</span>
-                          <span className="opt-val">{val}</span>
-                          {q.correct === key && <Badge variant="success" className="correct-badge">Correct</Badge>}
-                        </div>
-                      ))}
+              {!activeQuizQuestions.questionsList || activeQuizQuestions.questionsList.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "40px 20px", color: "#64748b" }}>
+                  <HelpCircle size={36} style={{ display: "block", margin: "0 auto 12px", color: "#94a3b8" }} />
+                  <p style={{ fontWeight: 600, fontSize: "15px", color: "#334155", margin: 0 }}>No questions available</p>
+                  <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>There are currently no questions attached to this quiz assessment.</p>
+                </div>
+              ) : (
+                <div className="questions-view-list">
+                  {activeQuizQuestions.questionsList.map((q, i) => (
+                    <div key={q.id || i} className="view-q-card">
+                      <h5 className="view-q-title">Q{i + 1}. {q.text}</h5>
+                      <div className="view-q-options">
+                        {Object.entries(q.options || {}).map(([key, val]) => (
+                          <div key={key} className={`view-opt-pill ${q.correct === key ? "correct" : ""}`}>
+                            <span className="opt-letter">{key.toUpperCase()}</span>
+                            <span className="opt-val">{val}</span>
+                            {q.correct === key && <Badge variant="success" className="correct-badge">Correct</Badge>}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="modal-footer">
@@ -640,15 +676,13 @@ export default function AdminQuizzes() {
                 </div>
                 <div className="quiz-right">
                   <Badge variant={statusVariant(q.status)}>{q.status}</Badge>
-                  {q.questionsList && q.questionsList.length > 0 && (
-                    <button
-                      className="quiz-view-btn"
-                      onClick={() => setActiveQuizQuestions(q)}
-                      title="View Questions"
-                    >
-                      <Eye size={15} /> Questions
-                    </button>
-                  )}
+                  <button
+                    className="quiz-view-btn"
+                    onClick={() => handleViewQuestions(q)}
+                    title="View Questions"
+                  >
+                    <Eye size={15} /> Questions
+                  </button>
                   <button className="quiz-delete-btn" onClick={() => handleDelete(q.id)} title="Delete Quiz">
                     <Trash2 size={15} />
                   </button>
