@@ -3,20 +3,32 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const initialMaintenanceConfig = {
   globalEmergencyMode: false,
   modules: {
-    // Role Dashboards
+    // 1. Authentication & Security
+    authSystem: {
+      key: "authSystem",
+      name: "User Login & Registration System",
+      category: "Auth & Gateways",
+      active: true,
+      role: "All Roles",
+      description: "Student, Admin, Mentor & Coordinator login, signup, role authorization, and JWT authentication",
+      message: "Authentication gateway is currently undergoing security upgrades and system maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 2. Role Dashboards & Workspaces
     studentDashboard: {
       key: "studentDashboard",
-      name: "Student Dashboard & Workspace",
+      name: "Student Workspace & Dashboard",
       category: "Dashboards",
       active: true,
       role: "Student",
-      description: "Student portal, goal selection, roadmap view, and personal analytics",
+      description: "Student portal overview, goal selection, roadmap view, and personal analytics",
       message: "The Student Workspace is currently undergoing scheduled platform upgrades.",
       updatedAt: "Just now",
     },
     adminDashboard: {
       key: "adminDashboard",
-      name: "College Admin Dashboard",
+      name: "College Admin Workspace",
       category: "Dashboards",
       active: true,
       role: "College Admin",
@@ -26,7 +38,7 @@ const initialMaintenanceConfig = {
     },
     coordinatorDashboard: {
       key: "coordinatorDashboard",
-      name: "Coordinator Dashboard",
+      name: "Coordinator Faculty Workspace",
       category: "Dashboards",
       active: true,
       role: "Coordinator",
@@ -36,7 +48,7 @@ const initialMaintenanceConfig = {
     },
     mentorDashboard: {
       key: "mentorDashboard",
-      name: "Mentor / Trainer Workspace",
+      name: "Mentor & Trainer Workspace",
       category: "Dashboards",
       active: true,
       role: "Mentor",
@@ -44,8 +56,18 @@ const initialMaintenanceConfig = {
       message: "Mentor Workspace is currently undergoing scheduled maintenance.",
       updatedAt: "Just now",
     },
+    superAdminDashboard: {
+      key: "superAdminDashboard",
+      name: "Super Admin Platform Control Hub",
+      category: "Dashboards",
+      active: true,
+      role: "Super Admin",
+      description: "Platform-wide governance, multiple college management, admin verification, and health oversight",
+      message: "Super Admin Control Hub is undergoing maintenance.",
+      updatedAt: "Just now",
+    },
 
-    // Core AI Systems (USPs)
+    // 3. Main USPs & Core AI Systems
     aiRoadmaps: {
       key: "aiRoadmaps",
       name: "AI Personalized Roadmap Generator",
@@ -53,7 +75,7 @@ const initialMaintenanceConfig = {
       active: true,
       role: "All Roles",
       isUSP: true,
-      description: "AI engine generating career milestone roadmaps based on skill goals and performance",
+      description: "AI engine generating career milestone roadmaps based on career goals (Python, Web, AI/ML, etc.) and adaptive updates",
       message: "AI Roadmap Generator algorithm model is being recalibrated. Feature will return shortly.",
       updatedAt: "Just now",
     },
@@ -64,7 +86,7 @@ const initialMaintenanceConfig = {
       active: true,
       role: "Student & Mentor",
       isUSP: true,
-      description: "AI-powered voice/code mock interviews, automated scoring, and technical evaluation",
+      description: "AI-generated technical interview practice, automated voice/code evaluation, and performance analysis",
       message: "AI Interview evaluation servers are currently performing routine model maintenance.",
       updatedAt: "Just now",
     },
@@ -75,94 +97,104 @@ const initialMaintenanceConfig = {
       active: true,
       role: "Student, Mentor & Coordinator",
       isUSP: true,
-      description: "Automated analysis identifying student weak areas and adaptive roadmap updates",
+      description: "Automated analysis identifying student weak areas, improvement suggestions, and adaptive roadmap modifications",
       message: "Skill gap analytics engine is undergoing optimization.",
       updatedAt: "Just now",
     },
 
-    // Learning & Practice Modules
-    practiceCoding: {
-      key: "practiceCoding",
-      name: "Practice & Coding Platform",
-      category: "Learning Flow",
-      active: true,
-      role: "Student",
-      description: "Hands-on code execution environment, problem sets, and submission judge",
-      message: "Coding practice platform is temporarily undergoing database maintenance.",
-      updatedAt: "Just now",
-    },
+    // 4. Student Learning & Practice Flow
     learningContent: {
       key: "learningContent",
-      name: "Learning Content & Study Material",
-      category: "Learning Flow",
+      name: "Learning Content & AI Study Material",
+      category: "Learning & Practice",
       active: true,
       role: "Student & Mentor",
-      description: "Topic-wise learning resources, notes, and AI study materials",
+      description: "Study material repository, AI-generated learning content, topic-wise resources, and milestone guides",
       message: "Learning content repository is updating.",
+      updatedAt: "Just now",
+    },
+    practiceCoding: {
+      key: "practiceCoding",
+      name: "Coding Practice & Code Compiler",
+      category: "Learning & Practice",
+      active: true,
+      role: "Student",
+      description: "Hands-on coding environment, algorithm practice problems, test runner, and submission judge",
+      message: "Coding practice platform is temporarily undergoing database maintenance.",
       updatedAt: "Just now",
     },
     academicQuizzes: {
       key: "academicQuizzes",
-      name: "Academic Quiz Engine",
-      category: "Learning Flow",
+      name: "Academic Quiz & Assessment Engine",
+      category: "Learning & Practice",
       active: true,
       role: "Student & Coordinator",
-      description: "MCQ assessments, timed tests, and score tracking",
+      description: "MCQ assessments, timed tests, topic quizzes, and quiz performance analytics",
       message: "Quiz assessment module is currently offline for maintenance.",
       updatedAt: "Just now",
     },
 
-    // Operations & Governance
+    // 5. Operations, Performance & Governance
     leaderboards: {
       key: "leaderboards",
-      name: "Leaderboard System (Overall & Dept)",
-      category: "Operations",
+      name: "Milestone-Based Leaderboard System",
+      category: "Operations & Monitoring",
       active: true,
       role: "All Roles",
       isUSP: true,
-      description: "Milestone-based ranking, department scoreboards, and college leaderboard",
+      description: "Overall college comparison, milestone-based ranking, and department-specific scoreboards",
       message: "Leaderboard rankings are recalculating.",
       updatedAt: "Just now",
     },
     attendance: {
       key: "attendance",
-      name: "Attendance Governance Module",
-      category: "Operations",
+      name: "Attendance Tracking & History Module",
+      category: "Operations & Monitoring",
       active: true,
       role: "All Roles",
-      description: "Student attendance tracking, percentage calculations, and absence logs",
+      description: "Student attendance percentage tracking, absence history, and performance connection",
       message: "Attendance module sync is undergoing maintenance.",
       updatedAt: "Just now",
     },
     defaulters: {
       key: "defaulters",
       name: "Defaulter Management & Intervention Cycle",
-      category: "Operations",
+      category: "Operations & Monitoring",
       active: true,
       role: "Mentor & Coordinator",
       isUSP: true,
-      description: "Poor performance tracking, mentor meeting booking, and parent notification triggers",
+      description: "Poor performance tracking, mentor meeting scheduling, parent notification triggers, and improvement cycles",
       message: "Defaulter remediation tracking system is undergoing updates.",
+      updatedAt: "Just now",
+    },
+    mockDrives: {
+      key: "mockDrives",
+      name: "Mock Placement Drive System",
+      category: "Operations & Monitoring",
+      active: true,
+      role: "Super Admin, Coordinator & Student",
+      description: "Aptitude tests, machine tests, placement interview scoring, and recruitment recommendations",
+      message: "Mock placement drive module is currently undergoing updates.",
       updatedAt: "Just now",
     },
     weeklyReports: {
       key: "weeklyReports",
       name: "Weekly Student Performance Report Generator",
-      category: "Operations",
+      category: "Operations & Monitoring",
       active: true,
       role: "All Roles",
-      description: "Automated weekly PDF/dashboard analysis reports for students, mentors, and admins",
+      description: "Automated weekly PDF and dashboard student performance analysis reports (quiz, coding, AI interview, skill gaps)",
       message: "Weekly report generation service is paused for scheduled maintenance.",
       updatedAt: "Just now",
     },
-    mockDrives: {
-      key: "mockDrives",
-      name: "Placement & Mock Drive System",
-      category: "Operations",
+    collegeGovernance: {
+      key: "collegeGovernance",
+      name: "College, Department & Batch Management",
+      category: "Operations & Monitoring",
       active: true,
-      role: "Super Admin, Coordinator & Student",
-      description: "Aptitude tests, machine tests, placement eligibility, and drive management",
-      message: "Mock drives module is currently undergoing updates.",
+      role: "Super Admin & College Admin",
+      description: "Multi-college management, department creation (IT, CS, AIML, etc.), batch allocations, and admin verification",
+      message: "Institutional college governance module is under maintenance.",
       updatedAt: "Just now",
     },
   },
@@ -184,7 +216,7 @@ export function SystemMaintenanceProvider({ children }) {
     try {
       localStorage.setItem("platform_system_maintenance_config", JSON.stringify(config));
     } catch (e) {
-      console.error("Failed to save maintenance state:", e);
+      console.error("Failed to save maintenance config to localStorage:", e);
     }
   }, [config]);
 
@@ -254,16 +286,6 @@ export function SystemMaintenanceProvider({ children }) {
     });
   };
 
-  // Helper check function
-  const isModuleActive = (moduleKey) => {
-    if (config.globalEmergencyMode) return false;
-    return config.modules[moduleKey]?.active ?? true;
-  };
-
-  const getModuleConfig = (moduleKey) => {
-    return config.modules[moduleKey] || { active: true, message: "Under maintenance" };
-  };
-
   return (
     <SystemMaintenanceContext.Provider
       value={{
@@ -272,8 +294,6 @@ export function SystemMaintenanceProvider({ children }) {
         updateModuleMessage,
         toggleGlobalEmergencyMode,
         turnAllModulesOn,
-        isModuleActive,
-        getModuleConfig,
       }}
     >
       {children}
@@ -282,9 +302,9 @@ export function SystemMaintenanceProvider({ children }) {
 }
 
 export function useSystemMaintenance() {
-  const context = useContext(SystemMaintenanceContext);
-  if (!context) {
-    throw new Error("useSystemMaintenance must be used within a SystemMaintenanceProvider");
+  const ctx = useContext(SystemMaintenanceContext);
+  if (!ctx) {
+    throw new Error("useSystemMaintenance must be used within SystemMaintenanceProvider");
   }
-  return context;
+  return ctx;
 }

@@ -201,10 +201,14 @@ function Login() {
         localStorage.setItem("user", JSON.stringify(mergedUser));
 
         const role = mergedUser.role?.toLowerCase() || "";
-        if (role.includes("coordinator")) {
+        if (role.includes("superadmin") || role.includes("super admin") || role.includes("super_admin")) {
+          navigate("/super-admin");
+        } else if (role.includes("coordinator")) {
           navigate("/coordinator");
         } else if (role.includes("admin") || role.includes("hod")) {
           navigate("/admin");
+        } else if (role.includes("mentor") || role.includes("faculty") || role.includes("trainer")) {
+          navigate("/mentor");
         } else {
           navigate("/student");
         }

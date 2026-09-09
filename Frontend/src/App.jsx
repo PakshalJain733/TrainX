@@ -38,6 +38,31 @@ import AdminHelp from "./pages/Admin/Components/AdminHelp";
 import AdminProfile from './pages/Admin/Components/AdminProfile';
 import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
 
+
+// Super Admin Workspace Imports
+import SuperAdminLayout from './pages/SuperAdmin/SuperAdminLayout';
+import SuperAdminOverview from './pages/SuperAdmin/Overview';
+import CollegesPage from './pages/SuperAdmin/Colleges';
+import CollegeDepartments from './pages/SuperAdmin/CollegeDepartments';
+import DepartmentsPage from './pages/SuperAdmin/Departments';
+import SuperAdminBatches from './pages/SuperAdmin/Batches';
+import AdminVerificationPage from './pages/SuperAdmin/AdminVerification';
+import CoordinatorsPage from './pages/SuperAdmin/Coordinators';
+import MentorsTrainersPage from './pages/SuperAdmin/MentorsTrainers';
+import StudentsRiskPage from './pages/SuperAdmin/Students';
+import SuperAdminManageUsers from './pages/SuperAdmin/ManageUsers';
+import SuperAdminPerformancePage from './pages/SuperAdmin/Performance';
+import SuperAdminAttendancePage from './pages/SuperAdmin/Attendance';
+import SuperAdminAIRoadmapsPage from './pages/SuperAdmin/AIRoadmaps';
+import SuperAdminAIInterviewsPage from './pages/SuperAdmin/AIInterviews';
+import SuperAdminMockDrivesPage from './pages/SuperAdmin/MockDrives';
+import SuperAdminWeeklyReportsPage from './pages/SuperAdmin/WeeklyReports';
+import SuperAdminSystemHealth from './pages/SuperAdmin/SystemHealth';
+import SuperAdminProfilePage from './pages/SuperAdmin/SuperAdminProfile';
+import SuperAdminMaintenanceControls from './pages/SuperAdmin/MaintenanceControls';
+import SuperAdminCodingPracticeMonitoring from './pages/SuperAdmin/CodingPracticeMonitoring';
+
+
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
 import MentorOverview from './pages/Mentor/Components/Overview';
@@ -191,6 +216,34 @@ function App() {
             <Route path="profile" element={<CoordinatorProfilePage />} />
             <Route path="settings" element={<CoordinatorProfilePage />} />
           </Route>
+
+
+          {/* Super Admin Workspace Routes */}
+          <Route path="/super-admin" element={<SuperAdminLayout />}>
+            <Route index element={<SuperAdminOverview />} />
+            <Route path="colleges" element={<CollegesPage />} />
+            <Route path="colleges/:collegeId" element={<CollegeDepartments />} />
+            <Route path="departments" element={<DepartmentsPage />} />
+            <Route path="batches" element={<SuperAdminBatches />} />
+            <Route path="users" element={<SuperAdminManageUsers />} />
+            <Route path="verification" element={<SuperAdminManageUsers />} />
+            <Route path="coordinators" element={<SuperAdminManageUsers />} />
+            <Route path="mentors" element={<SuperAdminManageUsers />} />
+            <Route path="students" element={<SuperAdminManageUsers />} />
+            <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
+            <Route path="performance" element={<SuperAdminPerformancePage />} />
+            <Route path="attendance" element={<SuperAdminAttendancePage />} />
+            <Route path="coding-practice" element={<SuperAdminCodingPracticeMonitoring />} />
+            <Route path="ai-roadmaps" element={<SuperAdminAIRoadmapsPage />} />
+            <Route path="ai-interviews" element={<SuperAdminAIInterviewsPage />} />
+            <Route path="mock-drives" element={<SuperAdminMockDrivesPage />} />
+            <Route path="health" element={<SuperAdminSystemHealth />} />
+            <Route path="weekly-reports" element={<SuperAdminWeeklyReportsPage />} />
+            <Route path="profile" element={<SuperAdminProfilePage />} />
+          </Route>
+          <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
+          <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
+
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -50,7 +50,19 @@ export const getStudentAttendanceSummaryService = async (userId) => {
   const percentage = calculateAttendancePercentage(counts.present_count, counts.total_classes);
   const status = evaluateAttendanceStatus(percentage, counts.total_classes);
 
+  const isLowAttendance = percentage < 75 && counts.total_classes > 0;
+
   const summary = {
+    // CamelCase keys per Ganesh's spec
+    studentId: Number(userId),
+    totalSessions: counts.total_classes,
+    present: counts.present_count,
+    absent: counts.absent_count,
+    percentage: percentage,
+    status: status,
+    lowAttendance: isLowAttendance,
+
+    // Legacy snake_case keys for backward compatibility
     student_id: Number(userId),
     total_classes: counts.total_classes,
     present_count: counts.present_count,
@@ -113,12 +125,26 @@ export const getFilteredStudentsAttendanceService = async ({
     const attendance_percentage = calculateAttendancePercentage(present_count, total_classes);
     const attendance_status = evaluateAttendanceStatus(attendance_percentage, total_classes, parsedThreshold);
 
+    const isBelowThreshold = attendance_percentage < parsedThreshold && total_classes > 0;
+
     return {
+      // CamelCase keys per Ganesh's spec
+      studentId: student.student_id,
+      studentName: student.student_name,
+      studentEmail: student.student_email,
+      department: student.department || 'General',
+      batchName: student.batch_name || 'Unassigned',
+      totalSessions: total_classes,
+      present: present_count,
+      absent: absent_count,
+      percentage: attendance_percentage,
+      status: attendance_status,
+      lowAttendance: isBelowThreshold,
+
+      // Legacy snake_case keys for backward compatibility
       student_id: student.student_id,
       student_name: student.student_name,
       student_email: student.student_email,
-      department: student.department || 'General',
-      batch_name: student.batch_name || 'Unassigned',
       total_classes,
       present_count,
       absent_count,
@@ -126,13 +152,13 @@ export const getFilteredStudentsAttendanceService = async ({
       excused_count,
       attendance_percentage,
       attendance_status,
-      is_below_threshold: attendance_percentage < parsedThreshold && total_classes > 0,
+      is_below_threshold: isBelowThreshold,
     };
   });
 
   if (onlyLowAttendance) {
     return processedStudents.filter(
-      (s) => s.is_below_threshold || s.attendance_status === 'Low Attendance' || s.attendance_status === 'Warning'
+      (s) => s.lowAttendance || s.status === 'Low Attendance' || s.status === 'Warning'
     );
   }
 
@@ -198,15 +224,15 @@ export const getAttendanceDashboardSummaryService = async (collegeId = null, thr
   let totalPercentageSum = 0;
 
   allStudents.forEach((s) => {
-    totalPercentageSum += s.attendance_percentage;
-    if (s.attendance_status === 'Good') goodCount++;
-    else if (s.attendance_status === 'Warning') warningCount++;
-    else if (s.attendance_status === 'Low Attendance') lowCount++;
+    totalPercentageSum += s.percentage;
+    if (s.status === 'Good') goodCount++;
+    else if (s.status === 'Warning') warningCount++;
+    else if (s.status === 'Low Attendance') lowCount++;
   });
 
   const overallAvg = totalStudents > 0 ? Number((totalPercentageSum / totalStudents).toFixed(2)) : 0.0;
 
-  const lowAttendanceList = allStudents.filter((s) => s.is_below_threshold || s.attendance_status === 'Low Attendance');
+  const lowAttendanceList = allStudents.filter((s) => s.lowAttendance || s.status === 'Low Attendance');
 
   return {
     total_students_tracked: totalStudents,
