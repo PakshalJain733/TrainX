@@ -36,7 +36,7 @@ export default function Overview() {
 
         <div className="overview-hero-actions">
           <Link
-            to="/super-admin/verification"
+            to="/super-admin/users"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               padding: '10px 18px', background: '#f59e0b', color: '#1c1917',
@@ -67,7 +67,7 @@ export default function Overview() {
               <ShieldAlert size={16} style={{ color: '#f59e0b' }} />
               <h3 style={{ fontWeight: 700, color: '#0f172a', fontSize: '13.5px', margin: 0 }}>Pending Admin Requests</h3>
             </div>
-            <Link to="/super-admin/verification" style={{ fontSize: '12px', fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}>
+            <Link to="/super-admin/users" style={{ fontSize: '12px', fontWeight: 600, color: '#4f46e5', textDecoration: 'none' }}>
               View All
             </Link>
           </div>

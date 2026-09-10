@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { initialBatches } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
-import { Layers, Plus, Search, UserCheck, Calendar, Building2, GraduationCap, RefreshCw, X } from 'lucide-react';
+import { Layers, Search, Plus, Filter, Users, Calendar, ArrowUpRight, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown } from 'lucide-react';
 import { batchAPI, collegeAPI, departmentAPI } from '../../services/api';
+import '../Admin/Styles/AdminUsers.css';
 
 export default function Batches() {
   const [batches, setBatches] = useState(initialBatches);
@@ -146,7 +148,7 @@ export default function Batches() {
   return (
     <div className="space-y-6">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Layers className="w-5 h-5 text-indigo-600" />
@@ -155,17 +157,18 @@ export default function Batches() {
           <p className="text-xs text-slate-500">Monitor batch timelines, completion progress, and assigned mentors</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-auto">
           <button
             onClick={loadData}
-            className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition"
-            title="Refresh API"
+            style={{ border: "none", outline: "none" }}
+            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer flex items-center justify-center"
+            title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2 self-start sm:self-auto"
+            className="sa-btn-primary"
           >
             <Plus className="w-4 h-4" />
             <span>Create New Cohort</span>
@@ -174,26 +177,34 @@ export default function Batches() {
       </div>
 
       {/* Cascading Filter Bar (College -> Department -> Search) */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center gap-4 justify-between">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+      <div className="sa-search-card flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="sa-search-wrap flex-1 max-w-sm">
+          <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder="Search cohort name or college..."
+            placeholder="Search cohort name, code, or college..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+            className="sa-search-input"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           {/* Cascading Step 1: Select College */}
-          <div className="flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-slate-400" />
+          <div className="relative flex items-center bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-indigo-300 px-3.5 h-[38px] rounded-xl transition-all duration-200 w-full sm:w-52 shrink-0 shadow-xs group">
+            <Building2 className="w-4 h-4 text-indigo-600 shrink-0 mr-1.5 group-hover:scale-105 transition-transform" />
             <select
               value={filterCollegeId}
               onChange={handleCollegeFilterChange}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+              style={{
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                appearance: "none",
+              }}
+              className="text-slate-800 text-xs font-semibold cursor-pointer w-full truncate pr-6 focus:ring-0"
             >
               <option value="all">Step 1: All Colleges</option>
               {colleges.map((c) => (
@@ -202,15 +213,24 @@ export default function Batches() {
                 </option>
               ))}
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 absolute right-3 pointer-events-none transition-colors" />
           </div>
 
           {/* Cascading Step 2: Select Department (Filtered by College) */}
-          <div className="flex items-center gap-1.5">
-            <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
+          <div className="relative flex items-center bg-slate-50 hover:bg-slate-100/90 border border-slate-200 hover:border-indigo-300 px-3.5 h-[38px] rounded-xl transition-all duration-200 w-full sm:w-52 shrink-0 shadow-xs group">
+            <GraduationCap className="w-4 h-4 text-indigo-600 shrink-0 mr-1.5 group-hover:scale-105 transition-transform" />
             <select
               value={filterDeptId}
               onChange={(e) => setFilterDeptId(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 rounded-lg text-xs font-semibold focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+              style={{
+                border: "none",
+                outline: "none",
+                background: "transparent",
+                WebkitAppearance: "none",
+                MozAppearance: "none",
+                appearance: "none",
+              }}
+              className="text-slate-800 text-xs font-semibold cursor-pointer w-full truncate pr-6 focus:ring-0"
             >
               <option value="all">Step 2: All Departments</option>
               {availableFilterDepartments.map((d) => (
@@ -219,6 +239,7 @@ export default function Batches() {
                 </option>
               ))}
             </select>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-600 absolute right-3 pointer-events-none transition-colors" />
           </div>
         </div>
       </div>
@@ -283,131 +304,124 @@ export default function Batches() {
       </div>
 
       {/* Add Cohort Modal with Cascading Selection */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
-                  <Layers className="w-5 h-5" />
+      {isModalOpen && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsModalOpen(false); }}>
+          <div className="modal-dialog" style={{ maxWidth: "540px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Layers size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-slate-800 text-base">Create New Cohort</h3>
-                  <p className="text-xs text-slate-500">Cascading creation: College → Department → Batch</p>
+                  <h2 className="modal-title">Create New Cohort</h2>
+                  <p className="modal-subtitle">Cascading creation: College → Department → Batch</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-              >
-                <X className="w-5 h-5" />
+              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateBatch} className="p-6 space-y-4">
-              {/* Step 1: Select College */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  1. Target Institution (College)
-                </label>
-                <select
-                  required
-                  value={modalCollegeId}
-                  onChange={(e) => {
-                    setModalCollegeId(e.target.value);
-                    setModalDeptId(''); // reset department when college changes
-                  }}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
-                >
-                  <option value="">Select College...</option>
-                  {colleges.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} ({c.code})
+            <form onSubmit={handleCreateBatch}>
+              <div className="modal-body">
+                {/* Step 1: Select College */}
+                <div className="form-group-admin">
+                  <label>1. Target Institution (College) *</label>
+                  <select
+                    required
+                    className="form-select-admin"
+                    value={modalCollegeId}
+                    onChange={(e) => {
+                      setModalCollegeId(e.target.value);
+                      setModalDeptId(''); // reset department when college changes
+                    }}
+                  >
+                    <option value="">Select College...</option>
+                    {colleges.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({c.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Step 2: Select Department */}
+                <div className="form-group-admin">
+                  <label>2. Department (Scoped to Selected College) *</label>
+                  <select
+                    required
+                    disabled={!modalCollegeId}
+                    className="form-select-admin"
+                    value={modalDeptId}
+                    onChange={(e) => setModalDeptId(e.target.value)}
+                  >
+                    <option value="">
+                      {modalCollegeId ? "Select Department..." : "← Select College first"}
                     </option>
-                  ))}
-                </select>
-              </div>
+                    {availableModalDepartments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} ({d.code})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              {/* Step 2: Select Department (Only departments belonging to selected college) */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  2. Department (Scoped to Selected College)
-                </label>
-                <select
-                  required
-                  disabled={!modalCollegeId}
-                  value={modalDeptId}
-                  onChange={(e) => setModalDeptId(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition disabled:opacity-50"
-                >
-                  <option value="">
-                    {modalCollegeId ? "Select Department..." : "← Select College first"}
-                  </option>
-                  {availableModalDepartments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Step 3: Batch Name & Details */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">3. Cohort / Batch Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. CSE 2026 Alpha Cohort"
-                  value={batchForm.name}
-                  onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Batch Code</label>
+                {/* Step 3: Batch Name & Details */}
+                <div className="form-group-admin">
+                  <label>3. Cohort / Batch Name *</label>
                   <input
                     type="text"
                     required
-                    placeholder="CSE-2026-A"
-                    value={batchForm.code}
-                    onChange={(e) => setBatchForm({ ...batchForm, code: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
+                    className="form-input-admin"
+                    placeholder="e.g. CSE 2026 Alpha Cohort"
+                    value={batchForm.name}
+                    onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })}
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">Assigned Trainer</label>
-                  <input
-                    type="text"
-                    placeholder="Rohan Sharma"
-                    value={batchForm.trainer}
-                    onChange={(e) => setBatchForm({ ...batchForm, trainer: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition"
-                  />
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Batch Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="CSE-2026-A"
+                      value={batchForm.code}
+                      onChange={(e) => setBatchForm({ ...batchForm, code: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-group-admin">
+                    <label>Assigned Trainer</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="Rohan Sharma"
+                      value={batchForm.trainer}
+                      onChange={(e) => setBatchForm({ ...batchForm, trainer: e.target.value })}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg transition"
-                >
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </button>
                 <button
                   type="submit"
+                  className="btn-modal-submit"
                   disabled={!modalCollegeId || !modalDeptId}
-                  className="px-4 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition disabled:opacity-50"
+                  style={{ opacity: (!modalCollegeId || !modalDeptId) ? 0.5 : 1 }}
                 >
                   Create Cohort
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
