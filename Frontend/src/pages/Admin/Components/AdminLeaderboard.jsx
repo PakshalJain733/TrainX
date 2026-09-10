@@ -9,12 +9,22 @@ import "../Styles/AdminLeaderboard.css";
 const getRankClass = (r) => r === 1 ? "admin-rank-1" : r === 2 ? "admin-rank-2" : r === 3 ? "admin-rank-3" : "";
 
 export default function AdminLeaderboard() {
-  const [data, setData] = useState({ overall: [], topBatches: [] });
+  const [data, setData] = useState({ overall: [], topBatches: [], department: [] });
   const [loading, setLoading] = useState(true);
+  
+  // Filters
+  const [filterDept, setFilterDept] = useState("");
+  const [filterBatch, setFilterBatch] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [viewType, setViewType] = useState("overall"); // overall, department, batch
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/leaderboards")
+    const queryParams = new URLSearchParams();
+    if (filterDept) queryParams.append("department", filterDept);
+    if (filterBatch) queryParams.append("batch", filterBatch);
+
+    apiFetch(`/leaderboards?${queryParams.toString()}`)
       .then((res) => {
         if (res && res.data) {
           setData(res.data);
@@ -24,9 +34,9 @@ export default function AdminLeaderboard() {
         console.error("Failed to fetch leaderboard data:", err);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [filterDept, filterBatch]);
 
-  if (loading) {
+  if (loading && !data.overall.length) {
     return (
       <div className="admin-leaderboard-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 20px', color: '#64748b' }}>
         <RefreshCw size={28} style={{ animation: 'spin 1.2s linear infinite', color: '#4f46e5', marginBottom: 14 }} />
@@ -36,8 +46,19 @@ export default function AdminLeaderboard() {
     );
   }
 
-  const topStudents = data.overall || [];
-  const topBatches = data.topBatches || [];
+  // Apply search query on frontend
+  const filterList = (list) => {
+    if (!searchQuery) return list;
+    const lowerQ = searchQuery.toLowerCase();
+    return list.filter(item => 
+      (item.name && item.name.toLowerCase().includes(lowerQ)) || 
+      (item.sub && item.sub.toLowerCase().includes(lowerQ)) ||
+      (item.batch && item.batch.toLowerCase().includes(lowerQ))
+    );
+  };
+
+  const topStudents = filterList(viewType === "department" ? data.department : data.overall) || [];
+  const topBatches = filterList(data.topBatches) || [];
 
   return (
     <div className="admin-leaderboard-container">
@@ -45,6 +66,36 @@ export default function AdminLeaderboard() {
         title="Leaderboard"
         description="Campus-wide rankings of students and batches."
       />
+
+      {/* Filters Bar */}
+      <div className="admin-filters-bar" style={{ display: 'flex', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <input 
+          type="text" 
+          placeholder="Search students or batches..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="sa-search-input"
+          style={{ flex: 1, minWidth: '200px', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+        />
+        <select 
+          value={viewType} 
+          onChange={(e) => setViewType(e.target.value)}
+          style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff' }}
+        >
+          <option value="overall">Overall Ranking</option>
+          <option value="department">Department Ranking</option>
+        </select>
+        <select 
+          value={filterDept} 
+          onChange={(e) => setFilterDept(e.target.value)}
+          style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#fff' }}
+        >
+          <option value="">All Departments</option>
+          <option value="Computer Engineering">Computer Engineering</option>
+          <option value="IT">IT</option>
+          <option value="ECS">ECS</option>
+        </select>
+      </div>
 
       <div className="leaderboard-split-grid">
         {/* Students */}

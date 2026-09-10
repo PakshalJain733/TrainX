@@ -34,7 +34,6 @@ export default function AdminProfile() {
     department: "Computer Engineering",
     college: "Vasantdada Patil Pratishthan College of Engineering (PVPPCOE)",
     location: "Mumbai, Maharashtra",
-    bio: "Administrator managing campus training portal, student cohorts, placement drives, and curriculum progress.",
     notifSystemAlerts: true,
     notifWeeklyReport: true,
     notifNewUsers: true,
@@ -56,8 +55,8 @@ export default function AdminProfile() {
           role: parsed.role || prev.role,
           department: parsed.department || prev.department,
           college: parsed.college || prev.college,
+          college: parsed.college || prev.college,
           location: parsed.location || prev.location,
-          bio: parsed.bio || prev.bio,
         }));
       }
 
@@ -108,7 +107,6 @@ export default function AdminProfile() {
         department: form.department,
         college: form.college,
         location: form.location,
-        bio: form.bio,
       };
 
       // Save to backend database
@@ -322,18 +320,6 @@ export default function AdminProfile() {
                     readOnly
                   />
                 </div>
-              </div>
-
-              <div className="profile-field" style={{ marginTop: "14px" }}>
-                <label className="profile-label">Bio / Description</label>
-                <textarea
-                  rows={3}
-                  className="profile-input"
-                  style={{ height: "auto", padding: "10px" }}
-                  value={form.bio}
-                  onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                  placeholder="Brief summary of responsibilities..."
-                />
               </div>
             </div>
 

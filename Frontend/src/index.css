@@ -67,6 +67,10 @@ html, body {
 }
 
 /* Standard Base Utilities for Consistent Layout & Alignment */
+button, .btn {
+  width: auto;
+}
+
 .flex { display: flex; }
 .inline-flex { display: inline-flex; }
 .grid { display: grid; }

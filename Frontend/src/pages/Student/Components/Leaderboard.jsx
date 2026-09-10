@@ -27,33 +27,43 @@ export default function Leaderboard() {
       }
     } catch (e) {}
 
-    // Fetch live dashboard leaderboard data
-    apiFetch("/student/dashboard")
+    // Fetch live leaderboard data
+    apiFetch("/leaderboards")
       .then((res) => {
-        if (res && res.data && res.data.leaderboard && res.data.leaderboard.length > 0) {
-          const list = res.data.leaderboard.map((item, idx) => ({
-            rank: item.rank || idx + 1,
-            name: item.name,
-            score: "0 XP",
-            initials: item.initials || getInitials(item.name),
-            department: item.department || userDept || "Computer Engineering & IT",
-            sub: item.you ? "Your Account" : (item.department || "Enrolled Student"),
-            isCurrentUser: item.you,
-          }));
-          setAllStudents(list);
-          const currentUser = list.find((s) => s.isCurrentUser);
+        if (res && res.data) {
+          const processList = (rawList) => {
+            return rawList.map((item, idx) => ({
+              rank: item.rank || idx + 1,
+              name: item.name,
+              score: `${item.score.toLocaleString()} XP`,
+              progress: item.progress || 0,
+              initials: item.initials || getInitials(item.name),
+              department: item.sub || userDept || "General",
+              batch: item.batch || "Unassigned",
+              sub: item.isCurrentUser ? "Your Account" : (item.sub || "Enrolled Student"),
+              isCurrentUser: item.isCurrentUser,
+            }));
+          };
+
+          const overallList = processList(res.data.overall || []);
+          const deptList = processList(res.data.department || []);
+
+          // Keep all students state with property to distinguish if needed, but we can just use activeTab to select from response.
+          // Wait, better to store the response directly and select in render.
+          setLeaderboardData({ overall: overallList, department: deptList, milestone: processList(res.data.milestone || []) });
+          
+          const currentUser = overallList.find((s) => s.isCurrentUser);
           if (currentUser) {
             setMyRank(`#${currentUser.rank}`);
           }
         }
       })
       .catch(() => {});
-  }, []);
+  }, [userDept]);
 
-  // Filter students based on activeTab: Overall (all) vs Department (specific department students)
-  const displayedStudents = activeTab === "department"
-    ? allStudents.filter((s) => s.isCurrentUser || (s.department && s.department.toLowerCase().includes(userDept.toLowerCase().split(' ')[0])))
-    : allStudents;
+  const [leaderboardData, setLeaderboardData] = useState({ overall: [], department: [], milestone: [] });
+
+  const displayedStudents = leaderboardData[activeTab] || [];
 
   const getRankClass = (r) => {
     if (r === 1) return "rank-1";
@@ -70,7 +80,7 @@ export default function Leaderboard() {
         description="View real-time batch rankings, XP score points, and top performers across your department."
       />
 
-      {/* 2 Top KPIs */}
+      {/* Top KPIs */}
       <div className="leaderboard-kpis-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
         <div className="leaderboard-kpi-card">
           <div className="leaderboard-kpi-icon-wrap">
@@ -79,7 +89,7 @@ export default function Leaderboard() {
           <div>
             <div className="leaderboard-kpi-label">Overall Rank</div>
             <p className="leaderboard-kpi-val">{myRank}</p>
-            <p className="leaderboard-kpi-sub">of {allStudents.length || 1} enrolled students</p>
+            <p className="leaderboard-kpi-sub">of {leaderboardData.overall.length || 1} enrolled students</p>
           </div>
         </div>
 
@@ -91,6 +101,19 @@ export default function Leaderboard() {
             <div className="leaderboard-kpi-label">Department Rank</div>
             <p className="leaderboard-kpi-val">{myRank}</p>
             <p className="leaderboard-kpi-sub">{userDept}</p>
+          </div>
+        </div>
+
+        <div className="leaderboard-kpi-card">
+          <div className="leaderboard-kpi-icon-wrap" style={{ background: '#fef3c7', color: '#d97706' }}>
+            <Flame size={22} />
+          </div>
+          <div>
+            <div className="leaderboard-kpi-label">My Overall Score</div>
+            <p className="leaderboard-kpi-val">
+              {leaderboardData.overall.find(s => s.isCurrentUser)?.score || "0 XP"}
+            </p>
+            <p className="leaderboard-kpi-sub">Total Experience Points</p>
           </div>
         </div>
       </div>
@@ -109,7 +132,13 @@ export default function Leaderboard() {
             className={`leaderboard-tab-btn ${activeTab === "department" ? "active" : ""}`}
             onClick={() => setActiveTab("department")}
           >
-            Coordinator / Department
+            Department
+          </button>
+          <button
+            className={`leaderboard-tab-btn ${activeTab === "milestone" ? "active" : ""}`}
+            onClick={() => setActiveTab("milestone")}
+          >
+            Milestone
           </button>
         </div>
 
@@ -117,11 +146,14 @@ export default function Leaderboard() {
           <h3 className="leaderboard-list-title">
             {activeTab === "overall" && "College-wide ranking"}
             {activeTab === "department" && `${userDept} Department Ranking`}
+            {activeTab === "milestone" && "Milestone Completion Ranking"}
           </h3>
           <p className="leaderboard-list-desc">
             {activeTab === "overall"
               ? "College-wide student leaderboard across all departments"
-              : `Specific department leaderboard showing assigned students for ${userDept}`}
+              : activeTab === "department"
+              ? `Specific department leaderboard showing assigned students for ${userDept}`
+              : "Ranking based on roadmap milestones completed"}
           </p>
         </div>
 

@@ -13,25 +13,28 @@ const defaultLeaderboard = [
 ];
 
 export default function Leaderboard() {
-  const [board, setBoard] = useState(defaultLeaderboard);
+  const [board, setBoard] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch("/students")
+    setLoading(true);
+    apiFetch("/leaderboards")
       .then((res) => {
-        if (res && res.data && res.data.length > 0) {
-          const sorted = res.data.map((s, idx) => ({
-            rank: idx + 1,
-            name: s.name || s.full_name || `Student ${idx + 1}`,
-            batch: s.batch_name || "BE-CS-2026-A",
-            points: `${2500 - idx * 120}`,
-            solved: 150 - idx * 8,
-            streak: `${15 - idx} Days`,
+        if (res && res.data && res.data.overall) {
+          const sorted = res.data.overall.map((s, idx) => ({
+            rank: s.rank || idx + 1,
+            name: s.name,
+            batch: s.batch || "Unassigned",
+            points: s.score || 0,
+            solved: Math.floor(s.progress / 10), // Mocked for now based on progress
+            streak: s.progress ? `${Math.floor(s.progress / 5)} Days` : "0 Days",
             badge: idx === 0 ? "Legendary" : idx === 1 ? "Grandmaster" : idx === 2 ? "Master" : "Expert",
           }));
           setBoard(sorted);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error("Error fetching mentor leaderboard:", err))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
@@ -40,9 +43,9 @@ export default function Leaderboard() {
         <div>
           <h2 className="mentor-page-title">
             <Trophy size={20} color="#4f46e5" />
-            <span>Batch Leaderboard & Rankings</span>
+            <span>Assigned Batches Leaderboard</span>
           </h2>
-          <p className="mentor-page-subtitle">Student coding points, solved problem counts, and active streaks</p>
+          <p className="mentor-page-subtitle">Rankings and scores for students in your assigned batches</p>
         </div>
       </div>
 
@@ -54,32 +57,42 @@ export default function Leaderboard() {
                 <th>Rank</th>
                 <th>Student Name</th>
                 <th>Cohort</th>
-                <th>Coding Points</th>
-                <th>Solved Problems</th>
+                <th>Overall Score</th>
+                <th>Assessments</th>
                 <th>Active Streak</th>
                 <th>Badge</th>
               </tr>
             </thead>
             <tbody>
-              {board.map((lb) => (
-                <tr key={lb.rank}>
-                  <td className="mentor-lb-rank font-extrabold text-indigo-600">#{lb.rank}</td>
-                  <td className="mentor-lb-name font-bold text-slate-800 dark:text-white">{lb.name}</td>
-                  <td className="mentor-lb-batch">{lb.batch}</td>
-                  <td className="mentor-lb-points font-extrabold text-indigo-600">{lb.points} pts</td>
-                  <td className="mentor-lb-solved font-bold">{lb.solved}</td>
-                  <td>
-                    <span className="mentor-lb-streak flex items-center gap-1 font-semibold text-amber-500">
-                      <Flame size={14} color="#f59e0b" fill="#f59e0b" /> {lb.streak}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="mentor-lb-badge px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                      {lb.badge}
-                    </span>
-                  </td>
+              {loading ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "2rem" }}>Loading leaderboard...</td>
                 </tr>
-              ))}
+              ) : board.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: "center", padding: "2rem" }}>No students found in your assigned batches.</td>
+                </tr>
+              ) : (
+                board.map((lb) => (
+                  <tr key={lb.rank}>
+                    <td className="mentor-lb-rank font-extrabold text-indigo-600">#{lb.rank}</td>
+                    <td className="mentor-lb-name font-bold text-slate-800 dark:text-white">{lb.name}</td>
+                    <td className="mentor-lb-batch">{lb.batch}</td>
+                    <td className="mentor-lb-points font-extrabold text-indigo-600">{lb.points.toLocaleString()} XP</td>
+                    <td className="mentor-lb-solved font-bold">{lb.solved}</td>
+                    <td>
+                      <span className="mentor-lb-streak flex items-center gap-1 font-semibold text-amber-500">
+                        <Flame size={14} color="#f59e0b" fill="#f59e0b" /> {lb.streak}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="mentor-lb-badge px-2.5 py-1 rounded-md text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                        {lb.badge}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

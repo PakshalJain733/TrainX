@@ -10,54 +10,7 @@ import {
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/WeeklyReports.css";
 
-const reportsData = [
-  {
-    id: "week-32",
-    title: "Week 32 · 10–16 Aug 2026",
-    score: "78%",
-    attendance: 86,
-    quiz: 79,
-    coding: 68,
-    interview: 72,
-    milestones: "2 completed · 2 in progress",
-    skillGaps: ["SQL indexing", "API versioning"],
-    nextSteps: [
-      "Finish Transactions & ACID material",
-      "Attempt Database Indexing quiz",
-      "Solve 3 medium SQL problems in Practice Arena",
-    ],
-  },
-  {
-    id: "week-31",
-    title: "Week 31 · 03–09 Aug 2026",
-    score: "74%",
-    attendance: 90,
-    quiz: 75,
-    coding: 62,
-    interview: 68,
-    milestones: "2 completed · 1 in progress",
-    skillGaps: ["FastAPI Validation", "Query Optimization"],
-    nextSteps: [
-      "Review Pydantic request models",
-      "Practice multi-table JOIN problem sets",
-    ],
-  },
-  {
-    id: "week-30",
-    title: "Week 30 · 27 Jul–02 Aug 2026",
-    score: "70%",
-    attendance: 88,
-    quiz: 70,
-    coding: 60,
-    interview: 64,
-    milestones: "1 completed · 1 in progress",
-    skillGaps: ["OOP Magic Methods", "Error Handling"],
-    nextSteps: [
-      "Solidify Python OOP inheritance and encapsulation drills",
-      "Re-attempt Unit 2 Quiz",
-    ],
-  },
-];
+const reportsData = [];
 
 export default function WeeklyReports() {
   const [openWeek, setOpenWeek] = useState("week-32");
@@ -97,82 +50,89 @@ export default function WeeklyReports() {
 
       {/* Accordion List */}
       <div className="weekly-reports-list">
-        {reportsData.map((report) => {
-          const isOpen = openWeek === report.id;
-          return (
-            <div
-              key={report.id}
-              className={`weekly-report-card ${isOpen ? "open" : ""}`}
-            >
-              <button
-                className="weekly-report-header-btn"
-                onClick={() => toggleWeek(report.id)}
+        {reportsData.length === 0 ? (
+          <div className="admin-empty-state-card" style={{ padding: '40px', textAlign: 'center', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <FileCheck2 size={36} className="text-slate-400" style={{ margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>No weekly reports available</h3>
+            <p style={{ color: '#64748b' }}>Your weekly performance reports will appear here once generated.</p>
+          </div>
+        ) : (
+          reportsData.map((report) => {
+            const isOpen = openWeek === report.id;
+            return (
+              <div
+                key={report.id}
+                className={`weekly-report-card ${isOpen ? "open" : ""}`}
               >
-                <h3 className="weekly-report-title">{report.title}</h3>
-                <div className="weekly-report-right">
-                  <span className="weekly-report-score-pill">
-                    {report.score}
-                  </span>
-                  {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-                </div>
-              </button>
-
-              {isOpen && (
-                <div className="weekly-report-content">
-                  {/* 4 Metric Bars */}
-                  <div className="weekly-metrics-grid">
-                    <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>Attendance</span>
-                        <span className="weekly-metric-pct">{report.attendance}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
-                        <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.attendance}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>Quiz performance</span>
-                        <span className="weekly-metric-pct">{report.quiz}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
-                        <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.quiz}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>Coding performance</span>
-                        <span className="weekly-metric-pct">{report.coding}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
-                        <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.coding}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>AI interview</span>
-                        <span className="weekly-metric-pct">{report.interview}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
-                        <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.interview}%` }}
-                        />
-                      </div>
-                    </div>
+                <button
+                  className="weekly-report-header-btn"
+                  onClick={() => toggleWeek(report.id)}
+                >
+                  <h3 className="weekly-report-title">{report.title}</h3>
+                  <div className="weekly-report-right">
+                    <span className="weekly-report-score-pill">
+                      {report.score}
+                    </span>
+                    {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                   </div>
+                </button>
+
+                {isOpen && (
+                  <div className="weekly-report-content">
+                    {/* 4 Metric Bars */}
+                    <div className="weekly-metrics-grid">
+                      <div className="weekly-metric-item">
+                        <div className="weekly-metric-top">
+                          <span>Attendance</span>
+                          <span className="weekly-metric-pct">{report.attendance}%</span>
+                        </div>
+                        <div className="weekly-metric-bar">
+                          <div
+                            className="weekly-metric-fill"
+                            style={{ width: `${report.attendance}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="weekly-metric-item">
+                        <div className="weekly-metric-top">
+                          <span>Quiz performance</span>
+                          <span className="weekly-metric-pct">{report.quiz}%</span>
+                        </div>
+                        <div className="weekly-metric-bar">
+                          <div
+                            className="weekly-metric-fill"
+                            style={{ width: `${report.quiz}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="weekly-metric-item">
+                        <div className="weekly-metric-top">
+                          <span>Coding performance</span>
+                          <span className="weekly-metric-pct">{report.coding}%</span>
+                        </div>
+                        <div className="weekly-metric-bar">
+                          <div
+                            className="weekly-metric-fill"
+                            style={{ width: `${report.coding}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="weekly-metric-item">
+                        <div className="weekly-metric-top">
+                          <span>AI interview</span>
+                          <span className="weekly-metric-pct">{report.interview}%</span>
+                        </div>
+                        <div className="weekly-metric-bar">
+                          <div
+                            className="weekly-metric-fill"
+                            style={{ width: `${report.interview}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
 
                   {/* Milestones info */}
                   <div className="weekly-info-section">
@@ -213,7 +173,8 @@ export default function WeeklyReports() {
               )}
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );
