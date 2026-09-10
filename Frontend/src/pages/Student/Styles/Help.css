@@ -253,11 +253,12 @@
 }
 
 .help-tab-btn.active {
-  background: #0f172a;
+  background: #4f46e5;
   color: #ffffff;
-  border-color: #0f172a;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+  border-color: #4f46e5;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
 }
+
 
 .help-raise-ticket-btn {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
@@ -308,11 +309,13 @@
 }
 
 .help-cat-pill.active {
-  background: #eff6ff;
-  border-color: #3b82f6;
-  color: #1d4ed8;
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
   font-weight: 700;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
 }
+
 
 /* FAQ Accordion List */
 .help-faq-list {

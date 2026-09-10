@@ -12,6 +12,7 @@ import {
   FileCheck2,
   HelpCircle,
   Layers,
+  Megaphone,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/MentorSidebar.css";
@@ -51,8 +52,10 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
-  { title: "Support", url: "/mentor/help", icon: HelpCircle },
+  { title: "Broadcast Notice", url: "/mentor/broadcast", icon: Megaphone },
+  { title: "Support Tickets", url: "/mentor/help", icon: HelpCircle },
 ];
+
 
 export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();

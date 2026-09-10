@@ -1,273 +1,474 @@
 import React, { useState } from 'react';
-import { HelpCircle, BookOpen, MessageSquare, Mail, AlertTriangle, Send, CheckCircle2, Search, Filter, ShieldCheck, UserCheck } from 'lucide-react';
-import { apiFetch } from '../../../utils/api';
+import {
+  HelpCircle,
+  MessageCircle,
+  Phone,
+  Search,
+  Plus,
+  ChevronDown,
+  Ticket,
+  FileText,
+  Download,
+  ThumbsUp,
+  ThumbsDown,
+  X,
+  Send,
+  Clock,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
+import { SectionHeader } from '../../../components/ui/SectionHeader';
+import '../../Student/Styles/Help.css';
 import '../Styles/Help.css';
 
-const defaultGrievances = [
+const defaultMentorFaqs = [
   {
     id: 1,
-    studentName: "Siddharth Rao",
-    rollNo: "IT202612",
-    batch: "TE-IT-2026-B",
-    category: "Assessment Doubt",
-    title: "Clarification required regarding Graph Traversal Test Case #4",
-    description: "The time limit on Test Case 4 seems too strict for standard BFS in C++. Could you please verify the hidden test bounds?",
-    date: "2026-09-05",
-    status: "Pending",
-    priority: "High"
+    category: "Lab & Infrastructure",
+    q: "How do I request software or compiler upgrades on lab workstations?",
+    a: "Submit an IT Support Ticket under 'Lab & Infrastructure' specifying workstation numbers, software version, and lab schedule."
   },
   {
     id: 2,
-    studentName: "Neha Sharma",
-    rollNo: "CS202611",
-    batch: "BE-CS-2026-A",
-    category: "Attendance Dispute",
-    title: "Attendance marked Absent for Live Class on Sept 3rd",
-    description: "I attended the live session from 10:00 AM to 11:30 AM via Google Meet link, but my status shows Absent in portal stats.",
-    date: "2026-09-04",
-    status: "In Progress",
-    priority: "Medium"
+    category: "Attendance & Roster",
+    q: "What should I do if a live training session attendance lock expires?",
+    a: "If session lock has passed (24h SLA), raise a support ticket under 'Attendance & Roster' to request administrative unlock."
   },
   {
     id: 3,
-    studentName: "Priya Nair",
-    rollNo: "EXT202607",
-    batch: "BE-EXTC-2026-C",
-    category: "Lab & Study Material",
-    title: "Missing solution notebook for Machine Learning Module 3",
-    description: "The code notebooks for Convolutional Neural Networks are giving 404 in the Study Material section.",
-    date: "2026-09-02",
+    category: "Curriculum & Study Material",
+    q: "How do I publish new code notebooks or dataset files for my batch?",
+    a: "Navigate to the Study Material section in your Mentor Workspace, select your subject module, and click 'Upload Resource'."
+  },
+  {
+    id: 4,
+    category: "Portal / System Error",
+    q: "Why are AI Mock Interview evaluation reports showing pending status?",
+    a: "AI evaluation jobs process asynchronously within 15 minutes of interview completion. If pending > 1 hour, raise a support ticket."
+  }
+];
+
+const initialMentorTickets = [
+  {
+    id: "TKT-MNT-301",
+    subject: "Requesting Linux GCC Compiler update on Lab 03 Workstations",
+    category: "Lab & Infrastructure",
+    priority: "High",
+    status: "In Progress",
+    created: "2026-09-08",
+    description: "BE-CS-A students require gcc-11 version for C++20 features during upcoming lab exams. Currently installed version is gcc-9.",
+    resolution: "IT Admin is updating lab workstation images. Expected resolution by tomorrow 10 AM."
+  },
+  {
+    id: "TKT-MNT-302",
+    subject: "Attendance record lock correction for Sept 2nd Live Session",
+    category: "Attendance & Roster",
+    priority: "Normal",
     status: "Resolved",
-    priority: "Low"
+    created: "2026-09-05",
+    description: "Internet disruption caused session log sync delay. Need manual unlock to submit attendance for 14 students.",
+    resolution: "Attendance lock opened by College Admin. Session status updated."
+  }
+];
+
+const kbGuides = [
+  {
+    title: "Mentor & Trainer Code Evaluation Guidelines",
+    desc: "Rubric and rules for evaluating student programming assignments, mock viva, and automated test cases.",
+    size: "2.4 MB",
+    type: "PDF Document"
+  },
+  {
+    title: "Attendance & Classroom Conduct Policy",
+    desc: "Mandatory 75% attendance criteria, medical leave verifications, and defaulter list generation steps.",
+    size: "1.1 MB",
+    type: "PDF Document"
+  },
+  {
+    title: "Lab Machine Hardware & IDE Setup Manual",
+    desc: "Configuring VS Code, Python virtualenv, MySQL Server, and Docker containers in campus computer centers.",
+    size: "1.8 MB",
+    type: "PDF Document"
   }
 ];
 
 export default function Help() {
-  const [grievances, setGrievances] = useState(defaultGrievances);
-  const [activeTab, setActiveTab] = useState('grievances'); // 'grievances' | 'docs' | 'contact'
-  const [search, setSearch] = useState('');
-  const [replyText, setReplyText] = useState({});
-  const [resolvedId, setResolvedId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("faq"); // 'faq' | 'tickets' | 'guides'
+  const [selectedCat, setSelectedCat] = useState("All");
+  const [openFaqId, setOpenFaqId] = useState(1);
+  const [helpfulFeedback, setHelpfulFeedback] = useState({});
 
-  const handleResolveGrievance = (id) => {
-    setGrievances(prev => prev.map(g => g.id === id ? { ...g, status: 'Resolved' } : g));
-    setResolvedId(id);
-    setTimeout(() => setResolvedId(null), 3000);
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [tickets, setTickets] = useState(initialMentorTickets);
+
+  const [newTicket, setNewTicket] = useState({
+    subject: "",
+    category: "Lab & Infrastructure",
+    priority: "Normal",
+    description: ""
+  });
+
+  const categories = ["All", "Lab & Infrastructure", "Attendance & Roster", "Curriculum & Study Material", "Portal / System Error"];
+
+  const filteredFaqs = defaultMentorFaqs.filter((f) => {
+    const matchesCat = selectedCat === "All" || f.category === selectedCat;
+    const matchesQuery =
+      f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      f.a.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCat && matchesQuery;
+  });
+
+  const handleCreateTicket = (e) => {
+    e.preventDefault();
+    if (!newTicket.subject.trim() || !newTicket.description.trim()) return;
+
+    const createdTicket = {
+      id: `TKT-MNT-${Math.floor(100 + Math.random() * 900)}`,
+      subject: newTicket.subject,
+      category: newTicket.category,
+      priority: newTicket.priority,
+      status: "Open",
+      created: new Date().toISOString().split("T")[0],
+      description: newTicket.description,
+      resolution: ""
+    };
+
+    setTickets([createdTicket, ...tickets]);
+    setNewTicket({ subject: "", category: "Lab & Infrastructure", priority: "Normal", description: "" });
+    setIsTicketModalOpen(false);
+    setActiveTab("tickets");
   };
 
-  const filteredGrievances = grievances.filter(g =>
-    (g.studentName || '').toLowerCase().includes(search.toLowerCase()) ||
-    (g.rollNo || '').toLowerCase().includes(search.toLowerCase()) ||
-    (g.batch || '').toLowerCase().includes(search.toLowerCase()) ||
-    (g.title || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const toggleFaq = (id) => {
+    setOpenFaqId(openFaqId === id ? null : id);
+  };
+
+  const handleFeedback = (faqId, type) => {
+    setHelpfulFeedback((prev) => ({ ...prev, [faqId]: type }));
+  };
 
   return (
-    <div className="mentor-help-container">
-      {/* Header */}
-      <div className="mentor-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <div>
-          <h2 className="mentor-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <HelpCircle size={22} color="#4f46e5" />
-            <span>Mentor Support Desk & Student Grievance Portal</span>
-          </h2>
-          <p className="mentor-page-subtitle">
-            Review and resolve student grievances, access trainer documentation, and reach out to system administrators.
-          </p>
+    <div className="help-page-wrapper">
+      <SectionHeader
+        title="Help & Support"
+        description="Find answers to common questions or reach out to our support team."
+      />
+
+      {/* Support Channel Quick Cards */}
+      <div className="help-channels-grid">
+        <div
+          className="help-channel-card-modern"
+          onClick={() => setIsTicketModalOpen(true)}
+        >
+          <div className="help-channel-icon-avatar help-icon-blue">
+            <Ticket size={22} />
+          </div>
+          <div className="help-channel-info">
+            <span className="help-channel-badge help-badge-blue">IT SUPPORT DESK</span>
+            <h3 className="help-channel-title">Raise Support Ticket</h3>
+            <p className="help-channel-sub">Report system bugs, login errors, or missing attendance records.</p>
+            <span className="help-channel-action-link">+ Create New Ticket →</span>
+          </div>
+        </div>
+
+        <div
+          className="help-channel-card-modern"
+          onClick={() => { window.location.href = "mailto:support@acadnexus.com"; }}
+        >
+          <div className="help-channel-icon-avatar help-icon-emerald">
+            <MessageCircle size={22} />
+          </div>
+          <div className="help-channel-info">
+            <span className="help-channel-badge help-badge-emerald">EMAIL ASSISTANCE</span>
+            <h3 className="help-channel-title">Email Support</h3>
+            <p className="help-channel-sub">Direct response from department coordinator within 24 hours.</p>
+            <span className="help-channel-action-link help-link-emerald">support@acadnexus.com →</span>
+          </div>
+        </div>
+
+        <div
+          className="help-channel-card-modern"
+          onClick={() => { window.location.href = "tel:+919876543210"; }}
+        >
+          <div className="help-channel-icon-avatar help-icon-purple">
+            <Phone size={22} />
+          </div>
+          <div className="help-channel-info">
+            <span className="help-channel-badge help-badge-purple">HELPLINE</span>
+            <h3 className="help-channel-title">Campus Hotline</h3>
+            <p className="help-channel-sub">Mon – Fri, 9:00 AM – 6:00 PM</p>
+            <span className="help-channel-action-link help-link-purple">+91 98765 43210 →</span>
+          </div>
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div style={{ display: 'flex', gap: '12px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
-        <button
-          onClick={() => setActiveTab('grievances')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'grievances' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'grievances' ? '#fff' : '#64748b',
-            fontWeight: '600',
-            fontSize: '13px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <MessageSquare size={16} /> Student Grievances & Tickets ({grievances.filter(g => g.status !== 'Resolved').length} Active)
-        </button>
-        <button
-          onClick={() => setActiveTab('docs')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'docs' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'docs' ? '#fff' : '#64748b',
-            fontWeight: '600',
-            fontSize: '13px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <BookOpen size={16} /> Trainer Guidelines & Docs
-        </button>
-        <button
-          onClick={() => setActiveTab('contact')}
-          style={{
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: 'none',
-            background: activeTab === 'contact' ? '#4f46e5' : 'transparent',
-            color: activeTab === 'contact' ? '#fff' : '#64748b',
-            fontWeight: '600',
-            fontSize: '13px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          <Mail size={16} /> Super Admin Support
-        </button>
+      {/* Main Section Header with Tabs */}
+      <div className="help-section-bar">
+        <div className="help-tabs-row">
+          <button
+            className={`help-tab-btn ${activeTab === "faq" ? "active" : ""}`}
+            onClick={() => setActiveTab("faq")}
+          >
+            <HelpCircle size={15} /> Knowledge Base & FAQs
+          </button>
+          <button
+            className={`help-tab-btn ${activeTab === "tickets" ? "active" : ""}`}
+            onClick={() => setActiveTab("tickets")}
+          >
+            <Ticket size={15} /> My Support Tickets ({tickets.length})
+          </button>
+          <button
+            className={`help-tab-btn ${activeTab === "guides" ? "active" : ""}`}
+            onClick={() => setActiveTab("guides")}
+          >
+            <FileText size={15} /> Downloads & Manuals
+          </button>
+        </div>
       </div>
 
-      {/* Tab Content: Student Grievances */}
-      {activeTab === 'grievances' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Search Card */}
-          <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Search size={18} color="#64748b" />
-            <input
-              type="text"
-              placeholder="Search student grievance by student name, roll no, batch, or issue title..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', border: 'none', outline: 'none', fontSize: '13px', background: 'transparent' }}
-            />
+      {/* TAB 1: KNOWLEDGE BASE & FAQS */}
+      {activeTab === "faq" && (
+        <div className="help-faq-column">
+          {/* Category Filter Pills */}
+          <div className="help-cat-pills-row">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                className={`help-cat-pill ${selectedCat === cat ? "active" : ""}`}
+                onClick={() => setSelectedCat(cat)}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
 
-          {/* Grievances List */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {filteredGrievances.length === 0 ? (
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '32px', textAlign: 'center', color: '#64748b' }}>
-                No grievances match your search query.
-              </div>
-            ) : (
-              filteredGrievances.map((g) => (
-                <div key={g.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '11px', fontWeight: '700', background: '#eff6ff', color: '#2563eb', padding: '2px 8px', borderRadius: '4px' }}>
-                          {g.batch}
-                        </span>
-                        <span style={{ fontSize: '11px', fontWeight: '700', background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '4px' }}>
-                          {g.category}
-                        </span>
-                        <span style={{
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          background: g.priority === 'High' ? '#ffe4e6' : '#fef3c7',
-                          color: g.priority === 'High' ? '#e11d48' : '#d97706'
-                        }}>
-                          {g.priority} Priority
-                        </span>
+          {/* FAQ Accordion Items */}
+          {filteredFaqs.length === 0 ? (
+            <div className="help-empty-state">
+              <HelpCircle size={36} className="help-empty-icon" />
+              <h4 className="help-empty-title">No FAQs found matching "{searchQuery}"</h4>
+              <p className="help-empty-desc">Try clearing your search query or submit a support ticket to our IT team.</p>
+            </div>
+          ) : (
+            <div className="help-faq-list">
+              {filteredFaqs.map((faq) => {
+                const isOpen = openFaqId === faq.id;
+                return (
+                  <div key={faq.id} className={`help-faq-item-card ${isOpen ? "open" : ""}`}>
+                    <div className="help-faq-header" onClick={() => toggleFaq(faq.id)}>
+                      <h4 className="help-faq-question">
+                        <HelpCircle size={18} color="#3b82f6" />
+                        {faq.q}
+                      </h4>
+                      <div className="help-faq-actions">
+                        <span className="help-faq-category-tag">{faq.category}</span>
+                        <ChevronDown size={18} className="help-faq-toggle-icon" />
                       </div>
-                      <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0 }}>
-                        {g.title}
-                      </h3>
-                      <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
-                        Submitted by <strong>{g.studentName}</strong> ({g.rollNo}) on {g.date}
-                      </p>
                     </div>
 
-                    <span style={{
-                      padding: '4px 12px',
-                      borderRadius: '9999px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      background: g.status === 'Resolved' ? '#ecfdf5' : g.status === 'In Progress' ? '#eff6ff' : '#fffbeb',
-                      color: g.status === 'Resolved' ? '#047857' : g.status === 'In Progress' ? '#1d4ed8' : '#b45309',
-                      border: `1px solid ${g.status === 'Resolved' ? '#a7f3d0' : '#bfdbfe'}`
-                    }}>
-                      {g.status}
-                    </span>
-                  </div>
-
-                  <p style={{ fontSize: '13.5px', color: '#334155', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9', margin: '0 0 14px 0', lineHeight: '1.5' }}>
-                    "{g.description}"
-                  </p>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {g.status !== 'Resolved' ? (
-                      <button
-                        onClick={() => handleResolveGrievance(g.id)}
-                        style={{
-                          background: '#10b981',
-                          color: '#fff',
-                          border: 'none',
-                          padding: '7px 14px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <CheckCircle2 size={14} /> Mark as Resolved & Respond
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: '12px', color: '#059669', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <CheckCircle2 size={14} /> Resolved by Mentor
-                      </span>
+                    {isOpen && (
+                      <div className="help-faq-body">
+                        <p>{faq.a}</p>
+                        <div className="help-faq-helpful-row">
+                          <span>Was this answer helpful?</span>
+                          <button
+                            className={`help-helpful-btn ${helpfulFeedback[faq.id] === "yes" ? "active" : ""}`}
+                            onClick={() => handleFeedback(faq.id, "yes")}
+                            style={helpfulFeedback[faq.id] === "yes" ? { background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" } : {}}
+                          >
+                            <ThumbsUp size={12} /> Yes
+                          </button>
+                          <button
+                            className={`help-helpful-btn ${helpfulFeedback[faq.id] === "no" ? "active" : ""}`}
+                            onClick={() => handleFeedback(faq.id, "no")}
+                            style={helpfulFeedback[faq.id] === "no" ? { background: "#fef2f2", color: "#dc2626", borderColor: "#fecaca" } : {}}
+                          >
+                            <ThumbsDown size={12} /> No
+                          </button>
+                        </div>
+                      </div>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: MY SUPPORT TICKETS */}
+      {activeTab === "tickets" && (
+        <div className="help-tickets-card">
+          <div className="help-tickets-table-wrapper">
+            <table className="help-tickets-table">
+              <thead>
+                <tr>
+                  <th>Ticket ID</th>
+                  <th>Subject & Details</th>
+                  <th>Category</th>
+                  <th>Priority</th>
+                  <th>Date Raised</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="help-table-empty-cell">
+                      No support tickets raised yet.
+                    </td>
+                  </tr>
+                ) : (
+                  tickets.map((t) => (
+                    <tr key={t.id}>
+                      <td><span className="help-ticket-id">{t.id}</span></td>
+                      <td className="help-table-subject">
+                        <div>{t.subject}</div>
+                        <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{t.description}</div>
+                        {t.resolution && (
+                          <div style={{ marginTop: '6px', background: '#ecfdf5', color: '#065f46', padding: '6px 10px', borderRadius: '6px', fontSize: '12px' }}>
+                            <strong>Resolution:</strong> {t.resolution}
+                          </div>
+                        )}
+                      </td>
+                      <td><span className="help-faq-category-tag">{t.category}</span></td>
+                      <td>
+                        <span className={`help-priority-pill ${t.priority === "High" || t.priority === "Critical" ? "help-priority-high" : "help-priority-normal"}`}>
+                          {t.priority}
+                        </span>
+                      </td>
+                      <td className="help-table-date">{t.created}</td>
+                      <td>
+                        <span className={`help-ticket-status-pill ${t.status === "In Progress"
+                            ? "help-status-in-progress"
+                            : t.status === "Resolved"
+                              ? "help-status-resolved"
+                              : "help-status-open"
+                          }`}>
+                          {t.status === "In Progress" && "⏳ "}
+                          {t.status === "Resolved" && "✓ "}
+                          {t.status === "Open" && "● "}
+                          {t.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: DOWNLOADS & USER GUIDES */}
+      {activeTab === "guides" && (
+        <div className="help-kb-grid">
+          {kbGuides.map((guide, idx) => (
+            <div key={idx} className="help-kb-card">
+              <div className="help-kb-header">
+                <div className="help-kb-icon">
+                  <FileText size={20} />
                 </div>
-              ))
-            )}
-          </div>
+                <div>
+                  <h4 className="help-kb-title">{guide.title}</h4>
+                  <span className="help-guide-meta">{guide.type} • {guide.size}</span>
+                </div>
+              </div>
+              <p className="help-kb-desc">{guide.desc}</p>
+              <button
+                className="help-kb-download-btn"
+                onClick={() => {
+                  alert(`Downloading ${guide.title}...`);
+                }}
+              >
+                <Download size={14} /> Download PDF Guide
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Tab Content: Trainer Guidelines */}
-      {activeTab === 'docs' && (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: 0 }}>Portal Trainer Guidelines & Code Evaluation Criteria</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', margin: '0 0 6px 0' }}>1. Attendance Marking Policy</h4>
-              <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>Attendance logs must be submitted within 24 hours of each live training session. Students with &lt;75% attendance are automatically flagged for intervention.</p>
+      {/* MODAL: RAISE SUPPORT TICKET */}
+      {isTicketModalOpen && (
+        <div className="help-modal-overlay">
+          <div className="help-modal-card">
+            <div className="help-modal-header">
+              <h3 className="help-modal-title">
+                <Ticket size={18} color="#60a5fa" /> Raise New Support Ticket
+              </h3>
+              <button className="help-modal-close-btn" onClick={() => setIsTicketModalOpen(false)}>
+                <X size={18} />
+              </button>
             </div>
-            <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#1e293b', margin: '0 0 6px 0' }}>2. Live Session Guidelines</h4>
-              <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>Always publish Google Meet / Zoom links at least 2 hours before session start. Deleted sessions sync instantly across student calendars.</p>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Tab Content: Super Admin Support */}
-      {activeTab === 'contact' && (
-        <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a', margin: '0 0 8px 0' }}>Contact Super Admin & System Administration</h3>
-          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>For batch reassignments, student transfers, or institutional portal escalations, email support directly.</p>
-          <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: '16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Mail size={24} color="#2563eb" />
-            <div>
-              <p style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: 0 }}>Super Admin Help Desk</p>
-              <p style={{ fontSize: '13px', color: '#2563eb', margin: 0 }}>admin-support@trainingportal.edu | Response time: &lt; 4 hours</p>
-            </div>
+            <form onSubmit={handleCreateTicket} className="help-modal-form">
+              <div className="help-form-group">
+                <label className="help-form-label">Subject / Issue Summary *</label>
+                <input
+                  type="text"
+                  className="help-form-input"
+                  placeholder="e.g. Need GCC 11 update on Lab 3 machines"
+                  value={newTicket.subject}
+                  onChange={(e) => setNewTicket({ ...newTicket, subject: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="help-grid-2col">
+                <div className="help-form-group">
+                  <label className="help-form-label">Category</label>
+                  <select
+                    className="help-form-select"
+                    value={newTicket.category}
+                    onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
+                  >
+                    <option value="Lab & Infrastructure">Lab & Infrastructure</option>
+                    <option value="Attendance & Roster">Attendance & Roster</option>
+                    <option value="Curriculum & Study Material">Curriculum & Study Material</option>
+                    <option value="Portal / System Error">Portal / System Error</option>
+                  </select>
+                </div>
+
+                <div className="help-form-group">
+                  <label className="help-form-label">Priority Level</label>
+                  <select
+                    className="help-form-select"
+                    value={newTicket.priority}
+                    onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
+                  >
+                    <option value="Normal">Normal</option>
+                    <option value="High">High Priority</option>
+                    <option value="Critical">Critical Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="help-form-group">
+                <label className="help-form-label">Detailed Description *</label>
+                <textarea
+                  className="help-form-textarea"
+                  rows={4}
+                  placeholder="Provide all relevant details, workstation numbers, affected lab hours..."
+                  value={newTicket.description}
+                  onChange={(e) => setNewTicket({ ...newTicket, description: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="help-modal-footer">
+                <button type="button" className="help-cancel-btn" onClick={() => setIsTicketModalOpen(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="help-submit-btn">
+                  Submit Ticket
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
     </div>
   );
 }
+

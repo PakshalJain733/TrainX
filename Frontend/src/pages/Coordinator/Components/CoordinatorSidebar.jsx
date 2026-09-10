@@ -15,6 +15,7 @@ import {
   HelpCircle,
   Code,
   Bot,
+  Megaphone,
   AlertTriangle,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
@@ -49,8 +50,10 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
-  { title: "Notifications", url: "/coordinator/notifications", icon: Bell },
+  { title: "Broadcast Notice", url: "/coordinator/broadcast", icon: Megaphone },
+  { title: "Support Tickets", url: "/coordinator/support", icon: HelpCircle },
 ];
+
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();

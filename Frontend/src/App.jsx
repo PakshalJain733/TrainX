@@ -50,7 +50,7 @@ import SuperAdminPerformancePage from './pages/SuperAdmin/Components/Performance
 import SuperAdminSystemHealth from './pages/SuperAdmin/Components/SystemHealth';
 import SuperAdminProfilePage from './pages/SuperAdmin/Components/SuperAdminProfile';
 import SuperAdminMaintenanceControls from './pages/SuperAdmin/Components/MaintenanceControls';
-
+import SuperAdminTickets from './pages/SuperAdmin/Components/SuperAdminTickets';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MentorLayout';
@@ -92,6 +92,7 @@ import CoordinatorNotifications from './pages/Coordinator/Components/Notificatio
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
 import CoordinatorQuizAndCodes from './pages/Coordinator/Components/QuizzesAndCodes';
 import CoordinatorPerformances from './pages/Coordinator/Components/Performances';
+import CoordinatorHelp from './pages/Coordinator/Components/Help';
 
 function App() {
   return (
@@ -174,6 +175,7 @@ function App() {
             <Route path="assignments" element={<MentorAssignments />} />
             <Route path="sessions" element={<MentorLiveSessions />} />
             <Route path="notifications" element={<MentorNotifications />} />
+            <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="profile" element={<MentorProfilePage />} />
             <Route path="settings" element={<MentorProfilePage />} />
             <Route path="help" element={<MentorHelp />} />
@@ -202,9 +204,13 @@ function App() {
             <Route path="mentors" element={<CoordinatorMentors />} />
             <Route path="requests" element={<CoordinatorRequests />} />
             <Route path="notifications" element={<CoordinatorNotifications />} />
+            <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="support" element={<CoordinatorHelp />} />
+            <Route path="help" element={<CoordinatorHelp />} />
             <Route path="profile" element={<CoordinatorProfilePage />} />
             <Route path="settings" element={<CoordinatorProfilePage />} />
           </Route>
+
 
 
           {/* Super Admin Workspace Routes */}
@@ -219,6 +225,8 @@ function App() {
             <Route path="coordinators" element={<SuperAdminManageUsers />} />
             <Route path="mentors" element={<SuperAdminManageUsers />} />
             <Route path="students" element={<SuperAdminManageUsers />} />
+            <Route path="tickets" element={<SuperAdminTickets />} />
+            <Route path="support" element={<SuperAdminTickets />} />
             <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
             <Route path="performance" element={<SuperAdminPerformancePage />} />
             <Route path="attendance" element={<SuperAdminPerformancePage />} />

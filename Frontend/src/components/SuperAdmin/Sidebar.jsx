@@ -8,6 +8,7 @@ import {
   TrendingUp,
   SlidersHorizontal,
   Activity,
+  LifeBuoy,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
 import "../../pages/SuperAdmin/Styles/SuperAdmin.css";
@@ -41,6 +42,10 @@ const primaryNavItems = [
   { title: "Performance", url: "/super-admin/performance", icon: TrendingUp },
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },
+];
+
+const footerNavItems = [
+  { title: "Support Tickets", url: "/super-admin/tickets", icon: LifeBuoy },
 ];
 
 export default function Sidebar({ collapsed, mobileOpen, onClose }) {
@@ -85,6 +90,14 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
           {primaryNavItems.map(renderItem)}
         </ul>
       </div>
+
+      {/* Pinned Bottom Support Section */}
+      <div className="sidebar-footer">
+        <ul className="sidebar-menu">
+          {footerNavItems.map(renderItem)}
+        </ul>
+      </div>
     </aside>
   );
 }
+

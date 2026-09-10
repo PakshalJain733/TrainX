@@ -3,7 +3,7 @@ import { MessageSquare, CheckCircle2, Clock, AlertCircle, Search, Filter, Shield
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
-import "../Styles/AdminHelp.css";
+import "../../Admin/Styles/AdminHelp.css";
 
 const initialTickets = [
   {
@@ -60,7 +60,7 @@ const initialTickets = [
 const statusVariant = (s) => s === "Open" ? "destructive" : s === "In Progress" ? "default" : "success";
 const priorityClass = (p) => p === "High" ? "ticket-priority--high" : p === "Medium" ? "ticket-priority--med" : "ticket-priority--low";
 
-export default function AdminHelp() {
+export default function SuperAdminTickets() {
   const [tickets, setTickets] = useState(initialTickets);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -77,7 +77,7 @@ export default function AdminHelp() {
     setTickets(tickets.map(t => t.id === selectedTicket.id ? {
       ...t,
       status: newStatus,
-      resolutionNote: resolutionText || `Resolved by College Admin`
+      resolutionNote: resolutionText || `Resolved by Super Admin`
     } : t));
     setSelectedTicket(null);
     setResolutionText("");
@@ -100,7 +100,7 @@ export default function AdminHelp() {
   return (
     <div className="admin-help-container">
       <SectionHeader
-        title="College Admin Issue Resolution Center"
+        title="Super Admin Issue Resolution Center"
         description="Review, manage, and resolve tickets submitted by students, mentors, and department coordinators."
         action={
           <div className="help-stats">
@@ -176,7 +176,7 @@ export default function AdminHelp() {
 
                   {t.resolutionNote && (
                     <div className="ticket-resolution-note-box">
-                      <strong>Admin Resolution Note:</strong> {t.resolutionNote}
+                      <strong>Super Admin Resolution Note:</strong> {t.resolutionNote}
                     </div>
                   )}
                 </div>
@@ -222,7 +222,7 @@ export default function AdminHelp() {
               </div>
 
               <div className="admin-form-group">
-                <label className="admin-form-label">Official Admin Response & Action Taken</label>
+                <label className="admin-form-label">Official Super Admin Response & Action Taken</label>
                 <textarea
                   className="admin-form-textarea"
                   rows={4}

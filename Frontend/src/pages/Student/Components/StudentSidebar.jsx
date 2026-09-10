@@ -61,9 +61,9 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
-  { title: "Settings", url: "/student/settings", icon: Settings },
-  { title: "Support", url: "/student/help", icon: HelpCircle },
+  { title: "Support Tickets", url: "/student/help", icon: HelpCircle },
 ];
+
 
 export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();

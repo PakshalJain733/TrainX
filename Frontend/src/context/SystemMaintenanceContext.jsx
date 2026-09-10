@@ -206,7 +206,16 @@ export function SystemMaintenanceProvider({ children }) {
   const [config, setConfig] = useState(() => {
     try {
       const saved = localStorage.getItem("platform_system_maintenance_config");
-      return saved ? JSON.parse(saved) : initialMaintenanceConfig;
+      if (!saved) return initialMaintenanceConfig;
+      const parsed = JSON.parse(saved);
+      return {
+        ...initialMaintenanceConfig,
+        ...parsed,
+        modules: {
+          ...initialMaintenanceConfig.modules,
+          ...(parsed?.modules || {}),
+        },
+      };
     } catch {
       return initialMaintenanceConfig;
     }
@@ -219,6 +228,27 @@ export function SystemMaintenanceProvider({ children }) {
       console.error("Failed to save maintenance config to localStorage:", e);
     }
   }, [config]);
+
+  // Check if a single module is active
+  const isModuleActive = (moduleKey) => {
+    if (config.globalEmergencyMode) return false;
+    if (!moduleKey) return true;
+    const mod = config.modules[moduleKey];
+    return mod ? Boolean(mod.active) : true;
+  };
+
+  // Get module configuration details for maintenance screen
+  const getModuleConfig = (moduleKey) => {
+    if (!moduleKey || !config.modules[moduleKey]) {
+      return {
+        name: "Module Maintenance",
+        role: "Platform System",
+        message: "This section is currently undergoing maintenance by the platform engineering team.",
+        updatedAt: "Active",
+      };
+    }
+    return config.modules[moduleKey];
+  };
 
   // Toggle single module ON/OFF
   const toggleModule = (moduleKey) => {
@@ -290,6 +320,8 @@ export function SystemMaintenanceProvider({ children }) {
     <SystemMaintenanceContext.Provider
       value={{
         config,
+        isModuleActive,
+        getModuleConfig,
         toggleModule,
         updateModuleMessage,
         toggleGlobalEmergencyMode,
