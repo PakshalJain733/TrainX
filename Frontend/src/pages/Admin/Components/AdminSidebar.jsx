@@ -13,6 +13,8 @@ import {
   HelpCircle,
   Megaphone,
   Code,
+  AlertCircle,
+  Briefcase,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/AdminSidebar.css";
@@ -36,7 +38,6 @@ function SidebarBrand({ collapsed, subtitle }) {
   );
 }
 
-
 const primaryNavItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Manage Users", url: "/admin/users", icon: UserCog },
@@ -48,6 +49,8 @@ const primaryNavItems = [
   { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
   { title: "Student Progress", url: "/admin/progress", icon: LineChart },
   { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
+  { title: "Defaulters", url: "/admin/defaulters", icon: AlertCircle },
+  { title: "Mock Drives", url: "/admin/mock-drives", icon: Briefcase },
 ];
 
 const footerNavItems = [

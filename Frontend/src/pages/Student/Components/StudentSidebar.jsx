@@ -56,7 +56,9 @@ const primaryNavItems = [
   { title: "Practice", url: "/student/practice", icon: Terminal },
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
+  { title: "Leaderboard", url: "/student/leaderboard", icon: Trophy },
   { title: "Progress", url: "/student/progress", icon: LineChart },
+  { title: "Skill Gaps", url: "/student/skill-gaps", icon: ChartBarIncreasing },
   { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
   { title: "Mock Drives", url: "/student/mock-drives", icon: Briefcase },
@@ -65,7 +67,6 @@ const primaryNavItems = [
 const footerNavItems = [
   { title: "Support Tickets", url: "/student/help", icon: HelpCircle },
 ];
-
 
 export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();

@@ -48,6 +48,7 @@ const primaryNavItems = [
   { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
   { title: "Weekly Reports", url: "/coordinator/weekly-reports", icon: FileCheck2 },
   { title: "Students Needing Support", url: "/coordinator/improvement", icon: AlertTriangle },
+  { title: "Placement Mock Drives", url: "/coordinator/placement", icon: Briefcase },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
 ];
@@ -56,7 +57,6 @@ const footerNavItems = [
   { title: "Broadcast Notice", url: "/coordinator/broadcast", icon: Megaphone },
   { title: "Support Tickets", url: "/coordinator/support", icon: HelpCircle },
 ];
-
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();

@@ -147,6 +147,8 @@ function App() {
             <Route path="progress" element={<AdminProgress />} />
             <Route path="leaderboard" element={<AdminLeaderboard />} />
             <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+            <Route path="defaulters" element={<MentorDefaulters />} />
+            <Route path="mock-drives" element={<MentorMockDrives />} />
             <Route path="help" element={<AdminHelp />} />
             <Route path="profile" element={<AdminProfile />} />
           </Route>

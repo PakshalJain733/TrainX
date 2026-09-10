@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Layers,
   Megaphone,
+  Briefcase,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/MentorSidebar.css";
@@ -47,6 +48,7 @@ const primaryNavItems = [
   { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
   { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy },
   { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle },
+  { title: "Mock Drives", url: "/mentor/mock-drives", icon: Briefcase },
   { title: "Study Material", url: "/mentor/study-material", icon: BookOpen },
   { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2 },
 ];
@@ -55,7 +57,6 @@ const footerNavItems = [
   { title: "Broadcast Notice", url: "/mentor/broadcast", icon: Megaphone },
   { title: "Support Tickets", url: "/mentor/help", icon: HelpCircle },
 ];
-
 
 export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
