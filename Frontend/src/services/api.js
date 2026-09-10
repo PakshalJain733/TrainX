@@ -1,7 +1,7 @@
 const API_BASE_URL = "/api/v1";
 
 async function request(endpoint, options = {}) {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = endpoint.startsWith("/api/v1") ? endpoint : `${API_BASE_URL}${endpoint}`;
   const headers = {
     "Content-Type": "application/json",
     ...options.headers,
@@ -124,3 +124,33 @@ export const assessmentAPI = {
     return res.data;
   },
 };
+
+// Generic API helper with default export
+const api = {
+  get: async (endpoint) => {
+    const res = await request(endpoint);
+    return { data: res };
+  },
+  post: async (endpoint, payload) => {
+    const res = await request(endpoint, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return { data: res };
+  },
+  put: async (endpoint, payload) => {
+    const res = await request(endpoint, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+    return { data: res };
+  },
+  delete: async (endpoint) => {
+    const res = await request(endpoint, {
+      method: "DELETE",
+    });
+    return { data: res };
+  },
+};
+
+export default api;

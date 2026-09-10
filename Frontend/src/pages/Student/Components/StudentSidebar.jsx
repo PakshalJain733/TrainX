@@ -24,6 +24,7 @@ import {
   ChartLineIcon,
   ChartBarIncreasing,
   ChartBarIncreasingIcon,
+  Briefcase,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentSidebar.css";
@@ -58,6 +59,7 @@ const primaryNavItems = [
   { title: "Progress", url: "/student/progress", icon: LineChart },
   { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
+  { title: "Mock Drives", url: "/student/mock-drives", icon: Briefcase },
 ];
 
 const footerNavItems = [

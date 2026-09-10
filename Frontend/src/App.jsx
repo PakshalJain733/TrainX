@@ -21,6 +21,7 @@ import ProfilePage from "./pages/Student/Components/ProfilePage";
 import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
 import Settings from "./pages/Student/Components/Settings";
 import StudentSkillGaps from "./pages/Student/Components/StudentSkillGaps";
+import StudentMockDrives from "./pages/Student/Components/MockDrives";
 
 // Admin imports
 import AdminLayout from "./pages/Admin/Components/AdminLayout";
@@ -121,6 +122,7 @@ function App() {
             <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><Attendance /></MaintenanceGuard>} />
             <Route path="skill-gaps" element={<StudentSkillGaps />} />
             <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><WeeklyReports /></MaintenanceGuard>} />
+            <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mockDrives"><StudentMockDrives /></MaintenanceGuard>} />
             <Route path="batches" element={<Batches />} />
             <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><PracticeProblems /></MaintenanceGuard>} />
             <Route path="coding-platform/:taskId" element={<MaintenanceGuard moduleKey="practiceCoding"><CodingPlatform /></MaintenanceGuard>} />
@@ -207,6 +209,8 @@ function App() {
             <Route path="broadcast" element={<AdminBroadcast />} />
             <Route path="support" element={<CoordinatorHelp />} />
             <Route path="help" element={<CoordinatorHelp />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
             <Route path="profile" element={<CoordinatorProfilePage />} />
             <Route path="settings" element={<CoordinatorProfilePage />} />
           </Route>
@@ -229,13 +233,14 @@ function App() {
             <Route path="support" element={<SuperAdminTickets />} />
             <Route path="maintenance" element={<SuperAdminMaintenanceControls />} />
             <Route path="performance" element={<SuperAdminPerformancePage />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
             <Route path="attendance" element={<SuperAdminPerformancePage />} />
             <Route path="coding-practice" element={<SuperAdminPerformancePage />} />
             <Route path="ai-roadmaps" element={<SuperAdminPerformancePage />} />
             <Route path="ai-interviews" element={<SuperAdminPerformancePage />} />
             <Route path="mock-drives" element={<SuperAdminPerformancePage />} />
             <Route path="health" element={<SuperAdminSystemHealth />} />
-            <Route path="weekly-reports" element={<SuperAdminPerformancePage />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
             <Route path="profile" element={<SuperAdminProfilePage />} />
           </Route>
           <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />

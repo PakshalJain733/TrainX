@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Search,
@@ -16,12 +16,44 @@ import {
   CheckCircle,
   Filter,
 } from "lucide-react";
+import { apiFetch } from "../../../utils/api";
 import { coordinatorSkillGapStudents } from "../../../data/coordinatorMockData";
 import "../Styles/CodingPerformance.css";
 
 export default function StudentsNeedImprovement() {
   const [dataList, setDataList] = useState(coordinatorSkillGapStudents);
   const [activeTab, setActiveTab] = useState("all"); // "all", "immediate", "commonSkills", "improving", "notImproving"
+
+  useEffect(() => {
+    apiFetch("/interventions")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((item, idx) => ({
+            id: item.id || idx + 1,
+            studentName: item.student_name || item.name || `Student ${idx + 1}`,
+            rollNo: item.roll_number || item.rollNo || "2026COMP042",
+            department: item.department || "Computer Engineering",
+            batch: item.batch_name || item.batch || "Batch A",
+            overallPerformance: item.overall_score !== undefined ? item.overall_score : 55,
+            weakSkillsCount: Array.isArray(item.weak_areas) ? item.weak_areas.length : 2,
+            priority: item.priority || "High",
+            trendStatus: item.status === "Improving" ? "Improving" : "Not Improving",
+            assignedMentor: "Prof. Mentor PVPPCOE",
+            weakSkills: (item.weak_areas || ["MySQL Indexing", "API Integration"]).map((w) => ({
+              skillName: w,
+              level: "High",
+              source: "Skill Gap & Assessment",
+              currentScore: 48,
+              suggestedImprovement: "Complete Database Indexing & Query Optimization drills in Practice Arena",
+            })),
+          }));
+          setDataList(mapped);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch coordinator interventions:", err);
+      });
+  }, []);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -103,22 +135,36 @@ export default function StudentsNeedImprovement() {
     e.preventDefault();
     if (!remediationStudent) return;
 
-    const updated = dataList.map((s) => {
-      if (s.id === remediationStudent.id) {
-        return {
-          ...s,
-          trendStatus: "Improving",
-          assignedPlan: planType,
-          targetDeadline: planDeadline,
-          notes: planNotes || "Remediation plan assigned by coordinator."
-        };
-      }
-      return s;
-    });
-
-    setDataList(updated);
-    alert(`Remedial action plan assigned to ${remediationStudent.studentName} successfully!`);
-    setRemediationStudent(null);
+    apiFetch('/interventions/log', {
+      method: 'POST',
+      body: JSON.stringify({
+        student_id: remediationStudent.id || remediationStudent.student_id || 6,
+        action_taken: planType,
+        recommendations: `Complete by ${planDeadline}`,
+        notes: planNotes || "Remediation plan assigned by coordinator.",
+        status: "Action Taken",
+      }),
+    })
+      .then(() => {
+        const updated = dataList.map((s) => {
+          if (s.id === remediationStudent.id) {
+            return {
+              ...s,
+              trendStatus: "Improving",
+              assignedPlan: planType,
+              targetDeadline: planDeadline,
+              notes: planNotes || "Remediation plan assigned by coordinator.",
+            };
+          }
+          return s;
+        });
+        setDataList(updated);
+        alert(`Remedial action plan assigned to ${remediationStudent.studentName} successfully!`);
+      })
+      .catch((err) => {
+        console.error("Failed to post remediation plan:", err);
+      })
+      .finally(() => setRemediationStudent(null));
   };
 
   const getPriorityBadgeClass = (priority) => {

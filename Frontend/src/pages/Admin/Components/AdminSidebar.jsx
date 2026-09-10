@@ -36,6 +36,7 @@ function SidebarBrand({ collapsed, subtitle }) {
   );
 }
 
+
 const primaryNavItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Manage Users", url: "/admin/users", icon: UserCog },
@@ -44,6 +45,7 @@ const primaryNavItems = [
   { title: "Manage Content", url: "/admin/learning", icon: BookOpen },
   { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
   { title: "Coding Practice", url: "/admin/practice", icon: Code },
+  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
   { title: "Student Progress", url: "/admin/progress", icon: LineChart },
   { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
 ];

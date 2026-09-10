@@ -9,6 +9,8 @@ import {
   SlidersHorizontal,
   Activity,
   LifeBuoy,
+  Trophy,
+  FileCheck2,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
 import "../../pages/SuperAdmin/Styles/SuperAdmin.css";
@@ -39,6 +41,8 @@ const primaryNavItems = [
   { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
   { title: "Batches", url: "/super-admin/batches", icon: Calendar },
   { title: "Manage Users", url: "/super-admin/users", icon: Users },
+  { title: "Leaderboards", url: "/super-admin/leaderboard", icon: Trophy },
+  { title: "Weekly Reports", url: "/super-admin/weekly-reports", icon: FileCheck2 },
   { title: "Performance", url: "/super-admin/performance", icon: TrendingUp },
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },

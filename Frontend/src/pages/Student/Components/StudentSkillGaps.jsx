@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -14,9 +14,12 @@ import {
   Info,
   Layers,
   GraduationCap,
-  PlayCircle
+  PlayCircle,
+  UserCheck,
+  Calendar,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/StudentSkillGaps.css";
 
 // Initial mock data for student skills analysis & recommendations
@@ -111,6 +114,19 @@ export default function StudentSkillGaps() {
   const [skills, setSkills] = useState(initialSkillData);
   const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedWeakSkill, setSelectedWeakSkill] = useState(initialSkillData[2]); // Default DBMS selected for recommendation view
+  const [interventionData, setInterventionData] = useState(null);
+
+  useEffect(() => {
+    apiFetch("/interventions/student/my-status")
+      .then((res) => {
+        if (res && res.data) {
+          setInterventionData(res.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch student intervention status:", err);
+      });
+  }, []);
 
   // Filter skills
   const filteredSkills = skills.filter((skill) => {
@@ -183,6 +199,31 @@ export default function StudentSkillGaps() {
           <span>Overall Competency: <strong>{avgOverallScore}%</strong></span>
         </div>
       </div>
+
+      {/* Mentor Intervention & Action Plan Banner */}
+      {interventionData && interventionData.statusInfo && interventionData.statusInfo.isDefaulter && (
+        <div style={{ padding: "16px 20px", borderRadius: "14px", background: "#fff1f2", border: "1px solid #fecdd3", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#e11d48", fontWeight: 800, fontSize: "15px" }}>
+              <AlertTriangle size={20} />
+              <span>Mentor Intervention Alert: Action Plan Assigned</span>
+            </div>
+            <span style={{ padding: "4px 10px", borderRadius: "12px", background: "#e11d48", color: "#ffffff", fontSize: "12px", fontWeight: 700 }}>
+              {interventionData.statusInfo.priority || "High"} Priority
+            </span>
+          </div>
+          <div style={{ fontSize: "13px", color: "#9f1239", lineHeight: 1.5 }}>
+            <strong>Flagged Reasons:</strong> {Array.isArray(interventionData.statusInfo.reasons) ? interventionData.statusInfo.reasons.join(" · ") : "Requires performance improvement"}
+          </div>
+          {interventionData.history && interventionData.history.length > 0 && (
+            <div style={{ marginTop: "4px", padding: "10px 12px", background: "#ffffff", borderRadius: "8px", border: "1px solid #ffe4e6", fontSize: "12.5px", color: "#334155" }}>
+              <div><strong>Assigned Mentor:</strong> {interventionData.history[0].mentor_name || "Prof. Mentor"}</div>
+              <div><strong>Action Directives:</strong> {interventionData.history[0].action_taken || "Assigned 1-on-1 counseling & remedial tasks"}</div>
+              <div><strong>Recommendations:</strong> {interventionData.history[0].recommendations || "Complete practice drills"}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* KPI Overview Cards */}
       <div className="skillgaps-kpi-grid">
