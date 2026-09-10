@@ -20,10 +20,12 @@ import {
   Copy,
   Check,
   X,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import StatusBadge from '../../../components/SuperAdmin/StatusBadge';
 import EmptyState from '../../../components/ui/EmptyState';
+import { apiFetch } from '../../../utils/api';
 import { initialAdminVerifications } from '../../../data/superAdminMockData';
 import '../Styles/SuperAdmin.css';
 import '../../Admin/Styles/AdminUsers.css';
@@ -79,6 +81,61 @@ export default function ManageUsers() {
   const [coordinators, setCoordinators] = useState(mockCoordinators);
   const [mentors, setMentors] = useState(mockMentors);
   const [students, setStudents] = useState(mockStudentsRisk);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await apiFetch('/admin/users');
+        if (res && Array.isArray(res.users)) {
+          const dbCoords = res.users.filter(u => u.role === 'coordinator');
+          const dbMentors = res.users.filter(u => u.role === 'mentor');
+          const dbStudents = res.users.filter(u => u.role === 'student');
+
+          if (dbCoords.length > 0) {
+            setCoordinators(dbCoords.map(u => ({
+              id: u.id,
+              name: u.name || 'Coordinator',
+              email: u.email,
+              phone: u.mobile_number || u.phone || '+91 98765 00000',
+              college: u.college_name || u.college || 'PVPPCOE Mumbai',
+              department: u.department_name || u.department || 'Computer Engineering',
+              status: u.is_active ? 'Active' : 'Inactive'
+            })));
+          }
+
+          if (dbMentors.length > 0) {
+            setMentors(dbMentors.map(u => ({
+              id: u.id,
+              name: u.name || 'Mentor',
+              email: u.email,
+              phone: u.mobile_number || u.phone || '+91 98765 00000',
+              college: u.college_name || u.college || 'PVPPCOE Mumbai',
+              track: u.target_track || 'Full Stack Web Engineering',
+              studentsAssigned: 35,
+              rating: '4.9/5'
+            })));
+          }
+
+          if (dbStudents.length > 0) {
+            setStudents(dbStudents.map(u => ({
+              id: u.id,
+              name: u.name || 'Student',
+              rollNo: u.rollNo || `STD-${u.id}`,
+              college: u.college_name || u.college || 'PVPPCOE Mumbai',
+              batch: u.batch || 'COMPS 2026',
+              attendance: u.attendance || '92%',
+              risk: u.risk || 'Low Risk',
+              status: 'Active'
+            })));
+          }
+        }
+      } catch (err) {
+        console.warn("Using default users dataset:", err);
+      }
+    };
+    fetchUsers();
+  }, []);
+
 
   useEffect(() => {
     const path = location.pathname;
@@ -195,9 +252,30 @@ export default function ManageUsers() {
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
-  const handleAddUserSubmit = (e) => {
+  const handleAddUserSubmit = async (e) => {
     e.preventDefault();
     if (!newUserForm.name || !newUserForm.email) return;
+
+    const roleMapping = {
+      admins: 'college_admin',
+      coordinators: 'coordinator',
+      mentors: 'mentor',
+      students: 'student'
+    };
+
+    try {
+      await apiFetch('/admin/users', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newUserForm.name,
+          email: newUserForm.email,
+          mobile_number: newUserForm.phone,
+          role: roleMapping[newUserForm.role] || 'student',
+        })
+      });
+    } catch (err) {
+      console.warn("User created in local state:", err);
+    }
 
     if (newUserForm.role === 'admins') {
       const newAdmin = {
@@ -261,19 +339,20 @@ export default function ManageUsers() {
     });
   };
 
+
   return (
-    <div className="space-y-6 text-slate-800">
+    <div className="manageusers-page-wrap">
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Users className="w-5 h-5 text-indigo-600" />
+          <div className="manageusers-header-title">
+            <Users className="manageusers-header-icon" />
             <span>Manage Users &amp; Registration Codes</span>
-          </h2>
-          <p className="text-xs text-slate-500">View system users, issue role-based registration invitation codes, and add new institutional users</p>
+          </div>
+          <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="sa-header-actions">
           <button
             type="button"
             onClick={() => {
@@ -282,7 +361,7 @@ export default function ManageUsers() {
             }}
             className="manageusers-btn-secondary"
           >
-            <BookOpen className="w-4 h-4 text-indigo-600" />
+            <BookOpen size={16} />
             <span>Generate Code</span>
           </button>
           <button
@@ -290,7 +369,7 @@ export default function ManageUsers() {
             onClick={() => setIsAddUserModalOpen(true)}
             className="sa-btn-primary"
           >
-            <Users className="w-4 h-4" />
+            <Users size={16} />
             <span>+ Add User</span>
           </button>
         </div>
@@ -337,13 +416,14 @@ export default function ManageUsers() {
 
       {/* TAB CONTENT: Admin Verification */}
       {activeTab === "admins" && (
-        <div className="space-y-4">
-          <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-center gap-3">
-            <Clock className="w-5 h-5 text-amber-600 shrink-0" />
-            <p className="text-xs text-amber-800 font-medium">
+        <div className="manageusers-tab-content">
+          <div className="manageusers-banner">
+            <Clock className="manageusers-banner-icon" />
+            <p className="manageusers-banner-text">
               Verifying a request grants institutional administrative access to create departments, assign coordinators, and view student performance data.
             </p>
           </div>
+
 
           <div className="manageusers-table-card">
             {filteredAdmins.length === 0 ? (

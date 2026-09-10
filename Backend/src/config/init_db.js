@@ -84,14 +84,21 @@ export async function initializeDatabase() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         mobile_number VARCHAR(20),
+        password VARCHAR(255) NULL,
         role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
         college_id INT DEFAULT 1,
+        two_factor_secret VARCHAR(255) NULL,
+        two_factor_enabled BOOLEAN DEFAULT TRUE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
       )
     `);
+
+    try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT TRUE`); } catch (_) {}
 
     // 5. Ensure Students Table
     await conn.query(`
@@ -363,6 +370,21 @@ export async function initializeDatabase() {
         INDEX idx_college (college_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    // 17. Ensure Super Admin Account (training.portal0987@gmail.com)
+    try {
+      const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = 'training.portal0987@gmail.com'`);
+      if (!superUsers || superUsers.length === 0) {
+        await conn.query(
+          `INSERT INTO users (name, email, mobile_number, role, college_id, is_active) VALUES ('Super Admin', 'training.portal0987@gmail.com', '9876543210', 'super_admin', NULL, 1)`
+        );
+        console.log('[DB Init] Seeded Super Admin account for training.portal0987@gmail.com');
+      } else {
+        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = 'training.portal0987@gmail.com'`);
+      }
+    } catch (e) {
+      console.warn('[DB Init] Super Admin seed notice:', e.message);
+    }
 
     console.log('[DB Init] All database tables (including shared_content for cross-dashboard sync) successfully created and verified!');
 

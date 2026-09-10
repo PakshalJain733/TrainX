@@ -163,6 +163,56 @@ export default function SuperAdminLayout() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      const name = stored.name || stored.email || "Super Admin";
+      const initials = name
+        ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+        : "SA";
+      return {
+        name,
+        email: stored.email || "training.portal0987@gmail.com",
+        initials: initials || "SA"
+      };
+    } catch (e) {
+      return { name: "Super Admin", email: "training.portal0987@gmail.com", initials: "SA" };
+    }
+  });
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('/api/v1/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user) {
+            const name = data.user.name || data.user.email || "Super Admin";
+            const initials = name
+              .split(' ')
+              .map(n => n[0])
+              .join('')
+              .substring(0, 2)
+              .toUpperCase();
+            setUserProfile({
+              name,
+              email: data.user.email || "training.portal0987@gmail.com",
+              initials: initials || "SA"
+            });
+            localStorage.setItem('user', JSON.stringify(data.user));
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching SuperAdmin profile:", err);
+      }
+    };
+    fetchUser();
+  }, []);
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (headerRightRef.current && !headerRightRef.current.contains(event.target)) {
@@ -185,17 +235,18 @@ export default function SuperAdminLayout() {
     if (path.startsWith("/super-admin/colleges")) return "Institutions & Colleges";
     if (path.startsWith("/super-admin/departments")) return "Academic Departments";
     if (path.startsWith("/super-admin/batches")) return "Cross-Campus Batches";
+    if (path.startsWith("/super-admin/users")) return "System Users Directory";
     if (path.startsWith("/super-admin/verification")) return "Admin Verifications";
     if (path.startsWith("/super-admin/coordinators")) return "Coordinators Management";
     if (path.startsWith("/super-admin/mentors")) return "Mentors & Trainers";
     if (path.startsWith("/super-admin/students")) return "Student Directory & Risk";
     if (path.startsWith("/super-admin/performance")) return "Performance Analytics";
-    if (path.startsWith("/super-admin/attendance")) return "Institutional Attendance";
-    if (path.startsWith("/super-admin/ai-roadmaps")) return "AI Career Roadmaps";
-    if (path.startsWith("/super-admin/ai-interviews")) return "AI Interview Analytics";
-    if (path.startsWith("/super-admin/mock-drives")) return "Mock Placement Drives";
-    if (path.startsWith("/super-admin/weekly-reports")) return "Weekly Governance Reports";
-    if (path.startsWith("/super-admin/profile")) return "Edit Profile";
+    if (path.startsWith("/super-admin/health")) return "System Health & Servers";
+    if (path.startsWith("/super-admin/maintenance")) return "Feature Switch Controls";
+    if (path.startsWith("/super-admin/tickets")) return "Support & Help Tickets";
+    if (path.startsWith("/super-admin/leaderboard")) return "Institutional Leaderboards";
+    if (path.startsWith("/super-admin/weekly-reports")) return "Governance Reports";
+    if (path.startsWith("/super-admin/profile")) return "Edit Profile Settings";
     return "Super Admin Dashboard";
   };
 
@@ -205,6 +256,13 @@ export default function SuperAdminLayout() {
     } else {
       setCollapsed((c) => !c);
     }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    localStorage.removeItem('role');
+    navigate('/login');
   };
 
   return (
@@ -241,6 +299,16 @@ export default function SuperAdminLayout() {
               </div>
 
               <div className="sa-header__right" ref={headerRightRef}>
+                {/* AI Risk Audit Action */}
+                <button
+                  onClick={() => setIsAuditOpen(true)}
+                  className="sa-header__audit-btn"
+                  title="Run AI System Audit"
+                >
+                  <Sparkles size={14} />
+                  <span>AI Risk Audit</span>
+                </button>
+
                 {/* Notification Bell */}
                 <div className="sa-header__notif-wrap">
                   <button
@@ -252,7 +320,7 @@ export default function SuperAdminLayout() {
                     }}
                     title="Notifications"
                   >
-                    <Bell size={21} className="sa-header__bell-icon" />
+                    <Bell size={20} className="sa-header__bell-icon" />
                     {hasUnreadNotif && <span className="sa-header__notification-dot"></span>}
                   </button>
 
@@ -275,20 +343,20 @@ export default function SuperAdminLayout() {
                     aria-label="User menu"
                   >
                     <div className="sa-header__user-info">
-                      <span className="sa-header__name">Dr. Sara Rao</span>
+                      <span className="sa-header__name">{userProfile.name}</span>
                     </div>
-                    <div className="sa-header__avatar" aria-label="Dr. Sara Rao">
-                      SR
+                    <div className="sa-header__avatar" aria-label={userProfile.name}>
+                      {userProfile.initials}
                     </div>
                   </button>
 
                   {profileOpen && (
                     <div className="sa-header__profile-dropdown">
                       <div className="sa-header__profile-top">
-                        <div className="sa-header__profile-avatar">SR</div>
+                        <div className="sa-header__profile-avatar">{userProfile.initials}</div>
                         <div className="sa-header__profile-info">
-                          <span className="sa-header__profile-name">Dr. Sara Rao</span>
-                          <span className="sa-header__profile-sub">Super Admin</span>
+                          <span className="sa-header__profile-name">{userProfile.name}</span>
+                          <span className="sa-header__profile-sub">{userProfile.email}</span>
                         </div>
                       </div>
                       <div className="sa-header__profile-divider" />
@@ -306,7 +374,7 @@ export default function SuperAdminLayout() {
                         className="sa-header__profile-item sa-header__profile-item--danger"
                         onClick={() => {
                           setProfileOpen(false);
-                          navigate("/");
+                          handleLogout();
                         }}
                       >
                         <LogOut size={15} />
@@ -331,3 +399,4 @@ export default function SuperAdminLayout() {
     </div>
   );
 }
+

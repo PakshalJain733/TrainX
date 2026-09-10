@@ -10,39 +10,56 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { apiFetch } from "../../../utils/api";
 import "../../Student/Styles/ProfilePage.css";
 import '../Styles/SuperAdminProfile.css';
+
 
 export default function SuperAdminProfile() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
 
-  const [form, setForm] = useState({
-    name: "Dr. Sara Rao",
-    email: "sara.rao@trainingportal.com",
-    phone: "+91 98765 43210",
-    role: "Super Admin",
-    region: "Mumbai, Maharashtra",
-    organization: "Training Portal",
+  const [form, setForm] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      return {
+        name: stored.name || "Super Admin",
+        email: stored.email || "training.portal0987@gmail.com",
+        phone: stored.mobile_number || stored.phone || "+91 98765 43210",
+        role: "Super Admin",
+        region: "Mumbai, Maharashtra",
+        organization: "Training Portal",
+      };
+    } catch (e) {
+      return {
+        name: "Super Admin",
+        email: "training.portal0987@gmail.com",
+        phone: "+91 98765 43210",
+        role: "Super Admin",
+        region: "Mumbai, Maharashtra",
+        organization: "Training Portal",
+      };
+    }
   });
 
   useEffect(() => {
     apiFetch("/auth/me")
       .then((res) => {
-        if (res && res.data) {
-          const u = res.data;
+        if (res && (res.user || res.data)) {
+          const u = res.user || res.data;
           setForm((prev) => ({
             ...prev,
             name: u.name || prev.name,
             email: u.email || prev.email,
-            phone: u.phone || u.mobile_number || prev.phone,
-            role: u.role || prev.role,
+            phone: u.mobile_number || u.phone || prev.phone,
+            role: u.role ? u.role.toUpperCase() : prev.role,
           }));
         }
       })
       .catch(() => {});
   }, []);
+
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];

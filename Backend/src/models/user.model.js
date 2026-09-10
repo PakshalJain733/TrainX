@@ -145,14 +145,14 @@ export const findUserById = async (id) => {
 
 export const findUserByEmail = findUserByEmailOrMobile;
 
-export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1 }) => {
+export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', two_factor_secret = null }) => {
   try {
     const res = await query(
-      'INSERT INTO users (name, email, mobile_number, role, college_id) VALUES (?, ?, ?, ?, ?)',
-      [name, email, mobile_number, role, college_id]
+      'INSERT INTO users (name, email, mobile_number, role, college_id, password_hash, two_factor_secret) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [name, email, mobile_number, role, college_id, password, two_factor_secret]
     );
     if (res && res.insertId) {
-      return { id: res.insertId, name, email, mobile_number, role, college_id };
+      return { id: res.insertId, name, email, mobile_number, role, college_id, password_hash: password, two_factor_secret };
     }
   } catch (error) {
     console.warn(`[User Model] Database insert fallback: ${error.message}`);
@@ -165,11 +165,27 @@ export const createUser = async ({ name, email = '', mobile_number = '', role = 
     mobile_number,
     role,
     college_id,
+    password_hash: password,
+    two_factor_secret,
     is_active: 1,
     created_at: new Date(),
   };
   mockUsers.push(newUser);
   return newUser;
+};
+
+export const updateUserTwoFactorSecret = async (userId, secret) => {
+  const numId = parseInt(userId, 10);
+  try {
+    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = TRUE WHERE id = ?', [secret, numId]);
+  } catch (error) {
+    console.warn(`[User Model] update secret error: ${error.message}`);
+  }
+  const u = mockUsers.find(user => user.id === numId);
+  if (u) {
+    u.two_factor_secret = secret;
+    u.two_factor_enabled = true;
+  }
 };
 
 export const saveStudentDetails = async ({

@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
   Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
-  Plus, X, KeyRound, Loader2
+  Plus, X, KeyRound, Loader2, UserCog
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -37,14 +38,9 @@ const getInitials = (name) => {
 const getStoredUserName = () => {
   try {
     const u = JSON.parse(localStorage.getItem("user"));
-    if (!u) return "Pakshal";
-    const name = u.name || "";
-    const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
-    if (isAutoName) {
-      return u.fullName || u.full_name || "Pakshal";
-    }
-    return name;
-  } catch { return "Pakshal"; }
+    if (!u) return "Student";
+    return u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+  } catch { return "Student"; }
 };
 
 const defaultDashboardData = {
@@ -54,6 +50,7 @@ const defaultDashboardData = {
   },
   academicOverview: {
     semester: "",
+    cgpa: "",
   },
   attendanceSummary: {
     percentage: 0,
@@ -69,7 +66,25 @@ export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
   const [myBatchesCount, setMyBatchesCount] = useState(0);
+  const [showFirstLoginAlert, setShowFirstLoginAlert] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (sessionStorage.getItem("showFirstLoginAlert") === "true") {
+      setShowFirstLoginAlert(true);
+    }
+  }, []);
+
+  const handleDismissFirstLoginAlert = () => {
+    sessionStorage.removeItem("showFirstLoginAlert");
+    setShowFirstLoginAlert(false);
+  };
+
+  const handleGoToProfileUpdate = () => {
+    sessionStorage.removeItem("showFirstLoginAlert");
+    setShowFirstLoginAlert(false);
+    navigate("/student/profile");
+  };
 
   const dismissNotice = () => {
     setNoticeDismissed(true);
@@ -89,16 +104,12 @@ export default function Overview() {
           const u = res.data;
           const student = u.studentProfile || {};
 
-          let resolvedName = u.name || "";
-          const isAutoName = !resolvedName || /^\d+$/.test(resolvedName.trim()) || resolvedName.startsWith("User_") || /^vu\d/i.test(resolvedName.trim());
-          if (isAutoName) {
-            resolvedName = u.fullName || u.full_name || "Pakshal";
-          }
+          let resolvedName = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || getStoredUserName();
 
-          const dept = u.department || student.department || "Electronics & Computer Science";
-          const sem = u.semester || student.semester || "Semester 6";
-          const cgpa = u.cgpa || u.aggregate_cgpa || "8.75";
-          const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills);
+          const dept = student.department || u.department || "";
+          const sem = student.semester || u.semester || "";
+          const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
+          const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(cgpa && (student.skills || u.skills));
 
           setProfileCompleted(isCompleted);
 
@@ -113,7 +124,7 @@ export default function Overview() {
               ...prev.academicOverview,
               semester: sem,
               cgpa: cgpa,
-              skills: u.skills || "",
+              skills: student.skills || u.skills || "",
               profileCompleted: isCompleted,
             },
           }));
@@ -211,50 +222,7 @@ export default function Overview() {
 
   const studentName = dashboard.personalDetails.name || "";
   const upcoming = dashboard.upcomingDeadlines || [];
-  const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
-    ? dashboard.leaderboard
-    : [
-        {
-          rank: 1,
-          name: "Test Student",
-          score: "2,025 XP",
-          initials: "TS",
-          badge: "Rank 1",
-          you: false,
-        },
-        {
-          rank: 2,
-          name: "Sunita",
-          score: "1,850 XP",
-          initials: "SU",
-          badge: "Rank 2",
-          you: false,
-        },
-        {
-          rank: 3,
-          name: `${studentName} (You)`,
-          score: "1,720 XP",
-          initials: getInitials(studentName),
-          badge: "Rank 3",
-          you: true,
-        },
-        {
-          rank: 4,
-          name: "Harshad",
-          score: "1,640 XP",
-          initials: "HA",
-          badge: "Top 20%",
-          you: false,
-        },
-        {
-          rank: 5,
-          name: "Siri",
-          score: "1,580 XP",
-          initials: "SI",
-          badge: "Top 20%",
-          you: false,
-        },
-      ];
+  const leaderboardList = dashboard.leaderboard || [];
 
   const studentStats = [
     { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
@@ -282,7 +250,11 @@ export default function Overview() {
               Welcome back, {studentName}!
             </h1>
             <p className="overview-hero-desc">
-              {dashboard.personalDetails.department} | {dashboard.academicOverview.semester} | {dashboard.academicOverview.cgpa ? `CGPA: ${dashboard.academicOverview.cgpa}` : ''}
+              {[
+                dashboard.personalDetails.department,
+                dashboard.academicOverview.semester,
+                dashboard.academicOverview.cgpa ? `CGPA: ${dashboard.academicOverview.cgpa}` : ''
+              ].filter(Boolean).join(" | ") || (profileCompleted ? "Student Portal Dashboard" : "Please complete your profile details under Profile Settings.")}
             </p>
           </div>
         </div>
@@ -382,88 +354,94 @@ export default function Overview() {
             </Link>
           </CardHeader>
           <CardContent style={{ padding: '20px 24px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {leaderboardList.slice(0, 5).map((item) => (
-                <div
-                  key={item.rank}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    background: item.you ? '#eef2ff' : '#ffffff',
-                    border: item.you ? '1.5px solid #a5b4fc' : '1px solid #f1f5f9',
-                    boxShadow: item.you ? '0 4px 14px rgba(79, 70, 229, 0.1)' : 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                    <span
-                      style={{
-                        width: '28px',
-                        height: '28px',
-                        borderRadius: '50%',
-                        background: item.rank === 1 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : item.rank === 2 ? 'linear-gradient(135deg, #94a3b8, #64748b)' : item.rank === 3 ? 'linear-gradient(135deg, #f97316, #c2410c)' : '#f1f5f9',
-                        color: item.rank <= 3 ? '#ffffff' : '#475569',
-                        fontSize: '11.5px',
-                        fontWeight: '800',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      #{item.rank}
-                    </span>
-                    <div
-                      style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        background: item.you ? 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' : '#f1f5f9',
-                        color: item.you ? '#ffffff' : '#1e293b',
-                        fontWeight: '700',
-                        fontSize: '13px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                        boxShadow: item.you ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
-                      }}
-                    >
-                      {item.initials}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
-                        {item.name}
-                      </span>
-                      <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '500', marginTop: '3px' }}>
-                        {item.badge || 'Batch Performer'}
-                      </span>
-                    </div>
-                  </div>
+            {leaderboardList.length === 0 ? (
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
+                No active leaderboard scores recorded yet. Rankings will update automatically as cohort students complete coding tasks and quizzes.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {leaderboardList.slice(0, 5).map((item) => (
                   <div
+                    key={item.rank}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      color: item.you ? '#3730a3' : '#0f172a',
-                      background: item.you ? '#e0e7ff' : '#f8fafc',
-                      border: item.you ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
-                      borderRadius: '18px',
-                      padding: '5px 12px',
-                      whiteSpace: 'nowrap',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderRadius: '14px',
+                      background: item.you ? '#eef2ff' : '#ffffff',
+                      border: item.you ? '1.5px solid #a5b4fc' : '1px solid #f1f5f9',
+                      boxShadow: item.you ? '0 4px 14px rgba(79, 70, 229, 0.1)' : 'none',
+                      transition: 'all 0.15s ease',
                     }}
                   >
-                    <Flame size={14} color="#f97316" />
-                    <span>{item.score || '1,500 XP'}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <span
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          background: item.rank === 1 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : item.rank === 2 ? 'linear-gradient(135deg, #94a3b8, #64748b)' : item.rank === 3 ? 'linear-gradient(135deg, #f97316, #c2410c)' : '#f1f5f9',
+                          color: item.rank <= 3 ? '#ffffff' : '#475569',
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        #{item.rank}
+                      </span>
+                      <div
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          background: item.you ? 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' : '#f1f5f9',
+                          color: item.you ? '#ffffff' : '#1e293b',
+                          fontWeight: '700',
+                          fontSize: '13px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          boxShadow: item.you ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+                        }}
+                      >
+                        {item.initials}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
+                          {item.name}
+                        </span>
+                        <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '500', marginTop: '3px' }}>
+                          {item.badge || 'Batch Performer'}
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '12.5px',
+                        fontWeight: '700',
+                        color: item.you ? '#3730a3' : '#0f172a',
+                        background: item.you ? '#e0e7ff' : '#f8fafc',
+                        border: item.you ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
+                        borderRadius: '18px',
+                        padding: '5px 12px',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      <Flame size={14} color="#f97316" />
+                      <span>{item.score || '0 XP'}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -530,6 +508,42 @@ export default function Overview() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* First Login Profile Update Alert Modal */}
+      {showFirstLoginAlert && createPortal(
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-dialog" style={{ maxWidth: "480px", textAlign: "center", padding: "28px 24px" }}>
+            <div style={{ width: "56px", height: "56px", background: "#e0e7ff", color: "#4f46e5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
+              <UserCog size={28} />
+            </div>
+            <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "8px" }}>
+              Welcome, {dashboard.personalDetails.name}! 🎉
+            </h2>
+            <p style={{ fontSize: "13.5px", color: "#64748b", lineHeight: "1.5", marginBottom: "24px" }}>
+              Your account has been registered successfully. Please update your profile details (department, semester, roll number, and skills) to complete your account setup.
+            </p>
+            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={handleDismissFirstLoginAlert}
+                style={{ flex: 1, padding: "10px 16px", borderRadius: "10px" }}
+              >
+                Remind Me Later
+              </button>
+              <button
+                type="button"
+                className="btn-modal-submit"
+                onClick={handleGoToProfileUpdate}
+                style={{ flex: 1, padding: "10px 16px", borderRadius: "10px" }}
+              >
+                Update Profile Now
+              </button>
+            </div>
           </div>
         </div>,
         document.body

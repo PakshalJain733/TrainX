@@ -22,101 +22,48 @@ import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/StudentSkillGaps.css";
 
-// Initial mock data for student skills analysis & recommendations
-const initialSkillData = [
-  {
-    id: "java",
-    name: "Java",
-    score: 82,
-    status: "Strong",
-    category: "Programming",
-    lastAssessed: "3 days ago",
-    whyWeak: null,
-    targetScore: 90,
-    recommendations: []
-  },
-  {
-    id: "oop",
-    name: "Object-Oriented Programming (OOP)",
-    score: 75,
-    status: "Good",
-    category: "Software Engineering",
-    lastAssessed: "5 days ago",
-    whyWeak: null,
-    targetScore: 85,
-    recommendations: []
-  },
-  {
-    id: "dbms",
-    name: "DBMS",
-    score: 48,
-    status: "Weak",
-    category: "Core Computer Science",
-    lastAssessed: "Yesterday",
-    whyWeak: "Low scores in DBMS quizzes (42%) and AI interview round on Indexing & Normalization. Multiple incorrect answers in SQL Joins syntax.",
-    targetScore: 80,
-    recommendedTopics: ["Database Normalization (1NF to 3NF)", "SQL Joins & Subqueries", "Indexing & Transactions", "ER Modeling"],
-    checklist: [
-      { id: 1, text: "Revise Normalization rules", completed: true, type: "revise", route: "/student/learning" },
-      { id: 2, text: "Study SQL Joins & Query Optimization", completed: false, type: "study", route: "/student/learning" },
-      { id: 3, text: "Complete DBMS practice quiz", completed: false, type: "quiz", route: "/student/quiz" },
-      { id: 4, text: "Retake DBMS assessment / AI Interview", completed: false, type: "retake", route: "/student/ai-interview" }
-    ]
-  },
-  {
-    id: "dp",
-    name: "Dynamic Programming",
-    score: 35,
-    status: "Critical",
-    category: "Data Structures & Algorithms",
-    lastAssessed: "2 days ago",
-    whyWeak: "Struggled with overlapping subproblems and memoization pattern recognition in recent practice coding challenges.",
-    targetScore: 75,
-    recommendedTopics: ["Memoization vs Tabulation", "0/1 Knapsack Problem", "Longest Common Subsequence (LCS)", "Coin Change Problem"],
-    checklist: [
-      { id: 1, text: "Watch Dynamic Programming Masterclass video", completed: true, type: "study", route: "/student/learning" },
-      { id: 2, text: "Solve 5 DP practice problems (Easy -> Medium)", completed: false, type: "practice", route: "/student/practice" },
-      { id: 3, text: "Complete DP Milestone Quiz", completed: false, type: "quiz", route: "/student/quiz" },
-      { id: 4, text: "Attempt AI Technical Interview on Algorithms", completed: false, type: "retake", route: "/student/ai-interview" }
-    ]
-  },
-  {
-    id: "react",
-    name: "React & Frontend Architecture",
-    score: 88,
-    status: "Strong",
-    category: "Web Development",
-    lastAssessed: "4 days ago",
-    whyWeak: null,
-    targetScore: 92,
-    recommendations: []
-  },
-  {
-    id: "system-design",
-    name: "System Design",
-    score: 52,
-    status: "Weak",
-    category: "Architecture",
-    lastAssessed: "1 week ago",
-    whyWeak: "Scored low on scalability concepts (Load Balancing & Caching strategies) during mock drive assessments.",
-    targetScore: 80,
-    recommendedTopics: ["Load Balancers & Reverse Proxies", "Redis Caching Strategies", "Database Sharding"],
-    checklist: [
-      { id: 1, text: "Read Caching & CDN architecture guide", completed: false, type: "revise", route: "/student/learning" },
-      { id: 2, text: "Practice High-Level Design scenarios", completed: false, type: "practice", route: "/student/practice" },
-      { id: 3, text: "Take System Design practice test", completed: false, type: "quiz", route: "/student/quiz" }
-    ]
-  }
-];
+const initialSkillData = [];
 
 export default function StudentSkillGaps() {
   const navigate = useNavigate();
   const [skills, setSkills] = useState(initialSkillData);
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [selectedWeakSkill, setSelectedWeakSkill] = useState(initialSkillData[2]); // Default DBMS selected for recommendation view
+  const [selectedWeakSkill, setSelectedWeakSkill] = useState(null);
   const [interventionData, setInterventionData] = useState(null);
 
   useEffect(() => {
+    apiFetch("/skill-gaps")
+      .then((res) => {
+        let evaluated = [];
+        if (res && res.data && res.data.all_evaluated_skills) {
+          evaluated = res.data.all_evaluated_skills;
+        } else if (res && res.all_evaluated_skills) {
+          evaluated = res.all_evaluated_skills;
+        }
+        if (evaluated.length > 0) {
+          const mapped = evaluated.map((item, idx) => ({
+            id: `skill-${idx}`,
+            name: item.skill,
+            score: item.score,
+            status: item.score >= 80 ? "Strong" : item.score >= 70 ? "Good" : item.score >= 50 ? "Weak" : "Critical",
+            category: "Technical Skill",
+            lastAssessed: "Recent Evaluation",
+            whyWeak: item.score < 60 ? `Scored low (${item.score}%) in technical assessment.` : null,
+            targetScore: 85,
+            recommendedTopics: [item.skill],
+            checklist: [
+              { id: 1, text: `Revise ${item.skill} concepts`, completed: false, type: "revise", route: "/student/learning" },
+              { id: 2, text: `Solve ${item.skill} practice problems`, completed: false, type: "practice", route: "/student/practice" },
+              { id: 3, text: `Attempt ${item.skill} quiz`, completed: false, type: "quiz", route: "/student/quiz" },
+            ]
+          }));
+          setSkills(mapped);
+          const weak = mapped.find((s) => s.score < 60);
+          if (weak) setSelectedWeakSkill(weak);
+        }
+      })
+      .catch(() => {});
+
     apiFetch("/interventions/student/my-status")
       .then((res) => {
         if (res && res.data) {

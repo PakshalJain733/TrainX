@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Brain,
   Sparkles,
@@ -11,7 +12,8 @@ import {
   ListChecks,
   Search,
   BookOpen,
-  TrendingDown
+  TrendingDown,
+  X,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
@@ -54,7 +56,7 @@ function DonutSegment({ cx, cy, r, strokeWidth, pct, color, offset }) {
   );
 }
 
-function SkillGapAnalyticsSection() {
+function SkillGapAnalyticsSection({ onClose }) {
   const [loading, setLoading] = useState(true);
   const [analysis, setAnalysis] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // 'all' | 'weak' | 'plan'
@@ -126,7 +128,7 @@ function SkillGapAnalyticsSection() {
           </div>
         </div>
 
-        <div className="sg-actions-group">
+        <div className="sg-actions-group" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button
             onClick={() => fetchLiveSkillGapData()}
             className="sg-refresh-btn"
@@ -136,6 +138,29 @@ function SkillGapAnalyticsSection() {
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
             <span>Sync Live Data</span>
           </button>
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: "#f1f5f9",
+                border: "none",
+                borderRadius: "8px",
+                padding: "6px 10px",
+                cursor: "pointer",
+                color: "#64748b",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                fontWeight: "600",
+                fontSize: "13px",
+                transition: "all 0.15s ease"
+              }}
+              title="Close Skill Gap Dashboard"
+            >
+              <X size={16} />
+              <span>Close</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -351,15 +376,50 @@ function SkillGapAnalyticsSection() {
 }
 
 export default function ProgressAnalytics() {
+  const navigate = useNavigate();
   const avgQuiz = Math.round(quizScores.reduce((a, q) => a + q.score, 0) / quizScores.length);
 
   return (
     <div className="progress-analytics-page stack-6">
-      <SectionHeader
-        eyebrow="PERFORMANCE METRICS"
-        title="Student Progress Analytics"
-        description="Track problem solving velocity, weekly milestones completion, accuracy trends, and quiz performance analytics."
-      />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+        <SectionHeader
+          eyebrow="PERFORMANCE METRICS"
+          title="Student Progress Analytics"
+          description="Track problem solving velocity, weekly milestones completion, accuracy trends, and quiz performance analytics."
+        />
+        <button
+          type="button"
+          onClick={() => navigate("/student/skill-gaps")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "11px 22px",
+            borderRadius: "12px",
+            background: "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
+            color: "#ffffff",
+            fontWeight: "700",
+            fontSize: "14px",
+            border: "none",
+            cursor: "pointer",
+            boxShadow: "0 4px 14px rgba(37, 99, 235, 0.25)",
+            transition: "all 0.2s ease",
+            whiteSpace: "nowrap",
+            outline: "none"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "translateY(-1px)";
+            e.currentTarget.style.boxShadow = "0 6px 18px rgba(37, 99, 235, 0.35)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.boxShadow = "0 4px 14px rgba(37, 99, 235, 0.25)";
+          }}
+        >
+          <Brain size={18} strokeWidth={2.2} />
+          <span>Skill Gap Analysis</span>
+        </button>
+      </div>
 
       {/* 3 Top KPIs */}
       <div className="progress-kpis-grid">
@@ -379,10 +439,7 @@ export default function ProgressAnalytics() {
         </div>
       </div>
 
-      {/* AI Skill Gap Detector Section */}
-      <SkillGapAnalyticsSection />
-
-      {/* Charts Grid — now 1x2 */}
+      {/* Charts Grid — 1x2 */}
       <div className="progress-charts-grid progress-charts-grid--two">
         {/* Weekly Progress — Bar Graph */}
         <div className="progress-chart-card">

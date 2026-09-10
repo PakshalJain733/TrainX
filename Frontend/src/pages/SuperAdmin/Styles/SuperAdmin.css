@@ -686,6 +686,15 @@
   flex-wrap: wrap;
 }
 
+.sa-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+
 /* ── Standard Search Bar ── */
 .sa-search-card {
   background: #ffffff;

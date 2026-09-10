@@ -136,6 +136,40 @@
     font-size: 13px;
 }
 
+.register-password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.register-password-wrapper input {
+    padding-right: 34px !important;
+}
+
+.register-password-toggle {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 2px !important;
+    margin: 0 !important;
+    width: auto !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.register-password-toggle:hover {
+    color: #2563eb;
+    background: none !important;
+    transform: translateY(-50%) !important;
+}
+
 /* selects — with custom chevron arrow */
 .input-group select {
     width: 100%;
@@ -549,7 +583,8 @@
         margin-bottom: 2px;
     }
 
-    #acad, #nexus {
+    #acad,
+    #nexus {
         font-size: 22px;
     }
 
@@ -657,4 +692,4 @@
     margin-bottom: 1rem;
     text-align: center;
     font-size: 0.9rem;
-}
+}

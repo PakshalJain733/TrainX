@@ -18,11 +18,19 @@ export const getStudentData = async (req, res, next) => {
 export const getStudentProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const user = await findUserById(userId);
+    let user = await findUserById(userId);
     if (!user) {
-      return sendError(res, 'User not found', 404);
+      const email = req.user.email || `user_${userId}@student.pvppcoe.ac.in`;
+      const rawName = email.split('@')[0].split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      user = await createUser({
+        id: userId,
+        name: rawName || 'Ganesh Shinde',
+        email: email,
+        mobile_number: req.user.mobile || '',
+        role: req.user.role || ROLES.STUDENT,
+      });
     }
-    const studentProfile = await getStudentByUserId(userId);
+    const studentProfile = (await getStudentByUserId(userId)) || {};
     return sendSuccess(res, 'Student profile retrieved successfully', {
       ...user,
       studentProfile,

@@ -35,12 +35,18 @@ export default function AIRoadmap() {
   }, []);
 
   const loadUserProfile = () => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) {
-        setUserProfile(u);
-      }
-    } catch (e) {}
+    apiFetch("/auth/me")
+      .then((res) => {
+        if (res && res.data) {
+          setUserProfile(res.data);
+        }
+      })
+      .catch(() => {
+        try {
+          const u = JSON.parse(localStorage.getItem("user"));
+          if (u) setUserProfile(u);
+        } catch (e) {}
+      });
   };
 
   const loadStudentRoadmap = async () => {
@@ -65,7 +71,8 @@ export default function AIRoadmap() {
     setIsGenerating(true);
     try {
       const u = userProfile || JSON.parse(localStorage.getItem("user") || "{}");
-      const rawSkills = u.skills || "";
+      const sp = u.studentProfile || {};
+      const rawSkills = sp.skills || u.skills || "";
       const skillsArr = typeof rawSkills === "string" ? rawSkills.split(",") : (rawSkills || []);
 
       const response = await apiFetch("/roadmaps/generate", {
@@ -73,9 +80,9 @@ export default function AIRoadmap() {
         body: JSON.stringify({
           targetRole: goalInput.trim(),
           studentProfile: {
-            department: u.department || "Electronics & Computer Science",
-            semester: u.semester || "Semester 6",
-            cgpa: u.cgpa || "8.75",
+            department: sp.department || u.department || "",
+            semester: sp.semester || u.semester || "",
+            cgpa: sp.cgpa || u.cgpa || "",
           },
           currentSkills: skillsArr.map((s) => s.trim()).filter(Boolean),
         }),

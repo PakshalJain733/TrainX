@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import StatsCard from '../../../components/SuperAdmin/StatsCard';
 import StatusBadge from '../../../components/SuperAdmin/StatusBadge';
 import { overviewStats, initialColleges, initialAdminVerifications } from '../../../data/superAdminMockData';
@@ -9,6 +9,21 @@ import '../Styles/SuperAdmin.css';
 import '../Styles/Overview.css';
 
 export default function Overview() {
+  const [userName, setUserName] = useState("Super Admin");
+  const [userInitials, setUserInitials] = useState("SA");
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      const name = stored.name || stored.email || "Super Admin";
+      setUserName(name);
+      setUserInitials(name ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
+    } catch (e) {
+      setUserName("Super Admin");
+      setUserInitials("SA");
+    }
+  }, []);
+
   const stats = overviewStats.length > 0 ? overviewStats : [
     { id: 1, label: "Total Partner Colleges", value: "0", change: "No colleges registered", trend: "up", icon: "Building2" },
     { id: 2, label: "Enrolled Students", value: "0", change: "Awaiting student sync", trend: "up", icon: "Users" },
@@ -21,13 +36,13 @@ export default function Overview() {
       {/* Radiant Welcome Hero Banner */}
       <div className="overview-hero-card">
         <div className="overview-hero-left">
-          <div className="overview-hero-avatar">SR</div>
+          <div className="overview-hero-avatar">{userInitials}</div>
           <div>
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> INSTITUTIONAL SUPER ADMIN CONTROL HUB
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, Dr. Sara Rao!
+              Welcome back, {userName}!
             </h1>
             <p className="overview-hero-desc">
               Cross-college portal status, active student engagement analytics, and faculty allocations.
@@ -42,6 +57,7 @@ export default function Overview() {
           </Link>
         </div>
       </div>
+
 
       {/* KPI Cards Grid */}
       <div className="sa-kpi-grid">

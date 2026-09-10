@@ -41,7 +41,7 @@ export default function Leaderboard() {
   };
 
   const studentContext = leaderboardData.studentContext || {};
-  const myRankInfo = studentContext.myRank || { overallRank: 1, departmentRank: 1, milestoneRank: 1, score: 85, totalStudents: 1 };
+  const myRankInfo = studentContext.myRank || { overallRank: "-", departmentRank: "-", milestoneRank: "-", score: 0, totalStudents: 0 };
 
   // Current tab items list
   let currentList = [];

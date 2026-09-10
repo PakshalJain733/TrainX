@@ -224,7 +224,7 @@
   right: -10px;
   width: 130px;
   height: 130px;
-  background-image: radial-gradient(circle, rgba(37,99,235,0.18) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.18) 1.5px, transparent 1.5px);
   background-size: 14px 14px;
   pointer-events: none;
   z-index: 0;
@@ -239,7 +239,7 @@
   left: -10px;
   width: 110px;
   height: 110px;
-  background-image: radial-gradient(circle, rgba(37,99,235,0.12) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.12) 1.5px, transparent 1.5px);
   background-size: 14px 14px;
   pointer-events: none;
   z-index: 0;
@@ -332,7 +332,8 @@
 }
 
 .login-input-group input[type="email"],
-.login-input-group input[type="text"] {
+.login-input-group input[type="text"],
+.login-input-group input[type="password"] {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid #cbd5e1;
@@ -563,11 +564,13 @@
   .login-left-panel {
     display: none;
   }
+
   .login-wrapper {
     min-height: auto;
     max-width: 440px;
     border-radius: 20px;
   }
+
   .login-card {
     border-radius: 20px;
     width: 100%;
@@ -580,30 +583,37 @@
   .login-page {
     padding: 10px;
   }
+
   .login-wrapper {
     max-width: 100%;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 50, 150, 0.08);
   }
+
   .login-card {
     padding: 22px 18px;
     border-radius: 16px;
   }
+
   .login-logo {
     width: 75px;
     margin-bottom: 8px;
   }
+
   .login-subtitle {
     font-size: 13px;
     margin-bottom: 12px;
   }
+
   .login-input-group {
     margin-bottom: 12px;
   }
+
   .login-input-group input {
     padding: 9px 12px;
     font-size: 13px;
   }
+
   .login-links p,
   .login-links a {
     font-size: 13px;
@@ -615,6 +625,10 @@
   margin-bottom: 0.8rem;
   text-align: center;
   font-size: 0.85rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 8px 12px;
+  border-radius: 8px;
 }
 
 .auth-success-msg {
@@ -622,4 +636,107 @@
   margin-bottom: 0.8rem;
   text-align: center;
   font-size: 0.85rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* Segmented Auth Mode Switcher Bar */
+.login-mode-segmented-bar {
+  display: flex;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.login-mode-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-mode-tab svg {
+  width: 15px;
+  height: 15px;
+}
+
+.login-mode-tab.active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.login-mode-tab:hover:not(.active) {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Password Input Field with Toggle Eye */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 42px !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  width: auto !important;
+}
+
+.password-toggle-btn:hover {
+  color: #2563eb;
+}
+
+/* Options row for remember me & forgot password */
+.login-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: text-decoration 0.2s;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
 }

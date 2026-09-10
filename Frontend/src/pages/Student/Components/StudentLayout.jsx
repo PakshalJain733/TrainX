@@ -256,15 +256,15 @@ export default function StudentLayout() {
   }, []);
 
   const resolveUser = (rawUser) => {
-    if (!rawUser) return { name: "Pakshal", department: "ECS", semester: 6 };
-    let name = rawUser.name;
-    if (!name || name.trim().toLowerCase() === "name" || name.startsWith("User_") || /^vu\d/i.test(name)) {
-      name = rawUser.fullName || rawUser.full_name || (rawUser.name && !name.startsWith("User_") && !/^vu\d/i.test(name) ? rawUser.name : "Pakshal");
-    }
-    return { ...rawUser, name };
+    let localUser = {};
+    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+    const u = rawUser || {};
+    let name = u.name || u.fullName || u.full_name || localUser.name || localUser.fullName || localUser.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Ganesh Shinde";
+    let email = u.email || localUser.email || "ganesh.shinde@student.pvppcoe.ac.in";
+    return { ...localUser, ...u, name, email };
   };
 
-  const [user, setUser] = useState({ name: "", department: "", semester: "" });
+  const [user, setUser] = useState(() => resolveUser(null));
   const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(false);
 
   // Load user profile from backend on mount (device-synced)
@@ -445,7 +445,8 @@ export default function StudentLayout() {
                             {user.name ? user.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
                           </div>
                           <div className="student-header__profile-info">
-                            <span className="student-header__profile-name">{user.name}</span>
+                            <span className="student-header__profile-name">{user.name || "Ganesh Shinde"}</span>
+                            <span className="student-header__profile-sub">{user.email || "ganesh.shinde@student.pvppcoe.ac.in"}</span>
                           </div>
                         </div>
                         <div className="student-header__profile-divider" />

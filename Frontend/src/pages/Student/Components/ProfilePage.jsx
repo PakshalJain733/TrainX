@@ -14,18 +14,34 @@ import {
   Sparkles,
   BookOpen,
   Star,
-  Code2,
   AlertCircle,
   Plus,
   X,
   Check,
   Target,
   Bell,
+  Search,
+  Briefcase,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ProfilePage.css";
+
+const CAREER_TRACK_OPTIONS = [
+  "Python Backend Developer",
+  "React Frontend Developer",
+  "Full Stack Engineer",
+  "Data Science & AI Engineer",
+  "Cloud & DevOps Specialist",
+  "Java Full Stack Developer",
+  "Mobile App Developer (Flutter / React Native)",
+  "Cyber Security & Ethical Hacking Specialist",
+  "UI/UX & Product Designer",
+  "Embedded Systems & IoT Engineer",
+  "Blockchain & Web3 Engineer",
+  "Machine Learning & MLOps Specialist",
+];
 
 const PREDEFINED_SKILLS = [
   "Python",
@@ -57,34 +73,54 @@ const PREDEFINED_SKILLS = [
 
 export default function ProfilePage() {
   const fileInputRef = useRef(null);
+  const trackWrapperRef = useRef(null);
   const [saved, setSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [customSkillInput, setCustomSkillInput] = useState("");
+  const [trackSearchFocus, setTrackSearchFocus] = useState(false);
 
-  // Initial empty state — all data is fetched from backend API on mount
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    rollNo: "",
-    department: "",
-    gender: "",
-    city: "",
-    guardianContact: "",
-    linkedinUrl: "",
-    semester: "",
-    cgpa: "",
-    skills: "",
-    profileCompleted: true,
-    batch: "",
-    college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-    coordinator: "",
-    mentor: "",
-    track: "",
-    notifMilestones: true,
-    notifWeeklyReport: true,
-    notifInterview: true,
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (trackWrapperRef.current && !trackWrapperRef.current.contains(e.target)) {
+        setTrackSearchFocus(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const [form, setForm] = useState(() => {
+    let localUser = {};
+    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+    const sp = localUser.studentProfile || {};
+    return {
+      name: localUser.name || localUser.fullName || localUser.full_name || "",
+      email: localUser.email || "",
+      phone: localUser.mobile_number || localUser.phone || "",
+      rollNo: sp.roll_number || localUser.roll_number || "",
+      department: sp.department || localUser.department || "",
+      gender: sp.gender || localUser.gender || "",
+      city: sp.city || localUser.city || "",
+      guardianContact: sp.emergency_contact || localUser.emergency_contact || "",
+      linkedinUrl: sp.linkedin_url || localUser.linkedin_url || "",
+      semester: sp.semester || localUser.semester || "",
+      cgpa: sp.cgpa || localUser.cgpa || localUser.aggregate_cgpa || "",
+      skills: sp.skills || localUser.skills || "",
+      profileCompleted: true,
+      batch: "",
+      college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+      coordinator: "",
+      mentor: "",
+      track: sp.target_track || localUser.target_track || "",
+      notifMilestones: true,
+      notifWeeklyReport: true,
+      notifInterview: true,
+    };
   });
+
+  const filteredTracks = CAREER_TRACK_OPTIONS.filter((track) =>
+    track.toLowerCase().includes((form.track || "").toLowerCase())
+  );
 
   useEffect(() => {
     apiFetch("/student/profile")
@@ -181,6 +217,25 @@ export default function ProfilePage() {
           notif_interview: form.notifInterview,
         }),
       });
+
+      try {
+        let existingUser = {};
+        try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+        const updatedUser = {
+          ...existingUser,
+          name: form.name,
+          email: form.email,
+          mobile_number: form.phone,
+          department: form.department,
+          semester: form.semester,
+          cgpa: form.cgpa,
+          skills: form.skills,
+          gender: form.gender,
+          city: form.city,
+          target_track: form.track,
+        };
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+      } catch (e) {}
     } catch (err) {
       console.error("[ProfilePage] Save error:", err);
     }
@@ -321,7 +376,7 @@ export default function ProfilePage() {
               <div className="profile-section-heading">
                 <User size={18} className="profile-heading-icon text-indigo-500" />
                 <div>
-                  <h3 className="profile-heading-title">Personal & Contact Details</h3>
+                  <h3 className="profile-heading-title">Personal & Academic Details</h3>
                   <p className="profile-heading-desc">Used for mentor notifications, personal contact, and training drive updates.</p>
                 </div>
               </div>
@@ -400,13 +455,7 @@ export default function ProfilePage() {
 
             {/* Section 2: Academic & Skill Details (MIDDLE) */}
             <div className="profile-form-section mt-6">
-              <div className="profile-section-heading">
-                <Sparkles size={18} className="profile-heading-icon text-indigo-500" />
-                <div>
-                  <h3 className="profile-heading-title">Academic & Skill Details</h3>
-                  <p className="profile-heading-desc">Enter your semester, CGPA, target career goal, and current skills. The AI engine will generate your customized learning roadmap based on these details.</p>
-                </div>
-              </div>
+
 
               <div className="profile-form-grid">
                 <div className="profile-field">
@@ -443,148 +492,280 @@ export default function ProfilePage() {
                   />
                 </div>
 
-                <div className="profile-field full-width">
+                {/* SEARCHABLE CAREER TRACK INPUT */}
+                <div className="profile-field full-width" style={{ position: "relative" }}>
                   <label className="profile-label">Target Career Track / Role Goal *</label>
-                  <select
-                    className="profile-input profile-select"
-                    value={form.track}
-                    onChange={(e) => setForm((p) => ({ ...p, track: e.target.value }))}
-                    required
-                  >
-                    <option value="Python Backend Developer">Python Backend Developer</option>
-                    <option value="React Frontend Developer">React Frontend Developer</option>
-                    <option value="Full Stack Engineer">Full Stack Engineer</option>
-                    <option value="Data Science & AI Engineer">Data Science & AI Engineer</option>
-                    <option value="Cloud & DevOps Specialist">Cloud & DevOps Specialist</option>
-                  </select>
-                </div>
-
-                {/* SKILLS MULTI-SELECT DROPDOWN SECTION */}
-                <div className="profile-field full-width">
-                  <label className="profile-label">Current Confirmed Skills (Select from catalog) *</label>
-                  
-                  {/* Select Dropdown */}
-                  <select
-                    className="profile-input profile-select mb-3"
-                    value=""
-                    onChange={(e) => {
-                      handleAddSkillFromDropdown(e.target.value);
-                      e.target.value = "";
-                    }}
-                  >
-                    <option value="" disabled>-- Click to select skills from catalog --</option>
-                    {PREDEFINED_SKILLS.map((skill) => (
-                      <option
-                        key={skill}
-                        value={skill}
-                        disabled={currentSkillsList.includes(skill)}
-                      >
-                        {skill} {currentSkillsList.includes(skill) ? "✓ (Added)" : ""}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* Add Custom Skill Row */}
-                  <div className="flex gap-2 mb-3">
-                    <input
-                      type="text"
-                      placeholder="Or type a custom skill (e.g. OpenCV, Kubernetes)..."
-                      className="profile-input flex-1"
-                      value={customSkillInput}
-                      onChange={(e) => setCustomSkillInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddCustomSkill(e);
-                        }
+                  <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <Search
+                      size={18}
+                      style={{
+                        position: "absolute",
+                        left: "14px",
+                        color: "#64748b",
+                        pointerEvents: "none",
+                        zIndex: 2,
                       }}
                     />
-                    <button
-                      type="button"
-                      className="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs flex items-center gap-1 transition-colors flex-shrink-0 shadow-sm"
-                      onClick={handleAddCustomSkill}
-                    >
-                      <Plus size={14} /> Add Skill
-                    </button>
-                  </div>
-
-                  {/* Crisp White / Light Skill Container */}
-                  <div className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 block mb-2.5">
-                      Selected Skills ({currentSkillsList.length}):
-                    </span>
-                    {currentSkillsList.length === 0 ? (
-                      <span className="text-xs text-slate-400 italic">Please select at least 1 skill from the dropdown above.</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {currentSkillsList.map((skill) => (
-                          <span
-                            key={skill}
-                            className="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold flex items-center gap-1.5 shadow-sm transition-transform hover:scale-105"
-                          >
-                            {skill}
-                            <button
-                              type="button"
-                              className="hover:bg-indigo-800 p-0.5 rounded-full text-indigo-100 transition-colors"
-                              onClick={() => handleRemoveSkill(skill)}
-                              title={`Remove ${skill}`}
-                            >
-                              <X size={12} />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
+                    <input
+                      type="text"
+                      className="profile-input"
+                      style={{
+                        paddingLeft: "42px",
+                        paddingRight: form.track ? "36px" : "14px",
+                        width: "100%",
+                      }}
+                      placeholder="Type your target career track (e.g. Python Backend, Full Stack Developer)..."
+                      value={form.track}
+                      onChange={(e) => setForm((p) => ({ ...p, track: e.target.value }))}
+                      required
+                    />
+                    {form.track && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((p) => ({ ...p, track: "" }))}
+                        style={{
+                          position: "absolute",
+                          right: "12px",
+                          background: "none",
+                          border: "none",
+                          color: "#94a3b8",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "2px",
+                        }}
+                        title="Clear input"
+                      >
+                        <X size={16} />
+                      </button>
                     )}
                   </div>
                 </div>
+
+                {/* 🌟 ENHANCED SKILLS SELECTION SECTION */}
+                <div className="profile-field full-width" style={{ marginTop: "12px" }}>
+                  <div style={{
+                    background: "#ffffff",
+                    border: "1px solid #e2e8f0",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.04)"
+                  }}>
+                    {/* Header */}
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div style={{
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "10px",
+                          background: "#eff6ff",
+                          color: "#2563eb",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}>
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <label className="profile-label" style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>
+                            Confirmed Technical & Soft Skills *
+                          </label>
+                          <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
+                            Add your core programming languages, frameworks, tools, and soft skills.
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <span style={{
+                        background: "#e0e7ff",
+                        color: "#3730a3",
+                        fontSize: "12px",
+                        fontWeight: "700",
+                        padding: "4px 12px",
+                        borderRadius: "9999px"
+                      }}>
+                        {currentSkillsList.length} Skills Selected
+                      </span>
+                    </div>
+
+                    {/* Catalog Dropdown Selector */}
+                    <div style={{ marginBottom: "12px" }}>
+                      <select
+                        className="profile-input profile-select"
+                        style={{
+                          width: "100%",
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: "13.5px",
+                          fontWeight: "500",
+                          color: "#1e293b",
+                          backgroundColor: "#f8fafc",
+                          cursor: "pointer"
+                        }}
+                        value=""
+                        onChange={(e) => {
+                          handleAddSkillFromDropdown(e.target.value);
+                          e.target.value = "";
+                        }}
+                      >
+                        <option value="" disabled>-- 🔍 Click to select skills from standard catalog --</option>
+                        {PREDEFINED_SKILLS.map((skill) => (
+                          <option
+                            key={skill}
+                            value={skill}
+                            disabled={currentSkillsList.includes(skill)}
+                          >
+                            {skill} {currentSkillsList.includes(skill) ? " ✓ (Added)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Add Custom Skill Input + Gradient Button */}
+                    <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+                      <input
+                        type="text"
+                        placeholder="Or type a custom skill (e.g. Docker, OpenCV, PyTorch)..."
+                        className="profile-input"
+                        style={{
+                          flex: 1,
+                          padding: "10px 14px",
+                          borderRadius: "12px",
+                          border: "1.5px solid #cbd5e1",
+                          fontSize: "13.5px"
+                        }}
+                        value={customSkillInput}
+                        onChange={(e) => setCustomSkillInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddCustomSkill(e);
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          padding: "10px 20px",
+                          borderRadius: "12px",
+                          background: "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
+                          color: "#ffffff",
+                          fontWeight: "600",
+                          fontSize: "13px",
+                          border: "none",
+                          cursor: "pointer",
+                          boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
+                          transition: "all 0.2s ease",
+                          flexShrink: 0,
+                          outline: "none"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                          e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.35)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(37, 99, 235, 0.25)";
+                        }}
+                        onClick={handleAddCustomSkill}
+                      >
+                        <Plus size={16} strokeWidth={2.5} style={{ color: "#ffffff" }} />
+                        <span>Add Skill</span>
+                      </button>
+                    </div>
+
+                    {/* Selected Skills Container with Ultra-Clean Badges */}
+                    <div style={{
+                      background: "#f8fafc",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "12px",
+                      padding: "14px"
+                    }}>
+                      <div style={{
+                        fontSize: "11px",
+                        fontWeight: "700",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.6px",
+                        color: "#475569",
+                        marginBottom: "10px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}>
+                        <CheckCircle2 size={14} style={{ color: "#16a34a" }} />
+                        <span>Active Skills on Profile ({currentSkillsList.length})</span>
+                      </div>
+
+                      {currentSkillsList.length === 0 ? (
+                        <div style={{ fontSize: "13px", color: "#94a3b8", fontStyle: "italic" }}>
+                          No skills added yet. Select from the dropdown catalog or type above.
+                        </div>
+                      ) : (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                          {currentSkillsList.map((skill) => (
+                            <span
+                              key={skill}
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                padding: "6px 12px 6px 14px",
+                                borderRadius: "9999px",
+                                background: "#eff6ff",
+                                border: "1px solid #bfdbfe",
+                                color: "#1e40af",
+                                fontSize: "13px",
+                                fontWeight: "600",
+                                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                                transition: "all 0.15s ease"
+                              }}
+                            >
+                              <span>{skill}</span>
+                              <button
+                                type="button"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  width: "18px",
+                                  height: "18px",
+                                  borderRadius: "50%",
+                                  background: "#dbeafe",
+                                  color: "#1e40af",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                  transition: "all 0.15s ease"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#ef4444";
+                                  e.currentTarget.style.color = "#ffffff";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "#dbeafe";
+                                  e.currentTarget.style.color = "#1e40af";
+                                }}
+                                onClick={() => handleRemoveSkill(skill)}
+                                title={`Remove ${skill}`}
+                              >
+                                <X size={12} strokeWidth={2.5} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Section 3: Personal Projects & Social Links */}
-            <div className="profile-form-section mt-6">
-              <div className="profile-section-heading">
-                <Code2 size={18} className="profile-heading-icon text-indigo-500" />
-                <div>
-                  <h3 className="profile-heading-title">Personal Projects & Online Profiles</h3>
-                  <p className="profile-heading-desc">Showcase your personal projects, GitHub repository, and LinkedIn profile to mentors.</p>
-                </div>
-              </div>
 
-              <div className="profile-form-grid">
-                <div className="profile-field full-width">
-                  <label className="profile-label">Personal Projects Overview</label>
-                  <textarea
-                    rows="3"
-                    placeholder="Describe your top personal projects (e.g. E-commerce web app using React & Node.js, AI Image Classifier using PyTorch)..."
-                    className="profile-input"
-                    value={form.personalProjects || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, personalProjects: e.target.value }))}
-                  />
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">LinkedIn Profile URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://linkedin.com/in/yourprofile"
-                    className="profile-input"
-                    value={form.linkedinUrl}
-                    onChange={(e) => setForm((p) => ({ ...p, linkedinUrl: e.target.value }))}
-                  />
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">GitHub / Portfolio URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://github.com/yourusername"
-                    className="profile-input"
-                    value={form.githubUrl || ""}
-                    onChange={(e) => setForm((p) => ({ ...p, githubUrl: e.target.value }))}
-                  />
-                </div>
-              </div>
-            </div>
 
             {/* Section 4: Account Settings & Preferences */}
             <div className="profile-form-section mt-6">

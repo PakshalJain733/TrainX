@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 import "./register.css";
@@ -60,6 +60,24 @@ const Icons = {
       <path d="M14 14h7v7h-7z" />
     </svg>
   ),
+  lock: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </svg>
+  ),
+  eye: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  ),
+  eyeOff: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+      <line x1="1" y1="1" x2="23" y2="23" />
+    </svg>
+  ),
   shield: (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -80,6 +98,8 @@ function FieldLabel({ icon, children }) {
 function Register() {
   const navigate = useNavigate();
   const [role, setRole] = useState("Student");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -88,11 +108,93 @@ function Register() {
     department: "",
     year: "",
     division: "",
+    password: "",
+    confirm_password: "",
     secure_code: "",
   });
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  // TOTP Authenticator Setup State
+  const [totpSetupData, setTotpSetupData] = useState(null);
+  const [showTotpSetup, setShowTotpSetup] = useState(false);
+  const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+  const totpInputRefs = useRef([]);
+
+  const handleCopySecret = () => {
+    if (totpSetupData?.secret) {
+      navigator.clipboard.writeText(totpSetupData.secret);
+      setCopiedSecret(true);
+      setTimeout(() => setCopiedSecret(false), 2000);
+    }
+  };
+
+  const handleTotpCodeChange = (e, index) => {
+    const val = e.target.value;
+    if (!/^\d*$/.test(val)) return;
+    const newCode = [...totpCode];
+    newCode[index] = val.substring(val.length - 1);
+    setTotpCode(newCode);
+
+    if (val && index < 5) {
+      totpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleTotpKeyDown = (e, index) => {
+    if (e.key === "Backspace" && !totpCode[index] && index > 0) {
+      totpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyTotpSetup = async (e) => {
+    e.preventDefault();
+    const enteredCode = totpCode.join("");
+    if (enteredCode.length < 6) {
+      setErrorMsg("Please enter complete 6-digit Authenticator code.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const emailToVerify = formData.email || totpSetupData?.user?.email || "";
+      const response = await fetch("/api/v1/auth/verify-totp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: emailToVerify,
+          code: enteredCode,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg("Authenticator paired successfully! Account activated.");
+        if (totpSetupData?.token) {
+          const registeredUser = {
+            ...totpSetupData.user,
+            name: formData.name || totpSetupData.user?.name || "Student",
+          };
+          localStorage.setItem("token", totpSetupData.token);
+          localStorage.setItem("user", JSON.stringify(registeredUser));
+          sessionStorage.setItem("showFirstLoginAlert", "true");
+        }
+        setTimeout(() => {
+          navigate("/");
+        }, 1200);
+      } else {
+        setErrorMsg(data.message || "Invalid Authenticator Code. Please check Microsoft or Google Authenticator.");
+      }
+    } catch (err) {
+      console.error("TOTP verify error:", err);
+      setErrorMsg("Unable to verify Authenticator code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -101,6 +203,19 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!role) {
+      setErrorMsg("Please select your role.");
+      return;
+    }
+    if (formData.password !== formData.confirm_password) {
+      setErrorMsg("Passwords do not match. Please re-enter passwords.");
+      return;
+    }
+    if (formData.password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters long.");
+      return;
+    }
+
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -115,7 +230,11 @@ function Register() {
         }),
       });
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.data?.qrCode) {
+        setTotpSetupData(data.data);
+        setShowTotpSetup(true);
+        setSuccessMsg("Account created! Scan the QR Code with Microsoft or Google Authenticator.");
+      } else if (data.success) {
         setSuccessMsg("Account created successfully! Redirecting to login...");
         if (data.data?.token) {
           localStorage.setItem("token", data.data.token);
@@ -162,7 +281,52 @@ function Register() {
         {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
         {successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
-        <form onSubmit={handleSubmit}>
+        {showTotpSetup ? (
+          <form onSubmit={handleVerifyTotpSetup} className="totp-setup-form">
+            <div className="totp-header" style={{ textAlign: "center", marginBottom: "16px" }}>
+              <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: "0 0 4px 0" }}>Pair Microsoft / Google Authenticator</h3>
+              <p style={{ fontSize: "12.5px", color: "#64748b", margin: 0 }}>Scan QR Code with Microsoft or Google Authenticator on your phone.</p>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", background: "#f8fafc", padding: "12px", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
+              {totpSetupData?.qrCode && (
+                <img src={totpSetupData.qrCode} alt="2FA QR Code" style={{ width: "160px", height: "160px", borderRadius: "8px" }} />
+              )}
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px", marginBottom: "16px" }}>
+              <span style={{ fontSize: "12px", color: "#475569", fontWeight: "600" }}>Key:</span>
+              <code style={{ fontSize: "12.5px", fontWeight: "700", color: "#1e293b", letterSpacing: "1px" }}>{totpSetupData?.secret}</code>
+              <button type="button" onClick={handleCopySecret} style={{ background: "#2563eb", color: "#fff", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
+                {copiedSecret ? "✓ Copied" : "Copy"}
+              </button>
+            </div>
+
+            <div className="input-group">
+              <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
+              <div className="login-otp-input-row" style={{ marginTop: "8px" }}>
+                {totpCode.map((digit, idx) => (
+                  <input
+                    key={idx}
+                    ref={(el) => (totpInputRefs.current[idx] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                    onChange={(e) => handleTotpCodeChange(e, idx)}
+                    onKeyDown={(e) => handleTotpKeyDown(e, idx)}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <button type="submit" className="login-send-otp-btn" style={{ width: "100%", marginTop: "16px" }} disabled={loading}>
+              {loading ? "Verifying..." : "Verify & Complete Registration"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit}>
           {/* ── Select Role ── */}
           <div className="role-select-container">
             <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
@@ -174,9 +338,9 @@ function Register() {
               <option value="">Select your role</option>
               <option value="Student">Student</option>
               <option value="Coordinator">Coordinator</option>
+              <option value="HOD">HOD</option>
               <option value="Faculty">Faculty</option>
               <option value="Mentor">Mentor</option>
-              <option value="HOD">HOD</option>
             </select>
           </div>
 
@@ -291,6 +455,53 @@ function Register() {
                   </select>
                 </div>
               </div>
+
+              {/* Row 4: Password | Confirm Password */}
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
+                  <div className="register-password-wrapper">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      required
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                    />
+                    <button
+                      type="button"
+                      className="register-password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? Icons.eyeOff : Icons.eye}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
+                  <div className="register-password-wrapper">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirm_password"
+                      required
+                      placeholder="••••••••"
+                      value={formData.confirm_password}
+                      onChange={handleChange}
+                    />
+                    <button
+                      type="button"
+                      className="register-password-toggle"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? Icons.eyeOff : Icons.eye}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 
@@ -321,6 +532,53 @@ function Register() {
                 />
               </div>
 
+              {/* Row: Password | Confirm Password for Staff/Mentors */}
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
+                  <div className="register-password-wrapper">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      required
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={handleChange}
+                    />
+                    <button
+                      type="button"
+                      className="register-password-toggle"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? Icons.eyeOff : Icons.eye}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
+                  <div className="register-password-wrapper">
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      name="confirm_password"
+                      required
+                      placeholder="••••••••"
+                      value={formData.confirm_password}
+                      onChange={handleChange}
+                    />
+                    <button
+                      type="button"
+                      className="register-password-toggle"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      tabIndex={-1}
+                    >
+                      {showConfirmPassword ? Icons.eyeOff : Icons.eye}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="input-group">
                 <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
                 <input
@@ -345,6 +603,7 @@ function Register() {
             </p>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
