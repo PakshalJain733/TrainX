@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Briefcase, Award, Users, CheckCircle, Plus, Sparkles } from "lucide-react";
 import api from "../../../services/api";
+import { addSharedDrive, getSharedDrives, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/Placement.css";
 
 export default function CoordinatorPlacement({ hideHeader }) {
@@ -11,34 +12,74 @@ export default function CoordinatorPlacement({ hideHeader }) {
   const [newBatch, setNewBatch] = useState("2026-COMP");
   const [creating, setCreating] = useState(false);
 
-  useEffect(() => {
-    fetchDrives();
-  }, []);
-
   const fetchDrives = async () => {
     try {
       const res = await api.get("/api/v1/drives");
-      const list = res.data?.data;
-      if (Array.isArray(list)) {
-        setDrives(list);
-      } else {
-        setDrives([
+      let list = res.data?.data;
+      if (!Array.isArray(list) || list.length === 0) {
+        list = [
           { id: 1, name: "TCS Digital Mock Placement Drive 2026", company: "TCS Digital", role: "Digital Software Engineer", driveDate: "2026-09-15", registeredCount: 45, cutoffScore: "80%", status: "Active Today" },
           { id: 2, name: "Infosys SP & DSE Mock Hiring Drive", company: "Infosys", role: "Specialist Programmer", driveDate: "2026-09-20", registeredCount: 52, cutoffScore: "75%", status: "Upcoming" }
-        ]);
+        ];
       }
+      const shared = getSharedDrives([]);
+      const existingIds = new Set(list.map((d) => String(d.id)));
+      const sharedItems = shared
+        .filter((s) => !existingIds.has(String(s.id)))
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          company: s.company || "Industry Partner",
+          role: "Graduate Trainee Engineer",
+          driveDate: s.date || "2026-10-15",
+          registeredCount: 0,
+          cutoffScore: s.cutoffScore || "75%",
+          status: s.status || "Upcoming",
+        }));
+      setDrives([...sharedItems, ...list]);
     } catch (err) {
-      setDrives([
+      const shared = getSharedDrives([]);
+      const fallbackList = [
         { id: 1, name: "TCS Digital Mock Placement Drive 2026", company: "TCS Digital", role: "Digital Software Engineer", driveDate: "2026-09-15", registeredCount: 45, cutoffScore: "80%", status: "Active Today" },
         { id: 2, name: "Infosys SP & DSE Mock Hiring Drive", company: "Infosys", role: "Specialist Programmer", driveDate: "2026-09-20", registeredCount: 52, cutoffScore: "75%", status: "Upcoming" }
-      ]);
+      ];
+      if (shared.length > 0) {
+        const sharedItems = shared.map((s) => ({
+          id: s.id,
+          name: s.name,
+          company: s.company || "Industry Partner",
+          role: "Graduate Trainee Engineer",
+          driveDate: s.date || "2026-10-15",
+          registeredCount: 0,
+          cutoffScore: "75%",
+          status: "Upcoming",
+        }));
+        setDrives([...sharedItems, ...fallbackList]);
+      } else {
+        setDrives(fallbackList);
+      }
     }
   };
+
+  useEffect(() => {
+    fetchDrives();
+    const handleUpdate = () => fetchDrives();
+    window.addEventListener(EVENTS.DRIVE_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.DRIVE_UPDATED, handleUpdate);
+  }, []);
 
   const handleCreateDrive = async (e) => {
     e.preventDefault();
     if (!newDriveName.trim()) return;
     setCreating(true);
+
+    addSharedDrive({
+      name: newDriveName,
+      date: newDriveDate,
+      batch: newBatch,
+      company: "Industry Partner",
+    });
+
     try {
       await api.post("/api/v1/drives/create", {
         name: newDriveName,
@@ -50,11 +91,7 @@ export default function CoordinatorPlacement({ hideHeader }) {
       fetchDrives();
     } catch (err) {
       console.error("Create drive failed:", err);
-      // Fallback local update
-      setDrives([
-        ...drives,
-        { id: Date.now(), name: newDriveName, company: "Corporate Partner", role: "Software Engineer", driveDate: newDriveDate, registeredCount: 0, cutoffScore: "75%", status: "Upcoming" }
-      ]);
+      fetchDrives();
       setShowCreateModal(false);
       setNewDriveName("");
     } finally {

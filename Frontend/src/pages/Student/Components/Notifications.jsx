@@ -18,6 +18,7 @@ import {
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
+import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/Notifications.css";
 
 const defaultNotifications = [
@@ -104,11 +105,25 @@ export default function Notifications() {
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {
-    // Fetch live broadcast announcements from database only (device-synced)
-    apiFetch("/student/notifications")
-      .then((res) => {
+    const loadBroadcasts = async () => {
+      const shared = await getSharedBroadcasts([]);
+      const sharedMapped = shared.map((s) => ({
+        id: `shared-${s.id}`,
+        title: `📢 [Broadcast] ${s.title}`,
+        body: s.data?.message || s.description || '',
+        time: s.created_at ? new Date(s.created_at).toLocaleString() : "Today",
+        category: "Broadcast",
+        icon: Bell,
+        iconColor: "#7c3aed",
+        iconBg: "#f5f3ff",
+        unread: true,
+      }));
+
+      try {
+        const res = await apiFetch("/student/notifications");
+        let broadcastMapped = [];
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const broadcastMapped = res.data.map((b) => ({
+          broadcastMapped = res.data.map((b) => ({
             id: `broadcast-${b.id}`,
             title: `📢 [Notice] ${b.title}`,
             body: b.message,
@@ -119,34 +134,33 @@ export default function Notifications() {
             iconBg: "#f5f3ff",
             unread: true,
           }));
+        }
+        setNotifications((prev) => {
+          const allItems = [...sharedMapped, ...broadcastMapped];
+          const existingIds = new Set(prev.map((p) => p.id));
+          const newNotifs = allItems.filter((n) => !existingIds.has(n.id));
+          return [...newNotifs, ...prev];
+        });
+      } catch {
+        if (sharedMapped.length > 0) {
           setNotifications((prev) => {
             const existingIds = new Set(prev.map((p) => p.id));
-            const newNotifs = broadcastMapped.filter((n) => !existingIds.has(n.id));
+            const newNotifs = sharedMapped.filter((n) => !existingIds.has(n.id));
             return [...newNotifs, ...prev];
           });
         }
-      })
-      .catch((err) => console.error("BROADCAST FETCH ERROR:", err));
-
-    const handleNewBroadcast = (e) => {
-      if (e.detail) {
-        const newNotifItem = {
-          id: e.detail.id,
-          title: e.detail.title,
-          body: e.detail.desc || e.detail.body,
-          time: "Just now",
-          category: "Broadcast",
-          icon: Bell,
-          iconColor: "#7c3aed",
-          iconBg: "#f5f3ff",
-          unread: true,
-        };
-        setNotifications((prev) => [newNotifItem, ...prev.filter((p) => p.id !== e.detail.id)]);
       }
     };
 
+    loadBroadcasts();
+
+    const handleNewBroadcast = () => loadBroadcasts();
     window.addEventListener("new_broadcast_notification", handleNewBroadcast);
-    return () => window.removeEventListener("new_broadcast_notification", handleNewBroadcast);
+    window.addEventListener(EVENTS.BROADCAST_UPDATED, handleNewBroadcast);
+    return () => {
+      window.removeEventListener("new_broadcast_notification", handleNewBroadcast);
+      window.removeEventListener(EVENTS.BROADCAST_UPDATED, handleNewBroadcast);
+    };
   }, []);
 
   const markAllRead = () => {

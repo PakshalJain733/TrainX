@@ -4,8 +4,7 @@ import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, 
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
-import "../Styles/AdminQuizzes.css";
-import "../Styles/AdminUsers.css";
+import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
 const API_BASE = "/api/v1";
 
@@ -138,11 +137,42 @@ export default function AdminQuizzes() {
     try {
       const res = await fetch(`${API_BASE}/assessments`, { headers: getAuthHeaders() });
       const data = await res.json();
+      let list = [];
       if (data.success && Array.isArray(data.data)) {
-        setQuizzes(data.data.map(mapAssessment));
+        list = data.data.map(mapAssessment);
       }
+      const shared = await getSharedQuizzes([]);
+      const existingIds = new Set(list.map(q => q.id));
+      const sharedItems = shared
+        .filter(s => !existingIds.has(s.id))
+        .map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          questionsCount: s.data?.questionsCount || 10,
+          type: "Manual",
+          status: s.status || "Active",
+          submissions: 0,
+          questionsList: s.data?.questions || [],
+          description: s.description || ""
+        }));
+      setQuizzes([...list, ...sharedItems]);
     } catch (err) {
       console.error("Failed to load quizzes:", err);
+      const shared = await getSharedQuizzes([]);
+      if (shared.length > 0) {
+        setQuizzes(shared.map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          questionsCount: s.data?.questionsCount || 10,
+          type: "Manual",
+          status: "Active",
+          submissions: 0,
+          questionsList: s.data?.questions || [],
+          description: s.description || ""
+        })));
+      }
     } finally {
       setLoading(false);
     }
@@ -151,6 +181,9 @@ export default function AdminQuizzes() {
   useEffect(() => {
     fetchQuizzes();
     fetchBatches();
+    const handleUpdate = () => fetchQuizzes();
+    window.addEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
   }, []);
 
 
@@ -158,6 +191,15 @@ export default function AdminQuizzes() {
   const saveQuizToDB = async (questionsList, quizType) => {
     const selectedBatchObj = availableBatches.find(b => b.name === batch);
     const batchId = selectedBatchObj ? selectedBatchObj.id : null;
+
+    // Broadcast to DB-backed shared store across all dashboards
+    await addSharedQuiz({
+      title: title.trim(),
+      batch: batch,
+      questionsCount: questionsList.length,
+      questions: questionsList,
+      description: `${quizType} quiz for ${batch}`,
+    });
 
     // 1. Create the assessment
     const assessRes = await fetch(`${API_BASE}/assessments`, {

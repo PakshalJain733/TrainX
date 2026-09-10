@@ -13,6 +13,7 @@ import {
   RotateCcw,
   Sparkles,
 } from 'lucide-react';
+import { getSharedDrives, EVENTS } from '../../../utils/sharedStore';
 import '../Styles/MockDrives.css';
 
 export default function StudentMockDrives() {
@@ -39,15 +40,50 @@ function twoSum(nums, target) {
   const [submitting, setSubmitting] = useState(false);
   const [participation, setParticipation] = useState(null);
 
-  useEffect(() => {
-    fetchDrives();
-  }, []);
-
   const fetchDrives = async () => {
     try {
       setLoading(true);
       const res = await api.get('/api/v1/drives');
-      const drivesList = res.data?.data || [
+      let drivesList = res.data?.data;
+      if (!Array.isArray(drivesList) || drivesList.length === 0) {
+        drivesList = [
+          {
+            id: 1,
+            name: 'TCS Digital Mock Placement Drive 2026',
+            company: 'TCS Digital',
+            date: '2026-09-15',
+            status: 'Active Today',
+            eligible_batches: ['2026-COMP', '2026-IT', '2026-ECS'],
+            participation: { status: 'Not Started', current_step: 1 },
+          },
+          {
+            id: 2,
+            name: 'Infosys SP & DSE Mock Hiring Drive',
+            company: 'Infosys',
+            date: '2026-09-20',
+            status: 'Upcoming',
+            eligible_batches: ['2026-COMP', '2026-IT'],
+            participation: { status: 'Not Started', current_step: 1 },
+          },
+        ];
+      }
+      const shared = await getSharedDrives([]);
+      const existingIds = new Set(drivesList.map(d => String(d.id)));
+      const sharedMapped = shared
+        .filter(s => !existingIds.has(String(s.id)))
+        .map(s => ({
+          id: s.id,
+          name: s.title || s.name,
+          company: s.data?.company || 'Corporate Partner',
+          date: s.data?.date || '2026-10-15',
+          status: s.status || 'Upcoming',
+          eligible_batches: s.data?.eligible_batches || [s.batch_name || 'All Batches'],
+          participation: { status: 'Not Started', current_step: 1 }
+        }));
+      setDrives([...sharedMapped, ...drivesList]);
+    } catch (err) {
+      const shared = await getSharedDrives([]);
+      const fallbackList = [
         {
           id: 1,
           name: 'TCS Digital Mock Placement Drive 2026',
@@ -67,33 +103,31 @@ function twoSum(nums, target) {
           participation: { status: 'Not Started', current_step: 1 },
         },
       ];
-      setDrives(drivesList);
-    } catch (err) {
-      console.warn('API error, using default mock drives');
-      setDrives([
-        {
-          id: 1,
-          name: 'TCS Digital Mock Placement Drive 2026',
-          company: 'TCS Digital',
-          date: '2026-09-15',
-          status: 'Active Today',
-          eligible_batches: ['2026-COMP', '2026-IT', '2026-ECS'],
-          participation: { status: 'Not Started', current_step: 1 },
-        },
-        {
-          id: 2,
-          name: 'Infosys SP & DSE Mock Hiring Drive',
-          company: 'Infosys',
-          date: '2026-09-20',
+      if (shared.length > 0) {
+        const sharedMapped = shared.map(s => ({
+          id: s.id,
+          name: s.title || s.name,
+          company: s.data?.company || 'Corporate Partner',
+          date: s.data?.date || '2026-10-15',
           status: 'Upcoming',
-          eligible_batches: ['2026-COMP', '2026-IT'],
-          participation: { status: 'Not Started', current_step: 1 },
-        },
-      ]);
+          eligible_batches: s.data?.eligible_batches || [s.batch_name || 'All Batches'],
+          participation: { status: 'Not Started', current_step: 1 }
+        }));
+        setDrives([...sharedMapped, ...fallbackList]);
+      } else {
+        setDrives(fallbackList);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchDrives();
+    const handleUpdate = () => fetchDrives();
+    window.addEventListener(EVENTS.DRIVE_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.DRIVE_UPDATED, handleUpdate);
+  }, []);
 
   const handleStartDrive = async (drive) => {
     try {

@@ -6,6 +6,7 @@ import {
   FileCheck2, ChevronLeft, Zap,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../../Admin/Styles/AdminQuizzes.css";
 import "../../Admin/Styles/AdminUsers.css";
 
@@ -234,18 +235,67 @@ export default function MentorQuizzes() {
     try {
       const r = await fetch(`${API_BASE}/assessments`, { headers: getAuthHeaders() });
       const d = await r.json();
-      if (d.success && Array.isArray(d.data)) setQuizzes(d.data.map(mapAssessment));
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+      let list = [];
+      if (d.success && Array.isArray(d.data)) list = d.data.map(mapAssessment);
+      const shared = await getSharedQuizzes([]);
+      const existingIds = new Set(list.map(q => q.id));
+      const sharedItems = shared
+        .filter(s => !existingIds.has(s.id))
+        .map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          questionsCount: s.data?.questionsCount || 10,
+          type: "Manual",
+          status: s.status || "Active",
+          questionsList: s.data?.questions || [],
+          description: s.description || "",
+          total_marks: s.data?.totalMarks || 100,
+          pass_marks: 60,
+        }));
+      setQuizzes([...list, ...sharedItems]);
+    } catch {
+      const shared = await getSharedQuizzes([]);
+      if (shared.length > 0) {
+        setQuizzes(shared.map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          questionsCount: s.data?.questionsCount || 10,
+          type: "Manual",
+          status: "Active",
+          questionsList: s.data?.questions || [],
+          description: s.description || "",
+          total_marks: 100,
+          pass_marks: 60,
+        })));
+      }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchQuizzes(); fetchBatches(); }, []);
+  useEffect(() => {
+    fetchQuizzes();
+    fetchBatches();
+    const handleUpdate = () => fetchQuizzes();
+    window.addEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+  }, []);
 
   const saveQuizToDB = async (questionsList, quizType) => {
     const batchObj = availableBatches.find(b => b.name === batch);
     const qCount = questionsList.length;
     const marks = parseInt(totalMarks) || qCount * 10;
     const pass = parseInt(passMarks) || Math.round(marks * 0.6);
+
+    await addSharedQuiz({
+      title: title.trim(),
+      batch: batch,
+      questionsCount: qCount,
+      questions: questionsList,
+      description: `${quizType} quiz for ${batch}`,
+      duration: `${durationMins} mins`,
+      totalMarks: marks
+    });
 
     const res = await fetch(`${API_BASE}/assessments`, {
       method: "POST", headers: getAuthHeaders(),

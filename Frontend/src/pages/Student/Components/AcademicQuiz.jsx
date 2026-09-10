@@ -25,6 +25,7 @@ import { Button } from "../../../components/ui/Button";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AcademicQuiz.css";
+import { getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
 /* ─── Admin-provided questions (mock) ─────────────────────────── */
 const quizQuestions = {
@@ -178,7 +179,7 @@ async function fetchApiQuizzes() {
     });
 
     // Map assessment DB shape -> student quiz shape
-    return list.map((q) => {
+    const dbList = list.map((q) => {
       const pastAttempt = attemptMap[String(q.id)];
       const isCompleted = Boolean(pastAttempt);
       const totalQs = pastAttempt?.total_questions || q.total_questions || (q.questions ? q.questions.length : 5);
@@ -213,9 +214,48 @@ async function fetchApiQuizzes() {
         source: "admin"
       };
     });
+
+    const shared = await getSharedQuizzes([]);
+    const existingIds = new Set(dbList.map(q => String(q.id)));
+    const sharedMapped = shared
+      .filter(s => !existingIds.has(String(s.id)))
+      .map(s => ({
+        id: s.id,
+        title: s.title,
+        subject: s.data?.subject || s.subject || "Custom Quiz",
+        topic: s.batch_name || s.data?.batch || "General",
+        date: "Today",
+        duration: s.data?.duration || "30 mins",
+        durationSecs: 1800,
+        marks: `${s.data?.totalMarks || 100} Marks`,
+        status: s.status || "Upcoming",
+        score: null,
+        difficulty: "Medium",
+        questions: s.data?.questionsCount || 10,
+        questionsList: s.data?.questions || [],
+        source: "shared"
+      }));
+
+    return [...sharedMapped, ...dbList];
   } catch (err) {
     console.error("Failed to load API quizzes:", err);
-    return [];
+    const shared = await getSharedQuizzes([]);
+    return shared.map(s => ({
+      id: s.id,
+      title: s.title,
+      subject: s.data?.subject || s.subject || "Custom Quiz",
+      topic: s.batch_name || s.data?.batch || "General",
+      date: "Today",
+      duration: s.data?.duration || "30 mins",
+      durationSecs: 1800,
+      marks: `${s.data?.totalMarks || 100} Marks`,
+      status: "Upcoming",
+      score: null,
+      difficulty: "Medium",
+      questions: s.data?.questionsCount || 10,
+      questionsList: s.data?.questions || [],
+      source: "shared"
+    }));
   }
 }
 
@@ -729,6 +769,9 @@ export default function AcademicQuiz() {
 
   useEffect(() => {
     refreshQuizzes();
+    const handleQuizUpdated = () => refreshQuizzes();
+    window.addEventListener(EVENTS.QUIZ_UPDATED, handleQuizUpdated);
+    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleQuizUpdated);
   }, []);
 
 

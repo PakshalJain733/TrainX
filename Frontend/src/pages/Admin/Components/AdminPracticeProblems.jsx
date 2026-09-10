@@ -23,6 +23,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { addSharedCodingTask, getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import "../Styles/AdminUsers.css";
@@ -203,9 +204,19 @@ export default function AdminPracticeProblems() {
   useEffect(() => {
     fetchApiProblems();
     fetchBatches();
+    const handleUpdate = async () => {
+      const shared = await getSharedCodingTasks([]);
+      setProblems((prev) => {
+        const existingIds = new Set(prev.map((p) => p.id));
+        const newItems = shared.filter((s) => !existingIds.has(s.id));
+        return [...newItems, ...prev];
+      });
+    };
+    window.addEventListener(EVENTS.CODING_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.CODING_UPDATED, handleUpdate);
   }, []);
 
-  const handleCreateProblem = (e) => {
+  const handleCreateProblem = async (e) => {
     e.preventDefault();
     if (!newProb.title.trim()) return;
 
@@ -221,6 +232,8 @@ export default function AdminPracticeProblems() {
       description: newProb.description,
       testCases: [],
     };
+
+    await addSharedCodingTask(created);
 
     setProblems([created, ...problems]);
     setShowAddModal(false);

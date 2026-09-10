@@ -203,30 +203,42 @@ const initialMaintenanceConfig = {
 const SystemMaintenanceContext = createContext(null);
 
 export function SystemMaintenanceProvider({ children }) {
-  const [config, setConfig] = useState(() => {
-    try {
-      const saved = localStorage.getItem("platform_system_maintenance_config");
-      if (!saved) return initialMaintenanceConfig;
-      const parsed = JSON.parse(saved);
-      return {
-        ...initialMaintenanceConfig,
-        ...parsed,
-        modules: {
-          ...initialMaintenanceConfig.modules,
-          ...(parsed?.modules || {}),
-        },
-      };
-    } catch {
-      return initialMaintenanceConfig;
-    }
-  });
+  const [config, setConfig] = useState(initialMaintenanceConfig);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("platform_system_maintenance_config", JSON.stringify(config));
-    } catch (e) {
-      console.error("Failed to save maintenance config to localStorage:", e);
-    }
+    // Fetch maintenance config directly from MySQL Database
+    fetch('/api/v1/shared-content?type=maintenance')
+      .then(res => res.json())
+      .then(json => {
+        if (json && json.data && json.data.length > 0) {
+          const item = json.data[0];
+          if (item && item.data && Object.keys(item.data).length > 0) {
+            setConfig(prev => ({
+              ...prev,
+              ...item.data,
+              modules: {
+                ...prev.modules,
+                ...(item.data?.modules || {}),
+              },
+            }));
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Save to MySQL DB whenever config updates
+    fetch('/api/v1/shared-content', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'maintenance',
+        title: 'System Maintenance Config',
+        description: 'Global maintenance configuration',
+        data: config,
+      }),
+    }).catch(err => console.warn('Database maintenance save warning:', err));
   }, [config]);
 
   // Check if a single module is active

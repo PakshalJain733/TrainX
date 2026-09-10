@@ -17,6 +17,7 @@ import driveRoutes from './routes/drive.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import departmentRoutes from './routes/department.routes.js';
 import batchRoutes from './routes/batch.routes.js';
+import sharedContentRoutes from './routes/sharedContent.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
 
@@ -60,6 +61,7 @@ app.use('/api/v1/skill-gap', skillGapRoutes);
 app.use('/api/v1/interventions', interventionRoutes);
 app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/shared-content', sharedContentRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

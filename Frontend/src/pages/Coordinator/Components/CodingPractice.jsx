@@ -33,6 +33,7 @@ import {
   initialSubmissions,
 } from "../../../data/codingPracticeMockData";
 import { coordinatorBatches } from "../../../data/coordinatorMockData";
+import { addSharedCodingTask, getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
 import CodingPerformance from "./CodingPerformance";
 
 export default function CodingPractice() {
@@ -129,8 +130,84 @@ export default function CodingPractice() {
     return matchesSearch && matchesVerdict && matchesBatch;
   });
 
+  useEffect(() => {
+    const loadShared = async () => {
+      const shared = await getSharedCodingTasks([]);
+      if (shared.length > 0) {
+        setProblems((prev) => {
+          const existingIds = new Set(prev.map((p) => String(p.id)));
+          const newShared = shared
+            .filter((s) => !existingIds.has(String(s.id)))
+            .map((s) => ({
+              id: s.id,
+              title: s.title,
+              topic: s.data?.category || s.category || s.topic || "Arrays & Hashing",
+              difficulty: s.data?.difficulty || s.difficulty || "Medium",
+              points: s.data?.points || s.points || 100,
+              timeLimit: "1.0s",
+              memoryLimit: "256MB",
+              description: s.description || "Solve problem optimal complexity.",
+              inputFormat: "Standard Input",
+              outputFormat: "Standard Output",
+              sampleInput: s.data?.sampleInput || "Input",
+              sampleOutput: s.data?.sampleOutput || "Output",
+              tags: ["DSA", "Practice"],
+              companies: ["Core Tech"],
+              status: "Active",
+              createdDate: "Today",
+              createdBy: "Shared",
+              college: "Apex Institute",
+              acceptanceRate: "80%",
+              totalSubmissions: 0,
+              testCases: [],
+              starterCode: { python: "def solution():\n    pass", cpp: "int main() {}" },
+            }));
+          return [...newShared, ...prev];
+        });
+      }
+    };
+    loadShared();
+
+    const handleUpdate = async () => {
+      const updatedShared = await getSharedCodingTasks([]);
+      setProblems((prev) => {
+        const existingIds = new Set(prev.map((p) => String(p.id)));
+        const newShared = updatedShared
+          .filter((s) => !existingIds.has(String(s.id)))
+          .map((s) => ({
+            id: s.id,
+            title: s.title,
+            topic: s.data?.category || s.category || s.topic || "Arrays & Hashing",
+            difficulty: s.data?.difficulty || s.difficulty || "Medium",
+            points: s.data?.points || s.points || 100,
+            timeLimit: "1.0s",
+            memoryLimit: "256MB",
+            description: s.description || "Solve problem optimal complexity.",
+            inputFormat: "Standard Input",
+            outputFormat: "Standard Output",
+            sampleInput: s.data?.sampleInput || "Input",
+            sampleOutput: s.data?.sampleOutput || "Output",
+            tags: ["DSA", "Practice"],
+            companies: ["Core Tech"],
+            status: "Active",
+            createdDate: "Today",
+            createdBy: "Shared",
+            college: "Apex Institute",
+            acceptanceRate: "80%",
+            totalSubmissions: 0,
+            testCases: [],
+            starterCode: { python: "def solution():\n    pass", cpp: "int main() {}" },
+          }));
+        return [...newShared, ...prev];
+      });
+    };
+
+    window.addEventListener(EVENTS.CODING_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.CODING_UPDATED, handleUpdate);
+  }, []);
+
   // Handle Save Problem
-  const handleSaveProblem = (e) => {
+  const handleSaveProblem = async (e) => {
     e.preventDefault();
     if (!problemForm.title.trim()) return;
 
@@ -141,8 +218,8 @@ export default function CodingPractice() {
             ? {
                 ...p,
                 ...problemForm,
-                tags: problemForm.tags.split(",").map((t) => t.trim()),
-                companies: problemForm.companies.split(",").map((c) => c.trim()),
+                tags: typeof problemForm.tags === "string" ? problemForm.tags.split(",").map((t) => t.trim()) : problemForm.tags,
+                companies: typeof problemForm.companies === "string" ? problemForm.companies.split(",").map((c) => c.trim()) : problemForm.companies,
               }
             : p
         )
@@ -152,8 +229,8 @@ export default function CodingPractice() {
       const created = {
         id: newId,
         ...problemForm,
-        tags: problemForm.tags.split(",").map((t) => t.trim()),
-        companies: problemForm.companies.split(",").map((c) => c.trim()),
+        tags: typeof problemForm.tags === "string" ? problemForm.tags.split(",").map((t) => t.trim()) : problemForm.tags,
+        companies: typeof problemForm.companies === "string" ? problemForm.companies.split(",").map((c) => c.trim()) : problemForm.companies,
         status: "Active",
         createdDate: new Date().toISOString().split("T")[0],
         createdBy: "Coordinator Workspace",
@@ -174,6 +251,8 @@ export default function CodingPractice() {
           cpp: "#include <iostream>\nusing namespace std;\nint main() { return 0; }",
         },
       };
+
+      await addSharedCodingTask(created);
       setProblems([created, ...problems]);
     }
 

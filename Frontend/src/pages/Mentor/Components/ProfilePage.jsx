@@ -30,20 +30,22 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) {
-        setForm((prev) => ({
-          ...prev,
-          name: u.name || prev.name,
-          email: u.email || prev.email,
-          phone: u.phone || u.mobile_number || prev.phone,
-          role: u.role || prev.role,
-          department: u.department || prev.department,
-          college: u.college || prev.college,
-        }));
-      }
-    } catch (e) {}
+    apiFetch("/auth/me")
+      .then((res) => {
+        if (res && res.data) {
+          const u = res.data;
+          setForm((prev) => ({
+            ...prev,
+            name: u.name || prev.name,
+            email: u.email || prev.email,
+            phone: u.phone || u.mobile_number || prev.phone,
+            role: u.role || prev.role,
+            department: u.department || prev.department,
+            college: u.college_name || prev.college,
+          }));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleAvatarChange = (e) => {
@@ -54,10 +56,21 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    localStorage.setItem("user", JSON.stringify(form));
-    window.dispatchEvent(new Event("userProfileUpdated"));
+    try {
+      await apiFetch("/users/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          department: form.department,
+        }),
+      });
+      window.dispatchEvent(new Event("userProfileUpdated"));
+    } catch (err) {
+      console.warn("Profile save warning:", err);
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 3500);
   };

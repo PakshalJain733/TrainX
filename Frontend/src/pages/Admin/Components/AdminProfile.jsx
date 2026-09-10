@@ -44,23 +44,6 @@ export default function AdminProfile() {
   const loadProfile = async () => {
     setLoading(true);
     try {
-      // First try stored local storage
-      const stored = localStorage.getItem("admin_user") || localStorage.getItem("user");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        setForm((prev) => ({
-          ...prev,
-          name: parsed.name || prev.name,
-          email: parsed.email || prev.email,
-          phone: parsed.phone || parsed.mobile_number || prev.phone,
-          role: parsed.role || prev.role,
-          department: parsed.department || prev.department,
-          college: parsed.college || prev.college,
-          location: parsed.location || prev.location,
-          bio: parsed.bio || prev.bio,
-        }));
-      }
-
       // Sync with backend DB
       const res = await apiFetch("/admin/profile");
       if (res && res.data) {
@@ -116,10 +99,6 @@ export default function AdminProfile() {
         method: "PUT",
         body: JSON.stringify(payload),
       });
-
-      // Update local storage
-      localStorage.setItem("admin_user", JSON.stringify(form));
-      localStorage.setItem("user", JSON.stringify({ ...form, mobile_number: form.phone }));
 
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);

@@ -58,21 +58,12 @@ export default function AdminLearningContent() {
         }));
         if (fetched.length > 0) {
           setResources(fetched);
-          localStorage.setItem("saved_study_materials", JSON.stringify(fetched));
           apiDataLoaded = true;
         }
       }
     } catch (err) {
       console.error("Failed to load study materials:", err);
     } finally {
-      if (!apiDataLoaded) {
-        const saved = localStorage.getItem("saved_study_materials");
-        if (saved) {
-          try {
-            setResources(JSON.parse(saved));
-          } catch (_) {}
-        }
-      }
       setLoading(false);
     }
   };
@@ -113,15 +104,11 @@ export default function AdminLearningContent() {
       icon: iconMap[newType] || FileText,
     };
 
-    // Optimistically show new card and save to local storage cache
-    setResources(prev => {
-      const updated = [tempEntry, ...prev];
-      localStorage.setItem("saved_study_materials", JSON.stringify(updated));
-      return updated;
-    });
+    // Optimistically show new card
+    setResources(prev => [tempEntry, ...prev]);
 
     try {
-      const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token") || "";
       let res;
 
       if (selectedFile) {
@@ -174,11 +161,7 @@ export default function AdminLearningContent() {
   };
 
   const handleDelete = async (id) => {
-    setResources(prev => {
-      const updated = prev.filter(r => r.id !== id);
-      localStorage.setItem("saved_study_materials", JSON.stringify(updated));
-      return updated;
-    });
+    setResources(prev => prev.filter(r => r.id !== id));
     try {
       await apiFetch(`/mentor/materials/${id}`, { method: "DELETE" });
     } catch (err) {

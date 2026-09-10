@@ -26,13 +26,7 @@ export default function Overview() {
   const [batches, setBatches] = useState(mentorBatches);
   const [assessments, setAssessments] = useState([]);
   const [studentCount, setStudentCount] = useState(mentorProfile.totalStudentsAssigned);
-  const [liveSessions, setLiveSessions] = useState(() => {
-    try {
-      const stored = localStorage.getItem('mentor_live_sessions');
-      if (stored) return JSON.parse(stored);
-    } catch (e) {}
-    return mentorLiveSessions;
-  });
+  const [liveSessions, setLiveSessions] = useState(mentorLiveSessions);
 
   useEffect(() => {
     // Sync Batches
@@ -61,25 +55,24 @@ export default function Overview() {
       })
       .catch(() => {});
 
-    const handleUpdate = () => {
-      try {
-        const u = JSON.parse(localStorage.getItem("user"));
-        if (u) setUser(u);
-      } catch (e) {}
-    };
+    // Fetch Live Sessions from MySQL DB
+    apiFetch("/shared-content?type=session")
+      .then((res) => {
+        if (res && res.data && res.data.length > 0) {
+          setLiveSessions(res.data.map(item => item.data || item));
+        }
+      })
+      .catch(() => {});
 
-    const handleSessionsUpdate = () => {
-      try {
-        const stored = localStorage.getItem('mentor_live_sessions');
-        if (stored) setLiveSessions(JSON.parse(stored));
-      } catch (e) {}
+    const handleUpdate = () => {
+      apiFetch("/auth/me").then(res => {
+        if (res && res.data) setUser(res.data);
+      }).catch(() => {});
     };
 
     window.addEventListener("userProfileUpdated", handleUpdate);
-    window.addEventListener("mentorSessionsUpdated", handleSessionsUpdate);
     return () => {
       window.removeEventListener("userProfileUpdated", handleUpdate);
-      window.removeEventListener("mentorSessionsUpdated", handleSessionsUpdate);
     };
   }, []);
 

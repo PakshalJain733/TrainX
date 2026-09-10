@@ -4,6 +4,7 @@ import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
+import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AdminBroadcast.css";
 
 export default function AdminBroadcast() {
@@ -23,11 +24,44 @@ export default function AdminBroadcast() {
     setLoading(true);
     try {
       const res = await apiFetch("/admin/broadcast");
+      let list = [];
       if (res && res.data && Array.isArray(res.data)) {
-        setBroadcasts(res.data);
+        list = res.data;
       }
+      const shared = await getSharedBroadcasts([]);
+      const existingIds = new Set(list.map((b) => String(b.id)));
+      const sharedMapped = shared
+        .filter((s) => !existingIds.has(String(s.id)))
+        .map((s) => ({
+          id: s.id,
+          title: `📢 [Broadcast] ${s.title}`,
+          desc: s.data?.message || s.description || '',
+          body: s.data?.message || s.description || '',
+          time: s.created_at ? new Date(s.created_at).toLocaleString() : "Today",
+          unread: true,
+          category: "Broadcast",
+          priority: s.data?.priority || "High",
+          target: s.data?.target_batch || s.target || "All Batches",
+        }));
+      setBroadcasts([...sharedMapped, ...list]);
     } catch (err) {
       console.error("Failed to fetch broadcast messages:", err);
+      const shared = await getSharedBroadcasts([]);
+      if (shared.length > 0) {
+        setBroadcasts(
+          shared.map((s) => ({
+            id: s.id,
+            title: `📢 [Broadcast] ${s.title}`,
+            desc: s.data?.message || s.description || '',
+            body: s.data?.message || s.description || '',
+            time: s.created_at ? new Date(s.created_at).toLocaleString() : "Today",
+            unread: true,
+            category: "Broadcast",
+            priority: s.data?.priority || "High",
+            target: s.data?.target_batch || s.target || "All Batches",
+          }))
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -47,6 +81,9 @@ export default function AdminBroadcast() {
   useEffect(() => {
     fetchBroadcasts();
     fetchBatches();
+    const handleUpdate = () => fetchBroadcasts();
+    window.addEventListener(EVENTS.BROADCAST_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.BROADCAST_UPDATED, handleUpdate);
   }, []);
 
   const handleSend = async (e) => {
@@ -62,6 +99,13 @@ export default function AdminBroadcast() {
       target,
       priority,
     };
+
+    await addSharedBroadcast({
+      title: title.trim(),
+      message: message.trim(),
+      target_batch: target,
+      author: "Admin Workspace",
+    });
 
     try {
       const res = await apiFetch("/admin/broadcast", {
@@ -82,12 +126,6 @@ export default function AdminBroadcast() {
           priority: priority,
           target: target,
         };
-
-        // Sync with localStorage
-        try {
-          const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
-          localStorage.setItem("app_broadcast_notifications", JSON.stringify([newNotif, ...stored]));
-        } catch (err) {}
 
         // Trigger real-time popup & navbar notification badge update
         window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));

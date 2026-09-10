@@ -10,6 +10,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { Button } from "../../../components/ui/Button";
 import { apiFetch } from "../../../utils/api";
+import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/Overview.css";
 import "../Styles/Batches.css";
 import "../../Admin/Styles/AdminUsers.css";
@@ -72,7 +73,6 @@ export default function Overview() {
 
   const dismissNotice = () => {
     setNoticeDismissed(true);
-    localStorage.setItem("student_profile_notice_dismissed", "true");
   };
 
   // Modal State for Joining Batch from Hero Card
@@ -83,64 +83,72 @@ export default function Overview() {
   const [modalSuccess, setModalSuccess] = useState("");
 
   const loadUserData = () => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) {
-        const student = u.studentProfile || {};
+    apiFetch("/auth/me")
+      .then((res) => {
+        if (res && res.data) {
+          const u = res.data;
+          const student = u.studentProfile || {};
 
-        let resolvedName = u.name || "";
-        const isAutoName = !resolvedName || /^\d+$/.test(resolvedName.trim()) || resolvedName.startsWith("User_") || /^vu\d/i.test(resolvedName.trim());
-        if (isAutoName) {
-          resolvedName = u.fullName || u.full_name || "Pakshal";
+          let resolvedName = u.name || "";
+          const isAutoName = !resolvedName || /^\d+$/.test(resolvedName.trim()) || resolvedName.startsWith("User_") || /^vu\d/i.test(resolvedName.trim());
+          if (isAutoName) {
+            resolvedName = u.fullName || u.full_name || "Pakshal";
+          }
+
+          const dept = u.department || student.department || "Electronics & Computer Science";
+          const sem = u.semester || student.semester || "Semester 6";
+          const cgpa = u.cgpa || u.aggregate_cgpa || "8.75";
+          const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills);
+
+          setProfileCompleted(isCompleted);
+
+          setDashboard((prev) => ({
+            ...prev,
+            personalDetails: {
+              ...prev.personalDetails,
+              name: resolvedName,
+              department: dept,
+            },
+            academicOverview: {
+              ...prev.academicOverview,
+              semester: sem,
+              cgpa: cgpa,
+              skills: u.skills || "",
+              profileCompleted: isCompleted,
+            },
+          }));
         }
-
-        const dept = u.department || student.department || "Electronics & Computer Science";
-        const sem = u.semester || student.semester || "Semester 6";
-        const cgpa = u.cgpa || u.aggregate_cgpa || "8.75";
-        const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills);
-
-        setProfileCompleted(isCompleted);
-
-        setDashboard((prev) => ({
-          ...prev,
-          personalDetails: {
-            ...prev.personalDetails,
-            name: resolvedName,
-            department: dept,
-          },
-          academicOverview: {
-            ...prev.academicOverview,
-            semester: sem,
-            cgpa: cgpa,
-            skills: u.skills || "",
-            profileCompleted: isCompleted,
-          },
-        }));
-      }
-    } catch (e) {}
+      })
+      .catch(() => {});
   };
 
   useEffect(() => {
     loadUserData();
     window.addEventListener("userProfileUpdated", loadUserData);
 
-    apiFetch("/student/dashboard")
-      .then((result) => {
-        if (result && result.data) {
-          setDashboard((prev) => ({
-            ...prev,
-            ...result.data,
-            personalDetails: {
-              ...prev.personalDetails,
-              ...(result.data.personalDetails || {}),
-            },
-            academicOverview: {
-              ...prev.academicOverview,
-              ...(result.data.academicOverview || {}),
-            },
-          }));
-        }
-      })
+    const loadDashboardData = () => {
+      apiFetch("/student/dashboard")
+        .then((result) => {
+          if (result && result.data) {
+            setDashboard((prev) => ({
+              ...prev,
+              ...result.data,
+              personalDetails: {
+                ...prev.personalDetails,
+                ...(result.data.personalDetails || {}),
+              },
+              academicOverview: {
+                ...prev.academicOverview,
+                ...(result.data.academicOverview || {}),
+              },
+            }));
+          }
+        })
+        .catch(() => {});
+    };
+
+    loadDashboardData();
+
     apiFetch("/batches/my-batches")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
@@ -149,7 +157,18 @@ export default function Overview() {
       })
       .catch(() => {});
 
-    return () => window.removeEventListener("userProfileUpdated", loadUserData);
+    window.addEventListener(EVENTS.QUIZ_UPDATED, loadDashboardData);
+    window.addEventListener(EVENTS.CODING_UPDATED, loadDashboardData);
+    window.addEventListener(EVENTS.DRIVE_UPDATED, loadDashboardData);
+    window.addEventListener(EVENTS.BROADCAST_UPDATED, loadDashboardData);
+
+    return () => {
+      window.removeEventListener("userProfileUpdated", loadUserData);
+      window.removeEventListener(EVENTS.QUIZ_UPDATED, loadDashboardData);
+      window.removeEventListener(EVENTS.CODING_UPDATED, loadDashboardData);
+      window.removeEventListener(EVENTS.DRIVE_UPDATED, loadDashboardData);
+      window.removeEventListener(EVENTS.BROADCAST_UPDATED, loadDashboardData);
+    };
   }, []);
 
   // Submit Join Batch from Hero Card Modal

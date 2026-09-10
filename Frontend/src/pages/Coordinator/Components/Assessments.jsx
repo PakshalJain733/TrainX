@@ -33,6 +33,7 @@ import CoordinatorPlacement from "./Placement";
 import "../Styles/Assessments.css";
 
 import { assessmentAPI } from "../../../services/api";
+import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
 export default function CoordinatorAssessments() {
   const location = useLocation();
@@ -62,16 +63,51 @@ export default function CoordinatorAssessments() {
   const fetchAssessments = async () => {
     try {
       const data = await assessmentAPI.getAssessments();
+      let list = coordinatorAssessments;
       if (data && Array.isArray(data) && data.length > 0) {
-        setAssessments(data);
+        list = data;
       }
+      const shared = await getSharedQuizzes([]);
+      const existingIds = new Set(list.map(a => a.id));
+      const sharedItems = shared
+        .filter(s => !existingIds.has(s.id))
+        .map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          type: "MCQ Quiz",
+          dueDate: "2026-10-15",
+          submissions: "0 / 120",
+          avgScore: "--",
+          passRate: "--",
+          status: s.status || "Active"
+        }));
+      setAssessments([...sharedItems, ...list]);
     } catch (err) {
       console.warn("Using local assessments fallback data.");
+      const shared = await getSharedQuizzes([]);
+      if (shared.length > 0) {
+        const sharedItems = shared.map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          type: "MCQ Quiz",
+          dueDate: "2026-10-15",
+          submissions: "0 / 120",
+          avgScore: "--",
+          passRate: "--",
+          status: "Active"
+        }));
+        setAssessments([...sharedItems, ...coordinatorAssessments]);
+      }
     }
   };
 
   useEffect(() => {
     fetchAssessments();
+    const handleUpdate = () => fetchAssessments();
+    window.addEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
   }, []);
 
   const filteredAssessments = assessments.filter((a) => {
@@ -97,6 +133,8 @@ export default function CoordinatorAssessments() {
       passRate: "--",
       status: "Active",
     };
+
+    await addSharedQuiz(newAssessment);
 
     try {
       const created = await assessmentAPI.createAssessment(newAssessment);

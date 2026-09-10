@@ -79,13 +79,10 @@ const exportAllHistoryToExcel = (records) => {
 
 export default function AdminAttendance() {
   const [batches, setBatches] = useState([]);
-  const [selectedBatchCode, setSelectedBatchCode] = useState(() => {
-    return localStorage.getItem("admin_selected_batch_code") || "";
-  });
+  const [selectedBatchCode, setSelectedBatchCode] = useState("");
 
   const handleBatchChange = (newCode) => {
     setSelectedBatchCode(newCode);
-    localStorage.setItem("admin_selected_batch_code", newCode);
   };
 
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().split("T")[0]);
@@ -97,14 +94,7 @@ export default function AdminAttendance() {
 
   // History state
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
-  const [historyRecords, setHistoryRecords] = useState(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("admin_attendance_history") || "null");
-      return stored && Array.isArray(stored) ? stored : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  const [historyRecords, setHistoryRecords] = useState([]);
   const [selectedHistoryDetail, setSelectedHistoryDetail] = useState(null);
 
   // QR Modal state
@@ -143,14 +133,8 @@ export default function AdminAttendance() {
             code: b.join_code || b.code || `BATCH-${b.id}`
           }));
           setBatches(mapped);
-
-          const savedCode = localStorage.getItem("admin_selected_batch_code");
-          const exists = mapped.some(b => b.code === savedCode);
-          if (exists) {
-            setSelectedBatchCode(savedCode);
-          } else if (mapped[0]) {
+          if (mapped[0]) {
             setSelectedBatchCode(mapped[0].code);
-            localStorage.setItem("admin_selected_batch_code", mapped[0].code);
           }
         }
       } catch (err) {
@@ -402,7 +386,6 @@ export default function AdminAttendance() {
 
     const updatedHistory = [newHistoryEntry, ...historyRecords];
     setHistoryRecords(updatedHistory);
-    localStorage.setItem("admin_attendance_history", JSON.stringify(updatedHistory));
 
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

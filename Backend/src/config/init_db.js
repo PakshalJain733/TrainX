@@ -344,7 +344,27 @@ export async function initializeDatabase() {
       )
     `);
 
-    console.log('[DB Init] All database tables (including attendance, leave_requests, broadcast_notifications, live_sessions, study_materials, support_tickets & skill_gap_analysis) successfully created and verified!');
+    // 16. Ensure Shared Content Table (cross-dashboard sync: quiz, coding, drive, learning, broadcast)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS shared_content (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        type        ENUM('quiz','coding','drive','learning','broadcast') NOT NULL,
+        title       VARCHAR(500) NOT NULL,
+        description TEXT,
+        data_json   TEXT,
+        status      VARCHAR(50)  DEFAULT 'Active',
+        college_id  INT          DEFAULT 1,
+        created_by  INT          DEFAULT NULL,
+        batch_name  VARCHAR(255) DEFAULT 'All Batches',
+        target      VARCHAR(255) DEFAULT 'All',
+        created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_type    (type),
+        INDEX idx_college (college_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    console.log('[DB Init] All database tables (including shared_content for cross-dashboard sync) successfully created and verified!');
 
     await conn.end();
     return true;

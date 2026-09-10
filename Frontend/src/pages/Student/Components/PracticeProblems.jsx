@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
+import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
 import {
   Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy,
   BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight,
@@ -20,10 +21,12 @@ export default function PracticeProblems() {
   const [problemsList, setProblemsList] = useState(practiceProblemsData);
 
   useEffect(() => {
-    apiFetch("/student/practice-problems")
-      .then((res) => {
+    const loadProblems = async () => {
+      try {
+        const res = await apiFetch("/student/practice-problems");
+        let apiItems = [];
         if (res.data && res.data.length > 0) {
-          const mapped = res.data.map(p => ({
+          apiItems = res.data.map((p) => ({
             id: p.id,
             title: p.title,
             topic: p.category || "General DSA",
@@ -32,12 +35,48 @@ export default function PracticeProblems() {
             points: p.points || 100,
             solved: p.solve_status === "Solved",
             companies: ["TCS", "Infosys"],
-            solutionAvailable: true
+            solutionAvailable: true,
           }));
-          setProblemsList(mapped);
         }
-      })
-      .catch((err) => console.error("PRACTICE PROBLEMS FETCH ERROR:", err));
+        const shared = await getSharedCodingTasks([]);
+        const mappedShared = shared.map((s) => ({
+          id: s.id,
+          title: s.title,
+          topic: s.data?.category || s.category || s.topic || "General DSA",
+          difficulty: s.data?.difficulty || s.difficulty || "Medium",
+          acceptance: "70.0%",
+          points: s.data?.points || s.points || 100,
+          solved: false,
+          companies: ["Core Tech"],
+          solutionAvailable: true,
+        }));
+        const existingIds = new Set(apiItems.map((i) => i.id));
+        const uniqueShared = mappedShared.filter((s) => !existingIds.has(s.id));
+        setProblemsList([...uniqueShared, ...apiItems]);
+      } catch {
+        const shared = await getSharedCodingTasks([]);
+        if (shared.length > 0) {
+          setProblemsList(
+            shared.map((s) => ({
+              id: s.id,
+              title: s.title,
+              topic: s.data?.category || s.category || s.topic || "General DSA",
+              difficulty: s.data?.difficulty || s.difficulty || "Medium",
+              acceptance: "70.0%",
+              points: s.data?.points || s.points || 100,
+              solved: false,
+              companies: ["Core Tech"],
+              solutionAvailable: true,
+            }))
+          );
+        }
+      }
+    };
+
+    loadProblems();
+    const handleUpdate = () => loadProblems();
+    window.addEventListener(EVENTS.CODING_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.CODING_UPDATED, handleUpdate);
   }, []);
   const [selectedTopic, setSelectedTopic] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");

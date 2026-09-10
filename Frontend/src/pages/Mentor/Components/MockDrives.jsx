@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
 import { ClipboardCheck, Plus, Award, UserCheck } from 'lucide-react';
+import { getSharedDrives, EVENTS } from '../../../utils/sharedStore';
 import '../Styles/SkillGaps.css';
 import '../Styles/MockDrives.css';
 
@@ -9,30 +10,52 @@ export default function MentorMockDrives() {
   const [studentResults, setStudentResults] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchMentorDrives();
-  }, []);
-
   const fetchMentorDrives = async () => {
     try {
       setLoading(true);
       const res = await api.get('/api/v1/drives');
       const data = res.data?.data || {};
-      setDrives(data.drives || [
+      let list = Array.isArray(data) ? data : (data.drives || [
         { id: 1, name: 'TCS Digital Mock Placement Drive 2026', date: '2026-09-15', status: 'Active Today', registered: 45, passCutoff: '38 (84%)' },
         { id: 2, name: 'Infosys SP & DSE Mock Hiring Drive', date: '2026-09-20', status: 'Upcoming', registered: 52, passCutoff: '41 (78%)' }
       ]);
+      const shared = await getSharedDrives([]);
+      const existingIds = new Set(list.map(d => String(d.id)));
+      const sharedMapped = shared
+        .filter(s => !existingIds.has(String(s.id)))
+        .map(s => ({
+          id: s.id,
+          name: s.title || s.name,
+          date: s.data?.date || '2026-10-15',
+          status: s.status || 'Upcoming',
+          registered: 0,
+          passCutoff: s.data?.cutoffScore || '75%'
+        }));
+      setDrives([...sharedMapped, ...list]);
       setStudentResults(data.studentResults || [
         { student_name: 'Ganesh Shinde', roll: '2026COMP042', aptitude: 85, coding: 90, interview: 80, final: 86, status: 'Completed' },
         { student_name: 'Aarav Sharma', roll: '2026COMP001', aptitude: 95, coding: 96, interview: 94, final: 95, status: 'Completed' },
         { student_name: 'Ananya Verma', roll: '2026ECS012', aptitude: 90, coding: 85, interview: 88, final: 87, status: 'Completed' }
       ]);
     } catch (err) {
-      console.warn('Using default mentor mock drive data');
-      setDrives([
+      const shared = await getSharedDrives([]);
+      const fallbackList = [
         { id: 1, name: 'TCS Digital Mock Placement Drive 2026', date: '2026-09-15', status: 'Active Today', registered: 45, passCutoff: '38 (84%)' },
         { id: 2, name: 'Infosys SP & DSE Mock Hiring Drive', date: '2026-09-20', status: 'Upcoming', registered: 52, passCutoff: '41 (78%)' }
-      ]);
+      ];
+      if (shared.length > 0) {
+        const sharedMapped = shared.map(s => ({
+          id: s.id,
+          name: s.title || s.name,
+          date: s.data?.date || '2026-10-15',
+          status: 'Upcoming',
+          registered: 0,
+          passCutoff: s.data?.cutoffScore || '75%'
+        }));
+        setDrives([...sharedMapped, ...fallbackList]);
+      } else {
+        setDrives(fallbackList);
+      }
       setStudentResults([
         { student_name: 'Ganesh Shinde', roll: '2026COMP042', aptitude: 85, coding: 90, interview: 80, final: 86, status: 'Completed' },
         { student_name: 'Aarav Sharma', roll: '2026COMP001', aptitude: 95, coding: 96, interview: 94, final: 95, status: 'Completed' },
@@ -42,6 +65,13 @@ export default function MentorMockDrives() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchMentorDrives();
+    const handleUpdate = () => fetchMentorDrives();
+    window.addEventListener(EVENTS.DRIVE_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.DRIVE_UPDATED, handleUpdate);
+  }, []);
 
   const getStatusClass = (status) => {
     if (status === 'Active Today') return 'mentor-mockdrive-status--active';
