@@ -2,7 +2,10 @@
 
 .overview-wrapper {
   width: 100%;
-  padding-bottom: 32px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 28px !important;
+  padding-bottom: 40px !important;
 }
 
 /* Utility row helpers */

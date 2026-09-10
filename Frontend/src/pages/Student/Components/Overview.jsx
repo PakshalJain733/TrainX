@@ -197,11 +197,43 @@ export default function Overview() {
     : [
         {
           rank: 1,
+          name: "Test Student",
+          score: "2,025 XP",
+          initials: "TS",
+          badge: "Rank 1",
+          you: false,
+        },
+        {
+          rank: 2,
+          name: "Sunita",
+          score: "1,850 XP",
+          initials: "SU",
+          badge: "Rank 2",
+          you: false,
+        },
+        {
+          rank: 3,
           name: `${studentName} (You)`,
-          score: "1,875 XP",
+          score: "1,720 XP",
           initials: getInitials(studentName),
-          badge: "Your Position",
+          badge: "Rank 3",
           you: true,
+        },
+        {
+          rank: 4,
+          name: "Harshad",
+          score: "1,640 XP",
+          initials: "HA",
+          badge: "Top 20%",
+          you: false,
+        },
+        {
+          rank: 5,
+          name: "Siri",
+          score: "1,580 XP",
+          initials: "SI",
+          badge: "Top 20%",
+          you: false,
         },
       ];
 
@@ -330,25 +362,86 @@ export default function Overview() {
               View All <ChevronRight size={14} />
             </Link>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2.5">
+          <CardContent style={{ padding: '20px 24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               {leaderboardList.slice(0, 5).map((item) => (
-                <div key={item.rank} className={`flex items-center justify-between p-2.5 rounded-xl border ${item.you ? 'bg-indigo-500/10 border-indigo-500/30' : 'border-slate-100 dark:border-slate-800'}`}>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-sm text-slate-500 w-5 text-center">#{item.rank}</span>
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="text-xs font-bold">{item.initials}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+                <div
+                  key={item.rank}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px 16px',
+                    borderRadius: '14px',
+                    background: item.you ? '#eef2ff' : '#ffffff',
+                    border: item.you ? '1.5px solid #a5b4fc' : '1px solid #f1f5f9',
+                    boxShadow: item.you ? '0 4px 14px rgba(79, 70, 229, 0.1)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <span
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        background: item.rank === 1 ? 'linear-gradient(135deg, #f59e0b, #d97706)' : item.rank === 2 ? 'linear-gradient(135deg, #94a3b8, #64748b)' : item.rank === 3 ? 'linear-gradient(135deg, #f97316, #c2410c)' : '#f1f5f9',
+                        color: item.rank <= 3 ? '#ffffff' : '#475569',
+                        fontSize: '11.5px',
+                        fontWeight: '800',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      #{item.rank}
+                    </span>
+                    <div
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        background: item.you ? 'linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)' : '#f1f5f9',
+                        color: item.you ? '#ffffff' : '#1e293b',
+                        fontWeight: '700',
+                        fontSize: '13px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        boxShadow: item.you ? '0 2px 8px rgba(79, 70, 229, 0.25)' : 'none',
+                      }}
+                    >
+                      {item.initials}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
                         {item.name}
-                      </h5>
-                      <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginTop: '2px', display: 'inline-block' }}>
-                        {item.score && !item.score.includes("1,") ? item.score : "0 XP"}
+                      </span>
+                      <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '500', marginTop: '3px' }}>
+                        {item.badge || 'Batch Performer'}
                       </span>
                     </div>
                   </div>
-                  <Badge variant={item.you ? "default" : "outline"} className="text-xs">{item.badge}</Badge>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      color: item.you ? '#3730a3' : '#0f172a',
+                      background: item.you ? '#e0e7ff' : '#f8fafc',
+                      border: item.you ? '1px solid #c7d2fe' : '1px solid #e2e8f0',
+                      borderRadius: '18px',
+                      padding: '5px 12px',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <Flame size={14} color="#f97316" />
+                    <span>{item.score || '1,500 XP'}</span>
+                  </div>
                 </div>
               ))}
             </div>
