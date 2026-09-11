@@ -96,6 +96,9 @@ import CoordinatorNotifications from './pages/Coordinator/Components/Notificatio
 import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
 import CoordinatorQuizAndCodes from './pages/Coordinator/Components/QuizzesAndCodes';
 import CoordinatorPerformances from './pages/Coordinator/Components/Performances';
+import CoordinatorLeaderboard from './pages/Coordinator/Components/Leaderboard';
+import CoordinatorWeeklyReports from './pages/Coordinator/Components/WeeklyReports';
+import CoordinatorMockDrives from './pages/Coordinator/Components/MockDrives';
 
 function App() {
   return (
@@ -198,6 +201,9 @@ function App() {
             <Route path="assessments" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
             <Route path="interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><CoordinatorInterviewPerformance /></MaintenanceGuard>} />
             <Route path="improvement" element={<MaintenanceGuard moduleKey="defaulters"><CoordinatorStudentsNeedImprovement /></MaintenanceGuard>} />
+            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><CoordinatorLeaderboard /></MaintenanceGuard>} />
+            <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><CoordinatorWeeklyReports /></MaintenanceGuard>} />
+            <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mockDrives"><CoordinatorMockDrives /></MaintenanceGuard>} />
             <Route path="attendance" element={<CoordinatorAttendance />} />
             <Route path="mentors" element={<CoordinatorMentors />} />
             <Route path="requests" element={<CoordinatorRequests />} />

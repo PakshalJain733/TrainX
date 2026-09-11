@@ -16,6 +16,9 @@ import {
   Code,
   Bot,
   AlertTriangle,
+  Trophy,
+  FileText,
+  ClipboardCheck,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/CoordinatorSidebar.css";
@@ -43,6 +46,9 @@ const primaryNavItems = [
   { title: "Dashboard", url: "/coordinator", icon: LayoutDashboard, exact: true },
   { title: "Students", url: "/coordinator/students", icon: GraduationCap },
   { title: "Performances", url: "/coordinator/performances", icon: LineChart },
+  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
+  { title: "Mock Drives", url: "/coordinator/mock-drives", icon: ClipboardCheck },
+  { title: "Weekly Reports", url: "/coordinator/weekly-reports", icon: FileText },
   { title: "Students Needing Support", url: "/coordinator/improvement", icon: AlertTriangle },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },

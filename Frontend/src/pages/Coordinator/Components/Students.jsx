@@ -400,62 +400,25 @@ export default function CoordinatorStudents() {
           </div>
         </div>
 
-        {/* Fullscreen Navigation Tabs Bar */}
-        <div className="coord-tabs-bar" style={{ marginBottom: "8px" }}>
-          <button
-            className={`coord-tab-btn ${activeTab === "roadmap" ? "coord-tab-btn--active" : ""}`}
-            onClick={() => setActiveTab("roadmap")}
-          >
-            <Sparkles size={16} /> Selected AI Career Roadmap
-          </button>
-          <button
-            className={`coord-tab-btn ${activeTab === "overview" ? "coord-tab-btn--active" : ""}`}
-            onClick={() => setActiveTab("overview")}
-          >
-            <GraduationCap size={16} /> Academic Scores & Placement Readiness
-          </button>
-        </div>
-
-        {/* TAB 1: FULLSCREEN AI ROADMAP INTERFACE */}
-        {activeTab === "roadmap" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            {/* Career Goal Generator Card */}
+        {/* Fullscreen AI Career Roadmap Interface */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            {/* Selected Career Goal Header Card */}
             <div className="student-roadmap-generator-card">
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <Sparkles size={22} color="#2563eb" />
-                <div>
-                  <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
-                    Select career / skill goal
-                  </h3>
-                  <p style={{ fontSize: "13px", color: "#64748b", margin: "2px 0 0 0" }}>
-                    AI analyses student goal, current scores and skill gaps to build their personalized roadmap.
-                  </p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <Sparkles size={22} color="#2563eb" />
+                  <div>
+                    <h3 style={{ fontSize: "17px", fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                      Target Career Track: {careerTracks.find((t) => t.id === selectedGoal)?.name || "Full Stack Engineer"}
+                    </h3>
+                    <p style={{ fontSize: "13px", color: "#64748b", margin: "2px 0 0 0" }}>
+                      AI-generated milestone roadmap tailored to the candidate's chosen career path and skill progression.
+                    </p>
+                  </div>
                 </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", alignItems: "center", marginTop: "4px" }}>
-                <select
-                  className="student-roadmap-select-input"
-                  style={{ flex: 1, minWidth: "300px" }}
-                  value={selectedGoal}
-                  onChange={(e) => setSelectedGoal(e.target.value)}
-                >
-                  {careerTracks.map((track) => (
-                    <option key={track.id} value={track.id}>
-                      {track.name}
-                    </option>
-                  ))}
-                </select>
-
-                <button
-                  className="coord-btn coord-btn--primary"
-                  onClick={handleGenerate}
-                  disabled={isGenerating}
-                  style={{ padding: "10px 22px" }}
-                >
-                  <Sparkles size={16} />
-                  {isGenerating ? "Generating Roadmap..." : "Generate roadmap"}
-                </button>
+                <span className="coord-badge coord-badge--primary" style={{ padding: "6px 14px", fontSize: "12.5px" }}>
+                  {careerTracks.find((t) => t.id === selectedGoal)?.name || "Full Stack Engineer"}
+                </span>
               </div>
             </div>
 
@@ -515,41 +478,6 @@ export default function CoordinatorStudents() {
               ))}
             </div>
           </div>
-        )}
-
-        {/* TAB 2: OVERVIEW & ACADEMICS */}
-        {activeTab === "overview" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-            <div className="coord-card">
-              <div className="coord-card-title">Placement Readiness Audit</div>
-              <div style={{ fontSize: "15px", fontWeight: 700, color: "#4f46e5", marginTop: "4px" }}>
-                {selectedStudent.placementStatus}
-              </div>
-              <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>
-                Candidate has cleared department criteria and is currently eligible for tier-1 partner recruitment drives.
-              </p>
-            </div>
-
-            <div className="coord-card">
-              <div className="coord-card-title">Coordinator Actions & Warnings</div>
-              <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
-                <button
-                  className="coord-btn coord-btn--primary"
-                  onClick={() => alert(`Warning notice sent to ${selectedStudent.name}`)}
-                >
-                  <Send size={15} /> Send Counseling Warning
-                </button>
-                <button
-                  className="coord-btn"
-                  style={{ background: "#ecfdf5", color: "#047857" }}
-                  onClick={() => alert(`Medical override granted for ${selectedStudent.name}`)}
-                >
-                  Grant Attendance Medical Override
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }

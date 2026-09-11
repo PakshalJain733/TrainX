@@ -63,7 +63,6 @@ export default function Overview() {
                   <s.icon size={16} />
                 </div>
                 <span className="overview-stat-label">{s.label}</span>
-                <Info size={15} className="overview-info-icon" />
               </div>
 
               <p className="overview-stat-value">{s.value}</p>
