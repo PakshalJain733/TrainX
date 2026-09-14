@@ -2,7 +2,7 @@ export const overviewStats = [
   { id: 'colleges', label: 'Total Colleges', value: '0', change: 'Live count from DB', trend: 'neutral', icon: 'Building2' },
   { id: 'students', label: 'Active Students', value: '0', change: 'Live count from DB', trend: 'neutral', icon: 'Users' },
   { id: 'departments', label: 'Departments Covered', value: '0', change: 'Live count from DB', trend: 'neutral', icon: 'GraduationCap' },
-  { id: 'verifications', label: 'Pending Verifications', value: '0', change: 'Requires review', trend: 'neutral', icon: 'ShieldAlert' },
+  { id: 'security', label: 'Security & Key Access', value: 'Protected', change: 'Secure Code Enforced', trend: 'up', icon: 'ShieldCheck' },
 ];
 
 export const initialColleges = [];
@@ -16,6 +16,7 @@ export const initialStudentsRiskAlerts = [];
 export const initialPerformanceData = {
   overallPassRate: 0,
   avgPlacementReadiness: 0,
+  activeStudents: 0,
   collegeBenchmarks: [],
   subjectProficiency: []
 };

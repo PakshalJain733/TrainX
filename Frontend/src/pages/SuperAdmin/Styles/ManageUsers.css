@@ -370,6 +370,52 @@
   gap: 12px;
 }
 
+.manageusers-item-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.manageusers-code-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.manageusers-role-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+  text-transform: uppercase;
+}
+
+.manageusers-uses-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  white-space: nowrap;
+}
+
+.manageusers-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .manageusers-item-copy-btn {
   background: #ffffff;
   border: 1px solid #cbd5e1;
@@ -385,10 +431,37 @@
   transition: all 0.15s ease;
 }
 
+.manageusers-item-copy-btn:hover {
+  background: #eef2ff;
+  border-color: #a5b4fc;
+}
+
 .manageusers-item-copy-btn--copied {
   background: #059669 !important;
   border-color: #059669 !important;
   color: #ffffff !important;
+}
+
+.manageusers-item-delete-btn {
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ef4444;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.manageusers-item-delete-btn:hover {
+  background: #fef2f2;
+  border-color: #f87171;
+  color: #b91c1c;
+  transform: scale(1.05);
 }
 
 /* Students Risk Table Card */
@@ -491,4 +564,101 @@
   padding: 2px 8px;
   border-radius: 999px;
 }
+
+/* ── Contact Details Table Cell Styling ── */
+.manageusers-contact-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  justify-content: center;
+}
+
+.manageusers-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: #475569;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.manageusers-contact-row--bold {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.manageusers-contact-icon {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.manageusers-contact-icon--indigo {
+  color: #4f46e5;
+}
+
+.manageusers-contact-text {
+  color: #334155;
+  font-weight: 500;
+}
+
+/* ── ManageUsers Form Dropdown ── */
+.mu-select-wrap { position: relative; display: block; width: 100%; box-sizing: border-box; }
+.mu-select-wrap--open { z-index: 99999 !important; }
+.form-group-admin:has(.mu-select-wrap--open),
+.form-row-2:has(.mu-select-wrap--open) {
+  position: relative;
+  z-index: 9999 !important;
+}
+.mu-select-wrap--disabled { opacity: 0.6; pointer-events: none; }
+.mu-select-trigger {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; height: 36px; padding: 0 12px;
+  background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px;
+  color: #0f172a; font-size: 13px; font-weight: 600; cursor: pointer;
+  outline: none; transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04); box-sizing: border-box;
+}
+.mu-select-trigger:hover { background: #f8fafc; border-color: #94a3b8; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.06); }
+.mu-select-trigger--open { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
+.mu-select-icon { width: 16px; height: 16px; color: #4f46e5; flex-shrink: 0; }
+.mu-select-text { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #0f172a; font-size: 13px; font-weight: 600; }
+.mu-select-arrow { width: 15px; height: 15px; color: #64748b; flex-shrink: 0; transition: transform .2s ease, color .2s ease; }
+.mu-select-arrow--rotate { transform: rotate(180deg); color: #4f46e5; }
+.mu-select-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; width: 100%;
+  max-height: 190px; overflow-y: auto; background: #ffffff !important;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  box-shadow: 0 12px 30px -4px rgba(15,23,42,.2), 0 4px 12px -2px rgba(15,23,42,.12);
+  z-index: 999999 !important; padding: 4px; box-sizing: border-box;
+  animation: muSelectFadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+.mu-select-dropdown--up {
+  top: auto; bottom: calc(100% + 4px);
+  animation: muSelectFadeUp 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes muSelectFadeIn { from { opacity:0; transform:translateY(-6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes muSelectFadeUp { from { opacity:0; transform:translateY(6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+.mu-select-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #334155; cursor: pointer; transition: background .15s ease, color .15s ease; user-select: none; }
+.mu-select-option:hover { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.mu-select-option--selected { background: #eef2ff; color: #4338ca; font-weight: 700; }
+.mu-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.mu-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
+.mu-select-placeholder { color: #94a3b8; }
+.mu-search-wrap-full { max-width: 100% !important; }
+.modal-dialog-overflow-visible {
+  overflow: visible !important;
+  border-radius: 16px !important;
+}
+.modal-dialog-overflow-visible .modal-header {
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+}
+.modal-dialog-overflow-visible .modal-footer {
+  border-bottom-left-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+}
+.modal-body-overflow-visible { overflow: visible !important; }
 

@@ -1,11 +1,45 @@
-import React, { useState, useEffect } from "react";
-import { Send, Bell, Trash2, Megaphone, CheckCircle2, ShieldAlert, Users, Calendar, AlertCircle } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { Send, Bell, Trash2, Megaphone, CheckCircle2, ShieldAlert, Users, Calendar, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AdminBroadcast.css";
+
+/* ── Inline dropdown for Admin Broadcast (CSS: AdminBroadcast.css .admin-bcast-select-*) ── */
+function AdminBcastSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`admin-bcast-select-wrap${isOpen ? ' admin-bcast-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-bcast-select-trigger${isOpen ? ' admin-bcast-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-bcast-select-icon" />}
+        <span className="admin-bcast-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-bcast-select-arrow${isOpen ? ' admin-bcast-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="admin-bcast-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-bcast-select-option${isSel ? ' admin-bcast-select-option--selected' : ''}`}>
+                <span className="admin-bcast-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-bcast-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminBroadcast() {
   const [broadcasts, setBroadcasts] = useState([]);
@@ -198,26 +232,30 @@ export default function AdminBroadcast() {
             <div className="form-row">
               <div className="form-group">
                 <label>Target Audience</label>
-                <select value={target} onChange={(e) => setTarget(e.target.value)}>
-                  <option value="All Batches & Enrolled Users">All Batches & Enrolled Users</option>
-                  <option value="Students Only">Students Only</option>
-                  <option value="Mentors & Coordinators Only">Mentors & Coordinators Only</option>
-                  {batches.map((b) => (
-                    <option key={b.id} value={b.name}>
-                      Cohort: {b.name}
-                    </option>
-                  ))}
-                </select>
+                <AdminBcastSelect
+                  value={target}
+                  onChange={setTarget}
+                  options={[
+                    { value: "All Batches & Enrolled Users", label: "All Batches & Enrolled Users" },
+                    { value: "Students Only", label: "Students Only" },
+                    { value: "Mentors & Coordinators Only", label: "Mentors & Coordinators Only" },
+                    ...batches.map((b) => ({ value: b.name, label: `Cohort: ${b.name}` })),
+                  ]}
+                />
               </div>
 
               <div className="form-group">
                 <label>Notice Priority Level</label>
-                <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-                  <option value="General Announcement">General Announcement</option>
-                  <option value="Urgent Notice">Urgent Notice</option>
-                  <option value="Exam & Quiz Schedule">Exam & Quiz Schedule</option>
-                  <option value="Placement Drive Alert">Placement Drive Alert</option>
-                </select>
+                <AdminBcastSelect
+                  value={priority}
+                  onChange={setPriority}
+                  options={[
+                    { value: "General Announcement", label: "General Announcement" },
+                    { value: "Urgent Notice", label: "Urgent Notice" },
+                    { value: "Exam & Quiz Schedule", label: "Exam & Quiz Schedule" },
+                    { value: "Placement Drive Alert", label: "Placement Drive Alert" },
+                  ]}
+                />
               </div>
             </div>
 

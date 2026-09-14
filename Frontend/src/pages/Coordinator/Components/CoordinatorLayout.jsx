@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2 } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key } from "lucide-react";
 import { CoordinatorSidebar } from "./CoordinatorSidebar";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
+import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/CoordinatorLayout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
@@ -100,9 +101,20 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             </div>
           </div>
         </div>
-        <button className="notif-mark-read-btn" onClick={handleMarkRead}>
-          <Check size={14} className="notif-check-icon" /> Mark read
-        </button>
+        <div className="notif-header-actions-right">
+          <button
+            className="notif-view-all-btn"
+            onClick={() => {
+              if (onClose) onClose();
+              navigate("/coordinator/notifications");
+            }}
+          >
+            View all
+          </button>
+          <button className="notif-mark-read-btn" onClick={handleMarkRead}>
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -166,6 +178,7 @@ export default function CoordinatorLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const headerRightRef = useRef(null);
 
   const navigate = useNavigate();
@@ -307,6 +320,16 @@ export default function CoordinatorLayout() {
                         Edit Profile
                       </button>
                       <button
+                        className="coordinator-header__profile-item"
+                        onClick={() => {
+                          setProfileOpen(false);
+                          setIsChangePasswordOpen(true);
+                        }}
+                      >
+                        <Key size={15} />
+                        Change Password
+                      </button>
+                      <button
                         className="coordinator-header__profile-item coordinator-header__profile-item--danger"
                         onClick={() => {
                           setProfileOpen(false);
@@ -329,6 +352,10 @@ export default function CoordinatorLayout() {
           </div>
         </main>
       </div>
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }

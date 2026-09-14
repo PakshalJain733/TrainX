@@ -1,12 +1,46 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { mentorBatches } from "../../../data/mentorMockData";
 import {
   CalendarCheck, Users, Search, CheckCircle2, XCircle, Clock,
   AlertTriangle, Layers, Filter, Check, Save, Sparkles, Send,
-  FileCheck2, ChevronRight, UserX, UserCheck
+  FileCheck2, ChevronRight, UserX, UserCheck, ChevronDown
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Attendance.css";
+
+/* ── Inline dropdown for Mentor Attendance (CSS: Attendance.css .mentor-att-select-*) ── */
+function MentorAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-att-select-wrap${isOpen ? ' mentor-att-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-att-select-trigger${isOpen ? ' mentor-att-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-att-select-icon" />}
+        <span className="mentor-att-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-att-select-arrow${isOpen ? ' mentor-att-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-att-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-att-select-option${isSel ? ' mentor-att-select-option--selected' : ''}`}>
+                <span className="mentor-att-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-att-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Comprehensive mock data for mentor student attendance register
 const baseStudentsData = [
@@ -229,18 +263,16 @@ export default function Attendance() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Batch Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Filter size={14} color="#94a3b8" />
-              <select
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: '220px' }}>
+              <MentorAttSelect
                 value={selectedBatch}
-                onChange={(e) => setSelectedBatch(e.target.value)}
-                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: '600', color: '#1e293b', background: '#f8fafc', cursor: 'pointer', minWidth: '200px' }}
-              >
-                <option value="ALL">All Batches</option>
-                {mentorBatches.map(b => (
-                  <option key={b.id} value={b.code}>{b.code} — {b.name}</option>
-                ))}
-              </select>
+                options={[
+                  { value: "ALL", label: "All Batches" },
+                  ...mentorBatches.map(b => ({ value: b.code, label: `${b.code} — ${b.name}` }))
+                ]}
+                onChange={(val) => setSelectedBatch(val)}
+                icon={Filter}
+              />
             </div>
             <div style={{ width: '1px', height: '24px', background: '#e2e8f0' }} />
             <input

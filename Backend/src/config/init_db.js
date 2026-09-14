@@ -23,12 +23,6 @@ export async function initializeDatabase() {
       )
     `);
 
-    const [colleges] = await conn.query('SELECT id FROM colleges WHERE id = 1');
-    if (colleges.length === 0) {
-      await conn.query(`INSERT INTO colleges (id, name, code) VALUES (1, 'Vasantdada Patil Pratishthan College of Engineering', 'PVPPCOE')`);
-      console.log('[DB Init] Inserted default college PVPPCOE (ID: 1)');
-    }
-
     // 2. Ensure Departments
     await conn.query(`
       CREATE TABLE IF NOT EXISTS departments (
@@ -41,18 +35,6 @@ export async function initializeDatabase() {
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
       )
     `);
-
-    const [depts] = await conn.query('SELECT id FROM departments');
-    if (depts.length === 0) {
-      await conn.query(`
-        INSERT INTO departments (college_id, name, code) VALUES 
-        (1, 'Computer Engineering', 'COMPS'),
-        (1, 'Information Technology', 'IT'),
-        (1, 'Artificial Intelligence & Data Science', 'AIDS'),
-        (1, 'Electronics & Telecommunication', 'EXTC')
-      `);
-      console.log('[DB Init] Inserted standard departments');
-    }
 
     // 3. Ensure Batches table
     await conn.query(`
@@ -97,6 +79,7 @@ export async function initializeDatabase() {
     `);
 
     try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) {}
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) {}
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT TRUE`); } catch (_) {}
 
@@ -371,7 +354,31 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 17. Ensure Super Admin Account (training.portal0987@gmail.com)
+    // 17. Ensure Secure Codes Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS secure_codes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        code VARCHAR(100) UNIQUE NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        college_name VARCHAR(255) NULL,
+        description VARCHAR(255) NULL,
+        max_uses INT DEFAULT 1,
+        uses_count INT DEFAULT 0,
+        status ENUM('active', 'used', 'expired', 'inactive') DEFAULT 'active',
+        created_by INT NULL,
+        used_by INT NULL,
+        used_at DATETIME NULL,
+        expires_at DATETIME NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_code_role (code, role)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN max_uses INT DEFAULT 1`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN uses_count INT DEFAULT 0`); } catch (_) {}
+
+    // 18. Ensure Super Admin Account (training.portal0987@gmail.com)
     try {
       const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = 'training.portal0987@gmail.com'`);
       if (!superUsers || superUsers.length === 0) {
@@ -386,7 +393,7 @@ export async function initializeDatabase() {
       console.warn('[DB Init] Super Admin seed notice:', e.message);
     }
 
-    console.log('[DB Init] All database tables (including shared_content for cross-dashboard sync) successfully created and verified!');
+    console.log('[DB Init] All database tables (including secure_codes) successfully created and verified!');
 
     await conn.end();
     return true;

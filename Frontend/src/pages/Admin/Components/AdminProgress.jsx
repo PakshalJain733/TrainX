@@ -1,9 +1,43 @@
-import React, { useState, useEffect } from "react";
-import { TrendingUp, Users, ChevronDown } from "lucide-react";
+import React, { useState, useEffect, useRef } from "react";
+import { TrendingUp, Users, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AdminProgress.css";
+
+/* ── Inline dropdown for Admin Progress (CSS: AdminProgress.css .admin-prog-select-*) ── */
+function AdminProgSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`admin-prog-select-wrap${isOpen ? ' admin-prog-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-prog-select-trigger${isOpen ? ' admin-prog-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-prog-select-icon" />}
+        <span className="admin-prog-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-prog-select-arrow${isOpen ? ' admin-prog-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="admin-prog-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-prog-select-option${isSel ? ' admin-prog-select-option--selected' : ''}`}>
+                <span className="admin-prog-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-prog-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const API_BASE = "/api/v1";
 
@@ -69,12 +103,14 @@ export default function AdminProgress() {
         title="Student Progress & Assessment Performance"
         description="Monitor student quiz scores, department metrics, and department coordinator analytics."
         action={
-          <select className="progress-batch-filter" value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)}>
-            <option value="All Batches">All Batches</option>
-            {batches.map(b => (
-              <option key={b.id} value={b.name}>{b.name}</option>
-            ))}
-          </select>
+          <AdminProgSelect
+            value={selectedBatch}
+            onChange={setSelectedBatch}
+            options={[
+              { value: "All Batches", label: "All Batches" },
+              ...batches.map(b => ({ value: b.name, label: b.name }))
+            ]}
+          />
         }
       />
 

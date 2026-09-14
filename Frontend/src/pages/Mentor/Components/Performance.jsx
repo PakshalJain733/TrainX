@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Users, TrendingUp, AlertTriangle, ChevronRight, Search,
   BarChart3, Code2, MessageSquare, CalendarCheck, Target,
   CheckCircle2, BookOpen, XCircle, RefreshCw, ArrowUpRight,
-  ArrowDownRight, Filter, Eye
+  ArrowDownRight, Filter, Eye, ChevronDown, Check
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
@@ -12,6 +12,40 @@ import { Badge } from "../../../components/ui/Badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/Tabs";
 import "../../Student/Styles/Performance.css";
 import "../Styles/Performance.css";
+
+/* ── Inline dropdown for Mentor Performance (CSS: Performance.css .mentor-perf-select-*) ── */
+function MentorPerfSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-perf-select-wrap${isOpen ? ' mentor-perf-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-perf-select-trigger${isOpen ? ' mentor-perf-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-perf-select-icon" />}
+        <span className="mentor-perf-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-perf-select-arrow${isOpen ? ' mentor-perf-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-perf-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-perf-select-option${isSel ? ' mentor-perf-select-option--selected' : ''}`}>
+                <span className="mentor-perf-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-perf-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Default fallback data ──────────────────────────────────────────────────
 const defaultStudents = [
@@ -264,14 +298,20 @@ export default function MentorPerformance() {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select value={batchFilter} onChange={e => setBatchFilter(e.target.value)}>
-          {batches.map(b => <option key={b} value={b}>{b === "All" ? "All Batches" : b}</option>)}
-        </select>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          {["All", "Excellent", "Good", "Average", "Needs Work"].map(s => (
-            <option key={s} value={s}>{s === "All" ? "All Statuses" : s}</option>
-          ))}
-        </select>
+        <div style={{ minWidth: "160px" }}>
+          <MentorPerfSelect
+            value={batchFilter}
+            options={batches.map(b => ({ value: b, label: b === "All" ? "All Batches" : b }))}
+            onChange={(val) => setBatchFilter(val)}
+          />
+        </div>
+        <div style={{ minWidth: "160px" }}>
+          <MentorPerfSelect
+            value={statusFilter}
+            options={["All", "Excellent", "Good", "Average", "Needs Work"].map(s => ({ value: s, label: s === "All" ? "All Statuses" : s }))}
+            onChange={(val) => setStatusFilter(val)}
+          />
+        </div>
       </div>
 
       {/* ── Tabs ── */}

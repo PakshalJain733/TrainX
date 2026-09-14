@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, Key } from "lucide-react";
 import { AdminSidebar } from "./AdminSidebar";
 import "../Styles/AdminLayout.css";
+import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
@@ -94,14 +95,25 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             </div>
           </div>
         </div>
-        <button
-          className="notif-mark-read-btn"
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0}
-          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
-        >
-          <Check size={14} className="notif-check-icon" /> Mark read
-        </button>
+        <div className="notif-header-actions-right">
+          <button
+            className="notif-view-all-btn"
+            onClick={() => {
+              if (onClose) onClose();
+              navigate("/admin/notifications");
+            }}
+          >
+            View all
+          </button>
+          <button
+            className="notif-mark-read-btn"
+            onClick={handleMarkAllRead}
+            disabled={unreadCount === 0}
+            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
+          >
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -178,6 +190,7 @@ export default function AdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const headerRightRef = useRef(null);
 
   useEffect(() => {
@@ -328,6 +341,16 @@ export default function AdminLayout() {
                           Edit Profile
                         </button>
                         <button
+                          className="admin-header__profile-item"
+                          onClick={() => {
+                            setProfileOpen(false);
+                            setIsChangePasswordOpen(true);
+                          }}
+                        >
+                          <Key size={15} />
+                          Change Password
+                        </button>
+                        <button
                           className="admin-header__profile-item admin-header__profile-item--danger"
                           onClick={() => {
                             setProfileOpen(false);
@@ -353,6 +376,10 @@ export default function AdminLayout() {
         </main>
       </div>
       <BroadcastToast />
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }

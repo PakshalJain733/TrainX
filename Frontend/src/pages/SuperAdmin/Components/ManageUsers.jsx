@@ -17,43 +17,96 @@ import {
   Phone,
   BookOpen,
   Key,
+  KeyRound,
   Copy,
   Check,
+  ChevronDown,
   X,
   Sparkles,
   Trash2
 } from 'lucide-react';
-import StatusBadge from '../../../components/SuperAdmin/StatusBadge';
 import EmptyState from '../../../components/ui/EmptyState';
 import { apiFetch } from '../../../utils/api';
-import { initialAdminVerifications } from '../../../data/superAdminMockData';
+import { collegeAPI } from '../../../services/api';
 import '../Styles/SuperAdmin.css';
 import '../../Admin/Styles/AdminUsers.css';
 import '../Styles/ManageUsers.css';
 
+/* ── Inline dropdown for ManageUsers (CSS: ManageUsers.css .mu-select-*) ── */
+function MuSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [dropUp, setDropUp] = React.useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+
+  React.useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleToggle = () => {
+    if (!isOpen && ref.current) {
+      setDropUp(direction === 'up');
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`mu-select-wrap${isOpen ? ' mu-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={handleToggle} className={`mu-select-trigger${isOpen ? ' mu-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mu-select-icon" />}
+        <span className="mu-select-text">{selected ? selected.label : <span className="mu-select-placeholder">{placeholder}</span>}</span>
+        <ChevronDown className={`mu-select-arrow${isOpen ? ' mu-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`mu-select-dropdown${dropUp ? ' mu-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mu-select-option${isSel ? ' mu-select-option--selected' : ''}`}>
+                <span className="mu-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mu-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Inline StatusBadge Helper ──────────────────────── */
+function StatusBadge({ status }) {
+  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  if (status === 'Active' || status === 'Verified' || status === 'Available') {
+    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  } else if (status === 'Inactive' || status === 'Disabled') {
+    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  } else if (status === 'High' || status === 'In Progress') {
+    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+  } else if (status === 'Busy' || status === 'Medium') {
+    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+  } else if (status === 'Near Completion') {
+    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+      {status}
+    </span>
+  );
+}
+
 // Mock Data for Coordinators
-const mockCoordinators = [
-  { id: 1, name: "Prof. Rajesh Sharma", email: "r.sharma@pvppcoe.ac.in", phone: "+91 98765 43210", college: "PVPPCOE Mumbai", department: "Computer Engineering", status: "Active" },
-  { id: 2, name: "Dr. Ananya Deshmukh", email: "a.deshmukh@apex.edu", phone: "+91 98765 43211", college: "Apex Institute of Technology", department: "Information Technology", status: "Active" },
-  { id: 3, name: "Prof. Suresh Kulkarni", email: "s.kulkarni@meridian.edu", phone: "+91 98765 43212", college: "Meridian College", department: "AI & Data Science", status: "Active" },
-  { id: 4, name: "Dr. Meera Patel", email: "m.patel@vanguard.edu", phone: "+91 98765 43213", college: "Vanguard Institute", department: "Electronics Engineering", status: "Active" }
-];
+const mockCoordinators = [];
 
 // Mock Data for Mentors & Trainers
-const mockMentors = [
-  { id: 1, name: "Ms. R. Kulkarni", email: "r.kulkarni@pvppcoe.ac.in", phone: "+91 98765 11111", college: "PVPPCOE Mumbai", track: "Python Backend Development", studentsAssigned: 45, rating: "4.9/5" },
-  { id: 2, name: "Prof. Vikram Joshi", email: "v.joshi@apex.edu", phone: "+91 98765 22222", college: "Apex Institute", track: "Full Stack Web Engineering", studentsAssigned: 50, rating: "4.8/5" },
-  { id: 3, name: "Dr. S. Nair", email: "s.nair@meridian.edu", phone: "+91 98765 33333", college: "Meridian College", track: "Data Science & Machine Learning", studentsAssigned: 40, rating: "4.9/5" },
-  { id: 4, name: "Er. Amit Shah", email: "a.shah@vanguard.edu", phone: "+91 98765 44444", college: "Vanguard Institute", track: "Cloud & DevOps Architecture", studentsAssigned: 38, rating: "4.7/5" }
-];
+const mockMentors = [];
 
 // Mock Data for Students Risk
-const mockStudentsRisk = [
-  { id: 1, name: "Aarav Sharma", rollNo: "CSE-2026-001", college: "PVPPCOE Mumbai", batch: "CSE 2026 Alpha", attendance: "98%", risk: "Low Risk", status: "Active" },
-  { id: 2, name: "Tanvi Deshmukh", rollNo: "IT-2026-012", college: "Apex Institute", batch: "IT 2026 Beta", attendance: "62%", risk: "High Risk", status: "Defaulter" },
-  { id: 3, name: "Karan Mehta", rollNo: "ECS-2026-044", college: "PVPPCOE Mumbai", batch: "ECS 2026 Alpha", attendance: "88%", risk: "Low Risk", status: "Active" },
-  { id: 4, name: "Rohan Kulkarni", rollNo: "AI-2026-033", college: "Meridian College", batch: "AI-DS 2026", attendance: "71%", risk: "Moderate Risk", status: "Needs Monitoring" },
-];
+const mockStudentsRisk = [];
 
 function RiskBadge({ risk }) {
   const color =
@@ -77,60 +130,77 @@ export default function ManageUsers() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Tab Data States
-  const [adminRequests, setAdminRequests] = useState(initialAdminVerifications);
-  const [coordinators, setCoordinators] = useState(mockCoordinators);
-  const [mentors, setMentors] = useState(mockMentors);
-  const [students, setStudents] = useState(mockStudentsRisk);
+  const [adminRequests, setAdminRequests] = useState([]);
+  const [coordinators, setCoordinators] = useState([]);
+  const [mentors, setMentors] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [collegesList, setCollegesList] = useState([]);
+
+  useEffect(() => {
+    collegeAPI.getColleges()
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCollegesList(data);
+          setCodeCollege(data[0].name);
+        }
+      })
+      .catch(err => console.error("Error loading colleges for ManageUsers modal:", err));
+  }, []);
 
   useEffect(() => {
     const fetchUsers = async () => {
       try {
         const res = await apiFetch('/admin/users');
         if (res && Array.isArray(res.users)) {
+          const dbAdmins = res.users.filter(u => u.role === 'college_admin');
           const dbCoords = res.users.filter(u => u.role === 'coordinator');
           const dbMentors = res.users.filter(u => u.role === 'mentor');
           const dbStudents = res.users.filter(u => u.role === 'student');
 
-          if (dbCoords.length > 0) {
-            setCoordinators(dbCoords.map(u => ({
-              id: u.id,
-              name: u.name || 'Coordinator',
-              email: u.email,
-              phone: u.mobile_number || u.phone || '+91 98765 00000',
-              college: u.college_name || u.college || 'PVPPCOE Mumbai',
-              department: u.department_name || u.department || 'Computer Engineering',
-              status: u.is_active ? 'Active' : 'Inactive'
-            })));
-          }
+          setAdminRequests(dbAdmins.map(u => ({
+            id: u.id,
+            name: u.name || 'College Admin',
+            adminName: u.name || 'College Admin',
+            email: u.email,
+            phone: u.mobile_number || u.phone || '',
+            college: u.college_name || u.college || '',
+            status: u.is_active ? 'Active' : 'Pending'
+          })));
 
-          if (dbMentors.length > 0) {
-            setMentors(dbMentors.map(u => ({
-              id: u.id,
-              name: u.name || 'Mentor',
-              email: u.email,
-              phone: u.mobile_number || u.phone || '+91 98765 00000',
-              college: u.college_name || u.college || 'PVPPCOE Mumbai',
-              track: u.target_track || 'Full Stack Web Engineering',
-              studentsAssigned: 35,
-              rating: '4.9/5'
-            })));
-          }
+          setCoordinators(dbCoords.map(u => ({
+            id: u.id,
+            name: u.name || 'Coordinator',
+            email: u.email,
+            phone: u.mobile_number || u.phone || '',
+            college: u.college_name || u.college || '',
+            department: u.department_name || u.department || '',
+            status: u.is_active ? 'Active' : 'Inactive'
+          })));
 
-          if (dbStudents.length > 0) {
-            setStudents(dbStudents.map(u => ({
-              id: u.id,
-              name: u.name || 'Student',
-              rollNo: u.rollNo || `STD-${u.id}`,
-              college: u.college_name || u.college || 'PVPPCOE Mumbai',
-              batch: u.batch || 'COMPS 2026',
-              attendance: u.attendance || '92%',
-              risk: u.risk || 'Low Risk',
-              status: 'Active'
-            })));
-          }
+          setMentors(dbMentors.map(u => ({
+            id: u.id,
+            name: u.name || 'Mentor',
+            email: u.email,
+            phone: u.mobile_number || u.phone || '',
+            college: u.college_name || u.college || '',
+            track: u.target_track || 'Full Stack Web Engineering',
+            studentsAssigned: 0,
+            rating: 'N/A'
+          })));
+
+          setStudents(dbStudents.map(u => ({
+            id: u.id,
+            name: u.name || 'Student',
+            rollNo: u.rollNo || `STD-${u.id}`,
+            college: u.college_name || u.college || '',
+            batch: u.batch || '',
+            attendance: u.attendance || '0%',
+            risk: u.risk || 'Low Risk',
+            status: 'Active'
+          })));
         }
       } catch (err) {
-        console.warn("Using default users dataset:", err);
+        console.warn("Error fetching users from database:", err);
       }
     };
     fetchUsers();
@@ -185,7 +255,7 @@ export default function ManageUsers() {
   );
 
   const tabs = [
-    { id: "admins", label: "Admin Verification", icon: ShieldCheck, count: adminRequests.length },
+    { id: "admins", label: "College Administrators", icon: ShieldCheck, count: adminRequests.length },
     { id: "coordinators", label: "Coordinators", icon: UserCheck, count: coordinators.length },
     { id: "mentors", label: "Mentors & Trainers", icon: GraduationCap, count: mentors.length },
     { id: "students", label: "Students Risk", icon: Users, count: students.length },
@@ -213,14 +283,49 @@ export default function ManageUsers() {
   const [codeRole, setCodeRole] = useState('admins');
   const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
   const [codeExpiry, setCodeExpiry] = useState('7 Days');
+  const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
-  const [generatedCodesList, setGeneratedCodesList] = useState([
-    { id: 1, code: 'ADM-9X82-PVPP', role: 'Admin', college: 'PVPPCOE Mumbai', expiry: '7 Days', date: '2026-09-09' },
-    { id: 2, code: 'CRD-4K11-APEX', role: 'Coordinator', college: 'Apex Institute', expiry: '24 Hours', date: '2026-09-09' },
-  ]);
+  const [generatedCodesList, setGeneratedCodesList] = useState([]);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
-  const handleGenerateCode = (e) => {
-    e.preventDefault();
+  const loadSecureCodes = async () => {
+    try {
+      const res = await apiFetch('/secure-codes');
+      if (res && Array.isArray(res.data)) {
+        setGeneratedCodesList(res.data.map(c => ({
+          id: c.id,
+          code: c.code,
+          role: c.role === 'college_admin' ? 'Admin' : c.role === 'coordinator' ? 'Coordinator' : c.role === 'mentor' ? 'Mentor' : c.role === 'trainer' ? 'Trainer' : c.role === 'company' ? 'Company' : c.role,
+          college: c.college_name || 'All Colleges',
+          maxUses: c.max_uses,
+          usesCount: c.uses_count || 0,
+          status: c.status,
+          date: c.created_at ? new Date(c.created_at).toLocaleDateString() : 'Active'
+        })));
+      }
+    } catch (err) {
+      console.warn("Failed to load secure codes from DB:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadSecureCodes();
+  }, []);
+
+  const handleGenerateCode = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (isGeneratingCode) return;
+
+    setIsGeneratingCode(true);
+
+    const roleMapping = {
+      admins: 'college_admin',
+      coordinators: 'coordinator',
+      mentors: 'mentor',
+      students: 'student',
+    };
+    const targetRole = roleMapping[codeRole] || codeRole;
+
     const prefixMap = {
       admins: 'ADM',
       coordinators: 'CRD',
@@ -229,21 +334,43 @@ export default function ManageUsers() {
     };
     const prefix = prefixMap[codeRole] || 'USR';
     const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
-    const colCode = codeCollege.split(' ')[0].substring(0, 4).toUpperCase();
-    const newCode = `${prefix}-${randomHex}-${colCode}`;
-    setGeneratedCode(newCode);
+    const colCode = codeCollege ? String(codeCollege).split(' ')[0].substring(0, 4).toUpperCase() : 'PVPP';
+    const generatedFallback = `${prefix}-${randomHex}-${colCode}`;
 
-    const roleMap = {
-      admins: 'Admin',
-      coordinators: 'Coordinator',
-      mentors: 'Mentor',
-      students: 'Student'
-    };
-    const roleLabel = roleMap[codeRole] || 'User';
-    setGeneratedCodesList([
-      { id: Date.now(), code: newCode, role: roleLabel, college: codeCollege, expiry: codeExpiry, date: 'Just now' },
-      ...generatedCodesList,
-    ]);
+    try {
+      const res = await apiFetch('/secure-codes/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: generatedFallback,
+          role: targetRole,
+          college_name: codeCollege,
+          max_uses: parseInt(codeMaxUses, 10) || 1,
+          expiry_option: codeExpiry,
+          description: `Generated for ${codeCollege} - Max Uses: ${codeMaxUses === '0' ? 'Unlimited' : codeMaxUses} - Expiry: ${codeExpiry}`,
+        }),
+      });
+
+      if (res && res.data && res.data.code) {
+        setGeneratedCode(res.data.code);
+      } else {
+        setGeneratedCode(generatedFallback);
+      }
+      await loadSecureCodes();
+    } catch (err) {
+      console.error("Error generating secure code:", err);
+      setGeneratedCode(generatedFallback);
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
+  const handleDeleteCode = async (id) => {
+    try {
+      await apiFetch(`/secure-codes/${id}`, { method: 'DELETE' });
+      await loadSecureCodes();
+    } catch (err) {
+      console.error("Error deleting secure code:", err);
+    }
   };
 
   const handleCopyCode = (code, id = 'hero') => {
@@ -361,7 +488,7 @@ export default function ManageUsers() {
             }}
             className="manageusers-btn-secondary"
           >
-            <BookOpen size={16} />
+            <KeyRound size={16} />
             <span>Generate Code</span>
           </button>
           <button
@@ -402,7 +529,7 @@ export default function ManageUsers() {
 
       {/* Search Input */}
       <div className="sa-search-card">
-        <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
+        <div className="sa-search-wrap mu-search-wrap-full">
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
@@ -414,13 +541,13 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* TAB CONTENT: Admin Verification */}
+      {/* TAB CONTENT: HODs & College Admins */}
       {activeTab === "admins" && (
         <div className="manageusers-tab-content">
           <div className="manageusers-banner">
-            <Clock className="manageusers-banner-icon" />
+            <ShieldCheck className="manageusers-banner-icon" />
             <p className="manageusers-banner-text">
-              Verifying a request grants institutional administrative access to create departments, assign coordinators, and view student performance data.
+              HODs and College Administrators register using pre-authorized secure invitation codes issued directly by the Super Admin.
             </p>
           </div>
 
@@ -429,8 +556,8 @@ export default function ManageUsers() {
             {filteredAdmins.length === 0 ? (
               <EmptyState
                 icon={ShieldCheck}
-                title="No Admin Requests Found"
-                description="There are currently no college administrator sign-ups matching your query."
+                title="No HOD / Admin Accounts Found"
+                description="HODs and College Administrators register using secure invitation codes. No manual verification required."
               />
             ) : (
               <div className="manageusers-table-wrap">
@@ -450,22 +577,22 @@ export default function ManageUsers() {
                       <tr key={req.id} className="manageusers-tr">
                         <td className="manageusers-td">
                           <div className="font-bold text-slate-900">{req.name}</div>
-                          <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-0.5">
-                            <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{req.email}</span>
+                          <div className="manageusers-contact-row mt-1">
+                            <Mail size={14} className="manageusers-contact-icon" />
+                            <span className="manageusers-contact-text">{req.email}</span>
                           </div>
                         </td>
                         <td className="manageusers-td">
-                          <div className="flex items-center gap-2 font-semibold text-slate-800">
-                            <Building2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                          <div className="manageusers-contact-row manageusers-contact-row--bold">
+                            <Building2 size={15} className="manageusers-contact-icon manageusers-contact-icon--indigo" />
                             <span>{req.college}</span>
                           </div>
                         </td>
                         <td className="manageusers-td font-medium text-slate-700">{req.designation}</td>
-                        <td className="manageusers-td text-slate-500">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <span>{req.date}</span>
+                        <td className="manageusers-td">
+                          <div className="manageusers-contact-row">
+                            <Calendar size={14} className="manageusers-contact-icon" />
+                            <span className="manageusers-contact-text">{req.date}</span>
                           </div>
                         </td>
                         <td className="manageusers-td">
@@ -479,7 +606,7 @@ export default function ManageUsers() {
                                 onClick={() => handleVerifyAdmin(req.id)}
                                 className="manageusers-btn-verify"
                               >
-                                <CheckCircle2 className="w-4 h-4 text-white" />
+                                <CheckCircle2 size={15} />
                                 <span>Verify Access</span>
                               </button>
                               <button
@@ -487,13 +614,13 @@ export default function ManageUsers() {
                                 onClick={() => handleRejectAdmin(req.id)}
                                 className="manageusers-btn-reject"
                               >
-                                <XCircle className="w-4 h-4 text-rose-600" />
+                                <XCircle size={15} />
                                 <span>Reject</span>
                               </button>
                             </div>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3.5 h-3.5" /> Approved
+                              <CheckCircle2 size={14} /> Approved
                             </span>
                           )}
                         </td>
@@ -534,20 +661,20 @@ export default function ManageUsers() {
                     </td>
                     <td className="manageusers-td text-slate-600 font-medium">{c.college}</td>
                     <td className="manageusers-td text-indigo-600 font-medium">{c.department}</td>
-                    <td className="manageusers-td text-xs text-slate-500">
-                      <div className="flex items-center gap-1">
-                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{c.email}</span>
-                      </div>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{c.phone}</span>
+                    <td className="manageusers-td">
+                      <div className="manageusers-contact-box">
+                        <div className="manageusers-contact-row">
+                          <Mail size={14} className="manageusers-contact-icon" />
+                          <span className="manageusers-contact-text">{c.email}</span>
+                        </div>
+                        <div className="manageusers-contact-row">
+                          <Phone size={14} className="manageusers-contact-icon" />
+                          <span className="manageusers-contact-text">{c.phone}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="manageusers-td-right">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
-                        {c.status}
-                      </span>
+                      <StatusBadge status={c.status} />
                     </td>
                   </tr>
                 ))}
@@ -661,7 +788,7 @@ export default function ManageUsers() {
       {/* Generate Access Code Modal */}
       {isGenerateCodeModalOpen && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsGenerateCodeModalOpen(false); }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog modal-dialog-overflow-visible">
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap modal-header-icon--indigo">
@@ -678,48 +805,64 @@ export default function ManageUsers() {
             </div>
 
             <form onSubmit={handleGenerateCode}>
-              <div className="modal-body">
+              <div className="modal-body modal-body-overflow-visible">
                 <div className="form-group-admin">
                   <label>Assign Target Role *</label>
-                  <select
-                    className="form-select-admin"
+                  <MuSelect
                     value={codeRole}
-                    onChange={(e) => setCodeRole(e.target.value)}
-                  >
-                    <option value="students">Student Cohort Access</option>
-                    <option value="mentors">Mentor &amp; Trainer</option>
-                    <option value="coordinators">Department Coordinator</option>
-                    <option value="admins">College Administrator (Admin)</option>
-                  </select>
+                    wrapperClass="mu-select"
+                    options={[
+                      { value: "mentors", label: "Mentor & Trainer" },
+                      { value: "coordinators", label: "Department Coordinator" },
+                      { value: "admins", label: "College Administrator (Admin)" },
+                    ]}
+                    onChange={(val) => setCodeRole(val)}
+                  />
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Target College *</label>
+                  <MuSelect
+                    value={codeCollege}
+                    wrapperClass="mu-select"
+                    options={collegesList.length > 0
+                      ? collegesList.map(c => ({ value: c.name, label: c.name }))
+                      : [{ value: "No colleges registered", label: "No colleges registered" }]
+                    }
+                    onChange={(val) => setCodeCollege(val)}
+                  />
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Target College *</label>
-                    <select
-                      className="form-select-admin"
-                      value={codeCollege}
-                      onChange={(e) => setCodeCollege(e.target.value)}
-                    >
-                      <option value="PVPPCOE Mumbai">PVPPCOE Mumbai</option>
-                      <option value="Apex Institute">Apex Institute of Tech</option>
-                      <option value="Meridian College">Meridian Engineering</option>
-                      <option value="Vanguard Institute">Vanguard Academy</option>
-                    </select>
+                    <label>How Many Uses (Count) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100000"
+                      required
+                      className="form-input-admin"
+                      placeholder="Type number of registrations allowed (e.g. 1, 5, 10)"
+                      value={codeMaxUses}
+                      onChange={(e) => setCodeMaxUses(e.target.value)}
+                    />
                   </div>
 
                   <div className="form-group-admin">
-                    <label>Code Validity *</label>
-                    <select
-                      className="form-select-admin"
+                    <label>Expiry Time Duration *</label>
+                    <MuSelect
                       value={codeExpiry}
-                      onChange={(e) => setCodeExpiry(e.target.value)}
-                    >
-                      <option value="24 Hours">24 Hours</option>
-                      <option value="7 Days">7 Days</option>
-                      <option value="30 Days">30 Days</option>
-                      <option value="Never (Permanent)">Never (Permanent)</option>
-                    </select>
+                      wrapperClass="mu-select"
+                      options={[
+                        { value: "24 Hours", label: "24 Hours (1 Day)" },
+                        { value: "3 Days", label: "3 Days" },
+                        { value: "7 Days", label: "7 Days (1 Week)" },
+                        { value: "30 Days", label: "30 Days (1 Month)" },
+                        { value: "90 Days", label: "90 Days (3 Months)" },
+                        { value: "Never", label: "Never (No Expiry)" },
+                      ]}
+                      onChange={(val) => setCodeExpiry(val)}
+                    />
                   </div>
                 </div>
 
@@ -728,7 +871,7 @@ export default function ManageUsers() {
                   <div className="manageusers-token-hero">
                     <div>
                       <div className="manageusers-token-label">
-                        <Sparkles size={13} style={{ color: "#a5b4fc" }} />
+                        <Sparkles size={13} className="mu-sparkles-icon" />
                         <span className="manageusers-token-tag">Newly Issued Token</span>
                       </div>
                       <div className="manageusers-token-code">{generatedCode}</div>
@@ -753,18 +896,31 @@ export default function ManageUsers() {
                   <div className="manageusers-token-list">
                     {generatedCodesList.map((c) => (
                       <div key={c.id} className="manageusers-token-item">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono font-bold text-slate-900 text-[13.5px] tracking-wide">{c.code}</span>
-                          <span className="text-[10.5px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700">{c.role}</span>
+                        <div className="manageusers-item-left">
+                          <span className="manageusers-code-text">{c.code}</span>
+                          <span className="manageusers-role-tag">{c.role}</span>
+                          <span className="manageusers-uses-tag">
+                            Uses: {c.usesCount || 0}/{c.maxUses === 0 ? '∞' : (c.maxUses || 1)}
+                          </span>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyCode(c.code, c.id)}
-                          className={`manageusers-item-copy-btn ${copiedCodeId === c.id ? 'manageusers-item-copy-btn--copied' : ''}`}
-                        >
-                          {copiedCodeId === c.id ? <Check size={13} /> : <Copy size={13} />}
-                          <span>{copiedCodeId === c.id ? 'Copied' : 'Copy'}</span>
-                        </button>
+                        <div className="manageusers-item-actions">
+                          <button
+                            type="button"
+                            onClick={() => handleCopyCode(c.code, c.id)}
+                            className={`manageusers-item-copy-btn ${copiedCodeId === c.id ? 'manageusers-item-copy-btn--copied' : ''}`}
+                          >
+                            {copiedCodeId === c.id ? <Check size={13} /> : <Copy size={13} />}
+                            <span>{copiedCodeId === c.id ? 'Copied' : 'Copy'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCode(c.id)}
+                            title="Delete / Revoke Code"
+                            className="manageusers-item-delete-btn"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -775,9 +931,14 @@ export default function ManageUsers() {
                 <button type="button" className="btn-modal-cancel" onClick={() => setIsGenerateCodeModalOpen(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-modal-submit inline-flex items-center gap-1.5">
+                <button
+                  type="submit"
+                  onClick={handleGenerateCode}
+                  disabled={isGeneratingCode}
+                  className="btn-modal-submit inline-flex items-center gap-1.5"
+                >
                   <Sparkles size={16} />
-                  <span>Generate Code</span>
+                  <span>{isGeneratingCode ? 'Generating...' : 'Generate Code'}</span>
                 </button>
               </div>
             </form>
@@ -845,16 +1006,17 @@ export default function ManageUsers() {
 
                 <div className="form-group-admin">
                   <label>Assign Role *</label>
-                  <select
-                    className="form-select-admin"
+                  <MuSelect
                     value={newUserForm.role}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, role: e.target.value })}
-                  >
-                    <option value="students">Student</option>
-                    <option value="mentors">Mentor / Faculty</option>
-                    <option value="coordinators">Coordinator</option>
-                    <option value="admins">College Administrator (Admin)</option>
-                  </select>
+                    wrapperClass="mu-select"
+                    options={[
+                      { value: "students", label: "Student" },
+                      { value: "mentors", label: "Mentor / Faculty" },
+                      { value: "coordinators", label: "Coordinator" },
+                      { value: "admins", label: "College Administrator (Admin)" },
+                    ]}
+                    onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
+                  />
                 </div>
 
                 {newUserForm.role === 'students' && (
@@ -872,46 +1034,49 @@ export default function ManageUsers() {
                       </div>
                       <div className="form-group-admin">
                         <label>Department</label>
-                        <select
-                          className="form-select-admin"
+                        <MuSelect
                           value={newUserForm.department || 'COMPS'}
-                          onChange={(e) => setNewUserForm({ ...newUserForm, department: e.target.value })}
-                        >
-                          <option value="COMPS">COMPS</option>
-                          <option value="IT">IT</option>
-                          <option value="AIML">AIML</option>
-                          <option value="ECS">ECS</option>
-                          <option value="MTRX">MTRX</option>
-                          <option value="EXTC">EXTC</option>
-                        </select>
+                          wrapperClass="mu-select"
+                          options={[
+                            { value: "COMPS", label: "COMPS" },
+                            { value: "IT", label: "IT" },
+                            { value: "AIML", label: "AIML" },
+                            { value: "ECS", label: "ECS" },
+                            { value: "MTRX", label: "MTRX" },
+                            { value: "EXTC", label: "EXTC" },
+                          ]}
+                          onChange={(val) => setNewUserForm({ ...newUserForm, department: val })}
+                        />
                       </div>
                     </div>
 
                     <div className="form-row-2">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
-                        <select
-                          className="form-select-admin"
+                        <MuSelect
                           value={newUserForm.year || 'FE'}
-                          onChange={(e) => setNewUserForm({ ...newUserForm, year: e.target.value })}
-                        >
-                          <option value="FE">FE</option>
-                          <option value="SE">SE</option>
-                          <option value="TE">TE</option>
-                          <option value="BE">BE</option>
-                        </select>
+                          wrapperClass="mu-select"
+                          options={[
+                            { value: "FE", label: "FE" },
+                            { value: "SE", label: "SE" },
+                            { value: "TE", label: "TE" },
+                            { value: "BE", label: "BE" },
+                          ]}
+                          onChange={(val) => setNewUserForm({ ...newUserForm, year: val })}
+                        />
                       </div>
                       <div className="form-group-admin">
                         <label>Division</label>
-                        <select
-                          className="form-select-admin"
+                        <MuSelect
                           value={newUserForm.division || 'A'}
-                          onChange={(e) => setNewUserForm({ ...newUserForm, division: e.target.value })}
-                        >
-                          <option value="A">Division A</option>
-                          <option value="B">Division B</option>
-                          <option value="C">Division C</option>
-                        </select>
+                          wrapperClass="mu-select"
+                          options={[
+                            { value: "A", label: "Division A" },
+                            { value: "B", label: "Division B" },
+                            { value: "C", label: "Division C" },
+                          ]}
+                          onChange={(val) => setNewUserForm({ ...newUserForm, division: val })}
+                        />
                       </div>
                     </div>
                   </>

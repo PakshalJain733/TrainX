@@ -577,6 +577,13 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
 }
 
+.sa-stats-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .sa-stats-label {
   font-size: 12px;
   font-weight: 600;
@@ -585,12 +592,76 @@
   letter-spacing: 0.05em;
 }
 
+.sa-stats-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.sa-stats-icon-box--default {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+}
+
+.sa-stats-icon-box--warning {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+}
+
+.sa-stats-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.sa-stats-card-body {
+  margin-top: 12px;
+}
+
 .sa-stats-val {
   font-size: 28px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.025em;
   margin: 0;
+  line-height: 1.1;
+}
+
+.sa-stats-change {
+  margin-top: 6px;
+  margin-bottom: 0;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.sa-stats-trend-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.sa-stats-trend-icon--up {
+  color: #10b981;
+}
+
+.sa-stats-trend-icon--warning {
+  color: #f59e0b;
+}
+
+.sa-stats-change-text--up {
+  color: #059669;
+}
+
+.sa-stats-change-text--warning {
+  color: #d97706;
 }
 
 .sa-bottom-grid {
@@ -892,25 +963,29 @@
 
 .notif-tabs {
   display: flex;
-  padding: 10px 14px 0;
-  border-bottom: 1px solid #e2e8f0;
+  gap: 6px;
+  margin-bottom: 16px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 12px;
+  align-items: center;
 }
 
 .notif-tab {
-  padding: 6px 12px;
-  font-size: 12px;
+  flex: 1;
+  padding: 8px 16px;
+  font-size: 13px;
   font-weight: 600;
-  color: #64748b;
-  background: none;
+  border-radius: 8px;
   border: none;
-  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
-  margin-bottom: -1px;
+  background: transparent;
+  color: #64748b;
+  transition: all 0.2s ease;
+  text-align: center;
 }
 
 .notif-tab.active {
-  color: #4f46e5;
   border-bottom-color: #4f46e5;
 }
 
@@ -1000,3 +1075,317 @@
   .overview-hero-title { font-size: 18px; }
   .overview-hero-card { padding: 20px; }
 }
+
+/* ─── ActionDropdown Vanilla CSS Rules ───────────────── */
+.action-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.action-dropdown-trigger {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  padding: 0;
+  margin: 0;
+}
+
+.action-dropdown-trigger:hover {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #bfdbfe;
+}
+
+.action-dropdown-trigger.open {
+  background: #eff6ff;
+  color: #2563eb;
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.action-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 170px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.18), 0 8px 10px -6px rgba(15, 23, 42, 0.1);
+  z-index: 99999;
+  padding: 5px;
+  list-style: none;
+  margin: 0;
+  animation: dropdownFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.action-dropdown-menu.action-dropdown-portal {
+  position: fixed !important;
+  z-index: 999999 !important;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.action-dropdown-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 9px !important;
+  width: 100% !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+.action-dropdown-item:hover {
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.action-dropdown-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.action-dropdown-item:hover .action-dropdown-icon {
+  color: #2563eb;
+}
+
+.action-dropdown-item--verify {
+  color: #d97706 !important;
+}
+
+.action-dropdown-item--verify .action-dropdown-icon {
+  color: #d97706;
+}
+
+.action-dropdown-item--verify:hover {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+}
+
+.action-dropdown-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 0;
+}
+
+.action-dropdown-item--danger {
+  color: #dc2626 !important;
+}
+
+.action-dropdown-item--danger .action-dropdown-icon {
+  color: #ef4444;
+}
+
+.action-dropdown-item--danger:hover {
+  background: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+
+.action-dropdown-item--danger:hover .action-dropdown-icon {
+  color: #dc2626;
+}
+
+/* ── Custom Select System ── styles managed in ui.css */
+
+/* Enhanced Fallback Styling for Native Form Selects */
+select,
+.form-select-admin {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  padding: 8px 36px 8px 12px !important;
+  border: 1px solid #cbd5e1 !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+select:hover,
+.form-select-admin:hover {
+  border-color: #94a3b8 !important;
+}
+
+select:focus,
+.form-select-admin:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
+}
+
+option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+option:checked,
+option:hover {
+  background-color: #eef2ff !important;
+  color: #4338ca !important;
+}
+
+/* ── Standard Table & Card Section Headers ── */
+.sa-table-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  box-sizing: border-box;
+}
+
+.sa-table-header-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sa-table-header-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.sa-table-header-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+/* ── Icon Badges ── */
+.sa-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.sa-icon-badge--indigo {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #e0e7ff;
+}
+
+.sa-icon-badge--emerald {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+/* ── College Logo Avatar Badge ── */
+.sa-college-avatar-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sa-college-logo-icon-wrap {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eef2ff;
+  border: 1px solid #e0e7ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sa-college-name-text {
+  font-weight: 700;
+  color: #0f172a;
+  font-size: 13px;
+}
+
+/* ── View Detail Modal Grid & Item Styles ── */
+.sa-modal-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+}
+
+@media (max-width: 520px) {
+  .sa-modal-details-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sa-modal-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #ffffff;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.sa-modal-detail-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sa-modal-detail-value {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+

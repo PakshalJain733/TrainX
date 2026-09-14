@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AlertCircle,
   Bell,
@@ -9,10 +9,46 @@ import {
   Calendar,
   UserCheck,
   FileText,
+  ChevronDown,
+  Check,
 } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
 import '../Styles/Students.css';
 import '../Styles/Defaulters.css';
+
+/* ── Inline dropdown for Mentor Defaulters (CSS: Defaulters.css .mentor-def-select-*) ── */
+function MentorDefSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-def-select-wrap${isOpen ? ' mentor-def-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-def-select-trigger${isOpen ? ' mentor-def-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-def-select-icon" />}
+        <span className="mentor-def-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-def-select-arrow${isOpen ? ' mentor-def-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-def-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-def-select-option${isSel ? ' mentor-def-select-option--selected' : ''}`}>
+                <span className="mentor-def-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-def-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Defaulters() {
   const [defaulters, setDefaulters] = useState([]);
@@ -235,17 +271,17 @@ export default function Defaulters() {
 
                 <div>
                   <label style={{ fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Workflow Status</label>
-                  <select
+                  <MentorDefSelect
                     value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
-                  >
-                    <option value="Needs Attention">Needs Attention</option>
-                    <option value="Under Review">Under Review</option>
-                    <option value="Action Taken">Action Taken</option>
-                    <option value="Improving">Improving</option>
-                    <option value="Resolved">Resolved</option>
-                  </select>
+                    options={[
+                      { value: "Needs Attention", label: "Needs Attention" },
+                      { value: "Under Review", label: "Under Review" },
+                      { value: "Action Taken", label: "Action Taken" },
+                      { value: "Improving", label: "Improving" },
+                      { value: "Resolved", label: "Resolved" },
+                    ]}
+                    onChange={(val) => setStatus(val)}
+                  />
                 </div>
               </div>
 

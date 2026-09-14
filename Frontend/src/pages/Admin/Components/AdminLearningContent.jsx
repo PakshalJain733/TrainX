@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Search,
@@ -14,6 +14,8 @@ import {
   ExternalLink,
   Download,
   Eye,
+  ChevronDown,
+  Check
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
@@ -21,6 +23,58 @@ import { apiFetch } from "../../../utils/api";
 import "../../Student/Styles/LearningContent.css";
 import "../Styles/AdminLearningContent.css";
 import "../Styles/AdminUsers.css";
+
+/* ── Inline dropdown for Admin LearningContent (CSS: AdminLearningContent.css .admin-lc-select-*) ── */
+function AdminLcSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleToggle = () => {
+    if (!isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (direction === 'up') {
+        setDropUp(true);
+      } else if (direction === 'down') {
+        setDropUp(false);
+      } else {
+        setDropUp(spaceBelow < 240);
+      }
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`admin-lc-select-wrap${isOpen ? ' admin-lc-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={handleToggle} className={`admin-lc-select-trigger${isOpen ? ' admin-lc-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-lc-select-icon" />}
+        <span className="admin-lc-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-lc-select-arrow${isOpen ? ' admin-lc-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`admin-lc-select-dropdown${dropUp ? ' admin-lc-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-lc-select-option${isSel ? ' admin-lc-select-option--selected' : ''}`}>
+                <span className="admin-lc-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-lc-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminLearningContent() {
   const [resources, setResources] = useState([]);
@@ -243,23 +297,30 @@ export default function AdminLearningContent() {
                 <div className="form-row-2">
                   <div className="form-group-admin">
                     <label>Resource Type</label>
-                    <select className="form-select-admin" value={newType} onChange={e => setNewType(e.target.value)}>
-                      <option>Document</option>
-                      <option>Video</option>
-                      <option>Link</option>
-                      <option>AI Notes</option>
-                    </select>
+                    <AdminLcSelect
+                      value={newType}
+                      onChange={setNewType}
+                      options={[
+                        { value: "Document", label: "Document" },
+                        { value: "Video", label: "Video" },
+                        { value: "Link", label: "Link" },
+                        { value: "AI Notes", label: "AI Notes" }
+                      ]}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label>Target Cohort / Batch</label>
-                    <select className="form-select-admin" value={newBatch} onChange={e => setNewBatch(e.target.value)}>
-                      <option value="All Batches">All Batches</option>
-                      {batchesList.map((b) => (
-                        <option key={b.id} value={b.name || b.title}>
-                          {b.name || b.title} ({b.code || b.join_code || b.id})
-                        </option>
-                      ))}
-                    </select>
+                    <AdminLcSelect
+                      value={newBatch}
+                      onChange={setNewBatch}
+                      options={[
+                        { value: "All Batches", label: "All Batches" },
+                        ...batchesList.map((b) => ({
+                          value: b.name || b.title,
+                          label: `${b.name || b.title} (${b.code || b.join_code || b.id})`
+                        }))
+                      ]}
+                    />
                   </div>
                 </div>
 

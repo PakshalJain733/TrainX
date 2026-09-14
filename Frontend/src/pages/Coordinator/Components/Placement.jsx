@@ -1,8 +1,42 @@
-import { useState, useEffect } from "react";
-import { Briefcase, Award, Users, CheckCircle, Plus, Sparkles } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Briefcase, Award, Users, CheckCircle, Plus, Sparkles, ChevronDown, Check } from "lucide-react";
 import api from "../../../services/api";
 import { addSharedDrive, getSharedDrives, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/Placement.css";
+
+/* ── Inline dropdown for Coordinator Placement (CSS: Placement.css .coord-place-select-*) ── */
+function CoordPlaceSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`coord-place-select-wrap${isOpen ? ' coord-place-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-place-select-trigger${isOpen ? ' coord-place-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="coord-place-select-icon" />}
+        <span className="coord-place-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`coord-place-select-arrow${isOpen ? ' coord-place-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="coord-place-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-place-select-option${isSel ? ' coord-place-select-option--selected' : ''}`}>
+                <span className="coord-place-select-option-label">{opt.label}</span>
+                {isSel && <Check className="coord-place-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CoordinatorPlacement({ hideHeader }) {
   const [drives, setDrives] = useState([]);
@@ -192,16 +226,16 @@ export default function CoordinatorPlacement({ hideHeader }) {
               </div>
               <div>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Eligible Batch</label>
-                <select
+                <CoordPlaceSelect
                   value={newBatch}
-                  onChange={(e) => setNewBatch(e.target.value)}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', marginTop: '4px' }}
-                >
-                  <option value="2026-COMP">2026-COMP</option>
-                  <option value="2026-IT">2026-IT</option>
-                  <option value="2026-ECS">2026-ECS</option>
-                  <option value="All Batches">All Batches</option>
-                </select>
+                  options={[
+                    { value: "2026-COMP", label: "2026-COMP" },
+                    { value: "2026-IT", label: "2026-IT" },
+                    { value: "2026-ECS", label: "2026-ECS" },
+                    { value: "All Batches", label: "All Batches" },
+                  ]}
+                  onChange={(val) => setNewBatch(val)}
+                />
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '12px' }}>

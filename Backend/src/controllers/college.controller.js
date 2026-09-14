@@ -19,6 +19,10 @@ async function ensureCollegeTable() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+    const cols = ['location VARCHAR(255) DEFAULT \'Main Campus\'', 'city VARCHAR(100) DEFAULT \'Metropolis\'', 'type VARCHAR(100) DEFAULT \'Autonomous\'', 'status VARCHAR(50) DEFAULT \'Active\'', 'contact_email VARCHAR(255) NULL', 'contact_phone VARCHAR(50) NULL'];
+    for (const c of cols) {
+      try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) {}
+    }
     tablesInitialized = true;
   } catch (e) {
     console.warn('[DB ensureCollegeTable error]', e.message);
@@ -28,7 +32,14 @@ async function ensureCollegeTable() {
 export const getColleges = async (req, res, next) => {
   try {
     await ensureCollegeTable();
-    const dbColleges = await query('SELECT * FROM colleges ORDER BY id DESC');
+    const dbColleges = await query(`
+      SELECT 
+        c.*,
+        (SELECT COUNT(*) FROM departments d WHERE d.college_id = c.id) AS department_count,
+        (SELECT COUNT(*) FROM users u WHERE u.college_id = c.id AND u.role = 'student') AS student_count
+      FROM colleges c 
+      ORDER BY c.id DESC
+    `);
     return sendSuccess(res, 'Colleges retrieved successfully', dbColleges || []);
   } catch (error) {
     next(error);

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { PanelLeft, Bell, Search, Sparkles, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2 } from 'lucide-react';
-import Sidebar from '../../../components/SuperAdmin/Sidebar';
-import AIRiskAuditModal from '../../../components/SuperAdmin/AIRiskAuditModal';
+import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key } from 'lucide-react';
+import SuperAdminSidebar from './SuperAdminSidebar';
+import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import '../Styles/SuperAdmin.css';
 import '../Styles/SuperAdminLayout.css';
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
   const [notifications, setNotifications] = useState([
-    { id: 1, type: "alert", title: "4 Admin Verification Requests Pending", time: "10 min ago", unread: true },
+    { id: 1, type: "success", title: "Secure College Access Key generated", time: "10 min ago", unread: true },
     { id: 2, type: "success", title: "Apex Institute of Tech batch sync complete", time: "1h ago", unread: true },
     { id: 3, type: "document", title: "Monthly Cross-College Placement Audit ready", time: "3h ago", unread: false },
   ]);
@@ -68,20 +68,31 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             {unreadCount > 0 && <span className="notif-header-dot"></span>}
           </div>
           <div className="notif-header-text">
-            <div className="notif-header-title">Super Admin Alerts</div>
+            <div className="notif-header-title">Notifications</div>
             <div className="notif-header-subtitle">
               {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
             </div>
           </div>
         </div>
-        <button
-          className="notif-mark-read-btn"
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0}
-          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
-        >
-          <Check size={14} className="notif-check-icon" /> Mark read
-        </button>
+        <div className="notif-header-actions-right">
+          <button
+            className="notif-view-all-btn"
+            onClick={() => {
+              if (onClose) onClose();
+              navigate("/superadmin/notifications");
+            }}
+          >
+            View all
+          </button>
+          <button
+            className="notif-mark-read-btn"
+            onClick={handleMarkAllRead}
+            disabled={unreadCount === 0}
+            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
+          >
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -130,6 +141,7 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
                     <Trash2 size={14} />
                   </button>
                 </div>
+                {n.desc && <div className="notif-card-desc">{n.desc}</div>}
               </div>
             </div>
           ))
@@ -157,13 +169,12 @@ export default function SuperAdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
-  const [isAuditOpen, setIsAuditOpen] = useState(false);
   const headerRightRef = useRef(null);
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
-  const [userProfile, setUserProfile] = useState(() => {
+  const loadProfile = () => {
     try {
       const stored = JSON.parse(localStorage.getItem('user') || '{}');
       const name = stored.name || stored.email || "Super Admin";
@@ -178,39 +189,49 @@ export default function SuperAdminLayout() {
     } catch (e) {
       return { name: "Super Admin", email: "training.portal0987@gmail.com", initials: "SA" };
     }
-  });
+  };
+
+  const [userProfile, setUserProfile] = useState(loadProfile);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+
+  const fetchUser = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const res = await fetch('/api/v1/auth/me', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user) {
+          const name = data.user.name || data.user.email || "Super Admin";
+          const initials = name
+            .split(' ')
+            .map(n => n[0])
+            .join('')
+            .substring(0, 2)
+            .toUpperCase();
+          setUserProfile({
+            name,
+            email: data.user.email || "training.portal0987@gmail.com",
+            initials: initials || "SA"
+          });
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching SuperAdmin profile:", err);
+    }
+  };
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch('/api/v1/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.user) {
-            const name = data.user.name || data.user.email || "Super Admin";
-            const initials = name
-              .split(' ')
-              .map(n => n[0])
-              .join('')
-              .substring(0, 2)
-              .toUpperCase();
-            setUserProfile({
-              name,
-              email: data.user.email || "training.portal0987@gmail.com",
-              initials: initials || "SA"
-            });
-            localStorage.setItem('user', JSON.stringify(data.user));
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching SuperAdmin profile:", err);
-      }
-    };
     fetchUser();
+    const handleProfileUpdate = () => {
+      setUserProfile(loadProfile());
+      fetchUser();
+    };
+    window.addEventListener("userProfileUpdated", handleProfileUpdate);
+    return () => window.removeEventListener("userProfileUpdated", handleProfileUpdate);
   }, []);
 
   useEffect(() => {
@@ -236,7 +257,7 @@ export default function SuperAdminLayout() {
     if (path.startsWith("/super-admin/departments")) return "Academic Departments";
     if (path.startsWith("/super-admin/batches")) return "Cross-Campus Batches";
     if (path.startsWith("/super-admin/users")) return "System Users Directory";
-    if (path.startsWith("/super-admin/verification")) return "Admin Verifications";
+    if (path.startsWith("/super-admin/verification")) return "College Admin Directory";
     if (path.startsWith("/super-admin/coordinators")) return "Coordinators Management";
     if (path.startsWith("/super-admin/mentors")) return "Mentors & Trainers";
     if (path.startsWith("/super-admin/students")) return "Student Directory & Risk";
@@ -270,7 +291,7 @@ export default function SuperAdminLayout() {
       {mobileOpen && (
         <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />
       )}
-      <Sidebar
+      <SuperAdminSidebar
         collapsed={collapsed}
         mobileOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}
@@ -299,16 +320,6 @@ export default function SuperAdminLayout() {
               </div>
 
               <div className="sa-header__right" ref={headerRightRef}>
-                {/* AI Risk Audit Action */}
-                <button
-                  onClick={() => setIsAuditOpen(true)}
-                  className="sa-header__audit-btn"
-                  title="Run AI System Audit"
-                >
-                  <Sparkles size={14} />
-                  <span>AI Risk Audit</span>
-                </button>
-
                 {/* Notification Bell */}
                 <div className="sa-header__notif-wrap">
                   <button
@@ -369,6 +380,17 @@ export default function SuperAdminLayout() {
                         <UserCog size={15} />
                         Edit Profile
                       </Link>
+                      <button
+                        type="button"
+                        className="sa-header__profile-item"
+                        onClick={() => {
+                          setProfileOpen(false);
+                          setIsChangePasswordOpen(true);
+                        }}
+                      >
+                        <Key size={15} />
+                        Change Password
+                      </button>
                       <div className="sa-header__profile-divider" />
                       <button
                         className="sa-header__profile-item sa-header__profile-item--danger"
@@ -394,8 +416,10 @@ export default function SuperAdminLayout() {
           </div>
         </main>
       </div>
-
-      <AIRiskAuditModal isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }

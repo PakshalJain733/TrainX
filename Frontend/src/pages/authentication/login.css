@@ -140,68 +140,778 @@
   min-height: 540px;
 }
 
-/* Left Hero Panel */
-.login-left-panel {
+/* ═══════════════════════════════════════════════════════════
+   ✨ NEW ANIMATION — lp2-* (Morphing Blob + Glowing Logo)
+═══════════════════════════════════════════════════════════ */
+
+/* Panel */
+.lp2-panel {
   flex: 1;
-  background: linear-gradient(150deg, #dce8f5 0%, #cae0f5 100%);
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 40px 36px 36px 36px;
+  padding: 36px 28px 28px;
+  background: linear-gradient(135deg, #1e3a5f 0%, #0f2040 40%, #162d55 70%, #0a1a35 100%);
+  min-height: 540px;
 }
 
-.login-welcome-text {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.2;
-  margin-bottom: 2px;
+/* ── Morphing blobs ────────────────────── */
+.lp2-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  animation: lp2Morph 9s ease-in-out infinite;
+}
+.lp2-blob.b1 {
+  width: 300px; height: 280px;
+  background: rgba(56, 139, 253, 0.22);
+  top: -60px; left: -60px;
+  animation-delay: 0s;
+}
+.lp2-blob.b2 {
+  width: 260px; height: 260px;
+  background: rgba(99, 102, 241, 0.18);
+  bottom: -60px; right: -60px;
+  animation-delay: 3s;
+  animation-duration: 11s;
+}
+.lp2-blob.b3 {
+  width: 200px; height: 200px;
+  background: rgba(6, 182, 212, 0.14);
+  top: 40%; left: 20%;
+  animation-delay: 6s;
+  animation-duration: 8s;
+}
+@keyframes lp2Morph {
+  0%,100% { border-radius: 60% 40% 70% 30% / 50% 60% 40% 50%; transform: translate(0,0) scale(1); }
+  33%      { border-radius: 40% 60% 30% 70% / 60% 40% 60% 40%; transform: translate(20px,-15px) scale(1.08); }
+  66%      { border-radius: 70% 30% 50% 50% / 40% 70% 30% 60%; transform: translate(-12px,20px) scale(0.95); }
 }
 
-.brand-row-login {
+/* ── Diagonal sweep shimmer ────────────── */
+.lp2-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(147, 197, 253, 0.06) 50%,
+    transparent 70%
+  );
+  background-size: 200% 200%;
+  animation: lp2Sweep 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+@keyframes lp2Sweep {
+  0%   { background-position: 200% 200%; }
+  100% { background-position: -200% -200%; }
+}
+
+/* ── Branding ──────────────────────────── */
+.lp2-brand {
+  position: relative;
+  z-index: 4;
+  flex-shrink: 0;
+}
+.lp2-welcome {
+  font-size: 15px;
+  font-weight: 500;
+  color: #93c5fd;
+  margin: 0 0 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.lp2-brand-name {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.lp2-t1 {
+  font-size: 34px;
+  font-weight: 800;
+  color: #f0f6ff;
+  letter-spacing: -1px;
+}
+.lp2-t2 {
+  font-size: 34px;
+  font-weight: 800;
+  color: #60a5fa;
+  letter-spacing: -1px;
+  text-shadow: 0 0 20px rgba(96,165,250,0.5);
+}
+.lp2-tagline {
+  font-size: 13px;
+  font-weight: 500;
+  color: #64a0d4;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🚀 LEARNING JOURNEY & SKILL GROWTH ANIMATION (.lj-*)
+═══════════════════════════════════════════════════════════ */
+
+.lj-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  margin-top: 15px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 0px;
-  margin-bottom: 10px;
-  font-size: 35px;
+  justify-content: center;
 }
 
-.brand-name-login1 {
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
-}
-
-.brand-name-login2 {
-  font-weight: 800;
-  color: #2563eb;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
-}
-
-.login-brand-tagline {
-  font-size: 14.5px;
-  color: #475569;
-  font-weight: 500;
-  line-height: 1.5;
-}
-
-.login-side-image-wrapper {
+/* SVG Path Overlay */
+.lj-svg-path {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  border-radius: 16px;
+  height: 100%;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.lj-main-line {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 0;
+  animation: ljLineDraw 4s ease-in-out infinite alternate;
+}
+
+@keyframes ljLineDraw {
+  0% { stroke-dashoffset: 200; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.lj-pulse-beam {
+  stroke-dasharray: 40 300;
+  animation: ljBeamTravel 3.5s linear infinite;
+}
+
+@keyframes ljBeamTravel {
+  0% { stroke-dashoffset: 340; }
+  100% { stroke-dashoffset: -40; }
+}
+
+/* Journey Nodes Along the Path */
+.lj-node {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.lj-node-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.9);
+  border: 2px solid #60a5fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.8);
+  position: relative;
+}
+
+.lj-node-inner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #38bdf8;
+  animation: ljNodePulse 2s ease-in-out infinite;
+}
+
+@keyframes ljNodePulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.6); opacity: 1; }
+}
+
+.lj-step-pill {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #93c5fd;
+  background: rgba(15, 32, 64, 0.85);
+  border: 1px solid rgba(147, 197, 253, 0.3);
+  padding: 2px 8px;
+  border-radius: 12px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.goal-pill {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.5);
+  background: rgba(14, 116, 144, 0.4);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+/* Node Locations matching SVG curve: M 30 240 Q 140 220 200 150 T 360 40 */
+.node-1 { left: 6%; bottom: 10%; }
+.node-2 { left: 28%; bottom: 38%; }
+.node-3 { left: 54%; top: 26%; }
+.node-4 { right: 6%; top: 4%; }
+
+/* TrainX Pulsing Goal Peak Icon */
+.lj-trainx-glow-wrapper {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lj-trainx-pulse-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 2px solid rgba(56, 189, 248, 0.6);
+  animation: ljTrainXRing 2.5s ease-out infinite;
+}
+
+.lj-trainx-pulse-ring.delay {
+  animation-delay: 1.25s;
+}
+
+@keyframes ljTrainXRing {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.lj-trainx-icon {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.9));
+  animation: ljTrainXFloat 3s ease-in-out infinite;
+}
+
+@keyframes ljTrainXFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.08); }
+}
+
+/* ── Floating Cards along the Pathway ── */
+.lj-card {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 32, 64, 0.88);
+  border: 1px solid rgba(147, 197, 253, 0.25);
+  border-radius: 12px;
+  padding: 6px 10px;
+  min-width: 145px;
+  max-width: 165px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  animation: ljCardFloat 4.5s ease-in-out infinite;
+  transition: transform 0.3s;
+}
+
+@keyframes ljCardFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.lj-card-icon-wrap {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.quiz-bg { background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); }
+.coding-bg { background: rgba(14, 165, 233, 0.2); border: 1px solid rgba(14, 165, 233, 0.4); }
+.ai-bg { background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); }
+.skills-bg { background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); }
+
+.lj-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.lj-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.lj-card-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.lj-card-badge {
+  font-size: 7.5px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 5px;
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.lj-card-badge.active { background: rgba(14, 165, 233, 0.3); color: #7dd3fc; }
+.lj-card-badge.ai-badge { background: rgba(139, 92, 246, 0.3); color: #c4b5fd; }
+.lj-card-badge.ready-badge { background: rgba(16, 185, 129, 0.3); color: #6ee7b7; }
+
+.lj-card-sub {
+  font-size: 8.5px;
+  color: #94a3b8;
+  margin-top: 1px;
+}
+
+.lj-progress-bar {
+  width: 100%;
+  height: 3.5px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
   overflow: hidden;
-  margin-top: auto;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  margin-top: 4px;
 }
 
-.login-side-image {
+.lj-progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  animation: ljFillAnim 3s ease-in-out infinite alternate;
+}
+
+.quiz-fill { width: 85%; background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+.coding-fill { width: 92%; background: linear-gradient(90deg, #0ea5e9, #38bdf8); animation-delay: 0.6s; }
+.ai-fill { width: 95%; background: linear-gradient(90deg, #8b5cf6, #c4b5fd); animation-delay: 1.2s; }
+.skills-fill { width: 99%; background: linear-gradient(90deg, #10b981, #34d399); animation-delay: 1.8s; }
+
+@keyframes ljFillAnim {
+  0% { opacity: 0.7; transform: scaleX(0.85); transform-origin: left; }
+  100% { opacity: 1; transform: scaleX(1); transform-origin: left; }
+}
+
+/* Card Positions: Staggered non-overlapping quadrants */
+.card-quiz { left: 2%; bottom: 20%; animation-delay: 0s; }
+.card-coding { left: 2%; bottom: 48%; animation-delay: 1.2s; }
+.card-ai { left: 48%; top: 38%; animation-delay: 2.4s; }
+.card-skills { right: 2%; top: 12%; animation-delay: 0.8s; }
+
+/* Bottom Bar */
+.lj-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 10px 6px 0;
+  border-top: 1px solid rgba(147, 197, 253, 0.15);
+  z-index: 5;
   width: 100%;
+  box-sizing: border-box;
+}
+
+.lj-bottom-tag {
+  font-size: 10px;
+  font-weight: 600;
+  color: #93c5fd;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+/* ── Rising particles ──────────────────── */
+.lp2-p {
+  position: absolute;
+  border-radius: 50%;
+  animation: lp2Rise 8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.p1 { width:5px;  height:5px;  background:rgba(96,165,250,0.7);  bottom:5%;  left:10%;  animation-delay:0s;   animation-duration:7s; }
+.p2 { width:3px;  height:3px;  background:rgba(167,139,250,0.7); bottom:5%;  left:25%;  animation-delay:1.5s; animation-duration:9s; }
+.p3 { width:6px;  height:6px;  background:rgba(34,211,238,0.6);  bottom:5%;  left:45%;  animation-delay:3s;   animation-duration:6s; }
+.p4 { width:4px;  height:4px;  background:rgba(96,165,250,0.5);  bottom:5%;  left:65%;  animation-delay:0.8s; animation-duration:8s; }
+.p5 { width:5px;  height:5px;  background:rgba(52,211,153,0.6);  bottom:5%;  left:80%;  animation-delay:2.2s; animation-duration:7.5s; }
+.p6 { width:3px;  height:3px;  background:rgba(248,113,113,0.5); bottom:5%;  left:35%;  animation-delay:4s;   animation-duration:9.5s; }
+.p7 { width:4px;  height:4px;  background:rgba(251,191,36,0.5);  bottom:5%;  left:58%;  animation-delay:1s;   animation-duration:6.5s; }
+@keyframes lp2Rise {
+  0%         { transform: translateY(0) scale(1);    opacity: 0; }
+  10%        { opacity: 0.9; }
+  90%        { opacity: 0.5; }
+  100%       { transform: translateY(-440px) scale(0.3); opacity: 0; }
+}
+
+/* ── old lp-* theme marker (kept for reference) ────────── */
+
+
+/* Panel base */
+.login-left-panel {
+  flex: 1;
+  background: linear-gradient(160deg, #080e1f 0%, #0d1a36 40%, #0a1628 70%, #060d1e 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 36px 28px 28px;
+  position: relative;
+  overflow: hidden;
+  min-height: 540px;
+}
+
+/* Text colors on dark */
+.login-left-panel .login-welcome-text  { color: #dbeafe; }
+.login-left-panel .brand-name-login1   { color: #f1f5f9; }
+.login-left-panel .brand-name-login2   { color: #60a5fa; text-shadow: 0 0 20px rgba(96,165,250,0.5); }
+.login-left-panel .login-brand-tagline { color: #7ea8d8; font-size: 13px; }
+
+/* ── Starfield dots ─────────────────────── */
+.lp-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  animation: lpStarTwinkle 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+.st1  { width:2px; height:2px; top:8%;   left:15%;  animation-delay:0s;    opacity:0.6; }
+.st2  { width:1px; height:1px; top:14%;  left:40%;  animation-delay:0.4s;  opacity:0.4; }
+.st3  { width:2px; height:2px; top:22%;  left:72%;  animation-delay:1.1s;  opacity:0.7; }
+.st4  { width:1px; height:1px; top:35%;  left:20%;  animation-delay:0.8s;  opacity:0.5; }
+.st5  { width:2px; height:2px; top:48%;  left:85%;  animation-delay:1.5s;  opacity:0.6; }
+.st6  { width:1px; height:1px; top:60%;  left:55%;  animation-delay:0.3s;  opacity:0.4; }
+.st7  { width:2px; height:2px; top:72%;  left:10%;  animation-delay:2.1s;  opacity:0.5; }
+.st8  { width:1px; height:1px; top:82%;  left:68%;  animation-delay:0.9s;  opacity:0.7; }
+.st9  { width:2px; height:2px; top:90%;  left:32%;  animation-delay:1.7s;  opacity:0.4; }
+.st10 { width:1px; height:1px; top:5%;   left:90%;  animation-delay:0.6s;  opacity:0.6; }
+@keyframes lpStarTwinkle {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.6); }
+}
+
+/* ── Aurora / nebula blobs ─────────────── */
+.lp-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(55px);
+  pointer-events: none;
+  z-index: 0;
+  animation: lpAuroraFloat 8s ease-in-out infinite;
+}
+.lp-aurora.a1 {
+  width: 260px; height: 200px;
+  background: radial-gradient(ellipse, rgba(59,130,246,0.18) 0%, transparent 70%);
+  top: 10%; left: -10%;
+  animation-delay: 0s;
+}
+.lp-aurora.a2 {
+  width: 220px; height: 220px;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.14) 0%, transparent 70%);
+  bottom: 5%; right: -8%;
+  animation-delay: 3s;
+  animation-duration: 10s;
+}
+.lp-aurora.a3 {
+  width: 180px; height: 180px;
+  background: radial-gradient(ellipse, rgba(6,182,212,0.12) 0%, transparent 70%);
+  top: 45%; left: 30%;
+  animation-delay: 1.5s;
+  animation-duration: 7s;
+}
+@keyframes lpAuroraFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(15px, -20px) scale(1.1); }
+  66%       { transform: translate(-10px, 15px) scale(0.92); }
+}
+
+/* ── Mesh grid ─────────────────────────── */
+.lp-mesh-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(96,165,250,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96,165,250,0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Shimmer light streaks ─────────────── */
+.lp-shimmer {
+  position: absolute;
+  width: 1.5px;
+  height: 200px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom,
+    transparent,
+    rgba(147,186,255,0.5) 40%,
+    rgba(147,186,255,0.5) 60%,
+    transparent);
+  pointer-events: none;
+  z-index: 0;
+  animation: lpShimmerFall 5s linear infinite;
+}
+.lp-shimmer.s1 { left: 18%; animation-delay: 0s;   animation-duration: 4.5s; }
+.lp-shimmer.s2 { left: 50%; animation-delay: 1.8s; animation-duration: 5.2s; }
+.lp-shimmer.s3 { left: 82%; animation-delay: 3.2s; animation-duration: 3.9s; }
+@keyframes lpShimmerFall {
+  0%   { transform: translateY(-220px); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 0.8; }
+  100% { transform: translateY(110vh);  opacity: 0; }
+}
+
+/* ── Branding content ─────────────────── */
+.login-left-content {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+}
+
+/* ── Hero area ────────────────────────── */
+.lp-hero {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  margin-top: 4px;
+}
+
+/* ── Central glow ─────────────────────── */
+.lp-glow-bg {
+  position: absolute;
+  width: 280px; height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    rgba(59,130,246,0.22) 0%,
+    rgba(99,102,241,0.08) 50%,
+    transparent 70%);
+  animation: lpGlowPulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes lpGlowPulse {
+  0%, 100% { transform: scale(1);    opacity: 0.8; }
+  50%       { transform: scale(1.22); opacity: 1;   }
+}
+
+/* ── Orbit rings ──────────────────────── */
+.lp-orbit {
+  position: absolute;
+  border-radius: 50%;
+  top: 50%; left: 50%;
+  animation: lpOrbitSpin 12s linear infinite;
+}
+.lp-orbit-outer {
+  width: 240px; height: 240px;
+  border: 1px solid rgba(96,165,250,0.2);
+  border-top-color: rgba(96,165,250,0.6);
+  transform: translate(-50%,-50%);
+  animation-duration: 14s;
+}
+.lp-orbit-inner {
+  width: 168px; height: 168px;
+  border: 1px solid rgba(129,140,248,0.15);
+  border-right-color: rgba(129,140,248,0.5);
+  transform: translate(-50%,-50%);
+  animation-duration: 9s;
+  animation-direction: reverse;
+}
+@keyframes lpOrbitSpin {
+  from { transform: translate(-50%,-50%) rotate(0deg); }
+  to   { transform: translate(-50%,-50%) rotate(360deg); }
+}
+
+/* Orbit glowing dots */
+.lp-orbit-dot {
+  position: absolute;
+  border-radius: 50%;
+  top: -7px; left: 50%;
+  transform: translateX(-50%);
+}
+.lp-dot-a {
+  width: 14px; height: 14px;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.25), 0 0 16px 4px rgba(59,130,246,0.7);
+}
+.lp-dot-b {
+  width: 9px; height: 9px;
+  background: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129,140,248,0.25), 0 0 12px 3px rgba(129,140,248,0.6);
+  top: auto; bottom: -5px;
+  left: 25%;
+}
+.lp-dot-c {
+  width: 11px; height: 11px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34,211,238,0.2), 0 0 14px 4px rgba(34,211,238,0.6);
+  left: 75%;
+}
+
+/* ── Logo stage ───────────────────────── */
+.lp-logo-stage {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ripple rings from logo */
+.lp-pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(96,165,250,0.5);
+  animation: lpRipple 3s ease-out infinite;
+}
+.lp-pulse-ring.pr1 { width: 90px;  height: 90px;  animation-delay: 0s; }
+.lp-pulse-ring.pr2 { width: 125px; height: 125px; animation-delay: 1s;   border-color: rgba(96,165,250,0.3); }
+.lp-pulse-ring.pr3 { width: 160px; height: 160px; animation-delay: 2s;   border-color: rgba(96,165,250,0.15); }
+@keyframes lpRipple {
+  0%   { transform: scale(0.8); opacity: 1;   }
+  100% { transform: scale(1.6); opacity: 0;   }
+}
+
+/* Hexagon border ring */
+.lp-hex-ring {
+  position: absolute;
+  width: 120px; height: 120px;
+  border: 2px solid transparent;
+  border-radius: 28px;
+  background:
+    linear-gradient(#080e1f, #080e1f) padding-box,
+    conic-gradient(from 0deg, #3b82f6, #818cf8, #22d3ee, #3b82f6) border-box;
+  animation: lpHexSpin 6s linear infinite;
+}
+@keyframes lpHexSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.lp-logo-img {
+  width: 88px;
   height: auto;
-  object-fit: cover;
-  object-position: center;
-  display: block;
+  object-fit: contain;
+  filter:
+    brightness(0) invert(1)
+    drop-shadow(0 0 12px rgba(96, 165, 250, 1))
+    drop-shadow(0 0 28px rgba(59, 130, 246, 0.8));
+  animation: lpLogoFloat 5s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+@keyframes lpLogoFloat {
+  0%, 100% { transform: translateY(0px)   scale(1); }
+  50%       { transform: translateY(-12px) scale(1.04); }
+}
+
+/* ── Floating feature cards ───────────── */
+.lp-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(22, 42, 82, 0.9);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
+  padding: 10px 14px;
+  white-space: nowrap;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(147, 197, 253, 0.15),
+    0 0 0 0.5px rgba(96, 165, 250, 0.2);
+  animation: lpCardFloat 5s ease-in-out infinite;
+  z-index: 10;
+}
+.lp-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 16px; right: 16px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(147, 197, 253, 0.5), transparent);
+}
+.lp-card-icon { font-size: 22px; flex-shrink: 0; }
+.lp-card-body { display: flex; flex-direction: column; gap: 3px; }
+.lp-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2eaf8;
+  line-height: 1;
+}
+.lp-card-sub {
+  font-size: 10px;
+  color: #7ea8d8;
+  font-weight: 500;
+  line-height: 1;
+}
+.lp-card-bar {
+  width: 64px;
+  height: 3px;
+  background: rgba(96, 165, 250, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+.lp-card-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  animation: lpBarGrow 3s ease-in-out infinite;
+}
+.lp-card-tl .lp-card-bar-fill { background: linear-gradient(to right, #3b82f6, #60a5fa); animation-delay: 0s; }
+.lp-card-tr .lp-card-bar-fill { background: linear-gradient(to right, #818cf8, #a5b4fc); animation-delay: 0.7s; }
+.lp-card-bl .lp-card-bar-fill { background: linear-gradient(to right, #22d3ee, #67e8f9); animation-delay: 1.4s; }
+.lp-card-br .lp-card-bar-fill { background: linear-gradient(to right, #34d399, #6ee7b7); animation-delay: 2.1s; }
+@keyframes lpBarGrow {
+  0%   { width: 20%; }
+  50%  { width: 88%; }
+  100% { width: 20%; }
+}
+
+/* Card positions — anchored to login-left-panel */
+.lp-card-tl { top: 42%;  left: 6%;   animation-delay: 0s;   animation-duration: 4.8s; }
+.lp-card-tr { top: 42%;  right: 6%;  animation-delay: 1.2s; animation-duration: 5.5s; }
+.lp-card-bl { bottom: 8%; left: 6%;  animation-delay: 2.5s; animation-duration: 4.2s; }
+.lp-card-br { bottom: 8%; right: 6%; animation-delay: 0.7s; animation-duration: 6s;   }
+
+@keyframes lpCardFloat {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+
+/* ── Ambient floating particles ──────── */
+.lp-dot {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: lpParticleRise 7s ease-in-out infinite;
+}
+.dp1 { width:6px;  height:6px;  background:rgba(96,165,250,0.7);  bottom:10%; left:12%;  animation-delay:0s;   animation-duration:6s; }
+.dp2 { width:4px;  height:4px;  background:rgba(129,140,248,0.8); bottom:20%; left:25%;  animation-delay:1.2s; animation-duration:8s; }
+.dp3 { width:8px;  height:8px;  background:rgba(34,211,238,0.5);  bottom:15%; right:18%; animation-delay:2.4s; animation-duration:7s; }
+.dp4 { width:5px;  height:5px;  background:rgba(96,165,250,0.6);  bottom:30%; right:30%; animation-delay:0.6s; animation-duration:9s; }
+.dp5 { width:7px;  height:7px;  background:rgba(52,211,153,0.5);  bottom:5%;  right:8%;  animation-delay:3.6s; animation-duration:6.5s; }
+@keyframes lpParticleRise {
+  0%         { transform: translateY(0) scale(1);   opacity: 0; }
+  10%        { opacity: 0.8; }
+  90%        { opacity: 0.6; }
+  100%       { transform: translateY(-320px) scale(0.5); opacity: 0; }
 }
 
 /* Right Panel - Login Card */
@@ -249,7 +959,8 @@
 .login-logo {
   display: block;
   margin: 0 auto 16px auto;
-  width: 90px;
+  width: 170px;
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }
@@ -487,22 +1198,28 @@
 /* OTP Boxes */
 .login-otp-input-row {
   display: flex;
-  gap: 10px;
-  justify-content: space-between;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .login-otp-digit-input {
+  width: 44px;
+  height: 48px;
+  min-width: 36px;
+  max-width: 48px;
   flex: 1;
-  height: 52px;
   text-align: center;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  border: 2px solid #e2e8f0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 10px;
   outline: none;
   background: #f8fafc;
   color: #0f172a;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .login-otp-digit-input:focus {

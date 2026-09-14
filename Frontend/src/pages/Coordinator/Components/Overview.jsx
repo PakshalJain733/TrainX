@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -16,9 +16,45 @@ import {
   FileText,
   AlertCircle,
   Mail,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { coordinatorStudents } from "../../../data/coordinatorMockData";
 import "../Styles/Overview.css";
+
+/* ── Inline dropdown for Coordinator Overview (CSS: Overview.css .coord-ov-select-*) ── */
+function CoordOvSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`coord-ov-select-wrap${isOpen ? ' coord-ov-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-ov-select-trigger${isOpen ? ' coord-ov-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="coord-ov-select-icon" />}
+        <span className="coord-ov-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`coord-ov-select-arrow${isOpen ? ' coord-ov-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="coord-ov-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-ov-select-option${isSel ? ' coord-ov-select-option--selected' : ''}`}>
+                <span className="coord-ov-select-option-label">{opt.label}</span>
+                {isSel && <Check className="coord-ov-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CoordinatorOverview() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
@@ -139,21 +175,18 @@ export default function CoordinatorOverview() {
               {/* Target Audience */}
               <div>
                 <label className="coord-field-label" style={{ marginBottom: "6px", display: "block" }}>Target Audience</label>
-                <div className="coord-select-wrap">
-                  <Users className="coord-select-icon" size={16} />
-                  <select
-                    value={targetCohort}
-                    onChange={(e) => setTargetCohort(e.target.value)}
-                    className="coord-select-input"
-                  >
-                    <option value="all">All CSE Batches & Students (480 Students)</option>
-                    <option value="cse26">CSE 2026 Alpha Cohort (120 Students)</option>
-                    <option value="fs">Fullstack React & Node Specialization (105 Students)</option>
-                    <option value="ds">Data Science & ML 2025 (110 Students)</option>
-                    <option value="cloud">Cloud Native & DevOps Infrastructure (85 Students)</option>
-                  </select>
-                  <div className="coord-select-arrow">▼</div>
-                </div>
+                <CoordOvSelect
+                  value={targetCohort}
+                  options={[
+                    { value: "all", label: "All CSE Batches & Students (480 Students)" },
+                    { value: "cse26", label: "CSE 2026 Alpha Cohort (120 Students)" },
+                    { value: "fs", label: "Fullstack React & Node Specialization (105 Students)" },
+                    { value: "ds", label: "Data Science & ML 2025 (110 Students)" },
+                    { value: "cloud", label: "Cloud Native & DevOps Infrastructure (85 Students)" },
+                  ]}
+                  onChange={(val) => setTargetCohort(val)}
+                  icon={Users}
+                />
               </div>
 
               {/* Notice Message */}

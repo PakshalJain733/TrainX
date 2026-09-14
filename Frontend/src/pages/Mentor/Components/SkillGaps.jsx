@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   AlertTriangle,
   Sparkles,
@@ -13,10 +13,46 @@ import {
   Calendar,
   Layers,
   ArrowUpRight,
-  TrendingDown
+  TrendingDown,
+  ChevronDown,
+  Check
 } from "lucide-react";
 import "../Styles/Students.css";
 import "../Styles/SkillGaps.css";
+
+/* ── Inline dropdown for Mentor SkillGaps (CSS: SkillGaps.css .mentor-sg-select-*) ── */
+function MentorSgSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-sg-select-wrap${isOpen ? ' mentor-sg-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-sg-select-trigger${isOpen ? ' mentor-sg-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-sg-select-icon" />}
+        <span className="mentor-sg-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-sg-select-arrow${isOpen ? ' mentor-sg-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-sg-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-sg-select-option${isSel ? ' mentor-sg-select-option--selected' : ''}`}>
+                <span className="mentor-sg-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-sg-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Comprehensive mock data for weak students diagnostic monitoring
 const initialWeakStudents = [
@@ -227,24 +263,27 @@ export default function SkillGaps() {
         </div>
 
         <div className="filter-selects-wrap">
-          <div className="select-item">
-            <Filter size={14} />
-            <select value={selectedBatch} onChange={(e) => setSelectedBatch(e.target.value)}>
-              <option value="All">All Batches</option>
-              <option value="BE-CS-2026-A">BE-CS-2026-A</option>
-              <option value="TE-IT-2026-B">TE-IT-2026-B</option>
-              <option value="BE-EXTC-2026-C">BE-EXTC-2026-C</option>
-            </select>
-          </div>
-
-          <div className="select-item">
-            <select value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)}>
-              <option value="All">All Priorities</option>
-              <option value="Critical">Critical Priority</option>
-              <option value="High">High Priority</option>
-              <option value="Medium">Medium Priority</option>
-            </select>
-          </div>
+          <MentorSgSelect
+            value={selectedBatch}
+            onChange={setSelectedBatch}
+            options={[
+              { value: "All", label: "All Batches" },
+              { value: "BE-CS-2026-A", label: "BE-CS-2026-A" },
+              { value: "TE-IT-2026-B", label: "TE-IT-2026-B" },
+              { value: "BE-EXTC-2026-C", label: "BE-EXTC-2026-C" },
+            ]}
+            icon={Filter}
+          />
+          <MentorSgSelect
+            value={selectedPriority}
+            onChange={setSelectedPriority}
+            options={[
+              { value: "All", label: "All Priorities" },
+              { value: "Critical", label: "Critical Priority" },
+              { value: "High", label: "High Priority" },
+              { value: "Medium", label: "Medium Priority" },
+            ]}
+          />
         </div>
       </div>
 

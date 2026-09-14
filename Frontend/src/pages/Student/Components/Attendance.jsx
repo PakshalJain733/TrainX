@@ -7,7 +7,7 @@ import {
   BookOpen, UserCheck, Info, Award,
   FileText, Paperclip, Send, CalendarDays,
   Clock3, Sparkles, CheckCircle, Search, Filter,
-  GraduationCap, RefreshCw, ChevronRight, Layers, Code2
+  GraduationCap, RefreshCw, ChevronRight, ChevronDown, Check, Layers, Code2
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
@@ -17,6 +17,40 @@ import { Button } from "../../../components/ui/Button";
 import { Progress } from "../../../components/ui/Progress";
 import { Input, Label, Textarea } from "../../../components/ui/Form";
 import "../Styles/Attendance.css";
+
+/* ── Inline dropdown for Student Attendance (CSS: Attendance.css .student-att-select-*) ── */
+function StudentAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`student-att-select-wrap${isOpen ? ' student-att-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-att-select-trigger${isOpen ? ' student-att-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="student-att-select-icon" />}
+        <span className="student-att-select-text">{selected ? selected.label : <span className="student-att-select-placeholder">{placeholder}</span>}</span>
+        <ChevronDown className={`student-att-select-arrow${isOpen ? ' student-att-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="student-att-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-att-select-option${isSel ? ' student-att-select-option--selected' : ''}`}>
+                <span className="student-att-select-option-label">{opt.label}</span>
+                {isSel && <Check className="student-att-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Clean initial data structure for student attendance (100% database driven)
 const defaultAttendanceData = {
@@ -486,21 +520,29 @@ export default function Attendance() {
               {/* Month Filter */}
               <div className="history-filter-item">
                 <span className="filter-label">Month:</span>
-                <select value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)}>
-                  <option value="All">All Months</option>
-                  <option value="September">September</option>
-                  <option value="August">August</option>
-                </select>
+                <StudentAttSelect
+                  value={monthFilter}
+                  options={[
+                    { value: "All", label: "All Months" },
+                    { value: "September", label: "September" },
+                    { value: "August", label: "August" },
+                  ]}
+                  onChange={(val) => setMonthFilter(val)}
+                />
               </div>
 
               {/* Status Filter */}
               <div className="history-filter-item">
                 <span className="filter-label">Status:</span>
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="All">All Statuses</option>
-                  <option value="Present">Present</option>
-                  <option value="Absent">Absent</option>
-                </select>
+                <StudentAttSelect
+                  value={statusFilter}
+                  options={[
+                    { value: "All", label: "All Statuses" },
+                    { value: "Present", label: "Present" },
+                    { value: "Absent", label: "Absent" },
+                  ]}
+                  onChange={(val) => setStatusFilter(val)}
+                />
               </div>
             </div>
           </div>

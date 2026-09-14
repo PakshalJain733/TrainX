@@ -1,9 +1,43 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Plus, Download, UploadCloud, X, FileText, CheckCircle2, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, Download, UploadCloud, X, FileText, CheckCircle2, Trash2, ChevronDown, Check } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
 import '../Styles/Students.css';
 import '../Styles/SkillGaps.css';
 import '../Styles/StudyMaterial.css';
+
+/* ── Inline dropdown for Mentor StudyMaterial (CSS: StudyMaterial.css .mentor-sm-select-*) ── */
+function MentorSmSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-sm-select-wrap${isOpen ? ' mentor-sm-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-sm-select-trigger${isOpen ? ' mentor-sm-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-sm-select-icon" />}
+        <span className="mentor-sm-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-sm-select-arrow${isOpen ? ' mentor-sm-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-sm-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-sm-select-option${isSel ? ' mentor-sm-select-option--selected' : ''}`}>
+                <span className="mentor-sm-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-sm-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function StudyMaterial() {
   const [materials, setMaterials] = useState([]);
@@ -184,29 +218,30 @@ export default function StudyMaterial() {
               <div className="studymaterial-form-row">
                 <div className="studymaterial-form-group">
                   <label>Assign Batch</label>
-                  <select
+                  <MentorSmSelect
                     value={form.batch}
-                    onChange={(e) => setForm({ ...form, batch: e.target.value })}
-                  >
-                    <option value="All Batches">All Batches</option>
-                    {dbBatches.map((b) => (
-                      <option key={b.id} value={b.name || b.code}>
-                        {b.name || b.code} ({b.code || b.join_code || b.id})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setForm({ ...form, batch: val })}
+                    options={[
+                      { value: "All Batches", label: "All Batches" },
+                      ...dbBatches.map((b) => ({
+                        value: b.name || b.code,
+                        label: `${b.name || b.code} (${b.code || b.join_code || b.id})`
+                      }))
+                    ]}
+                  />
                 </div>
                 <div className="studymaterial-form-group">
                   <label>Category</label>
-                  <select
+                  <MentorSmSelect
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  >
-                    <option value="PDF Guide">PDF Guide</option>
-                    <option value="Lecture Deck">Lecture Deck</option>
-                    <option value="Code Repo">Code Repo</option>
-                    <option value="Practice Sheet">Practice Sheet</option>
-                  </select>
+                    onChange={(val) => setForm({ ...form, category: val })}
+                    options={[
+                      { value: "PDF Guide", label: "PDF Guide" },
+                      { value: "Lecture Deck", label: "Lecture Deck" },
+                      { value: "Code Repo", label: "Code Repo" },
+                      { value: "Practice Sheet", label: "Practice Sheet" }
+                    ]}
+                  />
                 </div>
               </div>
 

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ShieldCheck, Users, GraduationCap } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ShieldCheck, Users, GraduationCap, Key } from "lucide-react";
 import { MentorSidebar } from "./MentorSidebar";
 import { mentorProfile } from "../../../data/mentorMockData";
+import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/MentorLayout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
@@ -73,14 +74,25 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             </div>
           </div>
         </div>
-        <button
-          className="notif-mark-read-btn"
-          onClick={handleMarkAllRead}
-          disabled={unreadCount === 0}
-          style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
-        >
-          <Check size={14} className="notif-check-icon" /> Mark read
-        </button>
+        <div className="notif-header-actions-right">
+          <button
+            className="notif-view-all-btn"
+            onClick={() => {
+              if (onClose) onClose();
+              navigate("/mentor/notifications");
+            }}
+          >
+            View all
+          </button>
+          <button
+            className="notif-mark-read-btn"
+            onClick={handleMarkAllRead}
+            disabled={unreadCount === 0}
+            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
+          >
+            <Check size={14} className="notif-check-icon" /> Mark read
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -129,6 +141,7 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
                     <Trash2 size={14} />
                   </button>
                 </div>
+                {n.desc && <div className="notif-card-desc">{n.desc}</div>}
               </div>
             </div>
           ))
@@ -156,6 +169,7 @@ export default function MentorLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const headerRightRef = useRef(null);
 
   const navigate = useNavigate();
@@ -324,6 +338,16 @@ export default function MentorLayout() {
                           Profile Settings
                         </button>
                         <button
+                          className="mentor-header__profile-item"
+                          onClick={() => {
+                            setProfileOpen(false);
+                            setIsChangePasswordOpen(true);
+                          }}
+                        >
+                          <Key size={15} />
+                          Change Password
+                        </button>
+                        <button
                           className="mentor-header__profile-item mentor-header__profile-item--danger"
                           onClick={() => {
                             setProfileOpen(false);
@@ -348,6 +372,10 @@ export default function MentorLayout() {
           </div>
         </main>
       </div>
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }

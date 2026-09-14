@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Logo from "../../assets/Logo.png";
-import sideImage from "../../assets/LoginSideImage.png";
+import Logo from "../../assets/Logo2.png";
+import TrainXIcon from "../../assets/TrainX.png";
+
 import "./login.css";
 
 /* ── Reusable SVG icons ─────────────────────────────── */
@@ -83,6 +84,8 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -108,8 +111,87 @@ function Login() {
     setSuccessMsg("");
     setStep("email");
     setOtp(["", "", "", "", "", ""]);
+    setNewPassword("");
+    setConfirmPassword("");
     setPendingUserData(null);
   };
+
+  const handleVerifyForgotOtp = async (e) => {
+    e.preventDefault();
+    const enteredOtp = otp.join("");
+    if (enteredOtp.length < 6) {
+      setErrorMsg("Please enter the complete 6-digit OTP code.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp: enteredOtp }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setStep("new_password");
+        setSuccessMsg("OTP verified successfully! Please enter your new password below.");
+      } else {
+        setErrorMsg(data.message || "Invalid or expired OTP code. Please check and try again.");
+      }
+    } catch (err) {
+      console.error("Verify OTP error:", err);
+      setErrorMsg("Unable to connect to server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    const fullOtp = otp.join("");
+    if (!newPassword || newPassword.length < 6) {
+      setErrorMsg("New password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setErrorMsg("Passwords do not match. Please verify.");
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/reset-password-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          otp: fullOtp,
+          newPassword,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccessMsg("Password reset successfully! You can now log in with your new password.");
+        setTimeout(() => {
+          handleModeSwitch("password");
+        }, 2000);
+      } else {
+        setErrorMsg(data.message || "Failed to reset password. Please try again.");
+      }
+    } catch (err) {
+      console.error("Reset password error:", err);
+      setErrorMsg("Unable to connect to server. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   const handlePostLoginRedirect = (serverUser) => {
     let existingUser = {};
@@ -307,25 +389,190 @@ function Login() {
       <div className="login-bg-shape login-circle6"></div>
 
       <div className="login-wrapper">
-        {/* Left Panel */}
-        <div className="login-left-panel">
-          <div className="login-left-content">
-            <h1 className="login-welcome-text">Welcome to</h1>
+        {/* Left Panel - Learning Journey & Skill Growth Animation */}
+        <div className="lp2-panel">
+          {/* Background Ambient Glows */}
+          <div className="lp2-blob b1"></div>
+          <div className="lp2-blob b2"></div>
+          <div className="lp2-blob b3"></div>
 
-            <div className="brand-row-login">
-              <span className="brand-name-login1">Training</span>
-              <span className="brand-name-login2">Portal</span>
+          {/* Diagonal sweep shimmer */}
+          <div className="lp2-sweep"></div>
+
+          {/* Ambient particles */}
+          <div className="lp2-p p1"></div>
+          <div className="lp2-p p2"></div>
+          <div className="lp2-p p3"></div>
+          <div className="lp2-p p4"></div>
+          <div className="lp2-p p5"></div>
+
+          {/* Top branding */}
+          <div className="lp2-brand">
+            <p className="lp2-welcome">Your Learning Journey</p>
+            <div className="lp2-brand-name">
+              <span className="lp2-t1">Train</span>
+              <span className="lp2-t2">X</span>
+            </div>
+            <p className="lp2-tagline">Learn · Practice · Assess · Excel</p>
+          </div>
+
+          {/* ── Learning Journey Curve & Skill Growth Animation ── */}
+          <div className="lj-container">
+            {/* Animated SVG Curve */}
+            <svg className="lj-svg-path" viewBox="0 0 400 280" fill="none" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="ljCurveGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                  <stop offset="40%" stopColor="#60a5fa" stopOpacity="0.8" />
+                  <stop offset="75%" stopColor="#818cf8" stopOpacity="0.9" />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="1" />
+                </linearGradient>
+                <linearGradient id="ljGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#60a5fa" stopOpacity="0" />
+                  <stop offset="50%" stopColor="#38bdf8" stopOpacity="1" />
+                  <stop offset="100%" stopColor="#60a5fa" stopOpacity="0" />
+                </linearGradient>
+                <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+
+              {/* Background Path Grid / Guide */}
+              <path
+                d="M 30 240 Q 140 220 200 150 T 360 40"
+                stroke="rgba(147, 197, 253, 0.15)"
+                strokeWidth="3"
+                strokeDasharray="4 4"
+                fill="none"
+              />
+
+              {/* Glowing Main Journey Path Line */}
+              <path
+                d="M 30 240 Q 140 220 200 150 T 360 40"
+                stroke="url(#ljCurveGrad)"
+                strokeWidth="4"
+                strokeLinecap="round"
+                fill="none"
+                filter="url(#glowFilter)"
+                className="lj-main-line"
+              />
+
+              {/* Traveling Light Pulse Along Path */}
+              <path
+                d="M 30 240 Q 140 220 200 150 T 360 40"
+                stroke="url(#ljGlowGrad)"
+                strokeWidth="6"
+                strokeLinecap="round"
+                fill="none"
+                className="lj-pulse-beam"
+              />
+            </svg>
+
+            {/* Step 1 Node: Learn / Quiz */}
+            <div className="lj-node node-1">
+              <div className="lj-node-dot">
+                <span className="lj-node-inner-dot"></span>
+              </div>
+              <div className="lj-step-pill">1. Learn</div>
             </div>
 
-            <p className="login-brand-tagline">Learn. Practice. Grow.</p>
-            <p className="login-brand-tagline">
-              Your journey to success starts here.
-            </p>
+            {/* Step 2 Node: Practice / Coding */}
+            <div className="lj-node node-2">
+              <div className="lj-node-dot">
+                <span className="lj-node-inner-dot"></span>
+              </div>
+              <div className="lj-step-pill">2. Practice</div>
+            </div>
+
+            {/* Step 3 Node: Assess / AI Interview */}
+            <div className="lj-node node-3">
+              <div className="lj-node-dot">
+                <span className="lj-node-inner-dot"></span>
+              </div>
+              <div className="lj-step-pill">3. Assess</div>
+            </div>
+
+            {/* Step 4 Node: TrainX Goal / Mastery */}
+            <div className="lj-node node-4">
+              <div className="lj-trainx-glow-wrapper">
+                <div className="lj-trainx-pulse-ring"></div>
+                <div className="lj-trainx-pulse-ring delay"></div>
+                <img src={TrainXIcon} alt="TrainX Target" className="lj-trainx-icon" />
+              </div>
+              <div className="lj-step-pill goal-pill">4. Mastery 🚀</div>
+            </div>
+
+            {/* ── Moving Floating Cards along the Journey ── */}
+            {/* Card 1: Quiz */}
+            <div className="lj-card card-quiz">
+              <div className="lj-card-icon-wrap quiz-bg">📝</div>
+              <div className="lj-card-content">
+                <div className="lj-card-header">
+                  <span className="lj-card-title">Quiz & Basics</span>
+                  <span className="lj-card-badge">Completed</span>
+                </div>
+                <div className="lj-card-sub">Fundamentals Mastered</div>
+                <div className="lj-progress-bar">
+                  <div className="lj-progress-fill quiz-fill"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Coding */}
+            <div className="lj-card card-coding">
+              <div className="lj-card-icon-wrap coding-bg">💻</div>
+              <div className="lj-card-content">
+                <div className="lj-card-header">
+                  <span className="lj-card-title">Coding Lab</span>
+                  <span className="lj-card-badge active">42 Solved</span>
+                </div>
+                <div className="lj-card-sub">Real-time Compiler</div>
+                <div className="lj-progress-bar">
+                  <div className="lj-progress-fill coding-fill"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 3: AI Interview */}
+            <div className="lj-card card-ai">
+              <div className="lj-card-icon-wrap ai-bg">🤖</div>
+              <div className="lj-card-content">
+                <div className="lj-card-header">
+                  <span className="lj-card-title">AI Interview</span>
+                  <span className="lj-card-badge ai-badge">94% Score</span>
+                </div>
+                <div className="lj-card-sub">Mock Assessment</div>
+                <div className="lj-progress-bar">
+                  <div className="lj-progress-fill ai-fill"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 4: Skills Growth */}
+            <div className="lj-card card-skills">
+              <div className="lj-card-icon-wrap skills-bg">⚡</div>
+              <div className="lj-card-content">
+                <div className="lj-card-header">
+                  <span className="lj-card-title">Skill Growth</span>
+                  <span className="lj-card-badge ready-badge">Top 1%</span>
+                </div>
+                <div className="lj-card-sub">Job Ready Profile</div>
+                <div className="lj-progress-bar">
+                  <div className="lj-progress-fill skills-fill"></div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="login-side-image-wrapper">
-            <img src={sideImage} alt="AcadNexus Learning" className="login-side-image" />
+
+          {/* Bottom Footer Pills */}
+          <div className="lj-bottom-bar">
+            <span className="lj-bottom-tag">✦ Interactive Modules</span>
+            <span className="lj-bottom-tag">✦ AI Insights</span>
+            <span className="lj-bottom-tag">✦ Instant Feedback</span>
           </div>
         </div>
+
 
         {/* Right Panel - Login Card */}
         <div className="login-card">
@@ -405,7 +652,7 @@ function Login() {
                       />
                       <span>Remember Me</span>
                     </label>
-                    <button type="button" className="forgot-password-link" onClick={() => handleModeSwitch("otp")}>
+                    <button type="button" className="forgot-password-link" onClick={() => handleModeSwitch("forgot")}>
                       Forgot Password?
                     </button>
                   </div>
@@ -597,6 +844,195 @@ function Login() {
                       <Link className="login-registeration-link" to="/register">
                         Create Account
                       </Link>
+                    </p>
+                  </div>
+                </form>
+              )}
+            </>
+          )}
+          {/* ═════════════════════════════════════════════════ */}
+          {/* MODE 3: FORGOT / RESET PASSWORD (3-STEP FLOW)     */}
+          {/* ═════════════════════════════════════════════════ */}
+          {authMode === "forgot" && (
+            <>
+              {/* STEP 1: Enter Email */}
+              {step === "email" && (
+                <form onSubmit={handleSendOtp}>
+                  <div className="login-input-group">
+                    <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Account Email Address</FieldLabel>
+                    <input
+                      id="forgot-email"
+                      type="email"
+                      required
+                      placeholder="user@pvppcoe.ac.in"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+
+                  <p style={{ fontSize: "12px", color: "#64748b", margin: "10px 0 16px", lineHeight: "1.4" }}>
+                    🔒 Enter your registered email address. We will send a 6-digit OTP to reset your password.
+                  </p>
+
+                  <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                    {Icons.send} {loading ? "Sending OTP..." : "Send OTP"}
+                  </button>
+
+                  <div className="login-links">
+                    <p>
+                      Remembered password?{" "}
+                      <button
+                        type="button"
+                        onClick={() => handleModeSwitch("password")}
+                        className="login-registeration-link"
+                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                      >
+                        Back to Login
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 2: Enter & Verify 6-Digit OTP */}
+              {step === "otp" && (
+                <form onSubmit={handleVerifyForgotOtp}>
+                  <div className="login-input-group">
+                    <div className="login-email-header-row">
+                      <FieldLabel icon={Icons.email}>OTP Sent To</FieldLabel>
+                      <button
+                        type="button"
+                        onClick={handleEditEmail}
+                        className="login-edit-email-btn"
+                      >
+                        {Icons.edit} Edit
+                      </button>
+                    </div>
+
+                    <div className="login-email-display-card">
+                      <span className="login-email-display-text">{email || "user@pvppcoe.ac.in"}</span>
+                    </div>
+                  </div>
+
+                  {/* 6-Digit OTP Input Boxes */}
+                  <div className="login-input-group">
+                    <FieldLabel icon={Icons.key}>Enter 6-Digit OTP</FieldLabel>
+                    <div className="login-otp-input-row">
+                      {otp.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          ref={(el) => (inputRefs.current[idx] = el)}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                          onChange={(e) => handleOtpChange(e, idx)}
+                          onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Resend OTP */}
+                  <div className="login-resend-wrap" style={{ marginTop: "12px" }}>
+                    <span className="login-resend-text">Didn&apos;t receive OTP?</span>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={resendTimer > 0 || loading}
+                      className="login-resend-link-btn"
+                      style={{ opacity: resendTimer > 0 || loading ? 0.6 : 1, cursor: resendTimer > 0 || loading ? "not-allowed" : "pointer" }}
+                    >
+                      ↺ {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                    </button>
+                  </div>
+
+                  <button type="submit" className="login-send-otp-btn" style={{ marginTop: "14px" }} disabled={loading}>
+                    {Icons.send} {loading ? "Verifying OTP..." : "Verify OTP"}
+                  </button>
+
+                  <div className="login-links">
+                    <p>
+                      Remembered password?{" "}
+                      <button
+                        type="button"
+                        onClick={() => handleModeSwitch("password")}
+                        className="login-registeration-link"
+                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                      >
+                        Back to Login
+                      </button>
+                    </p>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 3: Enter New Password & Confirm */}
+              {step === "new_password" && (
+                <form onSubmit={handleResetPasswordSubmit}>
+                  <div className="login-input-group">
+                    <div className="login-email-header-row">
+                      <FieldLabel icon={Icons.shield}>OTP Verified Account</FieldLabel>
+                    </div>
+                    <div className="login-email-display-card" style={{ borderColor: "#86efac", background: "#f0fdf4" }}>
+                      <span className="login-email-display-text" style={{ color: "#166534", fontWeight: "600" }}>✓ {email}</span>
+                    </div>
+                  </div>
+
+                  {/* New Password Input */}
+                  <div className="login-input-group" style={{ marginTop: "14px" }}>
+                    <FieldLabel htmlFor="new-password" icon={Icons.lock}>New Password *</FieldLabel>
+                    <div className="login-password-input-wrap">
+                      <input
+                        id="new-password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="Min. 6 characters"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="password-toggle-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? Icons.eyeOff : Icons.eye}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Confirm New Password Input */}
+                  <div className="login-input-group">
+                    <FieldLabel htmlFor="confirm-new-password" icon={Icons.lock}>Confirm New Password *</FieldLabel>
+                    <div className="login-password-input-wrap">
+                      <input
+                        id="confirm-new-password"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        placeholder="Re-enter new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <button type="submit" className="login-send-otp-btn" style={{ marginTop: "16px" }} disabled={loading}>
+                    {Icons.key} {loading ? "Updating Password..." : "Update Password & Login"}
+                  </button>
+
+                  <div className="login-links">
+                    <p>
+                      Back to{" "}
+                      <button
+                        type="button"
+                        onClick={() => handleModeSwitch("password")}
+                        className="login-registeration-link"
+                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                      >
+                        Login
+                      </button>
                     </p>
                   </div>
                 </form>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Search,
@@ -15,10 +15,46 @@ import {
   BrainCircuit,
   CheckCircle,
   Filter,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { coordinatorSkillGapStudents } from "../../../data/coordinatorMockData";
 import "../Styles/CodingPerformance.css";
+
+/* ── Inline dropdown for Students Need Improvement (CSS: CodingPerformance.css .coord-sni-select-*) ── */
+function CoordSniSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`coord-sni-select-wrap${isOpen ? ' coord-sni-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-sni-select-trigger${isOpen ? ' coord-sni-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="coord-sni-select-icon" />}
+        <span className="coord-sni-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`coord-sni-select-arrow${isOpen ? ' coord-sni-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="coord-sni-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-sni-select-option${isSel ? ' coord-sni-select-option--selected' : ''}`}>
+                <span className="coord-sni-select-option-label">{opt.label}</span>
+                {isSel && <Check className="coord-sni-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function StudentsNeedImprovement() {
   const [dataList, setDataList] = useState(coordinatorSkillGapStudents);
@@ -422,44 +458,36 @@ export default function StudentsNeedImprovement() {
                 </div>
 
                 {/* Department Filter */}
-                <select
+                <CoordSniSelect
                   value={selectedDept}
-                  onChange={(e) => setSelectedDept(e.target.value)}
-                  className="coord-perf-select"
-                >
-                  <option value="all">All Departments</option>
-                  {departments.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {dept} Department
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "all", label: "All Departments" },
+                    ...departments.map((dept) => ({ value: dept, label: `${dept} Department` }))
+                  ]}
+                  onChange={(val) => setSelectedDept(val)}
+                />
 
                 {/* Batch Filter */}
-                <select
+                <CoordSniSelect
                   value={selectedBatch}
-                  onChange={(e) => setSelectedBatch(e.target.value)}
-                  className="coord-perf-select"
-                >
-                  <option value="all">All Batches</option>
-                  {batches.map((b) => (
-                    <option key={b} value={b}>
-                      Batch {b}
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "all", label: "All Batches" },
+                    ...batches.map((b) => ({ value: b, label: `Batch ${b}` }))
+                  ]}
+                  onChange={(val) => setSelectedBatch(val)}
+                />
 
                 {/* Priority Filter */}
-                <select
+                <CoordSniSelect
                   value={selectedPriority}
-                  onChange={(e) => setSelectedPriority(e.target.value)}
-                  className="coord-perf-select"
-                >
-                  <option value="all">All Priorities</option>
-                  <option value="High">High Priority</option>
-                  <option value="Medium">Medium Priority</option>
-                  <option value="Low">Low Priority</option>
-                </select>
+                  options={[
+                    { value: "all", label: "All Priorities" },
+                    { value: "High", label: "High Priority" },
+                    { value: "Medium", label: "Medium Priority" },
+                    { value: "Low", label: "Low Priority" }
+                  ]}
+                  onChange={(val) => setSelectedPriority(val)}
+                />
               </div>
             </div>
           </div>
@@ -709,25 +737,16 @@ export default function StudentsNeedImprovement() {
             <form onSubmit={handleAssignPlan} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", fontSize: "12.5px" }}>
               <div>
                 <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Select Action Plan Type</label>
-                <select
+                <CoordSniSelect
                   value={planType}
-                  onChange={(e) => setPlanType(e.target.value)}
-                  className="coord-perf-select"
-                  style={{ width: "100%" }}
-                >
-                  <option value="Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling">
-                    Custom Practice Set & Mentor Counseling
-                  </option>
-                  <option value="Mandatory DSA & System Design Coding Bootcamp">
-                    Mandatory Coding Bootcamp
-                  </option>
-                  <option value="Official Skill Defaulter Warning + Catchup Labs">
-                    Academic Skill Warning Notice
-                  </option>
-                  <option value="Retake AI Mock Interview Round #2">
-                    Retake AI Mock Interview Round
-                  </option>
-                </select>
+                  options={[
+                    { value: "Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling", label: "Custom Practice Set & Mentor Counseling" },
+                    { value: "Mandatory DSA & System Design Coding Bootcamp", label: "Mandatory Coding Bootcamp" },
+                    { value: "Official Skill Defaulter Warning + Catchup Labs", label: "Academic Skill Warning Notice" },
+                    { value: "Retake AI Mock Interview Round #2", label: "Retake AI Mock Interview Round" },
+                  ]}
+                  onChange={(val) => setPlanType(val)}
+                />
               </div>
 
               <div>

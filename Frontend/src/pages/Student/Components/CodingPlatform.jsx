@@ -6,6 +6,40 @@ import {
 } from "lucide-react";
 import "../Styles/CodingPlatform.css";
 
+/* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
+function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`student-cp-select-wrap${isOpen ? ' student-cp-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-cp-select-trigger${isOpen ? ' student-cp-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="student-cp-select-icon" />}
+        <span className="student-cp-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`student-cp-select-arrow${isOpen ? ' student-cp-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="student-cp-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-cp-select-option${isSel ? ' student-cp-select-option--selected' : ''}`}>
+                <span className="student-cp-select-option-label">{opt.label}</span>
+                {isSel && <Check className="student-cp-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
@@ -26,6 +60,7 @@ export default function CodingPlatform() {
   const [code, setCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedLang, setSelectedLang] = useState("python");
   const [activeTab, setActiveTab] = useState("description"); // description, submissions
   const [mobileView, setMobileView] = useState("problem"); // problem, code
 
@@ -125,12 +160,16 @@ export default function CodingPlatform() {
               </button>
             </div>
 
-            <select className="cp-lang-select" defaultValue="python">
-              <option value="python">Python 3.10</option>
-              <option value="node">Node.js 18</option>
-              <option value="java">Java 17</option>
-              <option value="cpp">C++ 20</option>
-            </select>
+            <StudentCpSelect
+              value={selectedLang}
+              options={[
+                { value: "python", label: "Python 3.10" },
+                { value: "node", label: "Node.js 18" },
+                { value: "java", label: "Java 17" },
+                { value: "cpp", label: "C++ 20" },
+              ]}
+              onChange={(val) => setSelectedLang(val)}
+            />
             
             <button className="cp-run-btn" onClick={handleRun} disabled={isSubmitting}>
               <Play size={14} fill="currentColor" /> <span>Run</span>

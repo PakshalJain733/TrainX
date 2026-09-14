@@ -11,40 +11,37 @@ import {
   ShieldCheck,
   Globe,
   Bell,
-  Sparkles,
-  FileText,
+  Key,
   AlertCircle
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
-import "../../Student/Styles/ProfilePage.css"; // Reuse student profile styling
+import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
+import "../../Student/Styles/ProfilePage.css";
 
 export default function AdminProfile() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   const [form, setForm] = useState({
     name: "System Administrator",
     email: "admin@pvppcoe.ac.in",
     phone: "+91 98765 43210",
-    role: "System Administrator",
+    role: "College Administrator",
     department: "Computer Engineering",
-    college: "Vasantdada Patil Pratishthan College of Engineering (PVPPCOE)",
+    college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
     location: "Mumbai, Maharashtra",
-    bio: "Administrator managing campus training portal, student cohorts, placement drives, and curriculum progress.",
     notifSystemAlerts: true,
     notifWeeklyReport: true,
     notifNewUsers: true,
-    notifBroadcasts: true,
   });
 
   const loadProfile = async () => {
-    setLoading(true);
     try {
-      // Sync with backend DB
       const res = await apiFetch("/admin/profile");
       if (res && res.data) {
         const u = res.data;
@@ -53,15 +50,13 @@ export default function AdminProfile() {
           name: u.name || prev.name,
           email: u.email || prev.email,
           phone: u.mobile_number || u.phone || prev.phone,
-          role: u.role ? (u.role.includes("super") ? "Super Administrator" : "College Administrator") : prev.role,
+          role: u.role ? (u.role.toLowerCase().includes("super") ? "Super Administrator" : "College Administrator") : prev.role,
           department: u.department || prev.department,
           college: u.college_name || u.college || prev.college,
         }));
       }
     } catch (err) {
       console.warn("Error loading admin profile:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -91,10 +86,8 @@ export default function AdminProfile() {
         department: form.department,
         college: form.college,
         location: form.location,
-        bio: form.bio,
       };
 
-      // Save to backend database
       await apiFetch("/admin/profile", {
         method: "PUT",
         body: JSON.stringify(payload),
@@ -111,10 +104,8 @@ export default function AdminProfile() {
 
   const getInitials = (name) => {
     if (!name) return "AD";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();
   };
 
@@ -129,11 +120,11 @@ export default function AdminProfile() {
       {saved && (
         <div className="profile-alert-success">
           <CheckCircle2 size={18} />
-          <span>Profile changes and notification preferences saved successfully to database!</span>
+          <span>Profile changes and notification preferences saved successfully!</span>
         </div>
       )}
 
-      <div className="profile-main-grid">
+      <form onSubmit={handleSave} className="profile-main-grid">
         {/* LEFT COLUMN: Admin Dossier */}
         <div className="profile-dossier-card">
           <div className="profile-avatar-section">
@@ -165,11 +156,16 @@ export default function AdminProfile() {
               <ShieldCheck size={14} />
               <strong>{form.role}</strong>
             </div>
+
+            <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+              <Badge variant="success">Active Admin</Badge>
+              <Badge variant="default">{form.department}</Badge>
+            </div>
           </div>
 
           <div className="profile-academic-divider" />
 
-          {/* Admin Info Table List */}
+          {/* Admin Info Details */}
           <div className="profile-academic-details">
             <h4 className="profile-section-subtitle">Admin Details</h4>
 
@@ -177,7 +173,7 @@ export default function AdminProfile() {
               <Building size={16} className="profile-detail-icon" />
               <div>
                 <span className="profile-detail-label">Institution</span>
-                <p className="profile-detail-value">{form.college || "PVPPCOE"}</p>
+                <p className="profile-detail-value">{form.college}</p>
               </div>
             </div>
 
@@ -185,7 +181,7 @@ export default function AdminProfile() {
               <Briefcase size={16} className="profile-detail-icon" />
               <div>
                 <span className="profile-detail-label">Department</span>
-                <p className="profile-detail-value">{form.department || "Computer Engineering"}</p>
+                <p className="profile-detail-value">{form.department}</p>
               </div>
             </div>
 
@@ -206,165 +202,179 @@ export default function AdminProfile() {
             </div>
 
             <div className="profile-detail-row">
-              <Globe size={16} className="profile-detail-icon" />
+              <Globe size={16} className="profile-detail-icon text-amber-500" />
               <div>
                 <span className="profile-detail-label">Location</span>
-                <p className="profile-detail-value">{form.location || "Mumbai, India"}</p>
+                <p className="profile-detail-value">{form.location}</p>
               </div>
             </div>
+
+            <div className="profile-change-pw-wrap">
+              <button
+                type="button"
+                className="profile-change-pw-btn"
+                onClick={() => setIsChangePasswordOpen(true)}
+              >
+                <Key size={16} />
+                Change Password
+              </button>
+            </div>
+
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Edit Form & Notification Preferences */}
+        {/* RIGHT COLUMN: Edit Profile Form */}
         <div className="profile-form-card">
-          <form onSubmit={handleSave}>
-            {/* Section 1: Personal Contact Details */}
-            <div className="profile-form-section">
-              <div className="profile-section-heading">
-                <div>
-                  <h3 className="profile-heading-title">Account Details</h3>
-                  <p className="profile-heading-desc">Update your administrator account details.</p>
-                </div>
-              </div>
-
-              <div className="profile-form-grid">
-                <div className="profile-field">
-                  <label className="profile-label">Full Name</label>
-                  <input
-                    type="text"
-                    className="profile-input"
-                    value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Email Address</label>
-                  <input
-                    type="email"
-                    className="profile-input"
-                    value={form.email}
-                    onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Phone Number</label>
-                  <input
-                    type="text"
-                    className="profile-input"
-                    value={form.phone}
-                    onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                  />
-                </div>
+          <div className="profile-form-section">
+            <div className="profile-section-heading">
+              <User size={18} className="profile-heading-icon text-indigo-500" />
+              <div>
+                <h3 className="profile-heading-title">Account & Personal Details</h3>
+                <p className="profile-heading-desc">Update your administrator contact & college settings.</p>
               </div>
             </div>
 
-            {/* Section 2: Institutional Settings */}
-            <div className="profile-form-section mt-6">
-              <div className="profile-section-heading">
-                <div>
-                  <h3 className="profile-heading-title">Institutional Overview</h3>
-                  <p className="profile-heading-desc">College affiliation and department authority settings.</p>
-                </div>
-              </div>
-
-              <div className="profile-form-grid">
-                <div className="profile-field full-width">
-                  <label className="profile-label">College Name</label>
-                  <input
-                    type="text"
-                    className="profile-input"
-                    value={form.college}
-                    onChange={(e) => setForm((p) => ({ ...p, college: e.target.value }))}
-                  />
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Department</label>
-                  <input
-                    type="text"
-                    className="profile-input"
-                    value={form.department}
-                    onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
-                  />
-                </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Designation / Role</label>
-                  <input
-                    type="text"
-                    className="profile-input"
-                    value={form.role}
-                    readOnly
-                  />
-                </div>
-              </div>
-
-              <div className="profile-field" style={{ marginTop: "14px" }}>
-                <label className="profile-label">Bio / Description</label>
-                <textarea
-                  rows={3}
+            <div className="profile-form-grid">
+              <div className="profile-field">
+                <label className="profile-label">Full Name *</label>
+                <input
+                  type="text"
                   className="profile-input"
-                  style={{ height: "auto", padding: "10px" }}
-                  value={form.bio}
-                  onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                  placeholder="Brief summary of responsibilities..."
+                  value={form.name}
+                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Email Address *</label>
+                <input
+                  type="email"
+                  className="profile-input"
+                  value={form.email}
+                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Phone Number *</label>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={form.phone}
+                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                  required
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Designation / Role</label>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={form.role}
+                  disabled
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">College Name</label>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={form.college}
+                  onChange={(e) => setForm((p) => ({ ...p, college: e.target.value }))}
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Office Location / Room</label>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={form.location}
+                  onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))}
+                  placeholder="e.g. Admin Block, Room 102"
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Office Hours / Availability</label>
+                <input
+                  type="text"
+                  className="profile-input"
+                  value={form.officeHours || "Mon - Fri, 09:00 AM - 05:00 PM"}
+                  onChange={(e) => setForm((p) => ({ ...p, officeHours: e.target.value }))}
                 />
               </div>
             </div>
 
-            {/* Section 3: Notification Toggles */}
-            <div className="profile-form-section">
-              <div className="profile-section-heading">
-                <Bell size={18} className="profile-heading-icon" />
-                <div>
-                  <h3 className="profile-heading-title">System Preferences</h3>
-                  <p className="profile-heading-desc">Configure automated alerts and reports.</p>
+            {/* Alert Preferences */}
+            <div style={{ marginTop: "20px", paddingTop: "16px", borderTop: "1.5px solid #f1f5f9" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+                <Bell size={16} style={{ color: "#4f46e5" }} />
+                <h4 style={{ margin: 0, fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>Alert Preferences</h4>
+              </div>
+
+              <div className="profile-toggle-list" style={{ gap: "8px" }}>
+                <div className="profile-toggle-item" style={{ padding: "8px 10px" }}>
+                  <div className="profile-toggle-text">
+                    <span className="profile-toggle-title" style={{ fontSize: "12px" }}>System Security Alerts</span>
+                  </div>
+                  <label className="profile-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.notifSystemAlerts}
+                      onChange={(e) => setForm((p) => ({ ...p, notifSystemAlerts: e.target.checked }))}
+                    />
+                    <span className="profile-slider round" />
+                  </label>
+                </div>
+
+                <div className="profile-toggle-item" style={{ padding: "8px 10px" }}>
+                  <div className="profile-toggle-text">
+                    <span className="profile-toggle-title" style={{ fontSize: "12px" }}>Weekly Performance Summary</span>
+                  </div>
+                  <label className="profile-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.notifWeeklyReport}
+                      onChange={(e) => setForm((p) => ({ ...p, notifWeeklyReport: e.target.checked }))}
+                    />
+                    <span className="profile-slider round" />
+                  </label>
+                </div>
+
+                <div className="profile-toggle-item" style={{ padding: "8px 10px" }}>
+                  <div className="profile-toggle-text">
+                    <span className="profile-toggle-title" style={{ fontSize: "12px" }}>User Registration Alerts</span>
+                  </div>
+                  <label className="profile-switch">
+                    <input
+                      type="checkbox"
+                      checked={form.notifNewUsers}
+                      onChange={(e) => setForm((p) => ({ ...p, notifNewUsers: e.target.checked }))}
+                    />
+                    <span className="profile-slider round" />
+                  </label>
                 </div>
               </div>
-
-              <div className="profile-toggles-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={form.notifSystemAlerts}
-                    onChange={(e) => setForm((p) => ({ ...p, notifSystemAlerts: e.target.checked }))}
-                  />
-                  <span>Receive Critical System & Security Alerts</span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={form.notifWeeklyReport}
-                    onChange={(e) => setForm((p) => ({ ...p, notifWeeklyReport: e.target.checked }))}
-                  />
-                  <span>Receive Automated Weekly Performance Summary Reports</span>
-                </label>
-
-                <label style={{ display: "flex", alignItems: "center", gap: "10px", fontSize: "13px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={form.notifNewUsers}
-                    onChange={(e) => setForm((p) => ({ ...p, notifNewUsers: e.target.checked }))}
-                  />
-                  <span>New User Registration & Enrollment Notifications</span>
-                </label>
-              </div>
             </div>
+          </div>
 
-            {/* Bottom Actions */}
-            <div className="profile-actions-bar">
-              <button type="submit" className="profile-save-btn" disabled={saving}>
-                <Save size={16} /> {saving ? "Saving Changes..." : "Save Changes"}
-              </button>
-            </div>
-          </form>
+          <div className="profile-actions-bar">
+            <button type="submit" className="profile-save-btn" disabled={saving}>
+              <Save size={16} /> {saving ? "Saving Changes..." : "Save Profile Changes"}
+            </button>
+          </div>
         </div>
-      </div>
+      </form>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }

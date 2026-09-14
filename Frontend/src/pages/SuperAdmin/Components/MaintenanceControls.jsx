@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import ReactDOM from "react-dom";
 import {
   SlidersHorizontal,
   Power,
@@ -13,10 +14,164 @@ import {
   Users,
   CalendarCheck,
   Eye,
-  Shield
+  Shield,
+  X,
+  MessageSquare,
+  Lock,
+  ArrowRight,
+  Info
 } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
+import '../Styles/SuperAdmin.css';
 import '../Styles/MaintenanceControls.css';
+
+/* ── Interactive Modal Component for Editing Notice ─────────────────── */
+function EditNoticeModal({ moduleData, onClose, onSave }) {
+  const [message, setMessage] = useState(moduleData.message || "");
+
+  const quickTemplates = [
+    "Scheduled Database Maintenance in progress until 04:00 AM UTC.",
+    "System API & Security Upgrades undergoing routine maintenance.",
+    "AI Evaluation Model recalibration in progress. Returning shortly.",
+    "Platform performance optimization & server updates active."
+  ];
+
+  if (!moduleData) return null;
+
+  return ReactDOM.createPortal(
+    <div className="mc-modal-overlay" onClick={onClose}>
+      <div className="mc-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="mc-modal-header">
+          <div className="mc-modal-title">
+            <Edit3 size={18} className="text-indigo-600" />
+            <span>Customize Maintenance Message</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mc-modal-body">
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 font-bold shrink-0">
+              <SlidersHorizontal size={18} />
+            </div>
+            <div>
+              <div className="font-extrabold text-slate-900 text-sm">{moduleData.name}</div>
+              <div className="text-xs text-slate-500">{moduleData.category} • Target Role: {moduleData.role}</div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide mb-1.5">
+              Notice Message Shown To Users:
+            </label>
+            <textarea
+              rows={3}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Enter custom notice message..."
+              className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-indigo-500 resize-none shadow-xs font-medium"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-600 mb-1">Quick Notice Templates:</label>
+            <div className="mc-template-chips">
+              {quickTemplates.map((tmpl, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setMessage(tmpl)}
+                  className="mc-template-chip"
+                >
+                  + {tmpl.split(' ')[0]} {tmpl.split(' ')[1]}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mc-modal-footer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 transition rounded-xl cursor-pointer"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onSave(moduleData.key, message)}
+            className="sa-btn-primary"
+          >
+            <span>Save Notice Message</span>
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+/* ── Interactive Modal Component for Live Screen Preview ─────────── */
+function LivePreviewModal({ moduleData, onClose }) {
+  if (!moduleData) return null;
+
+  return ReactDOM.createPortal(
+    <div className="mc-modal-overlay" onClick={onClose}>
+      <div className="mc-modal-card" onClick={(e) => e.stopPropagation()}>
+        <div className="mc-modal-header">
+          <div className="mc-modal-title">
+            <Eye size={18} className="text-indigo-600" />
+            <span>Simulated User Maintenance Screen</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="mc-modal-body">
+          <div className="mc-preview-screen-card">
+            <div className="mc-preview-lock-icon">
+              <Lock size={24} />
+            </div>
+            <div>
+              <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider mb-2">
+                Under Scheduled Maintenance
+              </span>
+              <h3 className="font-extrabold text-slate-900 text-base">{moduleData.name}</h3>
+              <p className="text-xs text-amber-900 font-semibold mt-2 px-4 py-2 bg-amber-50 rounded-xl border border-amber-200">
+                "{moduleData.message}"
+              </p>
+            </div>
+            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-1">
+              <Info size={13} className="text-slate-400" />
+              <span>Target Role Restricted: <strong>{moduleData.role}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mc-modal-footer">
+          <button
+            type="button"
+            onClick={onClose}
+            className="sa-btn-primary"
+          >
+            <span>Close Preview</span>
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 export default function MaintenanceControls() {
   const {
@@ -29,9 +184,8 @@ export default function MaintenanceControls() {
 
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [editingModuleKey, setEditingModuleKey] = useState(null);
-  const [messageInput, setMessageInput] = useState("");
-  const [previewModuleKey, setPreviewModuleKey] = useState(null);
+  const [editingModule, setEditingModule] = useState(null);
+  const [previewModule, setPreviewModule] = useState(null);
 
   const modulesList = Object.values(config.modules);
 
@@ -67,18 +221,18 @@ export default function MaintenanceControls() {
     }
   };
 
-  const handleSaveMessage = (key) => {
-    updateModuleMessage(key, messageInput);
-    setEditingModuleKey(null);
+  const handleSaveMessage = (key, msg) => {
+    updateModuleMessage(key, msg);
+    setEditingModule(null);
   };
 
   const categories = [
     { id: "all", label: "All Modules", count: totalModules },
-    { id: "Auth & Gateways", label: "Auth & Login" },
-    { id: "Dashboards", label: "Role Dashboards" },
-    { id: "AI Engine", label: "AI Systems (USPs)" },
-    { id: "Learning & Practice", label: "Learning & Coding" },
-    { id: "Operations & Monitoring", label: "Operations & Reports" },
+    { id: "Auth & Gateways", label: "Auth & Login", count: modulesList.filter(m => m.category === "Auth & Gateways").length },
+    { id: "Dashboards", label: "Role Dashboards", count: modulesList.filter(m => m.category === "Dashboards").length },
+    { id: "AI Engine", label: "AI Systems (USPs)", count: modulesList.filter(m => m.category === "AI Engine").length },
+    { id: "Learning & Practice", label: "Learning & Coding", count: modulesList.filter(m => m.category === "Learning & Practice").length },
+    { id: "Operations & Monitoring", label: "Operations & Reports", count: modulesList.filter(m => m.category === "Operations & Monitoring").length },
   ];
 
   return (
@@ -94,17 +248,17 @@ export default function MaintenanceControls() {
             Manage live accessibility for all 18 platform modules across Student, Coordinator, Mentor, and Admin roles
           </p>
         </div>
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="maintenancecontrols-header-actions">
           <button
             type="button"
             onClick={toggleGlobalEmergencyMode}
             className={`maintenancecontrols-btn-emergency ${config.globalEmergencyMode ? 'maintenancecontrols-btn-emergency--on' : ''}`}
           >
-            <Power size={14} />
-            <span>{config.globalEmergencyMode ? "Emergency ON" : "Emergency Maintenance"}</span>
+            <Power size={15} />
+            <span>{config.globalEmergencyMode ? "Emergency Mode ON" : "Emergency Maintenance"}</span>
           </button>
           <button type="button" onClick={turnAllModulesOn} className="sa-btn-primary">
-            <RefreshCw size={14} />
+            <RefreshCw size={15} />
             <span>Restore All Systems ON</span>
           </button>
         </div>
@@ -112,76 +266,77 @@ export default function MaintenanceControls() {
 
       {/* Global Emergency Alert Banner if ON */}
       {config.globalEmergencyMode && (
-        <div className="p-4 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3">
+        <div className="p-4 bg-amber-50/90 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
           <div className="flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-            <p className="text-xs text-amber-800 font-medium">
+            <p className="text-xs text-amber-900 font-semibold">
               Emergency Maintenance Mode is currently active. All role dashboards are temporarily redirected to scheduled maintenance screens.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={toggleGlobalEmergencyMode}
-            className="px-2.5 py-1 bg-amber-600 text-white font-semibold text-xs rounded-lg transition shrink-0 cursor-pointer"
-          >
-            Turn Off Emergency
-          </button>
         </div>
       )}
 
       {/* Standardized KPI Grid */}
       <div className="sa-kpi-grid">
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">Managed Modules</span>
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-              <SlidersHorizontal size={16} />
+            <div className="sa-stats-icon-box sa-stats-icon-box--default">
+              <SlidersHorizontal size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val">{totalModules} Systems</h3>
-            <span className="text-xs text-slate-500 font-medium">Full feature inventory</span>
+            <p className="sa-stats-change">
+              <span className="sa-stats-change-text--up">Full feature inventory</span>
+            </p>
           </div>
         </div>
 
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">Active Online</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
-              <CheckCircle2 size={16} />
+            <div className="sa-stats-icon-box sa-stats-icon-box--default">
+              <CheckCircle2 size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val text-emerald-600">{activeCount} Systems</h3>
-            <span className="text-xs text-emerald-600 font-semibold">
-              {((activeCount / totalModules) * 100).toFixed(0)}% Operational
-            </span>
+            <p className="sa-stats-change">
+              <span className="sa-stats-change-text--up">
+                {((activeCount / totalModules) * 100).toFixed(0)}% Operational
+              </span>
+            </p>
           </div>
         </div>
 
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">Under Maintenance</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
-              <Wrench size={16} />
+            <div className="sa-stats-icon-box sa-stats-icon-box--default">
+              <Wrench size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val text-amber-600">{maintenanceCount} Systems</h3>
-            <span className="text-xs text-amber-600 font-semibold">Toggled OFF</span>
+            <p className="sa-stats-change">
+              <span className="sa-stats-change-text--up">Toggled OFF</span>
+            </p>
           </div>
         </div>
 
         <div className="sa-stats-card">
-          <div className="flex items-center justify-between">
+          <div className="sa-stats-card-header">
             <span className="sa-stats-label">Core USPs</span>
-            <div className="w-8 h-8 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
-              <Sparkles size={16} />
+            <div className="sa-stats-icon-box sa-stats-icon-box--default">
+              <Sparkles size={18} />
             </div>
           </div>
-          <div className="mt-2">
+          <div className="sa-stats-card-body">
             <h3 className="sa-stats-val text-purple-600">{uspCount} Key Features</h3>
-            <span className="text-xs text-purple-600 font-semibold">AI Roadmaps, Interviews, etc.</span>
+            <p className="sa-stats-change">
+              <span className="sa-stats-change-text--up">AI Roadmaps, Interviews, etc.</span>
+            </p>
           </div>
         </div>
       </div>
@@ -198,14 +353,15 @@ export default function MaintenanceControls() {
               className={`maintenancecontrols-category-pill ${isActive ? 'maintenancecontrols-category-pill--active' : ''}`}
             >
               <span>{tab.label}</span>
+              <span className="mc-tab-badge">{tab.count}</span>
             </button>
           );
         })}
       </div>
 
       {/* Search Input Card */}
-      <div className="sa-search-card">
-        <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
+      <div className="departments-filter-card">
+        <div className="sa-search-wrap dept-search-box" style={{ maxWidth: "100%" }}>
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
@@ -234,153 +390,115 @@ export default function MaintenanceControls() {
               {filteredModules.map((mod) => {
                 const CategoryIcon = getCategoryIcon(mod.category);
                 const isCurrentlyActive = mod.active && !config.globalEmergencyMode;
-                const isEditing = editingModuleKey === mod.key;
 
                 return (
-                  <React.Fragment key={mod.key}>
-                    <tr className="maintenancecontrols-tr">
-                      <td className="maintenancecontrols-td">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex flex-shrink-0 items-center justify-center font-bold text-xs border ${
-                            isCurrentlyActive
-                              ? "bg-indigo-50 text-indigo-600 border-indigo-100"
-                              : "bg-amber-50 text-amber-600 border-amber-200"
-                          }`}>
-                            <CategoryIcon size={16} />
-                          </div>
-                          <div>
-                            <div className="font-bold text-slate-900 flex items-center gap-2">
-                              <span>{mod.name}</span>
-                              {mod.isUSP && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
-                                  USP
-                                </span>
-                              )}
-                            </div>
-                            <div className="text-[11px] text-slate-500 mt-0.5">{mod.description}</div>
-                          </div>
+                  <tr key={mod.key} className="maintenancecontrols-tr">
+                    <td className="maintenancecontrols-td">
+                      <div className="mc-module-info-wrap">
+                        <div className={`mc-module-icon-box ${isCurrentlyActive ? 'mc-module-icon-box--active' : 'mc-module-icon-box--maintenance'}`}>
+                          <CategoryIcon size={18} />
                         </div>
-                      </td>
+                        <div>
+                          <div className="mc-module-title-row">
+                            <span>{mod.name}</span>
+                            {mod.isUSP && (
+                              <span className="mc-usp-badge">
+                                USP
+                              </span>
+                            )}
+                          </div>
+                          <div className="mc-module-desc">{mod.description}</div>
+                        </div>
+                      </div>
+                    </td>
 
-                      <td className="maintenancecontrols-td">
-                        <span className="inline-block whitespace-nowrap px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-                          {mod.category}
-                        </span>
-                      </td>
+                    <td className="maintenancecontrols-td">
+                      <span className="mc-category-badge">
+                        {mod.category}
+                      </span>
+                    </td>
 
-                      <td className="maintenancecontrols-td font-medium text-slate-700">
+                    <td className="maintenancecontrols-td">
+                      <span className="mc-role-badge">
                         {mod.role}
-                      </td>
+                      </span>
+                    </td>
 
-                      <td className="maintenancecontrols-td">
-                        {isCurrentlyActive ? (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 inline-flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Online
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200 inline-flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Maintenance
-                          </span>
-                        )}
-                      </td>
+                    <td className="maintenancecontrols-td">
+                      {isCurrentlyActive ? (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 inline-flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Maintenance
+                        </span>
+                      )}
+                    </td>
 
-                      <td className="maintenancecontrols-td-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {/* Clean High-Contrast Toggle Switch Button */}
-                          <button
-                            type="button"
-                            onClick={() => toggleModule(mod.key)}
-                            className={`maintenancecontrols-switch-btn ${
-                              isCurrentlyActive
-                                ? 'maintenancecontrols-switch-btn--enabled'
-                                : 'maintenancecontrols-switch-btn--disabled'
-                            }`}
-                          >
-                            <span className={`maintenancecontrols-switch-dot ${
-                              isCurrentlyActive
-                                ? 'maintenancecontrols-switch-dot--enabled'
-                                : 'maintenancecontrols-switch-dot--disabled'
-                            }`}></span>
-                            <span>{isCurrentlyActive ? "Enabled" : "Disabled"}</span>
-                          </button>
+                    <td className="maintenancecontrols-td-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* High-Contrast Toggle Switch Button */}
+                        <button
+                          type="button"
+                          onClick={() => toggleModule(mod.key)}
+                          className={`maintenancecontrols-switch-btn ${
+                            isCurrentlyActive
+                              ? 'maintenancecontrols-switch-btn--enabled'
+                              : 'maintenancecontrols-switch-btn--disabled'
+                          }`}
+                        >
+                          <span className={`maintenancecontrols-switch-dot ${
+                            isCurrentlyActive
+                              ? 'maintenancecontrols-switch-dot--enabled'
+                              : 'maintenancecontrols-switch-dot--disabled'
+                          }`}></span>
+                          <span>{isCurrentlyActive ? "Enabled" : "Maintenance"}</span>
+                        </button>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (isEditing) {
-                                setEditingModuleKey(null);
-                              } else {
-                                setEditingModuleKey(mod.key);
-                                setMessageInput(mod.message);
-                              }
-                            }}
-                            className="maintenancecontrols-action-icon-btn"
-                            title="Edit Maintenance Message"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPreviewModuleKey(previewModuleKey === mod.key ? null : mod.key)}
-                            className="maintenancecontrols-action-icon-btn"
-                            title="Preview Screen"
-                          >
-                            <Eye size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                        <button
+                          type="button"
+                          onClick={() => setEditingModule(mod)}
+                          className="maintenancecontrols-action-icon-btn"
+                          title="Edit Custom Notice Message"
+                        >
+                          <Edit3 size={15} />
+                        </button>
 
-                    {/* Expandable Notice Editor Row */}
-                    {isEditing && (
-                      <tr className="bg-slate-50/80 border-b border-slate-200">
-                        <td colSpan={5} className="py-3 px-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-semibold text-slate-700 shrink-0">Custom Notice Message:</span>
-                            <input
-                              type="text"
-                              value={messageInput}
-                              onChange={(e) => setMessageInput(e.target.value)}
-                              className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-indigo-500"
-                              placeholder="Message shown to users during maintenance..."
-                            />
-                            <button
-                              type="button"
-                              onClick={() => handleSaveMessage(mod.key)}
-                              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition"
-                            >
-                              Save Message
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingModuleKey(null)}
-                              className="px-3 py-1.5 text-xs text-slate-500 hover:text-slate-700 font-medium"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-
-                    {/* Expandable Preview Row */}
-                    {previewModuleKey === mod.key && (
-                      <tr className="bg-indigo-50/40 border-b border-slate-200">
-                        <td colSpan={5} className="py-3 px-4">
-                          <div className="text-xs text-indigo-900 font-medium flex items-center gap-2">
-                            <span className="font-bold text-indigo-950">Maintenance View Preview:</span>
-                            <span className="italic">"{mod.message}"</span>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewModule(mod)}
+                          className="maintenancecontrols-action-icon-btn"
+                          title="Preview Simulated Live Screen"
+                        >
+                          <Eye size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Edit Notice Modal Portal */}
+      {editingModule && (
+        <EditNoticeModal
+          moduleData={editingModule}
+          onClose={() => setEditingModule(null)}
+          onSave={handleSaveMessage}
+        />
+      )}
+
+      {/* Live Preview Modal Portal */}
+      {previewModule && (
+        <LivePreviewModal
+          moduleData={previewModule}
+          onClose={() => setPreviewModule(null)}
+        />
+      )}
     </div>
   );
 }

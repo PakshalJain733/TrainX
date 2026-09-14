@@ -268,23 +268,31 @@ body {
 .notif-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .notif-tab {
-  padding: 6px 16px;
-  font-size: 13px;
+  padding: 6px 14px;
+  font-size: 12.5px;
   font-weight: 600;
   border-radius: 20px;
-  border: none;
+  border: 1px solid #e2e8f0;
   cursor: pointer;
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #64748b;
+  transition: all 0.2s ease;
+}
+
+.notif-tab:hover {
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .notif-tab.active {
   background: #2563eb;
   color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
 }
 
 .notif-list-wrap {
@@ -534,6 +542,85 @@ body {
 .superadmin-header__profile-item--danger:hover {
   background: #fef2f2;
   color: #ef4444;
+}
+
+/* sa-header prefixed avatar & profile dropdown overrides */
+.sa-header__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+  box-sizing: border-box;
+}
+
+.sa-header__profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sa-header__profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 280px;
+  width: max-content;
+  max-width: 340px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 8px;
+  z-index: 100;
+}
+
+.sa-header__profile-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+}
+
+.sa-header__profile-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.sa-header__profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sa-header__profile-sub {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 /* Card Body */

@@ -1,10 +1,45 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw } from "lucide-react";
+import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
+import "../Styles/AdminQuizzes.css";
+
+/* ── Inline dropdown for Admin Quizzes (CSS: AdminQuizzes.css .admin-quiz-select-*) ── */
+function AdminQuizSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`admin-quiz-select-wrap${isOpen ? ' admin-quiz-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-quiz-select-trigger${isOpen ? ' admin-quiz-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-quiz-select-icon" />}
+        <span className="admin-quiz-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-quiz-select-arrow${isOpen ? ' admin-quiz-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="admin-quiz-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-quiz-select-option${isSel ? ' admin-quiz-select-option--selected' : ''}`}>
+                <span className="admin-quiz-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-quiz-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const API_BASE = "/api/v1";
 
@@ -406,14 +441,17 @@ export default function AdminQuizzes() {
                 <div className="form-row">
                   <div className="form-group">
                     <label>Target Batch</label>
-                    <select value={batch} onChange={e => setBatch(e.target.value)}>
-                      <option value="All Batches">All Batches</option>
-                      {availableBatches.map((b) => (
-                        <option key={b.id} value={b.name}>
-                          {b.name} {b.join_code ? `(${b.join_code})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                    <AdminQuizSelect
+                      value={batch}
+                      onChange={setBatch}
+                      options={[
+                        { value: "All Batches", label: "All Batches" },
+                        ...availableBatches.map((b) => ({
+                          value: b.name,
+                          label: `${b.name} ${b.join_code ? `(${b.join_code})` : ""}`
+                        }))
+                      ]}
+                    />
                   </div>
 
                   {mode === "ai" ? (

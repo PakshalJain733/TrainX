@@ -1,15 +1,220 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { initialBatches } from '../../../data/superAdminMockData';
-import StatusBadge from '../../../components/SuperAdmin/StatusBadge';
-import ActionDropdown from '../../../components/SuperAdmin/ActionDropdown';
-import { Layers, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown } from 'lucide-react';
+import { Layers, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check } from 'lucide-react';
 import { batchAPI, collegeAPI, departmentAPI } from '../../../services/api';
+import '../Styles/SuperAdmin.css';
 import '../../Admin/Styles/AdminUsers.css';
 import '../Styles/Batches.css';
 
+/* ── Inline dropdown for Batches (CSS: Batches.css .batch-select-*) ── */
+function BatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, disabled = false, direction }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [dropUp, setDropUp] = React.useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+
+  React.useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleToggle = () => {
+    if (!disabled && !isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (direction === 'up') {
+        setDropUp(true);
+      } else if (direction === 'down') {
+        setDropUp(false);
+      } else {
+        setDropUp(spaceBelow < 220);
+      }
+    }
+    if (!disabled) setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`batch-select-wrap${isOpen ? ' batch-select-wrap--open' : ''}${disabled ? ' batch-select-wrap--disabled' : ''}`} ref={ref}>
+      <button type="button" disabled={disabled} onClick={handleToggle} className={`batch-select-trigger${isOpen ? ' batch-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="batch-select-icon" />}
+        <span className="batch-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`batch-select-arrow${isOpen ? ' batch-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && !disabled && (
+        <div className={`batch-select-dropdown${dropUp ? ' batch-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`batch-select-option${isSel ? ' batch-select-option--selected' : ''}`}>
+                <span className="batch-select-option-label">{opt.label}</span>
+                {isSel && <Check className="batch-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+function StatusBadge({ status }) {
+  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  if (status === 'Active' || status === 'Verified' || status === 'Available') {
+    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  } else if (status === 'Inactive' || status === 'Disabled') {
+    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  } else if (status === 'High' || status === 'In Progress') {
+    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+  } else if (status === 'Busy' || status === 'Medium') {
+    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+  } else if (status === 'Near Completion') {
+    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+      {status}
+    </span>
+  );
+}
+
+function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = [] }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const toggleDropdown = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(!open);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        buttonRef.current && !buttonRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function handleScrollOrResize() {
+      if (open && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + 4,
+          right: window.innerWidth - rect.right,
+        });
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [open]);
+
+  return (
+    <div className="action-dropdown-container">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggleDropdown}
+        className={`action-dropdown-trigger ${open ? 'open' : ''}`}
+        title="Actions"
+      >
+        <MoreVertical size={16} />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="action-dropdown-menu action-dropdown-portal"
+          style={{
+            top: `${coords.top}px`,
+            right: `${coords.right}px`,
+          }}
+        >
+          {onView && (
+            <button
+              type="button"
+              onClick={() => { onView(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              <Eye className="action-dropdown-icon" />
+              <span>View Details</span>
+            </button>
+          )}
+
+          {onVerify && (
+            <button
+              type="button"
+              onClick={() => { onVerify(); setOpen(false); }}
+              className="action-dropdown-item action-dropdown-item--verify"
+            >
+              <ShieldCheck className="action-dropdown-icon" />
+              <span>Verify Access</span>
+            </button>
+          )}
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => { onEdit(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              <Edit2 className="action-dropdown-icon" />
+              <span>Edit Record</span>
+            </button>
+          )}
+
+          {customActions.map((action, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => { action.onClick(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              {action.icon && <action.icon className="action-dropdown-icon" />}
+              <span>{action.label}</span>
+            </button>
+          ))}
+
+          {onDelete && (
+            <>
+              <div className="action-dropdown-divider" />
+              <button
+                type="button"
+                onClick={() => { onDelete(); setOpen(false); }}
+                className="action-dropdown-item action-dropdown-item--danger"
+              >
+                <Trash2 className="action-dropdown-icon" />
+                <span>Remove Record</span>
+              </button>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export default function Batches() {
-  const [batches, setBatches] = useState(initialBatches);
+  const [batches, setBatches] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [departments, setDepartments] = useState([]);
 
@@ -19,6 +224,9 @@ export default function Batches() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewBatch, setViewBatch] = useState(null);
+  const [editBatch, setEditBatch] = useState(null);
+  const [deleteBatch, setDeleteBatch] = useState(null);
 
   // Modal Form Cascading States
   const [modalCollegeId, setModalCollegeId] = useState('');
@@ -42,15 +250,9 @@ export default function Batches() {
         ).catch(() => []),
       ]);
 
-      if (collegesData && Array.isArray(collegesData) && collegesData.length > 0) {
-        setColleges(collegesData);
-      }
-      if (deptsData && Array.isArray(deptsData) && deptsData.length > 0) {
-        setDepartments(deptsData);
-      }
-      if (batchesData && Array.isArray(batchesData) && batchesData.length > 0) {
-        setBatches(batchesData);
-      }
+      setColleges(Array.isArray(collegesData) ? collegesData : []);
+      setDepartments(Array.isArray(deptsData) ? deptsData : []);
+      setBatches(Array.isArray(batchesData) ? batchesData : []);
     } catch (err) {
       console.warn("API load failed, maintaining fallback state.");
     } finally {
@@ -183,41 +385,32 @@ export default function Batches() {
         </div>
 
         <div className="batches-select-group">
-          {/* Step 1: Select College */}
-          <div className="batches-select-box">
-            <Building2 className="batches-select-icon" />
-            <select
-              value={filterCollegeId}
-              onChange={handleCollegeFilterChange}
-              className="batches-select-element"
-            >
-              <option value="all">Step 1: All Colleges</option>
-              {colleges.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} ({c.code})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="batches-select-arrow" />
-          </div>
+          {/* Select College */}
+          <BatchSelect
+            icon={Building2}
+            value={filterCollegeId}
+            wrapperClass="batch-select"
+            onChange={(val) => {
+              setFilterCollegeId(val);
+              setFilterDeptId('all');
+            }}
+            options={[
+              { value: 'all', label: 'All Colleges' },
+              ...colleges.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))
+            ]}
+          />
 
-          {/* Step 2: Select Department */}
-          <div className="batches-select-box">
-            <GraduationCap className="batches-select-icon" />
-            <select
-              value={filterDeptId}
-              onChange={(e) => setFilterDeptId(e.target.value)}
-              className="batches-select-element"
-            >
-              <option value="all">Step 2: All Departments</option>
-              {availableFilterDepartments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} ({d.code})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="batches-select-arrow" />
-          </div>
+          {/* Select Department */}
+          <BatchSelect
+            icon={GraduationCap}
+            value={filterDeptId}
+            wrapperClass="batch-select"
+            onChange={(val) => setFilterDeptId(val)}
+            options={[
+              { value: 'all', label: 'All Departments' },
+              ...availableFilterDepartments.map((d) => ({ value: d.id, label: `${d.name} (${d.code})` }))
+            ]}
+          />
         </div>
       </div>
 
@@ -282,9 +475,9 @@ export default function Batches() {
                   </td>
                   <td className="batches-td-right">
                     <ActionDropdown
-                      onView={() => alert(`Viewing batch: ${b.name}`)}
-                      onEdit={() => alert(`Editing ${b.name}`)}
-                      onDelete={() => handleDelete(b.id)}
+                      onView={() => setViewBatch(b)}
+                      onEdit={() => setEditBatch(b)}
+                      onDelete={() => setDeleteBatch(b)}
                     />
                   </td>
                 </tr>
@@ -315,46 +508,36 @@ export default function Batches() {
 
             <form onSubmit={handleCreateBatch}>
               <div className="modal-body">
-                {/* Step 1: College Selection */}
+                {/* College Selection */}
                 <div className="form-group-admin">
-                  <label>Step 1: Select College Institution *</label>
-                  <select
-                    required
-                    className="form-input-admin"
+                  <label>Select College Institution *</label>
+                  <BatchSelect
                     value={modalCollegeId}
-                    onChange={(e) => {
-                      setModalCollegeId(e.target.value);
+                    options={colleges.map((c) => ({
+                      value: c.id,
+                      label: `${c.name} (${c.code})`
+                    }))}
+                    onChange={(val) => {
+                      setModalCollegeId(val);
                       setModalDeptId('');
                     }}
-                  >
-                    <option value="">Select College</option>
-                    {colleges.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({c.code})
-                      </option>
-                    ))}
-                  </select>
+                    placeholder="Select College"
+                  />
                 </div>
 
-                {/* Step 2: Department Selection */}
+                {/* Department Selection */}
                 <div className="form-group-admin">
-                  <label>Step 2: Select Academic Department *</label>
-                  <select
-                    required
-                    disabled={!modalCollegeId}
-                    className="form-input-admin"
+                  <label>Select Academic Department *</label>
+                  <BatchSelect
                     value={modalDeptId}
-                    onChange={(e) => setModalDeptId(e.target.value)}
-                  >
-                    <option value="">
-                      {!modalCollegeId ? "Select a college first..." : "Select Department"}
-                    </option>
-                    {availableModalDepartments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name} ({d.code})
-                      </option>
-                    ))}
-                  </select>
+                    disabled={!modalCollegeId}
+                    options={availableModalDepartments.map((d) => ({
+                      value: d.id,
+                      label: `${d.name} (${d.code})`
+                    }))}
+                    onChange={(val) => setModalDeptId(val)}
+                    placeholder={!modalCollegeId ? "Select a college first..." : "Select Department"}
+                  />
                 </div>
 
                 <div className="form-row-2">
@@ -415,6 +598,247 @@ export default function Batches() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* View Batch Modal */}
+      {viewBatch && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewBatch(null); }}>
+          <div className="modal-dialog" style={{ maxWidth: "520px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Eye size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">{viewBatch.name}</h2>
+                  <p className="modal-subtitle">Batch Code: <strong className="text-slate-700">{viewBatch.code || 'BCH-2026'}</strong></p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setViewBatch(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="sa-modal-details-grid">
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Building2 size={13} className="text-indigo-500" />
+                    <span>Institution</span>
+                  </span>
+                  <span className="sa-modal-detail-value">{viewBatch.collegeName || viewBatch.college || "Apex Tech"}</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <GraduationCap size={13} className="text-indigo-500" />
+                    <span>Department</span>
+                  </span>
+                  <span className="sa-modal-detail-value text-indigo-600">{viewBatch.departmentName || viewBatch.department || "Computer Science"}</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <UserCheck size={13} className="text-indigo-500" />
+                    <span>Assigned Lead Mentor</span>
+                  </span>
+                  <span className="sa-modal-detail-value">{viewBatch.trainer || 'Prof. Active Trainer'}</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Calendar size={13} className="text-indigo-500" />
+                    <span>Weekly Schedule</span>
+                  </span>
+                  <span className="sa-modal-detail-value font-medium text-slate-700" style={{ fontSize: '12px' }}>
+                    {viewBatch.schedule || 'Mon - Fri (10 AM)'}
+                  </span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Users size={13} className="text-indigo-500" />
+                    <span>Enrolled Students</span>
+                  </span>
+                  <span className="sa-modal-detail-value">{viewBatch.studentsCount || 45} Students</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <ShieldCheck size={13} className="text-indigo-500" />
+                    <span>Status</span>
+                  </span>
+                  <div className="mt-1">
+                    <StatusBadge status={viewBatch.status || 'Active'} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn-modal-cancel" onClick={() => setViewBatch(null)}>
+                Close
+              </button>
+              <button
+                type="button"
+                className="sa-btn-primary"
+                onClick={() => {
+                  setEditBatch(viewBatch);
+                  setViewBatch(null);
+                }}
+              >
+                <Edit2 size={15} />
+                <span>Edit Batch</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit Batch Modal */}
+      {editBatch && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditBatch(null); }}>
+          <div className="modal-dialog" style={{ maxWidth: "540px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Edit2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Edit Batch Record</h2>
+                  <p className="modal-subtitle">Update cohort parameters and mentor assignment</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setEditBatch(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setBatches(batches.map(b => b.id === editBatch.id ? editBatch : b));
+              setEditBatch(null);
+            }}>
+              <div className="modal-body">
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Batch / Cohort Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editBatch.name}
+                      onChange={(e) => setEditBatch({ ...editBatch, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Batch Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editBatch.code || ''}
+                      onChange={(e) => setEditBatch({ ...editBatch, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Assigned Mentor / Trainer</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      value={editBatch.trainer || ''}
+                      onChange={(e) => setEditBatch({ ...editBatch, trainer: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Schedule</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      value={editBatch.schedule || ''}
+                      onChange={(e) => setEditBatch({ ...editBatch, schedule: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Status</label>
+                  <BatchSelect
+                    value={editBatch.status || 'Active'}
+                    options={[
+                      { value: 'Active', label: 'Active' },
+                      { value: 'In Progress', label: 'In Progress' },
+                      { value: 'Completed', label: 'Completed' },
+                      { value: 'Upcoming', label: 'Upcoming' }
+                    ]}
+                    onChange={(val) => setEditBatch({ ...editBatch, status: val })}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setEditBatch(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-submit">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteBatch && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDeleteBatch(null); }}>
+          <div className="modal-dialog" style={{ maxWidth: "440px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap" style={{ background: "#fef2f2", color: "#ef4444", borderColor: "#fecdd3" }}>
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Remove Cohort</h2>
+                  <p className="modal-subtitle">Confirm batch deletion</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setDeleteBatch(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p className="text-sm text-slate-600 m-0">
+                Are you sure you want to remove <strong className="text-slate-900">{deleteBatch.name}</strong>? This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn-modal-cancel" onClick={() => setDeleteBatch(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="manageusers-btn-reject"
+                style={{ height: "38px", padding: "0 16px" }}
+                onClick={() => {
+                  setBatches(batches.filter(b => b.id !== deleteBatch.id));
+                  setDeleteBatch(null);
+                }}
+              >
+                <Trash2 size={15} />
+                <span>Confirm Remove</span>
+              </button>
+            </div>
           </div>
         </div>,
         document.body

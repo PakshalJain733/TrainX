@@ -12,9 +12,9 @@ import {
   Trophy,
   FileCheck2,
 } from "lucide-react";
-import logoImg from "../../assets/Logo.png";
-import "../../pages/SuperAdmin/Styles/SuperAdmin.css";
-import '../../pages/SuperAdmin/Styles/SuperAdminSidebar.css';
+import logoImg from "../../../assets/Logo.png";
+import "../Styles/SuperAdmin.css";
+import "../Styles/SuperAdminSidebar.css";
 
 function SidebarBrand({ collapsed }) {
   return (
@@ -52,7 +52,7 @@ const footerNavItems = [
   { title: "Support Tickets", url: "/super-admin/tickets", icon: LifeBuoy },
 ];
 
-export default function Sidebar({ collapsed, mobileOpen, onClose }) {
+export default function SuperAdminSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
 
   const isActive = (url, exact) =>
@@ -104,4 +104,3 @@ export default function Sidebar({ collapsed, mobileOpen, onClose }) {
     </aside>
   );
 }
-

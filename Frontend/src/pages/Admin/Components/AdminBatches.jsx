@@ -1,12 +1,64 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code } from "lucide-react";
+import { Plus, Users, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/AdminBatches.css";
 import "../Styles/AdminQuizzes.css";
 import "../Styles/AdminUsers.css";
+
+/* ── Inline dropdown for Admin Batches (CSS: AdminBatches.css .admin-batch-select-*) ── */
+function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleToggle = () => {
+    if (!isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (direction === 'up') {
+        setDropUp(true);
+      } else if (direction === 'down') {
+        setDropUp(false);
+      } else {
+        setDropUp(spaceBelow < 240);
+      }
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`admin-batch-select-wrap${isOpen ? ' admin-batch-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={handleToggle} className={`admin-batch-select-trigger${isOpen ? ' admin-batch-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-batch-select-icon" />}
+        <span className="admin-batch-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-batch-select-arrow${isOpen ? ' admin-batch-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`admin-batch-select-dropdown${dropUp ? ' admin-batch-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>
+                <span className="admin-batch-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-batch-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 import { apiFetch } from "../../../utils/api";
 
@@ -560,15 +612,15 @@ export default function AdminBatches() {
                 <div className="form-row-3">
                   <div className="form-group-admin">
                     <label>Difficulty Level</label>
-                    <select
-                      className="form-input-admin"
+                    <AdminBatchSelect
                       value={taskForm.difficulty}
-                      onChange={(e) => setTaskForm((p) => ({ ...p, difficulty: e.target.value }))}
-                    >
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
+                      onChange={(val) => setTaskForm((p) => ({ ...p, difficulty: val }))}
+                      options={[
+                        { value: "Easy", label: "Easy" },
+                        { value: "Medium", label: "Medium" },
+                        { value: "Hard", label: "Hard" }
+                      ]}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label>XP Points Awarded</label>

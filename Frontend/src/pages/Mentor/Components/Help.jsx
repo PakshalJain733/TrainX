@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   HelpCircle,
   MessageCircle,
@@ -15,11 +15,46 @@ import {
   Send,
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Check
 } from 'lucide-react';
 import { SectionHeader } from '../../../components/ui/SectionHeader';
 import '../../Student/Styles/Help.css';
 import '../Styles/Help.css';
+
+/* ── Inline dropdown for Mentor Help (CSS: Help.css .mentor-help-select-*) ── */
+function MentorHelpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-help-select-wrap${isOpen ? ' mentor-help-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-help-select-trigger${isOpen ? ' mentor-help-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-help-select-icon" />}
+        <span className="mentor-help-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-help-select-arrow${isOpen ? ' mentor-help-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-help-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-help-select-option${isSel ? ' mentor-help-select-option--selected' : ''}`}>
+                <span className="mentor-help-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-help-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const defaultMentorFaqs = [
   {
@@ -418,29 +453,29 @@ export default function Help() {
               <div className="help-grid-2col">
                 <div className="help-form-group">
                   <label className="help-form-label">Category</label>
-                  <select
-                    className="help-form-select"
+                  <MentorHelpSelect
                     value={newTicket.category}
-                    onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
-                  >
-                    <option value="Lab & Infrastructure">Lab & Infrastructure</option>
-                    <option value="Attendance & Roster">Attendance & Roster</option>
-                    <option value="Curriculum & Study Material">Curriculum & Study Material</option>
-                    <option value="Portal / System Error">Portal / System Error</option>
-                  </select>
+                    options={[
+                      { value: "Lab & Infrastructure", label: "Lab & Infrastructure" },
+                      { value: "Attendance & Roster", label: "Attendance & Roster" },
+                      { value: "Curriculum & Study Material", label: "Curriculum & Study Material" },
+                      { value: "Portal / System Error", label: "Portal / System Error" },
+                    ]}
+                    onChange={(val) => setNewTicket({ ...newTicket, category: val })}
+                  />
                 </div>
 
                 <div className="help-form-group">
                   <label className="help-form-label">Priority Level</label>
-                  <select
-                    className="help-form-select"
+                  <MentorHelpSelect
                     value={newTicket.priority}
-                    onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="High">High Priority</option>
-                    <option value="Critical">Critical Urgent</option>
-                  </select>
+                    options={[
+                      { value: "Normal", label: "Normal" },
+                      { value: "High", label: "High Priority" },
+                      { value: "Critical", label: "Critical Urgent" },
+                    ]}
+                    onChange={(val) => setNewTicket({ ...newTicket, priority: val })}
+                  />
                 </div>
               </div>
 

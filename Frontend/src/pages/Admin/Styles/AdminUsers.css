@@ -462,12 +462,14 @@
 }
 
 .modal-body {
-  padding: 22px 24px;
+  padding: 22px 24px 50px 24px;
   display: flex;
   flex-direction: column;
   gap: 15px;
   max-height: 70vh;
   overflow-y: auto;
+  position: relative;
+  z-index: 20;
 }
 
 .form-group-admin {
@@ -538,6 +540,8 @@ textarea.form-input-admin:focus,
   justify-content: flex-end;
   gap: 10px;
   background: #f8fafc;
+  position: relative;
+  z-index: 10;
 }
 
 .btn-modal-cancel {
@@ -665,5 +669,158 @@ textarea.form-input-admin:focus,
   margin: 4px 0 0 0;
   font-size: 13px;
   color: #64748b;
+}
+
+/* Inline Custom Select for Admin Users */
+.admin-user-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.admin-user-select-wrap--open {
+  z-index: 999;
+}
+
+.form-group-admin:has(.admin-user-select-wrap--open),
+.form-row-2:has(.admin-user-select-wrap--open) {
+  position: relative;
+  z-index: 100;
+}
+
+.admin-user-select-trigger {
+  width: 100%;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 14px;
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.admin-user-select-trigger:hover,
+.admin-user-select-wrap--open .admin-user-select-trigger {
+  border-color: #4f46e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.admin-user-select-icon {
+  width: 15px;
+  height: 15px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.admin-user-select-text {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-select-arrow {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.admin-user-select-arrow--rotate {
+  transform: rotate(180deg);
+  color: #4f46e5;
+}
+
+.admin-user-select-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 999999 !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.2), 0 4px 12px -2px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  animation: adminUserSelectFadeIn 0.15s ease-out;
+}
+
+.admin-user-select-dropdown--up {
+  top: auto;
+  bottom: calc(100% + 6px);
+  animation: adminUserSelectFadeUp 0.15s ease-out;
+}
+
+@keyframes adminUserSelectFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes adminUserSelectFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-user-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-user-select-option:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.admin-user-select-option--selected {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.admin-user-select-option--selected:hover {
+  background: #e0e7ff;
+}
+
+.admin-user-select-check {
+  width: 14px;
+  height: 14px;
+  color: #4f46e5;
+}
+
+.admin-user-select-placeholder {
+  color: #94a3b8;
 }
 

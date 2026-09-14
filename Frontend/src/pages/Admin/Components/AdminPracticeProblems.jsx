@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Code,
@@ -21,118 +21,72 @@ import {
   TrendingUp,
   Terminal,
   Sparkles,
+  ChevronDown,
+  Check,
 } from "lucide-react";
-import { apiFetch } from "../../../utils/api";
-import { addSharedCodingTask, getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
+import { Card, CardContent } from "../../../components/ui/Card";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
+import { apiFetch } from "../../../utils/api";
+import { addSharedCodingTask, getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AdminUsers.css";
 import "../Styles/AdminPracticeProblems.css";
 
-const initialCodingProblems = [
-  {
-    id: 1,
-    title: "Two Sum",
-    topic: "Arrays & Hashing",
-    difficulty: "Easy",
-    xp: 50,
-    companies: ["Google", "Amazon", "Meta"],
-    timeLimit: "1.0s",
-    memoryLimit: "128 MB",
-    description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-    testCases: [
-      { id: 1, input: "nums = [2,7,11,15], target = 9", output: "[0,1]", isHidden: false },
-      { id: 2, input: "nums = [3,2,4], target = 6", output: "[1,2]", isHidden: true },
-    ],
-  },
-  {
-    id: 2,
-    title: "Reverse Linked List",
-    topic: "Linked Lists",
-    difficulty: "Medium",
-    xp: 100,
-    companies: ["Microsoft", "Apple"],
-    timeLimit: "1.0s",
-    memoryLimit: "128 MB",
-    description: "Given the head of a singly linked list, reverse the list, and return the reversed list.",
-    testCases: [
-      { id: 1, input: "head = [1,2,3,4,5]", output: "[5,4,3,2,1]", isHidden: false },
-    ],
-  },
-  {
-    id: 3,
-    title: "LRU Cache Implementation",
-    topic: "Design / Data Structures",
-    difficulty: "Hard",
-    xp: 200,
-    companies: ["Netflix", "Uber", "Amazon"],
-    timeLimit: "2.0s",
-    memoryLimit: "256 MB",
-    description: "Design a data structure that follows the constraints of a Least Recently Used (LRU) cache.",
-    testCases: [
-      { id: 1, input: '["LRUCache", "put", "put", "get"]', output: "[null, null, null, 1]", isHidden: false },
-    ],
-  },
-];
+/* ── Inline dropdown for Admin PracticeProblems (CSS: AdminPracticeProblems.css .admin-pp-select-*) ── */
+function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
 
-const mockAssignments = [
-  {
-    id: 101,
-    title: "Week 4 DSA Sprint: Two Sum & Valid Palindrome",
-    batch: "Node.js Backend - Cohort A",
-    problemCount: 2,
-    assignedDate: "2026-09-01",
-    dueDate: "2026-09-10",
-    submissionRate: 88,
-    status: "Active",
-  },
-  {
-    id: 102,
-    title: "Advanced Data Structures: LRU Cache Practice",
-    batch: "React Frontend - Cohort B",
-    problemCount: 1,
-    assignedDate: "2026-08-25",
-    dueDate: "2026-09-05",
-    submissionRate: 64,
-    status: "Active",
-  },
-];
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
 
-const mockSubmissions = [
-  {
-    id: 501,
-    studentName: "Priya Sharma",
-    rollNo: "VU21CS042",
-    problemTitle: "Two Sum",
-    language: "Python 3",
-    status: "Accepted",
-    executionTime: "42 ms",
-    memory: "14.2 MB",
-    submittedAt: "10 min ago",
-  },
-  {
-    id: 502,
-    studentName: "Rahul Deshmukh",
-    rollNo: "VU21CS089",
-    problemTitle: "Reverse Linked List",
-    language: "C++ 17",
-    status: "Wrong Answer",
-    executionTime: "0 ms",
-    memory: "8.1 MB",
-    submittedAt: "25 min ago",
-  },
-  {
-    id: 503,
-    studentName: "Ananya Mehta",
-    rollNo: "VU21CS014",
-    problemTitle: "LRU Cache Implementation",
-    language: "Java 11",
-    status: "Accepted",
-    executionTime: "118 ms",
-    memory: "48.5 MB",
-    submittedAt: "1 hour ago",
-  },
-];
+  const handleToggle = () => {
+    if (!isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (direction === 'up') {
+        setDropUp(true);
+      } else if (direction === 'down') {
+        setDropUp(false);
+      } else {
+        setDropUp(spaceBelow < 240);
+      }
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`admin-pp-select-wrap${isOpen ? ' admin-pp-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={handleToggle} className={`admin-pp-select-trigger${isOpen ? ' admin-pp-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-pp-select-icon" />}
+        <span className="admin-pp-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-pp-select-arrow${isOpen ? ' admin-pp-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`admin-pp-select-dropdown${dropUp ? ' admin-pp-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-pp-select-option${isSel ? ' admin-pp-select-option--selected' : ''}`}>
+                <span className="admin-pp-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-pp-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const initialCodingProblems = [];
+const mockAssignments = [];
+const mockSubmissions = [];
 
 export default function AdminPracticeProblems() {
   const [activeTab, setActiveTab] = useState("bank");
@@ -458,16 +412,14 @@ export default function AdminPracticeProblems() {
 
               <div className="form-group-admin">
                 <label>Target Cohort / Batch</label>
-                <select
+                <AdminPpSelect
                   value={assignForm.batch}
-                  onChange={(e) => setAssignForm({ ...assignForm, batch: e.target.value })}
-                  className="form-select-admin"
-                >
-                  <option value="All Batches">All Batches (Universal)</option>
-                  {batches.map((b) => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setAssignForm({ ...assignForm, batch: val })}
+                  options={[
+                    { value: "All Batches", label: "All Batches (Universal)" },
+                    ...batches.map((b) => ({ value: b.name, label: b.name }))
+                  ]}
+                />
               </div>
 
               <div className="form-group-admin">
@@ -607,15 +559,15 @@ export default function AdminPracticeProblems() {
                   </div>
                   <div className="form-group-admin">
                     <label>Difficulty</label>
-                    <select
+                    <AdminPpSelect
                       value={newProb.difficulty}
-                      onChange={(e) => setNewProb({ ...newProb, difficulty: e.target.value })}
-                      className="form-select-admin"
-                    >
-                      <option value="Easy">Easy</option>
-                      <option value="Medium">Medium</option>
-                      <option value="Hard">Hard</option>
-                    </select>
+                      onChange={(val) => setNewProb({ ...newProb, difficulty: val })}
+                      options={[
+                        { value: "Easy", label: "Easy" },
+                        { value: "Medium", label: "Medium" },
+                        { value: "Hard", label: "Hard" }
+                      ]}
+                    />
                   </div>
                 </div>
 

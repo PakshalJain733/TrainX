@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   HelpCircle,
   MessageCircle,
@@ -15,11 +15,46 @@ import {
   Send,
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Check
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../../Student/Styles/Help.css";
 import "../Styles/Help.css";
+
+/* ── Inline dropdown for Coordinator Help (CSS: Help.css .coord-help-select-*) ── */
+function CoordHelpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`coord-help-select-wrap${isOpen ? ' coord-help-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-help-select-trigger${isOpen ? ' coord-help-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="coord-help-select-icon" />}
+        <span className="coord-help-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`coord-help-select-arrow${isOpen ? ' coord-help-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="coord-help-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-help-select-option${isSel ? ' coord-help-select-option--selected' : ''}`}>
+                <span className="coord-help-select-option-label">{opt.label}</span>
+                {isSel && <Check className="coord-help-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const defaultFaqs = [
   {
@@ -424,30 +459,30 @@ export default function CoordinatorHelp() {
               <div className="help-grid-2col">
                 <div className="help-form-group">
                   <label className="help-form-label">Category</label>
-                  <select
-                    className="help-form-select"
+                  <CoordHelpSelect
                     value={newTicket.category}
-                    onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
-                  >
-                    <option value="Academics Governance">Academics Governance</option>
-                    <option value="Attendance & Leave">Attendance & Leave</option>
-                    <option value="Practice & Coding">Practice & Coding</option>
-                    <option value="Batch Allocation">Batch Allocation</option>
-                    <option value="System Bug">System Bug</option>
-                  </select>
+                    options={[
+                      { value: "Academics Governance", label: "Academics Governance" },
+                      { value: "Attendance & Leave", label: "Attendance & Leave" },
+                      { value: "Practice & Coding", label: "Practice & Coding" },
+                      { value: "Batch Allocation", label: "Batch Allocation" },
+                      { value: "System Bug", label: "System Bug" },
+                    ]}
+                    onChange={(val) => setNewTicket({ ...newTicket, category: val })}
+                  />
                 </div>
 
                 <div className="help-form-group">
                   <label className="help-form-label">Priority Level</label>
-                  <select
-                    className="help-form-select"
+                  <CoordHelpSelect
                     value={newTicket.priority}
-                    onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="High">High Priority</option>
-                    <option value="Critical">Critical Urgent</option>
-                  </select>
+                    options={[
+                      { value: "Normal", label: "Normal" },
+                      { value: "High", label: "High Priority" },
+                      { value: "Critical", label: "Critical Urgent" },
+                    ]}
+                    onChange={(val) => setNewTicket({ ...newTicket, priority: val })}
+                  />
                 </div>
               </div>
 

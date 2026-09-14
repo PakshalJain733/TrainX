@@ -1,7 +1,41 @@
-import React, { useState, useEffect } from 'react';
-import { Video, Calendar, Clock, Plus, Users, Play, Trash2, CheckCircle, ExternalLink, AlertTriangle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Video, Calendar, Clock, Plus, Users, Play, Trash2, CheckCircle, ExternalLink, AlertTriangle, ChevronDown, Check } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
 import '../Styles/LiveSessions.css';
+
+/* ── Inline dropdown for Mentor Live Sessions (CSS: LiveSessions.css .mentor-ls-select-*) ── */
+function MentorLsSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-ls-select-wrap${isOpen ? ' mentor-ls-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-ls-select-trigger${isOpen ? ' mentor-ls-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-ls-select-icon" />}
+        <span className="mentor-ls-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-ls-select-arrow${isOpen ? ' mentor-ls-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-ls-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-ls-select-option${isSel ? ' mentor-ls-select-option--selected' : ''}`}>
+                <span className="mentor-ls-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-ls-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const LiveSessions = () => {
   const [sessions, setSessions] = useState([]);
@@ -211,17 +245,14 @@ const LiveSessions = () => {
 
               <div className="mentor-form-group">
                 <label>Target Batch</label>
-                <select
+                <MentorLsSelect
                   value={newSession.batch}
-                  onChange={e => setNewSession({ ...newSession, batch: e.target.value })}
-                >
-                  <option value="All Batches">All Batches</option>
-                  {dbBatches.map((b) => (
-                    <option key={b.id} value={b.name || b.code}>
-                      {b.name || b.code} ({b.code || b.join_code || b.id})
-                    </option>
-                  ))}
-                </select>
+                  options={[
+                    { value: "All Batches", label: "All Batches" },
+                    ...dbBatches.map(b => ({ value: b.name || b.code, label: `${b.name || b.code} (${b.code || b.join_code || b.id})` }))
+                  ]}
+                  onChange={(val) => setNewSession({ ...newSession, batch: val })}
+                />
               </div>
 
               <div className="mentor-form-grid-2">

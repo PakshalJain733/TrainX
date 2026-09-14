@@ -1,4 +1,4 @@
-import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin } from '../services/auth.service.js';
+import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, getStudentByUserId } from '../models/user.model.js';
 
@@ -87,5 +87,35 @@ export const getMe = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+export const changePassword = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { currentPassword, newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+      return sendError(res, 'New password must be at least 6 characters long', 400);
+    }
+    const result = await changeUserPassword(userId, currentPassword, newPassword);
+    return sendSuccess(res, 'Password changed successfully', result);
+  } catch (error) {
+    return sendError(res, error.message || 'Failed to change password', 400);
+  }
+};
+
+export const resetPasswordWithOtp = async (req, res, next) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return sendError(res, 'Email, OTP, and new password are required', 400);
+    }
+    if (newPassword.length < 6) {
+      return sendError(res, 'New password must be at least 6 characters long', 400);
+    }
+    const result = await resetUserPasswordWithOtp(email, otp, newPassword);
+    return sendSuccess(res, 'Password reset successfully', result);
+  } catch (error) {
+    return sendError(res, error.message || 'Failed to reset password', 400);
   }
 };

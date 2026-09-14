@@ -2,7 +2,9 @@ import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import {
   findUserByEmailOrMobile,
+  findUserById,
   createUser,
+  updateUser,
   saveStudentDetails,
   getStudentByUserId,
   saveOtpRecord,
@@ -13,6 +15,7 @@ import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
+import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
 
 export const generateTotpSetup = async (email) => {
   const secret = speakeasy.generateSecret({
@@ -50,7 +53,7 @@ export const verifyTotpToken = (secret, token) => {
 };
 
 export const registerUser = async (data) => {
-  const { name, email, mobile_number, password, role, roll_number, department, year, division, semester } = data;
+  const { name, email, mobile_number, password, role, secure_code, roll_number, department, year, division, semester } = data;
 
   // Check if user exists by email or mobile number
   if (email) {
@@ -76,8 +79,26 @@ export const registerUser = async (data) => {
   if (role) {
     const lowerRole = role.toLowerCase();
     if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
-    else if (lowerRole.includes('admin')) canonicalRole = ROLES.COLLEGE_ADMIN;
+    else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
     else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
+  }
+
+  // Verification of Secure Code in DB for non-student roles or if secure_code provided
+  let codeRecord = null;
+  const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
+  if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
+    if (!secure_code || String(secure_code).trim().length === 0) {
+      const error = new Error(`Secure access code is required to register for role: ${role || canonicalRole}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    codeRecord = await findSecureCode(secure_code, canonicalRole);
+    if (!codeRecord) {
+      const error = new Error(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`);
+      error.statusCode = 400;
+      throw error;
+    }
   }
 
   // Create base User
@@ -88,6 +109,11 @@ export const registerUser = async (data) => {
     password: password || '',
     role: canonicalRole,
   });
+
+  // Mark secure code as used in DB if applicable
+  if (codeRecord && codeRecord.id) {
+    await markCodeAsUsed(codeRecord.id, user.id);
+  }
 
   // If student role, save student details
   let studentProfile = null;
@@ -310,5 +336,36 @@ export const loginWithPassword = async (identifier, password) => {
       studentProfile,
     },
   };
+};
+
+export const changeUserPassword = async (userId, currentPassword, newPassword) => {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (user.password_hash && currentPassword) {
+    if (user.password_hash !== currentPassword) {
+      throw new Error('Current password is incorrect');
+    }
+  }
+
+  await updateUser(userId, { password: newPassword });
+  return { message: 'Password updated successfully' };
+};
+
+export const resetUserPasswordWithOtp = async (email, otp, newPassword) => {
+  const user = await findUserByEmailOrMobile(email);
+  if (!user) {
+    throw new Error('No user account found with this email address');
+  }
+
+  const isValidOtp = await verifyOtpRecord(user.email, otp);
+  if (!isValidOtp) {
+    throw new Error('Invalid or expired 6-digit security code');
+  }
+
+  await updateUser(user.id, { password: newPassword });
+  return { message: 'Password reset successfully' };
 };
 

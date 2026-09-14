@@ -1,14 +1,49 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X,
   Eye, HelpCircle, BookOpen, RefreshCw, Users, Trophy, BarChart2,
-  FileCheck2, ChevronLeft, Zap,
+  FileCheck2, ChevronLeft, Zap, ChevronDown, Check,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../../Admin/Styles/AdminQuizzes.css";
 import "../../Admin/Styles/AdminUsers.css";
+import "../Styles/MentorQuizzes.css";
+
+/* ── Inline dropdown for Mentor Quizzes (CSS: MentorQuizzes.css .mentor-mq-select-*) ── */
+function MentorMqSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`mentor-mq-select-wrap${isOpen ? ' mentor-mq-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-mq-select-trigger${isOpen ? ' mentor-mq-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="mentor-mq-select-icon" />}
+        <span className="mentor-mq-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`mentor-mq-select-arrow${isOpen ? ' mentor-mq-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="mentor-mq-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-mq-select-option${isSel ? ' mentor-mq-select-option--selected' : ''}`}>
+                <span className="mentor-mq-select-option-label">{opt.label}</span>
+                {isSel && <Check className="mentor-mq-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const API_BASE = "/api/v1";
 
@@ -400,10 +435,14 @@ export default function MentorQuizzes() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">Batch</label>
-                    <select className="form-input" value={batch} onChange={e => setBatch(e.target.value)}>
-                      <option value="All Batches">All Batches</option>
-                      {availableBatches.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
-                    </select>
+                    <MentorMqSelect
+                      value={batch}
+                      options={[
+                        { value: "All Batches", label: "All Batches" },
+                        ...availableBatches.map(b => ({ value: b.name, label: b.name }))
+                      ]}
+                      onChange={(val) => setBatch(val)}
+                    />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Duration (mins)</label>
@@ -479,9 +518,11 @@ export default function MentorQuizzes() {
               ))}
               <div className="form-group" style={{ marginBottom: 18 }}>
                 <label className="form-label">Correct Answer *</label>
-                <select className="form-input" value={correctOpt} onChange={e => setCorrectOpt(e.target.value)}>
-                  {['a', 'b', 'c', 'd'].map(o => <option key={o} value={o}>Option {o.toUpperCase()}</option>)}
-                </select>
+                <MentorMqSelect
+                  value={correctOpt}
+                  options={['a', 'b', 'c', 'd'].map(o => ({ value: o, label: `Option ${o.toUpperCase()}` }))}
+                  onChange={(val) => setCorrectOpt(val)}
+                />
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
                 <button type="button" onClick={() => setShowManualModal(false)} className="quiz-cancel-btn">Cancel</button>

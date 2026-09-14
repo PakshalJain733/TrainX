@@ -1,10 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { initialColleges, initialDepartments } from '../../../data/superAdminMockData';
-import StatusBadge from '../../../components/SuperAdmin/StatusBadge';
-import ActionDropdown from '../../../components/SuperAdmin/ActionDropdown';
 import EmptyState from '../../../components/ui/EmptyState';
+import { collegeAPI, departmentAPI } from '../../../services/api';
 import {
   Plus,
   Search,
@@ -15,25 +13,254 @@ import {
   Users,
   X,
   ArrowLeft,
-  GraduationCap
+  GraduationCap,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  Eye,
+  ShieldCheck,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import '../Styles/SuperAdmin.css';
 import '../../Admin/Styles/AdminUsers.css';
 import '../Styles/Colleges.css';
 
+/* ── Inline dropdown for Colleges (CSS: Colleges.css .college-select-*) ── */
+function CollegeSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [dropUp, setDropUp] = React.useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+
+  React.useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleToggle = () => {
+    if (!isOpen && ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (direction === 'up') {
+        setDropUp(true);
+      } else if (direction === 'down') {
+        setDropUp(false);
+      } else {
+        setDropUp(spaceBelow < 220);
+      }
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`college-select-wrap${isOpen ? ' college-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={handleToggle} className={`college-select-trigger${isOpen ? ' college-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="college-select-icon" />}
+        <span className="college-select-text">{selected ? selected.label : <span className="college-select-placeholder">{placeholder}</span>}</span>
+        <ChevronDown className={`college-select-arrow${isOpen ? ' college-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`college-select-dropdown${dropUp ? ' college-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`college-select-option${isSel ? ' college-select-option--selected' : ''}`}>
+                <span className="college-select-option-label">{opt.label}</span>
+                {isSel && <Check className="college-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  if (status === 'Active' || status === 'Verified' || status === 'Available') {
+    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+  } else if (status === 'Inactive' || status === 'Disabled') {
+    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  } else if (status === 'High' || status === 'In Progress') {
+    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+  } else if (status === 'Busy' || status === 'Medium') {
+    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+  } else if (status === 'Near Completion') {
+    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+  }
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
+      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+      {status}
+    </span>
+  );
+}
+
+function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = [] }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const toggleDropdown = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(!open);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        buttonRef.current && !buttonRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function handleScrollOrResize() {
+      if (open && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + 4,
+          right: window.innerWidth - rect.right,
+        });
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [open]);
+
+  return (
+    <div className="action-dropdown-container">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggleDropdown}
+        className={`action-dropdown-trigger ${open ? 'open' : ''}`}
+        title="Actions"
+      >
+        <MoreVertical size={16} />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="action-dropdown-menu action-dropdown-portal"
+          style={{
+            top: `${coords.top}px`,
+            right: `${coords.right}px`,
+          }}
+        >
+          {onView && (
+            <button
+              type="button"
+              onClick={() => { onView(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              <Eye className="action-dropdown-icon" />
+              <span>View Details</span>
+            </button>
+          )}
+
+          {onVerify && (
+            <button
+              type="button"
+              onClick={() => { onVerify(); setOpen(false); }}
+              className="action-dropdown-item action-dropdown-item--verify"
+            >
+              <ShieldCheck className="action-dropdown-icon" />
+              <span>Verify Access</span>
+            </button>
+          )}
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => { onEdit(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              <Edit2 className="action-dropdown-icon" />
+              <span>Edit Record</span>
+            </button>
+          )}
+
+          {customActions.map((action, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => { action.onClick(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              {action.icon && <action.icon className="action-dropdown-icon" />}
+              <span>{action.label}</span>
+            </button>
+          ))}
+
+          {onDelete && (
+            <>
+              <div className="action-dropdown-divider" />
+              <button
+                type="button"
+                onClick={() => { onDelete(); setOpen(false); }}
+                className="action-dropdown-item action-dropdown-item--danger"
+              >
+                <Trash2 className="action-dropdown-icon" />
+                <span>Remove Record</span>
+              </button>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
 export default function Colleges() {
   const { collegeId } = useParams();
   const navigate = useNavigate();
 
-  const [colleges, setColleges] = useState(initialColleges);
-  const [departments, setDepartments] = useState(initialDepartments);
+  const [colleges, setColleges] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
   const [isAddCollegeModalOpen, setIsAddCollegeModalOpen] = useState(false);
   const [isAddDeptModalOpen, setIsAddDeptModalOpen] = useState(false);
+  const [viewCollegeModal, setViewCollegeModal] = useState(null);
+  const [editCollege, setEditCollege] = useState(null);
+  const [deleteCollege, setDeleteCollege] = useState(null);
+
+  useEffect(() => {
+    collegeAPI.getColleges()
+      .then((data) => setColleges(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error loading colleges:", err));
+
+    departmentAPI.getDepartments()
+      .then((data) => setDepartments(Array.isArray(data) ? data : []))
+      .catch((err) => console.error("Error loading departments:", err));
+  }, []);
 
   // Form states
   const [collegeForm, setCollegeForm] = useState({
-    name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 5, studentsCount: 150,
+    name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0,
   });
   const [deptForm, setDeptForm] = useState({
     name: '', code: '', hodName: '', hodEmail: '',
@@ -41,24 +268,48 @@ export default function Colleges() {
 
   const selectedCollege = colleges.find(c => String(c.id) === String(collegeId));
 
-  const filteredColleges = colleges.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredColleges = colleges.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.adminName && c.adminName.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesStatus =
+      filterStatus === 'all' ||
+      c.status === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const filteredDepts = departments.filter((d) =>
     (!collegeId || String(d.collegeId) === String(collegeId)) &&
     (d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-     d.code.toLowerCase().includes(searchQuery.toLowerCase()))
+      d.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const handleAddCollege = (e) => {
+  const handleAddCollege = async (e) => {
     e.preventDefault();
     if (!collegeForm.name || !collegeForm.code || !collegeForm.location) return;
-    setColleges([{ ...collegeForm, id: Date.now(), status: 'Active' }, ...colleges]);
+    try {
+      const created = await collegeAPI.createCollege({
+        name: collegeForm.name,
+        code: collegeForm.code,
+        location: collegeForm.location,
+        city: collegeForm.location,
+        contactEmail: collegeForm.adminEmail,
+        adminName: collegeForm.adminName,
+      });
+      if (created) {
+        setColleges([created, ...colleges]);
+      }
+    } catch (err) {
+      console.error("Failed to save college to backend:", err);
+      // Fallback local update
+      setColleges([{ ...collegeForm, id: Date.now(), status: 'Active' }, ...colleges]);
+    }
     setIsAddCollegeModalOpen(false);
-    setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 5, studentsCount: 150 });
+    setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0 });
   };
 
   const handleAddDepartment = (e) => {
@@ -83,7 +334,12 @@ export default function Colleges() {
     setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
   };
 
-  const handleDeleteCollege = (id) => {
+  const handleDeleteCollege = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+    } catch (err) {
+      console.error("Failed to delete college from API:", err);
+    }
     setColleges(colleges.filter((c) => c.id !== id));
   };
 
@@ -94,8 +350,8 @@ export default function Colleges() {
         <div className="sa-page-header">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <button 
-                onClick={() => navigate('/super-admin/colleges')} 
+              <button
+                onClick={() => navigate('/super-admin/colleges')}
                 className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition cursor-pointer"
                 title="Back to Colleges Directory"
               >
@@ -118,7 +374,7 @@ export default function Colleges() {
         </div>
 
         <div className="sa-search-card">
-          <div className="sa-search-wrap" style={{ maxWidth: "100%" }}>
+          <div className="sa-search-wrap college-search-wrap-full">
             <Search className="sa-search-icon" size={16} />
             <input
               type="text"
@@ -132,7 +388,7 @@ export default function Colleges() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredDepts.map((dept) => (
-            <div key={dept.id} className="sa-widget-card hover:border-indigo-300 transition" style={{ padding: '20px' }}>
+            <div key={dept.id} className="sa-widget-card hover:border-indigo-300 transition college-dept-widget-card">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 text-indigo-600 mb-1 border border-indigo-100">
@@ -163,7 +419,7 @@ export default function Colleges() {
         {/* Add Department Modal */}
         {isAddDeptModalOpen && createPortal(
           <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddDeptModalOpen(false); }}>
-            <div className="modal-dialog" style={{ maxWidth: "540px" }}>
+            <div className="modal-dialog college-modal-540">
               <div className="modal-header">
                 <div className="modal-header-left">
                   <div className="modal-header-icon-wrap modal-header-icon--indigo">
@@ -268,7 +524,7 @@ export default function Colleges() {
       {/* Filter Bar */}
       <div className="colleges-search-card">
         <div className="sa-search-wrap colleges-search-wrap">
-          <Search className="sa-search-icon" />
+          <Search className="sa-search-icon" size={16} />
           <input
             type="text"
             placeholder="Search college name, city, or code..."
@@ -278,12 +534,17 @@ export default function Colleges() {
           />
         </div>
 
-        <div>
-          <button type="button" className="colleges-filter-btn">
-            <Filter className="colleges-filter-icon" />
-            <span>Filter Status</span>
-          </button>
-        </div>
+        <CollegeSelect
+          icon={Filter}
+          value={filterStatus}
+          onChange={(val) => setFilterStatus(val)}
+          wrapperClass="college-select"
+          options={[
+            { value: 'all', label: 'All Statuses' },
+            { value: 'Active', label: 'Active Colleges' },
+            { value: 'Inactive', label: 'Inactive Colleges' },
+          ]}
+        />
       </div>
 
       {/* Colleges Table */}
@@ -314,8 +575,15 @@ export default function Colleges() {
                 {filteredColleges.map((college) => (
                   <tr key={college.id} className="colleges-tr">
                     <td className="colleges-td">
-                      <div className="colleges-name">{college.name}</div>
-                      <div className="colleges-code">{college.code}</div>
+                      <div className="sa-college-avatar-box">
+                        <div className="sa-college-logo-icon-wrap">
+                          <Building2 size={16} />
+                        </div>
+                        <div>
+                          <div className="colleges-name">{college.name}</div>
+                          <div className="colleges-code">{college.code}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="colleges-td">
                       <div className="colleges-location-wrap">
@@ -324,17 +592,19 @@ export default function Colleges() {
                       </div>
                     </td>
                     <td className="colleges-td">
-                      <div className="colleges-admin-name">{college.adminName || 'Dr. Verma'}</div>
+                      <div className="colleges-admin-name">{college.adminName || college.contact_email?.split('@')[0] || '-'}</div>
                       <div className="colleges-admin-email-wrap">
                         <Mail size={12} />
-                        <span>{college.adminEmail || 'admin@college.edu.in'}</span>
+                        <span>{college.adminEmail || college.contact_email || '-'}</span>
                       </div>
                     </td>
-                    <td className="colleges-td colleges-admin-name">{college.departmentsCount}</td>
+                    <td className="colleges-td colleges-admin-name">
+                      {departments.filter(d => String(d.collegeId || d.college_id) === String(college.id)).length || college.departmentsCount || college.department_count || 0}
+                    </td>
                     <td className="colleges-td">
                       <div className="colleges-students-count">
                         <Users className="colleges-students-icon" />
-                        <span>{college.studentsCount}</span>
+                        <span>{college.studentsCount || college.student_count || 0}</span>
                       </div>
                     </td>
                     <td className="colleges-td">
@@ -343,8 +613,8 @@ export default function Colleges() {
                     <td className="colleges-td-right">
                       <ActionDropdown
                         onView={() => navigate(`/super-admin/colleges/${college.id}`)}
-                        onEdit={() => alert(`Editing ${college.name}`)}
-                        onDelete={() => handleDeleteCollege(college.id)}
+                        onEdit={() => setEditCollege(college)}
+                        onDelete={() => setDeleteCollege(college)}
                       />
                     </td>
                   </tr>
@@ -358,15 +628,15 @@ export default function Colleges() {
       {/* Add College Modal */}
       {isAddCollegeModalOpen && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddCollegeModalOpen(false); }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog college-modal-560">
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap modal-header-icon--indigo">
                   <Building2 size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Register Institution</h2>
-                  <p className="modal-subtitle">Onboard a new college to the training portal network.</p>
+                  <h2 className="modal-title">Register New Institution</h2>
+                  <p className="modal-subtitle">Add partner college to institutional ecosystem.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setIsAddCollegeModalOpen(false)}>
@@ -376,50 +646,50 @@ export default function Colleges() {
 
             <form onSubmit={handleAddCollege}>
               <div className="modal-body">
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>College Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="Vasantdada Patil Pratishthan"
+                      value={collegeForm.name}
+                      onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Short Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="PVPPCOE"
+                      value={collegeForm.code}
+                      onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+
                 <div className="form-group-admin">
-                  <label>College Full Name *</label>
+                  <label>City &amp; Location *</label>
                   <input
                     type="text"
                     required
                     className="form-input-admin"
-                    placeholder="e.g. Padmabhushan Vasantdada Patil Pratishthan's College of Engineering"
-                    value={collegeForm.name}
-                    onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
+                    placeholder="Sion, Mumbai"
+                    value={collegeForm.location}
+                    onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
                   />
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>College Code / Abbreviation *</label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-admin"
-                      placeholder="e.g. PVPPCOE"
-                      value={collegeForm.code}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group-admin">
-                    <label>City / Location *</label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-admin"
-                      placeholder="e.g. Sion, Mumbai"
-                      value={collegeForm.location}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Assigned Admin Name</label>
+                    <label>College Administrator Name</label>
                     <input
                       type="text"
                       className="form-input-admin"
-                      placeholder="Dr. K. S. Patil"
+                      placeholder="Dr. Verma"
                       value={collegeForm.adminName}
                       onChange={(e) => setCollegeForm({ ...collegeForm, adminName: e.target.value })}
                     />
@@ -446,6 +716,159 @@ export default function Colleges() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit College Modal */}
+      {editCollege && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditCollege(null); }}>
+          <div className="modal-dialog college-modal-560">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Edit2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Edit Institution</h2>
+                  <p className="modal-subtitle">Update college profile and administrator contact details</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setEditCollege(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setColleges(colleges.map(c => c.id === editCollege.id ? editCollege : c));
+              setEditCollege(null);
+            }}>
+              <div className="modal-body">
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>College Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editCollege.name}
+                      onChange={(e) => setEditCollege({ ...editCollege, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Short Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editCollege.code || ''}
+                      onChange={(e) => setEditCollege({ ...editCollege, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>City &amp; Location *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input-admin"
+                    value={editCollege.location || ''}
+                    onChange={(e) => setEditCollege({ ...editCollege, location: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Administrator Name</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      value={editCollege.adminName || ''}
+                      onChange={(e) => setEditCollege({ ...editCollege, adminName: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Admin Email</label>
+                    <input
+                      type="email"
+                      className="form-input-admin"
+                      value={editCollege.adminEmail || ''}
+                      onChange={(e) => setEditCollege({ ...editCollege, adminEmail: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Status</label>
+                  <CollegeSelect
+                    value={editCollege.status || 'Active'}
+                    options={[
+                      { value: 'Active', label: 'Active' },
+                      { value: 'Inactive', label: 'Inactive' }
+                    ]}
+                    onChange={(val) => setEditCollege({ ...editCollege, status: val })}
+                  />
+                </div>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-modal-cancel" onClick={() => setEditCollege(null)}>
+                  Cancel
+                </button>
+                <button type="submit" className="btn-modal-submit">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete College Confirmation Modal */}
+      {deleteCollege && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDeleteCollege(null); }}>
+          <div className="modal-dialog college-modal-440">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap college-delete-modal-icon">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Remove Institution</h2>
+                  <p className="modal-subtitle">Confirm college deletion</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setDeleteCollege(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p className="text-sm text-slate-600 m-0">
+                Are you sure you want to remove <strong className="text-slate-900">{deleteCollege.name}</strong>? All associated departments, batches, and student records will be archived.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn-modal-cancel" onClick={() => setDeleteCollege(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="manageusers-btn-reject college-btn-delete-confirm"
+                onClick={() => {
+                  handleDeleteCollege(deleteCollege.id);
+                  setDeleteCollege(null);
+                }}
+              >
+                <Trash2 size={15} />
+                <span>Confirm Remove</span>
+              </button>
+            </div>
           </div>
         </div>,
         document.body

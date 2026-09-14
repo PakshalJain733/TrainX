@@ -336,3 +336,122 @@
   to { opacity: 1; transform: scale(1); }
 }
 
+/* Inline Custom Select for Admin Attendance */
+.admin-att-select-wrap {
+  position: relative;
+  min-width: 220px;
+}
+
+.admin-att-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8.5px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.admin-att-select-trigger:hover,
+.admin-att-select-wrap--open .admin-att-select-trigger {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.admin-att-select-icon {
+  width: 15px;
+  height: 15px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.admin-att-select-text {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-att-select-arrow {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.admin-att-select-arrow--rotate {
+  transform: rotate(180deg);
+  color: #6366f1;
+}
+
+.admin-att-select-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  padding: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+  animation: adminAttSelectFadeIn 0.15s ease-out;
+}
+
+@keyframes adminAttSelectFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-att-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-att-select-option:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.admin-att-select-option--selected {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.admin-att-select-option--selected:hover {
+  background: #e0e7ff;
+}
+
+.admin-att-select-check {
+  width: 14px;
+  height: 14px;
+  color: #4f46e5;
+}
+

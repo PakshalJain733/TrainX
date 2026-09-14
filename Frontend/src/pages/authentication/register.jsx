@@ -1,7 +1,42 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
+import TrainXIcon from "../../assets/TrainX.png";
 import "./register.css";
+
+/* ── Inline dropdown for Register page (CSS: register.css .reg-select-*) ── */
+function RegSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`reg-select-wrap${isOpen ? ' reg-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger${isOpen ? ' reg-select-trigger--open' : ''}`}>
+        {Icon && <span className="reg-select-icon">{Icon}</span>}
+        <span className="reg-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <svg className={`reg-select-arrow${isOpen ? ' reg-select-arrow--rotate' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      {isOpen && (
+        <div className="reg-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`}>
+                <span className="reg-select-option-label">{opt.label}</span>
+                {isSel && <svg className="reg-select-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ── Reusable SVG icons ─────────────────────────────── */
 const Icons = {
@@ -83,6 +118,31 @@ const Icons = {
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   ),
+  copy: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </svg>
+  ),
+  check: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  ),
+  qrCode: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="14" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
+  arrowLeft: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  ),
 };
 
 /* ── Label with inline icon ─────────────────────────── */
@@ -121,7 +181,37 @@ function Register() {
   const [showTotpSetup, setShowTotpSetup] = useState(false);
   const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
   const [copiedSecret, setCopiedSecret] = useState(false);
+  const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
   const totpInputRefs = useRef([]);
+
+  // Request College Access Key / Demo State
+  const [isRequestDemoOpen, setIsRequestDemoOpen] = useState(false);
+  const [demoSubmitted, setDemoSubmitted] = useState(false);
+  const [demoFormData, setDemoFormData] = useState({
+    collegeName: "",
+    contactPerson: "",
+    designation: "",
+    email: "",
+    phone: "",
+    studentCount: "",
+  });
+
+  const handleDemoSubmit = (e) => {
+    e.preventDefault();
+    setDemoSubmitted(true);
+    setTimeout(() => {
+      setDemoSubmitted(false);
+      setIsRequestDemoOpen(false);
+      setDemoFormData({
+        collegeName: "",
+        contactPerson: "",
+        designation: "",
+        email: "",
+        phone: "",
+        studentCount: "",
+      });
+    }, 2200);
+  };
 
   const handleCopySecret = () => {
     if (totpSetupData?.secret) {
@@ -147,6 +237,26 @@ function Register() {
     if (e.key === "Backspace" && !totpCode[index] && index > 0) {
       totpInputRefs.current[index - 1]?.focus();
     }
+  };
+
+  const handleTotpPaste = (e) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasteData) {
+      const digits = pasteData.split("");
+      const newCode = ["", "", "", "", "", ""];
+      digits.forEach((d, i) => {
+        newCode[i] = d;
+      });
+      setTotpCode(newCode);
+      const nextIdx = Math.min(digits.length, 5);
+      totpInputRefs.current[nextIdx]?.focus();
+    }
+  };
+
+  const formatSecretKey = (secret) => {
+    if (!secret) return "";
+    return secret.match(/.{1,4}/g)?.join(" ") || secret;
   };
 
   const handleVerifyTotpSetup = async (e) => {
@@ -269,42 +379,110 @@ function Register() {
       <div className="bg-shape ring2"></div>
 
       <div className="register-card">
-        <img src={Logo} alt="Logo" className="logo" />
-
-        <div id="brand-row">
-          <h1 id="acad">Training</h1>
-          <h1 id="nexus">Portal</h1>
+        {/* Horizontal Brand Banner */}
+        <div className="register-header-banner">
+          <img src={Logo} alt="Logo" className="register-banner-logo" />
+          <div className="register-banner-divider"></div>
+          <div className="register-banner-text">
+            <div className="register-brand-row">
+              <span className="brand-training">Train</span>
+              <img src={TrainXIcon} alt="X" className="register-brand-x-icon" />
+            </div>
+            <p className="register-banner-subtitle">Create your account to get started.</p>
+          </div>
         </div>
 
-        <p className="subtitle">Create your account to get started.</p>
+        {showTotpSetup && (
+          <div className="totp-stepper-bar">
+            <div className="stepper-step completed">
+              <span className="stepper-badge">{Icons.check}</span>
+              <span className="stepper-label">Details</span>
+            </div>
+            <div className="stepper-line active"></div>
+            <div className="stepper-step active">
+              <span className="stepper-badge">{Icons.shield}</span>
+              <span className="stepper-label">Authenticator</span>
+            </div>
+          </div>
+        )}
 
         {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
         {successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showTotpSetup ? (
           <form onSubmit={handleVerifyTotpSetup} className="totp-setup-form">
-            <div className="totp-header" style={{ textAlign: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", margin: "0 0 4px 0" }}>Pair Microsoft / Google Authenticator</h3>
-              <p style={{ fontSize: "12.5px", color: "#64748b", margin: 0 }}>Scan QR Code with Microsoft or Google Authenticator on your phone.</p>
+            <div className="totp-header">
+              <h3 className="totp-title">Pair Authenticator App</h3>
+              <p className="totp-subtitle">
+                Scan QR Code using Google or Microsoft Authenticator.
+              </p>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px", background: "#f8fafc", padding: "12px", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
-              {totpSetupData?.qrCode && (
-                <img src={totpSetupData.qrCode} alt="2FA QR Code" style={{ width: "160px", height: "160px", borderRadius: "8px" }} />
-              )}
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#f1f5f9", padding: "8px 12px", borderRadius: "8px", marginBottom: "16px" }}>
-              <span style={{ fontSize: "12px", color: "#475569", fontWeight: "600" }}>Key:</span>
-              <code style={{ fontSize: "12.5px", fontWeight: "700", color: "#1e293b", letterSpacing: "1px" }}>{totpSetupData?.secret}</code>
-              <button type="button" onClick={handleCopySecret} style={{ background: "#2563eb", color: "#fff", border: "none", padding: "4px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: "600", cursor: "pointer" }}>
-                {copiedSecret ? "✓ Copied" : "Copy"}
+            {/* Method Tab Selector */}
+            <div className="totp-tab-nav">
+              <button
+                type="button"
+                className={`totp-tab-btn ${totpTab === "qr" ? "active" : ""}`}
+                onClick={() => setTotpTab("qr")}
+              >
+                {Icons.qrCode} Scan QR Code
+              </button>
+              <button
+                type="button"
+                className={`totp-tab-btn ${totpTab === "manual" ? "active" : ""}`}
+                onClick={() => setTotpTab("manual")}
+              >
+                {Icons.key} Manual Key
               </button>
             </div>
 
-            <div className="input-group">
+            {/* Tab 1: QR Code View */}
+            {totpTab === "qr" && (
+              <div className="totp-qr-wrapper">
+                <div className="totp-qr-frame">
+                  <span className="qr-corner top-left"></span>
+                  <span className="qr-corner top-right"></span>
+                  <span className="qr-corner bottom-left"></span>
+                  <span className="qr-corner bottom-right"></span>
+                  {totpSetupData?.qrCode && (
+                    <img src={totpSetupData.qrCode} alt="2FA QR Code" className="totp-qr-img" />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Secret Key Card (Only shown when Manual Key tab is active) */}
+            {totpTab === "manual" && (
+              <div className="totp-secret-card highlight">
+                <div className="secret-card-header">
+                  <span className="secret-card-label">{Icons.key} Secret Setup Key</span>
+                  <button
+                    type="button"
+                    onClick={handleCopySecret}
+                    className={`totp-copy-btn ${copiedSecret ? "copied" : ""}`}
+                    title="Copy secret key"
+                  >
+                    {copiedSecret ? (
+                      <>
+                        {Icons.check} <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        {Icons.copy} <span>Copy Key</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="secret-code-display">
+                  <code>{formatSecretKey(totpSetupData?.secret)}</code>
+                </div>
+              </div>
+            )}
+
+            {/* 6-Digit Verification Code Section */}
+            <div className="totp-otp-section">
               <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-              <div className="login-otp-input-row" style={{ marginTop: "8px" }}>
+              <div className="login-otp-input-row" onPaste={handleTotpPaste} style={{ marginTop: "6px" }}>
                 {totpCode.map((digit, idx) => (
                   <input
                     key={idx}
@@ -321,27 +499,41 @@ function Register() {
               </div>
             </div>
 
-            <button type="submit" className="login-send-otp-btn" style={{ width: "100%", marginTop: "16px" }} disabled={loading}>
+            <button type="submit" className="login-send-otp-btn totp-submit-btn" disabled={loading}>
               {loading ? "Verifying..." : "Verify & Complete Registration"}
             </button>
+
+            <div className="totp-footer-actions">
+              <button
+                type="button"
+                className="totp-back-link"
+                onClick={() => {
+                  setShowTotpSetup(false);
+                  setErrorMsg("");
+                  setSuccessMsg("");
+                }}
+              >
+                {Icons.arrowLeft} Back to registration
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={handleSubmit}>
           {/* ── Select Role ── */}
           <div className="role-select-container">
             <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
-            <select
-              className="role-select"
+            <RegSelect
               value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
-              <option value="">Select your role</option>
-              <option value="Student">Student</option>
-              <option value="Coordinator">Coordinator</option>
-              <option value="HOD">HOD</option>
-              <option value="Faculty">Faculty</option>
-              <option value="Mentor">Mentor</option>
-            </select>
+              wrapperClass="reg-select"
+              options={[
+                { value: "Student", label: "Student" },
+                { value: "Coordinator", label: "Coordinator" },
+                { value: "Admin", label: "Admin" },
+                { value: "Mentor", label: "Mentor" },
+              ]}
+              onChange={(val) => setRole(val)}
+              placeholder="Select your role"
+            />
           </div>
 
           {/* ── STUDENT ROLE FIELDS ── */}
@@ -405,54 +597,54 @@ function Register() {
               <div className="form-grid-3">
                 <div className="input-group">
                   <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
-                  <select
-                    name="department"
-                    className="field-select"
+                  <RegSelect
                     value={formData.department}
-                    onChange={handleChange}
-                  >
-                    <option value="">Dept</option>
-                    <option value="COMPS">COMPS</option>
-                    <option value="IT">IT</option>
-                    <option value="AIML">AIML</option>
-                    <option value="ECS">ECS</option>
-                    <option value="MTRX">MTRX</option>
-                    <option value="EXTC">EXTC</option>
-                  </select>
+                    wrapperClass="reg-select"
+                    options={[
+                      { value: "COMPS", label: "COMPS" },
+                      { value: "IT", label: "IT" },
+                      { value: "AIML", label: "AIML" },
+                      { value: "ECS", label: "ECS" },
+                      { value: "MTRX", label: "MTRX" },
+                      { value: "EXTC", label: "EXTC" },
+                    ]}
+                    onChange={(val) => setFormData({ ...formData, department: val })}
+                    placeholder="Dept"
+                  />
                 </div>
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.year}>Year</FieldLabel>
-                  <select
-                    name="year"
-                    className="field-select"
+                  <RegSelect
                     value={formData.year}
-                    onChange={handleChange}
-                  >
-                    <option value="">Year</option>
-                    <option value="FE">FE</option>
-                    <option value="SE">SE</option>
-                    <option value="TE">TE</option>
-                    <option value="BE">BE</option>
-                  </select>
+                    wrapperClass="reg-select"
+                    options={[
+                      { value: "FE", label: "FE" },
+                      { value: "SE", label: "SE" },
+                      { value: "TE", label: "TE" },
+                      { value: "BE", label: "BE" },
+                    ]}
+                    onChange={(val) => setFormData({ ...formData, year: val })}
+                    placeholder="Year"
+                  />
                 </div>
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.division}>Div.</FieldLabel>
-                  <select
-                    name="division"
-                    className="field-select"
+                  <RegSelect
                     value={formData.division}
-                    onChange={handleChange}
-                  >
-                    <option value="">Div</option>
-                    <option value="A">A</option>
-                    <option value="B">B</option>
-                    <option value="C">C</option>
-                    <option value="D">D</option>
-                    <option value="E">E</option>
-                    <option value="F">F</option>
-                  </select>
+                    wrapperClass="reg-select"
+                    options={[
+                      { value: "A", label: "A" },
+                      { value: "B", label: "B" },
+                      { value: "C", label: "C" },
+                      { value: "D", label: "D" },
+                      { value: "E", label: "E" },
+                      { value: "F", label: "F" },
+                    ]}
+                    onChange={(val) => setFormData({ ...formData, division: val })}
+                    placeholder="Div"
+                  />
                 </div>
               </div>
 
@@ -505,31 +697,33 @@ function Register() {
             </div>
           )}
 
-          {/* ── OTHER ROLE FIELDS (Faculty / Mentor / HOD) ── */}
+          {/* ── OTHER ROLE FIELDS (Faculty / Mentor / HOD / Admin) ── */}
           {role !== "Student" && role !== "" && (
             <div key={role}>
-              <div className="input-group">
-                <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                <input
-                  type="text"
-                  name="name"
-                  required
-                  placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={handleChange}
-                />
-              </div>
+              <div className="form-grid-2">
+                <div className="input-group">
+                  <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    placeholder="Enter your full name"
+                    value={formData.name}
+                    onChange={handleChange}
+                  />
+                </div>
 
-              <div className="input-group">
-                <FieldLabel icon={Icons.email}>Email</FieldLabel>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="user@pvppcoe.ac.in"
-                  value={formData.email}
-                  onChange={handleChange}
-                />
+                <div className="input-group">
+                  <FieldLabel icon={Icons.email}>Email</FieldLabel>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="user@pvppcoe.ac.in"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
+                </div>
               </div>
 
               {/* Row: Password | Confirm Password for Staff/Mentors */}
@@ -602,9 +796,141 @@ function Register() {
               <Link to="/"> Login</Link>
             </p>
           </div>
+
+          {role === "Admin" && (
+            <div className="request-key-banner">
+              <p className="request-key-text">Don't have an Invitation Access Code for your Institution?</p>
+              <button
+                type="button"
+                className="btn-request-key-link"
+                onClick={() => setIsRequestDemoOpen(true)}
+              >
+                Request College Demo / Access Key
+              </button>
+            </div>
+          )}
         </form>
         )}
       </div>
+
+      {/* Request College Access Key Modal */}
+      {isRequestDemoOpen && (
+        <div className="sa-modal-overlay" onClick={() => setIsRequestDemoOpen(false)}>
+          <div className="sa-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="sa-modal-header">
+              <div>
+                <h3 className="sa-modal-title">🏛️ Request Institution Access Key / Demo</h3>
+                <p className="sa-modal-desc">
+                  Submit your institution details. Our Super Admin team will verify your college offline and issue your Secure Authorization Key via email.
+                </p>
+              </div>
+              <button type="button" className="sa-modal-close" onClick={() => setIsRequestDemoOpen(false)}>
+                &times;
+              </button>
+            </div>
+
+            {demoSubmitted ? (
+              <div className="p-6 text-center space-y-3" style={{ padding: "36px 24px", textAlign: "center" }}>
+                <div style={{ width: "52px", height: "52px", background: "#dcfce7", color: "#16a34a", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px", fontSize: "24px", fontWeight: "bold" }}>
+                  ✓
+                </div>
+                <h4 style={{ fontSize: "18px", fontWeight: "700", color: "#0f172a", margin: "0 0 6px" }}>Request Submitted Successfully!</h4>
+                <p style={{ fontSize: "13.5px", color: "#475569", margin: 0, lineHeight: "1.5" }}>
+                  Our Super Admin team will review your institution credentials and issue your official Secure Access Code via email within 24 hours.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleDemoSubmit} className="sa-modal-body">
+                <div className="input-group">
+                  <FieldLabel icon={Icons.dept}>Institution / College Name *</FieldLabel>
+                  <input
+                    type="text"
+                    required
+                    className="form-input-admin"
+                    placeholder="e.g. Vasantdada Patil Pratishthan's College of Engg."
+                    value={demoFormData.collegeName}
+                    onChange={(e) => setDemoFormData({ ...demoFormData, collegeName: e.target.value })}
+                  />
+                </div>
+
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.user}>Contact Person Name *</FieldLabel>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="Dr. Rajesh Kumar"
+                      value={demoFormData.contactPerson}
+                      onChange={(e) => setDemoFormData({ ...demoFormData, contactPerson: e.target.value })}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.id}>Official Designation *</FieldLabel>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Principal / TPO / HOD"
+                      value={demoFormData.designation}
+                      onChange={(e) => setDemoFormData({ ...demoFormData, designation: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.email}>Institutional Email *</FieldLabel>
+                    <input
+                      type="email"
+                      required
+                      className="form-input-admin"
+                      placeholder="tpo@college.ac.in"
+                      value={demoFormData.email}
+                      onChange={(e) => setDemoFormData({ ...demoFormData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.phone}>Phone Number *</FieldLabel>
+                    <input
+                      type="tel"
+                      required
+                      className="form-input-admin"
+                      placeholder="+91 9876543210"
+                      value={demoFormData.phone}
+                      onChange={(e) => setDemoFormData({ ...demoFormData, phone: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="input-group">
+                  <FieldLabel icon={Icons.role}>Estimated Student Count</FieldLabel>
+                  <RegSelect
+                    value={demoFormData.studentCount}
+                    options={[
+                      { value: "100-500", label: "100 - 500 Students" },
+                      { value: "500-1500", label: "500 - 1,500 Students" },
+                      { value: "1500-3000", label: "1,500 - 3,000 Students" },
+                      { value: "3000+", label: "3,000+ Students" },
+                    ]}
+                    onChange={(val) => setDemoFormData({ ...demoFormData, studentCount: val })}
+                    placeholder="Select range"
+                  />
+                </div>
+
+                <div className="sa-modal-footer">
+                  <button type="button" className="btn-modal-cancel" onClick={() => setIsRequestDemoOpen(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-modal-submit">
+                    Submit Access Request
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

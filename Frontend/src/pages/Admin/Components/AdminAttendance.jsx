@@ -6,12 +6,47 @@ import {
   CheckCircle2, XCircle, QrCode, RefreshCw,
   Copy, Check, Calendar, Users, ShieldCheck,
   Download, Clock, Info, Sparkles, X, History,
-  Eye, FileText, ArrowLeft, Zap, FileSpreadsheet
+  Eye, FileText, ArrowLeft, Zap, FileSpreadsheet,
+  ChevronDown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AdminAttendance.css";
+
+/* ── Inline dropdown for Admin Attendance (CSS: AdminAttendance.css .admin-att-select-*) ── */
+function AdminAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`admin-att-select-wrap${isOpen ? ' admin-att-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-att-select-trigger${isOpen ? ' admin-att-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-att-select-icon" />}
+        <span className="admin-att-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`admin-att-select-arrow${isOpen ? ' admin-att-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="admin-att-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-att-select-option${isSel ? ' admin-att-select-option--selected' : ''}`}>
+                <span className="admin-att-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-att-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const defaultBatches = [
   { id: 1, name: "Java Full Stack Training", code: "JAVA-QRVL" },
@@ -669,17 +704,11 @@ export default function AdminAttendance() {
         />
         <div className="admin-attendance-top-actions">
           <div className="attendance-filters">
-            <select
-              className="attendance-select"
+            <AdminAttSelect
               value={selectedBatchCode}
-              onChange={e => handleBatchChange(e.target.value)}
-            >
-              {batches.map(b => (
-                <option key={b.code} value={b.code}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              onChange={handleBatchChange}
+              options={batches.map(b => ({ value: b.code, label: b.name }))}
+            />
             <input
               type="date"
               className="attendance-date-input"

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Users,
@@ -16,11 +16,59 @@ import {
   UserCheck,
   RefreshCw,
   X,
-  AlertCircle
+  AlertCircle,
+  ChevronDown,
+  Check
 } from "lucide-react";
-import { apiFetch } from "../../../utils/api";
+import { Card, CardContent } from "../../../components/ui/Card";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { Badge } from "../../../components/ui/Badge";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/AdminUsers.css";
+
+/* ── Inline dropdown for Admin Users (CSS: AdminUsers.css .admin-user-select-*) ── */
+function AdminUserSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [dropUp, setDropUp] = useState(false);
+  const ref = useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const handleToggle = () => {
+    if (!isOpen && ref.current) {
+      setDropUp(direction === 'up');
+    }
+    setIsOpen(v => !v);
+  };
+
+  return (
+    <div className={`admin-user-select-wrap${isOpen ? ' admin-user-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={handleToggle} className={`admin-user-select-trigger${isOpen ? ' admin-user-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="admin-user-select-icon" />}
+        <span className="admin-user-select-text">{selected ? selected.label : <span className="admin-user-select-placeholder">{placeholder}</span>}</span>
+        <ChevronDown className={`admin-user-select-arrow${isOpen ? ' admin-user-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className={`admin-user-select-dropdown${dropUp ? ' admin-user-select-dropdown--up' : ''}`}>
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-user-select-option${isSel ? ' admin-user-select-option--selected' : ''}`}>
+                <span className="admin-user-select-option-label">{opt.label}</span>
+                {isSel && <Check className="admin-user-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function AdminUsers() {
   const [users, setUsers] = useState([]);
@@ -471,16 +519,16 @@ export default function AdminUsers() {
 
                 <div className="form-group-admin">
                   <label>Assign Role *</label>
-                  <select
-                    className="form-select-admin"
+                  <AdminUserSelect
                     value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  >
-                    <option value="student">Student</option>
-                    <option value="mentor">Mentor / Faculty</option>
-                    <option value="coordinator">Coordinator</option>
-                    <option value="college_admin">College Admin</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, role: val })}
+                    options={[
+                      { value: "student", label: "Student" },
+                      { value: "mentor", label: "Mentor / Faculty" },
+                      { value: "coordinator", label: "Coordinator" },
+                      { value: "college_admin", label: "College Admin" }
+                    ]}
+                  />
                 </div>
 
                 {formData.role === "student" && (
@@ -498,46 +546,46 @@ export default function AdminUsers() {
                       </div>
                       <div className="form-group-admin">
                         <label>Department</label>
-                        <select
-                          className="form-select-admin"
+                        <AdminUserSelect
                           value={formData.department}
-                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                        >
-                          <option value="COMPS">COMPS</option>
-                          <option value="IT">IT</option>
-                          <option value="AIML">AIML</option>
-                          <option value="ECS">ECS</option>
-                          <option value="MTRX">MTRX</option>
-                          <option value="EXTC">EXTC</option>
-                        </select>
+                          onChange={(val) => setFormData({ ...formData, department: val })}
+                          options={[
+                            { value: "COMPS", label: "COMPS" },
+                            { value: "IT", label: "IT" },
+                            { value: "AIML", label: "AIML" },
+                            { value: "ECS", label: "ECS" },
+                            { value: "MTRX", label: "MTRX" },
+                            { value: "EXTC", label: "EXTC" }
+                          ]}
+                        />
                       </div>
                     </div>
 
                     <div className="form-row-2">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
-                        <select
-                          className="form-select-admin"
+                        <AdminUserSelect
                           value={formData.year}
-                          onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                        >
-                          <option value="FE">FE</option>
-                          <option value="SE">SE</option>
-                          <option value="TE">TE</option>
-                          <option value="BE">BE</option>
-                        </select>
+                          onChange={(val) => setFormData({ ...formData, year: val })}
+                          options={[
+                            { value: "FE", label: "FE" },
+                            { value: "SE", label: "SE" },
+                            { value: "TE", label: "TE" },
+                            { value: "BE", label: "BE" }
+                          ]}
+                        />
                       </div>
                       <div className="form-group-admin">
                         <label>Division</label>
-                        <select
-                          className="form-select-admin"
+                        <AdminUserSelect
                           value={formData.division}
-                          onChange={(e) => setFormData({ ...formData, division: e.target.value })}
-                        >
-                          <option value="A">Division A</option>
-                          <option value="B">Division B</option>
-                          <option value="C">Division C</option>
-                        </select>
+                          onChange={(val) => setFormData({ ...formData, division: val })}
+                          options={[
+                            { value: "A", label: "Division A" },
+                            { value: "B", label: "Division B" },
+                            { value: "C", label: "Division C" }
+                          ]}
+                        />
                       </div>
                     </div>
                   </>
@@ -617,27 +665,27 @@ export default function AdminUsers() {
                 <div className="form-row-2">
                   <div className="form-group-admin">
                     <label>Role</label>
-                    <select
-                      className="form-select-admin"
+                    <AdminUserSelect
                       value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                    >
-                      <option value="student">Student</option>
-                      <option value="mentor">Mentor / Faculty</option>
-                      <option value="coordinator">Coordinator</option>
-                      <option value="college_admin">College Admin</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, role: val })}
+                      options={[
+                        { value: "student", label: "Student" },
+                        { value: "mentor", label: "Mentor / Faculty" },
+                        { value: "coordinator", label: "Coordinator" },
+                        { value: "college_admin", label: "College Admin" }
+                      ]}
+                    />
                   </div>
                   <div className="form-group-admin">
                     <label>Account Status</label>
-                    <select
-                      className="form-select-admin"
+                    <AdminUserSelect
                       value={formData.is_active}
-                      onChange={(e) => setFormData({ ...formData, is_active: parseInt(e.target.value) })}
-                    >
-                      <option value={1}>Active</option>
-                      <option value={0}>Inactive</option>
-                    </select>
+                      onChange={(val) => setFormData({ ...formData, is_active: parseInt(val) })}
+                      options={[
+                        { value: 1, label: "Active" },
+                        { value: 0, label: "Inactive" }
+                      ]}
+                    />
                   </div>
                 </div>
 

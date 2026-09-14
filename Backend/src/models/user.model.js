@@ -145,17 +145,18 @@ export const findUserById = async (id) => {
 
 export const findUserByEmail = findUserByEmailOrMobile;
 
-export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', two_factor_secret = null }) => {
+export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', password_hash = '', two_factor_secret = null }) => {
+  const pwd = password || password_hash || '';
   try {
     const res = await query(
-      'INSERT INTO users (name, email, mobile_number, role, college_id, password_hash, two_factor_secret) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [name, email, mobile_number, role, college_id, password, two_factor_secret]
+      'INSERT INTO users (name, email, mobile_number, role, college_id, password, password_hash, two_factor_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, email, mobile_number, role, college_id, pwd, pwd, two_factor_secret]
     );
     if (res && res.insertId) {
-      return { id: res.insertId, name, email, mobile_number, role, college_id, password_hash: password, two_factor_secret };
+      return { id: res.insertId, name, email, mobile_number, role, college_id, password: pwd, two_factor_secret };
     }
   } catch (error) {
-    console.warn(`[User Model] Database insert fallback: ${error.message}`);
+    console.error(`[User Model Error] Database insert failed: ${error.message}`);
   }
 
   const newUser = {
@@ -165,13 +166,39 @@ export const createUser = async ({ name, email = '', mobile_number = '', role = 
     mobile_number,
     role,
     college_id,
-    password_hash: password,
+    password_hash: pwd,
     two_factor_secret,
     is_active: 1,
     created_at: new Date(),
   };
   mockUsers.push(newUser);
   return newUser;
+};
+
+export const updateUser = async (userId, updateData) => {
+  const numId = parseInt(userId, 10);
+  try {
+    const fields = [];
+    const values = [];
+    if (updateData.name !== undefined) { fields.push('name = ?'); values.push(updateData.name); }
+    if (updateData.email !== undefined) { fields.push('email = ?'); values.push(updateData.email); }
+    if (updateData.mobile_number !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.mobile_number); }
+    if (updateData.phone !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.phone); }
+    if (updateData.password !== undefined) { fields.push('password = ?'); values.push(updateData.password); fields.push('password_hash = ?'); values.push(updateData.password); }
+    if (updateData.password_hash !== undefined) { fields.push('password_hash = ?'); values.push(updateData.password_hash); }
+
+    if (fields.length > 0) {
+      values.push(numId);
+      await query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+    }
+  } catch (error) {
+    console.warn(`[User Model] updateUser DB error: ${error.message}`);
+  }
+
+  const u = mockUsers.find(user => user.id === numId);
+  if (u) {
+    Object.assign(u, updateData);
+  }
 };
 
 export const updateUserTwoFactorSecret = async (userId, secret) => {
@@ -289,8 +316,10 @@ export const getAllUsersModel = async (collegeId = null) => {
   try {
     let sql = `
       SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
+             c.name as college_name,
              s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills
       FROM users u
+      LEFT JOIN colleges c ON u.college_id = c.id
       LEFT JOIN students s ON u.id = s.user_id
     `;
     const params = [];
@@ -301,14 +330,13 @@ export const getAllUsersModel = async (collegeId = null) => {
     sql += ' ORDER BY u.id DESC';
 
     const results = await query(sql, params);
-    if (results && Array.isArray(results) && results.length > 0) {
+    if (results && Array.isArray(results)) {
       return results;
     }
   } catch (error) {
-    console.warn(`[User Model] Database query fallback for getAllUsers: ${error.message}`);
+    console.warn(`[User Model] Database query error for getAllUsers: ${error.message}`);
   }
 
-  // Fallback to mock storage with college isolation
   return mockUsers
     .filter((u) => {
       if (!collegeId) return true;
@@ -362,9 +390,12 @@ export const updateUserModel = async (id, data) => {
     linkedinUrl,
     target_track,
     track,
+    password,
+    password_hash,
   } = data;
 
   const phoneVal = mobile_number || phone;
+  const passVal = password || password_hash || null;
   const genderVal = gender;
   const cityVal = city;
   const emergencyVal = emergency_contact || guardianContact;
@@ -373,8 +404,8 @@ export const updateUserModel = async (id, data) => {
 
   try {
     await query(
-      'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track) WHERE id = ?',
-      [name, email, phoneVal, role, college_id, is_active, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
+      'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track) WHERE id = ?',
+      [name, email, phoneVal, passVal, role, college_id, is_active, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
     );
 
     if (

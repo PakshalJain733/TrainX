@@ -21,18 +21,45 @@ export default function AdminOverview() {
   const [recentUsers, setRecentUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const userStr = localStorage.getItem("user");
+  let currentUser = null;
+  try {
+    currentUser = userStr ? JSON.parse(userStr) : null;
+  } catch (_) {}
+  const fullName = currentUser?.name || currentUser?.fullName || "Admin";
+
+  const getInitials = (name) => {
+    if (!name) return "AD";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const adminInitials = getInitials(fullName);
+
   useEffect(() => {
     const loadAdminDashboard = async () => {
       try {
         const statsRes = await apiFetch("/admin/stats");
-        if (statsRes && statsRes.data) {
-          setStats(statsRes.data);
+        if (statsRes) {
+          const statsData = statsRes.data || statsRes.stats || statsRes;
+          setStats({
+            students: statsData.students !== undefined ? statsData.students : (statsData.totalStudents || 0),
+            mentors: statsData.mentors !== undefined ? statsData.mentors : (statsData.totalMentors || 0),
+            coordinators: statsData.coordinators !== undefined ? statsData.coordinators : (statsData.totalCoordinators || 0),
+            totalUsers: statsData.totalUsers !== undefined ? statsData.totalUsers : (statsData.total || 0),
+          });
         }
 
         const usersRes = await apiFetch("/admin/users");
-        if (usersRes && usersRes.data) {
-          setRecentUsers(usersRes.data.slice(0, 5));
-        }
+        const userList = Array.isArray(usersRes?.users)
+          ? usersRes.users
+          : Array.isArray(usersRes?.data)
+          ? usersRes.data
+          : Array.isArray(usersRes?.data?.users)
+          ? usersRes.data.users
+          : [];
+        setRecentUsers(userList.slice(0, 5));
       } catch (err) {
         console.error("Failed to load admin overview:", err);
       } finally {
@@ -42,13 +69,6 @@ export default function AdminOverview() {
 
     loadAdminDashboard();
   }, []);
-
-  const getInitials = (name) => {
-    if (!name) return "US";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
 
   const statCards = [
     { label: "Total Students", value: `${stats.students}`, hint: "Enrolled in campus programs", icon: Users },
@@ -63,14 +83,14 @@ export default function AdminOverview() {
       <div className="overview-hero-card">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">
-            AD
+            {adminInitials}
           </div>
           <div>
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> ADMIN CONTROL PANEL
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, Admin!
+              Welcome back, {fullName}!
             </h1>
             <p className="overview-hero-desc">
               Campus Training Portal | System Administration & User Directory

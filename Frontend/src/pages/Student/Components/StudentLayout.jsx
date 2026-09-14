@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key } from "lucide-react";
 import { StudentSidebar } from "./StudentSidebar";
 import { apiFetch } from "../../../utils/api";
+import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/StudentLayout.css";
 
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -266,6 +267,7 @@ export default function StudentLayout() {
 
   const [user, setUser] = useState(() => resolveUser(null));
   const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // Load user profile from backend on mount (device-synced)
   useEffect(() => {
@@ -461,6 +463,16 @@ export default function StudentLayout() {
                           Edit Profile
                         </button>
                         <button
+                          className="student-header__profile-item"
+                          onClick={() => {
+                            setProfileOpen(false);
+                            setIsChangePasswordOpen(true);
+                          }}
+                        >
+                          <Key size={15} />
+                          Change Password
+                        </button>
+                        <button
                           className="student-header__profile-item student-header__profile-item--danger"
                           onClick={() => {
                             setProfileOpen(false);
@@ -486,6 +498,10 @@ export default function StudentLayout() {
         </main>
       </div>
       <BroadcastToast />
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </div>
   );
 }

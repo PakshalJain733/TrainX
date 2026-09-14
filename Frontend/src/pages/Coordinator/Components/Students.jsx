@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Search,
   GraduationCap,
@@ -17,9 +17,45 @@ import {
   Award,
   Send,
   UserCheck,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
 import "../Styles/Students.css";
+
+/* ── Inline dropdown for Coordinator Students (CSS: Students.css .coord-student-select-*) ── */
+function CoordStudentSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  React.useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`coord-student-select-wrap${isOpen ? ' coord-student-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-student-select-trigger${isOpen ? ' coord-student-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="coord-student-select-icon" />}
+        <span className="coord-student-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`coord-student-select-arrow${isOpen ? ' coord-student-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="coord-student-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-student-select-option${isSel ? ' coord-student-select-option--selected' : ''}`}>
+                <span className="coord-student-select-option-label">{opt.label}</span>
+                {isSel && <Check className="coord-student-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const careerTracks = [
   { id: "python-backend", name: "Python Backend Developer" },
@@ -434,18 +470,14 @@ export default function CoordinatorStudents() {
               </div>
 
               <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", alignItems: "center", marginTop: "4px" }}>
-                <select
-                  className="student-roadmap-select-input"
-                  style={{ flex: 1, minWidth: "300px" }}
+                <CoordStudentSelect
                   value={selectedGoal}
-                  onChange={(e) => setSelectedGoal(e.target.value)}
-                >
-                  {careerTracks.map((track) => (
-                    <option key={track.id} value={track.id}>
-                      {track.name}
-                    </option>
-                  ))}
-                </select>
+                  options={careerTracks.map((track) => ({
+                    value: track.id,
+                    label: track.name
+                  }))}
+                  onChange={(val) => setSelectedGoal(val)}
+                />
 
                 <button
                   className="coord-btn coord-btn--primary"
@@ -579,30 +611,26 @@ export default function CoordinatorStudents() {
           />
         </div>
 
-        <select
-          className="coord-select"
+        <CoordStudentSelect
           value={batchFilter}
-          onChange={(e) => setBatchFilter(e.target.value)}
-        >
-          <option value="All">All Batches</option>
-          {coordinatorBatches.map((b) => (
-            <option key={b.id} value={b.name}>
-              {b.name}
-            </option>
-          ))}
-        </select>
+          options={[
+            { value: "All", label: "All Batches" },
+            ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
+          ]}
+          onChange={(val) => setBatchFilter(val)}
+        />
 
-        <select
-          className="coord-select"
+        <CoordStudentSelect
           value={riskFilter}
-          onChange={(e) => setRiskFilter(e.target.value)}
-        >
-          <option value="All">All Risk Levels</option>
-          <option value="Top Performer">Top Performer</option>
-          <option value="Good">Good Standing</option>
-          <option value="Moderate">Moderate Risk</option>
-          <option value="High Risk">High Risk (&lt;75% Attendance)</option>
-        </select>
+          options={[
+            { value: "All", label: "All Risk Levels" },
+            { value: "Top Performer", label: "Top Performer" },
+            { value: "Good", label: "Good Standing" },
+            { value: "Moderate", label: "Moderate Risk" },
+            { value: "High Risk", label: "High Risk (<75% Attendance)" },
+          ]}
+          onChange={(val) => setRiskFilter(val)}
+        />
       </div>
 
       <div className="coord-table-card">

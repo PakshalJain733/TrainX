@@ -6,6 +6,7 @@ import {
   Search,
   Plus,
   ChevronDown,
+  Check,
   Sparkles,
   Ticket,
   FileText,
@@ -22,6 +23,40 @@ import {
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Help.css";
+
+/* ── Inline dropdown for Student Help (CSS: Help.css .student-help-select-*) ── */
+function StudentHelpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = React.useRef(null);
+  const selected = options.find(o => String(o.value) === String(value));
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+  return (
+    <div className={`student-help-select-wrap${isOpen ? ' student-help-select-wrap--open' : ''}`} ref={ref}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-help-select-trigger${isOpen ? ' student-help-select-trigger--open' : ''}`}>
+        {Icon && <Icon className="student-help-select-icon" />}
+        <span className="student-help-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <ChevronDown className={`student-help-select-arrow${isOpen ? ' student-help-select-arrow--rotate' : ''}`} />
+      </button>
+      {isOpen && (
+        <div className="student-help-select-dropdown">
+          {options.map(opt => {
+            const isSel = String(opt.value) === String(value);
+            return (
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-help-select-option${isSel ? ' student-help-select-option--selected' : ''}`}>
+                <span className="student-help-select-option-label">{opt.label}</span>
+                {isSel && <Check className="student-help-select-check" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const defaultFaqs = [
   {
@@ -424,30 +459,30 @@ export default function Help() {
               <div className="help-grid-2col">
                 <div className="help-form-group">
                   <label className="help-form-label">Category</label>
-                  <select
-                    className="help-form-select"
+                  <StudentHelpSelect
                     value={newTicket.category}
-                    onChange={(e) => setNewTicket({ ...newTicket, category: e.target.value })}
-                  >
-                    <option value="Attendance & QR">Attendance & QR</option>
-                    <option value="Academics & Labs">Academics & Labs</option>
-                    <option value="Account & Security">Account & Security</option>
-                    <option value="Exams & Marks">Exams & Marks</option>
-                    <option value="System / Portal Bug">System / Portal Bug</option>
-                  </select>
+                    options={[
+                      { value: "Attendance & QR", label: "Attendance & QR" },
+                      { value: "Academics & Labs", label: "Academics & Labs" },
+                      { value: "Account & Security", label: "Account & Security" },
+                      { value: "Exams & Marks", label: "Exams & Marks" },
+                      { value: "System / Portal Bug", label: "System / Portal Bug" },
+                    ]}
+                    onChange={(val) => setNewTicket({ ...newTicket, category: val })}
+                  />
                 </div>
 
                 <div className="help-form-group">
                   <label className="help-form-label">Priority Level</label>
-                  <select
-                    className="help-form-select"
+                  <StudentHelpSelect
                     value={newTicket.priority}
-                    onChange={(e) => setNewTicket({ ...newTicket, priority: e.target.value })}
-                  >
-                    <option value="Normal">Normal</option>
-                    <option value="High">High Priority</option>
-                    <option value="Critical">Critical Urgent</option>
-                  </select>
+                    options={[
+                      { value: "Normal", label: "Normal" },
+                      { value: "High", label: "High Priority" },
+                      { value: "Critical", label: "Critical Urgent" },
+                    ]}
+                    onChange={(val) => setNewTicket({ ...newTicket, priority: val })}
+                  />
                 </div>
               </div>
 
