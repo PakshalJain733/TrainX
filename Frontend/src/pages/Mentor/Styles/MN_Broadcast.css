@@ -1,0 +1,311 @@
+/* MN_Broadcast.css */
+.mentor-broadcast-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mentor-broadcast-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mentor-broadcast-page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mentor-broadcast-page-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+.mentor-broadcast-alert-success {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ecfdf5;
+  border: 1px solid #6ee7b7;
+  color: #065f46;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+
+.mentor-broadcast-form-card, .mentor-broadcast-history-card {
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+}
+
+.mentor-broadcast-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mentor-broadcast-card-title h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mentor-broadcast-title-icon {
+  color: #4f46e5;
+}
+
+.mentor-broadcast-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mentor-broadcast-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mentor-broadcast-form-group label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.mentor-broadcast-form-group input, .mentor-broadcast-form-group select, .mentor-broadcast-form-group textarea {
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  font-family: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.mentor-broadcast-form-group input:focus, .mentor-broadcast-form-group select:focus, .mentor-broadcast-form-group textarea:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.mentor-broadcast-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .mentor-broadcast-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mentor-broadcast-send-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.mentor-broadcast-send-btn:hover {
+  opacity: 0.94;
+  transform: translateY(-1px);
+}
+
+.mentor-broadcast-send-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mentor-broadcast-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mentor-broadcast-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid #f1f5f9;
+  border-radius: 10px;
+  background: #f8fafc;
+  transition: border-color 0.2s;
+}
+
+.mentor-broadcast-item:hover {
+  border-color: #cbd5e1;
+}
+
+.mentor-broadcast-item-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.mentor-broadcast-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mentor-broadcast-item-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.mentor-broadcast-item-body {
+  font-size: 13.5px;
+  color: #475569;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.mentor-broadcast-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+.mentor-broadcast-meta-target, .mentor-broadcast-meta-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mentor-broadcast-delete-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.mentor-broadcast-delete-btn:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.mentor-broadcast-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  text-align: center;
+  gap: 10px;
+}
+
+/* Mentor Custom Dropdown */
+.mentor-bcast-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.mentor-bcast-select-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  color: #1e293b;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.mentor-bcast-select-trigger:focus, .mentor-bcast-select-trigger--open {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.mentor-bcast-select-arrow {
+  width: 16px;
+  height: 16px;
+  color: #64748b;
+  transition: transform 0.2s ease;
+}
+
+.mentor-bcast-select-arrow--rotate {
+  transform: rotate(180deg);
+}
+
+.mentor-bcast-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.mentor-bcast-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.mentor-bcast-select-option:hover {
+  background: #f1f5f9;
+}
+
+.mentor-bcast-select-option--selected {
+  background: #eef2ff;
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.mentor-bcast-select-check {
+  width: 15px;
+  height: 15px;
+  color: #4f46e5;
+}

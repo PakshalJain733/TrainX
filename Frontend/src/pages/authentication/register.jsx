@@ -18,8 +18,8 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
     <div className={`reg-select-wrap${isOpen ? ' reg-select-wrap--open' : ''}`} ref={ref}>
       <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger${isOpen ? ' reg-select-trigger--open' : ''}`}>
         {Icon && <span className="reg-select-icon">{Icon}</span>}
-        <span className="reg-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <svg className={`reg-select-arrow${isOpen ? ' reg-select-arrow--rotate' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        <span className="reg-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
+        <svg className={`reg-select-arrow${isOpen ? ' reg-select-arrow--rotate' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
       </button>
       {isOpen && (
         <div className="reg-select-dropdown">
@@ -28,7 +28,7 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`}>
                 <span className="reg-select-option-label">{opt.label}</span>
-                {isSel && <svg className="reg-select-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                {isSel && <svg className="reg-select-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
               </div>
             );
           })}
@@ -381,7 +381,7 @@ function Register() {
       <div className="register-card">
         {/* Horizontal Brand Banner */}
         <div className="register-header-banner">
-          <img src={Logo} alt="Logo" className="register-banner-logo" />
+          <img src={Logo} alt="Logo" className="register-banner-logo" ></img>
           <div className="register-banner-divider"></div>
           <div className="register-banner-text">
             <div className="register-brand-row">
@@ -519,297 +519,297 @@ function Register() {
           </form>
         ) : (
           <form onSubmit={handleSubmit}>
-          {/* ── Select Role ── */}
-          <div className="role-select-container">
-            <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
-            <RegSelect
-              value={role}
-              wrapperClass="reg-select"
-              options={[
-                { value: "Student", label: "Student" },
-                { value: "Coordinator", label: "Coordinator" },
-                { value: "Admin", label: "Admin" },
-                { value: "Mentor", label: "Mentor" },
-              ]}
-              onChange={(val) => setRole(val)}
-              placeholder="Select your role"
-            />
-          </div>
+            {/* ── Select Role ── */}
+            <div className="role-select-container">
+              <FieldLabel icon={Icons.role}>Select Role</FieldLabel>
+              <RegSelect
+                value={role}
+                wrapperClass="reg-select"
+                options={[
+                  { value: "Student", label: "Student" },
+                  { value: "Coordinator", label: "Coordinator" },
+                  { value: "Admin", label: "Admin" },
+                  { value: "Mentor", label: "Mentor" },
+                ]}
+                onChange={(val) => setRole(val)}
+                placeholder="Select your role"
+              />
+            </div>
 
-          {/* ── STUDENT ROLE FIELDS ── */}
-          {role === "Student" && (
-            <div key="Student">
-              {/* Row 1: Full Name | College Email */}
-              <div className="form-grid-2">
+            {/* ── STUDENT ROLE FIELDS ── */}
+            {role === "Student" && (
+              <div key="Student">
+                {/* Row 1: Full Name | College Email */}
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      placeholder="Full name"
+                      value={formData.name}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.email}>College Email</FieldLabel>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      placeholder="user@pvppcoe.ac.in"
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: College ID | Mobile Number */}
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.id}>College ID</FieldLabel>
+                    <input
+                      type="text"
+                      name="roll_number"
+                      required
+                      placeholder="College ID"
+                      value={formData.roll_number}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
+                    <input
+                      type="tel"
+                      name="mobile_number"
+                      required
+                      placeholder="Mobile number"
+                      value={formData.mobile_number}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Row 3: Department | Year | Division */}
+                <div className="form-grid-3">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
+                    <RegSelect
+                      value={formData.department}
+                      wrapperClass="reg-select"
+                      options={[
+                        { value: "COMPS", label: "COMPS" },
+                        { value: "IT", label: "IT" },
+                        { value: "AIML", label: "AIML" },
+                        { value: "ECS", label: "ECS" },
+                        { value: "MTRX", label: "MTRX" },
+                        { value: "EXTC", label: "EXTC" },
+                      ]}
+                      onChange={(val) => setFormData({ ...formData, department: val })}
+                      placeholder="Dept"
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.year}>Year</FieldLabel>
+                    <RegSelect
+                      value={formData.year}
+                      wrapperClass="reg-select"
+                      options={[
+                        { value: "FE", label: "FE" },
+                        { value: "SE", label: "SE" },
+                        { value: "TE", label: "TE" },
+                        { value: "BE", label: "BE" },
+                      ]}
+                      onChange={(val) => setFormData({ ...formData, year: val })}
+                      placeholder="Year"
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.division}>Div.</FieldLabel>
+                    <RegSelect
+                      value={formData.division}
+                      wrapperClass="reg-select"
+                      options={[
+                        { value: "A", label: "A" },
+                        { value: "B", label: "B" },
+                        { value: "C", label: "C" },
+                        { value: "D", label: "D" },
+                        { value: "E", label: "E" },
+                        { value: "F", label: "F" },
+                      ]}
+                      onChange={(val) => setFormData({ ...formData, division: val })}
+                      placeholder="Div"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4: Password | Confirm Password */}
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
+                    <div className="register-password-wrapper">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        required
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className="register-password-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? Icons.eyeOff : Icons.eye}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
+                    <div className="register-password-wrapper">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirm_password"
+                        required
+                        placeholder="••••••••"
+                        value={formData.confirm_password}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className="register-password-toggle"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? Icons.eyeOff : Icons.eye}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ── OTHER ROLE FIELDS (Faculty / Mentor / HOD / Admin) ── */}
+            {role !== "Student" && role !== "" && (
+              <div key={role}>
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      placeholder="Enter your full name"
+                      value={formData.name}
+                      onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.email}>Email</FieldLabel>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      placeholder="user@pvppcoe.ac.in"
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                {/* Row: Password | Confirm Password for Staff/Mentors */}
+                <div className="form-grid-2">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
+                    <div className="register-password-wrapper">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        required
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className="register-password-toggle"
+                        onClick={() => setShowPassword(!showPassword)}
+                        tabIndex={-1}
+                      >
+                        {showPassword ? Icons.eyeOff : Icons.eye}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
+                    <div className="register-password-wrapper">
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        name="confirm_password"
+                        required
+                        placeholder="••••••••"
+                        value={formData.confirm_password}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className="register-password-toggle"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? Icons.eyeOff : Icons.eye}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="input-group">
-                  <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
+                  <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
                   <input
                     type="text"
-                    name="name"
-                    required
-                    placeholder="Full name"
-                    value={formData.name}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    placeholder="user@pvppcoe.ac.in"
-                    value={formData.email}
+                    name="secure_code"
+                    placeholder={`Enter ${role} secure code`}
+                    value={formData.secure_code}
                     onChange={handleChange}
                   />
                 </div>
               </div>
+            )}
 
-              {/* Row 2: College ID | Mobile Number */}
-              <div className="form-grid-2">
-                <div className="input-group">
-                  <FieldLabel icon={Icons.id}>College ID</FieldLabel>
-                  <input
-                    type="text"
-                    name="roll_number"
-                    required
-                    placeholder="College ID"
-                    value={formData.roll_number}
-                    onChange={handleChange}
-                  />
-                </div>
+            <button type="submit" disabled={loading}>
+              {loading ? "Registering..." : "Register"}
+            </button>
 
-                <div className="input-group">
-                  <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                  <input
-                    type="tel"
-                    name="mobile_number"
-                    required
-                    placeholder="Mobile number"
-                    value={formData.mobile_number}
-                    onChange={handleChange}
-                  />
-                </div>
-              </div>
-
-              {/* Row 3: Department | Year | Division */}
-              <div className="form-grid-3">
-                <div className="input-group">
-                  <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
-                  <RegSelect
-                    value={formData.department}
-                    wrapperClass="reg-select"
-                    options={[
-                      { value: "COMPS", label: "COMPS" },
-                      { value: "IT", label: "IT" },
-                      { value: "AIML", label: "AIML" },
-                      { value: "ECS", label: "ECS" },
-                      { value: "MTRX", label: "MTRX" },
-                      { value: "EXTC", label: "EXTC" },
-                    ]}
-                    onChange={(val) => setFormData({ ...formData, department: val })}
-                    placeholder="Dept"
-                  />
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.year}>Year</FieldLabel>
-                  <RegSelect
-                    value={formData.year}
-                    wrapperClass="reg-select"
-                    options={[
-                      { value: "FE", label: "FE" },
-                      { value: "SE", label: "SE" },
-                      { value: "TE", label: "TE" },
-                      { value: "BE", label: "BE" },
-                    ]}
-                    onChange={(val) => setFormData({ ...formData, year: val })}
-                    placeholder="Year"
-                  />
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.division}>Div.</FieldLabel>
-                  <RegSelect
-                    value={formData.division}
-                    wrapperClass="reg-select"
-                    options={[
-                      { value: "A", label: "A" },
-                      { value: "B", label: "B" },
-                      { value: "C", label: "C" },
-                      { value: "D", label: "D" },
-                      { value: "E", label: "E" },
-                      { value: "F", label: "F" },
-                    ]}
-                    onChange={(val) => setFormData({ ...formData, division: val })}
-                    placeholder="Div"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4: Password | Confirm Password */}
-              <div className="form-grid-2">
-                <div className="input-group">
-                  <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
-                  <div className="register-password-wrapper">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      required
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className="register-password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? Icons.eyeOff : Icons.eye}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
-                  <div className="register-password-wrapper">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="confirm_password"
-                      required
-                      placeholder="••••••••"
-                      value={formData.confirm_password}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className="register-password-toggle"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      tabIndex={-1}
-                    >
-                      {showConfirmPassword ? Icons.eyeOff : Icons.eye}
-                    </button>
-                  </div>
-                </div>
-              </div>
+            <div className="links">
+              <p>
+                Already have an account?
+                <Link to="/"> Login</Link>
+              </p>
             </div>
-          )}
 
-          {/* ── OTHER ROLE FIELDS (Faculty / Mentor / HOD / Admin) ── */}
-          {role !== "Student" && role !== "" && (
-            <div key={role}>
-              <div className="form-grid-2">
-                <div className="input-group">
-                  <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    placeholder="Enter your full name"
-                    value={formData.name}
-                    onChange={handleChange}
-                  />
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.email}>Email</FieldLabel>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    placeholder="user@pvppcoe.ac.in"
-                    value={formData.email}
-                    onChange={handleChange}
-                  />
-                </div>
+            {role === "Admin" && (
+              <div className="request-key-banner">
+                <p className="request-key-text">Don't have an Invitation Access Code for your Institution?</p>
+                <button
+                  type="button"
+                  className="btn-request-key-link"
+                  onClick={() => setIsRequestDemoOpen(true)}
+                >
+                  Request College Demo / Access Key
+                </button>
               </div>
-
-              {/* Row: Password | Confirm Password for Staff/Mentors */}
-              <div className="form-grid-2">
-                <div className="input-group">
-                  <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
-                  <div className="register-password-wrapper">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      name="password"
-                      required
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className="register-password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? Icons.eyeOff : Icons.eye}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="input-group">
-                  <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
-                  <div className="register-password-wrapper">
-                    <input
-                      type={showConfirmPassword ? "text" : "password"}
-                      name="confirm_password"
-                      required
-                      placeholder="••••••••"
-                      value={formData.confirm_password}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className="register-password-toggle"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      tabIndex={-1}
-                    >
-                      {showConfirmPassword ? Icons.eyeOff : Icons.eye}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="input-group">
-                <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
-                <input
-                  type="text"
-                  name="secure_code"
-                  placeholder={`Enter ${role} secure code`}
-                  value={formData.secure_code}
-                  onChange={handleChange}
-                />
-              </div>
-            </div>
-          )}
-
-          <button type="submit" disabled={loading}>
-            {loading ? "Registering..." : "Register"}
-          </button>
-
-          <div className="links">
-            <p>
-              Already have an account?
-              <Link to="/"> Login</Link>
-            </p>
-          </div>
-
-          {role === "Admin" && (
-            <div className="request-key-banner">
-              <p className="request-key-text">Don't have an Invitation Access Code for your Institution?</p>
-              <button
-                type="button"
-                className="btn-request-key-link"
-                onClick={() => setIsRequestDemoOpen(true)}
-              >
-                Request College Demo / Access Key
-              </button>
-            </div>
-          )}
-        </form>
+            )}
+          </form>
         )}
       </div>
 

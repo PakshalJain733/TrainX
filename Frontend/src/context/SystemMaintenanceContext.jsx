@@ -206,8 +206,12 @@ export function SystemMaintenanceProvider({ children }) {
   const [config, setConfig] = useState(initialMaintenanceConfig);
 
   useEffect(() => {
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+    if (!token) return;
     // Fetch maintenance config directly from MySQL Database
-    fetch('/api/v1/shared-content?type=maintenance')
+    fetch('/api/v1/shared-content?type=maintenance', {
+      headers: { Authorization: `Bearer ${token}` }
+    })
       .then(res => res.json())
       .then(json => {
         if (json && json.data && json.data.length > 0) {
@@ -227,21 +231,7 @@ export function SystemMaintenanceProvider({ children }) {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    // Save to MySQL DB whenever config updates
-    fetch('/api/v1/shared-content', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'maintenance',
-        title: 'System Maintenance Config',
-        description: 'Global maintenance configuration',
-        data: config,
-      }),
-    }).catch(err => console.warn('Database maintenance save warning:', err));
-  }, [config]);
-
-  // Check if a single module is active
+  // Module state checker helper
   const isModuleActive = (moduleKey) => {
     if (config.globalEmergencyMode) return false;
     if (!moduleKey) return true;

@@ -41,18 +41,23 @@
 }
 
 /* Horizontal Brand Header Banner */
-/* .register-header-banner {
+.register-header-banner {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
-    margin-bottom: 18px;
-    padding-bottom: 12px;
-} */
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.register-banner-logo {
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+}
 
 .register-banner-divider {
     width: 1.5px;
-    height: 42px;
+    height: 38px;
     background-color: #cbd5e1;
 }
 
@@ -380,7 +385,6 @@
     align-items: center;
     justify-content: center;
     gap: 1px;
-    margin-bottom: 18px;
     padding-bottom: 4px;
 }
 
@@ -1533,4 +1537,131 @@
   background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
   transform: translateY(-1px) !important;
+}
+
+/* ── Mobile Responsive Scaling for Background Circles & Decorative Rings ── */
+@media (max-width: 768px) {
+  .circle1 {
+    width: 160px !important;
+    height: 160px !important;
+    top: -70px !important;
+    left: -70px !important;
+    opacity: 0.14 !important;
+  }
+
+  .circle2 {
+    width: 90px !important;
+    height: 90px !important;
+    top: 15px !important;
+    right: 15px !important;
+    opacity: 0.12 !important;
+  }
+
+  .circle3 {
+    width: 140px !important;
+    height: 140px !important;
+    bottom: -40px !important;
+    right: 30px !important;
+    opacity: 0.12 !important;
+  }
+
+  .circle4 {
+    width: 60px !important;
+    height: 60px !important;
+    bottom: 20px !important;
+    left: 15px !important;
+    opacity: 0.12 !important;
+  }
+
+  .circle5 {
+    width: 100px !important;
+    height: 100px !important;
+    left: -40px !important;
+    opacity: 0.12 !important;
+  }
+
+  .circle6 {
+    width: 45px !important;
+    height: 45px !important;
+    opacity: 0.08 !important;
+  }
+
+  .blob1 {
+    width: 130px !important;
+    height: 100px !important;
+    bottom: -20px !important;
+    left: -20px !important;
+    opacity: 0.1 !important;
+  }
+
+  .blob2 {
+    width: 100px !important;
+    height: 120px !important;
+    top: -30px !important;
+    right: 30px !important;
+    opacity: 0.08 !important;
+  }
+
+  .ring1 {
+    width: 110px !important;
+    height: 110px !important;
+    border-width: 10px !important;
+    right: -25px !important;
+    opacity: 0.08 !important;
+  }
+
+  .ring2 {
+    width: 70px !important;
+    height: 70px !important;
+    border-width: 8px !important;
+    top: 50px !important;
+    left: 40px !important;
+    opacity: 0.08 !important;
+  }
+
+  /* Mobile Layout Adjustments for Registration Card */
+  .register-card {
+    padding: 20px 16px !important;
+    max-width: 100% !important;
+    border-radius: 16px !important;
+  }
+
+  .register-header-banner {
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .register-banner-logo {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .register-banner-divider {
+    height: 32px !important;
+  }
+
+  .register-brand-row {
+    font-size: 24px !important;
+  }
+
+  .register-brand-x-icon {
+    height: 24px !important;
+  }
+
+  .register-banner-subtitle {
+    font-size: 11.5px !important;
+  }
+
+  .form-grid-2 {
+    gap: 8px !important;
+  }
+
+  .form-grid-3 {
+    gap: 6px !important;
+  }
+
+  .field-select {
+    padding: 8px 22px 8px 8px !important;
+    font-size: 12.5px !important;
+  }
 }

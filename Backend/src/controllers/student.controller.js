@@ -2,6 +2,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import {
   getAllUsersModel,
   findUserById,
+  createUser,
   getStudentByUserId,
   updateUserModel,
 } from '../models/user.model.js';
@@ -106,7 +107,19 @@ export const getStudentDashboard = async (req, res, next) => {
       console.warn('[getStudentDashboard materials query warning]', e.message);
     }
 
+    const callerUser = allUsers.find(u => u.id === callerId) || {};
+    const callerStudent = (await getStudentByUserId(callerId)) || {};
+
     const dashboardData = {
+      personalDetails: {
+        name: callerUser.name || 'Student',
+        department: callerStudent.department || callerUser.department || '',
+      },
+      academicOverview: {
+        rollNumber: callerStudent.roll_number || callerUser.roll_number || '',
+        semester: callerStudent.semester || callerUser.semester || '',
+        cgpa: callerStudent.cgpa || callerUser.cgpa || '',
+      },
       attendanceSummary: {
         percentage: attendancePercentage,
       },
@@ -140,17 +153,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
       return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
     }
 
-    const fallbackProblems = [
-      { id: 1, title: 'Two Sum', category: 'Arrays & Hashing', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
-      { id: 2, title: 'Valid Palindrome', category: 'Two Pointers', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
-      { id: 3, title: 'Longest Substring Without Repeating Characters', category: 'Sliding Window', difficulty: 'Medium', points: 150, solve_status: 'Unsolved' },
-      { id: 4, title: 'Reverse Linked List', category: 'Linked List', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
-      { id: 5, title: 'Maximum Subarray (Kadane\'s Algorithm)', category: 'Dynamic Programming', difficulty: 'Medium', points: 150, solve_status: 'Unsolved' },
-      { id: 6, title: 'Binary Tree Level Order Traversal', category: 'Trees & Graphs', difficulty: 'Medium', points: 150, solve_status: 'Unsolved' },
-      { id: 7, title: 'Merge k Sorted Lists', category: 'Heap / Priority Queue', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
-      { id: 8, title: 'Trapping Rain Water', category: 'Two Pointers', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
-    ];
-    return sendSuccess(res, 'Practice problems retrieved successfully', fallbackProblems);
+    return sendSuccess(res, 'Practice problems retrieved successfully', []);
   } catch (error) {
     next(error);
   }
@@ -308,25 +311,6 @@ export const getStudentNotifications = async (req, res, next) => {
       console.warn('[getStudentNotifications DB error]', e.message);
     }
 
-    if (!broadcasts || broadcasts.length === 0) {
-      broadcasts = [
-        {
-          id: 1,
-          title: 'IA-2 Quiz Rescheduled to Friday 10:00 AM',
-          message: 'The Internal Assessment 2 test for TE Computer batches has been shifted to Friday 10:00 AM. Please revise your modules.',
-          priority: 'Urgent Notice',
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 2,
-          title: 'Goldman Sachs Placement Drive Registration Live',
-          message: 'Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through the placement tab.',
-          priority: 'Placement Drive Alert',
-          created_at: new Date().toISOString(),
-        }
-      ];
-    }
-
     return sendSuccess(res, 'Student notifications retrieved', broadcasts);
   } catch (error) {
     next(error);
@@ -336,18 +320,93 @@ export const getStudentNotifications = async (req, res, next) => {
 
 export const getStudentPerformance = async (req, res, next) => {
   try {
+    const userId = req.user?.userId || req.user?.id;
+
+    let attendanceScore = 0;
+    let quizScore = 0;
+    let codingScore = 0;
+    let interviewScore = 0;
+    let solvedCount = 0;
+    let totalProblems = 0;
+    let learningProgress = 0;
+    let ranking = 1;
+    let totalStudents = 1;
+    let quizList = [];
+
+    if (userId) {
+      // 1. Attendance score
+      try {
+        const attRows = await query(`SELECT status FROM attendance WHERE user_id = ?`, [userId]);
+        if (attRows && attRows.length > 0) {
+          const present = attRows.filter(r => String(r.status).toLowerCase() === 'present').length;
+          attendanceScore = Math.round((present / attRows.length) * 100);
+        }
+      } catch (e) {}
+
+      // 2. Quiz score & list
+      try {
+        const qRows = await query(`SELECT q.title, qa.score, qa.total_marks FROM quiz_attempts qa LEFT JOIN quizzes q ON qa.quiz_id = q.id WHERE qa.user_id = ?`, [userId]);
+        if (qRows && qRows.length > 0) {
+          const totalPct = qRows.reduce((acc, r) => acc + (r.total_marks ? Math.round((r.score / r.total_marks) * 100) : r.score), 0);
+          quizScore = Math.round(totalPct / qRows.length);
+          quizList = qRows.map((r, i) => ({
+            label: r.title || `Quiz ${i + 1}`,
+            score: r.total_marks ? Math.round((r.score / r.total_marks) * 100) : r.score,
+            color: ["#6366f1", "#10b981", "#f59e0b", "#ec4899"][i % 4]
+          }));
+        }
+      } catch (e) {}
+
+      // 3. Coding score & solved count
+      try {
+        const cTotal = await query(`SELECT COUNT(*) as count FROM practice_problems`);
+        totalProblems = cTotal && cTotal[0] ? cTotal[0].count : 0;
+        const cSolved = await query(`SELECT COUNT(*) as count FROM practice_problem_submissions WHERE user_id = ? AND status = 'Solved'`, [userId]);
+        solvedCount = cSolved && cSolved[0] ? cSolved[0].count : 0;
+        codingScore = totalProblems > 0 ? Math.round((solvedCount / totalProblems) * 100) : 0;
+      } catch (e) {}
+
+      // 4. Learning progress (from active roadmap items if any)
+      try {
+        const rmItems = await query(`SELECT ri.status FROM roadmap_items ri JOIN roadmaps r ON ri.roadmap_id = r.id WHERE r.student_id = ?`, [userId]);
+        if (rmItems && rmItems.length > 0) {
+          const done = rmItems.filter(r => r.status === 'completed').length;
+          learningProgress = Math.round((done / rmItems.length) * 100);
+        }
+      } catch (e) {}
+
+      // 5. Interview score
+      try {
+        const iRows = await query(`SELECT overall_score FROM interview_submissions WHERE user_id = ?`, [userId]);
+        if (iRows && iRows.length > 0) {
+          const sum = iRows.reduce((acc, r) => acc + (Number(r.overall_score) || 0), 0);
+          interviewScore = Math.round(sum / iRows.length);
+        }
+      } catch (e) {}
+
+      // 6. Ranking
+      try {
+        const uCount = await query(`SELECT COUNT(*) as count FROM users WHERE role = 'student'`);
+        if (uCount && uCount[0]) totalStudents = Math.max(1, uCount[0].count);
+      } catch (e) {}
+    }
+
+    const validScores = [attendanceScore, quizScore, codingScore, interviewScore].filter(s => s > 0);
+    const overallScore = validScores.length > 0 ? Math.round(validScores.reduce((a, b) => a + b, 0) / validScores.length) : 0;
+
     const performanceData = {
-      overallScore: 85,
-      codingScore: 88,
-      quizScore: 82,
-      interviewScore: 84,
-      ranking: 12,
-      totalStudents: 150,
-      monthlyProgress: [
-        { month: 'Jan', score: 75 },
-        { month: 'Feb', score: 80 },
-        { month: 'Mar', score: 85 },
-      ],
+      overallScore,
+      attendanceScore,
+      codingScore,
+      quizScore,
+      interviewScore,
+      solvedCount,
+      totalProblems,
+      learningProgress,
+      ranking,
+      totalStudents,
+      quizList,
+      monthlyProgress: [],
     };
     return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
   } catch (error) {
@@ -364,29 +423,7 @@ export const getSupportTickets = async (req, res, next) => {
     } catch (e) {
       console.warn('[DB getSupportTickets fallback]', e.message);
     }
-    if (!tickets || tickets.length === 0) {
-      tickets = [
-        {
-          id: 'TICK-8842',
-          subject: 'Attendance percentage discrepancy in DSA lab',
-          category: 'Attendance & QR',
-          priority: 'High',
-          status: 'In Progress',
-          created_at: '2026-03-01',
-          responses: 2
-        },
-        {
-          id: 'TICK-7910',
-          subject: 'Unable to submit Python quiz module 3',
-          category: 'Academics & Labs',
-          priority: 'Medium',
-          status: 'Resolved',
-          created_at: '2026-02-24',
-          responses: 3
-        }
-      ];
-    }
-    return sendSuccess(res, 'Support tickets retrieved', tickets);
+    return sendSuccess(res, 'Support tickets retrieved', tickets || []);
   } catch (error) {
     next(error);
   }

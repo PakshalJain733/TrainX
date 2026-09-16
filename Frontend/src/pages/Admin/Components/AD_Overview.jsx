@@ -1,0 +1,266 @@
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
+import { Badge } from "../../../components/ui/Badge";
+import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
+import { Button } from "../../../components/ui/Button";
+import { apiFetch } from "../../../utils/api";
+import "../Styles/AD_Overview.css";
+
+export default function AdminOverview() {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    students: 0,
+    mentors: 0,
+    coordinators: 0,
+  });
+  const [recentUsers, setRecentUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("user") || "{}");
+    } catch (_) {
+      return {};
+    }
+  });
+
+  const fullName = adminUser.name || adminUser.fullName || adminUser.email?.split("@")[0] || "Admin";
+  const email = adminUser.email || "";
+  const role = adminUser.role || "Campus Admin";
+  const dept = adminUser.department || adminUser.dept || "";
+
+  const getInitials = (name) => {
+    if (!name) return "AD";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const adminInitials = getInitials(fullName);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        const res = await apiFetch("/auth/me");
+        if (res && res.data) {
+          setAdminUser(res.data);
+        }
+      } catch (_) {}
+    };
+
+    const loadAdminDashboard = async () => {
+      try {
+        const statsRes = await apiFetch("/admin/stats");
+        if (statsRes) {
+          const statsData = statsRes.data || statsRes.stats || statsRes;
+          setStats({
+            students: statsData.students !== undefined ? statsData.students : (statsData.totalStudents || 0),
+            mentors: statsData.mentors !== undefined ? statsData.mentors : (statsData.totalMentors || 0),
+            coordinators: statsData.coordinators !== undefined ? statsData.coordinators : (statsData.totalCoordinators || 0),
+            totalUsers: statsData.totalUsers !== undefined ? statsData.totalUsers : (statsData.total || 0),
+          });
+        }
+
+        const usersRes = await apiFetch("/admin/users");
+        const userList = Array.isArray(usersRes?.users)
+          ? usersRes.users
+          : Array.isArray(usersRes?.data)
+          ? usersRes.data
+          : Array.isArray(usersRes?.data?.users)
+          ? usersRes.data.users
+          : [];
+        setRecentUsers(userList.slice(0, 5));
+      } catch (err) {
+        console.error("Failed to load admin overview:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+    loadAdminDashboard();
+  }, []);
+
+  const statCards = [
+    { label: "Total Students", value: `${stats.students}`, hint: "Enrolled in campus programs", icon: Users },
+    { label: "Faculty & Mentors", value: `${stats.mentors}`, hint: "Active mentors on portal", icon: BookOpen },
+    { label: "Coordinators", value: `${stats.coordinators}`, hint: "Department coordinators", icon: Shield },
+    { label: "Total Accounts", value: `${stats.totalUsers}`, hint: "All registered users", icon: UserCog },
+  ];
+
+  return (
+    <div className="admin-page-inner stack-6 overview-wrapper">
+      {/* Radiant Welcome Banner */}
+      <div className="overview-hero-card-admin">
+        <div className="overview-hero-left">
+          <div className="overview-hero-avatar">
+            {adminInitials}
+          </div>
+          <div>
+            <div className="overview-hero-eyebrow">
+              <Sparkles size={13} /> ADMIN CONTROL PANEL
+            </div>
+            <h1 className="overview-hero-title">
+              Welcome back, {fullName}!
+            </h1>
+            <p className="overview-hero-desc">
+              {role || "Administrator"} &nbsp;|&nbsp; {email || "admin@pvppcoe.ac.in"} &nbsp;|&nbsp; {dept || "Computer Engineering"}
+            </p>
+          </div>
+        </div>
+
+        <div className="overview-hero-actions">
+          <Link to="/admin/users">
+            <Button className="overview-btn-primary">
+              <UserCog size={14} className="overview-btn-icon" /> Manage Users
+            </Button>
+          </Link>
+          <Link to="/admin/batches">
+            <Button className="overview-btn-secondary">
+              <BookOpen size={14} className="overview-btn-icon" /> View Batches
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* 4 Stats Cards Row */}
+      <div className="overview-grid-4">
+        {statCards.map((s) => (
+          <Card key={s.label} className="overview-stat-card shadow-sm">
+            <CardContent className="overview-card-content">
+              <div className="overview-stat-top">
+                <div className="overview-icon-container">
+                  <s.icon size={16} />
+                </div>
+                <span className="overview-stat-label">{s.label}</span>
+              </div>
+              <p className="overview-stat-value">{s.value}</p>
+              <div className="overview-stat-hint-row">
+                <span className="overview-stat-trend-pill">{s.hint}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Main Grid split */}
+      <div className="overview-split-grid">
+        {/* Left: Recent User Registrations */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap">
+                <Clock size={18} className="overview-header-icon" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Recent Registrations</CardTitle>
+                <CardDescription className="overview-card-desc">Newly onboarded portal users</CardDescription>
+              </div>
+            </div>
+            <Link to="/admin/users" className="overview-view-all-pill">
+              View All Users
+            </Link>
+          </CardHeader>
+          <CardContent className="overview-stack-1">
+            {recentUsers.length > 0 ? (
+              recentUsers.map((u) => (
+                <div key={u.id} className="overview-row-between overview-item-row">
+                  <div className="overview-row overview-item-left admin-overview-user-item-left">
+                    <Avatar size="32">
+                      <AvatarFallback>{getInitials(u.name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="overview-item-title">{u.name}</p>
+                      <p className="overview-item-due">{u.email || u.mobile_number}</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="overview-badge-shrink">
+                    {u.role ? u.role.replace("_", " ") : "student"}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <div className="admin-overview-empty-users">
+                <Clock size={28} className="admin-overview-empty-clock" />
+                <p className="admin-overview-empty-title">No users registered yet</p>
+                <p className="admin-overview-empty-sub">Users will appear here once registered.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Right: Quick Administration Actions */}
+        <Card className="overview-subcard overview-leaderboard-card">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
+                <Shield size={18} className="overview-header-icon overview-trophy-icon" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Quick Administration</CardTitle>
+                <CardDescription className="overview-card-desc">Direct control shortcuts</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="overview-leaderboard-content admin-quick-actions-content">
+            <Link to="/admin/users" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <Users size={18} color="#4f46e5" />
+                  <div>
+                    <span className="admin-quick-action-title">User Management</span>
+                    <span className="admin-quick-action-sub">Create, edit, and assign roles</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--blue">Open &rarr;</span>
+              </div>
+            </Link>
+
+            <Link to="/admin/batches" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <BookOpen size={18} color="#059669" />
+                  <div>
+                    <span className="admin-quick-action-title">Batch Rosters</span>
+                    <span className="admin-quick-action-sub">Manage cohorts & training streams</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--green">Open &rarr;</span>
+              </div>
+            </Link>
+
+            <Link to="/admin/broadcast" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <Megaphone size={18} color="#7c3aed" />
+                  <div>
+                    <span className="admin-quick-action-title">Broadcast Notice Center</span>
+                    <span className="admin-quick-action-sub">Send alerts & notices to all batches</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--purple">Send &rarr;</span>
+              </div>
+            </Link>
+
+            <Link to="/admin/attendance" className="admin-quick-action-link">
+              <div className="overview-row-between admin-quick-action-card">
+                <div className="overview-row admin-overview-user-item-left">
+                  <CalendarCheck size={18} color="#d97706" />
+                  <div>
+                    <span className="admin-quick-action-title">Attendance Tracking</span>
+                    <span className="admin-quick-action-sub">Session attendance & percentages</span>
+                  </div>
+                </div>
+                <span className="admin-quick-action-arrow admin-quick-action-arrow--amber">Open &rarr;</span>
+              </div>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+

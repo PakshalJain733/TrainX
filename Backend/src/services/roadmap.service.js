@@ -10,11 +10,8 @@ import {
  * Auto-generates a personalized roadmap if none exists yet for the student.
  */
 export const fetchStudentRoadmap = async (studentId) => {
-  let roadmap = await getRoadmapByStudentId(studentId);
-  if (!roadmap) {
-    roadmap = await generateNewRoadmap(studentId, 'Backend Developer');
-  }
-  return roadmap;
+  const roadmap = await getRoadmapByStudentId(studentId);
+  return roadmap || null;
 };
 
 /**

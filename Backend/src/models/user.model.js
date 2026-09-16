@@ -376,6 +376,8 @@ export const updateUserModel = async (id, data) => {
     batch_id,
     is_active,
     roll_number,
+    rollNo,
+    roll_no,
     department,
     year,
     division,
@@ -394,22 +396,28 @@ export const updateUserModel = async (id, data) => {
     password_hash,
   } = data;
 
-  const phoneVal = mobile_number || phone;
+  const rollVal = roll_number || rollNo || roll_no || null;
+  const phoneVal = mobile_number || phone || null;
   const passVal = password || password_hash || null;
-  const genderVal = gender;
-  const cityVal = city;
-  const emergencyVal = emergency_contact || guardianContact;
-  const linkedinVal = linkedin_url || linkedinUrl;
-  const trackVal = target_track || track;
+  const genderVal = gender || null;
+  const cityVal = city || null;
+  const emergencyVal = emergency_contact || guardianContact || null;
+  const linkedinVal = linkedin_url || linkedinUrl || null;
+  const trackVal = target_track || track || null;
+  const nameVal = name || null;
+  const emailVal = email || null;
+  const roleVal = role || null;
+  const collegeIdVal = college_id || null;
+  const isActiveVal = is_active !== undefined ? is_active : null;
 
   try {
     await query(
       'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track) WHERE id = ?',
-      [name, email, phoneVal, passVal, role, college_id, is_active, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
+      [nameVal, emailVal, phoneVal, passVal, roleVal, collegeIdVal, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
     );
 
     if (
-      roll_number !== undefined ||
+      rollVal !== undefined ||
       department !== undefined ||
       department_id !== undefined ||
       batch_id !== undefined ||
@@ -444,14 +452,31 @@ export const updateUserModel = async (id, data) => {
             linkedin_url = COALESCE(?, linkedin_url),
             target_track = COALESCE(?, target_track)
            WHERE user_id = ?`,
-          [roll_number, college_id, department_id, batch_id, department, year, division, semester, cgpa, skills, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
+          [
+            rollVal,
+            college_id || null,
+            department_id || null,
+            batch_id || null,
+            department || null,
+            year || null,
+            division || null,
+            semester || null,
+            cgpa || null,
+            skills || null,
+            genderVal,
+            cityVal,
+            emergencyVal,
+            linkedinVal,
+            trackVal,
+            numId,
+          ]
         );
       } else {
         await query(
           `INSERT INTO students 
             (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, linkedin_url, target_track) 
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, college_id || 1, department_id || null, batch_id || null, roll_number || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', linkedinVal || '', trackVal || '']
+          [numId, college_id || 1, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', linkedinVal || '', trackVal || '']
         );
       }
     }

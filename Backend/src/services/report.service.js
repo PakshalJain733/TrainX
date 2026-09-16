@@ -264,35 +264,17 @@ export const generateStudentWeeklyReport = async (studentId, options = {}) => {
  */
 export const getStudentWeeklyReports = async (studentId) => {
   const sId = Number(studentId);
-  let reports = await getWeeklyReportsByStudentIdModel(sId);
-
-  // If no reports exist yet, generate Week 37 (current week) and Week 36 (previous week) automatically
-  if (!reports || reports.length === 0) {
-    const currentWeekReport = await generateStudentWeeklyReport(sId, { weeksAgo: 0 });
-    const prevWeekReport = await generateStudentWeeklyReport(sId, { weeksAgo: 1 });
-    reports = [currentWeekReport, prevWeekReport];
-  }
-
-  return reports;
+  const reports = await getWeeklyReportsByStudentIdModel(sId);
+  return reports || [];
 };
 
 /**
  * 3. GET WEEKLY REPORTS FOR MENTOR'S BATCH & STUDENTS
  */
 export const getMentorWeeklyReportsService = async (user = {}, queryParams = {}) => {
-  const collegeId = user.college_id || 1;
   const batchId = queryParams.batch_id || 1;
-
-  let reports = await getWeeklyReportsByBatchModel(batchId);
-
-  if (!reports || reports.length === 0) {
-    // Generate reports for student 6 & 7 as fallback
-    const r1 = await generateStudentWeeklyReport(6);
-    const r2 = await generateStudentWeeklyReport(7);
-    reports = [r1, r2];
-  }
-
-  return reports;
+  const reports = await getWeeklyReportsByBatchModel(batchId);
+  return reports || [];
 };
 
 /**
@@ -300,49 +282,16 @@ export const getMentorWeeklyReportsService = async (user = {}, queryParams = {})
  */
 export const getAdminWeeklyReportsService = async (user = {}, queryParams = {}) => {
   const collegeId = queryParams.college_id || user.college_id || 1;
-
-  let reports = await getWeeklyReportsByCollegeModel(collegeId);
-
-  if (!reports || reports.length === 0) {
-    const r1 = await generateStudentWeeklyReport(6);
-    const r2 = await generateStudentWeeklyReport(7);
-    reports = [
-      {
-        id: 'report-batch-1',
-        batch: 'Batch A - CSE',
-        week: 'Week 37 · 07 Sep – 13 Sep 2026',
-        avgScore: 82,
-        attendance: 88,
-        topStudent: 'Aarav Sharma',
-        generatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'report-batch-2',
-        batch: 'Batch A - ECS',
-        week: 'Week 37 · 07 Sep – 13 Sep 2026',
-        avgScore: 78,
-        attendance: 85,
-        topStudent: 'Ananya Verma',
-        generatedAt: new Date().toISOString(),
-      },
-    ];
-  }
-
-  return reports;
+  const reports = await getWeeklyReportsByCollegeModel(collegeId);
+  return reports || [];
 };
 
 /**
  * 5. GET SUPER ADMIN WEEKLY GOVERNANCE REPORTS
  */
 export const getSuperAdminWeeklyReportsService = async (queryParams = {}) => {
-  const r1 = await generateStudentWeeklyReport(6);
-  const r2 = await generateStudentWeeklyReport(7);
   return {
-    campusSummaries: [
-      { college: 'PVPPCOE', totalBatches: 6, avgScore: 81, attendance: 88, activeStudents: 340 },
-      { college: 'DBIT', totalBatches: 4, avgScore: 79, attendance: 86, activeStudents: 220 },
-      { college: 'KJSCE', totalBatches: 5, avgScore: 85, attendance: 92, activeStudents: 290 },
-    ],
-    studentReports: [r1, r2],
+    campusSummaries: [],
+    studentReports: [],
   };
 };

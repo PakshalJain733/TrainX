@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import LogoMain from "../../assets/Logo.png";
 import Logo from "../../assets/Logo2.png";
 import TrainXIcon from "../../assets/TrainX.png";
 
@@ -206,7 +207,7 @@ function Login() {
     };
 
     localStorage.setItem("user", JSON.stringify(mergedUser));
-    
+
     // Set flag for First Login Profile Update Alert
     if (!localStorage.getItem(`profile_updated_${mergedUser.id || mergedUser.email}`)) {
       sessionStorage.setItem("showFirstLoginAlert", "true");
@@ -389,187 +390,61 @@ function Login() {
       <div className="login-bg-shape login-circle6"></div>
 
       <div className="login-wrapper">
-        {/* Left Panel - Learning Journey & Skill Growth Animation */}
+        {/* Left Panel - Minimal Premium TrainX Logo Creation Animation */}
         <div className="lp2-panel">
-          {/* Background Ambient Glows */}
-          <div className="lp2-blob b1"></div>
-          <div className="lp2-blob b2"></div>
-          <div className="lp2-blob b3"></div>
+          {/* Subtle Ambient Radial Glow */}
+          <div className="tx-ambient-radial-glow"></div>
 
-          {/* Diagonal sweep shimmer */}
-          <div className="lp2-sweep"></div>
+          {/* Minimal Floating Ambient Energy Particles */}
+          <div className="tx-micro-particle p1"></div>
+          <div className="tx-micro-particle p2"></div>
+          <div className="tx-micro-particle p3"></div>
+          <div className="tx-micro-particle p4"></div>
+          <div className="tx-micro-particle p5"></div>
+          <div className="tx-micro-particle p6"></div>
 
-          {/* Ambient particles */}
-          <div className="lp2-p p1"></div>
-          <div className="lp2-p p2"></div>
-          <div className="lp2-p p3"></div>
-          <div className="lp2-p p4"></div>
-          <div className="lp2-p p5"></div>
-
-          {/* Top branding */}
-          <div className="lp2-brand">
-            <p className="lp2-welcome">Your Learning Journey</p>
-            <div className="lp2-brand-name">
-              <span className="lp2-t1">Train</span>
-              <span className="lp2-t2">X</span>
-            </div>
-            <p className="lp2-tagline">Learn · Practice · Assess · Excel</p>
+          {/* Top Eyebrow Section */}
+          <div className="tx-hero-header">
+            <span className="tx-eyebrow-text">YOUR LEARNING JOURNEY</span>
+            <div className="tx-top-sparkle">✦</div>
           </div>
 
-          {/* ── Learning Journey Curve & Skill Growth Animation ── */}
-          <div className="lj-container">
-            {/* Animated SVG Curve */}
-            <svg className="lj-svg-path" viewBox="0 0 400 280" fill="none" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="ljCurveGrad" x1="0%" y1="100%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
-                  <stop offset="40%" stopColor="#60a5fa" stopOpacity="0.8" />
-                  <stop offset="75%" stopColor="#818cf8" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#38bdf8" stopOpacity="1" />
-                </linearGradient>
-                <linearGradient id="ljGlowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#60a5fa" stopOpacity="0" />
-                  <stop offset="50%" stopColor="#38bdf8" stopOpacity="1" />
-                  <stop offset="100%" stopColor="#60a5fa" stopOpacity="0" />
-                </linearGradient>
-                <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="4" result="blur" />
-                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                </filter>
-              </defs>
+          {/* Center Stage — Minimal Premium Logo Creation Animation */}
+          <div className="tx-logo-reveal-stage">
+            {/* Step 2 Energy Light Point */}
+            <div className="tx-energy-point"></div>
 
-              {/* Background Path Grid / Guide */}
-              <path
-                d="M 30 240 Q 140 220 200 150 T 360 40"
-                stroke="rgba(147, 197, 253, 0.15)"
-                strokeWidth="3"
-                strokeDasharray="4 4"
-                fill="none"
-              />
+            {/* Backing Ambient Glow Pulse */}
+            <div className="tx-logo-glow-pulse"></div>
 
-              {/* Glowing Main Journey Path Line */}
-              <path
-                d="M 30 240 Q 140 220 200 150 T 360 40"
-                stroke="url(#ljCurveGrad)"
-                strokeWidth="4"
-                strokeLinecap="round"
-                fill="none"
-                filter="url(#glowFilter)"
-                className="lj-main-line"
-              />
+            {/* Main Logo Reveal Canvas using Logo.png */}
+            <div className="tx-logo-canvas">
+              {/* Light Tracing Beam */}
+              <div className="tx-light-trace-beam"></div>
 
-              {/* Traveling Light Pulse Along Path */}
-              <path
-                d="M 30 240 Q 140 220 200 150 T 360 40"
-                stroke="url(#ljGlowGrad)"
-                strokeWidth="6"
-                strokeLinecap="round"
-                fill="none"
-                className="lj-pulse-beam"
-              />
-            </svg>
-
-            {/* Step 1 Node: Learn / Quiz */}
-            <div className="lj-node node-1">
-              <div className="lj-node-dot">
-                <span className="lj-node-inner-dot"></span>
+              {/* Masked Reveal Container for Logo.png */}
+              <div className="tx-logo-mask-layer">
+                <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
               </div>
-              <div className="lj-step-pill">1. Learn</div>
+
+              {/* Shine Sweep Overlay */}
+              <div className="tx-logo-shine-sweep"></div>
             </div>
 
-            {/* Step 2 Node: Practice / Coding */}
-            <div className="lj-node node-2">
-              <div className="lj-node-dot">
-                <span className="lj-node-inner-dot"></span>
-              </div>
-              <div className="lj-step-pill">2. Practice</div>
-            </div>
-
-            {/* Step 3 Node: Assess / AI Interview */}
-            <div className="lj-node node-3">
-              <div className="lj-node-dot">
-                <span className="lj-node-inner-dot"></span>
-              </div>
-              <div className="lj-step-pill">3. Assess</div>
-            </div>
-
-            {/* Step 4 Node: TrainX Goal / Mastery */}
-            <div className="lj-node node-4">
-              <div className="lj-trainx-glow-wrapper">
-                <div className="lj-trainx-pulse-ring"></div>
-                <div className="lj-trainx-pulse-ring delay"></div>
-                <img src={TrainXIcon} alt="TrainX Target" className="lj-trainx-icon" />
-              </div>
-              <div className="lj-step-pill goal-pill">4. Mastery 🚀</div>
-            </div>
-
-            {/* ── Moving Floating Cards along the Journey ── */}
-            {/* Card 1: Quiz */}
-            <div className="lj-card card-quiz">
-              <div className="lj-card-icon-wrap quiz-bg">📝</div>
-              <div className="lj-card-content">
-                <div className="lj-card-header">
-                  <span className="lj-card-title">Quiz & Basics</span>
-                  <span className="lj-card-badge">Completed</span>
-                </div>
-                <div className="lj-card-sub">Fundamentals Mastered</div>
-                <div className="lj-progress-bar">
-                  <div className="lj-progress-fill quiz-fill"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 2: Coding */}
-            <div className="lj-card card-coding">
-              <div className="lj-card-icon-wrap coding-bg">💻</div>
-              <div className="lj-card-content">
-                <div className="lj-card-header">
-                  <span className="lj-card-title">Coding Lab</span>
-                  <span className="lj-card-badge active">42 Solved</span>
-                </div>
-                <div className="lj-card-sub">Real-time Compiler</div>
-                <div className="lj-progress-bar">
-                  <div className="lj-progress-fill coding-fill"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 3: AI Interview */}
-            <div className="lj-card card-ai">
-              <div className="lj-card-icon-wrap ai-bg">🤖</div>
-              <div className="lj-card-content">
-                <div className="lj-card-header">
-                  <span className="lj-card-title">AI Interview</span>
-                  <span className="lj-card-badge ai-badge">94% Score</span>
-                </div>
-                <div className="lj-card-sub">Mock Assessment</div>
-                <div className="lj-progress-bar">
-                  <div className="lj-progress-fill ai-fill"></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Card 4: Skills Growth */}
-            <div className="lj-card card-skills">
-              <div className="lj-card-icon-wrap skills-bg">⚡</div>
-              <div className="lj-card-content">
-                <div className="lj-card-header">
-                  <span className="lj-card-title">Skill Growth</span>
-                  <span className="lj-card-badge ready-badge">Top 1%</span>
-                </div>
-                <div className="lj-card-sub">Job Ready Profile</div>
-                <div className="lj-progress-bar">
-                  <div className="lj-progress-fill skills-fill"></div>
-                </div>
-              </div>
+            {/* Typography Below Logo */}
+            <div className="tx-brand-text-block">
+              <h1 className="tx-brand-name-title">
+                Train<span className="tx-accent-x">X</span>
+              </h1>
+              <p className="tx-slogan-text">Learn • Practice • Assess • Excel</p>
             </div>
           </div>
 
-          {/* Bottom Footer Pills */}
-          <div className="lj-bottom-bar">
-            <span className="lj-bottom-tag">✦ Interactive Modules</span>
-            <span className="lj-bottom-tag">✦ AI Insights</span>
-            <span className="lj-bottom-tag">✦ Instant Feedback</span>
+          {/* Bottom Footer Section */}
+          <div className="tx-bottom-footer-bar">
+            <span className="tx-footer-tag">✦ Interactive Learning</span>
+            <span className="tx-footer-tag">✦ Smart Assessment</span>
+            <span className="tx-footer-tag">✦ Track Your Progress</span>
           </div>
         </div>
 

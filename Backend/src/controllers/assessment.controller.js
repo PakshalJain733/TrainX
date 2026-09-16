@@ -2,35 +2,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 import { generateQuizQuestionsAI } from '../ai/quiz.ai.js';
 
-let mockAssessments = [
-  {
-    id: 1,
-    title: "Data Structures & Graph Theory Mid-Term Quiz",
-    batch_name: "CSE 2026 Alpha Cohort",
-    category: "Technical Quiz",
-    total_questions: 10,
-    total_marks: 100,
-    pass_marks: 60,
-    status: "published",
-    questions: [
-      { id: 1, question_text: "What is the time complexity of searching in a Balanced Binary Search Tree?", option_a: "O(n)", option_b: "O(log n)", option_c: "O(1)", option_d: "O(n log n)", correct_option: "b" },
-      { id: 2, question_text: "Which data structure uses LIFO (Last In First Out) principle?", option_a: "Queue", option_b: "Array", option_c: "Stack", option_d: "Linked List", correct_option: "c" }
-    ]
-  },
-  {
-    id: 2,
-    title: "Generative AI & LLM Architecture Exam",
-    batch_name: "Data Science & ML 2025",
-    category: "AI Generated",
-    total_questions: 5,
-    total_marks: 50,
-    pass_marks: 30,
-    status: "published",
-    questions: [
-      { id: 1, question_text: "What does the Attention Mechanism in Transformers compute?", option_a: "Gradient Descent", option_b: "Self-weighted contextual relevance", option_c: "Convolutions", option_d: "Recurrent States", correct_option: "b" }
-    ]
-  }
-];
+let mockAssessments = [];
 
 let mockAssessmentResults = {};
 let mockQuestionsByAssessment = {};

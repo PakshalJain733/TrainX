@@ -3,97 +3,96 @@ import { SystemMaintenanceProvider } from './context/SystemMaintenanceContext';
 import MaintenanceGuard from './components/Common/MaintenanceGuard';
 import Login from './pages/authentication/login';
 import Register from './pages/authentication/register';
-import StudentLayout from './pages/Student/Components/StudentLayout';
-import Overview from "./pages/Student/Components/Overview";
-import AIRoadmap from "./pages/Student/Components/AiRoadmap";
-import LearningContent from "./pages/Student/Components/LearningContent";
-import AIInterview from "./pages/Student/Components/AiInterview";
-import ProgressAnalytics from "./pages/Student/Components/ProgressAnalytics";
-import Leaderboard from "./pages/Student/Components/Leaderboard";
-import WeeklyReports from "./pages/Student/Components/WeeklyReports";
-import Attendance from "./pages/Student/Components/Attendance";
-import Batches from "./pages/Student/Components/Batches";
-import PracticeProblems from "./pages/Student/Components/PracticeProblems";
-import CodingPlatform from "./pages/Student/Components/CodingPlatform";
-import Help from "./pages/Student/Components/Help";
-import Notifications from "./pages/Student/Components/Notifications";
-import ProfilePage from "./pages/Student/Components/ProfilePage";
-import AcademicQuiz from "./pages/Student/Components/AcademicQuiz";
-import Settings from "./pages/Student/Components/Settings";
-import StudentSkillGaps from "./pages/Student/Components/StudentSkillGaps";
-import StudentMockDrives from "./pages/Student/Components/MockDrives";
+import StudentLayout from './pages/Student/Components/ST_Layout';
+import Overview from "./pages/Student/Components/ST_Overview";
+import AIRoadmap from "./pages/Student/Components/ST_AiRoadmap";
+import LearningContent from "./pages/Student/Components/ST_LearningContent";
+import AIInterview from "./pages/Student/Components/ST_AiInterview";
+import ProgressAnalytics from "./pages/Student/Components/ST_ProgressAnalytics";
+import Leaderboard from "./pages/Student/Components/ST_Leaderboard";
+import WeeklyReports from "./pages/Student/Components/ST_WeeklyReports";
+import Attendance from "./pages/Student/Components/ST_Attendance";
+import Batches from "./pages/Student/Components/ST_Batches";
+import PracticeProblems from "./pages/Student/Components/ST_PracticeProblems";
+import CodingPlatform from "./pages/Student/Components/ST_CodingPlatform";
+import Help from "./pages/Student/Components/ST_Help";
+import Notifications from "./pages/Student/Components/ST_Notifications";
+import ProfilePage from "./pages/Student/Components/ST_ProfilePage";
+import AcademicQuiz from "./pages/Student/Components/ST_AcademicQuiz";
+import Settings from "./pages/Student/Components/ST_Settings";
+import StudentSkillGaps from "./pages/Student/Components/ST_SkillGaps";
+import StudentMockDrives from "./pages/Student/Components/ST_MockDrives";
 
 // Admin imports
-import AdminLayout from "./pages/Admin/Components/AdminLayout";
-import AdminOverview from "./pages/Admin/Components/AdminOverview";
-import AdminUsers from "./pages/Admin/Components/AdminUsers";
-import AdminBatches from "./pages/Admin/Components/AdminBatches";
-import AdminAttendance from "./pages/Admin/Components/AdminAttendance";
-import AdminLearningContent from "./pages/Admin/Components/AdminLearningContent";
-import AdminQuizzes from "./pages/Admin/Components/AdminQuizzes";
-import AdminPracticeProblems from "./pages/Admin/Components/AdminPracticeProblems";
-import AdminProgress from "./pages/Admin/Components/AdminProgress";
-import AdminLeaderboard from "./pages/Admin/Components/AdminLeaderboard";
-import AdminWeeklyReports from "./pages/Admin/Components/AdminWeeklyReports";
-import AdminHelp from "./pages/Admin/Components/AdminHelp";
-import AdminProfile from './pages/Admin/Components/AdminProfile';
-import AdminBroadcast from './pages/Admin/Components/AdminBroadcast';
+import AdminLayout from "./pages/Admin/Components/AD_Layout";
+import AdminOverview from "./pages/Admin/Components/AD_Overview";
+import AdminUsers from "./pages/Admin/Components/AD_Users";
+import AdminBatches from "./pages/Admin/Components/AD_Batches";
+import AdminAttendance from "./pages/Admin/Components/AD_Attendance";
+import AdminLearningContent from "./pages/Admin/Components/AD_LearningContent";
+import AdminQuizzes from "./pages/Admin/Components/AD_Quizzes";
+import AdminPracticeProblems from "./pages/Admin/Components/AD_PracticeProblems";
+import AdminProgress from "./pages/Admin/Components/AD_Progress";
+import AdminLeaderboard from "./pages/Admin/Components/AD_Leaderboard";
+import AdminWeeklyReports from "./pages/Admin/Components/AD_WeeklyReports";
+import AdminHelp from "./pages/Admin/Components/AD_Help";
+import AdminProfile from './pages/Admin/Components/AD_Profile';
+import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
 
 
 // Super Admin Workspace Imports
-import SuperAdminLayout from './pages/SuperAdmin/Components/SuperAdminLayout';
-import SuperAdminOverview from './pages/SuperAdmin/Components/Overview';
-import CollegesPage from './pages/SuperAdmin/Components/Colleges';
-import DepartmentsPage from './pages/SuperAdmin/Components/Departments';
-import SuperAdminBatches from './pages/SuperAdmin/Components/Batches';
-import SuperAdminManageUsers from './pages/SuperAdmin/Components/ManageUsers';
-import SuperAdminPerformancePage from './pages/SuperAdmin/Components/Performance';
-import SuperAdminSystemHealth from './pages/SuperAdmin/Components/SystemHealth';
-import SuperAdminProfilePage from './pages/SuperAdmin/Components/SuperAdminProfile';
-import SuperAdminMaintenanceControls from './pages/SuperAdmin/Components/MaintenanceControls';
-import SuperAdminTickets from './pages/SuperAdmin/Components/SuperAdminTickets';
+import SuperAdminLayout from './pages/SuperAdmin/Components/SA_Layout';
+import SuperAdminOverview from './pages/SuperAdmin/Components/SA_Overview';
+import CollegesPage from './pages/SuperAdmin/Components/SA_Colleges';
+import DepartmentsPage from './pages/SuperAdmin/Components/SA_Departments';
+import SuperAdminBatches from './pages/SuperAdmin/Components/SA_Batches';
+import SuperAdminManageUsers from './pages/SuperAdmin/Components/SA_ManageUsers';
+import SuperAdminPerformancePage from './pages/SuperAdmin/Components/SA_Performance';
+import SuperAdminSystemHealth from './pages/SuperAdmin/Components/SA_SystemHealth';
+import SuperAdminProfilePage from './pages/SuperAdmin/Components/SA_Profile';
+import SuperAdminMaintenanceControls from './pages/SuperAdmin/Components/SA_MaintenanceControls';
+import SuperAdminTickets from './pages/SuperAdmin/Components/SA_Tickets';
 
 // Mentor Workspace Imports
-import MentorLayout from './pages/Mentor/Components/MentorLayout';
-import MentorOverview from './pages/Mentor/Components/Overview';
-import MentorBatches from './pages/Mentor/Components/Batches';
-import MentorStudents from './pages/Mentor/Components/Students';
-import MentorRoadmaps from './pages/Mentor/Components/Roadmaps';
-import MentorAIInterviews from './pages/Mentor/Components/AIInterviews';
-import MentorSkillGaps from './pages/Mentor/Components/SkillGaps';
-import MentorAttendance from './pages/Mentor/Components/Attendance';
-import MentorLeaderboard from './pages/Mentor/Components/Leaderboard';
-import MentorMockDrives from './pages/Mentor/Components/MockDrives';
-import MentorDefaulters from './pages/Mentor/Components/Defaulters';
-import MentorStudyMaterial from './pages/Mentor/Components/StudyMaterial';
-import MentorWeeklyReports from './pages/Mentor/Components/WeeklyReports';
-import MentorAssignments from './pages/Mentor/Components/Assignments';
-import MentorLiveSessions from './pages/Mentor/Components/LiveSessions';
-import MentorNotifications from './pages/Mentor/Components/Notifications';
-import MentorProfilePage from './pages/Mentor/Components/ProfilePage';
-import MentorHelp from './pages/Mentor/Components/Help';
-import MentorQuizzes from './pages/Mentor/Components/MentorQuizzes';
-import MentorPerformance from './pages/Mentor/Components/Performance';
+import MentorLayout from './pages/Mentor/Components/MN_Layout';
+import MentorOverview from './pages/Mentor/Components/MN_Overview';
+import MentorBatches from './pages/Mentor/Components/MN_Batches';
+import MentorStudents from './pages/Mentor/Components/MN_Students';
+import MentorRoadmaps from './pages/Mentor/Components/MN_Roadmaps';
+import MentorAIInterviews from './pages/Mentor/Components/MN_AIInterviews';
+import MentorSkillGaps from './pages/Mentor/Components/MN_SkillGaps';
+import MentorAttendance from './pages/Mentor/Components/MN_Attendance';
+import MentorLeaderboard from './pages/Mentor/Components/MN_Leaderboard';
+import MentorMockDrives from './pages/Mentor/Components/MN_MockDrives';
+import MentorDefaulters from './pages/Mentor/Components/MN_Defaulters';
+import MentorStudyMaterial from './pages/Mentor/Components/MN_StudyMaterial';
+import MentorWeeklyReports from './pages/Mentor/Components/MN_WeeklyReports';
+import MentorAssignments from './pages/Mentor/Components/MN_Assignments';
+import MentorLiveSessions from './pages/Mentor/Components/MN_LiveSessions';
+import MentorNotifications from './pages/Mentor/Components/MN_Notifications';
+import MentorProfilePage from './pages/Mentor/Components/MN_ProfilePage';
+import MentorHelp from './pages/Mentor/Components/MN_Help';
+import MentorQuizzes from './pages/Mentor/Components/MN_Quizzes';
+import MentorPerformance from './pages/Mentor/Components/MN_Performance';
 
 // Coordinator Workspace Imports
-import CoordinatorLayout from './pages/Coordinator/Components/CoordinatorLayout';
-import CoordinatorOverview from './pages/Coordinator/Components/Overview';
-import CoordinatorBatches from './pages/Coordinator/Components/Batches';
-import CoordinatorStudents from './pages/Coordinator/Components/Students';
-import CoordinatorCodingPractice from './pages/Coordinator/Components/CodingPractice';
-import CoordinatorCodingPerformance from './pages/Coordinator/Components/CodingPerformance';
-import CoordinatorInterviewPerformance from './pages/Coordinator/Components/InterviewPerformance';
-import CoordinatorStudentsNeedImprovement from './pages/Coordinator/Components/StudentsNeedImprovement';
-import CoordinatorMentors from './pages/Coordinator/Components/Mentors';
-import CoordinatorAssessments from './pages/Coordinator/Components/Assessments';
-import CoordinatorAttendance from './pages/Coordinator/Components/Attendance';
-import CoordinatorPlacement from './pages/Coordinator/Components/Placement';
-import CoordinatorRequests from './pages/Coordinator/Components/Requests';
-import CoordinatorNotifications from './pages/Coordinator/Components/Notifications';
-import CoordinatorProfilePage from './pages/Coordinator/Components/ProfilePage';
-import CoordinatorQuizAndCodes from './pages/Coordinator/Components/QuizzesAndCodes';
-import CoordinatorPerformances from './pages/Coordinator/Components/Performances';
-import CoordinatorHelp from './pages/Coordinator/Components/Help';
+import CoordinatorLayout from './pages/Coordinator/Components/CO_Layout';
+import CoordinatorOverview from './pages/Coordinator/Components/CO_Overview';
+import CoordinatorBatches from './pages/Coordinator/Components/CO_Batches';
+import CoordinatorStudents from './pages/Coordinator/Components/CO_Students';
+import CoordinatorInterviewPerformance from './pages/Coordinator/Components/CO_InterviewPerformance';
+import CoordinatorStudentsNeedImprovement from './pages/Coordinator/Components/CO_StudentsNeedImprovement';
+import CoordinatorMentors from './pages/Coordinator/Components/CO_Mentors';
+import CoordinatorAttendance from './pages/Coordinator/Components/CO_Attendance';
+import CoordinatorPlacement from './pages/Coordinator/Components/CO_Placement';
+import CoordinatorRequests from './pages/Coordinator/Components/CO_Requests';
+import CoordinatorNotifications from './pages/Coordinator/Components/CO_Notifications';
+import CoordinatorProfilePage from './pages/Coordinator/Components/CO_ProfilePage';
+import CoordinatorQuizAndCodes from './pages/Coordinator/Components/CO_QuizzesAndCodes';
+import CoordinatorPerformances from './pages/Coordinator/Components/CO_Performances';
+import CoordinatorHelp from './pages/Coordinator/Components/CO_Help';
+import MentorBroadcast from './pages/Mentor/Components/MN_Broadcast';
+import CoordinatorBroadcast from './pages/Coordinator/Components/CO_Broadcast';
 
 function App() {
   return (
@@ -170,6 +169,7 @@ function App() {
             <Route path="ai-interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><MentorAIInterviews /></MaintenanceGuard>} />
             <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="skillGapAnalysis"><MentorSkillGaps /></MaintenanceGuard>} />
             <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><MentorAttendance /></MaintenanceGuard>} />
+            <Route path="performance" element={<MentorPerformance />} />
             <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><MentorLeaderboard /></MaintenanceGuard>} />
             <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mockDrives"><MentorMockDrives /></MaintenanceGuard>} />
             <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
@@ -179,7 +179,7 @@ function App() {
             <Route path="assignments" element={<MentorAssignments />} />
             <Route path="sessions" element={<MentorLiveSessions />} />
             <Route path="notifications" element={<MentorNotifications />} />
-            <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="broadcast" element={<MentorBroadcast />} />
             <Route path="profile" element={<MentorProfilePage />} />
             <Route path="settings" element={<MentorProfilePage />} />
             <Route path="help" element={<MentorHelp />} />
@@ -208,7 +208,7 @@ function App() {
             <Route path="mentors" element={<CoordinatorMentors />} />
             <Route path="requests" element={<CoordinatorRequests />} />
             <Route path="notifications" element={<CoordinatorNotifications />} />
-            <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="broadcast" element={<CoordinatorBroadcast />} />
             <Route path="support" element={<CoordinatorHelp />} />
             <Route path="help" element={<CoordinatorHelp />} />
             <Route path="leaderboard" element={<AdminLeaderboard />} />

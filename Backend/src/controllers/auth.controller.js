@@ -1,6 +1,6 @@
 import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { findUserById, getStudentByUserId } from '../models/user.model.js';
+import { findUserById, getStudentByUserId, updateUserModel } from '../models/user.model.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -117,5 +117,15 @@ export const resetPasswordWithOtp = async (req, res, next) => {
     return sendSuccess(res, 'Password reset successfully', result);
   } catch (error) {
     return sendError(res, error.message || 'Failed to reset password', 400);
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const updated = await updateUserModel(userId, req.body);
+    return sendSuccess(res, 'Profile updated successfully in database', updated);
+  } catch (error) {
+    next(error);
   }
 };

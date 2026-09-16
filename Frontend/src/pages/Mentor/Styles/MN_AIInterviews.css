@@ -1,0 +1,101 @@
+/* AIInterviews.css - Mentor AI Interviews Tab Styles */
+.mentor-ai-interviews-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mentor-search-wrapper {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+}
+
+.mentor-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.mentor-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 13.5px;
+  background: #ffffff;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  color: #0f172a;
+}
+
+.mentor-search-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.mentor-student-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.mentor-student-name {
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mentor-student-college {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.mentor-interview-role {
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.mentor-interview-score {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.mentor-interview-overall-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 12px;
+  display: inline-block;
+}
+
+.mentor-interview-overall-badge--green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.mentor-interview-overall-badge--blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.mentor-interview-overall-badge--red {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.mentor-interview-weakness {
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.mentor-empty-table-cell {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
