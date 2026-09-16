@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import {
   Code,
   Search,
@@ -10,45 +10,9 @@ import {
   X,
   RefreshCw,
   SlidersHorizontal,
-  ChevronDown,
-  Check
 } from "lucide-react";
 import { coordinatorCodingPerformance, coordinatorBatches } from "../../../data/coordinatorMockData";
 import "../Styles/CodingPerformance.css";
-
-/* ── Inline dropdown for Coordinator Coding Performance (CSS: CodingPerformance.css .coord-cp-perf-select-*) ── */
-function CoordCpPerfSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`coord-cp-perf-select-wrap${isOpen ? ' coord-cp-perf-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-cp-perf-select-trigger${isOpen ? ' coord-cp-perf-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-cp-perf-select-icon" />}
-        <span className="coord-cp-perf-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-cp-perf-select-arrow${isOpen ? ' coord-cp-perf-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="coord-cp-perf-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-cp-perf-select-option${isSel ? ' coord-cp-perf-select-option--selected' : ''}`}>
-                <span className="coord-cp-perf-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-cp-perf-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function CodingPerformance() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -210,41 +174,45 @@ export default function CodingPerformance() {
             </div>
 
             {/* Batch Filter */}
-            <CoordCpPerfSelect
+            <select
               value={selectedBatch}
-              options={[
-                { value: "all", label: "All Batches" },
-                ...coordinatorBatches.map(b => ({ value: b.name, label: b.name }))
-              ]}
-              onChange={(val) => setSelectedBatch(val)}
-            />
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="coord-perf-select"
+            >
+              <option value="all">All Batches</option>
+              {coordinatorBatches.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
 
             {/* Language Filter */}
-            <CoordCpPerfSelect
+            <select
               value={selectedLanguage}
-              options={[
-                { value: "all", label: "All Languages" },
-                { value: "C++", label: "C++" },
-                { value: "Python", label: "Python" },
-                { value: "JavaScript", label: "JavaScript" },
-                { value: "Java", label: "Java" },
-                { value: "Go", label: "Go" },
-              ]}
-              onChange={(val) => setSelectedLanguage(val)}
-            />
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              className="coord-perf-select"
+            >
+              <option value="all">All Languages</option>
+              <option value="C++">C++</option>
+              <option value="Python">Python</option>
+              <option value="JavaScript">JavaScript</option>
+              <option value="Java">Java</option>
+              <option value="Go">Go</option>
+            </select>
 
             {/* Status Filter */}
-            <CoordCpPerfSelect
+            <select
               value={selectedStatus}
-              options={[
-                { value: "all", label: "All Statuses" },
-                { value: "Top Performer", label: "Top Performer" },
-                { value: "Good", label: "Good" },
-                { value: "Average", label: "Average" },
-                { value: "Struggling", label: "Struggling" },
-              ]}
-              onChange={(val) => setSelectedStatus(val)}
-            />
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="coord-perf-select"
+            >
+              <option value="all">All Statuses</option>
+              <option value="Top Performer">Top Performer</option>
+              <option value="Good">Good</option>
+              <option value="Average">Average</option>
+              <option value="Struggling">Struggling</option>
+            </select>
 
             {(searchTerm || selectedBatch !== "all" || selectedLanguage !== "all" || selectedStatus !== "all") && (
               <button

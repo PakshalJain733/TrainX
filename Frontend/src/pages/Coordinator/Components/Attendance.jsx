@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import {
   Users,
   UserCheck,
@@ -16,49 +16,13 @@ import {
   RefreshCw,
   X,
   Building2,
-  FileSpreadsheet,
-  ChevronDown,
-  Check
+  FileSpreadsheet
 } from "lucide-react";
 import {
   coordinatorAttendanceStudents,
   coordinatorDepartmentAttendanceSummary
 } from "../../../data/coordinatorMockData";
 import "../Styles/CodingPerformance.css";
-
-/* ── Inline dropdown for Coordinator Attendance (CSS: CodingPerformance.css .coord-att-select-*) ── */
-function CoordAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`coord-att-select-wrap${isOpen ? ' coord-att-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-att-select-trigger${isOpen ? ' coord-att-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-att-select-icon" />}
-        <span className="coord-att-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-att-select-arrow${isOpen ? ' coord-att-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="coord-att-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-att-select-option${isSel ? ' coord-att-select-option--selected' : ''}`}>
-                <span className="coord-att-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-att-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function CoordinatorAttendance({ hideHeader }) {
   // Navigation Tabs: "overview", "list", "defaulters"
@@ -242,15 +206,16 @@ export default function CoordinatorAttendance({ hideHeader }) {
         <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f8fafc", padding: "6px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 600, color: "#475569" }}>
           <Sliders size={14} style={{ color: "#64748b" }} />
           <span>Configured Threshold:</span>
-          <CoordAttSelect
+          <select
             value={attendanceThreshold}
-            onChange={(val) => setAttendanceThreshold(Number(val))}
-            options={[
-              { value: 75, label: "75% (Standard Default)" },
-              { value: 70, label: "70% (Relaxed Threshold)" },
-              { value: 80, label: "80% (Strict Requirement)" },
-            ]}
-          />
+            onChange={(e) => setAttendanceThreshold(Number(e.target.value))}
+            className="coord-perf-select"
+            style={{ height: "30px", padding: "0 8px" }}
+          >
+            <option value={75}>75% (Standard Default)</option>
+            <option value={70}>70% (Relaxed Threshold)</option>
+            <option value={80}>80% (Strict Requirement)</option>
+          </select>
         </div>
       </div>
 
@@ -328,36 +293,44 @@ export default function CoordinatorAttendance({ hideHeader }) {
                 </div>
 
                 {/* Department Filter */}
-                <CoordAttSelect
+                <select
                   value={selectedDept}
-                  onChange={setSelectedDept}
-                  options={[
-                    { value: "all", label: "All Departments" },
-                    ...departments.map((d) => ({ value: d, label: `${d} Department` })),
-                  ]}
-                />
+                  onChange={(e) => setSelectedDept(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Departments</option>
+                  {departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d} Department
+                    </option>
+                  ))}
+                </select>
 
                 {/* Batch Filter */}
-                <CoordAttSelect
+                <select
                   value={selectedBatch}
-                  onChange={setSelectedBatch}
-                  options={[
-                    { value: "all", label: "All Batches" },
-                    ...batches.map((b) => ({ value: b, label: `Batch ${b}` })),
-                  ]}
-                />
+                  onChange={(e) => setSelectedBatch(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Batches</option>
+                  {batches.map((b) => (
+                    <option key={b} value={b}>
+                      Batch {b}
+                    </option>
+                  ))}
+                </select>
 
                 {/* Attendance % Filter */}
-                <CoordAttSelect
+                <select
                   value={selectedPercentFilter}
-                  onChange={setSelectedPercentFilter}
-                  options={[
-                    { value: "all", label: "All Attendance Range" },
-                    { value: "above75", label: "75%+ (Good)" },
-                    { value: "65to74", label: "65–74% (Warning)" },
-                    { value: "below65", label: "Below 65% (Critical)" },
-                  ]}
-                />
+                  onChange={(e) => setSelectedPercentFilter(e.target.value)}
+                  className="coord-perf-select"
+                >
+                  <option value="all">All Attendance Range</option>
+                  <option value="above75">75%+ (Good)</option>
+                  <option value="65to74">65–74% (Warning)</option>
+                  <option value="below65">Below 65% (Critical)</option>
+                </select>
 
                 {/* Defaulter Toggle */}
                 <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", padding: "0 12px", height: "38px", borderRadius: "10px", cursor: "pointer" }}>

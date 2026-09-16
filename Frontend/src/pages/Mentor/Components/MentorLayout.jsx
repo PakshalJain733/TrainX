@@ -1,55 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ShieldCheck, Users, GraduationCap, Key } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check } from "lucide-react";
 import { MentorSidebar } from "./MentorSidebar";
 import { mentorProfile } from "../../../data/mentorMockData";
-import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/MentorLayout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
-  const [notifications, setNotifications] = useState([
+  const notifications = [
     { id: 1, type: "document", title: "12 Assignment Submissions Pending Grading", time: "15 min ago", unread: true },
     { id: 2, type: "calendar", title: "Live Class scheduled for 02:00 PM Today", time: "1h ago", unread: true },
     { id: 3, type: "success", title: "Weekly Governance Report Approved", time: "3h ago", unread: false },
-  ]);
-
-  const [activeTab, setActiveTab] = useState("all");
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
-  const totalCount = notifications.length;
-
-  useEffect(() => {
-    if (onUnreadChange) {
-      onUnreadChange(unreadCount > 0);
-    }
-  }, [unreadCount, onUnreadChange]);
-
-  const handleMarkAllRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-  };
-
-  const handleDeleteItem = (e, id) => {
-    e.stopPropagation();
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  };
-
-  const handleClearAll = () => {
-    setNotifications([]);
-  };
-
-  const toggleSingleRead = (id) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n))
-    );
-  };
-
-  const visibleNotifications = notifications.filter((n) => {
-    if (activeTab === "unread") return n.unread;
-    return true;
-  });
+  ];
 
   const getIcon = (type) => {
-    switch (type) {
+    switch(type) {
       case "calendar": return <Calendar size={16} className="notif-icon-calendar" />;
       case "alert": return <AlertTriangle size={16} className="notif-icon-alert" />;
       case "success": return <CheckCircle2 size={16} className="notif-icon-success" />;
@@ -65,99 +29,45 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
         <div className="notif-header-left">
           <div className="notif-header-icon-wrap">
             <Bell size={18} className="notif-header-icon" />
-            {unreadCount > 0 && <span className="notif-header-dot"></span>}
+            <span className="notif-header-dot"></span>
           </div>
           <div className="notif-header-text">
             <div className="notif-header-title">Notifications</div>
-            <div className="notif-header-subtitle">
-              {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
-            </div>
+            <div className="notif-header-subtitle">2 unread alerts</div>
           </div>
         </div>
-        <div className="notif-header-actions-right">
-          <button
-            className="notif-view-all-btn"
-            onClick={() => {
-              if (onClose) onClose();
-              navigate("/mentor/notifications");
-            }}
-          >
-            View all
-          </button>
-          <button
-            className="notif-mark-read-btn"
-            onClick={handleMarkAllRead}
-            disabled={unreadCount === 0}
-            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
-          >
-            <Check size={14} className="notif-check-icon" /> Mark read
-          </button>
-        </div>
+        <button className="notif-mark-read-btn" onClick={() => onUnreadChange && onUnreadChange(false)}>
+          <Check size={14} className="notif-check-icon" /> Mark read
+        </button>
       </div>
 
       {/* Tabs */}
       <div className="notif-tabs">
-        <button
-          className={`notif-tab ${activeTab === "all" ? "active" : ""}`}
-          onClick={() => setActiveTab("all")}
-        >
-          All ({totalCount})
-        </button>
-        <button
-          className={`notif-tab ${activeTab === "unread" ? "active" : ""}`}
-          onClick={() => setActiveTab("unread")}
-        >
-          Unread ({unreadCount})
-        </button>
+        <button className="notif-tab active">All (3)</button>
+        <button className="notif-tab">Unread (2)</button>
       </div>
 
       {/* List */}
       <div className="notif-list-wrap">
-        {visibleNotifications.length === 0 ? (
-          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
-            No notifications to display
-          </div>
-        ) : (
-          visibleNotifications.map((n) => (
-            <div
-              key={n.id}
-              className={`notif-list-card ${n.unread ? "unread" : ""}`}
-              onClick={() => toggleSingleRead(n.id)}
-              style={{ cursor: "pointer" }}
-              title="Click to toggle read status"
-            >
-              <div className={`notif-icon-box type-${n.type}`}>
-                {getIcon(n.type)}
-              </div>
-              <div className="notif-content">
-                <div className="notif-content-top">
-                  <div className="notif-card-title">{n.title}</div>
-                  <div className="notif-card-time">{n.time}</div>
-                  <button
-                    className="notif-delete-btn"
-                    onClick={(e) => handleDeleteItem(e, n.id)}
-                    title="Delete notification"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                {n.desc && <div className="notif-card-desc">{n.desc}</div>}
+        {notifications.map((n) => (
+          <div key={n.id} className={`notif-list-card ${n.unread ? "unread" : ""}`}>
+            <div className={`notif-icon-box type-${n.type}`}>
+              {getIcon(n.type)}
+            </div>
+            <div className="notif-content">
+              <div className="notif-content-top">
+                <div className="notif-card-title">{n.title}</div>
+                <div className="notif-card-time">{n.time}</div>
+                <button className="notif-delete-btn"><Trash2 size={14}/></button>
               </div>
             </div>
-          ))
-        )}
+          </div>
+        ))}
       </div>
 
       {/* Footer */}
       <div className="notif-footer-wrap">
-        <button
-          className="notif-clear-all-btn"
-          onClick={handleClearAll}
-          disabled={totalCount === 0}
-          style={{ opacity: totalCount === 0 ? 0.5 : 1, cursor: totalCount === 0 ? "default" : "pointer" }}
-        >
-          Clear all
-        </button>
+        <button className="notif-clear-all-btn">Clear all</button>
       </div>
     </div>
   );
@@ -169,37 +79,10 @@ export default function MentorLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const headerRightRef = useRef(null);
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
-
-  const [userData, setUserData] = useState(() => {
-    try {
-      const u = JSON.parse(localStorage.getItem("user"));
-      if (u) return u;
-    } catch(e) {}
-    return { name: mentorProfile.name || "Vikram Sharma", role: mentorProfile.role || "Senior Trainer" };
-  });
-
-  useEffect(() => {
-    const handleUpdate = () => {
-      try {
-        const u = JSON.parse(localStorage.getItem("user"));
-        if (u) setUserData(u);
-      } catch(e) {}
-    };
-    window.addEventListener("userProfileUpdated", handleUpdate);
-    return () => window.removeEventListener("userProfileUpdated", handleUpdate);
-  }, []);
-
-  const getInitials = (name) => {
-    if (!name || name.trim().length === 0) return "VS";
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -228,7 +111,7 @@ export default function MentorLayout() {
     if (path.startsWith("/mentor/ai-interviews")) return "AI Interview Analytics";
     if (path.startsWith("/mentor/weekly-reports")) return "Weekly Reports";
     if (path.startsWith("/mentor/notifications")) return "Notifications";
-    if (path.startsWith("/mentor/profile")) return "Mentor Profile & Onboarding Settings";
+    if (path.startsWith("/mentor/profile")) return "Mentor Profile";
     if (path.startsWith("/mentor/help")) return "Help & Support Desk";
     return "Mentor Dashboard";
   };
@@ -309,10 +192,10 @@ export default function MentorLayout() {
                     aria-label="User menu"
                   >
                     <div className="mentor-header__user-info">
-                      <span className="mentor-header__name">{userData.name || mentorProfile.name || "Vikram Sharma"}</span>
+                      <span className="mentor-header__name">{mentorProfile.name}</span>
                     </div>
-                    <div className="mentor-header__avatar" aria-label={`User profile ${userData.name}`}>
-                      {getInitials(userData.name)}
+                    <div className="mentor-header__avatar" aria-label={`User profile ${mentorProfile.name}`}>
+                      VS
                     </div>
                   </button>
 
@@ -320,10 +203,10 @@ export default function MentorLayout() {
                     <>
                       <div className="mentor-header__profile-dropdown">
                         <div className="mentor-header__profile-top">
-                          <div className="mentor-header__profile-avatar">{getInitials(userData.name)}</div>
+                          <div className="mentor-header__profile-avatar">VS</div>
                           <div className="mentor-header__profile-info">
-                            <span className="mentor-header__profile-name">{userData.name || mentorProfile.name || "Vikram Sharma"}</span>
-                            <span className="mentor-header__profile-sub">{userData.role || mentorProfile.role || "Senior Trainer"}</span>
+                            <span className="mentor-header__profile-name">{mentorProfile.name}</span>
+                            <span className="mentor-header__profile-sub">{mentorProfile.role}</span>
                           </div>
                         </div>
                         <div className="mentor-header__profile-divider" />
@@ -336,16 +219,6 @@ export default function MentorLayout() {
                         >
                           <UserCog size={15} />
                           Profile Settings
-                        </button>
-                        <button
-                          className="mentor-header__profile-item"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            setIsChangePasswordOpen(true);
-                          }}
-                        >
-                          <Key size={15} />
-                          Change Password
                         </button>
                         <button
                           className="mentor-header__profile-item mentor-header__profile-item--danger"
@@ -372,10 +245,6 @@ export default function MentorLayout() {
           </div>
         </main>
       </div>
-      <ChangePasswordModal
-        isOpen={isChangePasswordOpen}
-        onClose={() => setIsChangePasswordOpen(false)}
-      />
     </div>
   );
 }

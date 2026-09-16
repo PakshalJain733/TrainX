@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   FileCheck2,
   Zap,
@@ -7,48 +7,12 @@ import {
   Search,
   Download,
   BarChart2,
-  ChevronDown,
-  Check,
 } from "lucide-react";
 import {
   coordinatorAssessments,
   coordinatorBatches,
 } from "../../../data/coordinatorMockData";
 import "../Styles/CodingPerformance.css";
-
-/* ── Inline dropdown for Coordinator Quiz Performance (CSS: CodingPerformance.css .coord-qp-select-*) ── */
-function CoordQpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`coord-qp-select-wrap${isOpen ? ' coord-qp-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-qp-select-trigger${isOpen ? ' coord-qp-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-qp-select-icon" />}
-        <span className="coord-qp-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-qp-select-arrow${isOpen ? ' coord-qp-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="coord-qp-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-qp-select-option${isSel ? ' coord-qp-select-option--selected' : ''}`}>
-                <span className="coord-qp-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-qp-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function QuizPerformance() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -148,14 +112,16 @@ export default function QuizPerformance() {
             />
           </div>
 
-          <CoordQpSelect
+          <select
             value={selectedBatch}
-            options={[
-              { value: "All", label: "All Batches" },
-              ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
-            ]}
-            onChange={(val) => setSelectedBatch(val)}
-          />
+            onChange={(e) => setSelectedBatch(e.target.value)}
+            className="coord-perf-select"
+          >
+            <option value="All">All Batches</option>
+            {coordinatorBatches.map((b) => (
+              <option key={b.id} value={b.name}>{b.name}</option>
+            ))}
+          </select>
 
           <button
             onClick={() => alert("Exporting Quiz Performance Report PDF...")}

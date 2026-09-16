@@ -1,7 +1,7 @@
 export const mentorProfile = {
   name: "",
   email: "",
-  role: "Technical Mentor",
+  role: "",
   specialization: "",
   department: "",
   experience: "",
@@ -13,14 +13,23 @@ export const mentorProfile = {
 };
 
 export const mentorBatches = [];
+
 export const mentorStudents = [];
+
 export const mentorAssignments = [];
+
 export const mentorLiveSessions = [];
 
 export const mentorStudentDoubts = [];
+
 export const mentorWeeklyReports = [];
+
 export const mentorSkillGaps = [];
+
 export const mentorLeaderboard = [];
+
 export const mentorMockDrives = [];
+
 export const mentorDefaulters = [];
+
 export const mentorStudyMaterial = [];

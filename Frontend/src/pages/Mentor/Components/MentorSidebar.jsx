@@ -4,16 +4,15 @@ import {
   Users,
   Target,
   Bot,
+  AlertTriangle,
   CalendarCheck,
   Trophy,
+  ClipboardCheck,
   AlertCircle,
-  AlertTriangle,
   BookOpen,
   FileCheck2,
   HelpCircle,
-  Layers,
-  Megaphone,
-  Briefcase,
+  BarChart3,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/MentorSidebar.css";
@@ -39,23 +38,21 @@ function SidebarBrand({ collapsed }) {
 
 const primaryNavItems = [
   { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true },
-  { title: "Allocated Batches", url: "/mentor/batches", icon: Layers },
-  { title: "Quizzes", url: "/mentor/quizzes", icon: FileCheck2 },
   { title: "Students", url: "/mentor/students", icon: Users },
   { title: "Roadmaps", url: "/mentor/roadmaps", icon: Target },
   { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot },
   { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle },
   { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
+  { title: "Progress", url: "/mentor/performance", icon: BarChart3 },
   { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy },
+  { title: "Mock Drives", url: "/mentor/mock-drives", icon: ClipboardCheck },
   { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle },
-  { title: "Mock Drives", url: "/mentor/mock-drives", icon: Briefcase },
   { title: "Study Material", url: "/mentor/study-material", icon: BookOpen },
   { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2 },
 ];
 
 const footerNavItems = [
-  { title: "Broadcast Notice", url: "/mentor/broadcast", icon: Megaphone },
-  { title: "Support Tickets", url: "/mentor/help", icon: HelpCircle },
+  { title: "Support", url: "/mentor/help", icon: HelpCircle },
 ];
 
 export function MentorSidebar({ collapsed, mobileOpen, onClose }) {

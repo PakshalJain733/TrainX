@@ -1,42 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square, ChevronDown, Check } from "lucide-react";
+import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square } from "lucide-react";
 import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../../../data/coordinatorMockData";
 import "../Styles/Batches.css";
-
-/* ── Inline dropdown for Coordinator Batches (CSS: Batches.css .coord-batch-select-*) ── */
-function CoordBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`coord-batch-select-wrap${isOpen ? ' coord-batch-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-batch-select-trigger${isOpen ? ' coord-batch-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-batch-select-icon" />}
-        <span className="coord-batch-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-batch-select-arrow${isOpen ? ' coord-batch-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="coord-batch-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-batch-select-option${isSel ? ' coord-batch-select-option--selected' : ''}`}>
-                <span className="coord-batch-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-batch-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function CoordinatorBatches() {
   const location = useLocation();
@@ -55,7 +21,7 @@ export default function CoordinatorBatches() {
   // New batch form state
   const [newBatchName, setNewBatchName] = useState("");
   const [newBatchCode, setNewBatchCode] = useState("");
-  const [newMentor, setNewMentor] = useState(coordinatorMentors[0]?.name || "");
+  const [newMentor, setNewMentor] = useState(coordinatorMentors[0].name);
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [studentSearch, setStudentSearch] = useState("");
 
@@ -151,15 +117,15 @@ export default function CoordinatorBatches() {
             style={{ paddingLeft: "36px", width: "100%" }}
           />
         </div>
-        <CoordBatchSelect
+        <select
+          className="coord-select"
           value={statusFilter}
-          options={[
-            { value: "All", label: "All Statuses" },
-            { value: "Active", label: "Active" },
-            { value: "Near Completion", label: "Near Completion" },
-          ]}
-          onChange={(val) => setStatusFilter(val)}
-        />
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="All">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Near Completion">Near Completion</option>
+        </select>
       </div>
 
       <div className="coord-table-card">
@@ -293,14 +259,23 @@ export default function CoordinatorBatches() {
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assign Industry Mentor</label>
-                <CoordBatchSelect
+                <select
                   value={newMentor}
-                  options={coordinatorMentors.map((m) => ({
-                    value: m.name,
-                    label: `${m.name} (${m.specialization})`
-                  }))}
-                  onChange={(val) => setNewMentor(val)}
-                />
+                  onChange={(e) => setNewMentor(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    marginTop: "4px",
+                  }}
+                >
+                  {coordinatorMentors.map((m) => (
+                    <option key={m.id} value={m.name}>
+                      {m.name} ({m.specialization})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Plus,
@@ -20,8 +20,6 @@ import {
   Send,
   LineChart,
   Briefcase,
-  ChevronDown,
-  Check
 } from "lucide-react";
 import {
   coordinatorAssessments,
@@ -34,42 +32,7 @@ import CoordinatorAttendance from "./Attendance";
 import CoordinatorPlacement from "./Placement";
 import "../Styles/Assessments.css";
 
-/* ── Inline dropdown for Coordinator Assessments (CSS: Assessments.css .coord-ass-select-*) ── */
-function CoordAssSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`coord-ass-select-wrap${isOpen ? ' coord-ass-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-ass-select-trigger${isOpen ? ' coord-ass-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-ass-select-icon" />}
-        <span className="coord-ass-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-ass-select-arrow${isOpen ? ' coord-ass-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="coord-ass-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-ass-select-option${isSel ? ' coord-ass-select-option--selected' : ''}`}>
-                <span className="coord-ass-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-ass-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 import { assessmentAPI } from "../../../services/api";
-import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
 export default function CoordinatorAssessments() {
   const location = useLocation();
@@ -99,51 +62,16 @@ export default function CoordinatorAssessments() {
   const fetchAssessments = async () => {
     try {
       const data = await assessmentAPI.getAssessments();
-      let list = coordinatorAssessments;
       if (data && Array.isArray(data) && data.length > 0) {
-        list = data;
+        setAssessments(data);
       }
-      const shared = await getSharedQuizzes([]);
-      const existingIds = new Set(list.map(a => a.id));
-      const sharedItems = shared
-        .filter(s => !existingIds.has(s.id))
-        .map(s => ({
-          id: s.id,
-          title: s.title,
-          batch: s.batch_name || s.data?.batch || "All Batches",
-          type: "MCQ Quiz",
-          dueDate: "2026-10-15",
-          submissions: "0 / 120",
-          avgScore: "--",
-          passRate: "--",
-          status: s.status || "Active"
-        }));
-      setAssessments([...sharedItems, ...list]);
     } catch (err) {
       console.warn("Using local assessments fallback data.");
-      const shared = await getSharedQuizzes([]);
-      if (shared.length > 0) {
-        const sharedItems = shared.map(s => ({
-          id: s.id,
-          title: s.title,
-          batch: s.batch_name || s.data?.batch || "All Batches",
-          type: "MCQ Quiz",
-          dueDate: "2026-10-15",
-          submissions: "0 / 120",
-          avgScore: "--",
-          passRate: "--",
-          status: "Active"
-        }));
-        setAssessments([...sharedItems, ...coordinatorAssessments]);
-      }
     }
   };
 
   useEffect(() => {
     fetchAssessments();
-    const handleUpdate = () => fetchAssessments();
-    window.addEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
-    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
   }, []);
 
   const filteredAssessments = assessments.filter((a) => {
@@ -169,8 +97,6 @@ export default function CoordinatorAssessments() {
       passRate: "--",
       status: "Active",
     };
-
-    await addSharedQuiz(newAssessment);
 
     try {
       const created = await assessmentAPI.createAssessment(newAssessment);
@@ -302,14 +228,18 @@ export default function CoordinatorAssessments() {
               />
             </div>
 
-            <CoordAssSelect
+            <select
+              className="coord-select"
               value={batchFilter}
-              onChange={setBatchFilter}
-              options={[
-                { value: "All", label: "All Batches" },
-                ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
-              ]}
-            />
+              onChange={(e) => setBatchFilter(e.target.value)}
+            >
+              <option value="All">All Batches</option>
+              {coordinatorBatches.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Quizzes List */}
@@ -651,24 +581,28 @@ export default function CoordinatorAssessments() {
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Target Batch</label>
-                <CoordAssSelect
+                <select
                   value={batch}
-                  onChange={setBatch}
-                  options={coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))}
-                />
+                  onChange={(e) => setBatch(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                >
+                  {coordinatorBatches.map((b) => (
+                    <option key={b.id} value={b.name}>{b.name}</option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assessment Format</label>
-                <CoordAssSelect
+                <select
                   value={type}
-                  onChange={setType}
-                  options={[
-                    { value: "MCQ Quiz", label: "MCQ Quiz" },
-                    { value: "Coding Assessment", label: "Coding Assessment" },
-                    { value: "Hands-on Project", label: "Hands-on Project" }
-                  ]}
-                />
+                  onChange={(e) => setType(e.target.value)}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
+                >
+                  <option value="MCQ Quiz">MCQ Quiz</option>
+                  <option value="Coding Assessment">Coding Assessment</option>
+                  <option value="Hands-on Project">Hands-on Project</option>
+                </select>
               </div>
 
               <div>

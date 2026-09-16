@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Search,
   CheckCircle2,
@@ -13,46 +13,10 @@ import {
   UserCheck,
   Clock,
   Calendar,
-  Layers,
-  ChevronDown,
-  Check,
+  Layers
 } from "lucide-react";
 import { coordinatorInterviewRecords, coordinatorBatches } from "../../../data/coordinatorMockData";
 import "../Styles/CodingPerformance.css";
-
-/* ── Inline dropdown for Coordinator Interview Performance (CSS: CodingPerformance.css .coord-ip-select-*) ── */
-function CoordIpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`coord-ip-select-wrap${isOpen ? ' coord-ip-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`coord-ip-select-trigger${isOpen ? ' coord-ip-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-ip-select-icon" />}
-        <span className="coord-ip-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-ip-select-arrow${isOpen ? ' coord-ip-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="coord-ip-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-ip-select-option${isSel ? ' coord-ip-select-option--selected' : ''}`}>
-                <span className="coord-ip-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-ip-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function InterviewPerformance() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -395,37 +359,41 @@ export default function InterviewPerformance() {
               <span>Filters:</span>
             </div>
 
-            <CoordIpSelect
+            <select
               value={selectedDept}
-              options={[
-                { value: "all", label: "All Departments" },
-                { value: "CSE", label: "CSE" },
-                { value: "IT", label: "IT" },
-                { value: "AI & DS", label: "AI & DS" },
-                { value: "ECS", label: "ECS" },
-              ]}
-              onChange={(val) => setSelectedDept(val)}
-            />
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className="coord-perf-select"
+            >
+              <option value="all">All Departments</option>
+              <option value="CSE">CSE</option>
+              <option value="IT">IT</option>
+              <option value="AI & DS">AI & DS</option>
+              <option value="ECS">ECS</option>
+            </select>
 
-            <CoordIpSelect
+            <select
               value={selectedBatch}
-              options={[
-                { value: "all", label: "All Batches" },
-                ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
-              ]}
-              onChange={(val) => setSelectedBatch(val)}
-            />
+              onChange={(e) => setSelectedBatch(e.target.value)}
+              className="coord-perf-select"
+            >
+              <option value="all">All Batches</option>
+              {coordinatorBatches.map((b) => (
+                <option key={b.id} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+            </select>
 
-            <CoordIpSelect
+            <select
               value={selectedStatus}
-              options={[
-                { value: "all", label: "All Statuses" },
-                { value: "Completed", label: "Completed" },
-                { value: "In Progress", label: "In Progress" },
-                { value: "Not Attempted", label: "Not Attempted / Needs Work" },
-              ]}
-              onChange={(val) => setSelectedStatus(val)}
-            />
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="coord-perf-select"
+            >
+              <option value="all">All Statuses</option>
+              <option value="Completed">Completed</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Not Attempted">Not Attempted / Needs Work</option>
+            </select>
           </div>
         </div>
       </div>

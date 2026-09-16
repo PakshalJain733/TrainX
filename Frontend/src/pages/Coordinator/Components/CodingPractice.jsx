@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Code,
   Plus,
@@ -19,7 +19,6 @@ import {
   FileCode,
   SlidersHorizontal,
   ChevronRight,
-  ChevronDown,
   AlertCircle,
   BarChart3,
   Layers,
@@ -28,65 +27,13 @@ import {
   Terminal,
   RefreshCw,
 } from "lucide-react";
-import "../Styles/CodingPerformance.css";
 import {
   initialCodingProblems,
   initialAssignments,
   initialSubmissions,
 } from "../../../data/codingPracticeMockData";
 import { coordinatorBatches } from "../../../data/coordinatorMockData";
-import { addSharedCodingTask, getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-/* ── Inline dropdown for Coordinator Coding Practice (CSS: CodingPractice.css .coord-cp-select-*) ── */
-function CoordCpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (direction === 'up') {
-        setDropUp(true);
-      } else if (direction === 'down') {
-        setDropUp(false);
-      } else {
-        setDropUp(spaceBelow < 240);
-      }
-    }
-    setIsOpen(v => !v);
-  };
-
-  return (
-    <div className={`coord-cp-select-wrap${isOpen ? ' coord-cp-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={handleToggle} className={`coord-cp-select-trigger${isOpen ? ' coord-cp-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="coord-cp-select-icon" />}
-        <span className="coord-cp-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
-        <ChevronDown className={`coord-cp-select-arrow${isOpen ? ' coord-cp-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className={`coord-cp-select-dropdown${dropUp ? ' coord-cp-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coord-cp-select-option${isSel ? ' coord-cp-select-option--selected' : ''}`}>
-                <span className="coord-cp-select-option-label">{opt.label}</span>
-                {isSel && <Check className="coord-cp-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+import CodingPerformance from "./CodingPerformance";
 
 export default function CodingPractice() {
   const [activeTab, setActiveTab] = useState("problems"); // 'problems' | 'assign' | 'submissions' | 'performance'
@@ -182,84 +129,8 @@ export default function CodingPractice() {
     return matchesSearch && matchesVerdict && matchesBatch;
   });
 
-  useEffect(() => {
-    const loadShared = async () => {
-      const shared = await getSharedCodingTasks([]);
-      if (shared.length > 0) {
-        setProblems((prev) => {
-          const existingIds = new Set(prev.map((p) => String(p.id)));
-          const newShared = shared
-            .filter((s) => !existingIds.has(String(s.id)))
-            .map((s) => ({
-              id: s.id,
-              title: s.title,
-              topic: s.data?.category || s.category || s.topic || "Arrays & Hashing",
-              difficulty: s.data?.difficulty || s.difficulty || "Medium",
-              points: s.data?.points || s.points || 100,
-              timeLimit: "1.0s",
-              memoryLimit: "256MB",
-              description: s.description || "Solve problem optimal complexity.",
-              inputFormat: "Standard Input",
-              outputFormat: "Standard Output",
-              sampleInput: s.data?.sampleInput || "Input",
-              sampleOutput: s.data?.sampleOutput || "Output",
-              tags: ["DSA", "Practice"],
-              companies: ["Core Tech"],
-              status: "Active",
-              createdDate: "Today",
-              createdBy: "Shared",
-              college: "Apex Institute",
-              acceptanceRate: "80%",
-              totalSubmissions: 0,
-              testCases: [],
-              starterCode: { python: "def solution():\n    pass", cpp: "int main() {}" },
-            }));
-          return [...newShared, ...prev];
-        });
-      }
-    };
-    loadShared();
-
-    const handleUpdate = async () => {
-      const updatedShared = await getSharedCodingTasks([]);
-      setProblems((prev) => {
-        const existingIds = new Set(prev.map((p) => String(p.id)));
-        const newShared = updatedShared
-          .filter((s) => !existingIds.has(String(s.id)))
-          .map((s) => ({
-            id: s.id,
-            title: s.title,
-            topic: s.data?.category || s.category || s.topic || "Arrays & Hashing",
-            difficulty: s.data?.difficulty || s.difficulty || "Medium",
-            points: s.data?.points || s.points || 100,
-            timeLimit: "1.0s",
-            memoryLimit: "256MB",
-            description: s.description || "Solve problem optimal complexity.",
-            inputFormat: "Standard Input",
-            outputFormat: "Standard Output",
-            sampleInput: s.data?.sampleInput || "Input",
-            sampleOutput: s.data?.sampleOutput || "Output",
-            tags: ["DSA", "Practice"],
-            companies: ["Core Tech"],
-            status: "Active",
-            createdDate: "Today",
-            createdBy: "Shared",
-            college: "Apex Institute",
-            acceptanceRate: "80%",
-            totalSubmissions: 0,
-            testCases: [],
-            starterCode: { python: "def solution():\n    pass", cpp: "int main() {}" },
-          }));
-        return [...newShared, ...prev];
-      });
-    };
-
-    window.addEventListener(EVENTS.CODING_UPDATED, handleUpdate);
-    return () => window.removeEventListener(EVENTS.CODING_UPDATED, handleUpdate);
-  }, []);
-
   // Handle Save Problem
-  const handleSaveProblem = async (e) => {
+  const handleSaveProblem = (e) => {
     e.preventDefault();
     if (!problemForm.title.trim()) return;
 
@@ -268,11 +139,11 @@ export default function CodingPractice() {
         prev.map((p) =>
           p.id === editingProblem.id
             ? {
-              ...p,
-              ...problemForm,
-              tags: typeof problemForm.tags === "string" ? problemForm.tags.split(",").map((t) => t.trim()) : problemForm.tags,
-              companies: typeof problemForm.companies === "string" ? problemForm.companies.split(",").map((c) => c.trim()) : problemForm.companies,
-            }
+                ...p,
+                ...problemForm,
+                tags: problemForm.tags.split(",").map((t) => t.trim()),
+                companies: problemForm.companies.split(",").map((c) => c.trim()),
+              }
             : p
         )
       );
@@ -281,8 +152,8 @@ export default function CodingPractice() {
       const created = {
         id: newId,
         ...problemForm,
-        tags: typeof problemForm.tags === "string" ? problemForm.tags.split(",").map((t) => t.trim()) : problemForm.tags,
-        companies: typeof problemForm.companies === "string" ? problemForm.companies.split(",").map((c) => c.trim()) : problemForm.companies,
+        tags: problemForm.tags.split(",").map((t) => t.trim()),
+        companies: problemForm.companies.split(",").map((c) => c.trim()),
         status: "Active",
         createdDate: new Date().toISOString().split("T")[0],
         createdBy: "Coordinator Workspace",
@@ -303,8 +174,6 @@ export default function CodingPractice() {
           cpp: "#include <iostream>\nusing namespace std;\nint main() { return 0; }",
         },
       };
-
-      await addSharedCodingTask(created);
       setProblems([created, ...problems]);
     }
 
@@ -477,10 +346,11 @@ export default function CodingPractice() {
         <div className="flex items-center gap-6 overflow-x-auto text-sm font-semibold">
           <button
             onClick={() => setActiveTab("problems")}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "problems"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "problems"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
           >
             <Code size={18} />
             <span>Problem Bank ({problems.length})</span>
@@ -488,10 +358,11 @@ export default function CodingPractice() {
 
           <button
             onClick={() => setActiveTab("assign")}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "assign"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "assign"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
           >
             <Send size={18} />
             <span>Assigned Practice Queue ({assignments.length})</span>
@@ -499,10 +370,11 @@ export default function CodingPractice() {
 
           <button
             onClick={() => setActiveTab("submissions")}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "submissions"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "submissions"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
           >
             <Terminal size={18} />
             <span>Student Submissions ({submissions.length})</span>
@@ -510,10 +382,11 @@ export default function CodingPractice() {
 
           <button
             onClick={() => setActiveTab("performance")}
-            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === "performance"
-              ? "border-indigo-600 text-indigo-600"
-              : "border-transparent text-slate-500 hover:text-slate-800"
-              }`}
+            className={`pb-3.5 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
+              activeTab === "performance"
+                ? "border-indigo-600 text-indigo-600"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
           >
             <BarChart3 size={18} />
             <span>Performance & Diagnostics</span>
@@ -543,22 +416,28 @@ export default function CodingPractice() {
                 <span>Filters:</span>
               </div>
 
-              <CoordCpSelect
+              <select
                 value={difficultyFilter}
-                options={[
-                  { value: "All", label: "All Difficulties" },
-                  { value: "Easy", label: "Easy" },
-                  { value: "Medium", label: "Medium" },
-                  { value: "Hard", label: "Hard" },
-                ]}
-                onChange={(val) => setDifficultyFilter(val)}
-              />
+                onChange={(e) => setDifficultyFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+              >
+                <option value="All">All Difficulties</option>
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
 
-              <CoordCpSelect
+              <select
                 value={topicFilter}
-                options={topicsList.map((t) => ({ value: t, label: t }))}
-                onChange={(val) => setTopicFilter(val)}
-              />
+                onChange={(e) => setTopicFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+              >
+                {topicsList.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
 
               <button
                 onClick={() => {
@@ -612,12 +491,13 @@ export default function CodingPractice() {
 
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${prob.difficulty === "Easy"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : prob.difficulty === "Medium"
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                            prob.difficulty === "Easy"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : prob.difficulty === "Medium"
                               ? "bg-amber-50 text-amber-700 border border-amber-200"
                               : "bg-purple-50 text-purple-700 border border-purple-200"
-                            }`}
+                          }`}
                         >
                           {prob.difficulty}
                         </span>
@@ -735,10 +615,11 @@ export default function CodingPractice() {
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${asgn.status === "Active"
-                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                        : "bg-slate-100 text-slate-600"
-                        }`}
+                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        asgn.status === "Active"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
                     >
                       {asgn.status}
                     </span>
@@ -808,25 +689,29 @@ export default function CodingPractice() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <CoordCpSelect
+              <select
                 value={verdictFilter}
-                options={[
-                  { value: "All", label: "All Verdicts" },
-                  { value: "Accepted", label: "Accepted" },
-                  { value: "Wrong Answer", label: "Wrong Answer" },
-                  { value: "Time Limit Exceeded", label: "Time Limit Exceeded" },
-                ]}
-                onChange={(val) => setVerdictFilter(val)}
-              />
+                onChange={(e) => setVerdictFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+              >
+                <option value="All">All Verdicts</option>
+                <option value="Accepted">Accepted</option>
+                <option value="Wrong Answer">Wrong Answer</option>
+                <option value="Time Limit Exceeded">Time Limit Exceeded</option>
+              </select>
 
-              <CoordCpSelect
+              <select
                 value={batchFilter}
-                options={[
-                  { value: "All", label: "All Batches" },
-                  ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
-                ]}
-                onChange={(val) => setBatchFilter(val)}
-              />
+                onChange={(e) => setBatchFilter(e.target.value)}
+                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
+              >
+                <option value="All">All Batches</option>
+                {coordinatorBatches.map((b) => (
+                  <option key={b.id} value={b.name}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
 
               <button
                 onClick={() => {
@@ -882,12 +767,13 @@ export default function CodingPractice() {
 
                       <td className="py-4 px-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${sub.status === "Accepted"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : sub.status === "Time Limit Exceeded"
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                            sub.status === "Accepted"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : sub.status === "Time Limit Exceeded"
                               ? "bg-amber-50 text-amber-700 border border-amber-200"
                               : "bg-rose-50 text-rose-700 border border-rose-200"
-                            }`}
+                          }`}
                         >
                           {sub.status}
                         </span>
@@ -964,24 +850,30 @@ export default function CodingPractice() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Topic Category *</label>
-                  <CoordCpSelect
+                  <select
                     value={problemForm.topic}
-                    options={topicsList.filter((t) => t !== "All").map((t) => ({ value: t, label: t }))}
-                    onChange={(val) => setProblemForm({ ...problemForm, topic: val })}
-                  />
+                    onChange={(e) => setProblemForm({ ...problemForm, topic: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                  >
+                    {topicsList.filter((t) => t !== "All").map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Difficulty Level</label>
-                  <CoordCpSelect
+                  <select
                     value={problemForm.difficulty}
-                    options={[
-                      { value: "Easy", label: "Easy" },
-                      { value: "Medium", label: "Medium" },
-                      { value: "Hard", label: "Hard" },
-                    ]}
-                    onChange={(val) => setProblemForm({ ...problemForm, difficulty: val })}
-                  />
+                    onChange={(e) => setProblemForm({ ...problemForm, difficulty: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1178,8 +1070,9 @@ export default function CodingPractice() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900">Case #{idx + 1}</span>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${tc.isHidden ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
-                              }`}
+                            className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                              tc.isHidden ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                            }`}
                           >
                             {tc.isHidden ? "Hidden" : "Public"}
                           </span>
@@ -1348,10 +1241,11 @@ export default function CodingPractice() {
               <div className="flex items-center justify-between bg-slate-800/60 p-3 rounded-xl border border-slate-700/60 text-xs">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${selectedSubmissionCode.status === "Accepted"
-                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                      : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
-                      }`}
+                    className={`px-2.5 py-0.5 rounded text-[11px] font-bold ${
+                      selectedSubmissionCode.status === "Accepted"
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        : "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                    }`}
                   >
                     {selectedSubmissionCode.status}
                   </span>
