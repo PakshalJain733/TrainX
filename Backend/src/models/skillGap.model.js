@@ -1,4 +1,5 @@
 import { query } from '../config/db.js';
+import { getStudentByUserId } from './user.model.js';
 
 // Fallback mock stores in case of database unavailability
 let mockSkillGaps = [
@@ -280,17 +281,14 @@ export const getStudentSkillGapsModel = async (userId) => {
   await ensureSkillGapTablesExist();
   const uId = Number(userId);
 
-  // Resolve student's batch_id and college_id for saving
+  // Resolve student record from users.id via students.user_id (single identity mapping)
   let studentBatchId = null;
   let studentCollegeId = 1;
   try {
-    const stuInfo = await query(
-      'SELECT batch_id, college_id FROM students WHERE user_id = ? LIMIT 1',
-      [uId]
-    );
-    if (stuInfo && stuInfo.length > 0) {
-      studentBatchId = stuInfo[0].batch_id || null;
-      studentCollegeId = stuInfo[0].college_id || 1;
+    const stuInfo = await getStudentByUserId(uId);
+    if (stuInfo) {
+      studentBatchId = stuInfo.batch_id || null;
+      studentCollegeId = stuInfo.college_id || 1;
     }
   } catch (e) {
     // Student info lookup failed, continue with defaults
@@ -343,6 +341,8 @@ export const getStudentSkillGapsModel = async (userId) => {
             topic: qr.topic || 'Technical Assessment',
             category: qr.category || 'Quiz & Conceptual',
             avgScore: `${Math.round(avg)}%`,
+            deficiencyRate: `${Math.round(deficiencyRate)}%`,
+            priority,
             severity: avg < 50 ? 'Critical' : 'Moderate',
             recommendation: `Review fundamental concepts in ${qr.topic} and retake unit quizzes`,
           });
@@ -363,6 +363,8 @@ export const getStudentSkillGapsModel = async (userId) => {
             topic: cr.topic || 'Data Structures & Algorithms',
             category: 'Coding & Implementation',
             avgScore: `${Math.round(avg)}%`,
+            deficiencyRate: `${Math.round(deficiencyRate)}%`,
+            priority,
             severity: avg < 50 ? 'Critical' : 'Moderate',
             recommendation: `Practice 3 medium problems for ${cr.topic} in Practice Arena`,
           });
@@ -425,34 +427,7 @@ export const getStudentSkillGapsModel = async (userId) => {
     console.warn(`[SkillGap Model] Student gap lookup warning: ${error.message}`);
   }
 
-  // Only fall back to mock when DB is completely unavailable
-  if (!dbAvailable) {
-    return [
-      {
-        topic: 'SQL Indexing & Query Optimization',
-        category: 'Database Systems',
-        avgScore: '54%',
-        severity: 'Moderate',
-        recommendation: 'Complete Transactions & Indexing practice module',
-      },
-      {
-        topic: 'FastAPI / Express Validation & Middleware',
-        category: 'Backend Architecture',
-        avgScore: '48%',
-        severity: 'Critical',
-        recommendation: 'Build a JWT auth and validation demo project',
-      },
-      {
-        topic: 'Dynamic Programming (Knapsack & Subsequences)',
-        category: 'Algorithms',
-        avgScore: '40%',
-        severity: 'Critical',
-        recommendation: 'Solve 3 top DP patterns in Practice Problems Arena',
-      },
-    ];
-  }
-
-  // DB works but student has no weak areas — return empty
+  // No mock/fallback data: return real computed gaps only (empty if none)
   return [];
 };
 

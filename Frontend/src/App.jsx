@@ -7,6 +7,11 @@ import AIRoadmap from "./pages/Student/Components/AiRoadmap";
 import LearningContent from "./pages/Student/Components/LearningContent";
 import AIInterview from "./pages/Student/Components/AiInterview";
 import ProgressAnalytics from "./pages/Student/Components/ProgressAnalytics";
+import SkillGapAnalysis from "./pages/Student/Components/SkillGapAnalysis";
+import StudentDashboardPreview from "./pages/Student/Components/StudentDashboardPreview";
+import StudentDashboardProfessionalPreview from "./pages/Student/Components/StudentDashboardProfessionalPreview";
+import StudentProfessionalOverview from "./pages/Student/Components/StudentProfessionalOverview";
+import StudentProfessionalBatches from "./pages/Student/Components/StudentProfessionalBatches";
 import Leaderboard from "./pages/Student/Components/Leaderboard";
 import WeeklyReports from "./pages/Student/Components/WeeklyReports";
 import Attendance from "./pages/Student/Components/Attendance";
@@ -107,6 +112,7 @@ function App() {
           <Route path="learning" element={<LearningContent />} />
           <Route path="ai-interview" element={<AIInterview />} />
           <Route path="progress" element={<ProgressAnalytics />} />
+          <Route path="skill-gaps" element={<SkillGapAnalysis />} />
           <Route path="leaderboard" element={<Leaderboard />} />
           <Route path="quiz" element={<AcademicQuiz />} />
           <Route path="attendance" element={<Attendance />} />
@@ -119,6 +125,15 @@ function App() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<Settings />} />
+        </Route>
+
+        {/* Student dashboard design preview (standalone — has its own sidebar) */}
+        <Route path="/student/dashboard-preview" element={<StudentDashboardPreview />} />
+
+        {/* Professional Student Portal — approved navy/indigo professional UI */}
+        <Route path="/student/dashboard-professional-preview" element={<StudentDashboardProfessionalPreview />}>
+          <Route index element={<StudentProfessionalOverview />} />
+          <Route path="batches" element={<StudentProfessionalBatches />} />
         </Route>
 
         {/* Admin Dashboard Routes */}
