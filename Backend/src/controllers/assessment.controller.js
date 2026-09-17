@@ -1,104 +1,293 @@
 import { sendSuccess, sendError } from '../utils/response.js';
-
-let mockAssessments = [
-  {
-    id: 1,
-    title: "Data Structures & Graph Theory Mid-Term Quiz",
-    batch: "CSE 2026 Alpha Cohort",
-    type: "MCQ & Coding",
-    dueDate: "2026-09-05",
-    submissions: "112 / 120",
-    attempts: 112,
-    totalEnrolled: 120,
-    avgScore: "84%",
-    highestScore: "98%",
-    passRate: "92%",
-    status: "Active",
-  },
-  {
-    id: 2,
-    title: "Generative AI & Fine-Tuning LLMs Assessment",
-    batch: "Data Science & ML 2025",
-    type: "Project & Quiz",
-    dueDate: "2026-08-30",
-    submissions: "110 / 110",
-    attempts: 110,
-    totalEnrolled: 110,
-    avgScore: "91%",
-    highestScore: "100%",
-    passRate: "98%",
-    status: "Completed",
-  },
-  {
-    id: 3,
-    title: "Fullstack Authentication & Redis Caching Exam",
-    batch: "Fullstack React & Node Specialization",
-    type: "Coding Assessment",
-    dueDate: "2026-09-08",
-    submissions: "45 / 105",
-    attempts: 45,
-    totalEnrolled: 105,
-    avgScore: "76%",
-    highestScore: "92%",
-    passRate: "81%",
-    status: "In Progress",
-  },
-  {
-    id: 4,
-    title: "Docker Containerization & Kubernetes Challenge",
-    batch: "Cloud Native & DevOps Infrastructure",
-    type: "Hands-on Lab",
-    dueDate: "2026-09-12",
-    submissions: "12 / 85",
-    attempts: 12,
-    totalEnrolled: 85,
-    avgScore: "82%",
-    highestScore: "95%",
-    passRate: "88%",
-    status: "Active",
-  },
-];
+import {
+  getAssessmentsService,
+  getAssessmentDetailsService,
+  startAssessmentService,
+  submitAssessmentService,
+  submitAssessmentAttemptService,
+  getAttemptResultService,
+} from '../services/assessment.service.js';
+import {
+  findAssessments,
+  getAssessmentByIdModel,
+  createAssessmentModel,
+  updateAssessmentModel,
+  deleteAssessmentModel,
+  publishAssessmentModel,
+  getAssessmentQuestionsModel,
+  addQuestionModel,
+  updateQuestionModel,
+  deleteQuestionModel,
+  getStudentAttemptsModel,
+  getAssessmentAttemptsModel,
+} from '../models/assessment.model.js';
+import { generateQuizQuestionsAI } from '../ai/quiz.ai.js';
+import { ROLES } from '../utils/constants.js';
 
 export const getAssessments = async (req, res, next) => {
   try {
-    const { batch } = req.query;
-    let result = mockAssessments;
-    if (batch && batch !== "All") {
-      result = result.filter((a) => a.batch.toLowerCase().includes(batch.toLowerCase()));
-    }
-    return sendSuccess(res, 'Assessments retrieved successfully', result);
+    const collegeId = req.user?.role === ROLES.SUPER_ADMIN ? req.query.collegeId : req.user?.collegeId;
+    const { batch_id, status } = req.query;
+
+    const assessments = await findAssessments({
+      college_id: collegeId,
+      batch_id,
+      status,
+    });
+
+    return sendSuccess(res, 'Assessments retrieved successfully', assessments);
   } catch (error) {
     next(error);
   }
 };
 
-export const createAssessment = async (req, res, next) => {
+export const getPublishedAssessments = async (req, res, next) => {
   try {
-    const { title, batch, type, dueDate } = req.body;
+    const collegeId = req.user?.collegeId;
+    const assessments = await getAssessmentsService(collegeId);
+    return sendSuccess(res, 'Published assessments retrieved successfully', assessments);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAssessmentById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const isStaff = [ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN].includes(req.user?.role);
+    const assessment = await getAssessmentDetailsService(id, isStaff, req.user?.collegeId);
+    return sendSuccess(res, 'Assessment details retrieved successfully', assessment);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addAssessment = async (req, res, next) => {
+  try {
+    const { title, description, category, duration_minutes, total_marks, pass_marks, batch_id } = req.body;
     if (!title) {
-      return sendError(res, 'Quiz/Assessment Title is required', 400);
+      return sendError(res, 'Title is required', 400);
     }
 
-    const newAssessment = {
-      id: Date.now(),
+    const newAssessment = await createAssessmentModel({
       title,
-      batch: batch || "CSE 2026 Alpha Cohort",
-      type: type || "MCQ Quiz",
-      dueDate: dueDate || "2026-09-15",
-      submissions: "0 / 120",
-      attempts: 0,
-      totalEnrolled: 120,
-      avgScore: "--",
-      highestScore: "--",
-      passRate: "--",
-      status: "Active",
-    };
+      description,
+      category: category || 'Technical Quiz',
+      duration_minutes: duration_minutes || 30,
+      total_marks: total_marks || 50,
+      pass_marks: pass_marks || 0,
+      batch_id: batch_id || null,
+      college_id: req.user?.collegeId || 1,
+      created_by: req.user?.userId || req.user?.id,
+    });
 
-    mockAssessments = [newAssessment, ...mockAssessments];
     return sendSuccess(res, 'Assessment created successfully', newAssessment, 201);
   } catch (error) {
     next(error);
   }
 };
 
-export const getAssessmentData = getAssessments;
+export const createAssessment = addAssessment;
+
+export const editAssessment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const updated = await updateAssessmentModel(id, req.body);
+    if (!updated) {
+      return sendError(res, 'Assessment not found', 404);
+    }
+    return sendSuccess(res, 'Assessment updated successfully', updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeAssessment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deleteAssessmentModel(id);
+    return sendSuccess(res, 'Assessment deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const publishAssessmentCtrl = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { is_published = true } = req.body;
+    const result = await publishAssessmentModel(id, is_published);
+    return sendSuccess(res, 'Assessment published status updated', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getQuestions = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const isStaff = [ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN].includes(req.user?.role);
+    const questions = await getAssessmentQuestionsModel(id, isStaff);
+    return sendSuccess(res, 'Questions retrieved successfully', questions);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addQuestion = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { question_text, option_a, option_b, option_c, option_d, correct_option, marks, explanation } = req.body;
+
+    if (!question_text || !option_a || !option_b || !correct_option) {
+      return sendError(res, 'Question text, option_a, option_b, and correct_option are required', 400);
+    }
+
+    const newQ = await addQuestionModel(id, {
+      question_text,
+      option_a,
+      option_b,
+      option_c,
+      option_d,
+      correct_option,
+      marks: marks || 10,
+      explanation,
+    });
+
+    return sendSuccess(res, 'Question added successfully', newQ, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const editQuestion = async (req, res, next) => {
+  try {
+    const { qid } = req.params;
+    const updated = await updateQuestionModel(qid, req.body);
+    return sendSuccess(res, 'Question updated successfully', updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const removeQuestion = async (req, res, next) => {
+  try {
+    const { qid } = req.params;
+    await deleteQuestionModel(qid);
+    return sendSuccess(res, 'Question removed successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const startAssessment = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+    const collegeId = req.user?.collegeId || 1;
+
+    const data = await startAssessmentService(id, userId, collegeId);
+    return sendSuccess(res, 'Assessment attempt started', data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const submitAssessment = async (req, res, next) => {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+    const userCollegeId = req.user?.collegeId || 1;
+    const { answers } = req.body;
+
+    const result = await submitAssessmentService({
+      attemptId,
+      userId,
+      submittedAnswers: answers || [],
+      userCollegeId,
+    });
+
+    return sendSuccess(res, 'Assessment submitted successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const submitAssessmentAttempt = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+    const collegeId = req.user?.collegeId || 1;
+    const { answers } = req.body;
+
+    const result = await submitAssessmentAttemptService({
+      assessmentId: id,
+      userId,
+      collegeId,
+      submittedAnswers: answers || [],
+    });
+
+    return sendSuccess(res, 'Assessment evaluated successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAttemptResult = async (req, res, next) => {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+    const userRole = req.user?.role;
+    const userCollegeId = req.user?.collegeId;
+
+    const result = await getAttemptResultService(attemptId, userId, userRole, userCollegeId);
+    return sendSuccess(res, 'Attempt result retrieved successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMyResult = async (req, res, next) => {
+  try {
+    const { attemptId } = req.params;
+    const userId = req.user?.userId || req.user?.id;
+
+    const result = await getAttemptResultService(attemptId, userId, ROLES.STUDENT);
+    return sendSuccess(res, 'My attempt result retrieved successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMyAttempts = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+    const attempts = await getStudentAttemptsModel(userId);
+    return sendSuccess(res, 'My assessment attempts retrieved successfully', attempts);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAssessmentResults = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const results = await getAssessmentAttemptsModel(id);
+    return sendSuccess(res, 'Assessment results retrieved successfully', results);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateAIQuestionsCtrl = async (req, res, next) => {
+  try {
+    const { title, count } = req.body;
+    if (!title) {
+      return sendError(res, 'Quiz title/topic is required for AI question generation', 400);
+    }
+    const questions = await generateQuizQuestionsAI(title, count || 10);
+    return sendSuccess(res, 'AI questions generated successfully', questions);
+  } catch (error) {
+    next(error);
+  }
+};

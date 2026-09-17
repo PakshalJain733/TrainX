@@ -1,6 +1,11 @@
 import { sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
 
+/**
+ * Role-based authorization middleware.
+ * Only allows access if the user's role is explicitly in allowedRoles.
+ * Super admins bypass everything. No other role gets implicit bypass.
+ */
 export const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
     if (!req.user) {
@@ -8,11 +13,14 @@ export const authorizeRoles = (...allowedRoles) => {
     }
 
     const userRole = req.user.role;
-    const isSuperAdmin = userRole === ROLES.SUPER_ADMIN || userRole === 'super_admin';
-    const isCollegeAdmin = userRole === ROLES.COLLEGE_ADMIN || userRole === 'college_admin';
-    const isDirectlyAllowed = allowedRoles.includes(userRole);
 
-    if (isDirectlyAllowed || isSuperAdmin || isCollegeAdmin) {
+    // Super admin bypasses all role restrictions
+    if (userRole === ROLES.SUPER_ADMIN) {
+      return next();
+    }
+
+    // All other roles (including college_admin) must be explicitly listed
+    if (allowedRoles.includes(userRole)) {
       return next();
     }
 

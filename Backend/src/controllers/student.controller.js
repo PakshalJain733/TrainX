@@ -1,10 +1,12 @@
 import { sendSuccess, sendError } from '../utils/response.js';
+import { query } from '../config/db.js';
 import {
   getAllUsersModel,
   findUserById,
   getStudentByUserId,
   updateUserModel,
 } from '../models/user.model.js';
+import { getStudentPerformanceService } from '../services/performance.service.js';
 import { ROLES } from '../utils/constants.js';
 
 export const getStudentData = async (req, res, next) => {
@@ -213,9 +215,31 @@ export const getStudentAttendance = async (req, res, next) => {
 
 export const applyStudentLeave = async (req, res, next) => {
   try {
-    const { category, startDate, endDate, days, reason, attachment } = req.body;
+    const userId = req.user?.userId || req.user?.id;
+    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const { category, startDate, endDate, days, reason, attachment, title } = req.body;
+
+    const leaveTitle = title || `${category || 'Leave'} · ${reason ? reason.substring(0, 25) : 'Application'}`;
+    const insertResult = await query(
+      `INSERT INTO leave_requests (user_id, college_id, title, category, status, days, start_date, end_date, reason, attachment)
+       VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)`,
+      [
+        userId,
+        collegeId,
+        leaveTitle,
+        category || 'Medical Leave',
+        days || 1,
+        startDate || new Date().toISOString().split('T')[0],
+        endDate || startDate || new Date().toISOString().split('T')[0],
+        reason || '',
+        attachment || null,
+      ]
+    );
+
     const newLeave = {
-      id: `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: `LV-2026-${insertResult.insertId}`,
+      leaveId: insertResult.insertId,
+      title: leaveTitle,
       category: category || 'Medical Leave',
       startDate,
       endDate: endDate || startDate,
@@ -233,32 +257,37 @@ export const applyStudentLeave = async (req, res, next) => {
 
 export const getStudentNotifications = async (req, res, next) => {
   try {
-    const notifications = [
-      {
-        id: 1,
-        title: 'New Coding Assessment Available',
-        message: 'Sprint 3 Technical Assessment is now live. Complete before Friday 11:59 PM.',
-        time: '10 mins ago',
-        type: 'assessment',
+    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const broadcastRows = await query(
+      `SELECT id, title, COALESCE(message, desc_text) as message, type, created_at
+       FROM broadcasts
+       WHERE college_id = ? OR college_id IS NULL
+       ORDER BY id DESC LIMIT 10`,
+      [collegeId]
+    );
+
+    let notifications = [];
+    if (broadcastRows && broadcastRows.length > 0) {
+      notifications = broadcastRows.map((b) => ({
+        id: b.id,
+        title: b.title,
+        message: b.message || 'Announcement posted.',
+        time: new Date(b.created_at).toLocaleDateString('en-GB'),
+        type: b.type || 'alert',
         read: false,
-      },
-      {
-        id: 2,
-        title: 'Roadmap Milestone Unlocked',
-        message: 'Congratulations! You unlocked Milestone 2: Statistical Foundations.',
-        time: '2 hours ago',
-        type: 'roadmap',
-        read: false,
-      },
-      {
-        id: 3,
-        title: 'Attendance Marked Present',
-        message: 'Your biometric check-in was verified for DSA Lab session.',
-        time: '5 hours ago',
-        type: 'attendance',
-        read: true,
-      },
-    ];
+      }));
+    } else {
+      notifications = [
+        {
+          id: 1,
+          title: 'Training Schedule Active',
+          message: 'Your training modules and assessments are active. Check your roadmap.',
+          time: 'Today',
+          type: 'roadmap',
+          read: false,
+        },
+      ];
+    }
     return sendSuccess(res, 'Notifications retrieved successfully', notifications);
   } catch (error) {
     next(error);
@@ -267,19 +296,8 @@ export const getStudentNotifications = async (req, res, next) => {
 
 export const getStudentPerformance = async (req, res, next) => {
   try {
-    const performanceData = {
-      overallScore: 85,
-      codingScore: 88,
-      quizScore: 82,
-      interviewScore: 84,
-      ranking: 12,
-      totalStudents: 150,
-      monthlyProgress: [
-        { month: 'Jan', score: 75 },
-        { month: 'Feb', score: 80 },
-        { month: 'Mar', score: 85 },
-      ],
-    };
+    const userId = req.user?.userId || req.user?.id;
+    const performanceData = await getStudentPerformanceService(userId);
     return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
   } catch (error) {
     next(error);

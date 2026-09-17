@@ -1,8 +1,28 @@
 import { Router } from 'express';
 import {
   getAssessments,
-  createAssessment,
+  getPublishedAssessments,
+  getAssessmentById,
+  addAssessment,
+  editAssessment,
+  removeAssessment,
+  publishAssessmentCtrl,
+  getQuestions,
+  addQuestion,
+  editQuestion,
+  removeQuestion,
+  startAssessment,
+  submitAssessment,
+  submitAssessmentAttempt,
+  getAttemptResult,
+  getMyResult,
+  getMyAttempts,
+  getAssessmentResults,
+  generateAIQuestionsCtrl,
 } from '../controllers/assessment.controller.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authorizeRoles } from '../middleware/role.middleware.js';
+import { ROLES } from '../utils/constants.js';
 
 const router = Router();
 
@@ -12,39 +32,42 @@ router.use(authenticateToken);
 // Generate questions using Google Gemini AI
 router.post(
   '/generate-ai-questions',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
   generateAIQuestionsCtrl
 );
 
 // ─── Result & Attempt Routes (before /:id to avoid param conflicts) ────────────
 
-
 // View full result for a completed attempt
 router.get(
   '/attempts/:attemptId/result',
-  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
   getAttemptResult
 );
 
 // Get own specific result (student)
-router.get('/attempts/:attemptId/my-result', authorizeRoles('student'), getMyResult);
+router.get('/attempts/:attemptId/my-result', authorizeRoles(ROLES.STUDENT), getMyResult);
 
 // Submit answers for an in_progress attempt
 router.post(
   '/attempts/:attemptId/submit',
-  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
   submitAssessment
 );
 
 // ─── Student Personal Routes ───────────────────────────────────────────────────
 
 // Available/published assessments for students
-router.get('/available', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), getPublishedAssessments);
+router.get(
+  '/available',
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  getPublishedAssessments
+);
 
 // List all past attempts for the logged-in student
 router.get(
   '/my-attempts',
-  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
   getMyAttempts
 );
 
@@ -53,60 +76,92 @@ router.get(
 // List all assessments (with filters)
 router.get(
   '/',
-  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
   getAssessments
 );
 
 // Get a single assessment
 router.get(
   '/:id',
-  authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'),
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
   getAssessmentById
 );
 
 // Create assessment
 router.post(
   '/',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
   addAssessment
 );
 
 // Edit assessment
 router.put(
   '/:id',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
   editAssessment
 );
 
 // Delete assessment
 router.delete(
   '/:id',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
   removeAssessment
 );
 
 // Publish assessment
 router.patch(
   '/:id/publish',
-  authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'),
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
   publishAssessmentCtrl
 );
 
 // ─── Questions CRUD ──────────────────────────────────────────────────────────
 
-router.get('/:id/questions', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), getQuestions);
-router.post('/:id/questions', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), addQuestion);
-router.put('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), editQuestion);
-router.delete('/:id/questions/:qid', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), removeQuestion);
+router.get(
+  '/:id/questions',
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
+  getQuestions
+);
+router.post(
+  '/:id/questions',
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
+  addQuestion
+);
+router.put(
+  '/:id/questions/:qid',
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
+  editQuestion
+);
+router.delete(
+  '/:id/questions/:qid',
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
+  removeQuestion
+);
 
 // View all results for an assessment (Admin/Mentor)
-router.get('/:id/results', authorizeRoles('super_admin', 'college_admin', 'coordinator', 'mentor'), getAssessmentResults);
+router.get(
+  '/:id/results',
+  authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR),
+  getAssessmentResults
+);
 
 // Student: Start assessment (returns questions WITHOUT correct answers)
-router.post('/:id/start', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), startAssessment);
+router.post(
+  '/:id/start',
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  startAssessment
+);
 
-// Legacy backward-compatible routes
-router.post('/:id/attempts', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), submitAssessmentAttempt);
-router.post('/:id/submit', authorizeRoles('student', 'mentor', 'coordinator', 'college_admin', 'super_admin'), submitAssessmentAttempt);
+// Backward-compatible routes
+router.post(
+  '/:id/attempts',
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  submitAssessmentAttempt
+);
+router.post(
+  '/:id/submit',
+  authorizeRoles(ROLES.STUDENT, ROLES.MENTOR, ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN),
+  submitAssessmentAttempt
+);
 
 export default router;

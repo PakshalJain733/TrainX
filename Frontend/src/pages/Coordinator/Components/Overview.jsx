@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Users,
@@ -17,32 +17,81 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
-import {
-  coordinatorStats,
-  coordinatorStudents,
-} from "../../../data/coordinatorMockData";
+import { apiFetch } from "../../../utils/api";
 import "../../Student/Styles/Overview.css";
 
 export default function CoordinatorOverview() {
   const [broadcastMsg, setBroadcastMsg] = useState("");
+  const [targetAudience, setTargetAudience] = useState("All Batches & Students");
   const [broadcastSent, setBroadcastSent] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState({
+    name: "Coordinator",
+    department: "Engineering & Technology",
+    college: "Campus Training Portal",
+  });
+  const [stats, setStats] = useState([
+    { label: "Enrolled Students", value: "0", hint: "Active in department", icon: GraduationCap },
+    { label: "Managed Batches", value: "0 Batches", hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: "0 Trainers", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: "0%", hint: "Department average", icon: LineChart },
+  ]);
+  const [highRiskStudents, setHighRiskStudents] = useState([]);
 
-  const highRiskStudents = coordinatorStudents.filter((s) => s.riskStatus === "High Risk");
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const res = await apiFetch("/coordinator/overview");
+        if (res && res.success && res.data) {
+          const d = res.data;
+          if (d.profile) setProfile(d.profile);
+          if (d.highRiskStudents) setHighRiskStudents(d.highRiskStudents);
+          if (d.stats && Array.isArray(d.stats)) {
+            const icons = [GraduationCap, Users, UserCheck, LineChart];
+            setStats(d.stats.map((s, idx) => ({
+              ...s,
+              icon: icons[idx % icons.length],
+            })));
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load coordinator overview data:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, []);
 
-  const handleBroadcast = (e) => {
+  const handleBroadcast = async (e) => {
     e.preventDefault();
     if (!broadcastMsg.trim()) return;
-    setBroadcastSent(true);
-    setBroadcastMsg("");
-    setTimeout(() => setBroadcastSent(false), 3000);
+    try {
+      await apiFetch("/coordinator/broadcast", {
+        method: "POST",
+        body: JSON.stringify({
+          title: "Department Notice",
+          message: broadcastMsg,
+          target: targetAudience,
+        }),
+      });
+      setBroadcastSent(true);
+      setBroadcastMsg("");
+      setTimeout(() => setBroadcastSent(false), 3000);
+    } catch (err) {
+      alert("Failed to send broadcast: " + err.message);
+    }
   };
 
-  const statsList = [
-    { label: "Enrolled Students", value: "480", hint: "Active in CSE department", icon: GraduationCap },
-    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
-    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
-  ];
+  const getInitials = (name) => {
+    if (!name) return "CO";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .substring(0, 2)
+      .toUpperCase();
+  };
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
@@ -50,17 +99,17 @@ export default function CoordinatorOverview() {
       <div className="overview-hero-card">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">
-            HN
+            {getInitials(profile.name)}
           </div>
           <div>
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> COORDINATOR WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, Harshad Nandurkar!
+              Welcome back, {profile.name}!
             </h1>
             <p className="overview-hero-desc">
-              Department Coordinator · Electronics & Computer Science | Apex Institute of Technology
+              Department Coordinator · {profile.department} | {profile.college}
             </p>
           </div>
         </div>
@@ -68,7 +117,7 @@ export default function CoordinatorOverview() {
 
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
-        {statsList.map((s) => (
+        {stats.map((s) => (
           <Card key={s.label} className="overview-stat-card shadow-sm">
             <CardContent className="overview-card-content">
               <div className="overview-stat-top">
@@ -103,19 +152,21 @@ export default function CoordinatorOverview() {
                 <CardDescription className="overview-card-desc">Send instant announcements to students & cohorts</CardDescription>
               </div>
             </div>
-            <Badge variant="outline">CSE Dept</Badge>
+            <Badge variant="outline">{profile.department}</Badge>
           </CardHeader>
           <CardContent className="p-4">
             <form onSubmit={handleBroadcast} className="space-y-3">
               <div>
                 <label className="text-xs font-semibold text-slate-700 block mb-1">Target Audience</label>
                 <select
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
                   className="w-full p-2.5 rounded-lg border border-slate-200 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                 >
-                  <option value="all">All CSE Batches & Students</option>
-                  <option value="cse26">CSE 2026 Alpha Cohort</option>
-                  <option value="fs">Fullstack React & Node Specialization</option>
-                  <option value="ds">Data Science & ML 2025</option>
+                  <option value="All Batches & Students">All Department Batches & Students</option>
+                  <option value="Third Year Batches">Third Year Batches</option>
+                  <option value="Final Year Batches">Final Year Batches</option>
+                  <option value="Defaulter Students">Flagged Defaulter Students Only</option>
                 </select>
               </div>
 
@@ -171,12 +222,12 @@ export default function CoordinatorOverview() {
                 <div key={s.id} className="p-3 rounded-xl border border-rose-100 bg-rose-50/40 flex items-center justify-between">
                   <div>
                     <h5 className="text-xs font-bold text-slate-800">{s.name}</h5>
-                    <p className="text-[11px] text-slate-500">{s.rollNo} · {s.batch}</p>
+                    <p className="text-[11px] text-slate-500">{s.rollNumber} · {s.batch}</p>
                     <span className="text-[10px] text-rose-600 font-semibold mt-0.5 block">
-                      Attendance: {s.attendance} | Performance: {s.testAvg}
+                      Attendance: {s.attendance} | Performance: {s.avgScore}
                     </span>
                   </div>
-                  <Badge variant="destructive" className="text-[10px]">High Risk</Badge>
+                  <Badge variant="destructive" className="text-[10px]">{s.riskStatus}</Badge>
                 </div>
               ))
             )}
@@ -186,4 +237,3 @@ export default function CoordinatorOverview() {
     </div>
   );
 }
-

@@ -1,81 +1,34 @@
 import { sendSuccess, sendError } from '../utils/response.js';
-import { query, pool } from '../config/db.js';
-
-// In-Memory Fallback Store initialized with default data
-let mockColleges = [
-  {
-    id: 1,
-    name: "Apex Institute of Technology",
-    code: "AIT-MAIN",
-    codeName: "AIT",
-    location: "Campus West, Tech Zone",
-    city: "Bangalore",
-    type: "Autonomous",
-    departmentsCount: 6,
-    studentsCount: 1420,
-    batchesCount: 12,
-    status: "Active",
-    contactEmail: "admin@apex.edu.in",
-    contactPhone: "+91 98765 43210",
-  },
-  {
-    id: 2,
-    name: "St. Xavier Engineering College",
-    code: "SXEC-NORTH",
-    codeName: "SXEC",
-    location: "North University Campus",
-    city: "Mumbai",
-    type: "Affiliated",
-    departmentsCount: 5,
-    studentsCount: 980,
-    batchesCount: 8,
-    status: "Active",
-    contactEmail: "info@sxec.edu.in",
-    contactPhone: "+91 98111 22334",
-  },
-  {
-    id: 3,
-    name: "Vidyalankar Institute of Tech",
-    code: "VIT-SOUTH",
-    codeName: "VIT",
-    location: "South Tech Park",
-    city: "Pune",
-    type: "Autonomous",
-    departmentsCount: 4,
-    studentsCount: 750,
-    batchesCount: 6,
-    status: "Active",
-    contactEmail: "contact@vit.edu.in",
-    contactPhone: "+91 98222 33445",
-  },
-  {
-    id: 4,
-    name: "Global Academy of Science & Engineering",
-    code: "GASE-EAST",
-    codeName: "GASE",
-    location: "East Innovation Belt",
-    city: "Hyderabad",
-    type: "Affiliated",
-    departmentsCount: 3,
-    studentsCount: 510,
-    batchesCount: 4,
-    status: "Active",
-    contactEmail: "admin@gase.edu.in",
-    contactPhone: "+91 98333 44556",
-  },
-];
+import { query } from '../config/db.js';
 
 export const getColleges = async (req, res, next) => {
   try {
-    try {
-      const dbColleges = await query('SELECT * FROM colleges');
-      if (dbColleges && dbColleges.length > 0) {
-        return sendSuccess(res, 'Colleges retrieved successfully', dbColleges);
-      }
-    } catch (dbErr) {
-      // Fallback to in-memory state
-    }
-    return sendSuccess(res, 'Colleges retrieved successfully', mockColleges);
+    const dbColleges = await query(`
+      SELECT c.id, c.name, c.code, c.created_at,
+             COUNT(DISTINCT d.id) as departmentsCount,
+             COUNT(DISTINCT b.id) as batchesCount,
+             COUNT(DISTINCT u.id) as studentsCount
+      FROM colleges c
+      LEFT JOIN departments d ON c.id = d.college_id
+      LEFT JOIN batches b ON c.id = b.college_id
+      LEFT JOIN users u ON c.id = u.college_id AND u.role = 'student'
+      GROUP BY c.id
+      ORDER BY c.id ASC
+    `);
+
+    const result = dbColleges.map((c) => ({
+      id: c.id,
+      name: c.name,
+      code: c.code,
+      codeName: (c.code || '').split('-')[0] || c.code,
+      departmentsCount: parseInt(c.departmentsCount, 10) || 0,
+      batchesCount: parseInt(c.batchesCount, 10) || 0,
+      studentsCount: parseInt(c.studentsCount, 10) || 0,
+      status: 'Active',
+      created_at: c.created_at,
+    }));
+
+    return sendSuccess(res, 'Colleges retrieved successfully', result);
   } catch (error) {
     next(error);
   }
@@ -83,38 +36,28 @@ export const getColleges = async (req, res, next) => {
 
 export const createCollege = async (req, res, next) => {
   try {
-    const { name, code, location, city, type, contactEmail, contactPhone } = req.body;
+    const { name, code } = req.body;
     if (!name || !code) {
       return sendError(res, 'College Name and Code are required', 400);
     }
 
-    const newCollege = {
-      id: Date.now(),
-      name,
-      code,
-      codeName: code.split("-")[0] || code,
-      location: location || "Main Campus",
-      city: city || "Metropolis",
-      type: type || "Autonomous",
+    const cleanCode = code.trim().toUpperCase();
+    const cleanName = name.trim();
+
+    const insertResult = await query(
+      'INSERT INTO colleges (name, code) VALUES (?, ?)',
+      [cleanName, cleanCode]
+    );
+
+    const [created] = await query('SELECT * FROM colleges WHERE id = ?', [insertResult.insertId]);
+
+    return sendSuccess(res, 'College created successfully', {
+      ...created,
       departmentsCount: 0,
-      studentsCount: 0,
       batchesCount: 0,
-      status: "Active",
-      contactEmail: contactEmail || `info@${code.toLowerCase()}.edu.in`,
-      contactPhone: contactPhone || "+91 90000 00000",
-    };
-
-    try {
-      await query(
-        'INSERT INTO colleges (name, code, location, city, type, status) VALUES (?, ?, ?, ?, ?, ?)',
-        [newCollege.name, newCollege.code, newCollege.location, newCollege.city, newCollege.type, newCollege.status]
-      );
-    } catch (dbErr) {
-      // Memory fallback insertion
-    }
-
-    mockColleges = [newCollege, ...mockColleges];
-    return sendSuccess(res, 'College created successfully', newCollege, 201);
+      studentsCount: 0,
+      status: 'Active',
+    }, 201);
   } catch (error) {
     next(error);
   }
@@ -124,21 +67,20 @@ export const updateCollege = async (req, res, next) => {
   try {
     const { id } = req.params;
     const numId = Number(id);
+    const { name, code } = req.body;
 
-    let updatedCollege = null;
-    mockColleges = mockColleges.map((c) => {
-      if (c.id === numId || c.id === id) {
-        updatedCollege = { ...c, ...req.body };
-        return updatedCollege;
-      }
-      return c;
-    });
-
-    if (!updatedCollege) {
+    const [existing] = await query('SELECT * FROM colleges WHERE id = ?', [numId]);
+    if (!existing) {
       return sendError(res, 'College not found', 404);
     }
 
-    return sendSuccess(res, 'College updated successfully', updatedCollege);
+    await query(
+      'UPDATE colleges SET name = COALESCE(?, name), code = COALESCE(?, code) WHERE id = ?',
+      [name ? name.trim() : null, code ? code.trim().toUpperCase() : null, numId]
+    );
+
+    const [updated] = await query('SELECT * FROM colleges WHERE id = ?', [numId]);
+    return sendSuccess(res, 'College updated successfully', updated);
   } catch (error) {
     next(error);
   }
@@ -149,7 +91,12 @@ export const deleteCollege = async (req, res, next) => {
     const { id } = req.params;
     const numId = Number(id);
 
-    mockColleges = mockColleges.filter((c) => c.id !== numId && c.id !== id);
+    const [existing] = await query('SELECT * FROM colleges WHERE id = ?', [numId]);
+    if (!existing) {
+      return sendError(res, 'College not found', 404);
+    }
+
+    await query('DELETE FROM colleges WHERE id = ?', [numId]);
     return sendSuccess(res, 'College deleted successfully');
   } catch (error) {
     next(error);

@@ -16,7 +16,10 @@ import interventionRoutes from './routes/intervention.routes.js';
 import driveRoutes from './routes/drive.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import departmentRoutes from './routes/department.routes.js';
-import batchRoutes from './routes/batch.routes.js';import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
+import batchRoutes from './routes/batch.routes.js';
+import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
+import mentorRoutes from './routes/mentor.routes.js';
+import coordinatorRoutes from './routes/coordinator.routes.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
@@ -57,6 +60,8 @@ app.use('/api/v1/interventions', interventionRoutes);
 app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
+app.use('/api/v1/mentor', mentorRoutes);
+app.use('/api/v1/coordinator', coordinatorRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

@@ -1,3 +1,4 @@
+import bcrypt from 'bcryptjs';
 import {
   findUserByEmailOrMobile,
   findUserById,
@@ -13,7 +14,7 @@ import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 
 export const registerUser = async (data) => {
-  const { name, email, mobile_number, role, roll_number, department, year, division, semester } = data;
+  const { name, email, mobile_number, password, role, roll_number, department, year, division, semester, college_id } = data;
 
   // Check if user exists by email or mobile number
   if (email) {
@@ -43,12 +44,16 @@ export const registerUser = async (data) => {
     else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
   }
 
+  const password_hash = password ? await bcrypt.hash(password, 10) : null;
+
   // Create base User
   const user = await createUser({
     name,
     email: email || '',
     mobile_number: mobile_number || '',
     role: canonicalRole,
+    college_id: college_id || 1,
+    password_hash,
   });
 
   // If student role, save student details
@@ -56,6 +61,7 @@ export const registerUser = async (data) => {
   if (canonicalRole === ROLES.STUDENT && roll_number) {
     studentProfile = await saveStudentDetails({
       user_id: user.id,
+      college_id: user.college_id || 1,
       roll_number,
       department: department || '',
       year: year || '',
@@ -99,24 +105,15 @@ export const registerUser = async (data) => {
 };
 
 export const sendUserOtp = async (identifier) => {
-  let user = await findUserByEmailOrMobile(identifier);
+  const user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    // Auto-onboard user if not registered yet
-    const isMobile = /^\d+$/.test(identifier.trim());
-    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
-    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-    user = await createUser({
-      name: formattedName || 'Student',
-      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
-      mobile_number: isMobile ? identifier : '',
-      role: ROLES.STUDENT,
-    });
+    const error = new Error('No account found with this email or mobile number. Please register first.');
+    error.statusCode = 404;
+    throw error;
   }
 
   const otp = generateOtp(6);
   await saveOtpRecord(identifier, otp);
-  console.log(`[AUTH SERVICE] Generated OTP for ${identifier}: ${otp}`);
 
   // Dispatch OTP email via Nodemailer
   const recipientEmail = user.email || (identifier.includes('@') ? identifier : null);
@@ -128,29 +125,70 @@ export const sendUserOtp = async (identifier) => {
 
   return {
     identifier,
-    otp, // Included in response for testing/demo mode
   };
 };
 
 export const verifyUserOtpAndLogin = async (identifier, otp) => {
-  let user = await findUserByEmailOrMobile(identifier);
+  const user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    const isMobile = /^\d+$/.test(identifier.trim());
-    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
-    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-    user = await createUser({
-      name: formattedName || 'Student',
-      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
-      mobile_number: isMobile ? identifier : '',
-      role: ROLES.STUDENT,
-    });
+    const error = new Error('User account not found. Please contact administration.');
+    error.statusCode = 404;
+    throw error;
   }
 
   const isValid = await verifyOtpRecord(identifier, otp);
   if (!isValid) {
     const error = new Error('Invalid or expired OTP');
     error.statusCode = 400;
+    throw error;
+  }
+
+  const studentProfile = await getStudentByUserId(user.id);
+
+  const token = generateToken({
+    userId: user.id,
+    email: user.email,
+    mobile: user.mobile_number,
+    role: user.role,
+    collegeId: user.college_id || 1,
+  });
+
+  return {
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      mobile_number: user.mobile_number,
+      role: user.role,
+      department: studentProfile?.department || '',
+      year: studentProfile?.year || '',
+      division: studentProfile?.division || '',
+      semester: studentProfile?.semester || '',
+      roll_number: studentProfile?.roll_number || '',
+      studentProfile,
+    },
+  };
+};
+
+export const loginWithPassword = async (identifier, password) => {
+  const user = await findUserByEmailOrMobile(identifier);
+  if (!user) {
+    const error = new Error('Invalid credentials');
+    error.statusCode = 401;
+    throw error;
+  }
+
+  if (!user.password_hash) {
+    const error = new Error('Password login is not set up for this user. Please log in using OTP.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const match = await bcrypt.compare(password, user.password_hash);
+  if (!match) {
+    const error = new Error('Invalid credentials');
+    error.statusCode = 401;
     throw error;
   }
 
@@ -207,4 +245,3 @@ export const getCurrentUser = async (userId) => {
     studentProfile,
   };
 };
-

@@ -1,21 +1,40 @@
-const API_BASE_URL = "http://localhost:5000/api/v1";
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  return "/api/v1";
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function request(endpoint, options = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
+  const token = localStorage.getItem("token");
+
   const headers = {
     "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 
   try {
     const response = await fetch(url, { ...options, headers });
-    const data = await response.json();
+    if (response.status === 401) {
+      // Unauthorized: clear expired or invalid credentials
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+        window.location.href = "/login";
+      }
+      throw new Error("Session expired or unauthorized. Please log in again.");
+    }
+
+    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(data.message || "API request failed");
+      throw new Error(data.message || `Request failed with status ${response.status}`);
     }
     return data;
   } catch (error) {
-    console.warn(`[API Warning] Request to ${endpoint} failed (${error.message}). Using fallback data.`);
+    console.warn(`[API Warning] Request to ${endpoint} failed: ${error.message}`);
     throw error;
   }
 }
@@ -124,3 +143,5 @@ export const assessmentAPI = {
     return res.data;
   },
 };
+
+export { request };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileCheck2,
   ChevronDown,
@@ -8,9 +8,10 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/WeeklyReports.css";
 
-const reportsData = [
+const defaultReports = [
   {
     id: "week-32",
     title: "Week 32 · 10–16 Aug 2026",
@@ -60,7 +61,26 @@ const reportsData = [
 ];
 
 export default function WeeklyReports() {
+  const [reports, setReports] = useState(defaultReports);
   const [openWeek, setOpenWeek] = useState("week-32");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        const res = await apiFetch("/reports/weekly");
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setReports(res.data);
+          setOpenWeek(res.data[0].id);
+        }
+      } catch (err) {
+        console.warn("Failed to load weekly reports:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadReports();
+  }, []);
 
   const toggleWeek = (id) => {
     setOpenWeek((prev) => (prev === id ? null : id));
@@ -85,130 +105,173 @@ export default function WeeklyReports() {
           <span>Current status</span>
         </div>
         <p className="weekly-status-desc">
-          Reviewed by Mentor Ms. R. Kulkarni · Coordinator Prof. A. Deshmukh (ECS / IT)
+          Reviewed by Faculty Mentors · Department Training Coordinators
         </p>
         <div className="weekly-status-pills">
           <span className="weekly-track-badge">On Track</span>
           <span className="weekly-track-note">
-            No mentor intervention required this week.
+            Weekly evaluation active and updated.
           </span>
         </div>
       </div>
 
       {/* Accordion List */}
       <div className="weekly-reports-list">
-        {reportsData.map((report) => {
+        {reports.map((report) => {
           const isOpen = openWeek === report.id;
           return (
             <div
               key={report.id}
-              className={`weekly-report-card ${isOpen ? "open" : ""}`}
+              className={`weekly-report-card ${
+                isOpen ? "weekly-report-card--open" : ""
+              }`}
             >
-              <button
-                className="weekly-report-header-btn"
+              {/* Header */}
+              <div
+                className="weekly-card-header"
                 onClick={() => toggleWeek(report.id)}
+                role="button"
+                tabIndex={0}
               >
-                <h3 className="weekly-report-title">{report.title}</h3>
-                <div className="weekly-report-right">
-                  <span className="weekly-report-score-pill">
-                    {report.score}
-                  </span>
-                  {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                <div className="weekly-header-info">
+                  <h3 className="weekly-card-title">{report.title}</h3>
+                  <div className="weekly-meta-row">
+                    <span className="weekly-meta-pill">Score: {report.score}</span>
+                    <span className="weekly-meta-pill">
+                      Attendance: {report.attendance}%
+                    </span>
+                    <span className="weekly-meta-pill">Quiz: {report.quiz}%</span>
+                    <span className="weekly-meta-pill">Coding: {report.coding}%</span>
+                  </div>
                 </div>
-              </button>
 
+                <div className="weekly-header-actions">
+                  <button
+                    type="button"
+                    className="weekly-download-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(report.title);
+                    }}
+                    title="Download weekly summary"
+                  >
+                    <Download size={15} />
+                    <span>Dossier</span>
+                  </button>
+                  <button type="button" className="weekly-toggle-btn">
+                    {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Expandable Body */}
               {isOpen && (
-                <div className="weekly-report-content">
-                  {/* 4 Metric Bars */}
+                <div className="weekly-card-body">
                   <div className="weekly-metrics-grid">
                     <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>Attendance</span>
-                        <span className="weekly-metric-pct">{report.attendance}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
+                      <span className="weekly-metric-label">Attendance</span>
+                      <div className="weekly-metric-bar-bg">
                         <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.attendance}%` }}
+                          className="weekly-metric-bar-fill"
+                          style={{
+                            width: `${report.attendance}%`,
+                            background:
+                              report.attendance >= 85
+                                ? "var(--color-primary-green)"
+                                : "var(--color-accent-gold)",
+                          }}
                         />
                       </div>
+                      <span className="weekly-metric-val">
+                        {report.attendance}%
+                      </span>
                     </div>
 
                     <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>Quiz performance</span>
-                        <span className="weekly-metric-pct">{report.quiz}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
+                      <span className="weekly-metric-label">Quiz Accuracy</span>
+                      <div className="weekly-metric-bar-bg">
                         <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.quiz}%` }}
+                          className="weekly-metric-bar-fill"
+                          style={{
+                            width: `${report.quiz}%`,
+                            background: "var(--color-primary-navy)",
+                          }}
                         />
                       </div>
+                      <span className="weekly-metric-val">{report.quiz}%</span>
                     </div>
 
                     <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>Coding performance</span>
-                        <span className="weekly-metric-pct">{report.coding}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
+                      <span className="weekly-metric-label">Coding Drills</span>
+                      <div className="weekly-metric-bar-bg">
                         <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.coding}%` }}
+                          className="weekly-metric-bar-fill"
+                          style={{
+                            width: `${report.coding}%`,
+                            background: "#8b5cf6",
+                          }}
                         />
                       </div>
+                      <span className="weekly-metric-val">{report.coding}%</span>
                     </div>
 
                     <div className="weekly-metric-item">
-                      <div className="weekly-metric-top">
-                        <span>AI interview</span>
-                        <span className="weekly-metric-pct">{report.interview}%</span>
-                      </div>
-                      <div className="weekly-metric-bar">
+                      <span className="weekly-metric-label">Interview Eval</span>
+                      <div className="weekly-metric-bar-bg">
                         <div
-                          className="weekly-metric-fill"
-                          style={{ width: `${report.interview}%` }}
+                          className="weekly-metric-bar-fill"
+                          style={{
+                            width: `${report.interview}%`,
+                            background: "#06b6d4",
+                          }}
                         />
+                      </div>
+                      <span className="weekly-metric-val">
+                        {report.interview}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="weekly-two-col">
+                    {/* Milestones info */}
+                    <div className="weekly-section-box">
+                      <h4 className="weekly-section-title">Milestones</h4>
+                      <p className="weekly-section-sub">{report.milestones}</p>
+                    </div>
+
+                    {/* Skill Gaps Identified */}
+                    <div className="weekly-section-box">
+                      <h4 className="weekly-section-title">
+                        Identified Skill Gaps
+                      </h4>
+                      <div className="weekly-tags-row">
+                        {report.skillGaps.map((gap) => (
+                          <span key={gap} className="weekly-gap-tag">
+                            <AlertTriangle size={12} className="text-amber-600" />
+                            {gap}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  {/* Milestones info */}
-                  <div className="weekly-info-section">
-                    <h4 className="weekly-section-title">Milestones</h4>
-                    <p className="weekly-section-sub">{report.milestones}</p>
-                  </div>
-
-                  {/* Skill Gaps */}
-                  <div className="weekly-info-section">
-                    <h4 className="weekly-section-title">Skill gaps</h4>
-                    <div className="weekly-gaps-tags">
-                      {report.skillGaps.map((gap) => (
-                        <span key={gap} className="weekly-gap-pill">
-                          {gap}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Recommended Next Steps */}
-                  <div className="weekly-info-section">
-                    <h4 className="weekly-section-title">Recommended next steps</h4>
+                  {/* Mentor Next Steps */}
+                  <div className="weekly-section-box weekly-steps-box">
+                    <h4 className="weekly-section-title">
+                      Mentor Action Steps for Upcoming Sprint
+                    </h4>
                     <ul className="weekly-steps-list">
                       {report.nextSteps.map((step, idx) => (
-                        <li key={idx}>{step}</li>
+                        <li key={idx} className="weekly-step-item">
+                          <CheckCircle
+                            size={14}
+                            className="text-emerald-600 flex-shrink-0"
+                          />
+                          <span>{step}</span>
+                        </li>
                       ))}
                     </ul>
                   </div>
-
-                  <button
-                    className="weekly-download-btn"
-                    onClick={() => handleDownload(report.title)}
-                  >
-                    <Download size={15} />
-                    Download report
-                  </button>
                 </div>
               )}
             </div>

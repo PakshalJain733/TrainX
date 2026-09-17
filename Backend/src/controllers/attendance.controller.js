@@ -34,6 +34,10 @@ export const getStudentAttendanceById = async (req, res, next) => {
     if (!studentId || isNaN(studentId)) {
       return sendError(res, 'Invalid student ID provided', 400);
     }
+    const currentUserId = Number(req.user?.userId || req.user?.id);
+    if (req.user?.role === 'student' && currentUserId !== studentId) {
+      return sendError(res, 'Access forbidden: You cannot view another student\'s attendance', 403);
+    }
     const data = await getStudentAttendanceSummaryService(studentId);
     return sendSuccess(res, 'Student attendance summary retrieved successfully', data);
   } catch (error) {
@@ -47,9 +51,13 @@ export const getStudentAttendanceById = async (req, res, next) => {
  */
 export const getStudentAttendanceHistory = async (req, res, next) => {
   try {
-    const studentId = req.params.studentId ? Number(req.params.studentId) : (req.user.id || req.user.userId);
+    const studentId = req.params.studentId ? Number(req.params.studentId) : (req.user?.id || req.user?.userId);
     if (!studentId || isNaN(studentId)) {
       return sendError(res, 'Invalid student ID provided', 400);
+    }
+    const currentUserId = Number(req.user?.userId || req.user?.id);
+    if (req.user?.role === 'student' && currentUserId !== studentId) {
+      return sendError(res, 'Access forbidden: You cannot view another student\'s attendance history', 403);
     }
     const limit = req.query.limit ? Number(req.query.limit) : 50;
     const data = await getStudentAttendanceHistoryService(studentId, limit);

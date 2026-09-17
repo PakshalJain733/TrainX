@@ -1,4 +1,4 @@
-import { registerUser, sendUserOtp, verifyUserOtpAndLogin, getCurrentUser } from '../services/auth.service.js';
+import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, getCurrentUser } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 
 export const register = async (req, res, next) => {
@@ -38,6 +38,20 @@ export const verifyOtpAndLogin = async (req, res, next) => {
   }
 };
 
+export const loginPassword = async (req, res, next) => {
+  try {
+    const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
+    const { password } = req.body;
+    if (!identifier || !password) {
+      return sendError(res, 'Identifier and password are required', 400);
+    }
+    const result = await loginWithPassword(identifier, password);
+    return sendSuccess(res, 'Login successful', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getMe = async (req, res, next) => {
   try {
     const user = await getCurrentUser(req.user.userId);
@@ -46,4 +60,3 @@ export const getMe = async (req, res, next) => {
     next(error);
   }
 };
-

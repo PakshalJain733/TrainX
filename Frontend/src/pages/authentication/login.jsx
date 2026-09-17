@@ -192,6 +192,8 @@ function Login() {
           navigate("/super-admin");
         } else if (role.includes("coordinator")) {
           navigate("/coordinator");
+        } else if (role.includes("mentor") || role.includes("faculty")) {
+          navigate("/mentor");
         } else if (role.includes("admin") || role.includes("hod")) {
           navigate("/admin");
         } else {

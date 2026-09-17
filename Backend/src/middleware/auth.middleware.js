@@ -27,15 +27,23 @@ export const authenticateToken = (req, res, next) => {
     if (err) {
       return sendError(res, 'Invalid or expired authentication token. Please log in again.', 401);
     }
-    
-    // Normalize user properties for consistent access across controllers/services
+
+    // Normalize user properties — do NOT provide dangerous defaults
+    const userId = decodedUser.userId || decodedUser.id;
+    const collegeId = decodedUser.collegeId || decodedUser.college_id;
+    const role = decodedUser.role;
+
+    if (!userId || !role) {
+      return sendError(res, 'Malformed authentication token. Please log in again.', 401);
+    }
+
     req.user = {
       ...decodedUser,
-      id: decodedUser.userId || decodedUser.id,
-      userId: decodedUser.userId || decodedUser.id,
-      collegeId: decodedUser.collegeId || decodedUser.college_id || 1,
-      college_id: decodedUser.college_id || decodedUser.collegeId || 1,
-      role: decodedUser.role || 'super_admin',
+      id: userId,
+      userId,
+      collegeId: collegeId || null,
+      college_id: collegeId || null,
+      role,
     };
 
     next();

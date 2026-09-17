@@ -1,9 +1,12 @@
 import { Router } from 'express';
-import { getReportData } from '../controllers/report.controller.js';
+import { getWeeklyReports, getAllReports } from '../controllers/report.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
 router.use(authenticateToken);
-router.get('/', getReportData);
+
+router.get('/', getWeeklyReports);
+router.get('/weekly', getWeeklyReports);
+router.get('/all', getAllReports);
 
 export default router;

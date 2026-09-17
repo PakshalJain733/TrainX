@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { SystemMaintenanceProvider } from './context/SystemMaintenanceContext';
 import MaintenanceGuard from './components/Common/MaintenanceGuard';
+import ProtectedRoute from './components/Common/ProtectedRoute';
 import Login from './pages/authentication/login';
 import Register from './pages/authentication/register';
 import StudentLayout from './pages/Student/Components/StudentLayout';
@@ -116,9 +117,11 @@ function App() {
           <Route
             path="/student"
             element={
-              <MaintenanceGuard moduleKey="studentDashboard">
-                <StudentLayout />
-              </MaintenanceGuard>
+              <ProtectedRoute allowedRoles={['student', 'super_admin']}>
+                <MaintenanceGuard moduleKey="studentDashboard">
+                  <StudentLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
             }
           >
             <Route index element={<Overview />} />
@@ -141,30 +144,39 @@ function App() {
             <Route path="settings" element={<Settings />} />
           </Route>
 
-        {/* Admin Dashboard Routes */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminOverview />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="batches" element={<AdminBatches />} />
-          <Route path="attendance" element={<AdminAttendance />} />
-          <Route path="learning" element={<AdminLearningContent />} />
-          <Route path="quiz" element={<AdminQuizzes />} />
-          <Route path="practice" element={<AdminPracticeProblems />} />
-          <Route path="progress" element={<AdminProgress />} />
-          <Route path="leaderboard" element={<AdminLeaderboard />} />
-          <Route path="weekly-reports" element={<AdminWeeklyReports />} />
-          <Route path="help" element={<AdminHelp />} />
-          <Route path="profile" element={<AdminProfile />} />
-        </Route>
+          {/* Admin Dashboard Routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={['college_admin', 'super_admin']}>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<AdminOverview />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="batches" element={<AdminBatches />} />
+            <Route path="attendance" element={<AdminAttendance />} />
+            <Route path="learning" element={<AdminLearningContent />} />
+            <Route path="quiz" element={<AdminQuizzes />} />
+            <Route path="practice" element={<AdminPracticeProblems />} />
+            <Route path="progress" element={<AdminProgress />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+            <Route path="help" element={<AdminHelp />} />
+            <Route path="profile" element={<AdminProfile />} />
+          </Route>
 
 
           {/* Mentor Workspace Routes */}
           <Route
             path="/mentor"
             element={
-              <MaintenanceGuard moduleKey="mentorDashboard">
-                <MentorLayout />
-              </MaintenanceGuard>
+              <ProtectedRoute allowedRoles={['mentor', 'super_admin']}>
+                <MaintenanceGuard moduleKey="mentorDashboard">
+                  <MentorLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
             }
           >
             <Route index element={<MentorOverview />} />
@@ -193,9 +205,11 @@ function App() {
           <Route
             path="/coordinator"
             element={
-              <MaintenanceGuard moduleKey="coordinatorDashboard">
-                <CoordinatorLayout />
-              </MaintenanceGuard>
+              <ProtectedRoute allowedRoles={['coordinator', 'super_admin']}>
+                <MaintenanceGuard moduleKey="coordinatorDashboard">
+                  <CoordinatorLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
             }
           >
             <Route index element={<CoordinatorOverview />} />
@@ -217,7 +231,14 @@ function App() {
           </Route>
 
           {/* Super Admin Workspace Routes */}
-          <Route path="/super-admin" element={<SuperAdminLayout />}>
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                <SuperAdminLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<SuperAdminOverview />} />
             <Route path="colleges" element={<CollegesPage />} />
             <Route path="departments" element={<DepartmentsPage />} />

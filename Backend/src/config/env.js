@@ -16,11 +16,11 @@ export const config = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'Ganeshvs@2006',
+    password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME || 'training_portal_db',
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback_secret',
+    secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   email: {
@@ -37,3 +37,23 @@ export const config = {
     model: process.env.AI_MODEL || 'gemini-flash-latest',
   },
 };
+
+// Validate critical env vars — error in production, warn in development
+const required = [
+  ['JWT_SECRET', config.jwt.secret],
+  ['DB_PASSWORD', config.db.password],
+];
+
+const missing = required.filter(([, val]) => !val).map(([key]) => key);
+
+if (missing.length > 0) {
+  const msg = `[Config] Missing required environment variables: ${missing.join(', ')}`;
+  if (config.nodeEnv === 'production') {
+    throw new Error(msg);
+  } else {
+    console.warn(msg + ' — using insecure defaults (development only)');
+    // Apply safe dev-only fallbacks so server can still start
+    if (!config.jwt.secret) config.jwt.secret = 'dev_only_jwt_secret_change_in_production';
+    if (!config.db.password) config.db.password = '';
+  }
+}
