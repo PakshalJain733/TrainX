@@ -181,11 +181,11 @@ export default function SuperAdminLayout() {
         : "SA";
       return {
         name,
-        email: stored.email || "training.portal0987@gmail.com",
+        email: stored.email || "admin@trainingportal.com",
         initials: initials || "SA"
       };
     } catch (e) {
-      return { name: "Super Admin", email: "training.portal0987@gmail.com", initials: "SA" };
+      return { name: "Super Admin", email: "admin@trainingportal.com", initials: "SA" };
     }
   };
 
@@ -211,7 +211,7 @@ export default function SuperAdminLayout() {
             .toUpperCase();
           setUserProfile({
             name,
-            email: data.user.email || "training.portal0987@gmail.com",
+            email: data.user.email || "admin@trainingportal.com",
             initials: initials || "SA"
           });
           localStorage.setItem('user', JSON.stringify(data.user));

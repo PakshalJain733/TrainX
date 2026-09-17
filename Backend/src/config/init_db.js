@@ -83,15 +83,15 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT TRUE`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
 
     // 5. Ensure Students Table
     await conn.query(`
@@ -121,11 +121,11 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE students ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE students ADD COLUMN city VARCHAR(100) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE students ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
 
     // 6. Ensure Assessments Table
     await conn.query(`
@@ -230,7 +230,7 @@ export async function initializeDatabase() {
 
     try {
       await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`);
-    } catch (_) {}
+    } catch (_) { }
 
     // 9c. Ensure Attendance Summary Table
     await conn.query(`
@@ -299,10 +299,10 @@ export async function initializeDatabase() {
 
     try {
       await conn.query(`ALTER TABLE study_materials ADD COLUMN description TEXT NULL`);
-    } catch (_) {}
+    } catch (_) { }
     try {
       await conn.query(`ALTER TABLE study_materials ADD COLUMN link VARCHAR(500) NULL`);
-    } catch (_) {}
+    } catch (_) { }
 
     // 13. Ensure Support Tickets Table
     await conn.query(`
@@ -396,8 +396,8 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN max_uses INT DEFAULT 1`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN uses_count INT DEFAULT 0`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN max_uses INT DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN uses_count INT DEFAULT 0`); } catch (_) { }
 
     // 18. Ensure Roadmaps Table
     await conn.query(`
@@ -470,51 +470,53 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN goal_name VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN student_id INT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN target_role VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN career_track VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN sequence_order INT DEFAULT 1`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN student_id INT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN user_id INT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN overall_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN reasons TEXT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN weak_areas JSON NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN student_id INT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN start_date DATE NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN end_date DATE NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN overall_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN quiz_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN coding_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN student_name VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN roll_no VARCHAR(100) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN batch VARCHAR(100) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN status VARCHAR(50) DEFAULT 'Needs Attention'`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN interview_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN milestones_summary JSON NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN strong_areas JSON NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN weak_areas JSON NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN suggestions JSON NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN trend_status VARCHAR(50) DEFAULT 'On Track'`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN score_delta VARCHAR(50) DEFAULT '+0%'`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN goal_name VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN target_role VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN career_track VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN sequence_order INT DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN user_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN overall_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN reasons TEXT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN weak_areas JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN start_date DATE NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN end_date DATE NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN overall_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN quiz_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN coding_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN student_name VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN roll_no VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN batch VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN status VARCHAR(50) DEFAULT 'Needs Attention'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN interview_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN milestones_summary JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN strong_areas JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN weak_areas JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN suggestions JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN trend_status VARCHAR(50) DEFAULT 'On Track'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN score_delta VARCHAR(50) DEFAULT '+0%'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) { }
 
-    // 18. Ensure Super Admin Account (training.portal0987@gmail.com)
+    // 18. Ensure Super Admin Account
     try {
-      const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = 'training.portal0987@gmail.com'`);
+      const superEmail = process.env.SUPER_ADMIN_EMAIL || process.env.EMAIL_USER;
+      const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
       if (!superUsers || superUsers.length === 0) {
         await conn.query(
-          `INSERT INTO users (name, email, mobile_number, role, college_id, is_active) VALUES ('Super Admin', 'training.portal0987@gmail.com', '9876543210', 'super_admin', NULL, 1)`
+          `INSERT INTO users (name, email, mobile_number, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', 'super_admin', NULL, 1)`,
+          [superEmail]
         );
-        console.log('[DB Init] Seeded Super Admin account for training.portal0987@gmail.com');
+        console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
       } else {
-        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = 'training.portal0987@gmail.com'`);
+        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
       }
     } catch (e) {
       console.warn('[DB Init] Super Admin seed notice:', e.message);
