@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   User,
   Camera,
@@ -64,21 +65,6 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
   );
 }
 
-const CAREER_TRACK_OPTIONS = [
-  "Python Backend Developer",
-  "React Frontend Developer",
-  "Full Stack Engineer",
-  "Data Science & AI Engineer",
-  "Cloud & DevOps Specialist",
-  "Java Full Stack Developer",
-  "Mobile App Developer (Flutter / React Native)",
-  "Cyber Security & Ethical Hacking Specialist",
-  "UI/UX & Product Designer",
-  "Embedded Systems & IoT Engineer",
-  "Blockchain & Web3 Engineer",
-  "Machine Learning & MLOps Specialist",
-];
-
 const PREDEFINED_SKILLS = [
   "Python",
   "Java",
@@ -108,6 +94,7 @@ const PREDEFINED_SKILLS = [
 ];
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const trackWrapperRef = useRef(null);
   const [saved, setSaved] = useState(false);
@@ -259,7 +246,10 @@ export default function ProfilePage() {
     }
 
     setSaved(true);
-    setTimeout(() => setSaved(false), 3500);
+    setTimeout(() => {
+      setSaved(false);
+      navigate("/student");
+    }, 1500);
   };
 
 
@@ -298,7 +288,7 @@ export default function ProfilePage() {
       {saved && (
         <div className="profile-alert-success">
           <CheckCircle2 size={18} />
-          <span>Profile updated successfully! Semester, CGPA, and Skills have been saved.</span>
+          <span>Profile saved successfully! Redirecting to Overview...</span>
         </div>
       )}
 

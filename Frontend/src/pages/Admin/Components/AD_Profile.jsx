@@ -93,11 +93,6 @@ export default function AdminProfile() {
         body: JSON.stringify(payload),
       });
 
-      localStorage.setItem("adminProfile", JSON.stringify(form));
-      let localUser = {};
-      try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-      const updatedUser = { ...localUser, name: payload.name, email: payload.email };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
       window.dispatchEvent(new Event("userProfileUpdated"));
 
       setSaved(true);

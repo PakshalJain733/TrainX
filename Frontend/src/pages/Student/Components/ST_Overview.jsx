@@ -96,17 +96,17 @@ export default function Overview() {
   const [modalSuccess, setModalSuccess] = useState("");
 
   const loadUserData = () => {
-    apiFetch("/auth/me")
+    apiFetch("/student/profile")
       .then((res) => {
         if (res && res.data) {
           const u = res.data;
           const student = u.studentProfile || {};
 
-          let resolvedName = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || getStoredUserName();
-
+          let resolvedName = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
           const dept = student.department || u.department || "";
           const sem = student.semester || u.semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
+          const rollNum = student.roll_number || u.roll_number || "";
           const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(cgpa && (student.skills || u.skills));
 
           setProfileCompleted(isCompleted);
@@ -115,14 +115,14 @@ export default function Overview() {
             ...prev,
             personalDetails: {
               ...prev.personalDetails,
-              name: resolvedName,
-              department: dept,
+              name: resolvedName !== "Student" ? resolvedName : prev.personalDetails.name,
+              department: dept || prev.personalDetails.department,
             },
             academicOverview: {
               ...prev.academicOverview,
-              rollNumber: student.roll_number || u.roll_number || "",
-              semester: sem,
-              cgpa: cgpa,
+              rollNumber: rollNum || prev.academicOverview.rollNumber,
+              semester: sem || prev.academicOverview.semester,
+              cgpa: cgpa || prev.academicOverview.cgpa,
               skills: student.skills || u.skills || "",
               profileCompleted: isCompleted,
             },
@@ -140,19 +140,28 @@ export default function Overview() {
       apiFetch("/student/dashboard")
         .then((result) => {
           if (result && result.data) {
-            setDashboard((prev) => ({
-              ...prev,
-              ...result.data,
-              personalDetails: {
-                ...prev.personalDetails,
-                ...(result.data.personalDetails || {}),
-              },
-              academicOverview: {
-                ...prev.academicOverview,
-                ...(result.data.academicOverview || {}),
-                rollNumber: prev.academicOverview.rollNumber || result.data.academicOverview?.rollNumber || "",
-              },
-            }));
+            setDashboard((prev) => {
+              const resPersonal = result.data.personalDetails || {};
+              const resAcademic = result.data.academicOverview || {};
+
+              return {
+                ...prev,
+                ...result.data,
+                personalDetails: {
+                  ...prev.personalDetails,
+                  ...resPersonal,
+                  name: (resPersonal.name && resPersonal.name !== "Student") ? resPersonal.name : prev.personalDetails.name,
+                  department: resPersonal.department || prev.personalDetails.department,
+                },
+                academicOverview: {
+                  ...prev.academicOverview,
+                  ...resAcademic,
+                  rollNumber: resAcademic.rollNumber || prev.academicOverview.rollNumber,
+                  semester: resAcademic.semester || prev.academicOverview.semester,
+                  cgpa: resAcademic.cgpa || prev.academicOverview.cgpa,
+                },
+              };
+            });
           }
         })
         .catch(() => {});
@@ -249,10 +258,15 @@ export default function Overview() {
               <Sparkles size={13} /> STUDENT WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, {studentName}!
+              Welcome back, {studentName && studentName !== "Student" ? studentName : "Student"}!
             </h1>
             <p className="overview-hero-desc">
-              {dept || "Computer Engineering"} &nbsp;|&nbsp; {sem ? (sem.toLowerCase().includes("sem") ? sem : `Semester ${sem}`) : "Semester 6"} &nbsp;|&nbsp; CGPA: {cgpa || "8.5"} &nbsp;|&nbsp; Roll: {rollNum || "2026COMP042"}
+              {[
+                dept || "Computer Engineering",
+                sem ? (String(sem).toLowerCase().includes("sem") ? sem : `Semester ${sem}`) : "Semester 6",
+                cgpa ? `CGPA: ${cgpa}` : "CGPA: 8.5",
+                rollNum ? `Roll: ${rollNum}` : "Roll: 2026COMP042"
+              ].join("  |  ")}
             </p>
           </div>
         </div>

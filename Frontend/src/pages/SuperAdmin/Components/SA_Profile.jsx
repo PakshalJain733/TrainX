@@ -97,15 +97,6 @@ export default function SuperAdminProfile() {
         }),
       });
 
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const updatedUser = {
-        ...currentUser,
-        name: form.name,
-        email: form.email,
-        mobile_number: form.phone,
-        phone: form.phone,
-      };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event("userProfileUpdated"));
 
       setProfileSaved(true);

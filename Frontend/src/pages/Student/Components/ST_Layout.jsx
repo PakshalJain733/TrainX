@@ -257,14 +257,10 @@ export default function StudentLayout() {
   }, []);
 
   const resolveUser = (rawUser) => {
-    let localUser = {};
-    let studentProf = {};
-    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-    try { studentProf = JSON.parse(localStorage.getItem("studentProfile")) || {}; } catch {}
     const u = rawUser || {};
-    let name = studentProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Ganesh Shinde";
-    let email = studentProf.email || localUser.email || u.email || "ganesh.shinde@student.pvppcoe.ac.in";
-    return { ...localUser, ...u, name, email };
+    let name = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+    let email = u.email || "";
+    return { ...u, name, email };
   };
 
   const [user, setUser] = useState(() => resolveUser(null));
@@ -281,9 +277,7 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
-          // Check if first time login (or if profile has not been completed)
-          const isFirstTime = !localStorage.getItem(`profile_updated_${fetchedUser.email || 'student'}`);
-          if (isFirstTime) {
+          if (!res.data.gender || !res.data.city) {
             setShowFirstLoginFlash(true);
           }
         }
@@ -292,11 +286,8 @@ export default function StudentLayout() {
   }, []);
 
   useEffect(() => {
-    // Re-fetch user profile from backend & localStorage whenever profile is updated
+    // Re-fetch user profile from backend whenever profile is updated
     const handleUpdate = () => {
-      let localUser = {};
-      try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-      setUser(resolveUser(localUser));
       apiFetch("/student/profile")
         .then((res) => {
           if (res && res.data) setUser(resolveUser(res.data));
@@ -542,7 +533,6 @@ export default function StudentLayout() {
                 className="st-firstlogin-btn-secondary"
                 onClick={() => {
                   setShowFirstLoginFlash(false);
-                  localStorage.setItem(`profile_updated_${user.email || 'student'}`, 'true');
                 }}
               >
                 Skip for now
@@ -551,7 +541,6 @@ export default function StudentLayout() {
                 className="st-firstlogin-btn-primary"
                 onClick={() => {
                   setShowFirstLoginFlash(false);
-                  localStorage.setItem(`profile_updated_${user.email || 'student'}`, 'true');
                   navigate('/student/profile');
                 }}
               >

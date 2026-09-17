@@ -88,10 +88,6 @@ export default function CoordinatorProfilePage() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      localStorage.setItem("coordinatorProfile", JSON.stringify(form));
-      let localUser = {};
-      try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-      localStorage.setItem("user", JSON.stringify({ ...localUser, name: form.name, email: form.email }));
       window.dispatchEvent(new Event("userProfileUpdated"));
     } catch (err) {}
 

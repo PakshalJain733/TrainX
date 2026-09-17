@@ -1,3 +1,4 @@
+import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import {
   getAllUsersModel,
@@ -107,12 +108,15 @@ export const getStudentDashboard = async (req, res, next) => {
       console.warn('[getStudentDashboard materials query warning]', e.message);
     }
 
-    const callerUser = allUsers.find(u => u.id === callerId) || {};
+    let callerUser = await findUserById(callerId);
+    if (!callerUser) {
+      callerUser = allUsers.find(u => Number(u.id) === Number(callerId)) || req.user || {};
+    }
     const callerStudent = (await getStudentByUserId(callerId)) || {};
 
     const dashboardData = {
       personalDetails: {
-        name: callerUser.name || 'Student',
+        name: callerUser.name || req.user.name || 'Student',
         department: callerStudent.department || callerUser.department || '',
       },
       academicOverview: {
