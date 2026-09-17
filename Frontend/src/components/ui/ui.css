@@ -353,6 +353,12 @@
     transition: all 0.2s ease;
 }
 
+.ui-tabs-trigger:hover:not(.ui-tabs-trigger--active) {
+    background: #e2e8f0;
+    color: #1e293b;
+    border-color: #cbd5e1;
+}
+
 .ui-tabs-trigger--active {
     background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
     color: #ffffff;
@@ -362,16 +368,16 @@
 }
 
 .ui-tabs-content {
-  margin-top: 24px;
+  margin-top: 12px;
 }
 
 /* --- Section Header --- */
 .ui-section-header {
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
 
 .ui-section-eyebrow {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -383,21 +389,43 @@
 .ui-section-main {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .ui-section-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-size: 22px;
+  font-weight: 800;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.3px;
+  line-height: 1.25;
 }
 
 .ui-section-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: #64748b;
-  margin-top: 4px;
+  margin-top: 3px;
   margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.ui-section-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .ui-section-title {
+    font-size: 18px;
+  }
+  .ui-section-desc {
+    font-size: 12px;
+  }
+  .ui-section-main {
+    align-items: flex-start;
+    gap: 12px;
+  }
 }

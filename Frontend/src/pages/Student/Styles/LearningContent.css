@@ -98,6 +98,30 @@
   gap: 18px;
 }
 
+.learning-empty-state {
+  width: 100%;
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+}
+
+.learning-empty-icon {
+  margin: 0 auto 12px auto;
+  opacity: 0.4;
+  color: #64748b;
+}
+
+.learning-empty-title {
+  font-weight: 500;
+  font-size: 14px;
+  color: #64748b;
+}
+
+.topic-empty-label {
+  font-size: 14px;
+  color: #94a3b8;
+}
+
 .learning-resource-card {
   background: #ffffff;
   border: 1.5px solid #e2e8f0;

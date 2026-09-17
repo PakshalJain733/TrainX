@@ -57,20 +57,26 @@ export default function Performance() {
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
         <h3 className="text-sm font-bold text-slate-900">Domain Proficiency Breakdown</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {data.subjectProficiency.map((item) => (
-            <div key={item.subject} className="p-3 bg-slate-50 rounded-xl space-y-2">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-800">{item.subject}</span>
-                <span className="text-indigo-600">{item.score}%</span>
-              </div>
-              <div className="w-full bg-slate-200 rounded-full h-2">
-                <div
-                  className="bg-indigo-600 h-2 rounded-full sa-progress-bar-fill"
-                  style={{ width: `${item.score}%` }}
-                ></div>
-              </div>
+          {(!data.subjectProficiency || data.subjectProficiency.length === 0) ? (
+            <div className="col-span-full py-6 text-center text-slate-400 text-xs">
+              No subject proficiency data calculated yet.
             </div>
-          ))}
+          ) : (
+            data.subjectProficiency.map((item) => (
+              <div key={item.subject} className="p-3 bg-slate-50 rounded-xl space-y-2">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-800">{item.subject}</span>
+                  <span className="text-indigo-600">{item.score}%</span>
+                </div>
+                <div className="w-full bg-slate-200 rounded-full h-2">
+                  <div
+                    className="bg-indigo-600 h-2 rounded-full sa-progress-bar-fill"
+                    style={{ width: `${item.score}%` }}
+                  ></div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -91,14 +97,22 @@ export default function Performance() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {data.collegeBenchmarks.map((c) => (
-                <tr key={c.college} className="hover:bg-slate-50/60 transition">
-                  <td className="px-5 py-3.5 font-bold text-slate-900">{c.college}</td>
-                  <td className="px-5 py-3.5 text-emerald-600 font-semibold">{c.passRate}%</td>
-                  <td className="px-5 py-3.5 font-semibold text-slate-700">{c.readinessScore} / 100</td>
-                  <td className="px-5 py-3.5 text-slate-500">{c.activeStudents}</td>
+              {(!data.collegeBenchmarks || data.collegeBenchmarks.length === 0) ? (
+                <tr>
+                  <td colSpan="4" className="px-5 py-8 text-center text-slate-400 font-medium">
+                    No institutional benchmark data available.
+                  </td>
                 </tr>
-              ))}
+              ) : (
+                data.collegeBenchmarks.map((c) => (
+                  <tr key={c.college} className="hover:bg-slate-50/60 transition">
+                    <td className="px-5 py-3.5 font-bold text-slate-900">{c.college}</td>
+                    <td className="px-5 py-3.5 text-emerald-600 font-semibold">{c.passRate}%</td>
+                    <td className="px-5 py-3.5 font-semibold text-slate-700">{c.readinessScore} / 100</td>
+                    <td className="px-5 py-3.5 text-slate-500">{c.activeStudents}</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -1,4 +1,4 @@
-import { registerUser, sendUserOtp, verifyUserOtpAndLogin } from '../services/auth.service.js';
+import { registerUser, sendUserOtp, verifyUserOtpAndLogin, getCurrentUser } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 
 export const register = async (req, res, next) => {
@@ -37,3 +37,13 @@ export const verifyOtpAndLogin = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getMe = async (req, res, next) => {
+  try {
+    const user = await getCurrentUser(req.user.userId);
+    return sendSuccess(res, 'Current user profile fetched successfully', user);
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -227,3 +227,202 @@ export const deleteUserAdmin = async (req, res, next) => {
     next(error);
   }
 };
+
+// -------------------------------------------------------------
+// Practice Problems / Coding Tasks Management
+// -------------------------------------------------------------
+import {
+  getPracticeProblemsModel,
+  createPracticeProblemModel,
+  deletePracticeProblemModel,
+} from '../models/practiceProblem.model.js';
+
+export const getAdminPracticeProblems = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req);
+    const { batch_id, difficulty } = req.query;
+    const problems = await getPracticeProblemsModel({ collegeId, batchId: batch_id, difficulty });
+    return sendSuccess(res, 'Practice problems retrieved successfully', problems);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createAdminPracticeProblem = async (req, res, next) => {
+  try {
+    const {
+      title,
+      batch = 'All Batches',
+      batch_id = null,
+      difficulty = 'Medium',
+      category = 'General DSA',
+      tags = '',
+      description = '',
+      points = 100,
+    } = req.body;
+
+    if (!title || !title.trim()) {
+      return sendError(res, 'Problem title is required', 400);
+    }
+
+    const collegeId = getCallerCollegeFilter(req) || 1;
+    const newProblem = await createPracticeProblemModel({
+      college_id: collegeId,
+      batch_id,
+      batch_name: batch,
+      title: title.trim(),
+      description,
+      difficulty,
+      category,
+      tags,
+      points,
+      created_by: req.user ? req.user.id : 1,
+    });
+
+    return sendSuccess(res, 'Coding problem created successfully', newProblem, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdminPracticeProblem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deletePracticeProblemModel(id);
+    return sendSuccess(res, 'Coding problem deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// -------------------------------------------------------------
+// Admin Profile Management
+// -------------------------------------------------------------
+export const getAdminProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id || 1;
+    const user = await findUserById(userId);
+    return sendSuccess(res, 'Admin profile retrieved successfully', user || req.user);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateAdminProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id || 1;
+    const updated = await updateUserModel(userId, req.body);
+    return sendSuccess(res, 'Admin profile updated successfully', updated);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// -------------------------------------------------------------
+// Admin Broadcast Notifications Center
+// -------------------------------------------------------------
+import {
+  getBroadcastsModel,
+  createBroadcastModel,
+  deleteBroadcastModel,
+} from '../models/broadcast.model.js';
+
+export const getAdminBroadcasts = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req);
+    const broadcasts = await getBroadcastsModel(collegeId);
+    return sendSuccess(res, 'Broadcast messages retrieved successfully', broadcasts);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const createAdminBroadcast = async (req, res, next) => {
+  try {
+    const { title, message, target = 'All Batches', priority = 'General Announcement' } = req.body;
+    if (!title || !message) {
+      return sendError(res, 'Title and message text are required', 400);
+    }
+    const collegeId = getCallerCollegeFilter(req) || 1;
+    const created = await createBroadcastModel({
+      college_id: collegeId,
+      title: title.trim(),
+      message: message.trim(),
+      target,
+      priority,
+      created_by: req.user ? req.user.id : 1,
+    });
+    return sendSuccess(res, 'Broadcast sent successfully to all targets', created, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteAdminBroadcast = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await deleteBroadcastModel(id);
+    return sendSuccess(res, 'Broadcast message deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminPerformance = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req); // Optional filter
+    
+    // Mock performance payload scoped for College Admin
+    const performanceData = {
+      overview: {
+        totalStudents: 450,
+        averagePerformance: 76,
+        highPerforming: 120,
+        needsImprovement: 45,
+      },
+      departments: [
+        { id: "d1", name: "Computer Science", students: 180, avgPerformance: 82, avgAttendance: 88, avgQuiz: 80, avgCoding: 84, needsAttention: 12 },
+        { id: "d2", name: "Information Tech", students: 150, avgPerformance: 74, avgAttendance: 82, avgQuiz: 75, avgCoding: 73, needsAttention: 20 },
+        { id: "d3", name: "Electronics", students: 120, avgPerformance: 69, avgAttendance: 76, avgQuiz: 70, avgCoding: 68, needsAttention: 13 },
+      ],
+      batches: [
+        { id: "b1", name: "Batch A - 2026", students: 220, avgPerformance: 78, avgProgress: 80, needsAttention: 25 },
+        { id: "b2", name: "Batch B - 2026", students: 230, avgPerformance: 74, avgProgress: 75, needsAttention: 20 },
+      ],
+      students: [
+        {
+          id: "st-1", name: "Ganesh Shinde", roll: "CS-101", department: "Computer Science", batch: "Batch A - 2026",
+          overallScore: 71, quiz: 78, coding: 65, interview: 58, attendance: 82, progress: 74,
+          status: "Average",
+          weakAreas: [{ skill: "AI Mock Interview", score: 58, target: 75 }, { skill: "Coding / DSA", score: 65, target: 80 }],
+          strongAreas: ["Quiz Assessment", "Attendance"]
+        },
+        {
+          id: "st-2", name: "Priya Nair", roll: "CS-102", department: "Computer Science", batch: "Batch A - 2026",
+          overallScore: 85, quiz: 88, coding: 82, interview: 79, attendance: 91, progress: 86,
+          status: "Excellent",
+          weakAreas: [],
+          strongAreas: ["Coding / DSA", "AI Mock Interview", "Quiz Assessment"]
+        },
+        {
+          id: "st-3", name: "Rahul Mehta", roll: "IT-201", department: "Information Tech", batch: "Batch B - 2026",
+          overallScore: 52, quiz: 55, coding: 48, interview: 42, attendance: 68, progress: 50,
+          status: "Needs Work",
+          weakAreas: [{ skill: "AI Mock Interview", score: 42, target: 65 }, { skill: "Coding / DSA", score: 48, target: 70 }, { skill: "Attendance", score: 68, target: 75 }],
+          strongAreas: []
+        },
+        {
+          id: "st-4", name: "Sneha Patil", roll: "EC-301", department: "Electronics", batch: "Batch B - 2026",
+          overallScore: 68, quiz: 72, coding: 60, interview: 64, attendance: 78, progress: 66,
+          status: "Average",
+          weakAreas: [{ skill: "Coding / DSA", score: 60, target: 70 }],
+          strongAreas: ["Quiz Assessment", "Attendance"]
+        },
+      ]
+    };
+    
+    return sendSuccess(res, 'College Admin Performance data retrieved successfully', performanceData);
+  } catch (error) {
+    next(error);
+  }
+};

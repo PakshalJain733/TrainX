@@ -17,6 +17,8 @@ import {
   SlidersHorizontal,
   Shield,
   HelpCircle,
+  Code,
+  UserCog,
 } from "lucide-react";
 import logoImg from "../../assets/Logo.png";
 import "../../pages/SuperAdmin/SuperAdmin.css";
@@ -51,6 +53,7 @@ const primaryNavItems = [
   { title: "Students", url: "/super-admin/students", icon: Users },
   { title: "Performance", url: "/super-admin/performance", icon: TrendingUp },
   { title: "Attendance", url: "/super-admin/attendance", icon: CalendarCheck },
+  { title: "Coding Practice", url: "/super-admin/coding-practice", icon: Code },
   { title: "AI Roadmaps", url: "/super-admin/ai-roadmaps", icon: Target },
   { title: "AI Interviews", url: "/super-admin/ai-interviews", icon: Sparkles },
   { title: "Mock Drives", url: "/super-admin/mock-drives", icon: ClipboardCheck },
@@ -58,6 +61,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "Edit Profile", url: "/super-admin/profile", icon: UserCog },
   { title: "Settings", url: "/super-admin/performance", icon: SlidersHorizontal },
 ];
 

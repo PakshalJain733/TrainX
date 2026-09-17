@@ -10,111 +10,11 @@ import {
   Clock,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/LearningContent.css";
 
-const initialResources = [
-  {
-    id: 1,
-    title: "Mastering SQL Joins",
-    category: "SQL & Databases",
-    type: "AI Notes",
-    duration: "25 min",
-    status: "Completed",
-    icon: Sparkles,
-  },
-  {
-    id: 2,
-    title: "Indexing & Query Plans",
-    category: "SQL & Databases",
-    type: "Article",
-    duration: "18 min",
-    status: "Pending",
-    icon: FileText,
-  },
-  {
-    id: 3,
-    title: "Transactions and ACID Properties",
-    category: "SQL & Databases",
-    type: "Video",
-    duration: "32 min",
-    status: "Pending",
-    icon: Video,
-  },
-  {
-    id: 4,
-    title: "Designing Clean REST Endpoints",
-    category: "REST APIs with FastAPI",
-    type: "AI Notes",
-    duration: "22 min",
-    status: "Completed",
-    icon: Sparkles,
-  },
-  {
-    id: 5,
-    title: "JWT Authentication Explained",
-    category: "REST APIs with FastAPI",
-    type: "Video",
-    duration: "28 min",
-    status: "Pending",
-    icon: Video,
-  },
-  {
-    id: 6,
-    title: "SOLID Principles in Python",
-    category: "Object Oriented Programming",
-    type: "Article",
-    duration: "20 min",
-    status: "Completed",
-    icon: FileText,
-  },
-  {
-    id: 7,
-    title: "Advanced Pydantic Validation",
-    category: "REST APIs with FastAPI",
-    type: "Article",
-    duration: "15 min",
-    status: "Pending",
-    icon: FileText,
-  },
-  {
-    id: 8,
-    title: "Database Sharding & Replication",
-    category: "SQL & Databases",
-    type: "AI Notes",
-    duration: "30 min",
-    status: "Pending",
-    icon: Sparkles,
-  },
-];
-
-const allTopics = [
-  "Variables & Types",
-  "Loops",
-  "Functions",
-  "Exceptions",
-  "Classes",
-  "Inheritance",
-  "Magic Methods",
-  "SOLID",
-  "Joins",
-  "Aggregations",
-  "Indexes",
-  "Transactions",
-  "Routing",
-  "Pydantic",
-  "JWT Auth",
-  "Testing",
-  "JSX",
-  "Hooks",
-  "Routing",
-  "State",
-  "Project Planning",
-  "Deployment",
-  "Code Review",
-  "DSA",
-  "HR Round",
-  "System Design",
-];
+const initialResources = [];
+const allTopics = [];
 
 export default function LearningContent() {
   const [resources, setResources] = useState(initialResources);
@@ -145,7 +45,12 @@ export default function LearningContent() {
   }, [resources, searchQuery, selectedFilter]);
 
   return (
-    <div className="learning-content-page">
+    <div className="learning-content-page stack-6">
+      <SectionHeader
+        eyebrow="STUDY MATERIALS & CURRICULUM"
+        title="Learning Resources & Documentation"
+        description="Access module lecture notes, reference guides, coding cheatsheets, and faculty curriculum resources."
+      />
       {/* Search and Category Filter Card */}
       <div className="learning-search-card">
         <div className="learning-search-bar">
@@ -176,46 +81,53 @@ export default function LearningContent() {
 
       {/* Resource Cards Grid */}
       <div className="learning-resources-grid">
-        {filteredResources.map((item) => {
-          const IconComponent = item.icon;
-          const isCompleted = item.status === "Completed";
-          return (
-            <div key={item.id} className="learning-resource-card">
-              <div className="learning-card-top">
-                <div className="learning-type-icon-wrap">
-                  <IconComponent size={18} />
+        {filteredResources.length === 0 ? (
+          <div className="learning-empty-state">
+            <BookOpen size={36} className="learning-empty-icon" />
+            <p className="learning-empty-title">No learning resources available yet.</p>
+          </div>
+        ) : (
+          filteredResources.map((item) => {
+            const IconComponent = item.icon;
+            const isCompleted = item.status === "Completed";
+            return (
+              <div key={item.id} className="learning-resource-card">
+                <div className="learning-card-top">
+                  <div className="learning-type-icon-wrap">
+                    {IconComponent ? <IconComponent size={18} /> : <FileText size={18} />}
+                  </div>
                 </div>
-              </div>
 
-              <div className="learning-card-body">
-                <h3 className="learning-card-title">{item.title}</h3>
-                <p className="learning-card-meta">
-                  {item.category} · {item.type} · {item.duration}
-                </p>
-              </div>
-
-              {isCompleted ? (
-                <div className="learning-completed-label">
-                  <CheckCircle2 size={15} className="learning-completed-icon" />
-                  Completed
+                <div className="learning-card-body">
+                  <h3 className="learning-card-title">{item.title}</h3>
+                  <p className="learning-card-meta">
+                    {item.category} · {item.type} · {item.duration}
+                  </p>
                 </div>
-              ) : (
-                <button
-                  className="learning-toggle-btn btn-mark-complete"
-                  onClick={() => toggleStatus(item.id)}
-                >
-                  Mark complete
-                </button>
-              )}
-            </div>
-          );
-        })}
+
+                {isCompleted ? (
+                  <div className="learning-completed-label">
+                    <CheckCircle2 size={15} className="learning-completed-icon" />
+                    Completed
+                  </div>
+                ) : (
+                  <button
+                    className="learning-toggle-btn btn-mark-complete"
+                    onClick={() => toggleStatus(item.id)}
+                  >
+                    Mark complete
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
       </div>
 
       {/* Topic Mastery Coverage */}
       <div className="topic-coverage-card">
         <div className="topic-coverage-header">
-          <BookOpen size={18} className="text-blue-600" />
+          <BookOpen size={18} className="topic-coverage-header-icon" />
           <span>Topic coverage</span>
         </div>
         <p className="topic-coverage-subtitle">
@@ -223,11 +135,15 @@ export default function LearningContent() {
         </p>
 
         <div className="topic-coverage-tags">
-          {allTopics.map((topic, idx) => (
-            <span key={idx} className="topic-coverage-tag-pill">
-              {topic}
-            </span>
-          ))}
+          {allTopics.length === 0 ? (
+            <span className="topic-empty-label">No topics registered yet.</span>
+          ) : (
+            allTopics.map((topic, idx) => (
+              <span key={idx} className="topic-coverage-tag-pill">
+                {topic}
+              </span>
+            ))
+          )}
         </div>
       </div>
     </div>

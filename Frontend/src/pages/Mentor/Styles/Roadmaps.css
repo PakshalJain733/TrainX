@@ -11,6 +11,18 @@
   gap: 24px;
 }
 
+.mentor-roadmaps-empty {
+  grid-column: 1 / -1;
+  padding: 48px 16px;
+  text-align: center;
+  color: #64748b;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 @media (min-width: 768px) {
   .mentor-roadmaps-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

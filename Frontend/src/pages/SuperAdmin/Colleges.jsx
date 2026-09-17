@@ -2,13 +2,20 @@ import React, { useState } from 'react';
 import { initialColleges } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
-import AddCollegeModal from '../../components/SuperAdmin/AddCollegeModal';
-import { Plus, Search, Filter, Building2, MapPin, Mail, Users } from 'lucide-react';
+import { Plus, Search, Filter, Building2, MapPin, Mail, Users, ArrowLeft, Hash, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import EmptyState from '../../components/ui/EmptyState';
 
 export default function Colleges() {
   const [colleges, setColleges] = useState(initialColleges);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [view, setView] = useState('list'); // 'list' or 'add'
+  const navigate = useNavigate();
+
+  // Add College Form State
+  const [formData, setFormData] = useState({
+    name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 5, studentsCount: 150,
+  });
 
   const filteredColleges = colleges.filter((c) =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -16,8 +23,12 @@ export default function Colleges() {
     c.code.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddCollege = (newCollege) => {
-    setColleges([newCollege, ...colleges]);
+  const handleAddCollege = (e) => {
+    e.preventDefault();
+    if (!formData.name || !formData.code || !formData.location) return;
+    setColleges([{ ...formData, id: Date.now(), status: 'Active' }, ...colleges]);
+    setView('list');
+    setFormData({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 5, studentsCount: 150 });
   };
 
   const handleDelete = (id) => {
@@ -35,16 +46,11 @@ export default function Colleges() {
           </h2>
           <p className="text-xs text-slate-500">Manage all registered institutions and partner universities</p>
         </div>
-
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="sa-btn-primary"
-        >
+        <button onClick={() => setView('add')} className="sa-btn-primary">
           <Plus className="w-4 h-4" />
           <span>Add New College</span>
         </button>
       </div>
-
 
       {/* Filter Bar */}
       <div className="sa-search-card flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -58,7 +64,6 @@ export default function Colleges() {
             className="sa-search-input"
           />
         </div>
-
 
         <div className="flex items-center gap-2">
           <button className="px-3 py-2 bg-slate-50 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-100 flex items-center gap-1.5 transition">
@@ -76,7 +81,7 @@ export default function Colleges() {
             title="No Colleges Found"
             description={searchQuery ? `No colleges matching "${searchQuery}"` : "Get started by registering the first partner college."}
             actionText="Add New College"
-            onAction={() => setIsModalOpen(true)}
+            onAction={() => setView('add')}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -124,7 +129,7 @@ export default function Colleges() {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <ActionDropdown
-                        onView={() => alert(`Viewing details for ${college.name}`)}
+                        onView={() => navigate(`/super-admin/colleges/${college.id}`)}
                         onEdit={() => alert(`Editing ${college.name}`)}
                         onDelete={() => handleDelete(college.id)}
                       />
@@ -136,14 +141,6 @@ export default function Colleges() {
           </div>
         )}
       </div>
-
-
-      {/* Add College Modal */}
-      <AddCollegeModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onAdd={handleAddCollege}
-      />
     </div>
   );
 }

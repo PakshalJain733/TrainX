@@ -44,11 +44,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: none;
-  height: var(--navbar-height, 64px);
+  padding: 0 16px 14px 16px;
+  border-bottom: 1.5px solid #cbd2eb !important;
+  height: auto;
+  min-height: 64px;
   gap: 8px;
   box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+/* ── Footer ── */
+.sidebar-footer {
+  padding: 14px 12px 12px 12px;
+  border-top: 1.5px solid #cbd2eb !important;
+  margin-top: 8px;
 }
 
 .sidebar-brand {

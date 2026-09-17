@@ -81,9 +81,24 @@ export const getStudentDashboard = async (req, res, next) => {
   }
 };
 
+import { getPracticeProblemsModel } from '../models/practiceProblem.model.js';
+
 export const getStudentPracticeProblems = async (req, res, next) => {
   try {
-    const problems = [
+    const dbProblems = await getPracticeProblemsModel();
+    if (dbProblems && dbProblems.length > 0) {
+      const mapped = dbProblems.map((p) => ({
+        id: p.id,
+        title: p.title,
+        category: p.category || 'General DSA',
+        difficulty: p.difficulty,
+        points: p.points || 100,
+        solve_status: 'Unsolved',
+      }));
+      return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
+    }
+
+    const fallbackProblems = [
       { id: 1, title: 'Two Sum', category: 'Arrays & Hashing', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
       { id: 2, title: 'Valid Palindrome', category: 'Two Pointers', difficulty: 'Easy', points: 100, solve_status: 'Solved' },
       { id: 3, title: 'Longest Substring Without Repeating Characters', category: 'Sliding Window', difficulty: 'Medium', points: 150, solve_status: 'Unsolved' },
@@ -93,7 +108,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
       { id: 7, title: 'Merge k Sorted Lists', category: 'Heap / Priority Queue', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
       { id: 8, title: 'Trapping Rain Water', category: 'Two Pointers', difficulty: 'Hard', points: 250, solve_status: 'Unsolved' },
     ];
-    return sendSuccess(res, 'Practice problems retrieved successfully', problems);
+    return sendSuccess(res, 'Practice problems retrieved successfully', fallbackProblems);
   } catch (error) {
     next(error);
   }
@@ -101,21 +116,94 @@ export const getStudentPracticeProblems = async (req, res, next) => {
 
 export const getStudentAttendance = async (req, res, next) => {
   try {
+    const userId = req.user?.userId || req.user?.id;
+
+    let verifications = [];
+    let recentLogs = [];
+    let totalClasses = 0;
+    let presentClasses = 0;
+    let absentClasses = 0;
+
+    if (userId) {
+      // 1. Query Leave Requests for this user from DB
+      try {
+        const leaves = await query(
+          `SELECT id, category, start_date, end_date, days, reason, status, created_at
+           FROM leave_requests WHERE user_id = ? ORDER BY id DESC`,
+          [userId]
+        );
+        if (leaves && leaves.length > 0) {
+          verifications = leaves.map(l => ({
+            id: `LV-2026-${l.id}`,
+            title: `${l.category} · ${l.reason ? l.reason.substring(0, 30) : 'Leave Request'}`,
+            category: l.category,
+            status: l.status,
+            days: l.days,
+            date: l.start_date
+          }));
+        }
+      } catch (e) {
+        console.error("[getStudentAttendance leave query error]", e.message);
+      }
+
+      // 2. Query Attendance logs for user's joined batches from DB
+      try {
+        const rows = await query(
+          `SELECT a.*, b.name AS batch_name, b.code AS batch_code
+           FROM attendance a
+           LEFT JOIN batches b ON a.batch_id = b.id
+           WHERE a.user_id = ?
+           ORDER BY a.session_date DESC, a.id DESC`,
+          [userId]
+        );
+        if (rows && rows.length > 0) {
+          totalClasses = rows.length;
+          presentClasses = rows.filter(r => String(r.status).toLowerCase() === 'present').length;
+          absentClasses = rows.filter(r => String(r.status).toLowerCase() === 'absent').length;
+
+          recentLogs = rows.map(r => ({
+            id: r.id,
+            date: r.session_date ? new Date(r.session_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Sep 06, 2026',
+            session: `${r.batch_name || 'Training Cohort'} · Training Session`,
+            time: '10:00 AM - 12:00 PM',
+            status: r.status ? r.status.charAt(0).toUpperCase() + r.status.slice(1) : 'Present',
+            mode: 'Biometric / QR'
+          }));
+        }
+      } catch (e) {
+        console.error("[getStudentAttendance attendance query error]", e.message);
+      }
+    }
+
+    // Query database leave requests if available
+    try {
+      const leaveRows = await query(
+        `SELECT * FROM leave_requests WHERE user_id = ? ORDER BY created_at DESC`,
+        [userId]
+      );
+      if (leaveRows && leaveRows.length > 0) {
+        verifications = leaveRows.map(l => ({
+          id: `LV-${l.id}`,
+          title: l.title,
+          category: l.category || 'General Leave',
+          status: l.status || 'Pending',
+          days: l.days || 1,
+          date: l.start_date ? new Date(l.start_date).toISOString().split('T')[0] : '2026-03-01'
+        }));
+      }
+    } catch (e) {
+      console.error("[getStudentAttendance leave_requests query error]", e.message);
+    }
+
+    const percentage = calculateAttendancePercentage(presentClasses, totalClasses);
+
     const attendanceData = {
-      percentage: 95.2,
-      totalClasses: 48,
-      presentClasses: 46,
-      absentClasses: 2,
-      verifications: [
-        { id: 'LV-2026-101', title: 'Medical Leave · Viral fever', category: 'Medical Leave', status: 'Approved', days: 2, date: '2026-03-01' },
-        { id: 'LV-2026-102', title: 'On-Duty Leave · Smart India Hackathon', category: 'On-Duty', status: 'Pending', days: 1, date: '2026-03-04' },
-      ],
-      recentLogs: [
-        { date: '04 Mar 2026', session: 'Data Structures & Algorithms', time: '09:00 AM - 11:00 AM', status: 'Present', mode: 'Biometric / QR' },
-        { date: '03 Mar 2026', session: 'Full Stack Web Development', time: '11:15 AM - 01:15 PM', status: 'Present', mode: 'Biometric / QR' },
-        { date: '02 Mar 2026', session: 'System Design & Cloud Systems', time: '02:00 PM - 04:00 PM', status: 'Present', mode: 'Biometric / QR' },
-        { date: '01 Mar 2026', session: 'Database Engineering & SQL', time: '09:00 AM - 11:00 AM', status: 'Present', mode: 'Biometric / QR' },
-      ],
+      percentage,
+      totalClasses,
+      presentClasses,
+      absentClasses,
+      verifications,
+      recentLogs,
     };
     return sendSuccess(res, 'Attendance data retrieved successfully', attendanceData);
   } catch (error) {
@@ -176,3 +264,25 @@ export const getStudentNotifications = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getStudentPerformance = async (req, res, next) => {
+  try {
+    const performanceData = {
+      overallScore: 85,
+      codingScore: 88,
+      quizScore: 82,
+      interviewScore: 84,
+      ranking: 12,
+      totalStudents: 150,
+      monthlyProgress: [
+        { month: 'Jan', score: 75 },
+        { month: 'Feb', score: 80 },
+        { month: 'Mar', score: 85 },
+      ],
+    };
+    return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
+  } catch (error) {
+    next(error);
+  }
+};
+

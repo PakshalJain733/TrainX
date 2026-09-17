@@ -1,7 +1,14 @@
 import React from 'react';
-import { mentorProfile, mentorBatches, mentorAssignments, mentorLiveSessions } from '../../../data/mentorMockData';
-import { Layers, Users, Video, FileCode, Clock, Star, Sparkles, Layers3, Calendar, PlusCircle, ArrowUpRight } from 'lucide-react';
-import '../Styles/Overview.css';
+import { Link } from 'react-router-dom';
+import { mentorProfile, mentorBatches, mentorStudents, mentorAssignments, mentorLiveSessions } from '../../../data/mentorMockData';
+import {
+  Layers, Users, CalendarCheck, FileCode, Video, ArrowUpRight, CheckCircle2,
+  Clock, Star, Sparkles, Info, BookOpen, ChevronRight
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/Card';
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import '../../Student/Styles/Overview.css';
 
 const getInitials = (name) => {
   if (!name || name.trim().length === 0) return "VS";
@@ -13,6 +20,13 @@ const getInitials = (name) => {
 };
 
 export default function Overview() {
+  const mentorStats = [
+    { label: "Active Batches", value: `${mentorProfile.allocatedBatchesCount} Cohorts`, hint: "All cohorts on track", icon: Layers },
+    { label: "Total Students", value: `${mentorProfile.totalStudentsAssigned}`, hint: "94% active participation", icon: Users },
+    { label: "Live Classes Today", value: "1 Session", hint: "Starts 02:00 PM", icon: Video },
+    { label: "Pending Reviews", value: `${mentorProfile.pendingEvaluationsCount} Code Reviews`, hint: "Require trainer feedback", icon: FileCode },
+  ];
+
   return (
     <div className="mentor-overview-container">
       {/* Radiant Welcome Hero Banner - Identical to Student Overview */}
@@ -29,84 +43,70 @@ export default function Overview() {
               Welcome back, {mentorProfile.name}!
             </h1>
             <p className="overview-hero-desc">
-              {mentorProfile.department} | {mentorProfile.specialization} | Rating: {mentorProfile.rating} / 5.0
+              Senior Technical Trainer | {mentorProfile.allocatedBatchesCount} Active Batches | {mentorProfile.totalStudentsAssigned} Assigned Students
             </p>
           </div>
         </div>
 
         <div className="overview-hero-actions">
-          <div className="mentor-hero-stat-badge">
-            <span className="mentor-stat-badge-num">{mentorProfile.allocatedBatchesCount}</span>
-            <span className="mentor-stat-badge-lbl">Active Cohorts</span>
-          </div>
-          <div className="mentor-hero-stat-badge">
-            <span className="mentor-stat-badge-num">{mentorProfile.totalStudentsAssigned}</span>
-            <span className="mentor-stat-badge-lbl">Students</span>
-          </div>
+          <Link to="/mentor/batches">
+            <Button className="overview-btn-primary">
+              <Layers size={14} className="overview-btn-icon" /> View Batches
+            </Button>
+          </Link>
+          <Link to="/mentor/sessions">
+            <Button className="overview-btn-secondary">
+              <Video size={14} className="overview-btn-icon" /> Live Sessions
+            </Button>
+          </Link>
         </div>
       </div>
 
+      {/* 4 Stats Cards Row */}
+      <div className="overview-grid-4">
+        {mentorStats.map((s) => (
+          <Card key={s.label} className="overview-stat-card shadow-sm">
+            <CardContent className="overview-card-content">
+              <div className="overview-stat-top">
+                <div className="overview-icon-container">
+                  <s.icon size={16} />
+                </div>
+                <span className="overview-stat-label">{s.label}</span>
+                <Info size={15} className="overview-info-icon" />
+              </div>
 
-      {/* Top Quick Metric Cards */}
-      <div className="mentor-kpi-grid">
-        <div className="mentor-kpi-card">
-          <div>
-            <p className="mentor-kpi-label">Active Batches</p>
-            <h3 className="mentor-kpi-value">{mentorProfile.allocatedBatchesCount}</h3>
-            <span className="mentor-kpi-sub mentor-kpi-sub--emerald">All cohorts on track</span>
-          </div>
-          <div className="mentor-kpi-icon-box mentor-kpi-icon-box--indigo">
-            <Layers size={20} />
-          </div>
-        </div>
+              <p className="overview-stat-value">{s.value}</p>
 
-        <div className="mentor-kpi-card">
-          <div>
-            <p className="mentor-kpi-label">Total Students</p>
-            <h3 className="mentor-kpi-value">{mentorProfile.totalStudentsAssigned}</h3>
-            <span className="mentor-kpi-sub mentor-kpi-sub--indigo">94% active participation</span>
-          </div>
-          <div className="mentor-kpi-icon-box mentor-kpi-icon-box--emerald">
-            <Users size={20} />
-          </div>
-        </div>
-
-        <div className="mentor-kpi-card">
-          <div>
-            <p className="mentor-kpi-label">Live Classes Today</p>
-            <h3 className="mentor-kpi-value">1 Session</h3>
-            <span className="mentor-kpi-sub mentor-kpi-sub--amber">Starts 02:00 PM</span>
-          </div>
-          <div className="mentor-kpi-icon-box mentor-kpi-icon-box--amber">
-            <Video size={20} />
-          </div>
-        </div>
-
-        <div className="mentor-kpi-card">
-          <div>
-            <p className="mentor-kpi-label">Pending Code Reviews</p>
-            <h3 className="mentor-kpi-value">14 Submissions</h3>
-            <span className="mentor-kpi-sub mentor-kpi-sub--rose">Require feedback</span>
-          </div>
-          <div className="mentor-kpi-icon-box mentor-kpi-icon-box--rose">
-            <FileCode size={20} />
-          </div>
-        </div>
+              <div className="overview-stat-hint-row">
+                <span className="overview-stat-trend-pill">{s.hint}</span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {/* Two Column Grid */}
-      <div className="mentor-grid-split">
-        {/* Left: Batches Overview */}
-        <div className="mentor-section-card">
-          <div className="mentor-section-header">
-            <h3 className="mentor-section-title">Allocated Training Batches</h3>
-            <span className="mentor-link-arrow">View All Batches</span>
-          </div>
-
-          <div className="mentor-card-list">
+      {/* 2-Column Main Arena */}
+      <div className="overview-split-grid">
+        {/* Left: Allocated Training Batches */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap">
+                <Layers size={18} className="overview-header-icon" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Allocated Training Batches</CardTitle>
+                <CardDescription className="overview-card-desc">Active cohort syllabus completion & health</CardDescription>
+              </div>
+            </div>
+            <Link to="/mentor/batches" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+              View All <ChevronRight size={14} />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
             {mentorBatches.map((b) => (
-              <div key={b.id} className="mentor-batch-card">
-                <div className="mentor-batch-header">
+              <div key={b.id} className="p-3.5 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/70 hover:bg-slate-50 transition space-y-2.5">
+                <div className="flex items-center justify-between">
                   <div>
                     <span className="mentor-batch-code-tag">{b.code}</span>
                     <h4 className="mentor-batch-name">{b.name}</h4>
@@ -131,37 +131,51 @@ export default function Overview() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
-        {/* Right: Live Session & Pending Tasks */}
-        <div className="mentor-section-card">
-          <h3 className="mentor-section-title">
-            <Video size={18} color="#4f46e5" />
-            <span>Upcoming Live Session</span>
-          </h3>
-
-          <div className="mentor-card-list">
+        {/* Right: Upcoming Live Session & Trainer Stats */}
+        <Card className="overview-subcard">
+          <CardHeader className="overview-card-header-between">
+            <div className="overview-header-left">
+              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
+                <Video size={18} className="overview-header-icon text-amber-500" />
+              </div>
+              <div>
+                <CardTitle className="overview-card-title">Live Session & Evaluation</CardTitle>
+                <CardDescription className="overview-card-desc">Scheduled instructor sessions & rating</CardDescription>
+              </div>
+            </div>
+            <Badge variant="outline">Today</Badge>
+          </CardHeader>
+          <CardContent className="p-4 space-y-4">
             {mentorLiveSessions.map((s) => (
-              <div key={s.id} className="mentor-live-card">
-                <span className="mentor-live-badge">{s.status}</span>
-                <h4 className="mentor-live-title">{s.title}</h4>
-                <p className="mentor-live-batch">{s.batch}</p>
-                <p className="mentor-live-time">
-                  <Clock size={14} color="#4f46e5" /> {s.time}
-                </p>
+              <div key={s.id} className="p-4 bg-gradient-to-br from-indigo-50 to-slate-50 rounded-xl border border-indigo-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-600 text-white uppercase tracking-wider">
+                    {s.status}
+                  </span>
+                  <div className="flex items-center gap-1 text-amber-500 font-bold text-xs">
+                    <Star size={14} className="fill-amber-400" /> Rating {mentorProfile.rating}
+                  </div>
+                </div>
+                <h4 className="font-bold text-slate-900 text-sm">{s.title}</h4>
+                <p className="text-xs text-slate-600 font-medium">{s.batch}</p>
+                <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <Clock size={14} className="text-indigo-600" /> {s.time}
+                </div>
                 <a
                   href={s.link}
                   target="_blank"
                   rel="noreferrer"
-                  className="mentor-live-btn"
+                  className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg transition inline-flex items-center justify-center gap-1.5 shadow-xs text-center"
                 >
                   Join Meeting Room
                 </a>
               </div>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ import {
   BookOpen,
   FileCheck2,
   HelpCircle,
+  BarChart3,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/MentorSidebar.css";
@@ -25,8 +26,8 @@ function SidebarBrand({ collapsed }) {
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
           <span className="sidebar-brand-sub">Mentor Workspace</span>
         </div>

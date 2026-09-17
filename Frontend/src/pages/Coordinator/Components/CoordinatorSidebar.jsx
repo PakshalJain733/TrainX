@@ -13,10 +13,9 @@ import {
   Bell,
   Settings,
   HelpCircle,
-  Sparkles,
+  Code,
   Bot,
-  Video,
-  Trophy,
+  AlertTriangle,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/CoordinatorSidebar.css";
@@ -30,8 +29,8 @@ function SidebarBrand({ collapsed, subtitle }) {
       {!collapsed && (
         <div className="sidebar-brand-text">
           <div className="brand-row">
-            <span className="brand-name1">Acad</span>
-            <span className="brand-name2">Nexus</span>
+            <span className="brand-name1">Training</span>
+            <span className="brand-name2">Portal</span>
           </div>
           {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
         </div>
@@ -42,35 +41,38 @@ function SidebarBrand({ collapsed, subtitle }) {
 
 const primaryNavItems = [
   { title: "Dashboard", url: "/coordinator", icon: LayoutDashboard, exact: true },
-  { title: "Batches", url: "/coordinator/batches", icon: Users },
   { title: "Students", url: "/coordinator/students", icon: GraduationCap },
-  { title: "Mentors & Trainers", url: "/coordinator/mentors", icon: UserCheck },
-  { title: "Live Classrooms", url: "/coordinator/sessions", icon: Video },
-  { title: "Live Schedules", url: "/coordinator/schedules", icon: CalendarCheck },
-  { title: "Assessments & Quiz", url: "/coordinator/assessments", icon: FileCheck2 },
-  { title: "Attendance Governance", url: "/coordinator/attendance", icon: LineChart },
-  { title: "AI Roadmaps", url: "/coordinator/roadmaps", icon: Sparkles },
-  { title: "AI Mock Interviews", url: "/coordinator/interviews", icon: Bot },
-  { title: "Performance & Skills", url: "/coordinator/performance", icon: LineChart },
-  { title: "Placement Drives", url: "/coordinator/placement", icon: Briefcase },
-  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
+  { title: "Performances", url: "/coordinator/performances", icon: LineChart },
+  { title: "Students Needing Support", url: "/coordinator/improvement", icon: AlertTriangle },
+  { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
-  { title: "Governance Reports", url: "/coordinator/reports", icon: FileSpreadsheet },
 ];
 
 const footerNavItems = [
   { title: "Notifications", url: "/coordinator/notifications", icon: Bell },
-  { title: "Settings & Profile", url: "/coordinator/profile", icon: Settings },
-  { title: "Help & Support", url: "/coordinator/help", icon: HelpCircle },
 ];
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
 
-  const isActive = (url, exact) =>
-    exact
+  const isActive = (url, exact) => {
+    if (url === "/coordinator/quizzes-and-codes") {
+      return (
+        pathname.startsWith("/coordinator/quizzes-and-codes") ||
+        pathname.startsWith("/coordinator/assessments") ||
+        pathname.startsWith("/coordinator/practice")
+      );
+    }
+    if (url === "/coordinator/performances") {
+      return (
+        pathname.startsWith("/coordinator/performances") ||
+        pathname.startsWith("/coordinator/coding-performance")
+      );
+    }
+    return exact
       ? pathname === url
       : pathname === url || pathname.startsWith(url + "/");
+  };
 
   const handleNavClick = () => {
     if (onClose) onClose();

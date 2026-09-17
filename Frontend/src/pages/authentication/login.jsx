@@ -61,7 +61,7 @@ function Login() {
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
-  const API_BASE_URL = "http://localhost:5000/api/v1/auth";
+  const API_BASE_URL = "/api/v1/auth";
 
   useEffect(() => {
     let interval = null;
@@ -180,28 +180,17 @@ function Login() {
         let existingUser = {};
         try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
 
-        const isAutoName = (n) => !n || /^\d+$/.test(n.trim()) || n.startsWith("User_") || /^vu\d/i.test(n.trim());
-
-        let finalName = serverUser.name;
-        if (isAutoName(finalName)) {
-          if (existingUser.name && !isAutoName(existingUser.name)) {
-            finalName = existingUser.name;
-          } else {
-            // Default friendly name instead of raw roll code Vu3f2425047
-            finalName = "Pakshal";
-          }
-        }
-
         const mergedUser = {
           ...existingUser,
           ...serverUser,
-          name: finalName,
         };
 
         localStorage.setItem("user", JSON.stringify(mergedUser));
 
         const role = mergedUser.role?.toLowerCase() || "";
-        if (role.includes("coordinator")) {
+        if (role.includes("super")) {
+          navigate("/super-admin");
+        } else if (role.includes("coordinator")) {
           navigate("/coordinator");
         } else if (role.includes("admin") || role.includes("hod")) {
           navigate("/admin");

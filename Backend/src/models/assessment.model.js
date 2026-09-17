@@ -32,10 +32,11 @@ export const getAssessmentsModel = async (collegeId = null) => {
 
 export const findAssessments = async (filters = {}) => {
   let sql = `
-    SELECT a.*, u.name AS created_by_name, c.name AS college_name
+    SELECT a.*, u.name AS created_by_name, c.name AS college_name, b.name AS batch_name
     FROM assessments a
     LEFT JOIN users u ON a.created_by = u.id
     LEFT JOIN colleges c ON a.college_id = c.id
+    LEFT JOIN batches b ON a.batch_id = b.id
     WHERE 1=1
   `;
   const params = [];
@@ -54,8 +55,23 @@ export const findAssessments = async (filters = {}) => {
   }
 
   sql += ' ORDER BY a.id DESC';
-  return await query(sql, params);
+  const rows = await query(sql, params);
+
+  if (Array.isArray(rows)) {
+    for (const a of rows) {
+      const qRows = await query(
+        `SELECT id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order
+         FROM assessment_questions WHERE assessment_id = ? ORDER BY question_order ASC, id ASC`,
+        [a.id]
+      );
+      a.questions = qRows || [];
+      a.total_questions = a.questions.length;
+    }
+  }
+
+  return rows || [];
 };
+
 
 export const getAssessmentByIdModel = async (id) => {
   const numId = parseInt(id, 10);
@@ -70,32 +86,43 @@ export const getAssessmentByIdModel = async (id) => {
 
 export const findAssessmentById = async (id) => {
   const rows = await query(`
-    SELECT a.*, u.name AS created_by_name, c.name AS college_name
+    SELECT a.*, u.name AS created_by_name, c.name AS college_name, b.name AS batch_name
     FROM assessments a
     LEFT JOIN users u ON a.created_by = u.id
     LEFT JOIN colleges c ON a.college_id = c.id
+    LEFT JOIN batches b ON a.batch_id = b.id
     WHERE a.id = ?
   `, [id]);
   return rows[0] || (await getAssessmentByIdModel(id));
 };
 
 export const createAssessment = async ({ title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status }) => {
+  const isPub = (status === 'published') ? 1 : 0;
+  let creatorId = null;
+  if (created_by) {
+    const existingUser = await query('SELECT id FROM users WHERE id = ?', [created_by]);
+    if (existingUser && existingUser.length > 0) {
+      creatorId = existingUser[0].id;
+    }
+  }
   const result = await query(
-    `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, description || null, college_id || null, batch_id || null, created_by, duration_minutes || null, total_marks || 0, pass_marks || 0, status || 'draft']
+    `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status, is_published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, description || null, college_id || null, batch_id || null, creatorId, duration_minutes || null, total_marks || 0, pass_marks || 0, status || 'published', isPub]
   );
   return findAssessmentById(result.insertId);
 };
 
 export const updateAssessment = async (id, { title, description, college_id, batch_id, duration_minutes, total_marks, pass_marks, status }) => {
+  const isPub = (status === 'published') ? 1 : 0;
   await query(
-    `UPDATE assessments SET title=?, description=?, college_id=?, batch_id=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?
+    `UPDATE assessments SET title=?, description=?, college_id=?, batch_id=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?, is_published=?
      WHERE id = ?`,
-    [title, description || null, college_id || null, batch_id || null, duration_minutes || null, total_marks, pass_marks, status, id]
+    [title, description || null, college_id || null, batch_id || null, duration_minutes || null, total_marks, pass_marks, status, isPub, id]
   );
   return findAssessmentById(id);
 };
+
 
 export const deleteAssessment = async (id) => {
   return await query('DELETE FROM assessments WHERE id = ?', [id]);
@@ -262,7 +289,7 @@ export const getStudentAttemptsModel = async (userId) => {
   const numId = parseInt(userId, 10);
   try {
     const results = await query(
-      `SELECT a.*, asm.title as assessment_title, asm.category 
+      `SELECT a.*, asm.title as assessment_title, asm.category, asm.total_marks as assessment_total_marks, asm.duration_minutes
        FROM assessment_attempts a
        JOIN assessments asm ON a.assessment_id = asm.id
        WHERE a.user_id = ?

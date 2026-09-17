@@ -5,14 +5,22 @@ import {
   triggerRemedialAssignmentService,
   getRemedialInterventionsService,
   getAIDiagnosticForTopicService,
+  executeskillGapService,
+  getStudentSkillGapAnalysis,
 } from '../services/skillGap.service.js';
 
 /**
- * Controller: Get batch-wide skill gaps (Mentor / Coordinator / Admin)
+ * Controller: Get batch-wide or student skill gap analysis
  * GET /api/v1/skill-gaps
  */
 export const getSkillGapData = async (req, res, next) => {
   try {
+    const studentId = req.params.studentId || req.query.student_id;
+    if (studentId) {
+      const analysis = await getStudentSkillGapAnalysis(studentId);
+      return sendSuccess(res, 'Skill gap analysis retrieved successfully', analysis);
+    }
+
     const collegeId = req.query.collegeId || req.user?.collegeId || req.user?.college_id;
     const batchId = req.query.batchId || null;
 
@@ -133,6 +141,23 @@ export const getAIDiagnostics = async (req, res, next) => {
     });
 
     return sendSuccess(res, 'AI diagnostics generated successfully', diagnostics);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Analyze performance data
+ * POST /api/v1/skill-gaps/analyze
+ */
+export const analyzePerformance = async (req, res, next) => {
+  try {
+    const payload = req.body || {};
+    if (req.user?.id && !payload.student_id) {
+      payload.student_id = req.user.id;
+    }
+    const analysis = await executeskillGapService(payload);
+    return sendSuccess(res, 'Student performance analysis completed successfully', analysis);
   } catch (error) {
     next(error);
   }

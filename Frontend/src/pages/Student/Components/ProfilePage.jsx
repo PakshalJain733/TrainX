@@ -79,11 +79,15 @@ export default function ProfilePage() {
           cgpa: u.cgpa || u.aggregate_cgpa || "",
           skills: u.skills || "",
           profileCompleted: u.profileCompleted !== undefined ? u.profileCompleted : Boolean(u.cgpa && u.skills),
+          gender: u.gender || "",
+          city: u.city || "",
+          guardianContact: u.guardianContact || u.emergency_contact || "",
+          linkedinUrl: u.linkedinUrl || u.linkedin_url || "",
           batch: u.batch || "",
           college: u.college || "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
           coordinator: u.coordinator || "",
           mentor: u.mentor || "",
-          track: u.track || "",
+          track: u.track || u.target_track || "",
         };
       }
     } catch (e) {}
@@ -94,6 +98,10 @@ export default function ProfilePage() {
       phone: "",
       rollNo: "",
       department: "",
+      gender: "",
+      city: "",
+      guardianContact: "",
+      linkedinUrl: "",
       semester: "",
       cgpa: "",
       skills: "",

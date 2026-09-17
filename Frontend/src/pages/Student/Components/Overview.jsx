@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
-  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight
+  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
+  Plus, X, KeyRound, Loader2
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -23,14 +24,9 @@ const getInitials = (name) => {
 const getStoredUserName = () => {
   try {
     const u = JSON.parse(localStorage.getItem("user"));
-    if (!u) return "Pakshal";
-    const name = u.name || "";
-    const isAutoName = !name || /^\d+$/.test(name.trim()) || name.startsWith("User_") || /^vu\d/i.test(name.trim());
-    if (isAutoName) {
-      return u.fullName || u.full_name || "Pakshal";
-    }
-    return name;
-  } catch { return "Pakshal"; }
+    if (u && u.name) return u.name;
+    return "Student";
+  } catch { return "Student"; }
 };
 
 const defaultDashboardData = {
@@ -120,7 +116,15 @@ export default function Overview() {
     return () => window.removeEventListener("userProfileUpdated", loadUserData);
   }, []);
 
-  const studentName = dashboard.personalDetails.name || "Ganesh Shinde";
+  const studentName = dashboard.personalDetails.name || getStoredUserName() || "Pakshal";
+  const studentDept = dashboard.personalDetails.department || "Electronics & Computer Science";
+  const studentSem = dashboard.academicOverview.semester || "Semester 6";
+  const studentCgpa = dashboard.academicOverview.cgpa || "8.75";
+
+  const heroSubtitle = [studentDept, studentSem, studentCgpa ? `CGPA: ${studentCgpa}` : ""]
+    .filter(Boolean)
+    .join(" | ");
+
   const upcoming = dashboard.upcomingDeadlines || [];
   const leaderboardList = dashboard.leaderboard && dashboard.leaderboard.length > 0
     ? dashboard.leaderboard
@@ -136,9 +140,9 @@ export default function Overview() {
       ];
 
   const studentStats = [
-    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
+    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage || 95)}%`, hint: "Active semester attendance", icon: CalendarCheck },
     { label: "Active Batches", value: "Enrolled", hint: "Assigned training batch", icon: Users },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
+    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank || '1/1'}`, hint: "Current cohort rank", icon: TrendingUp },
     { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Flame },
   ];
 
@@ -190,13 +194,19 @@ export default function Overview() {
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/student/batches">
-            <Button className="overview-btn-primary">
-              <Sparkles size={14} className="overview-btn-icon" /> Batches
-            </Button>
-          </Link>
+          <Button
+            className="overview-btn-primary"
+            onClick={() => {
+              setModalError("");
+              setModalSuccess("");
+              setShowJoinModal(true);
+            }}
+          >
+            <Plus size={16} className="overview-btn-icon" /> Join Batch
+          </Button>
         </div>
       </div>
+
 
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
@@ -285,7 +295,7 @@ export default function Overview() {
                       <AvatarFallback className="text-xs font-bold">{item.initials}</AvatarFallback>
                     </Avatar>
                     <div>
-                     <h5 className="text-sm font-semibold dark:text-slate-200\">{item.name}</h5>
+                      <h5 className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.name}</h5>
                       <span className="text-xs text-slate-500">{item.score}</span>
                     </div>
                   </div>
@@ -299,3 +309,4 @@ export default function Overview() {
     </div>
   );
 }
+
