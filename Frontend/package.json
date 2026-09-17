@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "code": "^5.2.4",
     "lucide-react": "^1.33.0",
     "puppeteer": "^25.9.0",
+    "qr": "^0.7.0",
     "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
