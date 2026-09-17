@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoMain from "../../assets/Logo.png";
 import Logo from "../../assets/Logo2.png";
-import TrainXIcon from "../../assets/TrainX.png";
+import { getApiBaseUrl } from "../../utils/api";
 
 import "./login.css";
 
@@ -94,7 +94,7 @@ function Login() {
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
-  const API_BASE_URL = "/api/v1/auth";
+  const API_BASE_URL = `${getApiBaseUrl()}/auth`;
 
   useEffect(() => {
     let interval = null;

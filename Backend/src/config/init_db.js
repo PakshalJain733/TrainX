@@ -507,16 +507,21 @@ export async function initializeDatabase() {
 
     // 18. Ensure Super Admin Account
     try {
-      const superEmail = process.env.SUPER_ADMIN_EMAIL || process.env.EMAIL_USER;
+      const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
+      const superPass = process.env.SUPER_ADMIN_PASSWORD;
       const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
       if (!superUsers || superUsers.length === 0) {
         await conn.query(
-          `INSERT INTO users (name, email, mobile_number, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', 'super_admin', NULL, 1)`,
-          [superEmail]
+          `INSERT INTO users (name, email, mobile_number, password, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, ?, 'super_admin', NULL, 1)`,
+          [superEmail, superPass, superPass]
         );
         console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
       } else {
-        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        if (superPass) {
+          await conn.query(`UPDATE users SET role = 'super_admin', password = ?, password_hash = ? WHERE email = ?`, [superPass, superPass, superEmail]);
+        } else {
+          await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        }
       }
     } catch (e) {
       console.warn('[DB Init] Super Admin seed notice:', e.message);

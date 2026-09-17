@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
-import TrainXIcon from "../../assets/TrainX.png";
+import { getApiBaseUrl } from "../../utils/api";
 import "./register.css";
 
 /* ── Inline dropdown for Register page (CSS: register.css .reg-select-*) ── */
@@ -272,7 +272,7 @@ function Register() {
 
     try {
       const emailToVerify = formData.email || totpSetupData?.user?.email || "";
-      const response = await fetch("/api/v1/auth/verify-totp", {
+      const response = await fetch(`${getApiBaseUrl()}/auth/verify-totp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -331,7 +331,7 @@ function Register() {
     setSuccessMsg("");
 
     try {
-      const response = await fetch("/api/v1/auth/register", {
+      const response = await fetch(`${getApiBaseUrl()}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

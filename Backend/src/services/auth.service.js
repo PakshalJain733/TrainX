@@ -310,6 +310,17 @@ export const loginWithPassword = async (identifier, password) => {
     });
   }
 
+  // Password Verification Logic
+  const storedPassword = user.password || user.password_hash;
+  const envSuperEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
+  const envSuperPass = process.env.SUPER_ADMIN_PASSWORD;
+
+  const isSuperAdminMatch = (user.email.toLowerCase() === envSuperEmail.toLowerCase()) && (password === envSuperPass);
+
+  if (storedPassword && storedPassword !== password && !isSuperAdminMatch) {
+    throw new Error('Invalid password. Please check your credentials.');
+  }
+
   const studentProfile = await getStudentByUserId(user.id);
 
   const token = generateToken({

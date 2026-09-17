@@ -28,8 +28,8 @@ export const config = {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT || '587', 10),
     secure: process.env.EMAIL_SECURE === 'true',
-    user: process.env.EMAIL_USER || '',
-    pass: process.env.EMAIL_PASS || '',
+    user: process.env.EMAIL_USER || 'training.portal0987@gmail.com',
+    pass: process.env.EMAIL_PASS || 'ocbaioexvynljtnz',
     from: process.env.EMAIL_FROM || '"Campus Training Portal" <noreply@pvppcoe.ac.in>',
   },
   ai: {
