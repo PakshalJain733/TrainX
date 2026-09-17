@@ -93,6 +93,24 @@ const PREDEFINED_SKILLS = [
   "Communication Skills",
 ];
 
+export const CAREER_TRACK_OPTIONS = [
+  "Full Stack Web Development",
+  "Frontend Web Development",
+  "Backend Engineering",
+  "AI & Machine Learning Engineering",
+  "Data Science & Analytics",
+  "DevOps & Cloud Engineering",
+  "Mobile App Development (Flutter / Android / iOS)",
+  "Cybersecurity & Ethical Hacking",
+  "UI/UX Design & Product Design",
+  "Blockchain & Web3",
+  "Embedded Systems & IoT",
+  "Software Quality Assurance & Automation Testing",
+  "Data Engineering",
+  "Cloud Architecture (AWS / Azure / GCP)",
+  "Game Development",
+];
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
@@ -577,7 +595,7 @@ export default function ProfilePage() {
               </div>
 
               {/* SEARCHABLE CAREER TRACK INPUT */}
-              <div className="profile-field" style={{ position: "relative" }}>
+              <div className="profile-field" style={{ position: "relative" }} ref={trackWrapperRef}>
                 <label className="profile-label">Target Career Track / Role Goal *</label>
                 <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                   <Search
@@ -598,9 +616,13 @@ export default function ProfilePage() {
                       paddingRight: form.track ? "36px" : "14px",
                       width: "100%",
                     }}
-                    placeholder="Type target track..."
+                    placeholder="Search or type target track (e.g. Full Stack)..."
                     value={form.track}
-                    onChange={(e) => setForm((p) => ({ ...p, track: e.target.value }))}
+                    onFocus={() => setTrackSearchFocus(true)}
+                    onChange={(e) => {
+                      setForm((p) => ({ ...p, track: e.target.value }));
+                      setTrackSearchFocus(true);
+                    }}
                     required
                   />
                   {form.track && (
@@ -624,6 +646,59 @@ export default function ProfilePage() {
                     </button>
                   )}
                 </div>
+
+                {trackSearchFocus && filteredTracks.length > 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      zIndex: 50,
+                      marginTop: "6px",
+                      background: "#ffffff",
+                      border: "1px solid #e2e8f0",
+                      borderRadius: "12px",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
+                      maxHeight: "220px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {filteredTracks.map((trk) => {
+                      const isSelected = form.track === trk;
+                      return (
+                        <div
+                          key={trk}
+                          onClick={() => {
+                            setForm((p) => ({ ...p, track: trk }));
+                            setTrackSearchFocus(false);
+                          }}
+                          style={{
+                            padding: "10px 14px",
+                            fontSize: "13.5px",
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            background: isSelected ? "#eff6ff" : "transparent",
+                            color: isSelected ? "#2563eb" : "#334155",
+                            fontWeight: isSelected ? 600 : 500,
+                            transition: "background 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "#f8fafc";
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isSelected) e.currentTarget.style.background = "transparent";
+                          }}
+                        >
+                          <span>{trk}</span>
+                          {isSelected && <Check size={16} color="#2563eb" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </div>
