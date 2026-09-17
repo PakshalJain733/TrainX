@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "build": "echo 'No build step required for backend'",
     "dev": "nodemon server.js",
     "test": "node tests/skill_gap.test.js && node tests/attendance.test.js",
     "test:attendance": "node tests/attendance.test.js",

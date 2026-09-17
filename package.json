@@ -136,6 +136,8 @@
     "tailwindcss": "^3.4.19"
   },
   "scripts": {
+    "start": "node backend/server.js",
+    "build": "cd Frontend && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
