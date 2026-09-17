@@ -34,7 +34,7 @@ export const config = {
   },
   ai: {
     apiKey: process.env.AI_API_KEY || '',
-    model: process.env.AI_MODEL || 'gemini-flash-latest',
+    model: process.env.AI_MODEL || 'gemini-1.5-flash',
   },
   supabase: {
     url: process.env.SUPABASE_URL || '',
