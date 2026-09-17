@@ -1,10 +1,9 @@
 export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== "undefined") {
-    // Relative URL `/api/v1` routes via Vite Proxy securely (no HTTPS/HTTP mixed content issues)
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
     return "/api/v1";
   }
-  return "http://localhost:5000/api/v1";
+  return "https://trainx-6w8m.onrender.com/api/v1";
 };
 
 export async function apiFetch(endpoint, options = {}) {
