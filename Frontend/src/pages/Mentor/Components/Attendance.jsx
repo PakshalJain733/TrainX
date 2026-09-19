@@ -3,7 +3,7 @@ import { mentorBatches } from "../../../data/mentorMockData";
 import {
   CalendarCheck, Users, Search, CheckCircle2, XCircle, Clock,
   AlertTriangle, Layers, Filter, Check, Save, Sparkles, Send,
-  FileCheck2, ChevronRight, UserX, UserCheck
+  FileCheck2, ChevronRight, UserX, UserCheck, Loader2
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/Attendance.css";
@@ -32,6 +32,8 @@ export default function Attendance() {
   const [attendanceRecords, setAttendanceRecords] = useState({});
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [leaveActionMsg, setLeaveActionMsg] = useState('');
+  const [toastMessage, setToastMessage] = useState("");
+  const [leaveLoading, setLeaveLoading] = useState(true);
 
   // Sample/API leave applications state
   const [leaveRequests, setLeaveRequests] = useState([
@@ -111,6 +113,36 @@ export default function Attendance() {
       });
   }, []);
 
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 4000);
+  };
+
+  // Load pending leave applications from backend when available (falls back to sample data)
+  useEffect(() => {
+    apiFetch("/mentor/attendance/leaves")
+      .then((res) => {
+        if (res && res.data && res.data.length > 0) {
+          setLeaveRequests(
+            res.data.map((l) => ({
+              id: l.id,
+              studentId: l.studentId,
+              studentName: l.studentName,
+              rollNo: l.rollNo,
+              batch: l.batch,
+              category: l.leaveType || l.category,
+              startDate: l.startDate,
+              endDate: l.endDate,
+              days: l.days,
+              reason: l.reason,
+              status: l.status || "Pending"
+            }))
+          );
+        }
+      })
+      .finally(() => setLeaveLoading(false));
+  }, []);
+
   // Handle Marking Status Toggle (Present <-> Absent toggle or Late)
   const handleStatusToggle = (id, newStatus) => {
     setAttendanceRecords((prev) => ({
@@ -168,6 +200,14 @@ export default function Attendance() {
 
   return (
     <div className="mentor-attendance-container">
+
+      {/* Toast Alert */}
+      {toastMessage && (
+        <div className="mentor-toast-notification">
+          <CheckCircle2 size={18} />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {/* ── Page Header ── */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
@@ -370,7 +410,11 @@ export default function Attendance() {
 
         {/* Cards */}
         <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '400px', overflowY: 'auto' }}>
-          {leaveRequests.length === 0 ? (
+          {leaveLoading ? (
+            <div style={{ textAlign: 'center', padding: '32px', color: '#94a3b8', fontSize: '13px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <Loader2 size={18} /> Loading leave applications...
+            </div>
+          ) : leaveRequests.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '32px', color: '#94a3b8', fontSize: '13px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #cbd5e1' }}>
               No pending leave applications.
             </div>
