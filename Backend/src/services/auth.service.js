@@ -117,14 +117,22 @@ export const registerUser = async (data) => {
 
   // If student role, save student details
   let studentProfile = null;
-  if (canonicalRole === ROLES.STUDENT && roll_number) {
+  if (canonicalRole === ROLES.STUDENT) {
+    let derivedSemester = semester || '';
+    if (!derivedSemester && year) {
+      if (year === 'FE') derivedSemester = 'Semester 1';
+      else if (year === 'SE') derivedSemester = 'Semester 3';
+      else if (year === 'TE') derivedSemester = 'Semester 5';
+      else if (year === 'BE') derivedSemester = 'Semester 7';
+    }
+
     studentProfile = await saveStudentDetails({
       user_id: user.id,
-      roll_number,
+      roll_number: roll_number || '',
       department: department || '',
       year: year || '',
       division: division || '',
-      semester: semester || '',
+      semester: derivedSemester,
     });
   }
 

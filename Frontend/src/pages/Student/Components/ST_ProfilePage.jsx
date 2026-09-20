@@ -166,14 +166,22 @@ export default function ProfilePage() {
         if (res && res.data) {
           const user = res.data;
           const sp = user.studentProfile || {};
+          const rawYear = sp.year || user.year;
+          let derivedSem = sp.semester || user.semester;
+          if (!derivedSem && rawYear) {
+            if (rawYear === 'FE') derivedSem = 'Semester 1';
+            else if (rawYear === 'SE') derivedSem = 'Semester 3';
+            else if (rawYear === 'TE') derivedSem = 'Semester 5';
+            else if (rawYear === 'BE') derivedSem = 'Semester 7';
+          }
           setForm((prev) => ({
             ...prev,
             name: user.name || prev.name,
             email: user.email || prev.email,
-            phone: user.mobile_number || prev.phone,
+            phone: user.mobile_number || user.phone || prev.phone,
             rollNo: sp.roll_number || user.roll_number || prev.rollNo,
             department: sp.department || user.department || prev.department,
-            semester: sp.semester || user.semester || prev.semester,
+            semester: derivedSem || prev.semester,
             cgpa: sp.cgpa || user.cgpa || user.aggregate_cgpa || prev.cgpa,
             skills: sp.skills || user.skills || prev.skills,
             gender: sp.gender || user.gender || prev.gender,
