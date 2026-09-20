@@ -3,7 +3,7 @@ import { Send, Bell, Trash2, Megaphone, CheckCircle2, Users, Calendar, ChevronDo
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
-import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import { addSharedBroadcast, getSharedBroadcasts, deleteSharedItem, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/CO_Broadcast.css";
 
 function CoordinatorBcastSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
@@ -50,6 +50,8 @@ export default function CoordinatorBroadcast() {
   const [message, setMessage] = useState("");
   const [target, setTarget] = useState("Entire Department & Students");
   const [priority, setPriority] = useState("General Announcement");
+
+  const [isDispatched, setIsDispatched] = useState(false);
 
   const fetchBroadcasts = async () => {
     setLoading(true);
@@ -123,49 +125,52 @@ export default function CoordinatorBroadcast() {
 
     setSending(true);
     setSuccessMsg("");
+    setIsDispatched(false);
 
     const payload = {
       title: title.trim(),
       message: message.trim(),
-      target,
-      priority,
+      target_batch: target,
+      priority: priority,
+      author: "Coordinator Workspace",
     };
 
-    await addSharedBroadcast({
-      title: title.trim(),
-      message: message.trim(),
-      target_batch: target,
-      author: "Coordinator Workspace",
-    });
-
     try {
-      const res = await apiFetch("/coordinator/broadcast", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      const created = await addSharedBroadcast(payload);
 
-      if (res && res.data) {
-        const newNotif = {
-          id: res.data.id || Date.now(),
-          type: "alert",
-          title: `📢 [Broadcast] ${title.trim()}`,
-          desc: message.trim(),
-          body: message.trim(),
-          time: "Just now",
-          unread: true,
-          category: "Broadcast",
-          priority: priority,
-          target: target,
-        };
-
-        window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));
-
-        setTitle("");
-        setMessage("");
-        setSuccessMsg("Departmental broadcast announcement dispatched successfully!");
-        setTimeout(() => setSuccessMsg(""), 4000);
-        fetchBroadcasts();
+      try {
+        await apiFetch("/coordinator/broadcast", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      } catch (_) {
+        // Fallback handled by addSharedBroadcast
       }
+
+      const newNotif = {
+        id: created?.id || Date.now(),
+        type: "alert",
+        title: `📢 [Broadcast] ${title.trim()}`,
+        desc: message.trim(),
+        body: message.trim(),
+        time: "Just now",
+        unread: true,
+        category: "Broadcast",
+        priority: priority,
+        target: target,
+      };
+
+      window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: newNotif }));
+
+      setTitle("");
+      setMessage("");
+      setIsDispatched(true);
+      setSuccessMsg("Dispatched Successfully!");
+      setTimeout(() => {
+        setSuccessMsg("");
+        setIsDispatched(false);
+      }, 4000);
+      await fetchBroadcasts();
     } catch (err) {
       console.error("Failed to send broadcast:", err);
     } finally {
@@ -175,10 +180,13 @@ export default function CoordinatorBroadcast() {
 
   const handleDelete = async (id) => {
     try {
-      await apiFetch(`/coordinator/broadcast/${id}`, {
-        method: "DELETE",
-      });
-      setBroadcasts((prev) => prev.filter((b) => b.id !== id));
+      await deleteSharedItem(id);
+      try {
+        await apiFetch(`/coordinator/broadcast/${id}`, {
+          method: "DELETE",
+        });
+      } catch (_) {}
+      setBroadcasts((prev) => prev.filter((b) => String(b.id) !== String(id)));
     } catch (err) {
       console.error("Failed to delete broadcast message:", err);
     }
@@ -272,8 +280,18 @@ export default function CoordinatorBroadcast() {
               />
             </div>
 
-            <button type="submit" className="coordinator-broadcast-send-btn" disabled={sending}>
-              <Send size={15} /> {sending ? "Broadcasting..." : "Dispatch Notice Now"}
+            <button
+              type="submit"
+              className={`coordinator-broadcast-send-btn ${isDispatched ? "dispatched-success-btn" : ""}`}
+              disabled={sending}
+            >
+              {sending ? (
+                "Broadcasting..."
+              ) : isDispatched ? (
+                <><CheckCircle2 size={16} /> Dispatched Successfully</>
+              ) : (
+                <><Send size={15} /> Dispatch Notice Now</>
+              )}
             </button>
           </form>
         </CardContent>

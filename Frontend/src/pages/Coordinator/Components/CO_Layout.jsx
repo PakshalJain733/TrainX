@@ -4,6 +4,7 @@ import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, Check
 import { CoordinatorSidebar } from "./CO_Sidebar";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
+import BroadcastToast from "../../../components/ui/BroadcastToast";
 import "../Styles/CO_Layout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
@@ -466,6 +467,7 @@ export default function CoordinatorLayout() {
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       />
+      <BroadcastToast />
     </div>
   );
 }

@@ -1,22 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Bot,
   ChevronRight,
   Sparkles,
   CheckCircle2,
-  AlertCircle,
   Mic,
   MicOff,
   Volume2,
-  Play,
+  VolumeX,
   RotateCcw,
-  X,
   Award,
-  Zap,
   TrendingUp,
-  FileCheck,
+  Play,
 } from "lucide-react";
-import { Badge } from "../../../components/ui/Badge";
 import "../Styles/ST_AiInterview.css";
 
 const questionsList = [
@@ -86,13 +82,14 @@ const pastInterviews = [
 ];
 
 export default function AIInterview() {
+  const [hasStarted, setHasStarted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answer, setAnswer] = useState("");
   const [submittedAnswers, setSubmittedAnswers] = useState({});
   const [isEvaluating, setIsEvaluating] = useState(false);
   
-  // Live AI Modal State
-  const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
+  // Speech & Interview State
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isInterviewFinished, setIsInterviewFinished] = useState(false);
@@ -101,14 +98,83 @@ export default function AIInterview() {
   const currentQ = questionsList[currentIdx];
   const progressPercent = ((currentIdx + 1) / questionsList.length) * 100;
 
+  // Text-to-Speech (AI Voice) Function
+  const speakText = (text) => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.92;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const englishVoice =
+        voices.find(
+          (v) =>
+            v.lang.startsWith("en") &&
+            (v.name.includes("Natural") ||
+              v.name.includes("Google") ||
+              v.name.includes("Microsoft") ||
+              v.name.includes("Samantha") ||
+              v.name.includes("Daniel"))
+        ) || voices.find((v) => v.lang.startsWith("en"));
+
+      if (englishVoice) {
+        utterance.voice = englishVoice;
+      }
+
+      utterance.onstart = () => setIsAiSpeaking(true);
+      utterance.onend = () => setIsAiSpeaking(false);
+      utterance.onerror = () => setIsAiSpeaking(false);
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setIsAiSpeaking(true);
+      setTimeout(() => setIsAiSpeaking(false), 3000);
+    }
+  };
+
+  const toggleVoice = (e) => {
+    if (e) e.stopPropagation();
+    if (isVoiceEnabled) {
+      setIsVoiceEnabled(false);
+      setIsAiSpeaking(false);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    } else {
+      setIsVoiceEnabled(true);
+      speakText(currentQ.question);
+    }
+  };
+
+  // Speak question automatically when interview has started & voice is enabled
+  useEffect(() => {
+    if (hasStarted && !isInterviewFinished && currentQ?.question && isVoiceEnabled) {
+      speakText(currentQ.question);
+    } else {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+    return () => {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [hasStarted, currentIdx, isInterviewFinished, isVoiceEnabled]);
+
   const handleNext = () => {
-    if (!answer.trim()) return;
+    const finalAnswer = answer.trim() || currentQ.sampleAnswer || "Candidate provided response during live interview.";
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
 
     setIsEvaluating(true);
     setTimeout(() => {
       setSubmittedAnswers((prev) => ({
         ...prev,
-        [currentIdx]: answer,
+        [currentIdx]: finalAnswer,
       }));
 
       setIsEvaluating(false);
@@ -117,20 +183,9 @@ export default function AIInterview() {
         setCurrentIdx((i) => i + 1);
         setAnswer("");
       } else {
-        // Finished all questions!
         generateScorecard();
       }
     }, 600);
-  };
-
-  const handleOpenLiveModal = () => {
-    setIsLiveModalOpen(true);
-    setIsAiSpeaking(true);
-    setTimeout(() => setIsAiSpeaking(false), 2500);
-  };
-
-  const handleAutoFillSample = () => {
-    setAnswer(currentQ.sampleAnswer);
   };
 
   const toggleRecording = () => {
@@ -169,7 +224,7 @@ export default function AIInterview() {
     setSubmittedAnswers({});
     setIsInterviewFinished(false);
     setOverallScorecard(null);
-    setIsLiveModalOpen(false);
+    setHasStarted(false);
   };
 
   return (
@@ -177,86 +232,225 @@ export default function AIInterview() {
       <div className="student-header-box">
         <h2 className="student-header-title">
           <Bot size={22} style={{ color: "#4f46e5" }} />
-          <span>AI Mock Interview Arena</span>
+          <span>Live AI Technical Interview Simulation</span>
         </h2>
-        <p className="student-header-desc">Practice real-time technical interview questions with instant AI feedback and voice evaluation.</p>
+        <p className="student-header-desc">
+          Interactive voice and technical drill arena with real-time speech evaluation and instant AI feedback.
+        </p>
       </div>
 
-      <div className="ai-interview-split-grid">
-        {/* Practice Arena */}
-        <div className="interview-practice-card">
-          <div className="interview-card-header">
-            <Bot size={20} className="text-blue-600" />
-            <span>Technical interview practice</span>
-          </div>
+      {/* START AI INTERVIEW LANDING CARD vs LIVE INTERVIEW ARENA */}
+      {!hasStarted ? (
+        <div className="interview-practice-card single-interview-arena ai-welcome-landing-card">
+          <div className="ai-welcome-content">
+            <div className="ai-bot-graphic">
+              <div className="ai-bot-circle">
+                <Bot size={54} className="ai-bot-icon" />
+              </div>
+              <div className="ai-bot-pulse"></div>
+            </div>
 
-          <div className="interview-question-tracker">
-            Question {currentIdx + 1} of {questionsList.length} • {currentQ.topic}
-          </div>
+            <h3 className="ai-welcome-title">Ready for your AI Mock Technical Interview?</h3>
+            <p className="ai-welcome-desc">
+              Practice real-world technical interview questions with live AI voice prompts, speech recognition, and instant diagnostic evaluation.
+            </p>
 
-          <div className="interview-progress-bar">
-            <div
-              className="interview-progress-bar-fill"
-              style={{ width: `${progressPercent}%` }}
-            />
-          </div>
+            <div className="ai-welcome-meta-grid">
+              <div className="ai-meta-item">
+                <div className="ai-meta-icon"><Play size={18} /></div>
+                <div>
+                  <div className="ai-meta-val">5 Technical Questions</div>
+                  <div className="ai-meta-lbl">SQL, APIs, Python & Data Structures</div>
+                </div>
+              </div>
 
-          <div className="interview-prompt-box">{currentQ.question}</div>
+              <div className="ai-meta-item">
+                <div className="ai-meta-icon"><Volume2 size={18} /></div>
+                <div>
+                  <div className="ai-meta-val">Live AI Voice</div>
+                  <div className="ai-meta-lbl">Interviewer speaks questions aloud</div>
+                </div>
+              </div>
 
-          <textarea
-            className="interview-textarea"
-            placeholder="Type your structured answer here or click the AI Robot to launch live voice mode..."
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-          />
+              <div className="ai-meta-item">
+                <div className="ai-meta-icon"><Sparkles size={18} /></div>
+                <div>
+                  <div className="ai-meta-val">Instant Evaluation</div>
+                  <div className="ai-meta-lbl">Detailed diagnostic scorecard</div>
+                </div>
+              </div>
+            </div>
 
-          <div className="interview-action-row">
             <button
               type="button"
-              className="ai-autofill-btn"
-              onClick={handleAutoFillSample}
-              title="Auto-fill sample response"
+              className="ai-start-interview-btn"
+              onClick={() => setHasStarted(true)}
             >
-              <Zap size={14} /> Auto-fill Sample Answer
-            </button>
-
-            <button
-              className="interview-next-btn"
-              onClick={handleNext}
-              disabled={isEvaluating || !answer.trim()}
-            >
-              {isEvaluating ? (
-                "Evaluating..."
-              ) : currentIdx === questionsList.length - 1 ? (
-                <>Submit & Finish <ChevronRight size={16} /></>
-              ) : (
-                <>Next question <ChevronRight size={16} /></>
-              )}
+              <Play size={18} fill="currentColor" /> Start AI Interview
             </button>
           </div>
         </div>
+      ) : (
+        /* SINGLE UNIFIED LIVE AI INTERVIEW ARENA */
+        <div className="interview-practice-card single-interview-arena">
+          {!isInterviewFinished ? (
+            <>
+              {/* Header & Question Tracker */}
+              <div className="interview-card-header">
+                <Bot size={20} className="text-blue-600" />
+                <span>Technical Interview Practice</span>
+                <span className="interview-topic-badge">{currentQ.topic}</span>
+              </div>
 
-        {/* AI Bot Visual Card (Clickable Robot Trigger) */}
-        <div
-          className="ai-bot-visual-card"
-          onClick={handleOpenLiveModal}
-          title="Click to launch interactive Live AI Interview phase"
-        >
-          <div className="ai-bot-graphic">
-            <div className="ai-bot-circle">
-              <Bot size={54} className="ai-bot-icon" />
+              <div className="interview-question-tracker">
+                Question {currentIdx + 1} of {questionsList.length}
+              </div>
+
+              <div className="interview-progress-bar">
+                <div
+                  className="interview-progress-bar-fill"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              {/* AI Interviewer Audio & Prompt Bubble with Voice ON/OFF Toggle */}
+              <div
+                className="ai-speak-bubble clickable-prompt"
+                onClick={toggleVoice}
+                title={isVoiceEnabled ? "Click to Mute AI Voice" : "Click to Enable AI Voice"}
+              >
+                <button
+                  type="button"
+                  className={`ai-speaker-play-btn ${!isVoiceEnabled ? "voice-disabled" : ""}`}
+                  onClick={toggleVoice}
+                  title={isVoiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}
+                >
+                  {isVoiceEnabled ? (
+                    <Volume2
+                      size={24}
+                      className={`ai-speak-icon ${isAiSpeaking ? "speaking-pulse" : ""}`}
+                    />
+                  ) : (
+                    <VolumeX size={24} className="ai-speak-icon muted-icon" />
+                  )}
+                </button>
+                <div className="ai-speak-content">
+                  <div className="ai-speak-label-wrap">
+                    <span className="ai-speak-label">
+                      {isVoiceEnabled
+                        ? isAiSpeaking
+                          ? "🔊 AI INTERVIEWER SPEAKING..."
+                          : "AI INTERVIEWER PROMPT (VOICE ON)"
+                        : "🔇 AI VOICE MUTED"}
+                    </span>
+                    <span className="ai-replay-tag">
+                      {isVoiceEnabled ? "(Click speaker to Mute)" : "(Click speaker to Unmute)"}
+                    </span>
+                  </div>
+                  <div className="ai-question-text">{currentQ.question}</div>
+                </div>
+                {isVoiceEnabled && isAiSpeaking && (
+                  <div className="ai-voice-waves">
+                    <span className="ai-wave-bar"></span>
+                    <span className="ai-wave-bar"></span>
+                    <span className="ai-wave-bar"></span>
+                    <span className="ai-wave-bar"></span>
+                    <span className="ai-wave-bar"></span>
+                  </div>
+                )}
+              </div>
+
+              {/* Response Area */}
+              <textarea
+                className="interview-textarea"
+                placeholder="Speak using the mic button below or type your answer..."
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+              />
+
+              {/* Action Bar: Mic Button + Next/Submit Button */}
+              <div className="interview-action-row">
+                <button
+                  type="button"
+                  className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
+                  onClick={toggleRecording}
+                >
+                  {isRecording ? <Mic size={16} /> : <MicOff size={16} />}
+                  {isRecording ? "Listening (3s)..." : "Simulate Speech Input"}
+                </button>
+
+                <button
+                  className="interview-next-btn"
+                  onClick={handleNext}
+                  disabled={isEvaluating}
+                >
+                  {isEvaluating ? (
+                    "Evaluating..."
+                  ) : currentIdx === questionsList.length - 1 ? (
+                    <>Submit & View Scorecard <Award size={16} /></>
+                  ) : (
+                    <>Next Question <ChevronRight size={16} /></>
+                  )}
+                </button>
+              </div>
+            </>
+          ) : (
+            /* FINAL DIAGNOSTIC SCORECARD REPORT */
+            <div className="ai-scorecard-column">
+              <div className="ai-scorecard-hero">
+                <Award size={48} className="ai-award-icon" />
+                <h2 className="ai-scorecard-title">
+                  Live AI Interview Completed!
+                </h2>
+                <p className="ai-scorecard-subtitle">
+                  Overall Technical Evaluation & Readiness Score
+                </p>
+                <div className="ai-score-big">{overallScorecard?.score}%</div>
+
+                <div className="ai-score-breakdown-grid">
+                  <div className="ai-score-mini-card">
+                    <div className="ai-mini-score-val-green">
+                      {overallScorecard?.technical}%
+                    </div>
+                    <div className="ai-mini-score-label">Technical Depth</div>
+                  </div>
+                  <div className="ai-score-mini-card">
+                    <div className="ai-mini-score-val-blue">
+                      {overallScorecard?.problemSolving}%
+                    </div>
+                    <div className="ai-mini-score-label">Problem Solving</div>
+                  </div>
+                  <div className="ai-score-mini-card">
+                    <div className="ai-mini-score-val-purple">
+                      {overallScorecard?.communication}%
+                    </div>
+                    <div className="ai-mini-score-label">Communication</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ai-diagnostic-box">
+                <h4 className="ai-diagnostic-title">
+                  <TrendingUp size={16} className="text-blue-600" /> AI Diagnostic Feedback
+                </h4>
+                <p className="ai-diagnostic-text">
+                  {overallScorecard?.feedback}
+                </p>
+              </div>
+
+              <div className="ai-action-row">
+                <button
+                  type="button"
+                  className="ai-mic-btn ai-retake-btn"
+                  onClick={resetInterview}
+                >
+                  <RotateCcw size={16} /> Retake AI Interview
+                </button>
+              </div>
             </div>
-            <div className="ai-bot-pulse"></div>
-          </div>
-          <h3 className="ai-bot-title">AI Interviewer Active</h3>
-          <p className="ai-bot-desc">
-            Click here to launch the interactive live voice & simulation phase. Analyzes accuracy, problem solving & clarity.
-          </p>
-          <div className="ai-bot-launch-badge">
-            <Play size={16} fill="currentColor" /> Start Live AI Interview
-          </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* Past Interviews History */}
       <div className="past-interviews-card">
@@ -302,171 +496,8 @@ export default function AIInterview() {
           ))}
         </div>
       </div>
-
-      {/* LIVE AI INTERVIEW MODAL / ARENA */}
-      {isLiveModalOpen && (
-        <div className="ai-modal-overlay">
-          <div className="ai-modal-container">
-            <div className="ai-modal-header">
-              <div className="ai-modal-title-wrap">
-                <div className="ai-modal-icon-badge">
-                  <Bot size={24} />
-                </div>
-                <div>
-                  <h3 className="ai-modal-heading">
-                    Live AI Technical Interview Simulation
-                  </h3>
-                  <span className="ai-modal-subheading">
-                    Interactive Voice & Coding Drill Phase
-                  </span>
-                </div>
-              </div>
-              <button
-                className="ai-modal-close-btn"
-                onClick={() => setIsLiveModalOpen(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="ai-modal-body">
-              {!isInterviewFinished ? (
-                <>
-                  {/* AI Interviewer Audio Visualizer */}
-                  <div className="ai-speak-bubble">
-                    <Volume2 size={22} className="ai-speak-icon" />
-                    <div className="ai-speak-content">
-                      <div className="ai-speak-label">
-                        {isAiSpeaking ? "AI INTERVIEWER SPEAKING..." : "AI INTERVIEWER PROMPT"}
-                      </div>
-                      <div>{currentQ.question}</div>
-                    </div>
-                    {isAiSpeaking && (
-                      <div className="ai-voice-waves">
-                        <span className="ai-wave-bar"></span>
-                        <span className="ai-wave-bar"></span>
-                        <span className="ai-wave-bar"></span>
-                        <span className="ai-wave-bar"></span>
-                        <span className="ai-wave-bar"></span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Question & Answer Inputs */}
-                  <div className="ai-qa-box">
-                    <div className="ai-qa-header">
-                      <span>Your Response (Question {currentIdx + 1} of {questionsList.length})</span>
-                      <span className="ai-qa-topic">{currentQ.topic}</span>
-                    </div>
-
-                    <textarea
-                      className="interview-textarea interview-textarea-min"
-                      placeholder="Speak using the mic button below or type your answer..."
-                      value={answer}
-                      onChange={(e) => setAnswer(e.target.value)}
-                    />
-
-                    <div className="ai-modal-controls">
-                      <div className="ai-controls-btn-group">
-                        <button
-                          type="button"
-                          className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
-                          onClick={toggleRecording}
-                        >
-                          {isRecording ? <Mic size={16} /> : <MicOff size={16} />}
-                          {isRecording ? "Listening (3s)..." : "Simulate Speech Input"}
-                        </button>
-                        <button
-                          type="button"
-                          className="ai-autofill-btn"
-                          onClick={handleAutoFillSample}
-                        >
-                          <Zap size={14} /> Auto-fill Sample Answer
-                        </button>
-                      </div>
-
-                      <button
-                        className="interview-next-btn"
-                        onClick={handleNext}
-                        disabled={isEvaluating || !answer.trim()}
-                      >
-                        {isEvaluating ? (
-                          "Evaluating..."
-                        ) : currentIdx === questionsList.length - 1 ? (
-                          <>Submit & View Scorecard <Award size={16} /></>
-                        ) : (
-                          <>Next Question <ChevronRight size={16} /></>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                /* FINAL DIAGNOSTIC SCORECARD REPORT */
-                <div className="ai-scorecard-column">
-                  <div className="ai-scorecard-hero">
-                    <Award size={48} className="ai-award-icon" />
-                    <h2 className="ai-scorecard-title">
-                      Live AI Interview Completed!
-                    </h2>
-                    <p className="ai-scorecard-subtitle">
-                      Overall Technical Evaluation & Readiness Score
-                    </p>
-                    <div className="ai-score-big">{overallScorecard?.score}%</div>
-
-                    <div className="ai-score-breakdown-grid">
-                      <div className="ai-score-mini-card">
-                        <div className="ai-mini-score-val-green">
-                          {overallScorecard?.technical}%
-                        </div>
-                        <div className="ai-mini-score-label">Technical Depth</div>
-                      </div>
-                      <div className="ai-score-mini-card">
-                        <div className="ai-mini-score-val-blue">
-                          {overallScorecard?.problemSolving}%
-                        </div>
-                        <div className="ai-mini-score-label">Problem Solving</div>
-                      </div>
-                      <div className="ai-score-mini-card">
-                        <div className="ai-mini-score-val-purple">
-                          {overallScorecard?.communication}%
-                        </div>
-                        <div className="ai-mini-score-label">Communication</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="ai-diagnostic-box">
-                    <h4 className="ai-diagnostic-title">
-                      <TrendingUp size={16} className="text-blue-600" /> AI Diagnostic Feedback
-                    </h4>
-                    <p className="ai-diagnostic-text">
-                      {overallScorecard?.feedback}
-                    </p>
-                  </div>
-
-                  <div className="ai-action-row">
-                    <button
-                      type="button"
-                      className="ai-autofill-btn ai-retake-btn"
-                      onClick={resetInterview}
-                    >
-                      <RotateCcw size={16} /> Retake AI Interview
-                    </button>
-                    <button
-                      type="button"
-                      className="interview-next-btn"
-                      onClick={() => setIsLiveModalOpen(false)}
-                    >
-                      <CheckCircle2 size={16} /> Close & Save Results
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
+
+

@@ -4,6 +4,7 @@ import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, Check
 import { MentorSidebar } from "./MN_Sidebar";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
+import BroadcastToast from "../../../components/ui/BroadcastToast";
 import "../Styles/MN_Layout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
@@ -464,6 +465,7 @@ export default function MentorLayout() {
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
       />
+      <BroadcastToast />
     </div>
   );
 }
