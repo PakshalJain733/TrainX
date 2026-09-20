@@ -79,6 +79,7 @@ export const getMe = async (req, res, next) => {
     const studentProfile = await getStudentByUserId(userId) || {};
     return sendSuccess(res, 'Authenticated user data retrieved', {
       ...user,
+      ...studentProfile,
       studentProfile,
       department: user.department || studentProfile.department || '',
       semester: user.semester || studentProfile.semester || '',

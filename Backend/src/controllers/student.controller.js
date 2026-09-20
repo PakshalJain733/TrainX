@@ -26,7 +26,7 @@ export const getStudentProfile = async (req, res, next) => {
       const rawName = email.split('@')[0].split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       user = await createUser({
         id: userId,
-        name: rawName || 'Ganesh Shinde',
+        name: rawName || 'Student',
         email: email,
         mobile_number: req.user.mobile || '',
         role: req.user.role || ROLES.STUDENT,
@@ -35,6 +35,7 @@ export const getStudentProfile = async (req, res, next) => {
     const studentProfile = (await getStudentByUserId(userId)) || {};
     return sendSuccess(res, 'Student profile retrieved successfully', {
       ...user,
+      ...studentProfile,
       studentProfile,
     });
   } catch (error) {

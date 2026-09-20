@@ -277,7 +277,8 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
-          if (!res.data.gender || !res.data.city) {
+          const dismissed = sessionStorage.getItem("st_first_login_dismissed");
+          if ((!res.data.gender || !res.data.city) && !dismissed) {
             setShowFirstLoginFlash(true);
           }
         }
@@ -532,6 +533,7 @@ export default function StudentLayout() {
               <button
                 className="st-firstlogin-btn-secondary"
                 onClick={() => {
+                  sessionStorage.setItem("st_first_login_dismissed", "true");
                   setShowFirstLoginFlash(false);
                 }}
               >
@@ -540,6 +542,7 @@ export default function StudentLayout() {
               <button
                 className="st-firstlogin-btn-primary"
                 onClick={() => {
+                  sessionStorage.setItem("st_first_login_dismissed", "true");
                   setShowFirstLoginFlash(false);
                   navigate('/student/profile');
                 }}
