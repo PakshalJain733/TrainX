@@ -1,42 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { mentorStudents } from '../../../data/mentorMockData';
-import { Users, Search, Mail } from 'lucide-react';
+import { Users, Search, Mail, RefreshCw } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
 import '../Styles/Students.css';
 
 export default function Students() {
   const [search, setSearch] = useState('');
-  const [studentList, setStudentList] = useState(mentorStudents);
+  const [studentList, setStudentList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch("/students")
+    setLoading(true);
+    apiFetch("/mentor/students")
       .then((res) => {
-        if (res && res.data && res.data.length > 0) {
-          setStudentList(res.data.map((u, idx) => ({
-            id: u.id || idx,
-            name: u.name || u.full_name || "Student User",
-            rollNo: u.roll_number || u.rollNo || `CS20260${idx + 1}`,
-            department: u.department || "Computer Engineering",
-            college: u.college_name || "PVPPCOE",
-            batch: u.batch_name || "BE-CS-2026-A",
-            attendance: `${u.attendance || 85 + (idx % 12)}%`,
-            quizScore: `${u.quiz_score || 80 + (idx % 18)} / 100`,
-            riskLevel: u.attendance < 75 ? "High Risk" : (u.quiz_score >= 90 ? "Top Performer" : "Good"),
-          })));
+        if (res && res.data && Array.isArray(res.data.students)) {
+          setStudentList(res.data.students);
         }
       })
-      .catch(() => {});
+      .catch(() => setStudentList([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const students = studentList.filter((s) =>
     (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
     (s.rollNo || "").toLowerCase().includes(search.toLowerCase()) ||
     (s.department || "").toLowerCase().includes(search.toLowerCase()) ||
-    (s.batch || "").toLowerCase().includes(search.toLowerCase())
+    (s.batch || s.batchName || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const getAttendanceClass = (attStr) => {
-    const num = parseInt(attStr) || 0;
+  const getAttendanceClass = (att) => {
+    const num = parseInt(att, 10) || 0;
     if (num >= 90) return 'mentor-student-attendance--green';
     if (num >= 75) return 'mentor-student-attendance--amber';
     return 'mentor-student-attendance--rose';
@@ -46,7 +38,8 @@ export default function Students() {
     if (risk === 'Top Performer') return 'mentor-risk-pill--top';
     if (risk === 'Good') return 'mentor-risk-pill--good';
     if (risk === 'Moderate Risk') return 'mentor-risk-pill--moderate';
-    return 'mentor-risk-pill--high';
+    if (risk === 'High Risk') return 'mentor-risk-pill--high';
+    return 'mentor-risk-pill--moderate';
   };
 
   return (
@@ -78,56 +71,71 @@ export default function Students() {
 
       {/* Table */}
       <div className="mentor-table-card">
-        <div className="mentor-table-responsive">
-          <table className="mentor-table">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Roll No</th>
-                <th>Department</th>
-                <th>Attendance</th>
-                <th>Quiz Score</th>
-                <th>Risk Level</th>
-                <th className="mentor-actions-cell">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((s) => (
-                <tr key={s.id}>
-                  <td>
-                    <p className="mentor-student-name">{s.name}</p>
-                    <p className="mentor-student-college">{s.college || "PVPPCOE"}</p>
-                  </td>
-                  <td>
-                    <span className="mentor-student-roll">{s.rollNo}</span>
-                  </td>
-                  <td>
-                    <span className="mentor-student-batch">{s.department || s.batch}</span>
-                  </td>
-                  <td>
-                    <span className={`mentor-student-attendance ${getAttendanceClass(s.attendance)}`}>
-                      {s.attendance}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="mentor-student-score">{s.quizScore || s.avgScore || "85 / 100"}</span>
-                  </td>
-                  <td>
-                    <span className={`mentor-risk-pill ${getRiskClass(s.riskLevel)}`}>
-                      {s.riskLevel}
-                    </span>
-                  </td>
-                  <td className="mentor-actions-cell">
-                    <button className="mentor-action-btn">
-                      <Mail size={13} />
-                      <span>Contact</span>
-                    </button>
-                  </td>
+        {loading ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: '#64748b', gap: 12 }}>
+            <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', color: '#4f46e5' }} />
+            <p style={{ fontSize: 13 }}>Loading assigned students...</p>
+          </div>
+        ) : (
+          <div className="mentor-table-responsive">
+            <table className="mentor-table">
+              <thead>
+                <tr>
+                  <th>Student Name</th>
+                  <th>Roll No</th>
+                  <th>Department</th>
+                  <th>Attendance</th>
+                  <th>Quiz Score</th>
+                  <th>Risk Level</th>
+                  <th className="mentor-actions-cell">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {students.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="mentor-empty-table-cell">
+                      No students assigned to you yet.
+                    </td>
+                  </tr>
+                ) : (
+                  students.map((s) => (
+                    <tr key={s.id}>
+                      <td>
+                        <p className="mentor-student-name">{s.name}</p>
+                        <p className="mentor-student-college">{s.batch || s.batchName || "—"}</p>
+                      </td>
+                      <td>
+                        <span className="mentor-student-roll">{s.rollNo}</span>
+                      </td>
+                      <td>
+                        <span className="mentor-student-batch">{s.department || "—"}</span>
+                      </td>
+                      <td>
+                        <span className={`mentor-student-attendance ${getAttendanceClass(s.attendance)}`}>
+                          {s.attendance != null && s.attendance > 0 ? `${s.attendance}%` : "No records"}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="mentor-student-score">{s.quizScore || "No Data"}</span>
+                      </td>
+                      <td>
+                        <span className={`mentor-risk-pill ${getRiskClass(s.riskLevel)}`}>
+                          {s.riskLevel || "—"}
+                        </span>
+                      </td>
+                      <td className="mentor-actions-cell">
+                        <button className="mentor-action-btn">
+                          <Mail size={13} />
+                          <span>Contact</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

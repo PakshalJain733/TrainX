@@ -10,14 +10,14 @@ import {
 import {
   findAssessments,
   getAssessmentByIdModel,
-  createAssessmentModel,
-  updateAssessmentModel,
-  deleteAssessmentModel,
-  publishAssessmentModel,
+  createAssessment as createAssessmentModel,
+  updateAssessment,
+  deleteAssessment,
+  publishAssessment,
   getAssessmentQuestionsModel,
-  addQuestionModel,
-  updateQuestionModel,
-  deleteQuestionModel,
+  createQuestion,
+  updateQuestion,
+  deleteQuestion,
   getStudentAttemptsModel,
   getAssessmentAttemptsModel,
 } from '../models/assessment.model.js';
@@ -92,7 +92,7 @@ export const createAssessment = addAssessment;
 export const editAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updated = await updateAssessmentModel(id, req.body);
+    const updated = await updateAssessment(id, req.body);
     if (!updated) {
       return sendError(res, 'Assessment not found', 404);
     }
@@ -105,7 +105,7 @@ export const editAssessment = async (req, res, next) => {
 export const removeAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await deleteAssessmentModel(id);
+    await deleteAssessment(id);
     return sendSuccess(res, 'Assessment deleted successfully');
   } catch (error) {
     next(error);
@@ -116,7 +116,7 @@ export const publishAssessmentCtrl = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { is_published = true } = req.body;
-    const result = await publishAssessmentModel(id, is_published);
+    const result = await publishAssessment(id, is_published);
     return sendSuccess(res, 'Assessment published status updated', result);
   } catch (error) {
     next(error);
@@ -143,7 +143,7 @@ export const addQuestion = async (req, res, next) => {
       return sendError(res, 'Question text, option_a, option_b, and correct_option are required', 400);
     }
 
-    const newQ = await addQuestionModel(id, {
+    const newQ = await createQuestion(id, {
       question_text,
       option_a,
       option_b,
@@ -163,7 +163,7 @@ export const addQuestion = async (req, res, next) => {
 export const editQuestion = async (req, res, next) => {
   try {
     const { qid } = req.params;
-    const updated = await updateQuestionModel(qid, req.body);
+    const updated = await updateQuestion(qid, req.body);
     return sendSuccess(res, 'Question updated successfully', updated);
   } catch (error) {
     next(error);
@@ -173,7 +173,7 @@ export const editQuestion = async (req, res, next) => {
 export const removeQuestion = async (req, res, next) => {
   try {
     const { qid } = req.params;
-    await deleteQuestionModel(qid);
+    await deleteQuestion(qid);
     return sendSuccess(res, 'Question removed successfully');
   } catch (error) {
     next(error);
@@ -186,7 +186,7 @@ export const startAssessment = async (req, res, next) => {
     const userId = req.user?.userId || req.user?.id;
     const collegeId = req.user?.collegeId || 1;
 
-    const data = await startAssessmentService(id, userId, collegeId);
+    const data = await startAssessmentService(id, userId, req.user?.role || 'student', collegeId);
     return sendSuccess(res, 'Assessment attempt started', data);
   } catch (error) {
     next(error);
@@ -200,12 +200,7 @@ export const submitAssessment = async (req, res, next) => {
     const userCollegeId = req.user?.collegeId || 1;
     const { answers } = req.body;
 
-    const result = await submitAssessmentService({
-      attemptId,
-      userId,
-      submittedAnswers: answers || [],
-      userCollegeId,
-    });
+    const result = await submitAssessmentService(attemptId, userId, answers || [], req.user?.role || 'student', userCollegeId);
 
     return sendSuccess(res, 'Assessment submitted successfully', result);
   } catch (error) {
@@ -272,7 +267,11 @@ export const getMyAttempts = async (req, res, next) => {
 export const getAssessmentResults = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const results = await getAssessmentAttemptsModel(id);
+    const collegeId =
+      req.user?.role === ROLES.SUPER_ADMIN
+        ? (req.query.collegeId || null)
+        : (req.user?.collegeId || req.user?.college_id || null);
+    const results = await getAssessmentAttemptsModel(id, collegeId);
     return sendSuccess(res, 'Assessment results retrieved successfully', results);
   } catch (error) {
     next(error);

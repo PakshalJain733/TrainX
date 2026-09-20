@@ -8,16 +8,7 @@ import {
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../../Admin/Styles/AdminQuizzes.css";
 import "../../Admin/Styles/AdminUsers.css";
-
-const API_BASE = "http://localhost:5000/api/v1";
-
-function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+import apiFetch from "../../../utils/api";
 
 function normalizeQuestion(item, idx) {
   if (!item) return { id: idx + 1, text: `Question ${idx + 1}`, options: { a: "", b: "", c: "", d: "" }, correct: "a" };
@@ -52,11 +43,10 @@ function QuizResultsPanel({ quiz, onBack }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`${API_BASE}/assessments/${quiz.id}/results`, { headers: getAuthHeaders() })
-      .then(r => r.json())
+    apiFetch(`/assessments/${quiz.id}/results`)
       .then(data => {
-        if (data.success && data.data?.results) setResults(data.data.results);
-        else if (data.success && Array.isArray(data.data)) setResults(data.data);
+        if (data && data.success && data.data?.results) setResults(data.data.results);
+        else if (data && data.success && Array.isArray(data.data)) setResults(data.data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -205,8 +195,7 @@ export default function MentorQuizzes() {
 
   const fetchBatches = async () => {
     try {
-      const r = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
-      const d = await r.json();
+      const d = await apiFetch("/batches");
       if (d.success && Array.isArray(d.data)) setAvailableBatches(d.data);
     } catch { /* ignore */ }
   };
@@ -214,8 +203,7 @@ export default function MentorQuizzes() {
   const fetchQuizzes = async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${API_BASE}/assessments`, { headers: getAuthHeaders() });
-      const d = await r.json();
+      const d = await apiFetch("/assessments");
       if (d.success && Array.isArray(d.data)) setQuizzes(d.data.map(mapAssessment));
     } catch { /* ignore */ }
     finally { setLoading(false); }
@@ -229,18 +217,17 @@ export default function MentorQuizzes() {
     const marks = parseInt(totalMarks) || qCount * 10;
     const pass = parseInt(passMarks) || Math.round(marks * 0.6);
 
-    const res = await fetch(`${API_BASE}/assessments`, {
-      method: "POST", headers: getAuthHeaders(),
+    const d = await apiFetch("/assessments", {
+      method: "POST",
       body: JSON.stringify({ title: title.trim(), batch_id: batchObj?.id || null, batch_name: batch, category: quizType === "AI Generated" ? "AI Generated" : "Technical Quiz", description: `${quizType} quiz for ${batch}`, status: "published", is_published: true, total_marks: marks, pass_marks: pass, duration_minutes: parseInt(durationMins) || 30 }),
     });
-    const d = await res.json();
     if (!d.success) throw new Error(d.message || "Failed to create quiz");
     const assessmentId = d.data?.id || d.data?.insertId;
     if (!assessmentId) throw new Error("No assessment ID returned");
 
     for (const q of questionsList) {
-      await fetch(`${API_BASE}/assessments/${assessmentId}/questions`, {
-        method: "POST", headers: getAuthHeaders(),
+      await apiFetch(`/assessments/${assessmentId}/questions`, {
+        method: "POST",
         body: JSON.stringify({ question_text: q.text, option_a: q.options.a, option_b: q.options.b, option_c: q.options.c !== "N/A" ? q.options.c : null, option_d: q.options.d !== "N/A" ? q.options.d : null, correct_option: q.correct, marks: Math.round(marks / qCount) }),
       });
     }
@@ -254,8 +241,7 @@ export default function MentorQuizzes() {
   };
 
   const fetchAIQuestions = async (topic, count) => {
-    const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ title: topic, count: parseInt(count, 10) || 10 }) });
-    const d = await res.json();
+    const d = await apiFetch("/assessments/generate-ai-questions", { method: "POST", body: JSON.stringify({ title: topic, count: parseInt(count, 10) || 10 }) });
     if (!d.success || !Array.isArray(d.data) || !d.data.length) throw new Error(d.message || "AI question generation failed");
     return d.data;
   };
@@ -283,7 +269,7 @@ export default function MentorQuizzes() {
   const handleDelete = async id => {
     if (!window.confirm("Delete this quiz? This cannot be undone.")) return;
     try {
-      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+      await apiFetch(`/assessments/${id}`, { method: "DELETE" });
       setQuizzes(quizzes.filter(q => q.id !== id));
     } catch (err) { alert("Delete failed: " + err.message); }
   };

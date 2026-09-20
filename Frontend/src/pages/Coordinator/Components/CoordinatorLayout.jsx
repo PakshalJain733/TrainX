@@ -2,52 +2,35 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2 } from "lucide-react";
 import { CoordinatorSidebar } from "./CoordinatorSidebar";
-import { coordinatorProfile } from "../../../data/coordinatorMockData";
+import apiFetch from "../../../utils/api";
 import "../Styles/CoordinatorLayout.css";
 
+function getInitials(name) {
+  return name
+    ? name.split(/\s+/).map((p) => p[0]?.toUpperCase()).filter(Boolean).slice(0, 2).join("") || "CO"
+    : "CO";
+}
+
 function NotificationDropdown({ onClose, onUnreadChange }) {
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "calendar",
-      title: "Department Meeting Schedule",
-      desc: "HOD CSE has requested an urgent faculty meeting at 3:30 PM in Conference Room...",
-      time: "5 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      type: "alert",
-      title: "New Student Grievance",
-      desc: "Student Aarav Patel (BTech CSE, Sem 6) submitted a grade re-evaluation request.",
-      time: "25 min ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      type: "success",
-      title: "Attendance Report Approved",
-      desc: "Monthly attendance report for Semester 6 Data Structures has been generated.",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 4,
-      type: "document",
-      title: "Curriculum Syllabus Update",
-      desc: "Revised syllabus for AI & Machine Learning module has been published by...",
-      time: "3 hours ago",
-      unread: false,
-    },
-    {
-      id: 5,
-      type: "calendar",
-      title: "Exam Duty Allocation",
-      desc: "Your invigilation schedule for upcoming Mid-term exams has been published.",
-      time: "Yesterday",
-      unread: false,
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    apiFetch("/coordinator/notifications")
+      .then((d) => {
+        const items = (d.success && Array.isArray(d.data) ? d.data : [])
+          .filter((b) => b && (b.title || b.message))
+          .map((b) => ({
+            id: b.id,
+            type: (b.priority || "").toLowerCase().includes("urgent") || b.priority === "Urgent Notice" ? "alert" : "calendar",
+            title: b.title || "Announcement",
+            desc: b.message || (b.desc_text || ""),
+            time: b.created_at ? new Date(b.created_at).toLocaleString() : "",
+            unread: false,
+          }));
+        setNotifications(items);
+      })
+      .catch(() => setNotifications([]));
+  }, []);
 
   const [activeTab, setActiveTab] = useState("all");
 
@@ -165,11 +148,24 @@ export default function CoordinatorLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
+  const [profile, setProfile] = useState({ name: "", role: "Department Coordinator", email: "" });
   const headerRightRef = useRef(null);
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    apiFetch("/coordinator/overview")
+      .then((d) => {
+        const p = d.success && d.data?.profile;
+        if (p) {
+          setProfile({ name: p.name || "", role: p.role || "Department Coordinator", email: p.email || "" });
+          setHasUnreadNotif(false);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -277,10 +273,10 @@ export default function CoordinatorLayout() {
                     aria-label="User menu"
                   >
                     <div className="coordinator-header__user-info">
-                      <span className="coordinator-header__name">{coordinatorProfile.name}</span>
+                      <span className="coordinator-header__name">{profile.name || "Coordinator"}</span>
                     </div>
                     <div className="coordinator-header__avatar">
-                      AM
+                      {getInitials(profile.name)}
                     </div>
                   </button>
 
@@ -288,11 +284,11 @@ export default function CoordinatorLayout() {
                     <div className="coordinator-header__profile-dropdown">
                       <div className="coordinator-header__profile-top">
                         <div className="coordinator-header__profile-avatar">
-                          AM
+                          {getInitials(profile.name)}
                         </div>
                         <div className="coordinator-header__profile-info">
-                          <span className="coordinator-header__profile-name">{coordinatorProfile.name}</span>
-                          <span className="coordinator-header__profile-sub">{coordinatorProfile.role}</span>
+                          <span className="coordinator-header__profile-name">{profile.name || "Coordinator"}</span>
+                          <span className="coordinator-header__profile-sub">{profile.role}</span>
                         </div>
                       </div>
                       <div className="coordinator-header__profile-divider" />

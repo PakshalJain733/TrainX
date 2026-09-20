@@ -1,9 +1,22 @@
-import React from 'react';
-import { initialAIRoadmaps } from '../../data/superAdminMockData';
-import { Target, Sparkles, BookOpen, Layers, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { superAdminAPI } from '../../services/api';
+import { Target, Sparkles, BookOpen, Layers, Users, RefreshCw } from 'lucide-react';
 
 export default function AIRoadmaps() {
-  const roadmaps = initialAIRoadmaps;
+  const [roadmaps, setRoadmaps] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadRoadmaps = () => {
+    setLoading(true);
+    superAdminAPI.roadmaps()
+      .then((data) => setRoadmaps(Array.isArray(data) ? data : []))
+      .catch(() => setRoadmaps([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadRoadmaps();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -17,15 +30,22 @@ export default function AIRoadmaps() {
           <p className="text-xs text-slate-500">AI-generated learning tracks, adaptive module completion, and student progression</p>
         </div>
 
-        <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2">
-          <Sparkles className="w-4 h-4" />
-          <span>Generate New Roadmap Track</span>
+        <button
+          onClick={loadRoadmaps}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh Roadmaps</span>
         </button>
       </div>
 
       {/* Roadmaps Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {roadmaps.length === 0 ? (
+        {loading ? (
+          <div className="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
+            <p className="font-medium text-slate-600 text-sm">Loading roadmap tracks…</p>
+          </div>
+        ) : roadmaps.length === 0 ? (
           <div className="col-span-full py-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
             <Target className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-400" />
             <p className="font-medium text-slate-600 text-sm">No adaptive AI roadmap tracks found.</p>
@@ -39,6 +59,7 @@ export default function AIRoadmaps() {
                     {r.track}
                   </span>
                   <h3 className="font-bold text-slate-900 text-base mt-2">{r.title}</h3>
+                  <p className="text-xs text-slate-500 mt-1">Student: {r.student} · {r.college}</p>
                 </div>
                 <span className="text-xs font-semibold px-2 py-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200">
                   AI Adaptation: {r.aiAdaptation}

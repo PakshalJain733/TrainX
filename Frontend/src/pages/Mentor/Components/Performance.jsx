@@ -13,60 +13,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui
 import "../../Student/Styles/Performance.css";
 import "../Styles/Performance.css";
 
-// ── Default fallback data ──────────────────────────────────────────────────
-const defaultStudents = [
-  {
-    id: "st-1", name: "Ganesh Shinde", department: "ECS", batch: "Batch A",
-    overallScore: 71, assessment: 78, coding: 65, interview: 58, attendance: 82, milestone: 74,
-    status: "Average", trend: "up", trendDelta: "+4%",
-    weakAreas: [
-      { skill: "AI Mock Interview", score: 58, target: 75 },
-      { skill: "Coding / DSA", score: 65, target: 80 },
-    ],
-    recommendations: [
-      "Schedule 2 AI Mock Interview sessions this week.",
-      "Complete the Dynamic Programming problem set.",
-      "Maintain 80%+ attendance for placement eligibility.",
-    ],
-  },
-  {
-    id: "st-2", name: "Priya Nair", department: "CSE", batch: "Batch A",
-    overallScore: 85, assessment: 88, coding: 82, interview: 79, attendance: 91, milestone: 86,
-    status: "Excellent", trend: "up", trendDelta: "+6%",
-    weakAreas: [],
-    recommendations: ["Attempt advanced DSA problems to maintain rank.", "Try the AI Interview for leadership-track prep."],
-  },
-  {
-    id: "st-3", name: "Rahul Mehta", department: "IT", batch: "Batch B",
-    overallScore: 52, assessment: 55, coding: 48, interview: 42, attendance: 68, milestone: 50,
-    status: "Needs Work", trend: "down", trendDelta: "-3%",
-    weakAreas: [
-      { skill: "AI Mock Interview", score: 42, target: 65 },
-      { skill: "Coding / DSA", score: 48, target: 70 },
-      { skill: "Attendance", score: 68, target: 75 },
-    ],
-    recommendations: [
-      "Urgently improve attendance (currently 68%).",
-      "Complete 3 practice coding sessions before next assessment.",
-      "Schedule mentor one-on-one session immediately.",
-    ],
-  },
-  {
-    id: "st-4", name: "Sneha Patil", department: "ECS", batch: "Batch A",
-    overallScore: 68, assessment: 72, coding: 60, interview: 64, attendance: 78, milestone: 66,
-    status: "Average", trend: "stable", trendDelta: "0%",
-    weakAreas: [
-      { skill: "Coding / DSA", score: 60, target: 70 },
-    ],
-    recommendations: [
-      "Focus on graph algorithms in the practice module.",
-      "Review last quiz feedback and reattempt.",
-    ],
-  },
-];
-
 // ── Helper: status color ────────────────────────────────────────────────────
 function statusStyle(score) {
+  if (score == null) return { color: "#94a3b8", bg: "rgba(148,163,184,0.1)" };
   if (score >= 85) return { color: "#10b981", bg: "rgba(16,185,129,0.1)" };
   if (score >= 70) return { color: "#3b82f6", bg: "rgba(59,130,246,0.1)" };
   if (score >= 55) return { color: "#f59e0b", bg: "rgba(245,158,11,0.1)" };
@@ -75,6 +24,14 @@ function statusStyle(score) {
 
 // ── Mini bar ───────────────────────────────────────────────────────────────
 function MiniBar({ value, target = 70 }) {
+  if (value == null) {
+    return (
+      <div className="mentor-perf-score-bar-cell">
+        <span className="mentor-perf-score-num" style={{ color: "#94a3b8" }}>N/A</span>
+        <div className="mentor-perf-mini-bar-bg" />
+      </div>
+    );
+  }
   const isWeak = value < target;
   const color = isWeak ? "#ef4444" : "#10b981";
   return (
@@ -86,6 +43,9 @@ function MiniBar({ value, target = 70 }) {
     </div>
   );
 }
+
+// ── Formatted score helper ─────────────────────────────────────────────────
+const fmt = (v) => (v == null ? "N/A" : `${v}%`);
 
 // ── Student Detail Panel ───────────────────────────────────────────────────
 function StudentDetailPanel({ student, onClose }) {
@@ -105,12 +65,12 @@ function StudentDetailPanel({ student, onClose }) {
       {/* KPI Grid */}
       <div className="mentor-perf-detail-grid">
         {[
-          { label: "Overall Score", value: `${student.overallScore}%`, color: oc },
-          { label: "Assessment", value: `${student.assessment}%` },
-          { label: "Coding", value: `${student.coding}%` },
-          { label: "Interview", value: `${student.interview}%` },
-          { label: "Attendance", value: `${student.attendance}%` },
-          { label: "Milestone", value: `${student.milestone}%` },
+          { label: "Overall Score", value: fmt(student.overallScore), color: oc },
+          { label: "Assessment", value: fmt(student.assessment) },
+          { label: "Coding", value: "N/A" },
+          { label: "Interview", value: "N/A" },
+          { label: "Attendance", value: fmt(student.attendance) },
+          { label: "Roadmap Progress", value: fmt(student.milestone) },
         ].map((k, i) => (
           <div key={i} className="mentor-perf-detail-kpi">
             <span className="mentor-perf-detail-kpi-label">{k.label}</span>
@@ -134,8 +94,8 @@ function StudentDetailPanel({ student, onClose }) {
               <div key={i} className="mentor-perf-weak-item">
                 <AlertTriangle size={14} color="#ef4444" />
                 <span className="mentor-perf-weak-item-name">{w.skill}</span>
-                <span className="mentor-perf-weak-item-score">{w.score}%</span>
-                <span style={{ fontSize: 11.5, color: "#94a3b8" }}>Target: {w.target}%</span>
+                <span className="mentor-perf-weak-item-score">{w.score == null ? "N/A" : `${w.score}%`}</span>
+                <span style={{ fontSize: 11.5, color: "#94a3b8" }}>Target: {w.target ?? 75}%</span>
               </div>
             ))}
           </div>
@@ -162,7 +122,7 @@ function StudentDetailPanel({ student, onClose }) {
 
 // ── Main Component ──────────────────────────────────────────────────────────
 export default function MentorPerformance() {
-  const [students, setStudents] = useState(defaultStudents);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [search, setSearch] = useState("");
@@ -178,28 +138,33 @@ export default function MentorPerformance() {
           setStudents(res.data.students);
         }
       })
-      .catch(() => {}) // graceful fallback
+      .catch(() => setStudents([]))
       .finally(() => setLoading(false));
   }, []);
 
   // Compute batch stats
+  const withScores = students.filter(s => s.overallScore != null);
   const totalStudents = students.length;
-  const avgOverall = totalStudents ? Math.round(students.reduce((a, s) => a + s.overallScore, 0) / totalStudents) : 0;
-  const needsImprovement = students.filter(s => s.overallScore < 60).length;
-  const excellent = students.filter(s => s.overallScore >= 85).length;
-  const batches = ["All", ...new Set(students.map(s => s.batch))];
+  const avgOverall = withScores.length ? Math.round(withScores.reduce((a, s) => a + s.overallScore, 0) / withScores.length) : null;
+  const needsImprovement = students.filter(s => s.overallScore != null && s.overallScore < 60).length;
+  const excellent = students.filter(s => s.overallScore != null && s.overallScore >= 85).length;
+  const batches = ["All", ...new Set(students.map(s => s.batch).filter(Boolean))];
 
   // Filter students
   const filtered = students.filter(s => {
-    const matchSearch = s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.department.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.department || "").toLowerCase().includes(search.toLowerCase());
     const matchBatch = batchFilter === "All" || s.batch === batchFilter;
-    const matchStatus = statusFilter === "All" || s.status === statusFilter;
-    const matchTab = activeTab === "all" || (activeTab === "weak" && s.overallScore < 65) || (activeTab === "excel" && s.overallScore >= 80);
+    const matchStatus = statusFilter === "All" ||
+      (statusFilter === "No Data" ? s.overallScore == null : s.status === statusFilter);
+    const matchTab =
+      activeTab === "all" ||
+      (activeTab === "weak" && s.overallScore != null && s.overallScore < 65) ||
+      (activeTab === "excel" && s.overallScore != null && s.overallScore >= 80);
     return matchSearch && matchBatch && matchStatus && matchTab;
   });
 
-  const scoreColor = (v, target = 70) => v < target ? "#ef4444" : v >= 85 ? "#10b981" : "#3b82f6";
+  const scoreColor = (v, target = 70) => (v == null ? "#94a3b8" : v < target ? "#ef4444" : v >= 85 ? "#10b981" : "#3b82f6");
 
   if (loading) {
     return (
@@ -238,7 +203,9 @@ export default function MentorPerformance() {
         </div>
         <div className="mentor-perf-stat-card">
           <span className="mentor-perf-stat-label">Batch Average</span>
-          <span className="mentor-perf-stat-value" style={{ color: scoreColor(avgOverall, 70) }}>{avgOverall}%</span>
+          <span className="mentor-perf-stat-value" style={{ color: scoreColor(avgOverall, 70) }}>
+            {avgOverall == null ? "N/A" : `${avgOverall}%`}
+          </span>
           <span className="mentor-perf-stat-sub">Overall performance</span>
         </div>
         <div className="mentor-perf-stat-card">
@@ -268,7 +235,7 @@ export default function MentorPerformance() {
           {batches.map(b => <option key={b} value={b}>{b === "All" ? "All Batches" : b}</option>)}
         </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          {["All", "Excellent", "Good", "Average", "Needs Work"].map(s => (
+          {["All", "Excellent", "Good", "Average", "Needs Work", "No Data"].map(s => (
             <option key={s} value={s}>{s === "All" ? "All Statuses" : s}</option>
           ))}
         </select>
@@ -278,8 +245,8 @@ export default function MentorPerformance() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="all">All Students ({students.length})</TabsTrigger>
-          <TabsTrigger value="weak">Needs Attention ({students.filter(s => s.overallScore < 65).length})</TabsTrigger>
-          <TabsTrigger value="excel">Top Performers ({students.filter(s => s.overallScore >= 80).length})</TabsTrigger>
+          <TabsTrigger value="weak">Needs Attention ({students.filter(s => s.overallScore != null && s.overallScore < 65).length})</TabsTrigger>
+          <TabsTrigger value="excel">Top Performers ({students.filter(s => s.overallScore != null && s.overallScore >= 80).length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="stack-4">
@@ -301,7 +268,13 @@ export default function MentorPerformance() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.length === 0 ? (
+                    {students.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", fontSize: 13 }}>
+                          No performance data available yet.
+                        </td>
+                      </tr>
+                    ) : filtered.length === 0 ? (
                       <tr>
                         <td colSpan={9} style={{ textAlign: "center", padding: "40px 20px", color: "#94a3b8", fontSize: 13 }}>
                           No students found matching the current filters.
@@ -315,7 +288,7 @@ export default function MentorPerformance() {
                             <td>
                               <div className="mentor-perf-student-cell">
                                 <div className="mentor-perf-avatar">
-                                  {s.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
+                                  {(s.name || "S").split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2)}
                                 </div>
                                 <div>
                                   <div className="mentor-perf-student-name">{s.name}</div>
@@ -324,22 +297,24 @@ export default function MentorPerformance() {
                               </div>
                             </td>
                             <td>
-                              <span style={{ fontSize: 15, fontWeight: 800, color: sc }}>{s.overallScore}%</span>
+                              <span style={{ fontSize: 15, fontWeight: 800, color: sc }}>
+                                {s.overallScore == null ? "N/A" : `${s.overallScore}%`}
+                              </span>
                             </td>
                             <td><MiniBar value={s.assessment} target={75} /></td>
-                            <td><MiniBar value={s.coding} target={70} /></td>
-                            <td><MiniBar value={s.interview} target={65} /></td>
+                            <td><MiniBar value={null} target={70} /></td>
+                            <td><MiniBar value={null} target={65} /></td>
                             <td><MiniBar value={s.attendance} target={75} /></td>
                             <td>
                               <span style={{ background: sb, color: sc, padding: "3px 10px", borderRadius: 20, fontSize: 11.5, fontWeight: 700 }}>
-                                {s.status}
+                                {s.overallScore == null ? "No Data" : s.status}
                               </span>
                             </td>
                             <td>
                               <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12.5, fontWeight: 600,
                                 color: s.trend === "up" ? "#10b981" : s.trend === "down" ? "#ef4444" : "#64748b" }}>
                                 {s.trend === "up" ? <ArrowUpRight size={14} /> : s.trend === "down" ? <ArrowDownRight size={14} /> : "—"}
-                                {s.trendDelta}
+                                {s.trendDelta || "N/A"}
                               </span>
                             </td>
                             <td>

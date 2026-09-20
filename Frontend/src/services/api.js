@@ -1,4 +1,4 @@
-const getApiBaseUrl = () => {
+export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   return "/api/v1";
@@ -7,18 +7,19 @@ const getApiBaseUrl = () => {
 const API_BASE_URL = getApiBaseUrl();
 
 async function request(endpoint, options = {}) {
+  const { skipAuthRedirect = false, ...fetchOptions } = options;
   const url = `${API_BASE_URL}${endpoint}`;
   const token = localStorage.getItem("token");
 
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+    ...fetchOptions.headers,
   };
 
   try {
-    const response = await fetch(url, { ...options, headers });
-    if (response.status === 401) {
+    const response = await fetch(url, { ...fetchOptions, headers });
+    if (response.status === 401 && !skipAuthRedirect) {
       // Unauthorized: clear expired or invalid credentials
       localStorage.removeItem("token");
       localStorage.removeItem("user");
@@ -38,6 +39,46 @@ async function request(endpoint, options = {}) {
     throw error;
   }
 }
+
+// Auth API
+export const authAPI = {
+  sendOtp: async (identifier) => {
+    const res = await request("/auth/send-otp", {
+      method: "POST",
+      body: JSON.stringify({ email: identifier, identifier }),
+      skipAuthRedirect: true,
+    });
+    return res.data;
+  },
+  verifyOtp: async (identifier, otp) => {
+    const res = await request("/auth/verify-otp", {
+      method: "POST",
+      body: JSON.stringify({ email: identifier, identifier, otp }),
+      skipAuthRedirect: true,
+    });
+    return res.data;
+  },
+  loginPassword: async (identifier, password) => {
+    const res = await request("/auth/login-password", {
+      method: "POST",
+      body: JSON.stringify({ email: identifier, identifier, password }),
+      skipAuthRedirect: true,
+    });
+    return res.data;
+  },
+  register: async (payload) => {
+    const res = await request("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+      skipAuthRedirect: true,
+    });
+    return res.data;
+  },
+  getMe: async () => {
+    const res = await request("/auth/me");
+    return res.data;
+  },
+};
 
 // Colleges API
 export const collegeAPI = {
@@ -140,6 +181,58 @@ export const assessmentAPI = {
       method: "POST",
       body: JSON.stringify(data),
     });
+    return res.data;
+  },
+};
+
+// Super Admin API
+export const superAdminAPI = {
+  overview: async () => {
+    const res = await request("/superadmin/overview");
+    return res.data;
+  },
+  colleges: async () => {
+    const res = await request("/superadmin/colleges");
+    return res.data;
+  },
+  departments: async () => {
+    const res = await request("/superadmin/departments");
+    return res.data;
+  },
+  batches: async () => {
+    const res = await request("/superadmin/batches");
+    return res.data;
+  },
+  coordinators: async () => {
+    const res = await request("/superadmin/coordinators");
+    return res.data;
+  },
+  mentors: async () => {
+    const res = await request("/superadmin/mentors");
+    return res.data;
+  },
+  students: async () => {
+    const res = await request("/superadmin/students");
+    return res.data;
+  },
+  attendance: async () => {
+    const res = await request("/superadmin/attendance");
+    return res.data;
+  },
+  performance: async () => {
+    const res = await request("/superadmin/performance");
+    return res.data;
+  },
+  weeklyReports: async () => {
+    const res = await request("/superadmin/weekly-reports");
+    return res.data;
+  },
+  roadmaps: async () => {
+    const res = await request("/superadmin/roadmaps");
+    return res.data;
+  },
+  verifications: async () => {
+    const res = await request("/superadmin/verifications");
     return res.data;
   },
 };

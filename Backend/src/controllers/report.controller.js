@@ -10,20 +10,25 @@ export const getWeeklyReports = async (req, res, next) => {
     const userId = req.user?.userId || req.user?.id;
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
 
-    // Fetch student's real performance metrics
+    // Fetch student's real performance metrics (null when no data — no fabricated scores)
     const [att] = await query(
       `SELECT attendance_percentage FROM attendance_summary WHERE user_id = ?`,
       [userId]
     );
-    const attendance = att ? Math.round(parseFloat(att.attendance_percentage) || 80) : 80;
+    const attendance = att && att.attendance_percentage != null
+      ? Math.round(parseFloat(att.attendance_percentage))
+      : null;
 
     const attempts = await query(
       `SELECT percentage FROM assessment_attempts WHERE user_id = ? AND status = 'completed'`,
       [userId]
     );
-    const avgQuiz = attempts.length > 0
-      ? Math.round(attempts.reduce((acc, a) => acc + (parseFloat(a.percentage) || 0), 0) / attempts.length)
-      : 75;
+    const validPcts = (attempts || [])
+      .map((a) => parseFloat(a.percentage))
+      .filter((v) => Number.isFinite(v));
+    const avgQuiz = validPcts.length > 0
+      ? Math.round(validPcts.reduce((acc, v) => acc + v, 0) / validPcts.length)
+      : null;
 
     // Check saved weekly reports from DB
     const dbReports = await query(
@@ -37,38 +42,25 @@ export const getWeeklyReports = async (req, res, next) => {
 
     let reports = [];
     if (dbReports && dbReports.length > 0) {
-      reports = dbReports.map((r) => ({
-        id: `week-${r.week_number}`,
-        title: r.title || `Week ${r.week_number} · Report`,
-        score: `${Math.round(r.avg_quiz_score || avgQuiz)}%`,
-        attendance: Math.round(r.attendance_rate || attendance),
-        quiz: Math.round(r.avg_quiz_score || avgQuiz),
-        coding: Math.round((r.avg_quiz_score || avgQuiz) * 0.9),
-        interview: Math.round((r.avg_quiz_score || avgQuiz) * 0.85),
-        milestones: "2 completed · 1 in progress",
-        skillGaps: r.topics_covered ? r.topics_covered.split(',').map(s => s.trim()) : ["Core Concepts", "API Design"],
-        nextSteps: r.recommendations ? r.recommendations.split(',').map(s => s.trim()) : ["Review latest assessments", "Complete assigned coding tasks"],
-      }));
-    } else {
-      // Dynamic reports based on real student metrics
-      reports = [
-        {
-          id: "week-32",
-          title: "Week 32 · Current Sprint",
-          score: `${Math.round((attendance * 0.4) + (avgQuiz * 0.6))}%`,
-          attendance,
-          quiz: avgQuiz,
-          coding: Math.round(avgQuiz * 0.92),
-          interview: Math.round(avgQuiz * 0.88),
-          milestones: "2 completed · 1 in progress",
-          skillGaps: ["DSA Optimization", "System Architecture"],
-          nextSteps: [
-            "Complete practice problem sets in practice arena",
-            "Maintain 80%+ attendance for placement eligibility",
-            "Review quiz feedback on completed modules",
-          ],
-        },
-      ];
+      reports = dbReports.map((r) => {
+        const quizScore = r.avg_quiz_score != null ? Math.round(r.avg_quiz_score) : avgQuiz;
+        const attendanceRate = r.attendance_rate != null ? Math.round(r.attendance_rate) : attendance;
+        return {
+          id: `week-${r.week_number}`,
+          title: r.title || `Week ${r.week_number} · Report`,
+          score: quizScore != null ? `${quizScore}%` : 'N/A',
+          attendance: attendanceRate,
+          quiz: quizScore,
+          coding: null,
+          interview: null,
+          skillGaps: r.topics_covered
+            ? r.topics_covered.split(',').map((s) => s.trim()).filter(Boolean)
+            : [],
+          nextSteps: r.recommendations
+            ? r.recommendations.split(',').map((s) => s.trim()).filter(Boolean)
+            : [],
+        };
+      });
     }
 
     return sendSuccess(res, 'Weekly reports retrieved successfully', reports);

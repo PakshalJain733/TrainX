@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Search,
@@ -16,12 +16,30 @@ import {
   CheckCircle,
   Filter,
 } from "lucide-react";
-import { coordinatorSkillGapStudents } from "../../../data/coordinatorMockData";
+import apiFetch from "../../../utils/api";
 import "../Styles/CodingPerformance.css";
 
 export default function StudentsNeedImprovement() {
-  const [dataList, setDataList] = useState(coordinatorSkillGapStudents);
+  const [dataList, setDataList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("all"); // "all", "immediate", "commonSkills", "improving", "notImproving"
+
+  useEffect(() => {
+    let mounted = true;
+    apiFetch("/coordinator/skill-gaps")
+      .then((data) => {
+        if (!mounted) return;
+        setDataList(data?.students || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err.message || "Failed to load skill gap data");
+        setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -35,8 +53,9 @@ export default function StudentsNeedImprovement() {
   // Remediation Plan Modal State
   const [remediationStudent, setRemediationStudent] = useState(null);
   const [planType, setPlanType] = useState("Custom Practice Set & Mentor Counseling");
-  const [planDeadline, setPlanDeadline] = useState("2026-09-15");
+  const [planDeadline, setPlanDeadline] = useState("");
   const [planNotes, setPlanNotes] = useState("");
+  const [assigning, setAssigning] = useState(false);
 
   // Extract Unique Departments & Batches for Filters
   const departments = Array.from(new Set(dataList.map((s) => s.department)));
@@ -99,24 +118,45 @@ export default function StudentsNeedImprovement() {
     sourcesList: Array.from(item.sources).join(", ")
   })).sort((a, b) => b.count - a.count);
 
-  const handleAssignPlan = (e) => {
+  const handleAssignPlan = async (e) => {
     e.preventDefault();
     if (!remediationStudent) return;
+    setAssigning(true);
+
+    const topics = remediationStudent.weakSkills.map((w) => w.skillName);
+    const results = [];
+    for (const topic of topics) {
+      try {
+        const res = await apiFetch("/skill-gaps/remedial", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            topic,
+            studentId: remediationStudent.studentId,
+            batchId: remediationStudent.batchId,
+            difficultyLevel: remediationStudent.priority === "High" ? "Hard" : "Medium",
+          }),
+        });
+        results.push(res);
+      } catch (err) {
+        results.push(null);
+      }
+    }
 
     const updated = dataList.map((s) => {
-      if (s.id === remediationStudent.id) {
+      if (s.studentId === remediationStudent.studentId) {
         return {
           ...s,
-          trendStatus: "Improving",
           assignedPlan: planType,
-          targetDeadline: planDeadline,
-          notes: planNotes || "Remediation plan assigned by coordinator."
+          targetDeadline: planDeadline || "—",
+          notes: planNotes || "Remediation plan assigned by coordinator.",
         };
       }
       return s;
     });
 
     setDataList(updated);
+    setAssigning(false);
     alert(`Remedial action plan assigned to ${remediationStudent.studentName} successfully!`);
     setRemediationStudent(null);
   };
@@ -145,6 +185,22 @@ export default function StudentsNeedImprovement() {
         return "coord-perf-diff-pill coord-perf-diff-pill--easy";
     }
   };
+
+  if (loading) {
+    return (
+      <div className="coord-perf-container" style={{ padding: "48px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
+        Loading skill gap analysis...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="coord-perf-container" style={{ padding: "48px", textAlign: "center", color: "#e11d48", fontSize: "14px" }}>
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="coord-perf-container">

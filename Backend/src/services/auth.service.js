@@ -14,7 +14,7 @@ import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 
 export const registerUser = async (data) => {
-  const { name, email, mobile_number, password, role, roll_number, department, year, division, semester, college_id } = data;
+  const { name, email, mobile_number, password, roll_number, department, year, division, semester } = data;
 
   // Check if user exists by email or mobile number
   if (email) {
@@ -35,14 +35,10 @@ export const registerUser = async (data) => {
     }
   }
 
-  // Map role
-  let canonicalRole = ROLES.STUDENT;
-  if (role) {
-    const lowerRole = role.toLowerCase();
-    if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
-    else if (lowerRole.includes('hod') || lowerRole.includes('admin')) canonicalRole = ROLES.COLLEGE_ADMIN;
-    else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
-  }
+  // SECURITY: Public self-registration can only ever create a student account.
+  // Privileged roles (mentor/coordinator/college_admin/super_admin) must be
+  // assigned by an authenticated admin via the admin user-management endpoint.
+  const canonicalRole = ROLES.STUDENT;
 
   const password_hash = password ? await bcrypt.hash(password, 10) : null;
 
@@ -52,7 +48,7 @@ export const registerUser = async (data) => {
     email: email || '',
     mobile_number: mobile_number || '',
     role: canonicalRole,
-    college_id: college_id || 1,
+    college_id: 1,
     password_hash,
   });
 

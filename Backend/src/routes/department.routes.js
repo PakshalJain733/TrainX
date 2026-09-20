@@ -5,12 +5,17 @@ import {
   updateDepartment,
   deleteDepartment,
 } from '../controllers/department.controller.js';
+import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authorizeRoles } from '../middleware/role.middleware.js';
+import { ROLES } from '../utils/constants.js';
 
 const router = Router();
 
+router.use(authenticateToken);
+
 router.get('/', getDepartments);
-router.post('/', createDepartment);
-router.put('/:id', updateDepartment);
-router.delete('/:id', deleteDepartment);
+router.post('/', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN), createDepartment);
+router.put('/:id', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN), updateDepartment);
+router.delete('/:id', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN), deleteDepartment);
 
 export default router;

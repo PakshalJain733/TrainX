@@ -10,6 +10,7 @@ import {
   saveAnswersModel,
   getAttemptAnswersModel,
 } from '../models/assessment.model.js';
+import { assertCollegeScope } from '../utils/collegeAccess.js';
 
 // ─── VALID ANSWER OPTIONS ──────────────────────────────────────────────────────
 const VALID_OPTIONS = new Set(['A', 'B', 'C', 'D', 'a', 'b', 'c', 'd']);
@@ -35,10 +36,15 @@ export const getAssessmentDetailsService = async (assessmentId, isStaff = false,
   }
 
   // College isolation check: if assessment is bound to a college, user's college must match (unless super_admin / global)
-  if (userCollegeId && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
-    const error = new Error("Access forbidden: Cannot view quiz data belonging to another college");
-    error.statusCode = 403;
-    throw error;
+  const denied = assertCollegeScope({
+    userRole,
+    userCollegeId,
+    resourceCollegeId: assessment.college_id,
+    message: 'Access forbidden: Cannot view quiz data belonging to another college',
+  });
+  if (denied) {
+    denied.statusCode = 403;
+    throw denied;
   }
 
   const questions = await getAssessmentQuestionsModel(assessmentId, isStaff);
@@ -216,10 +222,15 @@ export const startAssessmentService = async (assessmentId, userId, userRole = 's
   }
 
   // 3. College isolation check
-  if (userCollegeId && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
-    const error = new Error("Access forbidden: Cannot access quiz belonging to another college");
-    error.statusCode = 403;
-    throw error;
+  const denied = assertCollegeScope({
+    userRole,
+    userCollegeId,
+    resourceCollegeId: assessment.college_id,
+    message: 'Access forbidden: Cannot access quiz belonging to another college',
+  });
+  if (denied) {
+    denied.statusCode = 403;
+    throw denied;
   }
 
   // 4. Check published
@@ -323,10 +334,15 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     throw error;
   }
 
-  if (userCollegeId && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
-    const error = new Error("Access forbidden: Cannot submit quiz belonging to another college");
-    error.statusCode = 403;
-    throw error;
+  const deniedCollege = assertCollegeScope({
+    userRole,
+    userCollegeId,
+    resourceCollegeId: assessment.college_id,
+    message: 'Access forbidden: Cannot submit quiz belonging to another college',
+  });
+  if (deniedCollege) {
+    deniedCollege.statusCode = 403;
+    throw deniedCollege;
   }
 
   // 5. Fetch authoritative questions WITH correct answers
@@ -460,7 +476,7 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     ? parseFloat(assessment.pass_marks)
     : (assessment.passing_percentage ? (parseFloat(assessment.passing_percentage) * totalPossibleMarks / 100) : (0.6 * totalPossibleMarks));
 
-  const finalStatus = marksObtained >= passMarksThreshold ? 'passed' : 'failed';
+  const passed = marksObtained >= passMarksThreshold;
 
   // 10. Save graded answers to DB
   await saveAnswersModel(attemptId, gradedAnswers);
@@ -484,6 +500,8 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     assessmentId: assessment.id,
     assessmentTitle: assessment.title,
     category: assessment.category,
+    status: 'completed',
+    passed,
     scoring: {
       total_questions: totalQuestions,
       attempted_questions: attemptedQuestions,
@@ -494,7 +512,7 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
       total_marks: totalPossibleMarks,
       percentage: `${percentage}%`,
       pass_marks: passMarksThreshold,
-      status: finalStatus,
+      passed,
     },
     breakdown: gradedAnswers,
     submitted_at: new Date().toISOString(),

@@ -430,6 +430,83 @@
   text-decoration: underline;
 }
 
+/* DEV-ONLY password login (rendered only when VITE_ENABLE_DEV_LOGIN=true) */
+.dev-login-box {
+  margin-top: 8px;
+  border: 1.5px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fffbeb;
+}
+
+.dev-login-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #92400e;
+}
+
+.dev-login-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #f59e0b;
+  border-radius: 4px;
+  padding: 3px 8px;
+  letter-spacing: 0.04em;
+}
+
+.dev-login-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dev-login-box input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.dev-login-box input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.dev-login-btn {
+  width: 100%;
+  padding: 11px 18px;
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.dev-login-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.dev-login-box .auth-error-msg {
+  margin: 10px 0 0 0;
+}
+
 /* OTP Specifics */
 .login-email-header-row {
   display: flex;

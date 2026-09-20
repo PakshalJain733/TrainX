@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   CheckCircle2,
@@ -13,20 +13,60 @@ import {
   UserCheck,
   Clock,
   Calendar,
-  Layers
+  Layers,
+  Info,
 } from "lucide-react";
-import { coordinatorInterviewRecords, coordinatorBatches } from "../../../data/coordinatorMockData";
+import apiFetch from "../../../utils/api";
 import "../Styles/CodingPerformance.css";
 
 export default function InterviewPerformance() {
+  const [records, setRecords] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedInterview, setSelectedInterview] = useState(null);
 
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      apiFetch("/coordinator/students"),
+      apiFetch("/coordinator/batches"),
+    ])
+      .then(([stuRes, batchRes]) => {
+        if (!mounted) return;
+        const batchList = batchRes?.batches || [];
+        const list = (stuRes?.students || []).map((s, idx) => ({
+          id: `st-${s.studentId}`,
+          studentInfoId: idx,
+          studentName: s.name || "Unknown Student",
+          rollNo: s.rollNumber || "—",
+          department: s.department || "CSE",
+          batch: s.batch || "General Batch",
+          interviewType: "Technical Mock",
+          conductedDate: "—",
+          status: "Not Attempted",
+          overallScore: "—",
+          grade: "—",
+          targetRole: "",
+        }));
+        setBatches(batchList);
+        setRecords(list);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err.message || "Failed to load interview records");
+        setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
   // Filters
-  const filteredInterviews = coordinatorInterviewRecords.filter((rec) => {
+  const filteredInterviews = records.filter((rec) => {
     const matchesSearch =
       rec.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       rec.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -37,17 +77,19 @@ export default function InterviewPerformance() {
     return matchesSearch && matchesDept && matchesBatch && matchesStatus;
   });
 
-  const totalStudentsCount = 120;
-  const completedCount = 85;
-  const pendingCount = 35;
-  const averageScore = "72%";
+  const totalStudentsCount = records.length;
+  const completedCount = records.filter((r) => r.status === "Completed").length;
+  const pendingCount = records.filter((r) => r.status !== "Completed").length;
+  const averageScore = "N/A";
 
   const categoryCounts = {
-    excellent: 20,
-    good: 35,
-    average: 22,
-    needsWork: 8
+    excellent: 0,
+    good: 0,
+    average: 0,
+    needsWork: 0,
   };
+
+  const departments = Array.from(new Set(records.map((r) => r.department)).values());
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -76,6 +118,14 @@ export default function InterviewPerformance() {
         return "coord-perf-status--struggling";
     }
   };
+
+  if (loading) {
+    return <div className="coord-perf-container" style={{ padding: "48px", textAlign: "center", color: "#64748b" }}>Loading interview performance...</div>;
+  }
+
+  if (error) {
+    return <div className="coord-perf-container" style={{ padding: "48px", textAlign: "center", color: "#e11d48" }}>{error}</div>;
+  }
 
   // Evaluation View
   if (selectedInterview) {
@@ -251,6 +301,12 @@ export default function InterviewPerformance() {
         </button>
       </div>
 
+      {/* Data availability banner */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderRadius: "12px", background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#5b21b6", fontSize: "13px", fontWeight: 600, marginBottom: "16px" }}>
+        <Info size={16} />
+        AI mock interview evaluations are not available yet. All enrolled students are listed as "Not Attempted".
+      </div>
+
       {/* KPI Cards */}
       <div className="coord-perf-kpi-grid">
         <div className="coord-perf-kpi-card">
@@ -305,7 +361,7 @@ export default function InterviewPerformance() {
             <BarChart2 size={16} style={{ color: "#4f46e5" }} />
             Performance Categories Distribution
           </h3>
-          <span style={{ fontSize: "12px", color: "#94a3b8", marginLeft: "auto" }}>120 Total Candidates</span>
+          <span style={{ fontSize: "12px", color: "#94a3b8", marginLeft: "auto" }}>{records.length} Total Candidates</span>
         </div>
 
         <div className="coord-perf-cat-grid">
@@ -365,10 +421,9 @@ export default function InterviewPerformance() {
               className="coord-perf-select"
             >
               <option value="all">All Departments</option>
-              <option value="CSE">CSE</option>
-              <option value="IT">IT</option>
-              <option value="AI & DS">AI & DS</option>
-              <option value="ECS">ECS</option>
+              {departments.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
             </select>
 
             <select
@@ -377,7 +432,7 @@ export default function InterviewPerformance() {
               className="coord-perf-select"
             >
               <option value="all">All Batches</option>
-              {coordinatorBatches.map((b) => (
+              {batches.map((b) => (
                 <option key={b.id} value={b.name}>
                   {b.name}
                 </option>
@@ -404,7 +459,7 @@ export default function InterviewPerformance() {
           <div>
             <h3 className="coord-perf-card-title">Student Interview Roster</h3>
             <p className="coord-perf-card-sub">
-              Showing {filteredInterviews.length} of {coordinatorInterviewRecords.length} student interview evaluation records
+              Showing {filteredInterviews.length} of {records.length} student interview evaluation records
             </p>
           </div>
         </div>
@@ -429,7 +484,7 @@ export default function InterviewPerformance() {
                     <div>
                       <div
                         className="coord-perf-student-name"
-                        onClick={() => setSelectedInterview(rec)}
+                        onClick={() => { if (rec.status === "Completed") setSelectedInterview(rec); }}
                       >
                         {rec.studentName}
                       </div>
@@ -458,8 +513,8 @@ export default function InterviewPerformance() {
 
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontWeight: 800, fontSize: "13px", color: "#0f172a" }}>{rec.overallScore}%</span>
-                      <span className={`coord-perf-status-badge ${getCategoryBadgeClass(rec.grade)}`}>
+                      <span style={{ fontWeight: 800, fontSize: "13px", color: "#0f172a" }}>{rec.overallScore}</span>
+                      <span className={`coord-perf-status-badge ${rec.grade === "—" ? "coord-perf-status--default" : getCategoryBadgeClass(rec.grade)}`}>
                         {rec.grade}
                       </span>
                     </div>
@@ -467,11 +522,11 @@ export default function InterviewPerformance() {
 
                   <td style={{ textAlign: "right" }}>
                     <button
-                      onClick={() => setSelectedInterview(rec)}
+                      onClick={() => { if (rec.status === "Completed") setSelectedInterview(rec); }}
                       className="coord-perf-btn coord-perf-btn--purple-light"
                     >
                       <Eye size={14} />
-                      View Details
+                      {rec.status === "Completed" ? "View Details" : "No Evaluation"}
                     </button>
                   </td>
                 </tr>

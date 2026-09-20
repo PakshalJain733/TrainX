@@ -21,7 +21,7 @@ export const getLeaderboardData = async (req, res, next) => {
     const studentRows = await query(
       `SELECT u.id, u.name, s.department, s.batch_id, b.name as batch_name,
               COALESCE(att.attendance_percentage, 0) as attendance_pct,
-              COALESCE(ROUND(AVG(aa.percentage), 1), 60.0) as avg_assessment
+              COALESCE(ROUND(AVG(aa.percentage), 1), 0.0) as avg_assessment
        FROM users u
        JOIN students s ON u.id = s.user_id
        LEFT JOIN batches b ON s.batch_id = b.id
@@ -71,11 +71,11 @@ export const getLeaderboardData = async (req, res, next) => {
       ...s,
     }));
 
-    // Milestone leaderboard
+    // Milestone leaderboard (ranked by real attendance performance, no fabricated multiplier)
     const milestone = scoredStudents
       .map((s) => ({
         ...s,
-        score: Math.min(100, Math.round(s.score * 1.05)),
+        score: s.score,
       }))
       .sort((a, b) => b.score - a.score)
       .map((s, idx) => ({
@@ -87,7 +87,7 @@ export const getLeaderboardData = async (req, res, next) => {
     const batchRows = await query(
       `SELECT b.id, b.name,
               COUNT(DISTINCT s.id) as student_count,
-              COALESCE(ROUND(AVG(aa.percentage), 1), 75.0) as avg_score
+              COALESCE(ROUND(AVG(aa.percentage), 1), 0.0) as avg_score
        FROM batches b
        LEFT JOIN students s ON b.id = s.batch_id
        LEFT JOIN assessment_attempts aa ON s.user_id = aa.user_id
@@ -110,7 +110,7 @@ export const getLeaderboardData = async (req, res, next) => {
         rank: idx + 1,
         name: b.name,
         students: b.student_count || 0,
-        score: Math.round(parseFloat(b.avg_score) || 75),
+        score: Math.round(parseFloat(b.avg_score) || 0),
         initials,
       };
     });

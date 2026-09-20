@@ -21,18 +21,12 @@ import {
   LineChart,
   Briefcase,
 } from "lucide-react";
-import {
-  coordinatorAssessments,
-  coordinatorBatches,
-  coordinatorQuizActivityLogs,
-  coordinatorDetailedQuizScorecards,
-  coordinatorStudents,
-} from "../../../data/coordinatorMockData";
 import CoordinatorAttendance from "./Attendance";
 import CoordinatorPlacement from "./Placement";
 import "../Styles/Assessments.css";
 
 import { assessmentAPI } from "../../../services/api";
+import { apiFetch } from "../../../utils/api";
 
 export default function CoordinatorAssessments() {
   const location = useLocation();
@@ -44,8 +38,10 @@ export default function CoordinatorAssessments() {
   };
 
   const [mainTab, setMainTab] = useState(getInitialTab);
-  const [assessments, setAssessments] = useState(coordinatorAssessments);
-  const [activityLogs, setActivityLogs] = useState(coordinatorQuizActivityLogs);
+  const [assessments, setAssessments] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [activeTab, setActiveTab] = useState("directory"); // 'directory', 'live_feed', 'analytics'
   const [modalTab, setModalTab] = useState("scorecard"); // 'scorecard', 'questions'
@@ -55,18 +51,85 @@ export default function CoordinatorAssessments() {
 
   // Create Quiz Form
   const [title, setTitle] = useState("");
-  const [batch, setBatch] = useState(coordinatorBatches[0].name);
+  const [newBatchId, setNewBatchId] = useState("");
   const [type, setType] = useState("MCQ Quiz");
   const [dueDate, setDueDate] = useState("");
 
-  const fetchAssessments = async () => {
+  const normalizeAssessment = (a) => ({
+    id: a.id,
+    title: a.title || "Untitled Assessment",
+    batch: a.batch_name || "All Batches",
+    type: a.type || a.category || "MCQ Quiz",
+    dueDate: a.due_date ? String(a.due_date).slice(0, 10) : "—",
+    status:
+      a.status === "published"
+        ? "Active"
+        : a.status === "completed"
+        ? "Completed"
+        : a.status === "draft"
+        ? "Draft"
+        : a.status || "Draft",
+    passPercentage: Number(a.pass_marks) > 0 ? Math.round((Number(a.pass_marks) / Number(a.total_marks || 1)) * 100) : 60,
+    submissions: "—",
+    avgScore: "—",
+    passRate: "—",
+  });
+
+  const enrichWithResults = async (a) => {
+    let results = [];
     try {
-      const data = await assessmentAPI.getAssessments();
-      if (data && Array.isArray(data) && data.length > 0) {
-        setAssessments(data);
-      }
+      const r = await apiFetch(`/assessments/${a.id}/results`);
+      if (r && Array.isArray(r.data)) results = r.data;
     } catch (err) {
-      console.warn("Using local assessments fallback data.");
+      results = [];
+    }
+    const scores = results.map((s) => Number(s.percentage) || 0);
+    const avg = scores.length ? Math.round(scores.reduce((x, y) => x + y, 0) / scores.length) : null;
+    const passed = results.filter((s) => (Number(s.percentage) || 0) >= a.passPercentage).length;
+    return {
+      ...a,
+      submissions: String(results.length),
+      avgScore: avg == null ? "—" : `${avg}%`,
+      passRate: results.length ? `${Math.round((passed / results.length) * 100)}%` : "—",
+      _results: results,
+      _avg: avg,
+      _passed: passed,
+    };
+  };
+
+  const fetchAssessments = async () => {
+    setLoading(true);
+    try {
+      const [batchRes, data] = await Promise.all([
+        apiFetch("/coordinator/batches"),
+        assessmentAPI.getAssessments().catch(() => []),
+      ]);
+      const bch = (batchRes && batchRes.data && Array.isArray(batchRes.data.batches)) ? batchRes.data.batches : [];
+      setBatches(bch);
+      if (bch.length > 0) setNewBatchId(String(bch[0].id));
+      const list = Array.isArray(data) ? data : [];
+      const normalized = await Promise.all(list.map((a) => enrichWithResults(normalizeAssessment(a))));
+      setAssessments(normalized);
+      setActivityLogs(
+        normalized.flatMap((a) =>
+          (a._results || []).map((r) => ({
+            id: r.id,
+            studentName: r.student_name || "Student",
+            rollNo: r.roll_number || `R-${r.user_id}`,
+            batch: r.batch_name || a.batch || "—",
+            quizTitle: a.title,
+            score: `${r.percentage}%`,
+            status: (Number(r.percentage) || 0) >= a.passPercentage ? "Passed" : "Retake",
+            timeSpent: "—",
+            submittedAt: r.submitted_at ? new Date(r.submitted_at).toLocaleDateString() : "—",
+          }))
+        )
+      );
+    } catch (err) {
+      setAssessments([]);
+      setActivityLogs([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,32 +149,66 @@ export default function CoordinatorAssessments() {
     e.preventDefault();
     if (!title.trim()) return;
 
-    const newAssessment = {
-      id: Date.now(),
-      title,
-      batch,
-      type,
-      dueDate: dueDate || "2026-09-10",
-      submissions: "0 / 120",
-      avgScore: "--",
-      passRate: "--",
-      status: "Active",
-    };
-
     try {
-      const created = await assessmentAPI.createAssessment(newAssessment);
-      setAssessments([created, ...assessments]);
+      await assessmentAPI.createAssessment({
+        title: title.trim(),
+        category: type,
+        batch_id: newBatchId ? Number(newBatchId) : null,
+        due_date: dueDate,
+        description: "",
+      });
+      fetchAssessments();
     } catch (err) {
-      setAssessments([newAssessment, ...assessments]);
+      alert(err.message || "Failed to publish quiz");
     }
 
     setShowCreateModal(false);
     setTitle("");
   };
 
-  const currentScorecard = selectedQuiz
-    ? coordinatorDetailedQuizScorecards[selectedQuiz.id] || coordinatorDetailedQuizScorecards[1]
-    : null;
+  const openScorecard = async (a) => {
+    setSelectedQuiz(a);
+    setModalTab("scorecard");
+    try {
+      const r = await apiFetch(`/assessments/${a.id}/results`);
+      const results = (r && Array.isArray(r.data)) ? r.data : [];
+      const scores = results.map((s) => Number(s.percentage) || 0);
+      const avg = scores.length ? Math.round(scores.reduce((x, y) => x + y, 0) / scores.length) : 0;
+      const highest = scores.length ? Math.max(...scores) : 0;
+      const passed = results.filter((s) => (Number(s.percentage) || 0) >= a.passPercentage).length;
+      setSelectedQuiz((prev) => ({
+        ...(prev || a),
+        attempted: results.length,
+        totalEnrolled: results.length,
+        avgScore: `${avg}%`,
+        highestScore: `${highest}%`,
+        passedCount: passed,
+        studentSubmissions: results.map((s) => ({
+          id: s.id,
+          name: s.student_name || "Student",
+          rollNo: s.roll_number || `R-${s.user_id}`,
+          score: Number(s.percentage) || 0,
+          correctCount: s.correct_count || 0,
+          timeSpent: "—",
+          status: (Number(s.percentage) || 0) >= a.passPercentage ? "Passed" : "Needs Retake",
+        })),
+        questionAnalytics: [],
+      }));
+    } catch (err) {
+      setSelectedQuiz((prev) => ({
+        ...(prev || a),
+        attempted: 0,
+        totalEnrolled: 0,
+        avgScore: "—",
+        highestScore: "—",
+        passedCount: 0,
+        studentSubmissions: [],
+        questionAnalytics: [],
+      }));
+    }
+  };
+
+  const currentScorecard = selectedQuiz;
 
   return (
     <div>
@@ -142,24 +239,24 @@ export default function CoordinatorAssessments() {
       <div className="coord-stats-grid" style={{ marginBottom: "20px" }}>
         <div className="coord-stat-card">
           <div className="coord-stat-top">
-            <span className="coord-stat-label">Active Quizzes</span>
+            <span className="coord-stat-label">Published Quizzes</span>
             <div className="coord-stat-icon-bg" style={{ background: "#eff6ff", color: "#2563eb" }}>
               <FileCheck2 size={18} />
             </div>
           </div>
-          <div className="coord-stat-value">4 Active</div>
-          <div className="coord-stat-subtext">Across 4 managed batches</div>
+          <div className="coord-stat-value">{assessments.length} Total</div>
+          <div className="coord-stat-subtext">Across your college</div>
         </div>
 
         <div className="coord-stat-card">
           <div className="coord-stat-top">
-            <span className="coord-stat-label">Submission Rate</span>
+            <span className="coord-stat-label">Total Attempts</span>
             <div className="coord-stat-icon-bg" style={{ background: "#ecfdf5", color: "#059669" }}>
               <Zap size={18} />
             </div>
           </div>
-          <div className="coord-stat-value">91.2%</div>
-          <div className="coord-stat-subtext">279 / 335 total attempts</div>
+          <div className="coord-stat-value">{activityLogs.length}</div>
+          <div className="coord-stat-subtext">Recorded submissions</div>
         </div>
 
         <div className="coord-stat-card">
@@ -170,9 +267,12 @@ export default function CoordinatorAssessments() {
             </div>
           </div>
           <div className="coord-stat-value" style={{ color: "#7c3aed" }}>
-            84.5%
+            {(() => {
+              const scores = assessments.map((a) => a._avg).filter((v) => v != null);
+              return scores.length ? `${Math.round(scores.reduce((x, y) => x + y, 0) / scores.length)}%` : "—";
+            })()}
           </div>
-          <div className="coord-stat-subtext">+3.2% vs last quiz</div>
+          <div className="coord-stat-subtext">Across all quizzes</div>
         </div>
 
         <div className="coord-stat-card">
@@ -183,9 +283,9 @@ export default function CoordinatorAssessments() {
             </div>
           </div>
           <div className="coord-stat-value" style={{ color: "#e11d48" }}>
-            14 Students
+            {activityLogs.filter((l) => l.status !== "Passed").length} Students
           </div>
-          <div className="coord-stat-subtext">Scored &lt;60% cutoff</div>
+          <div className="coord-stat-subtext">Below pass cutoff</div>
         </div>
       </div>
 
@@ -234,7 +334,7 @@ export default function CoordinatorAssessments() {
               onChange={(e) => setBatchFilter(e.target.value)}
             >
               <option value="All">All Batches</option>
-              {coordinatorBatches.map((b) => (
+              {batches.map((b) => (
                 <option key={b.id} value={b.name}>
                   {b.name}
                 </option>
@@ -286,10 +386,7 @@ export default function CoordinatorAssessments() {
                   <button
                     className="coord-btn coord-btn--primary"
                     style={{ fontSize: "12px", padding: "8px 14px" }}
-                    onClick={() => {
-                      setSelectedQuiz(a);
-                      setModalTab("scorecard");
-                    }}
+                    onClick={() => openScorecard(a)}
                   >
                     View Scorecard & Activity
                   </button>
@@ -342,80 +439,29 @@ export default function CoordinatorAssessments() {
       {/* VIEW 3: QUESTION ANALYTICS & TOPIC MASTERY */}
       {activeTab === "analytics" && (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {/* Topic Mastery Radar Cards */}
+          {/* Topic Mastery */}
           <div className="coord-card">
             <div className="coord-card-title">
               <BarChart2 size={18} color="#7c3aed" />
               Department Topic Mastery & Proficiency Audit
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px", marginTop: "12px" }}>
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Graph Theory & Shortest Path</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#059669", marginTop: "2px" }}>88% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>High Proficiency</div>
+            {activityLogs.length === 0 ? (
+              <div style={{ padding: "36px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                No submissions yet — topic-level accuracy analytics will appear as students complete quizzes.
               </div>
-
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Topological Sorting & Kahn Algo</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#d97706", marginTop: "2px" }}>64% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#d97706", marginTop: "4px" }}>Moderate Skill Gap</div>
+            ) : (
+              <div style={{ padding: "16px 0", color: "#64748b", fontSize: 13 }}>
+                Question-by-question analytics are computed per assessment from its scorecard. Open any quiz and use
+                the "Question-by-Question Breakdown" tab.
               </div>
-
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Disjoint Set Union (Union-Find)</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#059669", marginTop: "2px" }}>92% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#059669", marginTop: "4px" }}>Mastered</div>
-              </div>
-
-              <div style={{ background: "#f8fafc", padding: "14px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Dynamic Programming Memoization</div>
-                <div style={{ fontSize: "20px", fontWeight: 800, color: "#e11d48", marginTop: "2px" }}>58% Accuracy</div>
-                <div style={{ fontSize: "11px", color: "#e11d48", marginTop: "4px" }}>Requires Tutorial Remediation</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Hardest Questions Analysis */}
-          <div className="coord-card">
-            <div className="coord-card-title">
-              <HelpCircle size={18} color="#e11d48" />
-              Hardest Questions & Low Accuracy Alert
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
-              <div className="question-analytic-box">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span className="question-tag">Dynamic Programming</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#e11d48" }}>Only 42% Correct</span>
-                </div>
-                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>
-                  Q: Space complexity difference between Bottom-Up Tabulation and Top-Down Memoization for 0/1 Knapsack
-                </div>
-                <div style={{ fontSize: "12px", color: "#64748b" }}>
-                  Common Mistake: 38% of students overlooked auxiliary recursion call stack memory depth.
-                </div>
-              </div>
-
-              <div className="question-analytic-box">
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span className="question-tag">Topological Sort</span>
-                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#d97706" }}>64% Correct</span>
-                </div>
-                <div style={{ fontWeight: 700, fontSize: "14px", color: "#0f172a" }}>
-                  Q: Detecting cycles in Directed Acyclic Graphs (DAG) using In-Degree reduction
-                </div>
-                <div style={{ fontSize: "12px", color: "#64748b" }}>
-                  Common Mistake: Confused Undirected DFS visited array with Directed recursion stack tracking.
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
       {/* DETAILED QUIZ RESULTS & SCORECARD MODAL */}
-      {selectedQuiz && currentScorecard && (
+      {selectedQuiz && (
         <div className="coord-modal-backdrop" onClick={() => setSelectedQuiz(null)}>
           <div className="coord-modal coord-modal--lg" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
@@ -539,22 +585,28 @@ export default function CoordinatorAssessments() {
             {/* TAB 2: QUESTION BREAKDOWN */}
             {modalTab === "questions" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {currentScorecard.questionAnalytics.map((q) => (
-                  <div key={q.qNo} className="question-analytic-box">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span className="question-tag">{q.topic}</span>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#059669" }}>
-                        {q.correctPct} Correct Answers
-                      </span>
-                    </div>
-                    <div style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>
-                      Q{q.qNo}: {q.text}
-                    </div>
-                    <div style={{ fontSize: "11px", color: "#64748b" }}>
-                      Difficulty Level: <strong>{q.difficulty}</strong>
-                    </div>
+                {currentScorecard.questionAnalytics.length === 0 ? (
+                  <div style={{ padding: "24px", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>
+                    Per-question accuracy data is not available yet for this assessment.
                   </div>
-                ))}
+                ) : (
+                  currentScorecard.questionAnalytics.map((q) => (
+                    <div key={q.qNo} className="question-analytic-box">
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span className="question-tag">{q.topic}</span>
+                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#059669" }}>
+                          {q.correctPct} Correct Answers
+                        </span>
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: "13px", color: "#0f172a" }}>
+                        Q{q.qNo}: {q.text}
+                      </div>
+                      <div style={{ fontSize: "11px", color: "#64748b" }}>
+                        Difficulty Level: <strong>{q.difficulty}</strong>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -582,12 +634,13 @@ export default function CoordinatorAssessments() {
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Target Batch</label>
                 <select
-                  value={batch}
-                  onChange={(e) => setBatch(e.target.value)}
+                  value={newBatchId}
+                  onChange={(e) => setNewBatchId(e.target.value)}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
                 >
-                  {coordinatorBatches.map((b) => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
+                  <option value="">All Batches</option>
+                  {batches.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
                   ))}
                 </select>
               </div>

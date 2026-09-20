@@ -1,19 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import StatsCard from '../../components/SuperAdmin/StatsCard';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
-import { overviewStats, initialColleges, initialAdminVerifications } from '../../data/superAdminMockData';
-import { Building2, ShieldAlert, ArrowUpRight, CheckCircle2, Clock, Shield, Sparkles, FolderOpen, Layers } from 'lucide-react';
+import { superAdminAPI } from '../../services/api';
+import { Building2, ShieldAlert, ArrowUpRight, Clock, Shield, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import EmptyState from '../../components/ui/EmptyState';
 import './SuperAdmin.css';
 
 export default function Overview() {
-  const stats = overviewStats.length > 0 ? overviewStats : [
-    { id: 1, label: "Total Partner Colleges", value: "0", change: "No colleges registered", trend: "up", icon: "Building2" },
-    { id: 2, label: "Enrolled Students", value: "0", change: "Awaiting student sync", trend: "up", icon: "Users" },
-    { id: 3, label: "Active Trainers / Mentors", value: "0", change: "No active mentors", trend: "up", icon: "GraduationCap" },
-    { id: 4, label: "Pending Admin Requests", value: "0", change: "All verifications clear", trend: "up", icon: "ShieldAlert" },
-  ];
+  const [stats, setStats] = useState([]);
+  const [colleges, setColleges] = useState([]);
+  const [verifications, setVerifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    superAdminAPI.overview()
+      .then((data) => {
+        if (data) {
+          setStats(data.stats || []);
+          setColleges(data.colleges || []);
+          setVerifications(data.verifications || []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -21,14 +33,14 @@ export default function Overview() {
       <div className="overview-hero-card">
         <div className="overview-hero-left">
           <div className="overview-hero-avatar">
-            SR
+            <Shield size={20} />
           </div>
           <div>
             <div className="overview-hero-eyebrow">
               <Sparkles size={13} /> INSTITUTIONAL SUPER ADMIN CONTROL HUB
             </div>
             <h1 className="overview-hero-title">
-              Welcome back, Dr. Sara Rao!
+              Welcome back!
             </h1>
             <p className="overview-hero-desc">
               Cross-college portal status, active student engagement analytics, and faculty allocations.
@@ -48,7 +60,7 @@ export default function Overview() {
             }}
           >
             <Clock size={16} />
-            <span>Review Requests (0)</span>
+            <span>Review Requests ({verifications.length})</span>
           </Link>
         </div>
       </div>
@@ -74,7 +86,7 @@ export default function Overview() {
             </Link>
           </div>
 
-          {initialAdminVerifications.length === 0 ? (
+          {verifications.length === 0 ? (
             <div style={{ padding: '24px 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <EmptyState
                 icon={ShieldAlert}
@@ -84,7 +96,7 @@ export default function Overview() {
             </div>
           ) : (
             <div style={{ flex: 1 }}>
-              {initialAdminVerifications.slice(0, 3).map((req) => (
+              {verifications.slice(0, 3).map((req) => (
                 <div key={req.id} style={{ padding: '12px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', borderBottom: '1px solid #f8fafc' }}>
                   <div>
                     <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', margin: '0 0 2px 0' }}>{req.name}</h4>
@@ -111,15 +123,19 @@ export default function Overview() {
             </Link>
           </div>
 
-          {initialColleges.length === 0 ? (
+          {colleges.length === 0 ? (
             <div style={{ padding: '24px 0', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <EmptyState
-                icon={Building2}
-                title="No Colleges Connected"
-                description="No institutions or universities are registered on the platform yet."
-                actionText="Add New College"
-                onAction={() => window.location.href = '/super-admin/colleges'}
-              />
+              {loading ? (
+                <p style={{ fontSize: '12px', color: '#94a3b8' }}>Loading institutions…</p>
+              ) : (
+                <EmptyState
+                  icon={Building2}
+                  title="No Colleges Connected"
+                  description="No institutions or universities are registered on the platform yet."
+                  actionText="Add New College"
+                  onAction={() => window.location.href = '/super-admin/colleges'}
+                />
+              )}
             </div>
           ) : (
             <div style={{ overflowX: 'auto', marginTop: '4px' }}>
@@ -133,7 +149,7 @@ export default function Overview() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                  {initialColleges.slice(0, 4).map((college) => (
+                  {colleges.slice(0, 4).map((college) => (
                     <tr key={college.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 px-3">
                         <div className="font-semibold text-slate-800">{college.name}</div>
@@ -155,4 +171,3 @@ export default function Overview() {
     </div>
   );
 }
-

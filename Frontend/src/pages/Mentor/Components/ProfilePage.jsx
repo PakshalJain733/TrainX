@@ -11,7 +11,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
-import { mentorProfile } from "../../../data/mentorMockData";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/ProfilePage.css";
 import "../../Student/Styles/ProfilePage.css";
 
@@ -21,15 +21,16 @@ export default function ProfilePage() {
   const [avatarUrl, setAvatarUrl] = useState(null);
 
   const [form, setForm] = useState({
-    name: "Portal System Admin",
-    email: "training.portal0987@gmail.com",
-    phone: "8422920060",
-    role: "College Administrator",
-    department: "Computer Engineering",
-    college: "Vasantdada Patil Pratishthan College of Engineering (PVPPCOE)",
+    name: "",
+    email: "",
+    phone: "",
+    role: "",
+    department: "",
+    college: "",
   });
 
   useEffect(() => {
+    fetchUserProfile();
     try {
       const u = JSON.parse(localStorage.getItem("user"));
       if (u) {
@@ -45,6 +46,25 @@ export default function ProfilePage() {
       }
     } catch (e) {}
   }, []);
+
+  async function fetchUserProfile() {
+    try {
+      const res = await apiFetch("/auth/me");
+      if (res && res.data) {
+        const d = res.data;
+        setForm((prev) => ({
+          ...prev,
+          name: d.name || prev.name,
+          email: d.email || prev.email,
+          phone: d.mobile_number || d.phone || prev.phone,
+          role: "Mentor",
+          department: d.department || prev.department,
+          college: d.college_name || d.college || prev.college,
+        }));
+        localStorage.setItem("user", JSON.stringify({ ...(JSON.parse(localStorage.getItem("user")) || {}), name: d.name, email: d.email, role: "Mentor" }));
+      }
+    } catch (e) {}
+  }
 
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];

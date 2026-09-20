@@ -4,18 +4,9 @@ import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, 
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import apiFetch from "../../../utils/api";
 import "../Styles/AdminQuizzes.css";
 import "../Styles/AdminUsers.css";
-
-const API_BASE = "/api/v1";
-
-function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
 
 function normalizeQuestion(item, idx) {
   if (!item) return { id: idx + 1, text: `Question ${idx + 1}`, options: { a: "", b: "", c: "", d: "" }, correct: "a" };
@@ -87,8 +78,7 @@ export default function AdminQuizzes() {
   // ── Fetch quizzes & batches from DB on mount ───────────────────
   const fetchBatches = async () => {
     try {
-      const res = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
-      const data = await res.json();
+      const data = await apiFetch("/batches");
       if (data.success && Array.isArray(data.data)) {
         setAvailableBatches(data.data);
       }
@@ -100,8 +90,7 @@ export default function AdminQuizzes() {
   const fetchQuizzes = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/assessments`, { headers: getAuthHeaders() });
-      const data = await res.json();
+      const data = await apiFetch("/assessments");
       if (data.success && Array.isArray(data.data)) {
         setQuizzes(data.data.map(mapAssessment));
       }
@@ -124,9 +113,8 @@ export default function AdminQuizzes() {
     const batchId = selectedBatchObj ? selectedBatchObj.id : null;
 
     // 1. Create the assessment
-    const assessRes = await fetch(`${API_BASE}/assessments`, {
+    const assessData = await apiFetch("/assessments", {
       method: "POST",
-      headers: getAuthHeaders(),
       body: JSON.stringify({
         title: title.trim(),
         batch_id: batchId,
@@ -139,16 +127,14 @@ export default function AdminQuizzes() {
         duration_minutes: Math.max(10, questionsList.length * 2),
       }),
     });
-    const assessData = await assessRes.json();
     if (!assessData.success) throw new Error(assessData.message || "Failed to create quiz");
     const assessmentId = assessData.data?.id || assessData.data?.insertId;
     if (!assessmentId) throw new Error("No assessment ID returned");
 
     // 2. Add each question
     for (const q of questionsList) {
-      await fetch(`${API_BASE}/assessments/${assessmentId}/questions`, {
+      await apiFetch(`/assessments/${assessmentId}/questions`, {
         method: "POST",
-        headers: getAuthHeaders(),
         body: JSON.stringify({
           question_text: q.text,
           option_a: q.options.a,
@@ -187,15 +173,13 @@ export default function AdminQuizzes() {
 
   // Live Google Gemini AI Question Generator via Backend API
   const fetchLiveAIQuestions = async (quizTitle, count) => {
-    const res = await fetch(`${API_BASE}/assessments/generate-ai-questions`, {
+    const data = await apiFetch("/assessments/generate-ai-questions", {
       method: "POST",
-      headers: getAuthHeaders(),
       body: JSON.stringify({
         title: quizTitle,
         count: parseInt(count, 10) || 10,
       }),
     });
-    const data = await res.json();
     if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
       throw new Error(data.message || "Failed to generate AI questions with Google Gemini");
     }
@@ -243,7 +227,7 @@ export default function AdminQuizzes() {
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this quiz? This cannot be undone.")) return;
     try {
-      await fetch(`${API_BASE}/assessments/${id}`, { method: "DELETE", headers: getAuthHeaders() });
+      await apiFetch(`/assessments/${id}`, { method: "DELETE" });
       setQuizzes(quizzes.filter(q => q.id !== id));
     } catch (err) {
       alert("Failed to delete quiz: " + err.message);

@@ -1,100 +1,143 @@
-import React, { useState, useRef } from 'react';
-import { mentorStudyMaterial as initialMaterials } from '../../../data/mentorMockData';
-import { BookOpen, Plus, Download, UploadCloud, X, FileText, CheckCircle2, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  BookOpen,
+  Plus,
+  ExternalLink,
+  X,
+  FileText,
+  CheckCircle2,
+  Trash2,
+  RefreshCw,
+  Link2,
+  AlertCircle,
+} from 'lucide-react';
+import { apiFetch } from '../../../utils/api';
 import '../Styles/Students.css';
 import '../Styles/SkillGaps.css';
 import '../Styles/StudyMaterial.css';
 
+const hasResource = (url) => {
+  const v = (url || '').trim();
+  if (!v || v === '#') return false;
+  try {
+    const parsed = new URL(v);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 export default function StudyMaterial() {
-  const [materials, setMaterials] = useState(() => {
-    const saved = localStorage.getItem("mentor_study_materials");
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
-    }
-    return initialMaterials.length > 0 ? initialMaterials : [
-      { id: 1, title: "Data Structures & Algorithms Handbook", batch: "Batch-A (CS)", category: "PDF Guide", date: "2026-08-20", downloads: 42, fileUrl: "#" },
-      { id: 2, title: "React.js & Full-Stack Notes", batch: "Batch-B (IT)", category: "Lecture Deck", date: "2026-08-25", downloads: 28, fileUrl: "#" }
-    ];
-  });
+  const [materials, setMaterials] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [showModal, setShowModal] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
-  const fileInputRef = useRef(null);
+  const [errorMsg, setErrorMsg] = useState("");
 
   const [form, setForm] = useState({
     title: "",
-    batch: "Batch-A (CS)",
-    category: "PDF Guide",
+    subject: "",
+    batch_id: "",
+    type: "PDF Guide",
+    file_url: "",
   });
 
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      if (!form.title) {
-        setForm((prev) => ({ ...prev, title: file.name.replace(/\.[^/.]+$/, "") }));
-      }
-    }
-  };
+  const loadMaterials = useCallback((showSpinner = true) => {
+    if (showSpinner) setLoading(true);
+    Promise.all([
+      apiFetch("/mentor/study-materials").then((res) => {
+        if (res && res.data && Array.isArray(res.data.materials)) {
+          setMaterials(res.data.materials);
+        }
+      }),
+      apiFetch("/mentor/batches").then((res) => {
+        if (res && res.data && Array.isArray(res.data.batches)) {
+          setBatches(res.data.batches);
+        }
+      }),
+    ])
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    apiFetch("/mentor/study-materials")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data.materials)) {
+          setMaterials(res.data.materials);
+        }
+      })
+      .catch(() => {});
+    apiFetch("/mentor/batches")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data.batches)) {
+          setBatches(res.data.batches);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const selectedBatch = batches.find((b) => String(b.id) === form.batch_id);
+  const urlValid = hasResource(form.file_url);
+  const canPublish = Boolean(form.title.trim() && form.subject.trim() && urlValid);
 
   const handleUploadSubmit = (e) => {
     e.preventDefault();
-    if (!form.title.trim()) return;
+    if (!canPublish || saving) return;
+    setSaving(true);
+    setErrorMsg("");
 
-    const fileUrl = selectedFile ? URL.createObjectURL(selectedFile) : "#";
-
-    const newItem = {
-      id: Date.now(),
+    const payload = {
       title: form.title.trim(),
-      batch: form.batch,
-      category: form.category,
-      date: new Date().toISOString().split("T")[0],
-      downloads: 0,
-      fileName: selectedFile ? selectedFile.name : "Document.pdf",
-      fileUrl: fileUrl,
+      subject: form.subject.trim(),
+      batch: selectedBatch ? selectedBatch.name : "All Batches",
+      batch_id: form.batch_id ? parseInt(form.batch_id, 10) : null,
+      type: form.type,
+      file_url: form.file_url.trim(),
     };
 
-    const updated = [newItem, ...materials];
-    setMaterials(updated);
-    localStorage.setItem("mentor_study_materials", JSON.stringify(updated));
-
-    setShowModal(false);
-    setForm({ title: "", batch: "Batch-A (CS)", category: "PDF Guide" });
-    setSelectedFile(null);
-
-    setSuccessMsg("Study material uploaded & published successfully!");
-    setTimeout(() => setSuccessMsg(""), 4000);
+    apiFetch("/mentor/study-materials", { method: "POST", body: JSON.stringify(payload) })
+      .then((res) => {
+        if (res && res.success) {
+          setShowModal(false);
+          setForm({ title: "", subject: "", batch_id: "", type: "PDF Guide", file_url: "" });
+          setSuccessMsg("Study material published successfully!");
+          setTimeout(() => setSuccessMsg(""), 4000);
+          loadMaterials();
+        } else {
+          setErrorMsg(res?.message || "Failed to publish study material");
+        }
+      })
+      .catch((err) => setErrorMsg(err.message || "Failed to publish study material"))
+      .finally(() => setSaving(false));
   };
 
   const handleDownload = (item) => {
-    // Increment downloads count
-    const updated = materials.map((m) =>
-      m.id === item.id ? { ...m, downloads: m.downloads + 1 } : m
-    );
-    setMaterials(updated);
-    localStorage.setItem("mentor_study_materials", JSON.stringify(updated));
-
-    // Trigger file download
-    if (item.fileUrl && item.fileUrl !== "#") {
-      const a = document.createElement("a");
-      a.href = item.fileUrl;
-      a.download = item.fileName || `${item.title}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } else {
-      alert(`Downloading resource: "${item.title}"`);
+    if (hasResource(item.file_url)) {
+      window.open(item.file_url.trim(), "_blank", "noopener,noreferrer");
     }
   };
 
   const handleDelete = (id) => {
     if (window.confirm("Are you sure you want to delete this resource?")) {
-      const updated = materials.filter((m) => m.id !== id);
-      setMaterials(updated);
-      localStorage.setItem("mentor_study_materials", JSON.stringify(updated));
+      apiFetch(`/mentor/study-materials/${id}`, { method: "DELETE" })
+        .then((res) => {
+          if (res && res.success) {
+            setMaterials((prev) => prev.filter((m) => m.id !== id));
+            setSuccessMsg("Study material deleted.");
+            setTimeout(() => setSuccessMsg(""), 3000);
+          } else {
+            alert(res?.message || "Failed to delete study material");
+          }
+        })
+        .catch((err) => alert(err.message || "Failed to delete study material"));
     }
   };
+
+  const linkedCount = materials.filter((m) => hasResource(m.file_url)).length;
 
   return (
     <div className="mentor-studymaterial-container">
@@ -104,192 +147,219 @@ export default function StudyMaterial() {
             <BookOpen size={20} color="#4f46e5" />
             <span>Study Material & Resources Library</span>
           </h2>
-          <p className="mentor-page-subtitle">Publish lecture decks, code repositories, cheatsheets, and PDF study guides</p>
+          <p className="mentor-page-subtitle">Publish lecture decks, repositories, cheatsheets, and study guides</p>
         </div>
 
-        <button className="mentor-btn-primary" onClick={() => setShowModal(true)}>
+        <button className="mentor-btn-primary" onClick={() => setShowModal(true)} type="button">
           <Plus size={16} />
-          <span>Upload New Study Material</span>
+          <span>Add Study Material</span>
         </button>
       </div>
 
       {successMsg && (
-        <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold flex items-center gap-2">
+        <div className="mentor-alert-success">
           <CheckCircle2 size={16} /> {successMsg}
+        </div>
+      )}
+      {errorMsg && (
+        <div className="mentor-alert-error">
+          <AlertCircle size={16} /> {errorMsg}
+        </div>
+      )}
+
+      {!loading && materials.length > 0 && (
+        <div className="mentor-material-summary">
+          <div className="mentor-material-summary-item">
+            <FileText size={15} />
+            <span><strong>{materials.length}</strong> resources</span>
+          </div>
+          <div className="mentor-material-summary-item">
+            <Link2 size={15} />
+            <span><strong>{linkedCount}</strong> with links</span>
+          </div>
         </div>
       )}
 
       <div className="mentor-table-card">
-        <div className="mentor-table-responsive">
-          <table className="mentor-table">
-            <thead>
-              <tr>
-                <th>Resource Title</th>
-                <th>Target Batch</th>
-                <th>Category</th>
-                <th>Published Date</th>
-                <th>Total Downloads</th>
-                <th className="mentor-actions-cell">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {materials.map((m) => (
-                <tr key={m.id}>
-                  <td className="mentor-material-title">
-                    <div className="flex items-center gap-2">
-                      <FileText size={16} className="text-indigo-600" />
-                      <span>{m.title}</span>
-                    </div>
-                  </td>
-                  <td className="mentor-material-batch">{m.batch}</td>
-                  <td>
-                    <span className="mentor-material-tag">
-                      {m.category}
-                    </span>
-                  </td>
-                  <td className="mentor-material-date">{m.date}</td>
-                  <td className="mentor-material-downloads">{m.downloads} downloads</td>
-                  <td className="mentor-actions-cell">
-                    <div className="flex items-center gap-2 justify-end">
-                      <button className="mentor-btn-download" onClick={() => handleDownload(m)}>
-                        <Download size={14} /> Download
-                      </button>
-                      <button
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        onClick={() => handleDelete(m.id)}
-                        title="Delete Material"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {materials.length === 0 && (
+        {loading ? (
+          <div className="mentor-card-state">
+            <RefreshCw className="mentor-card-state-spinner" size={24} />
+            <p className="mentor-card-state-text">Loading study materials...</p>
+          </div>
+        ) : (
+          <div className="mentor-table-responsive">
+            <table className="mentor-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-slate-400 text-xs">
-                    No study materials uploaded yet. Click "Upload New Study Material" above to add resources.
-                  </td>
+                  <th>Resource Title</th>
+                  <th>Subject</th>
+                  <th>Target Batch</th>
+                  <th>Category</th>
+                  <th>Published Date</th>
+                  <th className="mentor-actions-cell">Action</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {materials.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="mentor-empty-table-cell">
+                      <div className="mentor-material-empty">
+                        <BookOpen size={26} />
+                        <p className="mentor-material-empty-title">No study materials published yet</p>
+                        <p className="mentor-material-empty-sub">
+                          Click "Add Study Material" above and attach a resource link to publish the first one.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  materials.map((m) => {
+                    const linked = hasResource(m.file_url);
+                    return (
+                      <tr key={m.id}>
+                        <td>
+                          <div className="mentor-material-title-cell">
+                            <span className="mentor-material-file-icon"><FileText size={16} /></span>
+                            <span>{m.title}</span>
+                          </div>
+                        </td>
+                        <td className="mentor-material-subject">{m.subject}</td>
+                        <td className="mentor-material-batch">{m.batch || "All Batches"}</td>
+                        <td>
+                          <span className="mentor-material-tag">{m.type || m.category || "PDF"}</span>
+                        </td>
+                        <td className="mentor-material-date">
+                          {m.created_at ? new Date(m.created_at).toLocaleDateString() : "—"}
+                        </td>
+                        <td className="mentor-actions-cell">
+                          <div className="mentor-material-actions">
+                            <button
+                              className={`mentor-btn-download${linked ? "" : " mentor-btn-download--disabled"}`}
+                              onClick={() => handleDownload(m)}
+                              type="button"
+                              title={linked ? "Open resource link in a new tab" : "No resource link attached to this material"}
+                            >
+                              {linked ? <ExternalLink size={14} /> : <Link2 size={14} />}
+                              {linked ? "Open" : "No Link"}
+                            </button>
+                            <button
+                              className="mentor-btn-icon"
+                              onClick={() => handleDelete(m.id)}
+                              type="button"
+                              title="Delete Material"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* UPLOAD STUDY MATERIAL MODAL */}
+      {/* ADD STUDY MATERIAL MODAL */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-4">
-              <div className="flex items-center gap-2 text-indigo-600 font-bold text-base">
-                <UploadCloud size={20} />
-                <span>Upload Study Material</span>
+        <div className="mentor-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+          <div className="mentor-modal-card mentor-modal-card--compact">
+            <div className="mentor-modal-head">
+              <div className="mentor-modal-title">
+                <BookOpen size={20} />
+                <span>Add Study Material</span>
               </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100"
-              >
+              <button onClick={() => setShowModal(false)} className="mentor-modal-close" type="button" title="Close">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleUploadSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Resource Title *
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                  placeholder="e.g. Data Structures & Algorithms Complete Handbook"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  required
-                />
-              </div>
+            <div className="mentor-modal-body">
+              <form onSubmit={handleUploadSubmit} className="mentor-form">
+                <div className="mentor-form-grid">
+                  <div className="mentor-field mentor-field--full">
+                    <label className="mentor-field-label">Resource Title *</label>
+                    <input
+                      type="text"
+                      className="mentor-input"
+                      placeholder="e.g. Data Structures & Algorithms Handbook"
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      required
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Target Batch
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white"
-                    value={form.batch}
-                    onChange={(e) => setForm({ ...form, batch: e.target.value })}
-                  >
-                    <option value="Batch-A (CS)">Batch-A (CS)</option>
-                    <option value="Batch-B (IT)">Batch-B (IT)</option>
-                    <option value="Batch-C (EXTC)">Batch-C (EXTC)</option>
-                    <option value="All Batches">All Batches</option>
-                  </select>
+                  <div className="mentor-field">
+                    <label className="mentor-field-label">Subject *</label>
+                    <input
+                      type="text"
+                      className="mentor-input"
+                      placeholder="e.g. Data Structures"
+                      value={form.subject}
+                      onChange={(e) => setForm({ ...form, subject: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="mentor-field">
+                    <label className="mentor-field-label">Category</label>
+                    <select
+                      className="mentor-select"
+                      value={form.type}
+                      onChange={(e) => setForm({ ...form, type: e.target.value })}
+                    >
+                      <option value="PDF Guide">PDF Guide</option>
+                      <option value="Lecture Deck">Lecture Deck</option>
+                      <option value="Code Repo">Code Repo</option>
+                      <option value="Cheatsheet">Cheatsheet</option>
+                      <option value="Assignment Brief">Assignment Brief</option>
+                    </select>
+                  </div>
+
+                  <div className="mentor-field mentor-field--full">
+                    <label className="mentor-field-label">Target Batch</label>
+                    <select
+                      className="mentor-select"
+                      value={form.batch_id}
+                      onChange={(e) => setForm({ ...form, batch_id: e.target.value })}
+                    >
+                      <option value="">All Batches</option>
+                      {batches.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                    {batches.length === 0 && (
+                      <p className="mentor-field-hint">No batches are currently assigned to you.</p>
+                    )}
+                  </div>
+
+                  <div className="mentor-field mentor-field--full">
+                    <label className="mentor-field-label">Resource Link (URL) *</label>
+                    <input
+                      type="url"
+                      className="mentor-input"
+                      placeholder="https://drive.google.com/... or repository URL"
+                      value={form.file_url}
+                      onChange={(e) => setForm({ ...form, file_url: e.target.value })}
+                      required
+                    />
+                    <p className="mentor-field-hint">
+                      Attach the direct web link of the resource. Publishing requires a valid http(s) link.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                    Category
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-semibold text-slate-800 dark:text-white"
-                    value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
-                  >
-                    <option value="PDF Guide">PDF Guide</option>
-                    <option value="Lecture Deck">Lecture Deck</option>
-                    <option value="Code Repo">Code Repo</option>
-                    <option value="Cheatsheet">Cheatsheet</option>
-                    <option value="Assignment Brief">Assignment Brief</option>
-                  </select>
+                <div className="mentor-modal-foot">
+                  <button type="button" onClick={() => setShowModal(false)} className="mentor-btn-secondary">Cancel</button>
+                  <button type="submit" disabled={saving || !canPublish} className="mentor-btn-submit">
+                    {saving ? <RefreshCw size={14} className="mentor-btn-spin" /> : <BookOpen size={14} />}
+                    {saving ? "Publishing..." : "Publish Resource"}
+                  </button>
                 </div>
-              </div>
-
-              {/* Drag & Drop File Select Box */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Attach Document / File
-                </label>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-indigo-200 dark:border-indigo-800/60 rounded-xl p-5 text-center bg-indigo-50/40 dark:bg-indigo-950/20 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors cursor-pointer"
-                >
-                  <UploadCloud size={28} className="mx-auto text-indigo-500 mb-2" />
-                  {selectedFile ? (
-                    <div>
-                      <p className="text-xs font-bold text-indigo-600">{selectedFile.name}</p>
-                      <p className="text-[10px] text-slate-400">{(selectedFile.size / 1024).toFixed(1)} KB</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p className="text-xs font-bold text-slate-700 dark:text-slate-300">Click to choose a file</p>
-                      <p className="text-[10px] text-slate-400">Supports PDF, PPTX, DOCX, ZIP (Max 50MB)</p>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleFileChange}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-500/20 flex items-center gap-1.5"
-                >
-                  <UploadCloud size={14} /> Upload & Publish
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}

@@ -48,12 +48,15 @@ const missing = required.filter(([, val]) => !val).map(([key]) => key);
 
 if (missing.length > 0) {
   const msg = `[Config] Missing required environment variables: ${missing.join(', ')}`;
+
+  if (missing.includes('JWT_SECRET')) {
+    throw new Error(`${msg}. JWT_SECRET must come from an environment variable (Backend/.env). Refusing to start with insecure defaults.`);
+  }
+
   if (config.nodeEnv === 'production') {
     throw new Error(msg);
   } else {
     console.warn(msg + ' — using insecure defaults (development only)');
-    // Apply safe dev-only fallbacks so server can still start
-    if (!config.jwt.secret) config.jwt.secret = 'dev_only_jwt_secret_change_in_production';
     if (!config.db.password) config.db.password = '';
   }
 }

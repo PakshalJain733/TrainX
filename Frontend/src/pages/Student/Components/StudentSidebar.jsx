@@ -52,7 +52,7 @@ const primaryNavItems = [
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
   { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
-  { title: "Progress", url: "/student/performance", icon: BarChart3 },
+  { title: "Progress", url: "/student/progress", icon: BarChart3 },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
 ];
 

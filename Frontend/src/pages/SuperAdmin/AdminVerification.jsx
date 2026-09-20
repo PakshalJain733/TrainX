@@ -1,19 +1,38 @@
-import React, { useState } from 'react';
-import { initialAdminVerifications } from '../../data/superAdminMockData';
-import StatusBadge from '../../components/SuperAdmin/StatusBadge';
+import React, { useState, useEffect } from 'react';
+import { superAdminAPI } from '../../services/api';
 import EmptyState from '../../components/ui/EmptyState';
-import { ShieldCheck, CheckCircle2, XCircle, Mail, Building2, Calendar, Clock } from 'lucide-react';
+import { ShieldCheck, Building2, Calendar, CheckCircle2, RefreshCw, Mail } from 'lucide-react';
 
 export default function AdminVerification() {
-  const [requests, setRequests] = useState(initialAdminVerifications);
+  const [admins, setAdmins] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleVerify = (id) => {
-    setRequests(requests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+  const loadAdmins = () => {
+    setLoading(true);
+    superAdminAPI.colleges()
+      .then((colleges) => {
+        if (!Array.isArray(colleges)) return;
+        setAdmins(
+          colleges
+            .filter((c) => c.adminName && c.adminName !== '—')
+            .map((c, i) => ({
+              id: c.id,
+              name: c.adminName,
+              email: c.adminEmail || '—',
+              college: c.name,
+              designation: 'College Admin',
+              date: String(c.created_at || 'Unknown').slice(0, 10),
+              status: 'Registered',
+            }))
+        );
+      })
+      .catch(() => setAdmins([]))
+      .finally(() => setLoading(false));
   };
 
-  const handleReject = (id) => {
-    setRequests(requests.filter((r) => r.id !== id));
-  };
+  useEffect(() => {
+    loadAdmins();
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -21,86 +40,74 @@ export default function AdminVerification() {
         <div>
           <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-amber-500" />
-            <span>College Admin Governance & Verification</span>
+            <span>College Admin Governance</span>
           </h2>
-          <p className="text-xs text-slate-500">Review pending administrative sign-ups from college deans and placement heads</p>
+          <p className="text-xs text-slate-500">Registered college administrators with institutional access</p>
         </div>
+        <button
+          onClick={loadAdmins}
+          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition flex items-center gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Refresh</span>
+        </button>
       </div>
 
       <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex items-center gap-3">
-        <Clock className="w-5 h-5 text-amber-600 shrink-0" />
+        <ShieldCheck className="w-5 h-5 text-amber-600 shrink-0" />
         <p className="text-xs text-amber-800 font-medium">
-          Verifying a request grants institutional administrative access to create departments, assign coordinators, and view student performance data.
+          There is currently no separate admin-verification workflow on the platform. The list below shows registered college administrators.
         </p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {requests.length === 0 ? (
+        {loading ? (
+          <div className="py-14 text-center text-slate-400 text-sm">Loading administrators…</div>
+        ) : admins.length === 0 ? (
           <EmptyState
             icon={ShieldCheck}
-            title="All Verification Requests Handled"
-            description="There are currently no college dean or administrator sign-ups pending verification."
+            title="No Registered College Admins"
+            description="No college administrator accounts are registered yet. Admins can be created by a super admin via the admin user management flow."
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="bg-slate-50/80 text-slate-500 font-semibold border-b border-slate-200 uppercase text-[10px]">
-                  <th className="py-3 px-4">Applicant Name</th>
+                  <th className="py-3 px-4">Admin Name</th>
                   <th className="py-3 px-4">Institution / College</th>
                   <th className="py-3 px-4">Designation</th>
-                  <th className="py-3 px-4">Requested On</th>
+                  <th className="py-3 px-4">Registered</th>
                   <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Governance Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {requests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50/70 transition">
+                {admins.map((admin) => (
+                  <tr key={admin.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{req.name}</div>
+                      <div className="font-bold text-slate-900">{admin.name}</div>
                       <div className="text-[10px] text-slate-400 flex items-center gap-1">
                         <Mail className="w-3 h-3 text-slate-400" />
-                        <span>{req.email}</span>
+                        <span>{admin.email}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-1.5 font-semibold text-slate-800">
                         <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{req.college}</span>
+                        <span>{admin.college}</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">{req.designation}</td>
+                    <td className="py-3.5 px-4 text-slate-600 font-medium">{admin.designation}</td>
                     <td className="py-3.5 px-4 text-slate-500">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{req.date}</span>
+                        <span>{admin.date}</span>
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <StatusBadge status={req.status} />
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      {req.status === 'Pending' ? (
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleVerify(req.id)}
-                            className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold rounded-lg text-xs border border-emerald-200 transition flex items-center gap-1"
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            <span>Verify Access</span>
-                          </button>
-                          <button
-                            onClick={() => handleReject(req.id)}
-                            className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-lg text-xs border border-rose-200 transition flex items-center gap-1"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 font-medium italic">Approved</span>
-                      )}
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <CheckCircle2 className="w-3 h-3" /> {admin.status}
+                      </span>
                     </td>
                   </tr>
                 ))}

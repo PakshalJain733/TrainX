@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Search,
   BookOpen,
@@ -11,17 +11,46 @@ import {
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import apiFetch from "../../../utils/api";
 import "../Styles/LearningContent.css";
 
-const initialResources = [];
-const allTopics = [];
+const typeToIcon = {
+  PDF: FileText,
+  Video: Video,
+  DOC: FileText,
+};
 
 export default function LearningContent() {
-  const [resources, setResources] = useState(initialResources);
+  const [resources, setResources] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("All resources");
 
-  const categories = ["All resources", "SQL & Databases", "REST APIs with FastAPI", "Object Oriented Programming"];
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const response = await apiFetch("/study-materials");
+        if (mounted && response && Array.isArray(response.data)) {
+          setResources(response.data);
+        }
+      } catch (err) {
+        console.error("Study materials load error:", err);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  const categories = [
+    "All resources",
+    ...Array.from(new Set(resources.map((r) => r.category).filter(Boolean))),
+  ];
+
+  const allTopics = Array.from(
+    new Set(resources.map((r) => r.category).filter(Boolean))
+  );
 
   const toggleStatus = (id) => {
     setResources((prev) =>
@@ -81,14 +110,19 @@ export default function LearningContent() {
 
       {/* Resource Cards Grid */}
       <div className="learning-resources-grid">
-        {filteredResources.length === 0 ? (
+        {loading ? (
+          <div className="learning-empty-state">
+            <BookOpen size={36} className="learning-empty-icon" />
+            <p className="learning-empty-title">Loading study materials…</p>
+          </div>
+        ) : filteredResources.length === 0 ? (
           <div className="learning-empty-state">
             <BookOpen size={36} className="learning-empty-icon" />
             <p className="learning-empty-title">No learning resources available yet.</p>
           </div>
         ) : (
           filteredResources.map((item) => {
-            const IconComponent = item.icon;
+            const IconComponent = typeToIcon[item.type] || FileText;
             const isCompleted = item.status === "Completed";
             return (
               <div key={item.id} className="learning-resource-card">

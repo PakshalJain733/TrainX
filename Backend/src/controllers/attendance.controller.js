@@ -208,11 +208,27 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       sessionDate: todayStr,
     });
 
-    // Insert or update attendance record linked to session_id
+    // Duplicate protection: if the same user already marked attendance for the
+    // same session, do not insert another row — return an "already marked" response.
+    const existing = await query(
+      `SELECT id FROM attendance WHERE user_id = ? AND session_id = ? LIMIT 1`,
+      [userId, sessionObj.id]
+    );
+
+    if (existing && existing.length > 0) {
+      const summary = await getStudentAttendanceSummaryService(userId);
+      return sendSuccess(res, 'Attendance already marked for this session', {
+        marked: false,
+        already_marked: true,
+        session_date: todayStr,
+        status: 'present',
+        summary,
+      });
+    }
+
     await query(
       `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
-       VALUES (?, ?, ?, ?, ?, 'present', ?)
-       ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
+       VALUES (?, ?, ?, ?, ?, 'present', ?)`,
       [collegeId, targetBatchId, userId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
     );
 

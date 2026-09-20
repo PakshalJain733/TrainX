@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { initialBatches } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
 import { Layers, Plus, Search, UserCheck, Calendar, Building2, GraduationCap, RefreshCw, X } from 'lucide-react';
 import { batchAPI, collegeAPI, departmentAPI } from '../../services/api';
 
 export default function Batches() {
-  const [batches, setBatches] = useState(initialBatches);
+  const [batches, setBatches] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [departments, setDepartments] = useState([]);
 
@@ -39,15 +38,9 @@ export default function Batches() {
         ).catch(() => []),
       ]);
 
-      if (collegesData && Array.isArray(collegesData) && collegesData.length > 0) {
-        setColleges(collegesData);
-      }
-      if (deptsData && Array.isArray(deptsData) && deptsData.length > 0) {
-        setDepartments(deptsData);
-      }
-      if (batchesData && Array.isArray(batchesData) && batchesData.length > 0) {
-        setBatches(batchesData);
-      }
+      setColleges(Array.isArray(collegesData) ? collegesData : []);
+      setDepartments(Array.isArray(deptsData) ? deptsData : []);
+      setBatches(Array.isArray(batchesData) ? batchesData : []);
     } catch (err) {
       console.warn("API load failed, maintaining fallback state.");
     } finally {

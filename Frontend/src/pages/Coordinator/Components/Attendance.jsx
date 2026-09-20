@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Users,
   UserCheck,
@@ -18,10 +18,7 @@ import {
   Building2,
   FileSpreadsheet
 } from "lucide-react";
-import {
-  coordinatorAttendanceStudents,
-  coordinatorDepartmentAttendanceSummary
-} from "../../../data/coordinatorMockData";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/CodingPerformance.css";
 
 export default function CoordinatorAttendance({ hideHeader }) {
@@ -29,8 +26,11 @@ export default function CoordinatorAttendance({ hideHeader }) {
   const [activeTab, setActiveTab] = useState("overview");
 
   // State Data
-  const [studentsList, setStudentsList] = useState(coordinatorAttendanceStudents);
-  const [deptSummaries, setDeptSummaries] = useState(coordinatorDepartmentAttendanceSummary);
+  const [studentsList, setStudentsList] = useState([]);
+  const [defaulterList, setDefaulterList] = useState([]);
+  const [deptSummaries, setDeptSummaries] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Dynamic Threshold State
   const [attendanceThreshold, setAttendanceThreshold] = useState(75);
@@ -44,17 +44,59 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
   // Detail Modal State
   const [selectedStudentForDetail, setSelectedStudentForDetail] = useState(null);
+  const [detailHistory, setDetailHistory] = useState([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  // Dynamic Metrics Calculation
-  const totalStudentsCount = 320;
-  const presentTodayCount = 287;
-  const absentTodayCount = 33;
-  const avgAttendancePercent = 82;
-  const lowAttendanceCount = studentsList.filter((s) => s.attendance < attendanceThreshold).length;
+  const loadData = useCallback((threshold) => {
+    setLoading(true);
+    Promise.all([
+      apiFetch(`/attendance/dashboard-summary?threshold=${threshold}`),
+      apiFetch("/attendance/list"),
+      apiFetch(`/attendance/low-attendance?threshold=${threshold}`),
+      apiFetch("/attendance/department"),
+    ])
+      .then(([dashRes, listRes, lowRes, deptRes]) => {
+        setDashboard(dashRes && dashRes.data ? dashRes.data : null);
+        const list = (listRes && Array.isArray(listRes.data)) ? listRes.data : (listRes?.data?.students || []);
+        const low = (lowRes && Array.isArray(lowRes.data)) ? lowRes.data : (lowRes?.data?.students || []);
+        setStudentsList(list);
+        setDefaulterList(low);
+        const dept = (deptRes && Array.isArray(deptRes.data)) ? deptRes.data : [];
+        setDeptSummaries(dept);
+      })
+      .catch(() => { setStudentsList([]); setDefaulterList([]); setDeptSummaries([]); })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadData(attendanceThreshold);
+  }, [attendanceThreshold, loadData]);
+
+  const openDetail = (student) => {
+    setSelectedStudentForDetail(student);
+    setDetailHistory([]);
+    setDetailLoading(true);
+    apiFetch(`/attendance/student/${student.student_id}/history?limit=50`)
+      .then((res) => {
+        const hist = (res && res.data && Array.isArray(res.data.history)) ? res.data.history : [];
+        setDetailHistory(hist);
+        if (res && res.data && res.data.summary) {
+          setSelectedStudentForDetail((prev) => ({ ...prev, ...res.data.summary }));
+        }
+      })
+      .catch(() => setDetailHistory([]))
+      .finally(() => setDetailLoading(false));
+  };
+
+  // KPIs from live dashboard summary
+  const totalStudentsCount = dashboard?.total_students_tracked ?? 0;
+  const avgAttendancePercent = dashboard?.overall_average_attendance ?? 0;
+  const lowAttendanceCount = dashboard?.low_attendance_count ?? defaulterList.length;
+  const goodCount = dashboard?.good_status_count ?? 0;
 
   // Extract unique departments & batches
   const departments = Array.from(new Set(studentsList.map((s) => s.department)));
-  const batches = Array.from(new Set(studentsList.map((s) => s.batch)));
+  const batches = Array.from(new Set(studentsList.map((s) => s.batch_name)));
 
   const getDynamicStatus = (attendancePct) => {
     if (attendancePct >= attendanceThreshold) {
@@ -69,23 +111,25 @@ export default function CoordinatorAttendance({ hideHeader }) {
   // Filter Logic
   const filteredStudents = studentsList.filter((student) => {
     const matchesSearch =
-      student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.rollNo.toLowerCase().includes(searchTerm.toLowerCase());
+      String(student.student_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(student.student_id || "").toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesDept = selectedDept === "all" || student.department === selectedDept;
-    const matchesBatch = selectedBatch === "all" || student.batch === selectedBatch;
+    const matchesBatch = selectedBatch === "all" || student.batch_name === selectedBatch;
 
     let matchesPercent = true;
-    if (selectedPercentFilter === "below65") matchesPercent = student.attendance < 65;
-    else if (selectedPercentFilter === "65to74") matchesPercent = student.attendance >= 65 && student.attendance < 75;
-    else if (selectedPercentFilter === "above75") matchesPercent = student.attendance >= 75;
+    if (selectedPercentFilter === "below65") matchesPercent = student.attendance_percentage < 65;
+    else if (selectedPercentFilter === "65to74") matchesPercent = student.attendance_percentage >= 65 && student.attendance_percentage < 75;
+    else if (selectedPercentFilter === "above75") matchesPercent = student.attendance_percentage >= 75;
 
-    const matchesDefaulterToggle = lowAttendanceOnly ? student.attendance < attendanceThreshold : true;
+    const matchesDefaulterToggle = lowAttendanceOnly ? student.attendance_percentage < attendanceThreshold : true;
 
     return matchesSearch && matchesDept && matchesBatch && matchesPercent && matchesDefaulterToggle;
   });
 
-  const defaulterStudents = studentsList.filter((s) => s.attendance < attendanceThreshold);
+  const defaulterStudents = defaulterList.length > 0
+    ? defaulterList
+    : studentsList.filter((s) => s.attendance_percentage < attendanceThreshold);
 
   return (
     <div className="coord-perf-container">
@@ -102,12 +146,12 @@ export default function CoordinatorAttendance({ hideHeader }) {
               </span>
             </div>
             <p className="coord-perf-sub">
-              Track daily attendance across departments, monitor defaulters (&lt;{attendanceThreshold}%), and view complete student attendance history logs.
+              Track attendance across departments, monitor defaulters (&lt;{attendanceThreshold}%), and view real student attendance history logs.
             </p>
           </div>
 
           <button
-            onClick={() => alert("Downloading Department Attendance Audit CSV Report...")}
+            onClick={() => alert("Attendance reports are available under the Reports module.")}
             className="coord-perf-btn coord-perf-btn--indigo-light"
             style={{ background: "#0f172a", color: "#ffffff", border: "none" }}
           >
@@ -117,6 +161,13 @@ export default function CoordinatorAttendance({ hideHeader }) {
       )}
 
       {/* KPI Cards Grid */}
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px", color: "#64748b", gap: 12 }}>
+          <RefreshCw size={24} style={{ animation: "spin 1s linear infinite", color: "#4f46e5" }} />
+          <p style={{ fontSize: 13 }}>Loading attendance analytics...</p>
+        </div>
+      ) : (
+        <>
       <div className="coord-perf-kpi-grid">
         {/* Total Students */}
         <div className="coord-perf-kpi-card">
@@ -126,31 +177,31 @@ export default function CoordinatorAttendance({ hideHeader }) {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Total Students</span>
             <span className="coord-perf-kpi-value">{totalStudentsCount}</span>
-            <span className="coord-perf-kpi-sub">Enrolled across 4 departments</span>
+            <span className="coord-perf-kpi-sub">Tracked with attendance records</span>
           </div>
         </div>
 
-        {/* Present Today */}
+        {/* Good Standing */}
         <div className="coord-perf-kpi-card">
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--emerald">
             <UserCheck size={20} />
           </div>
           <div className="coord-perf-kpi-info">
-            <span className="coord-perf-kpi-label">Present Today</span>
-            <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{presentTodayCount}</span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#059669", fontWeight: 600 }}>89.6% Attendance Rate</span>
+            <span className="coord-perf-kpi-label">Good Standing (&gt;=80%)</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{goodCount}</span>
+            <span className="coord-perf-kpi-sub" style={{ color: "#059669", fontWeight: 600 }}>Healthy attendance</span>
           </div>
         </div>
 
-        {/* Absent Today */}
+        {/* Defaulter Count */}
         <div className="coord-perf-kpi-card">
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
             <UserX size={20} />
           </div>
           <div className="coord-perf-kpi-info">
-            <span className="coord-perf-kpi-label">Absent Today</span>
-            <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{absentTodayCount}</span>
-            <span className="coord-perf-kpi-sub">33 Absentees logged</span>
+            <span className="coord-perf-kpi-label">Absent / Low</span>
+            <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{defaulterStudents.length}</span>
+            <span className="coord-perf-kpi-sub">Below configured threshold</span>
           </div>
         </div>
 
@@ -162,7 +213,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Average Attendance</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--purple">{avgAttendancePercent}%</span>
-            <span className="coord-perf-kpi-sub">Monthly overall avg</span>
+            <span className="coord-perf-kpi-sub">Overall college average</span>
           </div>
         </div>
 
@@ -228,38 +279,47 @@ export default function CoordinatorAttendance({ hideHeader }) {
               Department-Wise Attendance Summary
             </h2>
             <p className="coord-perf-card-sub">
-              Aggregate breakdown of daily presence, absentees, and defaulter counts across department tracks.
+              Aggregate breakdown of session records, presents, absents, and average attendance per department.
             </p>
           </div>
 
           <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
+            {deptSummaries.length === 0 && (
+              <div style={{ color: "#94a3b8", fontSize: 13, padding: "16px" }}>
+                No attendance records logged yet for any department.
+              </div>
+            )}
             {deptSummaries.map((dept, idx) => (
               <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                   <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{dept.department} Track</h3>
                   <span className="coord-perf-status-badge coord-perf-status--default">
-                    {dept.totalStudents} Students
+                    {dept.total_students} Students
                   </span>
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
-                    <span>Present Today:</span>
-                    <strong style={{ color: "#059669", fontWeight: 700 }}>{dept.presentToday} Students</strong>
+                    <span>Session Records:</span>
+                    <strong style={{ color: "#475569", fontWeight: 700 }}>{dept.total_sessions}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
-                    <span>Absent Today:</span>
-                    <strong style={{ color: "#e11d48", fontWeight: 700 }}>{dept.absentToday} Students</strong>
+                    <span>Present Records:</span>
+                    <strong style={{ color: "#059669", fontWeight: 700 }}>{dept.total_presents}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
+                    <span>Absent Records:</span>
+                    <strong style={{ color: "#e11d48", fontWeight: 700 }}>{dept.total_absents}</strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", color: "#475569", paddingTop: "4px", borderTop: "1px solid #e2e8f0" }}>
                     <span>Avg Attendance:</span>
-                    <strong style={{ color: dept.avgAttendance >= 85 ? "#059669" : "#d97706", fontWeight: 800 }}>
-                      {dept.avgAttendance}%
+                    <strong style={{ color: dept.average_attendance_percentage >= 85 ? "#059669" : "#d97706", fontWeight: 800 }}>
+                      {dept.average_attendance_percentage}%
                     </strong>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", background: "#fff1f2", color: "#be123c", padding: "8px 10px", borderRadius: "10px", border: "1px solid #fecdd3", fontWeight: 600 }}>
-                    <span>Defaulters (&lt;75%):</span>
-                    <strong style={{ fontWeight: 800 }}>{dept.lowAttendanceCount} Flagged</strong>
+                    <span>Status:</span>
+                    <strong style={{ fontWeight: 800 }}>{dept.status}</strong>
                   </div>
                 </div>
               </div>
@@ -315,7 +375,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
                   <option value="all">All Batches</option>
                   {batches.map((b) => (
                     <option key={b} value={b}>
-                      Batch {b}
+                      {b}
                     </option>
                   ))}
                 </select>
@@ -368,25 +428,25 @@ export default function CoordinatorAttendance({ hideHeader }) {
                 </thead>
                 <tbody>
                   {(activeTab === "defaulters" ? defaulterStudents : filteredStudents).map((student) => {
-                    const statusObj = getDynamicStatus(student.attendance);
+                    const statusObj = getDynamicStatus(student.attendance_percentage);
                     return (
-                      <tr key={student.id}>
+                      <tr key={student.student_id}>
                         {/* Student Name */}
                         <td>
                           <div className="coord-perf-student-cell">
                             <div className="coord-perf-avatar-lg" style={{ width: "36px", height: "36px", fontSize: "12px", borderRadius: "10px" }}>
-                              {student.name.split(" ").map((n) => n[0]).join("")}
+                              {String(student.student_name || "S").split(" ").map((n) => n[0]).join("")}
                             </div>
                             <div>
-                              <div className="coord-perf-student-name">{student.name}</div>
-                              <div className="coord-perf-roll">{student.email}</div>
+                              <div className="coord-perf-student-name">{student.student_name}</div>
+                              <div className="coord-perf-roll">{student.student_email}</div>
                             </div>
                           </div>
                         </td>
 
                         {/* Roll No. */}
                         <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#334155" }}>
-                          {student.rollNo}
+                          {student.student_id}
                         </td>
 
                         {/* Department */}
@@ -398,17 +458,17 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
                         {/* Batch */}
                         <td style={{ fontWeight: 600, color: "#475569" }}>
-                          {student.batch}
+                          {student.batch_name}
                         </td>
 
                         {/* Present */}
                         <td style={{ textAlign: "center", fontWeight: 800, color: "#059669" }}>
-                          {student.present}
+                          {student.present_count}
                         </td>
 
                         {/* Absent */}
                         <td style={{ textAlign: "center", fontWeight: 800, color: "#e11d48" }}>
-                          {student.absent}
+                          {student.absent_count}
                         </td>
 
                         {/* Attendance % */}
@@ -416,23 +476,23 @@ export default function CoordinatorAttendance({ hideHeader }) {
                           <span style={{
                             fontWeight: 800,
                             fontSize: "14px",
-                            color: student.attendance < 65 ? "#e11d48" : student.attendance < attendanceThreshold ? "#d97706" : "#059669"
+                            color: student.attendance_percentage < 65 ? "#e11d48" : student.attendance_percentage < attendanceThreshold ? "#d97706" : "#059669"
                           }}>
-                            {student.attendance}%
+                            {student.attendance_percentage}%
                           </span>
                         </td>
 
                         {/* Status */}
                         <td style={{ textAlign: "center" }}>
                           <span className={`coord-perf-status-badge ${statusObj.badgeClass}`}>
-                            {student.attendance >= 75 ? "75%+ Good" : student.attendance >= 65 ? "65–74% Warning" : "Below 65% Critical"}
+                            {student.attendance_percentage >= 75 ? "75%+ Good" : student.attendance_percentage >= 65 ? "65–74% Warning" : "Below 65% Critical"}
                           </span>
                         </td>
 
                         {/* Action */}
                         <td style={{ textAlign: "right" }}>
                           <button
-                            onClick={() => setSelectedStudentForDetail(student)}
+                            onClick={() => openDetail(student)}
                             className="coord-perf-btn coord-perf-btn--secondary"
                           >
                             <Eye size={14} />
@@ -473,20 +533,20 @@ export default function CoordinatorAttendance({ hideHeader }) {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudentForDetail.name}</h3>
-                    <span className={`coord-perf-status-badge ${getDynamicStatus(selectedStudentForDetail.attendance).badgeClass}`}>
-                      {selectedStudentForDetail.attendance >= 75 ? "Good" : selectedStudentForDetail.attendance >= 65 ? "Warning" : "Critical"}
+                    <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudentForDetail.student_name}</h3>
+                    <span className={`coord-perf-status-badge ${getDynamicStatus(selectedStudentForDetail.attendance_percentage).badgeClass}`}>
+                      {selectedStudentForDetail.attendance_percentage >= 75 ? "Good" : selectedStudentForDetail.attendance_percentage >= 65 ? "Warning" : "Critical"}
                     </span>
                   </div>
                   <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "4px 0 0 0" }}>
-                    Roll No: <strong style={{ color: "#ffffff" }}>{selectedStudentForDetail.rollNo}</strong> · Dept: {selectedStudentForDetail.department} · Batch: {selectedStudentForDetail.batch}
+                    Student ID: <strong style={{ color: "#ffffff" }}>{selectedStudentForDetail.student_id}</strong> · Dept: {selectedStudentForDetail.department} · Batch: {selectedStudentForDetail.batch_name}
                   </p>
                 </div>
 
                 <div style={{ background: "rgba(255,255,255,0.1)", padding: "8px 16px", borderRadius: "12px", textAlign: "center" }}>
                   <span style={{ fontSize: "10px", color: "#cbd5e1", textTransform: "uppercase", display: "block" }}>Overall Attendance</span>
-                  <span style={{ fontSize: "20px", fontWeight: 800, color: selectedStudentForDetail.attendance < 65 ? "#f43f5e" : "#34d399" }}>
-                    {selectedStudentForDetail.attendance}%
+                  <span style={{ fontSize: "20px", fontWeight: 800, color: selectedStudentForDetail.attendance_percentage < 65 ? "#f43f5e" : "#34d399" }}>
+                    {selectedStudentForDetail.attendance_percentage}%
                   </span>
                 </div>
               </div>
@@ -498,77 +558,73 @@ export default function CoordinatorAttendance({ hideHeader }) {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
                 <div>
                   <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Total Sessions</span>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>{selectedStudentForDetail.totalClasses} Sessions</span>
+                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>
+                    {selectedStudentForDetail.total_classes ?? selectedStudentForDetail.total_classes} Sessions
+                  </span>
                 </div>
                 <div>
                   <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Present / Absent</span>
                   <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>
-                    <span style={{ color: "#059669" }}>{selectedStudentForDetail.present} Present</span> / <span style={{ color: "#e11d48" }}>{selectedStudentForDetail.absent} Absent</span>
+                    <span style={{ color: "#059669" }}>{selectedStudentForDetail.present_count} Present</span> / <span style={{ color: "#e11d48" }}>{selectedStudentForDetail.absent_count} Absent</span>
                   </span>
                 </div>
                 <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Attendance Trend</span>
+                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Attendance Status</span>
                   <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
-                    {selectedStudentForDetail.trend === "Declining" ? (
-                      <span style={{ color: "#e11d48", display: "flex", alignItems: "center", gap: "4px" }}><TrendingDown size={16} /> Declining (-6%)</span>
-                    ) : selectedStudentForDetail.trend === "Improving" ? (
-                      <span style={{ color: "#059669", display: "flex", alignItems: "center", gap: "4px" }}><TrendingUp size={16} /> Improving (+4%)</span>
-                    ) : (
-                      <span style={{ color: "#64748b" }}>Stable</span>
-                    )}
+                    <Clock size={15} color="#4f46e5" /> {selectedStudentForDetail.attendance_status || "—"}
                   </span>
                 </div>
               </div>
 
-              {/* Monthly Breakdown */}
+              {/* Session History Log */}
               <div>
                 <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <Calendar size={16} style={{ color: "#4f46e5" }} />
-                  Monthly Attendance History
+                  Session Attendance History Log
                 </h4>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
-                  {selectedStudentForDetail.monthlyAttendance.map((m, idx) => (
-                    <div key={idx} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block" }}>{m.month}</span>
-                      <span style={{ fontSize: "16px", fontWeight: 800, color: m.percent < 75 ? "#e11d48" : "#059669" }}>
-                        {m.percent}%
-                      </span>
-                      <span style={{ fontSize: "10px", color: "#94a3b8", display: "block", marginTop: "2px" }}>
-                        {m.present} P / {m.absent} A
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Subject Breakdown */}
-              <div>
-                <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <FileSpreadsheet size={16} style={{ color: "#4f46e5" }} />
-                  Subject / Session-Wise Attendance Breakdown
-                </h4>
-                <div className="coord-perf-card" style={{ border: "1px solid #e2e8f0" }}>
-                  <table className="coord-perf-table">
-                    <thead>
-                      <tr>
-                        <th>Subject / Module</th>
-                        <th style={{ textAlign: "center" }}>Present</th>
-                        <th style={{ textAlign: "center" }}>Absent</th>
-                        <th style={{ textAlign: "right" }}>Attendance %</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedStudentForDetail.subjectHistory.map((sub, idx) => (
-                        <tr key={idx}>
-                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{sub.subject}</td>
-                          <td style={{ textAlign: "center", color: "#059669", fontWeight: 700 }}>{sub.present}</td>
-                          <td style={{ textAlign: "center", color: "#e11d48", fontWeight: 700 }}>{sub.absent}</td>
-                          <td style={{ textAlign: "right", fontWeight: 800, color: "#0f172a" }}>{sub.percent}%</td>
+                {detailLoading ? (
+                  <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8", fontSize: 13 }}>
+                    Loading history...
+                  </div>
+                ) : detailHistory.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "24px", color: "#94a3b8", fontSize: 13 }}>
+                    No logged sessions yet.
+                  </div>
+                ) : (
+                  <div className="coord-perf-card" style={{ border: "1px solid #e2e8f0" }}>
+                    <table className="coord-perf-table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Session</th>
+                          <th>Batch</th>
+                          <th style={{ textAlign: "center" }}>Status</th>
+                          <th>Remarks</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {detailHistory.map((log) => (
+                          <tr key={log.id}>
+                            <td style={{ fontWeight: 700, color: "#0f172a" }}>
+                              {log.session_date ? new Date(log.session_date).toLocaleDateString() : "—"}
+                            </td>
+                            <td style={{ color: "#334155" }}>{log.session_title || log.session_code || "—"}</td>
+                            <td style={{ color: "#475569" }}>{log.batch_name || "—"}</td>
+                            <td style={{ textAlign: "center" }}>
+                              <span
+                                className={`coord-perf-status-badge ${log.status === "present" ? "coord-perf-status--top" : log.status === "absent" ? "coord-perf-status--struggling" : "coord-perf-status--default"}`}
+                              >
+                                {log.status}
+                              </span>
+                            </td>
+                            <td style={{ color: "#64748b", fontSize: 12 }}>{log.remarks || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -587,6 +643,8 @@ export default function CoordinatorAttendance({ hideHeader }) {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

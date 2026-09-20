@@ -17,21 +17,7 @@ import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ProgressAnalytics.css";
 
-const weeklyData = [
-  { week: "W1", value: 15 },
-  { week: "W2", value: 28 },
-  { week: "W3", value: 38 },
-  { week: "W4", value: 45 },
-  { week: "W5", value: 52 },
-  { week: "W6", value: 58 },
-  { week: "W7", value: 62 },
-];
-
-const quizScores = [
-  { label: "Quiz 1", score: 82, color: "#4f46e5" },
-  { label: "Quiz 2", score: 91, color: "#10b981" },
-  { label: "Quiz 3", score: 64, color: "#f59e0b" },
-];
+const DONUT_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#06b6d4", "#8b5cf6", "#ef4444", "#14b8a6", "#f97316"];
 
 function DonutSegment({ cx, cy, r, strokeWidth, pct, color, offset }) {
   const circumference = 2 * Math.PI * r;
@@ -338,7 +324,48 @@ function SkillGapAnalyticsSection() {
 }
 
 export default function ProgressAnalytics() {
-  const avgQuiz = Math.round(quizScores.reduce((a, q) => a + q.score, 0) / quizScores.length);
+  const [weeklyData, setWeeklyData] = useState([]);
+  const [quizScores, setQuizScores] = useState([]);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadStats() {
+      try {
+        const res = await apiFetch("/reports/weekly");
+        if (cancelled) return;
+        const rows = res && res.success && Array.isArray(res.data) ? res.data : [];
+        const weekly = [];
+        const quizzes = [];
+        rows.forEach((r, i) => {
+          const scoreVal = Number.parseFloat(r.score) || r.quiz != null ? Number.parseFloat(r.quiz) : null;
+          const val = Number.isFinite(scoreVal) ? Math.max(0, Math.min(100, Math.round(scoreVal))) : null;
+          if (val != null) weekly.push({ week: `S${i + 1}`, value: val });
+          const quizVal = r.quiz != null ? Math.max(0, Math.min(100, Math.round(Number.parseFloat(r.quiz)))) : null;
+          if (quizVal != null) {
+            quizzes.push({
+              label: r.title || `Week ${i + 1}`,
+              score: quizVal,
+              color: DONUT_COLORS[i % DONUT_COLORS.length],
+            });
+          }
+        });
+        setWeeklyData(weekly);
+        setQuizScores(quizzes);
+      } catch (err) {
+        console.warn("Failed to load progress statistics:", err);
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    }
+    loadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const learningProgress = weeklyData.length > 0 ? Math.round(weeklyData.reduce((a, d) => a + d.value, 0) / weeklyData.length) : null;
+  const avgQuiz = quizScores.length > 0 ? Math.round(quizScores.reduce((a, q) => a + q.score, 0) / quizScores.length) : null;
 
   return (
     <div className="progress-analytics-page stack-6">
@@ -352,17 +379,22 @@ export default function ProgressAnalytics() {
       <div className="progress-kpis-grid">
         <div className="progress-kpi-card">
           <div className="progress-kpi-label">Problems Solved</div>
-          <p className="progress-kpi-val">48</p>
+          <p className="progress-kpi-val">N/A</p>
+          <span className="progress-kpi-sub">Coding module postponed</span>
         </div>
 
         <div className="progress-kpi-card">
           <div className="progress-kpi-label">Learning Progress</div>
-          <p className="progress-kpi-val progress-kpi-val--blue">62%</p>
+          <p className="progress-kpi-val progress-kpi-val--blue">
+            {statsLoading ? "..." : learningProgress != null ? `${learningProgress}%` : "N/A"}
+          </p>
         </div>
 
         <div className="progress-kpi-card">
           <div className="progress-kpi-label">Avg Quiz Score</div>
-          <p className="progress-kpi-val progress-kpi-val--emerald">{avgQuiz}%</p>
+          <p className="progress-kpi-val progress-kpi-val--emerald">
+            {statsLoading ? "..." : avgQuiz != null ? `${avgQuiz}%` : "N/A"}
+          </p>
         </div>
       </div>
 
@@ -376,39 +408,45 @@ export default function ProgressAnalytics() {
           <h3 className="progress-chart-title">Weekly progress</h3>
           <p className="progress-chart-desc">Cumulative roadmap completion over time</p>
           <div className="progress-chart-container">
-            <svg viewBox="0 0 400 210" width="100%" height="100%">
-              <line x1="45" y1="20" x2="385" y2="20" stroke="#f1f5f9" strokeDasharray="4" />
-              <line x1="45" y1="55" x2="385" y2="55" stroke="#f1f5f9" strokeDasharray="4" />
-              <line x1="45" y1="90" x2="385" y2="90" stroke="#f1f5f9" strokeDasharray="4" />
-              <line x1="45" y1="125" x2="385" y2="125" stroke="#f1f5f9" strokeDasharray="4" />
-              <line x1="45" y1="160" x2="385" y2="160" stroke="#cbd5e1" />
+            {statsLoading ? (
+              <div className="progress-chart-empty">Loading weekly data...</div>
+            ) : weeklyData.length === 0 ? (
+              <div className="progress-chart-empty">No weekly progress data available yet.</div>
+            ) : (
+              <svg viewBox="0 0 400 210" width="100%" height="100%">
+                <line x1="45" y1="20" x2="385" y2="20" stroke="#f1f5f9" strokeDasharray="4" />
+                <line x1="45" y1="55" x2="385" y2="55" stroke="#f1f5f9" strokeDasharray="4" />
+                <line x1="45" y1="90" x2="385" y2="90" stroke="#f1f5f9" strokeDasharray="4" />
+                <line x1="45" y1="125" x2="385" y2="125" stroke="#f1f5f9" strokeDasharray="4" />
+                <line x1="45" y1="160" x2="385" y2="160" stroke="#cbd5e1" />
 
-              <text x="35" y="24" fontSize="10" fill="#94a3b8" textAnchor="end">80</text>
-              <text x="35" y="59" fontSize="10" fill="#94a3b8" textAnchor="end">60</text>
-              <text x="35" y="94" fontSize="10" fill="#94a3b8" textAnchor="end">40</text>
-              <text x="35" y="129" fontSize="10" fill="#94a3b8" textAnchor="end">20</text>
-              <text x="35" y="164" fontSize="10" fill="#94a3b8" textAnchor="end">0</text>
+                <text x="35" y="24" fontSize="10" fill="#94a3b8" textAnchor="end">80</text>
+                <text x="35" y="59" fontSize="10" fill="#94a3b8" textAnchor="end">60</text>
+                <text x="35" y="94" fontSize="10" fill="#94a3b8" textAnchor="end">40</text>
+                <text x="35" y="129" fontSize="10" fill="#94a3b8" textAnchor="end">20</text>
+                <text x="35" y="164" fontSize="10" fill="#94a3b8" textAnchor="end">0</text>
 
-              <defs>
-                <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#4f46e5" />
-                  <stop offset="100%" stopColor="#818cf8" />
-                </linearGradient>
-              </defs>
+                <defs>
+                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4f46e5" />
+                    <stop offset="100%" stopColor="#818cf8" />
+                  </linearGradient>
+                </defs>
 
-              {weeklyData.map((d, i) => {
-                const barH = (d.value / 80) * 140;
-                const x = 60 + i * 48;
-                const y = 160 - barH;
-                return (
-                  <g key={i}>
-                    <rect x={x} y={y} width="30" height={barH} rx="4" fill="url(#barGrad)" />
-                    <text x={x + 15} y={y - 6} fontSize="10" fontWeight="700" fill="#4f46e5" textAnchor="middle">{d.value}%</text>
-                    <text x={x + 15} y="178" fontSize="11" fill="#64748b" textAnchor="middle">{d.week}</text>
-                  </g>
-                );
-              })}
-            </svg>
+                {weeklyData.map((d, i) => {
+                  const barH = Math.max((d.value / 80) * 140, 2);
+                  const x = 60 + i * 48;
+                  const y = 160 - barH;
+                  return (
+                    <g key={i}>
+                      <rect x={x} y={y} width="30" height={barH} rx="4" fill="url(#barGrad)" />
+                      <text x={x + 15} y={y - 6} fontSize="10" fontWeight="700" fill="#4f46e5" textAnchor="middle">{d.value}%</text>
+                      <text x={x + 15} y="178" fontSize="11" fill="#64748b" textAnchor="middle">{d.week}</text>
+                    </g>
+                  );
+                })}
+              </svg>
+            )}
           </div>
         </div>
 
@@ -417,46 +455,54 @@ export default function ProgressAnalytics() {
           <h3 className="progress-chart-title">Quiz performance</h3>
           <p className="progress-chart-desc">Best score per milestone quiz</p>
           <div className="progress-chart-container progress-donut-container">
-            <div className="progress-donut-wrap">
-              <svg viewBox="0 0 200 200" width="180" height="180">
-                <circle cx="100" cy="100" r="75" fill="none" stroke="#f1f5f9" strokeWidth="18" />
+            {statsLoading ? (
+              <div className="progress-chart-empty">Loading quiz scores...</div>
+            ) : quizScores.length === 0 ? (
+              <div className="progress-chart-empty">No quiz attempts recorded yet.</div>
+            ) : (
+              <>
+                <div className="progress-donut-wrap">
+                  <svg viewBox="0 0 200 200" width="180" height="180">
+                    <circle cx="100" cy="100" r="75" fill="none" stroke="#f1f5f9" strokeWidth="18" />
 
-                {(() => {
-                  const total = quizScores.reduce((a, q) => a + q.score, 0);
-                  let offset = 0;
-                  return quizScores.map((q, i) => {
-                    const pct = (q.score / total) * 100;
-                    const seg = (
-                      <DonutSegment
-                        key={i}
-                        cx={100}
-                        cy={100}
-                        r={75}
-                        strokeWidth={18}
-                        pct={pct}
-                        color={q.color}
-                        offset={offset}
-                      />
-                    );
-                    offset += pct;
-                    return seg;
-                  });
-                })()}
+                    {(() => {
+                      const total = quizScores.reduce((a, q) => a + q.score, 0);
+                      let offset = 0;
+                      return quizScores.map((q, i) => {
+                        const pct = (q.score / total) * 100;
+                        const seg = (
+                          <DonutSegment
+                            key={i}
+                            cx={100}
+                            cy={100}
+                            r={75}
+                            strokeWidth={18}
+                            pct={pct}
+                            color={q.color}
+                            offset={offset}
+                          />
+                        );
+                        offset += pct;
+                        return seg;
+                      });
+                    })()}
 
-                <text x="100" y="93" textAnchor="middle" fontSize="28" fontWeight="800" fill="#0f172a">{avgQuiz}%</text>
-                <text x="100" y="115" textAnchor="middle" fontSize="12" fill="#64748b">Avg Score</text>
-              </svg>
-            </div>
-
-            <div className="progress-donut-legend">
-              {quizScores.map((q, i) => (
-                <div key={i} className="donut-legend-item">
-                  <span className="donut-legend-dot" style={{ background: q.color }}></span>
-                  <span className="donut-legend-label">{q.label}</span>
-                  <span className="donut-legend-val">{q.score}%</span>
+                    <text x="100" y="93" textAnchor="middle" fontSize="28" fontWeight="800" fill="#0f172a">{avgQuiz}%</text>
+                    <text x="100" y="115" textAnchor="middle" fontSize="12" fill="#64748b">Avg Score</text>
+                  </svg>
                 </div>
-              ))}
-            </div>
+
+                <div className="progress-donut-legend">
+                  {quizScores.map((q, i) => (
+                    <div key={i} className="donut-legend-item">
+                      <span className="donut-legend-dot" style={{ background: q.color }}></span>
+                      <span className="donut-legend-label">{q.label}</span>
+                      <span className="donut-legend-val">{q.score}%</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

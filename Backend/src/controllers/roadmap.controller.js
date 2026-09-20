@@ -36,7 +36,7 @@ export const generateRoadmap = async (req, res, next) => {
       interviewSignals,
     } = req.body || {};
 
-    const requestedRole = targetRole || 'Software Engineer';
+    const requestedRole = targetRole ? String(targetRole).trim() : '';
     console.log(`[Roadmap Controller] Generating AI roadmap for student #${studentId}, role: "${requestedRole}"`);
     
     const roadmap = await generateNewRoadmap(studentId, requestedRole, {

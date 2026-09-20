@@ -14,8 +14,8 @@ const getTransporter = () => {
     dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
   }
 
-  const emailUser = process.env.EMAIL_USER || config.email?.user || 'training.portal0987@gmail.com';
-  const emailPass = process.env.EMAIL_PASS || config.email?.pass || 'ocbaioexvynljtnz';
+  const emailUser = process.env.EMAIL_USER || config.email?.user || '';
+  const emailPass = process.env.EMAIL_PASS || config.email?.pass || '';
 
   // If user and pass are provided in env, configure real SMTP transporter
   if (emailUser && emailPass) {
@@ -209,7 +209,7 @@ export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
       footerNote: 'This is an automated security email. Please do not reply directly.',
     });
 
-    const emailUser = process.env.EMAIL_USER || config.email?.user || 'training.portal0987@gmail.com';
+    const emailUser = process.env.EMAIL_USER || config.email?.user || '';
     const senderHeader = `"Campus Training Portal" <${emailUser}>`;
 
     const mailOptions = {
@@ -235,7 +235,7 @@ export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
 export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
   try {
     const client = getTransporter();
-    const emailUser = process.env.EMAIL_USER || config.email?.user || 'training.portal0987@gmail.com';
+    const emailUser = process.env.EMAIL_USER || config.email?.user || '';
     const senderHeader = `"Campus Training Portal" <${emailUser}>`;
 
     const roleUpper = role.toUpperCase();
@@ -314,7 +314,7 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
 export const sendGenericEmail = async ({ to, subject, html, text }) => {
   try {
     const client = getTransporter();
-    const emailUser = process.env.EMAIL_USER || config.email?.user || 'training.portal0987@gmail.com';
+    const emailUser = process.env.EMAIL_USER || config.email?.user || '';
     const senderHeader = `"Campus Training Portal" <${emailUser}>`;
 
     const htmlContent = html

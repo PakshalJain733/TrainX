@@ -176,7 +176,9 @@ export const getStudentSkillGapAnalysis = async (studentId, customData = null) =
         quizMarks[topic] = Math.round(att.percentage || 0);
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.warn(`[Skill Gap Service] Assessment attempt query failed: ${err.message}`);
+  }
 
   const performancePayload = {
     student_id: numericId,

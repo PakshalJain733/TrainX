@@ -1,116 +1,67 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
+import { ROLES } from '../utils/constants.js';
 
-let mockBatches = [
-  {
-    id: 1,
-    name: "CSE 2026 Alpha Cohort",
-    code: "CSE-2026-A",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    departmentId: 1,
-    departmentName: "Computer Science & Engineering",
-    trainer: "Rohan Sharma",
-    studentsCount: 120,
-    enrolledStudents: 120,
-    progress: 78,
-    schedule: "Mon, Wed, Fri (10:00 AM - 12:00 PM)",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Fullstack React & Node Specialization",
-    code: "FS-WEB-04",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    departmentId: 1,
-    departmentName: "Computer Science & Engineering",
-    trainer: "Ananya Gupta",
-    studentsCount: 105,
-    enrolledStudents: 105,
-    progress: 62,
-    schedule: "Mon, Thu (04:00 PM - 06:00 PM)",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Data Science & ML 2025",
-    code: "DSML-2025-B",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    departmentId: 2,
-    departmentName: "Artificial Intelligence & Data Science",
-    trainer: "Dr. Vikram Seth",
-    studentsCount: 110,
-    enrolledStudents: 110,
-    progress: 91,
-    schedule: "Tue, Thu (02:00 PM - 04:00 PM)",
-    status: "Near Completion",
-  },
-  {
-    id: 4,
-    name: "Cloud Native & DevOps Infrastructure",
-    code: "CLOUD-DO-02",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    departmentId: 3,
-    departmentName: "Information Technology",
-    trainer: "Siddharth Roy",
-    studentsCount: 85,
-    enrolledStudents: 85,
-    progress: 45,
-    schedule: "Tue, Fri (09:00 AM - 11:00 AM)",
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "CE 2025 Beta Cohort",
-    code: "CE-2025-B",
-    collegeId: 2,
-    collegeName: "St. Xavier Engineering College",
-    departmentId: 4,
-    departmentName: "Computer Engineering",
-    trainer: "Priya Nair",
-    studentsCount: 130,
-    enrolledStudents: 130,
-    progress: 80,
-    schedule: "Mon, Wed (01:00 PM - 03:00 PM)",
-    status: "Active",
-  },
-];
+const batchSelect = `
+  SELECT b.*, c.name as college_name, d.name as department_name,
+         (SELECT COUNT(DISTINCT s.id) FROM students s WHERE s.batch_id = b.id) as enrolled_students
+  FROM batches b
+  LEFT JOIN colleges c ON b.college_id = c.id
+  LEFT JOIN departments d ON b.department_id = d.id`;
+
+const mapBatch = (b) => ({
+  id: b?.id,
+  name: b?.name,
+  code: b?.join_code || `B-${b?.id}`,
+  collegeId: b?.college_id,
+  collegeName: b?.college_name || 'Engineering College',
+  departmentId: b?.department_id,
+  departmentName: b?.department_name || 'Engineering',
+  trainer: b?.mentor || 'Unassigned',
+  studentsCount: Number(b?.enrolled_students) || 0,
+  enrolledStudents: Number(b?.enrolled_students) || 0,
+  progress: 0,
+  schedule: b?.schedule || 'Regular Schedule',
+  status: b?.status === 'active' ? 'Active' : 'Inactive',
+  year: b?.year,
+  division: b?.division,
+  academic_year: b?.academic_year,
+});
 
 export const getBatches = async (req, res, next) => {
   try {
     const { collegeId, departmentId, college, department } = req.query;
 
-    let result = mockBatches;
+    let sql = `${batchSelect} WHERE 1=1`;
+    const params = [];
 
-    try {
-      const dbBatches = await query('SELECT * FROM batches');
-      if (dbBatches && dbBatches.length > 0) {
-        result = dbBatches;
-      }
-    } catch (err) {
-      // Fallback
+    // College scope: explicit query param wins; otherwise default to the
+    // caller's own college. Super admins see all colleges when no filter is given.
+    const isSuperAdmin = req.user?.role === ROLES.SUPER_ADMIN;
+    const effectiveCollegeId =
+      Number(collegeId) || (!isSuperAdmin ? (req.user?.collegeId || req.user?.college_id || null) : null);
+
+    if (effectiveCollegeId) {
+      sql += ` AND b.college_id = ?`;
+      params.push(effectiveCollegeId);
     }
-
-    if (collegeId) {
-      const cid = Number(collegeId);
-      result = result.filter((b) => b.collegeId === cid || b.collegeId === collegeId);
-    } else if (college) {
-      const cname = college.toLowerCase();
-      result = result.filter((b) => b.collegeName && b.collegeName.toLowerCase().includes(cname));
-    }
-
     if (departmentId) {
-      const did = Number(departmentId);
-      result = result.filter((b) => b.departmentId === did || b.departmentId === departmentId);
-    } else if (department) {
-      const dname = department.toLowerCase();
-      result = result.filter((b) => b.departmentName && b.departmentName.toLowerCase().includes(dname));
+      sql += ` AND b.department_id = ?`;
+      params.push(Number(departmentId));
+    }
+    if (college) {
+      sql += ` AND LOWER(c.name) LIKE ?`;
+      params.push(`%${String(college).toLowerCase()}%`);
+    }
+    if (department) {
+      sql += ` AND LOWER(d.name) LIKE ?`;
+      params.push(`%${String(department).toLowerCase()}%`);
     }
 
-    return sendSuccess(res, 'Batches retrieved successfully', result);
+    sql += ` ORDER BY b.id DESC`;
+
+    const dbBatches = await query(sql, params);
+    return sendSuccess(res, 'Batches retrieved successfully', (dbBatches || []).map(mapBatch));
   } catch (error) {
     next(error);
   }
@@ -118,29 +69,31 @@ export const getBatches = async (req, res, next) => {
 
 export const createBatch = async (req, res, next) => {
   try {
-    const { name, code, collegeId, collegeName, departmentId, departmentName, trainer, schedule } = req.body;
+    const { name, code, collegeId, departmentId, trainer, mentorId, schedule } = req.body;
     if (!name || !code) {
       return sendError(res, 'Batch Name and Code are required', 400);
     }
 
-    const newBatch = {
-      id: Date.now(),
-      name,
-      code,
-      collegeId: collegeId ? Number(collegeId) : 1,
-      collegeName: collegeName || "Apex Institute of Technology",
-      departmentId: departmentId ? Number(departmentId) : 1,
-      departmentName: departmentName || "Computer Science & Engineering",
-      trainer: trainer || "Industry Specialist",
-      studentsCount: 0,
-      enrolledStudents: 0,
-      progress: 0,
-      schedule: schedule || "Mon, Wed, Fri (10:00 AM - 12:00 PM)",
-      status: "Active",
-    };
+    const collegeIdFinal = Number(collegeId) || req.user?.college_id || req.user?.collegeId || null;
+    const userId = req.user?.userId || req.user?.id;
 
-    mockBatches = [newBatch, ...mockBatches];
-    return sendSuccess(res, 'Batch created successfully', newBatch, 201);
+    let deptId = departmentId ? Number(departmentId) : null;
+    if (!deptId && userId) {
+      const coord = await query(
+        `SELECT department_id FROM coordinator_departments WHERE coordinator_id = ? LIMIT 1`,
+        [userId]
+      );
+      deptId = coord && coord[0] ? coord[0].department_id : null;
+    }
+
+    const result = await query(
+      `INSERT INTO batches (college_id, department_id, name, mentor, mentor_id, schedule, join_code, status, academic_year)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)`,
+      [collegeIdFinal, deptId, name, trainer || null, mentorId ? Number(mentorId) : null, schedule || null, code, new Date().getFullYear()]
+    );
+
+    const [created] = await query(`${batchSelect} WHERE b.id = ?`, [result.insertId]);
+    return sendSuccess(res, 'Batch created successfully', mapBatch(created), 201);
   } catch (error) {
     next(error);
   }
@@ -149,22 +102,31 @@ export const createBatch = async (req, res, next) => {
 export const updateBatch = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const numId = Number(id);
-
-    let updatedBatch = null;
-    mockBatches = mockBatches.map((b) => {
-      if (b.id === numId || b.id === id) {
-        updatedBatch = { ...b, ...req.body };
-        return updatedBatch;
-      }
-      return b;
-    });
-
-    if (!updatedBatch) {
+    const existing = await query(`SELECT id FROM batches WHERE id = ?`, [id]);
+    if (!existing || existing.length === 0) {
       return sendError(res, 'Batch not found', 404);
     }
 
-    return sendSuccess(res, 'Batch updated successfully', updatedBatch);
+    const { name, code, trainer, mentorId, schedule, status } = req.body;
+    const updates = [];
+    const params = [];
+
+    if (name !== undefined) { updates.push('name = ?'); params.push(name); }
+    if (code !== undefined) { updates.push('join_code = ?'); params.push(code); }
+    if (trainer !== undefined) { updates.push('mentor = ?'); params.push(trainer); }
+    if (mentorId !== undefined) { updates.push('mentor_id = ?'); params.push(Number(mentorId)); }
+    if (schedule !== undefined) { updates.push('schedule = ?'); params.push(schedule); }
+    if (status !== undefined) { updates.push('status = ?'); params.push(String(status).toLowerCase() === 'active' ? 'active' : 'inactive'); }
+
+    if (updates.length === 0) {
+      return sendError(res, 'No fields to update', 400);
+    }
+
+    params.push(id);
+    await query(`UPDATE batches SET ${updates.join(', ')} WHERE id = ?`, params);
+
+    const [updated] = await query(`${batchSelect} WHERE b.id = ?`, [id]);
+    return sendSuccess(res, 'Batch updated successfully', mapBatch(updated));
   } catch (error) {
     next(error);
   }
@@ -173,9 +135,7 @@ export const updateBatch = async (req, res, next) => {
 export const deleteBatch = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const numId = Number(id);
-
-    mockBatches = mockBatches.filter((b) => b.id !== numId && b.id !== id);
+    await query(`DELETE FROM batches WHERE id = ?`, [id]);
     return sendSuccess(res, 'Batch deleted successfully');
   } catch (error) {
     next(error);

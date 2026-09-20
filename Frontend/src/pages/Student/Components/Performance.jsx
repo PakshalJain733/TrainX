@@ -13,58 +13,26 @@ import { Progress } from "../../../components/ui/Progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/Tabs";
 import "../Styles/Performance.css";
 
-// ── Default / fallback data ────────────────────────────────────────────────
+// ── Default / no-data state ────────────────────────────────────────────────
 const defaultPerformance = {
-  studentName: "Ganesh Shinde",
-  department: "ECS",
-  batch: "Batch A – 2026",
-  overallScore: 71,
-  status: "Average",
-  trend: "up",
-  trendDelta: "+4%",
-  lastUpdated: "8 Sep 2026",
+  studentName: "—",
+  department: "—",
+  batch: "—",
+  overallScore: null,
+  status: "No Data Yet",
+  trend: "stable",
+  trendDelta: "",
+  lastUpdated: "",
   scores: {
-    assessment: 78,
-    coding: 65,
-    interview: 58,
-    attendance: 82,
-    milestone: 74,
+    assessment: null,
+    coding: null,
+    interview: null,
+    attendance: null,
+    milestone: null,
   },
-  weakAreas: [
-    {
-      id: "wa-1",
-      skill: "AI Mock Interview",
-      score: 58,
-      target: 75,
-      reason: "Low scores across last 3 AI interviews – confidence and problem articulation need improvement.",
-      topics: ["STAR method", "DSA explanation", "Behavioural Q&A"],
-      actions: ["Practice 2 mock interviews this week", "Review recorded sessions", "Attempt Interview Feedback module"],
-      priority: "Critical",
-    },
-    {
-      id: "wa-2",
-      skill: "Coding / DSA",
-      score: 65,
-      target: 80,
-      reason: "Struggling with dynamic programming and graph-based problems in practice submissions.",
-      topics: ["Dynamic Programming", "Graph traversal (BFS/DFS)", "Recursion & Backtracking"],
-      actions: ["Solve 5 DP problems this week", "Complete Graph module on Learning Content", "Join Weekend Coding Sprint"],
-      priority: "High",
-    },
-  ],
-  suggestions: [
-    { id: "s-1", icon: "interview", text: "Schedule 2 AI Mock Interview sessions before the next assessment cycle.", action: "Go to AI Interview", link: "/student/ai-interview" },
-    { id: "s-2", icon: "coding", text: "Complete the Dynamic Programming practice set (8 problems pending).", action: "Open Practice", link: "/student/practice" },
-    { id: "s-3", icon: "learning", text: "Watch the DBMS Normalization video and complete the follow-up quiz.", action: "Open Learning", link: "/student/learning" },
-    { id: "s-4", icon: "attendance", text: "Maintain 80%+ attendance to protect your eligibility for placements.", action: "View Attendance", link: "/student/attendance" },
-  ],
-  scoreHistory: [
-    { week: "W1", assessment: 62, coding: 50, interview: 45 },
-    { week: "W2", assessment: 67, coding: 55, interview: 50 },
-    { week: "W3", assessment: 72, coding: 60, interview: 52 },
-    { week: "W4", assessment: 75, coding: 62, interview: 55 },
-    { week: "W5", assessment: 78, coding: 65, interview: 58 },
-  ],
+  weakAreas: [],
+  suggestions: [],
+  scoreHistory: [],
 };
 
 // ── Radial Gauge ────────────────────────────────────────────────────────────
@@ -73,7 +41,7 @@ function RadialGauge({ value, size = 160, label, color = "#4f46e5" }) {
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
-  const filled = (value / 100) * circumference;
+  const filled = value == null ? 0 : (value / 100) * circumference;
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(148,163,184,0.15)" strokeWidth={14} />
@@ -85,7 +53,7 @@ function RadialGauge({ value, size = 160, label, color = "#4f46e5" }) {
         transform={`rotate(-90 ${cx} ${cy})`}
         style={{ transition: "stroke-dasharray 1s ease" }}
       />
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="800" fill="#0f172a">{value}%</text>
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="800" fill="#0f172a">{value == null ? "N/A" : `${value}%`}</text>
       <text x={cx} y={cy + 14} textAnchor="middle" fontSize="11" fill="#64748b">{label}</text>
     </svg>
   );
@@ -93,6 +61,14 @@ function RadialGauge({ value, size = 160, label, color = "#4f46e5" }) {
 
 // ── Score History Bar Chart ─────────────────────────────────────────────────
 function ScoreHistoryChart({ data }) {
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return (
+      <div className="perf-empty">
+        <BarChart3 size={36} color="#94a3b8" />
+        <p>No assessment history recorded yet.</p>
+      </div>
+    );
+  }
   const maxVal = 100;
   const W = 360, H = 160, padX = 40, padY = 20;
   const chartW = W - padX * 2;
@@ -143,7 +119,8 @@ function ScoreHistoryChart({ data }) {
 
 // ── Score Meter Card ────────────────────────────────────────────────────────
 function ScoreMeter({ label, value, icon: Icon, color, bgColor, target = 75 }) {
-  const isWeak = value < target;
+  const isWeak = value != null && value < target;
+  const displayValue = value == null ? "N/A" : `${value}%`;
   return (
     <div className="perf-score-meter-card">
       <div className="perf-score-meter-header">
@@ -151,19 +128,21 @@ function ScoreMeter({ label, value, icon: Icon, color, bgColor, target = 75 }) {
           <Icon size={16} />
         </div>
         <span className="perf-score-label">{label}</span>
-        {isWeak
-          ? <span className="perf-score-flag weak">Below Target</span>
-          : <span className="perf-score-flag good">On Track</span>}
+        {value == null
+          ? <span className="perf-score-flag good">No Data Yet</span>
+          : isWeak
+            ? <span className="perf-score-flag weak">Below Target</span>
+            : <span className="perf-score-flag good">On Track</span>}
       </div>
-      <div className="perf-score-value" style={{ color }}>{value}%</div>
+      <div className="perf-score-value" style={{ color }}>{displayValue}</div>
       <div className="perf-score-progress-bg">
-        <div className="perf-score-progress-fill" style={{ width: `${value}%`, background: color }} />
+        <div className="perf-score-progress-fill" style={{ width: `${value ?? 0}%`, background: color }} />
         <div className="perf-score-target-marker" style={{ left: `${target}%` }} title={`Target: ${target}%`} />
       </div>
       <div className="perf-score-footer">
         <span className="perf-score-sub">Target: {target}%</span>
         <span className={`perf-score-diff ${isWeak ? "neg" : "pos"}`}>
-          {isWeak ? `${target - value}% to go` : `+${value - target}% above`}
+          {value == null ? "No data recorded" : isWeak ? `${target - value}% to go` : `+${value - target}% above`}
         </span>
       </div>
     </div>
@@ -244,6 +223,7 @@ function SuggestionIcon({ type }) {
 
 // ── Status helper ───────────────────────────────────────────────────────────
 function statusInfo(score) {
+  if (score == null) return { label: "No Data Yet", color: "#94a3b8", bg: "rgba(148,163,184,0.12)" };
   if (score >= 85) return { label: "Excellent", color: "#10b981", bg: "rgba(16,185,129,0.12)" };
   if (score >= 70) return { label: "Good", color: "#3b82f6", bg: "rgba(59,130,246,0.12)" };
   if (score >= 55) return { label: "Average", color: "#f59e0b", bg: "rgba(245,158,11,0.12)" };
@@ -309,16 +289,16 @@ export default function Performance() {
             <span className="perf-hero-status-badge" style={{ background: statusBg, color: statusColor }}>
               <Activity size={14} /> {statusLabel}
             </span>
-            <span className={`perf-hero-trend ${data.trend === "up" ? "up" : "down"}`}>
-              {data.trend === "up" ? <ArrowUpRight size={15} /> : <ArrowDownRight size={15} />}
-              {data.trendDelta} this cycle
+            <span className={`perf-hero-trend ${data.trend}`}>
+              {data.trend === "up" ? <ArrowUpRight size={15} /> : data.trend === "down" ? <ArrowDownRight size={15} /> : <Activity size={15} />}
+              {data.trendDelta || "No trend data yet"}
             </span>
           </div>
           <div className="perf-hero-meta-row">
-            <span><Clock size={13} /> Updated: {data.lastUpdated}</span>
+            <span><Clock size={13} /> Updated: {data.lastUpdated || "—"}</span>
             <span><Star size={13} /> {data.weakAreas?.length || 0} weak area{data.weakAreas?.length !== 1 ? "s" : ""} identified</span>
           </div>
-          {overall < 75 && (
+          {overall != null && overall < 75 && (
             <div className="perf-hero-alert">
               <AlertTriangle size={15} />
               <span>Overall score is below the 75% threshold. Focus on weak areas highlighted below.</span>

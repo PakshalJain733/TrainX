@@ -96,6 +96,26 @@ export const deleteCollege = async (req, res, next) => {
       return sendError(res, 'College not found', 404);
     }
 
+    const [userRefs] = await query(
+      `SELECT COUNT(*) as count FROM users WHERE college_id = ?`,
+      [numId]
+    );
+    const [batchRefs] = await query(
+      `SELECT COUNT(*) as count FROM batches WHERE college_id = ?`,
+      [numId]
+    );
+    const [deptRefs] = await query(
+      `SELECT COUNT(*) as count FROM departments WHERE college_id = ?`,
+      [numId]
+    );
+    if ((userRefs?.count || 0) > 0 || (batchRefs?.count || 0) > 0 || (deptRefs?.count || 0) > 0) {
+      return sendError(
+        res,
+        'Cannot delete college: it still has users, batches, or departments. Reassign or remove those records first.',
+        409
+      );
+    }
+
     await query('DELETE FROM colleges WHERE id = ?', [numId]);
     return sendSuccess(res, 'College deleted successfully');
   } catch (error) {

@@ -1,104 +1,46 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
+import { ROLES } from '../utils/constants.js';
 
-let mockDepartments = [
-  {
-    id: 1,
-    name: "Computer Science & Engineering",
-    code: "CSE",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    hodName: "Dr. Arvind Kulkarni",
-    hodEmail: "hod.cse@apex.edu.in",
-    studentsCount: 420,
-    batchesCount: 4,
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Artificial Intelligence & Data Science",
-    code: "AI-DS",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    hodName: "Dr. Meera Nambiar",
-    hodEmail: "hod.aids@apex.edu.in",
-    studentsCount: 380,
-    batchesCount: 3,
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Information Technology",
-    code: "IT",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    hodName: "Prof. Rajesh Verma",
-    hodEmail: "hod.it@apex.edu.in",
-    studentsCount: 340,
-    batchesCount: 3,
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Computer Engineering",
-    code: "CE",
-    collegeId: 2,
-    collegeName: "St. Xavier Engineering College",
-    hodName: "Dr. Sanjay Joshi",
-    hodEmail: "hod.ce@sxec.edu.in",
-    studentsCount: 450,
-    batchesCount: 4,
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "Electronics & Telecommunication",
-    code: "EXTC",
-    collegeId: 2,
-    collegeName: "St. Xavier Engineering College",
-    hodName: "Dr. Sunita Rao",
-    hodEmail: "hod.extc@sxec.edu.in",
-    studentsCount: 300,
-    batchesCount: 3,
-    status: "Active",
-  },
-  {
-    id: 6,
-    name: "Data Science",
-    code: "DS",
-    collegeId: 3,
-    collegeName: "Vidyalankar Institute of Tech",
-    hodName: "Prof. Anand Sharma",
-    hodEmail: "hod.ds@vit.edu.in",
-    studentsCount: 280,
-    batchesCount: 2,
-    status: "Active",
-  },
-];
+const mapDept = (d) => ({
+  id: d.id,
+  name: d.name,
+  code: d.code,
+  collegeId: d.college_id,
+  collegeName: d.collegeName || null,
+  hodName: null,
+  hodEmail: null,
+  studentsCount: parseInt(d.studentsCount, 10) || 0,
+  batchesCount: parseInt(d.batchesCount, 10) || 0,
+  status: 'Active',
+});
 
 export const getDepartments = async (req, res, next) => {
   try {
-    const { collegeId, college } = req.query;
+    const { collegeId, college, college_id } = req.query;
 
-    let result = mockDepartments;
+    let sql = `
+      SELECT d.id, d.name, d.code, d.college_id, c.name as collegeName,
+             (SELECT COUNT(DISTINCT s.user_id) FROM students s WHERE s.department_id = d.id) as studentsCount,
+             (SELECT COUNT(*) FROM batches b WHERE b.department_id = d.id) as batchesCount
+      FROM departments d
+      LEFT JOIN colleges c ON d.college_id = c.id
+    `;
+    const params = [];
 
-    try {
-      const dbDepts = await query('SELECT * FROM departments');
-      if (dbDepts && dbDepts.length > 0) {
-        result = dbDepts;
-      }
-    } catch (err) {
-      // Fallback to mock
-    }
-
-    if (collegeId) {
-      const cid = Number(collegeId);
-      result = result.filter((d) => d.collegeId === cid || d.collegeId === collegeId);
+    const cidRaw = collegeId || college_id;
+    if (cidRaw) {
+      sql += ' WHERE d.college_id = ?';
+      params.push(Number(cidRaw));
     } else if (college) {
-      const cname = college.toLowerCase();
-      result = result.filter((d) => d.collegeName && d.collegeName.toLowerCase().includes(cname));
+      sql += ' WHERE LOWER(c.name) LIKE ?';
+      params.push(`%${String(college).toLowerCase()}%`);
     }
 
+    sql += ' ORDER BY d.id ASC';
+
+    const dbDepts = await query(sql, params);
+    const result = (dbDepts || []).map(mapDept);
     return sendSuccess(res, 'Departments retrieved successfully', result);
   } catch (error) {
     next(error);
@@ -107,26 +49,39 @@ export const getDepartments = async (req, res, next) => {
 
 export const createDepartment = async (req, res, next) => {
   try {
-    const { name, code, collegeId, collegeName, hodName, hodEmail } = req.body;
+    const { name, code, collegeId, college_id } = req.body;
     if (!name || !code) {
       return sendError(res, 'Department Name and Code are required', 400);
     }
 
-    const newDept = {
-      id: Date.now(),
-      name,
-      code,
-      collegeId: collegeId ? Number(collegeId) : 1,
-      collegeName: collegeName || "Apex Institute of Technology",
-      hodName: hodName || "Dr. Department HOD",
-      hodEmail: hodEmail || `hod.${code.toLowerCase()}@college.edu.in`,
-      studentsCount: 0,
-      batchesCount: 0,
-      status: "Active",
-    };
+    const isSuperAdmin = req.user.role === ROLES.SUPER_ADMIN;
+    const collegeIdNum = Number(collegeId || college_id);
+    const targetCollege = isSuperAdmin
+      ? (collegeIdNum || 1)
+      : (req.user.collegeId || 1);
 
-    mockDepartments = [newDept, ...mockDepartments];
-    return sendSuccess(res, 'Department created successfully', newDept, 201);
+    if (isSuperAdmin && collegeIdNum) {
+      const [college] = await query('SELECT id FROM colleges WHERE id = ?', [collegeIdNum]);
+      if (!college) {
+        return sendError(res, 'Selected college does not exist', 400);
+      }
+    }
+
+    const insertResult = await query(
+      'INSERT INTO departments (college_id, name, code) VALUES (?, ?, ?)',
+      [targetCollege, name.trim(), code.trim().toUpperCase()]
+    );
+
+    const rows = await query(
+      `SELECT d.id, d.name, d.code, d.college_id, c.name as collegeName,
+             0 as studentsCount, 0 as batchesCount
+       FROM departments d
+       LEFT JOIN colleges c ON d.college_id = c.id
+       WHERE d.id = ?`,
+      [insertResult.insertId]
+    );
+
+    return sendSuccess(res, 'Department created successfully', mapDept(rows?.[0] || { id: insertResult.insertId, name, code, college_id: targetCollege }), 201);
   } catch (error) {
     next(error);
   }
@@ -136,21 +91,32 @@ export const updateDepartment = async (req, res, next) => {
   try {
     const { id } = req.params;
     const numId = Number(id);
+    const { name, code, collegeId } = req.body;
 
-    let updatedDept = null;
-    mockDepartments = mockDepartments.map((d) => {
-      if (d.id === numId || d.id === id) {
-        updatedDept = { ...d, ...req.body };
-        return updatedDept;
-      }
-      return d;
-    });
-
-    if (!updatedDept) {
+    const [existing] = await query('SELECT * FROM departments WHERE id = ?', [numId]);
+    if (!existing) {
       return sendError(res, 'Department not found', 404);
     }
 
-    return sendSuccess(res, 'Department updated successfully', updatedDept);
+    if (req.user.role !== ROLES.SUPER_ADMIN && existing.college_id !== (req.user.collegeId || 1)) {
+      return sendError(res, 'Access forbidden: cannot modify a department of another college', 403);
+    }
+
+    const newCollegeId = req.user.role === ROLES.SUPER_ADMIN && collegeId != null
+      ? Number(collegeId)
+      : existing.college_id;
+
+    await query(
+      'UPDATE departments SET name = COALESCE(?, name), code = COALESCE(?, code), college_id = COALESCE(?, college_id) WHERE id = ?',
+      [name ? name.trim() : null, code ? code.trim().toUpperCase() : null, newCollegeId, numId]
+    );
+
+    const [updated] = await query(
+      `SELECT d.id, d.name, d.code, d.college_id
+       FROM departments d WHERE d.id = ?`,
+      [numId]
+    );
+    return sendSuccess(res, 'Department updated successfully', mapDept(updated));
   } catch (error) {
     next(error);
   }
@@ -161,7 +127,32 @@ export const deleteDepartment = async (req, res, next) => {
     const { id } = req.params;
     const numId = Number(id);
 
-    mockDepartments = mockDepartments.filter((d) => d.id !== numId && d.id !== id);
+    const [existing] = await query('SELECT * FROM departments WHERE id = ?', [numId]);
+    if (!existing) {
+      return sendError(res, 'Department not found', 404);
+    }
+
+    if (req.user.role !== ROLES.SUPER_ADMIN && existing.college_id !== (req.user.collegeId || 1)) {
+      return sendError(res, 'Access forbidden: cannot delete a department of another college', 403);
+    }
+
+    const [batchRefs] = await query(
+      `SELECT COUNT(*) as count FROM batches WHERE department_id = ?`,
+      [numId]
+    );
+    const [studentRefs] = await query(
+      `SELECT COUNT(*) as count FROM students WHERE department_id = ?`,
+      [numId]
+    );
+    if ((batchRefs?.count || 0) > 0 || (studentRefs?.count || 0) > 0) {
+      return sendError(
+        res,
+        'Cannot delete department: it still has batches or students assigned. Reassign them first.',
+        409
+      );
+    }
+
+    await query('DELETE FROM departments WHERE id = ?', [numId]);
     return sendSuccess(res, 'Department deleted successfully');
   } catch (error) {
     next(error);

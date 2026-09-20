@@ -5,55 +5,31 @@ import { StudentSidebar } from "./StudentSidebar";
 import "../Styles/StudentLayout.css";
 
 import BroadcastToast from "../../../components/ui/BroadcastToast";
+import apiFetch from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "calendar",
-      title: "Department Meeting Schedule",
-      desc: "HOD CSE has requested an urgent faculty meeting at 3:30 PM in Conference Room...",
-      time: "5 min ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      type: "alert",
-      title: "New Student Grievance",
-      desc: "Student Aarav Patel (BTech CSE, Sem 6) submitted a grade re-evaluation request.",
-      time: "25 min ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      type: "success",
-      title: "Attendance Report Approved",
-      desc: "Monthly attendance report for Semester 6 Data Structures has been generated.",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 4,
-      type: "document",
-      title: "Curriculum Syllabus Update",
-      desc: "Revised syllabus for AI & Machine Learning module has been published by...",
-      time: "3 hours ago",
-      unread: false,
-    },
-    {
-      id: 5,
-      type: "calendar",
-      title: "Exam Duty Allocation",
-      desc: "Your invigilation schedule for upcoming Mid-term exams has been published.",
-      time: "Yesterday",
-      unread: false,
-    }
-  ]);
+  const [notifications, setNotifications] = useState([]);
 
   const [activeTab, setActiveTab] = useState("all");
 
   useEffect(() => {
+    apiFetch("/student/notifications")
+      .then((res) => {
+        const items = (res && res.success && Array.isArray(res.data) ? res.data : [])
+          .filter((n) => n && n.title)
+          .map((n) => ({
+            id: n.id,
+            type: "alert",
+            title: n.title,
+            desc: n.message || n.body || "",
+            time: n.time || "Recently",
+            unread: false,
+          }));
+        if (items.length > 0) setNotifications((prev) => items);
+      })
+      .catch(() => {});
+
     try {
       const stored = JSON.parse(localStorage.getItem("app_broadcast_notifications") || "[]");
       if (stored.length > 0) {

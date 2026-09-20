@@ -1,12 +1,41 @@
-import { useState } from "react";
-import { Briefcase, Award, Users, CheckCircle } from "lucide-react";
-import { coordinatorPlacementDrives, coordinatorStudents } from "../../../data/coordinatorMockData";
+import { useState, useEffect } from "react";
+import { Briefcase } from "lucide-react";
+import apiFetch from "../../../utils/api";
 import "../Styles/Placement.css";
 
 export default function CoordinatorPlacement({ hideHeader }) {
-  const [drives] = useState(coordinatorPlacementDrives);
+  const [drives, setDrives] = useState([]);
+  const [schoolStudents, setSchoolStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const placedStudents = coordinatorStudents.filter((s) => s.placementStatus.includes("Placed"));
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      apiFetch("/drives"),
+      apiFetch("/coordinator/students"),
+    ])
+      .then(([driveRes, studentRes]) => {
+        if (!mounted) return;
+        setDrives(driveRes?.drives || driveRes?.results || []);
+        setSchoolStudents(studentRes?.students || []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err.message || "Failed to load placement data");
+        setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
+  if (loading) {
+    return <div style={{ padding: "48px", textAlign: "center", color: "#64748b" }}>Loading placement data...</div>;
+  }
+
+  if (error) {
+    return <div style={{ padding: "48px", textAlign: "center", color: "#e11d48" }}>{error}</div>;
+  }
 
   return (
     <div>
@@ -25,9 +54,9 @@ export default function CoordinatorPlacement({ hideHeader }) {
         <div className="coord-stat-card">
           <div className="coord-stat-label">Placed Students (CSE)</div>
           <div className="coord-stat-value coord-stat-val--emerald">
-            {placedStudents.length} Students
+            0 Students
           </div>
-          <div className="coord-stat-subtext">Avg Package: 13.0 LPA</div>
+          <div className="coord-stat-subtext">Placement records not available yet</div>
         </div>
 
         <div className="coord-stat-card">
@@ -35,15 +64,15 @@ export default function CoordinatorPlacement({ hideHeader }) {
           <div className="coord-stat-value coord-stat-val--indigo">
             {drives.length} Drives
           </div>
-          <div className="coord-stat-subtext">Google, Goldman Sachs, TCS</div>
+          <div className="coord-stat-subtext">Partner drives</div>
         </div>
 
         <div className="coord-stat-card">
           <div className="coord-stat-label">Dept Readiness Index</div>
-          <div className="coord-stat-value coord-stat-val--amber">
-            84.8%
+          <div className="coord-stat-value coord-stat-val--amber" style={{ color: "#e11d48" }}>
+            N/A
           </div>
-          <div className="coord-stat-subtext">Placement Eligible: 92%</div>
+          <div className="coord-stat-subtext">No readiness assessment data available</div>
         </div>
       </div>
 
@@ -53,29 +82,35 @@ export default function CoordinatorPlacement({ hideHeader }) {
           Partner Placement & Mock Drives
         </div>
 
-        <div className="coord-drive-list">
-          {drives.map((d) => (
-            <div key={d.id} className="coord-drive-card">
-              <div className="coord-drive-header">
-                <div>
-                  <div className="coord-drive-company">{d.company}</div>
-                  <div className="coord-drive-role">{d.role}</div>
+        {drives.length === 0 ? (
+          <p style={{ padding: "28px", textAlign: "center", color: "#94a3b8", margin: 0 }}>
+            No partner placement or mock drives are available at this time.
+          </p>
+        ) : (
+          <div className="coord-drive-list">
+            {drives.map((d) => (
+              <div key={d.id} className="coord-drive-card">
+                <div className="coord-drive-header">
+                  <div>
+                    <div className="coord-drive-company">{d.company || d.title}</div>
+                    <div className="coord-drive-role">{d.role || d.description || "Placement Drive"}</div>
+                  </div>
+                  <span
+                    className={String(d.status || "Active").includes("Active") ? "coord-drive-status--active" : "coord-drive-status--placed"}
+                  >
+                    {d.status || "Active"}
+                  </span>
                 </div>
-                <span
-                  className={d.status.includes("Active") ? "coord-drive-status--active" : "coord-drive-status--placed"}
-                >
-                  {d.status}
-                </span>
-              </div>
 
-              <div className="coord-drive-meta">
-                <span>Drive Date: <strong>{d.driveDate}</strong></span>
-                <span>Registered: <strong>{d.registeredCount} Students</strong></span>
-                <span>Cutoff: <strong>{d.cutoffScore}</strong></span>
+                <div className="coord-drive-meta">
+                  <span>Drive Date: <strong>{d.driveDate || d.date || "—"}</strong></span>
+                  <span>Registered: <strong>{d.registeredCount || 0} Students</strong></span>
+                  <span>Cutoff: <strong>{d.cutoffScore || "—"}</strong></span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

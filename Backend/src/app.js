@@ -20,6 +20,7 @@ import batchRoutes from './routes/batch.routes.js';
 import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
 import mentorRoutes from './routes/mentor.routes.js';
 import coordinatorRoutes from './routes/coordinator.routes.js';
+import superadminRoutes from './routes/superadmin.routes.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
@@ -62,6 +63,7 @@ app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
 app.use('/api/v1/mentor', mentorRoutes);
 app.use('/api/v1/coordinator', coordinatorRoutes);
+app.use('/api/v1/superadmin', superadminRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

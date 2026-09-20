@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { initialDepartments } from '../../data/superAdminMockData';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
 import { GraduationCap, Search, Plus, Layers, Users, BookOpen, Building2, Filter, RefreshCw, X, Mail } from 'lucide-react';
 import { departmentAPI, collegeAPI } from '../../services/api';
 
 export default function Departments() {
-  const [departments, setDepartments] = useState(initialDepartments);
+  const [departments, setDepartments] = useState([]);
   const [colleges, setColleges] = useState([]);
   const [selectedCollegeId, setSelectedCollegeId] = useState('all');
   const [search, setSearch] = useState('');
@@ -30,12 +29,8 @@ export default function Departments() {
         departmentAPI.getDepartments(selectedCollegeId === 'all' ? null : selectedCollegeId).catch(() => []),
       ]);
 
-      if (collegesData && Array.isArray(collegesData) && collegesData.length > 0) {
-        setColleges(collegesData);
-      }
-      if (deptsData && Array.isArray(deptsData) && deptsData.length > 0) {
-        setDepartments(deptsData);
-      }
+      setColleges(Array.isArray(collegesData) ? collegesData : []);
+      setDepartments(Array.isArray(deptsData) ? deptsData : []);
     } catch (err) {
       console.warn("API load failed, fallback state maintained.");
     } finally {

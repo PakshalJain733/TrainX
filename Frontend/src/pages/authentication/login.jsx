@@ -2,7 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 import sideImage from "../../assets/LoginSideImage.png";
+import { authAPI } from "../../services/api.js";
+import { getRoleLandingRoute } from "../../utils/roleRedirect";
 import "./login.css";
+
+const DEV_LOGIN_ENABLED = import.meta.env.VITE_ENABLE_DEV_LOGIN === "true";
 
 /* ── Reusable SVG icons ─────────────────────────────── */
 const Icons = {
@@ -61,7 +65,10 @@ function Login() {
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
-  const API_BASE_URL = "/api/v1/auth";
+  const [devEmail, setDevEmail] = useState("");
+  const [devPassword, setDevPassword] = useState("");
+  const [devLoading, setDevLoading] = useState(false);
+  const [devError, setDevError] = useState("");
 
   useEffect(() => {
     let interval = null;
@@ -81,21 +88,12 @@ function Login() {
     setSuccessMsg("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setStep("otp");
-        setResendTimer(30);
-      } else {
-        setErrorMsg(data.message || "Failed to send OTP. Please ensure your account is registered.");
-      }
+      await authAPI.sendOtp(email);
+      setStep("otp");
+      setResendTimer(30);
     } catch (err) {
       console.error("OTP send error:", err);
-      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
+      setErrorMsg(err.message || "Failed to send OTP. Please ensure your account is registered.");
     } finally {
       setLoading(false);
     }
@@ -109,21 +107,12 @@ function Login() {
     setOtp(["", "", "", "", "", ""]);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/send-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setSuccessMsg("A new OTP has been sent to your email!");
-        setResendTimer(30);
-      } else {
-        setErrorMsg(data.message || "Failed to resend OTP");
-      }
+      await authAPI.sendOtp(email);
+      setSuccessMsg("A new OTP has been sent to your email!");
+      setResendTimer(30);
     } catch (err) {
       console.error("Resend OTP error:", err);
-      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
+      setErrorMsg(err.message || "Failed to resend OTP");
     } finally {
       setLoading(false);
       inputRefs.current[0]?.focus();
@@ -167,16 +156,11 @@ function Login() {
     setSuccessMsg("");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: enteredOtp }),
-      });
-      const data = await response.json();
-      if (data.success && data.data?.token) {
-        localStorage.setItem("token", data.data.token);
+      const result = await authAPI.verifyOtp(email, enteredOtp);
+      if (result?.token) {
+        localStorage.setItem("token", result.token);
 
-        const serverUser = data.data.user || {};
+        const serverUser = result.user || {};
         let existingUser = {};
         try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
 
@@ -187,26 +171,50 @@ function Login() {
 
         localStorage.setItem("user", JSON.stringify(mergedUser));
 
-        const role = mergedUser.role?.toLowerCase() || "";
-        if (role.includes("super")) {
-          navigate("/super-admin");
-        } else if (role.includes("coordinator")) {
-          navigate("/coordinator");
-        } else if (role.includes("mentor") || role.includes("faculty")) {
-          navigate("/mentor");
-        } else if (role.includes("admin") || role.includes("hod")) {
-          navigate("/admin");
-        } else {
-          navigate("/student");
-        }
+        navigate(getRoleLandingRoute(mergedUser.role));
       } else {
-        setErrorMsg(data.message || "Invalid OTP or account not found.");
+        setErrorMsg("Invalid OTP or account not found.");
       }
     } catch (err) {
       console.error("Login verification error:", err);
-      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
+      setErrorMsg(err.message || "Unable to verify OTP. Please check your connection and try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDevLogin = async (e) => {
+    e.preventDefault();
+    setDevError("");
+
+    if (!devEmail || !devPassword) {
+      setDevError("Enter the development email and password.");
+      return;
+    }
+
+    setDevLoading(true);
+
+    try {
+      const result = await authAPI.loginPassword(devEmail, devPassword);
+      if (result?.token) {
+        localStorage.setItem("token", result.token);
+
+        const serverUser = result.user || {};
+        let existingUser = {};
+        try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+
+        const mergedUser = { ...existingUser, ...serverUser };
+        localStorage.setItem("user", JSON.stringify(mergedUser));
+
+        navigate(getRoleLandingRoute(mergedUser.role));
+      } else {
+        setDevError("Invalid credentials for development login.");
+      }
+    } catch (err) {
+      console.error("Dev login error:", err);
+      setDevError(err.message || "Development login failed. Check the account or password.");
+    } finally {
+      setDevLoading(false);
     }
   };
 
@@ -388,6 +396,38 @@ function Login() {
                 </div>
               </form>
             </>
+          )}
+
+          {/* DEV-ONLY password login — hidden unless VITE_ENABLE_DEV_LOGIN=true */}
+          {DEV_LOGIN_ENABLED && (
+            <div className="dev-login-box">
+              <div className="dev-login-header">
+                <span>DEV LOGIN</span>
+                <span className="dev-login-badge">LOCAL TESTING ONLY</span>
+              </div>
+              <form onSubmit={handleDevLogin}>
+                <div className="dev-login-input-wrap">
+                  <input
+                    type="text"
+                    placeholder="Account email"
+                    value={devEmail}
+                    onChange={(e) => setDevEmail(e.target.value)}
+                    autoComplete="username"
+                  />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={devPassword}
+                    onChange={(e) => setDevPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <button type="submit" className="dev-login-btn" disabled={devLoading}>
+                  {devLoading ? "Signing in..." : "Dev Sign In"}
+                </button>
+                {devError && <p className="auth-error-msg">{devError}</p>}
+              </form>
+            </div>
           )}
         </div>
       </div>

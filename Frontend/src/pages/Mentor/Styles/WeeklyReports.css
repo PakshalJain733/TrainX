@@ -2,12 +2,13 @@
 .mentor-weeklyreports-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
 .mentor-report-title {
   font-weight: 700;
   color: #0f172a;
+  max-width: 320px;
 }
 
 .mentor-report-batch {
@@ -19,13 +20,73 @@
   color: #64748b;
 }
 
+.mentor-report-metric {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
 .mentor-report-status {
   padding: 3px 10px;
   border-radius: 9999px;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
+  border: 1px solid transparent;
+  display: inline-block;
+}
+
+.mentor-report-status--submitted {
   background: #ecfdf5;
   color: #047857;
-  border: 1px solid #a7f3d0;
-  display: inline-block;
+  border-color: #a7f3d0;
+}
+
+.mentor-report-status--draft {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.mentor-report-status--reviewed {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.mentor-report-export-note {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Empty state inside the table */
+.mentor-report-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 16px;
+}
+
+.mentor-report-empty svg {
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.mentor-report-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.mentor-report-empty-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
 }

@@ -558,6 +558,92 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE leave_requests MODIFY COLUMN title VARCHAR(255) DEFAULT 'Leave Request'`); } catch (_) {}
     try { await conn.query(`ALTER TABLE leave_requests ADD COLUMN attachment VARCHAR(500) NULL`); } catch (_) {}
 
+    // 28. Ensure Practice Problems / Coding Tasks Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS practice_problems (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT DEFAULT 1,
+        batch_id INT NULL,
+        batch_name VARCHAR(100) DEFAULT 'All Batches',
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        difficulty ENUM('Easy', 'Medium', 'Hard') NOT NULL DEFAULT 'Medium',
+        category VARCHAR(100) DEFAULT 'General DSA',
+        tags VARCHAR(255) NULL,
+        points INT DEFAULT 100,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // 29. Ensure Batch Tasks Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        batch_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        topic VARCHAR(255) NULL,
+        difficulty ENUM('Easy', 'Medium', 'Hard') DEFAULT 'Medium',
+        points INT DEFAULT 100,
+        deadline VARCHAR(100) NULL,
+        description TEXT NULL,
+        test_cases JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 30. Ensure Task Submissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS task_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        user_id INT NOT NULL,
+        status VARCHAR(50) DEFAULT 'submitted',
+        score INT DEFAULT 0,
+        submitted_code LONGTEXT NULL,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (task_id) REFERENCES batch_tasks(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 31. Ensure Roadmaps Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS roadmaps (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        target_role VARCHAR(255) NULL,
+        career_track VARCHAR(255) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 32. Ensure Roadmap Items Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS roadmap_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        roadmap_id INT NOT NULL,
+        sequence_order INT DEFAULT 0,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        status VARCHAR(50) DEFAULT 'locked',
+        progress INT DEFAULT 0,
+        tags JSON NULL,
+        quizzes INT DEFAULT 0,
+        exercises INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (roadmap_id) REFERENCES roadmaps(id) ON DELETE CASCADE
+      )
+    `);
+
     console.log('[DB Init] All database tables successfully created and verified!');
 
     await conn.end();

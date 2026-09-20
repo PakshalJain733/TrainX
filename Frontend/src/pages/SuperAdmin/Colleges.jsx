@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { initialColleges } from '../../data/superAdminMockData';
+import React, { useState, useEffect } from 'react';
+import { superAdminAPI, collegeAPI } from '../../services/api';
 import StatusBadge from '../../components/SuperAdmin/StatusBadge';
 import ActionDropdown from '../../components/SuperAdmin/ActionDropdown';
 import { Plus, Search, Filter, Building2, MapPin, Mail, Users, ArrowLeft, Hash, User } from 'lucide-react';
@@ -7,7 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import EmptyState from '../../components/ui/EmptyState';
 
 export default function Colleges() {
-  const [colleges, setColleges] = useState(initialColleges);
+  const [colleges, setColleges] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState('list'); // 'list' or 'add'
   const navigate = useNavigate();
@@ -17,21 +18,46 @@ export default function Colleges() {
     name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 5, studentsCount: 150,
   });
 
+  const loadColleges = () => {
+    setLoading(true);
+    superAdminAPI.colleges()
+      .then((data) => {
+        if (Array.isArray(data)) setColleges(data);
+        else if (data && Array.isArray(data.colleges)) setColleges(data.colleges);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadColleges();
+  }, []);
+
   const filteredColleges = colleges.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.code.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.location || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.code || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAddCollege = (e) => {
+  const handleAddCollege = async (e) => {
     e.preventDefault();
-    if (!formData.name || !formData.code || !formData.location) return;
-    setColleges([{ ...formData, id: Date.now(), status: 'Active' }, ...colleges]);
+    if (!formData.name || !formData.code) return;
+    try {
+      const created = await collegeAPI.createCollege({ name: formData.name, code: formData.code });
+      setColleges([created, ...colleges]);
+    } catch (err) {
+      console.warn('Create college failed', err);
+    }
     setView('list');
     setFormData({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 5, studentsCount: 150 });
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+    } catch (err) {
+      console.warn('Delete college failed', err);
+    }
     setColleges(colleges.filter((c) => c.id !== id));
   };
 

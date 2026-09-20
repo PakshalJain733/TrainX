@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   User,
   Camera,
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
-import { coordinatorProfile } from "../../../data/coordinatorMockData";
+import apiFetch from "../../../utils/api";
 import "../../Student/Styles/ProfilePage.css";
 import "../Styles/ProfilePage.css";
 
@@ -32,19 +32,40 @@ export default function CoordinatorProfilePage() {
     } catch (e) {}
 
     return {
-      name: coordinatorProfile.name || "Harshad Nandurkar",
-      email: coordinatorProfile.email || "harshadnandurkar851@gmail.com",
-      phone: coordinatorProfile.phone || "+91 77109 07045",
-      empId: "COORD-ECS-004",
-      role: coordinatorProfile.role || "Department Training Coordinator",
-      department: coordinatorProfile.department || "Electronics & Computer Science",
-      college: coordinatorProfile.college || "Apex Institute of Technology",
-      officeLocation: "Room 402, Block B, ECS Dept",
-      officeHours: "Mon - Fri, 09:30 AM - 05:00 PM",
-      managedBatches: "6 Active Batches",
-      totalStudents: "480 Enrolled Students",
+      name: "",
+      email: "",
+      phone: "",
+      empId: "",
+      role: "Department Training Coordinator",
+      department: "",
+      college: "",
+      officeLocation: "",
+      officeHours: "",
+      managedBatches: "",
+      totalStudents: "",
     };
   });
+
+  useEffect(() => {
+    let mounted = true;
+    apiFetch("/auth/me")
+      .then((data) => {
+        if (!mounted) return;
+        const u = data?.user || data || {};
+        setForm((prev) => ({
+          ...prev,
+          name: u.name || prev.name,
+          email: u.email || prev.email,
+          phone: u.mobile_number || prev.phone,
+          empId: u.emp_id || prev.empId,
+          role: u.role === "coordinator" ? "Department Training Coordinator" : prev.role,
+          department: u.department_name || prev.department,
+          college: u.college_name || prev.college,
+        }));
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
 
   const getInitials = (nameStr) => {
     if (!nameStr) return "HN";

@@ -24,6 +24,64 @@ const getCallerCollegeFilter = (req) => {
   return req.user.collegeId;
 };
 
+/**
+ * Normalize an incoming role string to a canonical role constant.
+ */
+const normalizeRole = (role) => {
+  if (!role) return null;
+  const r = String(role).toLowerCase();
+  if (r.includes('super')) return ROLES.SUPER_ADMIN;
+  if (r.includes('admin') || r.includes('hod')) return ROLES.COLLEGE_ADMIN;
+  if (r.includes('coordinator')) return ROLES.COORDINATOR;
+  if (r.includes('mentor') || r.includes('faculty')) return ROLES.MENTOR;
+  return ROLES.STUDENT;
+};
+
+/**
+ * Privilege guard: only a super_admin may assign admin-level roles.
+ * College admins may only manage coordinator / mentor / student accounts.
+ */
+const canAssignRole = (callerRole, targetRole) => {
+  if (callerRole === ROLES.SUPER_ADMIN) return true;
+  return [ROLES.COORDINATOR, ROLES.MENTOR, ROLES.STUDENT].includes(targetRole);
+};
+
+/**
+ * Whitelist user-editable fields so clients can never inject role /
+ * college_id / arbitrary columns through update payloads.
+ */
+const pickUserUpdateFields = (body = {}) => {
+  const allowed = [
+    'name',
+    'email',
+    'mobile_number',
+    'phone',
+    'department_id',
+    'batch_id',
+    'roll_number',
+    'department',
+    'year',
+    'division',
+    'semester',
+    'cgpa',
+    'skills',
+    'gender',
+    'city',
+    'emergency_contact',
+    'guardianContact',
+    'linkedin_url',
+    'linkedinUrl',
+    'target_track',
+    'track',
+    'is_active',
+  ];
+  const picked = {};
+  for (const key of allowed) {
+    if (body[key] !== undefined) picked[key] = body[key];
+  }
+  return picked;
+};
+
 export const getAdminData = async (req, res, next) => {
   try {
     const collegeId = getCallerCollegeFilter(req);
@@ -115,13 +173,11 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     // Role mapping
-    let canonicalRole = ROLES.STUDENT;
-    if (role) {
-      const r = role.toLowerCase();
-      if (r.includes('super')) canonicalRole = ROLES.SUPER_ADMIN;
-      else if (r.includes('admin') || r.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
-      else if (r.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
-      else if (r.includes('mentor') || r.includes('faculty')) canonicalRole = ROLES.MENTOR;
+    const canonicalRole = normalizeRole(role) || ROLES.STUDENT;
+
+    // Privilege guard: college admins cannot mint admin-level accounts
+    if (!canAssignRole(req.user.role, canonicalRole)) {
+      return sendError(res, 'Access forbidden: You cannot assign this role', 403);
     }
 
     // College Isolation Enforcement:
@@ -202,7 +258,27 @@ export const updateUserAdmin = async (req, res, next) => {
       return sendError(res, 'Access forbidden: Cannot modify users from another college', 403);
     }
 
-    const updated = await updateUserModel(id, req.body);
+    // Whitelist editable fields — never trust raw req.body
+    const updates = pickUserUpdateFields(req.body);
+
+    // Role changes require role-assignment privileges
+    if (req.body.role !== undefined) {
+      const targetRole = normalizeRole(req.body.role);
+      if (!canAssignRole(req.user.role, targetRole)) {
+        return sendError(res, 'Access forbidden: You cannot assign this role', 403);
+      }
+      updates.role = targetRole;
+    }
+
+    // Only super admins may move a user to another college
+    if (req.body.college_id !== undefined) {
+      if (req.user.role !== ROLES.SUPER_ADMIN) {
+        return sendError(res, 'Access forbidden: Only super admins can change college assignment', 403);
+      }
+      updates.college_id = parseInt(req.body.college_id, 10);
+    }
+
+    const updated = await updateUserModel(id, updates);
     return sendSuccess(res, 'User updated successfully', updated);
   } catch (error) {
     next(error);
@@ -312,7 +388,13 @@ export const getAdminProfile = async (req, res, next) => {
 export const updateAdminProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id || 1;
-    const updated = await updateUserModel(userId, req.body);
+    // Self-service profile edits may never change role, college or activation state
+    const updates = pickUserUpdateFields(req.body);
+    delete updates.is_active;
+    delete updates.department_id;
+    delete updates.batch_id;
+    delete updates.roll_number;
+    const updated = await updateUserModel(userId, updates);
     return sendSuccess(res, 'Admin profile updated successfully', updated);
   } catch (error) {
     next(error);
@@ -378,7 +460,7 @@ export const getAdminPerformance = async (req, res, next) => {
       SELECT u.id, u.name, u.email, s.roll_number, s.department, s.department_id, s.batch_id,
              d.name as dept_name, b.name as batch_name,
              COALESCE(att.attendance_percentage, 0) as attendance_pct,
-             COALESCE(ROUND(AVG(aa.percentage), 1), 70.0) as avg_assessment,
+             COALESCE(ROUND(AVG(aa.percentage), 1), 0) as avg_assessment,
              sg.overall_status, sg.weak_areas
       FROM users u
       JOIN students s ON u.id = s.user_id

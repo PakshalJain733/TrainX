@@ -1,22 +1,34 @@
-import React, { useState } from 'react';
-import { CalendarCheck, Search, CheckCircle2, XCircle, Clock, Building2, Filter } from 'lucide-react';
-
-const mockAttendanceData = [
-  { id: 1, college: "PVPPCOE Mumbai", department: "Computer Engineering", batch: "CSE 2026 Alpha", totalSessions: 48, avgAttendance: "94.2%", status: "Good" },
-  { id: 2, college: "Apex Institute", department: "Information Technology", batch: "IT 2026 Beta", totalSessions: 42, avgAttendance: "68.5%", status: "Needs Support" },
-  { id: 3, college: "Meridian College", department: "AI & Data Science", batch: "AI 2026 Cohort", totalSessions: 45, avgAttendance: "88.0%", status: "Good" },
-  { id: 4, college: "Vanguard Institute", department: "Electronics Engineering", batch: "ECE 2026", totalSessions: 40, avgAttendance: "82.4%", status: "Good" }
-];
+import React, { useState, useEffect } from 'react';
+import { CalendarCheck, Search, RefreshCw, Building2 } from 'lucide-react';
+import { superAdminAPI } from '../../services/api';
 
 export default function Attendance() {
-  const [attendanceList] = useState(mockAttendanceData);
+  const [attendanceList, setAttendanceList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  const loadAttendance = () => {
+    setLoading(true);
+    superAdminAPI.attendance()
+      .then((data) => setAttendanceList(Array.isArray(data) ? data : []))
+      .catch(() => setAttendanceList([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAttendance();
+  }, []);
+
   const filtered = attendanceList.filter(item =>
-    item.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.department.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.batch.toLowerCase().includes(searchQuery.toLowerCase())
+    (item.college || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (item.batch || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const statusStyle = (status) => {
+    if (status === 'Healthy') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+    if (status === 'Moderate') return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+    return 'bg-rose-500/10 text-rose-400 border-rose-500/30';
+  };
 
   return (
     <div className="space-y-6 text-slate-100">
@@ -28,6 +40,13 @@ export default function Attendance() {
           </h2>
           <p className="text-xs text-slate-500">Institutional attendance tracking and session logs</p>
         </div>
+        <button
+          onClick={loadAttendance}
+          className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition"
+          title="Refresh API"
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+        </button>
       </div>
 
       <div className="sa-search-card flex items-center justify-between gap-4">
@@ -35,7 +54,7 @@ export default function Attendance() {
           <Search className="sa-search-icon absolute left-3 top-3 text-slate-400" size={16} />
           <input
             type="text"
-            placeholder="Search college, department, or batch..."
+            placeholder="Search college or batch..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white focus:outline-none"
@@ -44,37 +63,44 @@ export default function Attendance() {
       </div>
 
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-300">
-          <thead className="text-xs text-slate-400 border-b border-slate-800 uppercase font-mono bg-slate-950/40">
-            <tr>
-              <th className="py-3 px-4">College / Department</th>
-              <th className="py-3 px-4">Target Batch</th>
-              <th className="py-3 px-4">Total Sessions</th>
-              <th className="py-3 px-4">Avg Attendance Rate</th>
-              <th className="py-3 px-4 text-right">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-800/60">
-            {filtered.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-800/40">
-                <td className="py-3.5 px-4 font-bold text-white">
-                  <div>{item.college}</div>
-                  <div className="text-xs text-indigo-400 font-normal">{item.department}</div>
-                </td>
-                <td className="py-3.5 px-4 text-slate-300 font-medium">{item.batch}</td>
-                <td className="py-3.5 px-4 text-slate-300 font-mono">{item.totalSessions} Sessions</td>
-                <td className="py-3.5 px-4 font-bold text-emerald-400">{item.avgAttendance}</td>
-                <td className="py-3.5 px-4 text-right">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
-                    item.status === 'Good' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
-                  }`}>
-                    {item.status}
-                  </span>
-                </td>
+        {filtered.length === 0 ? (
+          <div className="py-10 text-center text-slate-500 text-sm font-medium">
+            {loading ? 'Loading attendance…' : 'No batches with attendance data yet.'}
+          </div>
+        ) : (
+          <table className="w-full text-left text-sm text-slate-300">
+            <thead className="text-xs text-slate-400 border-b border-slate-800 uppercase font-mono bg-slate-950/40">
+              <tr>
+                <th className="py-3 px-4">College / Dept</th>
+                <th className="py-3 px-4">Target Batch</th>
+                <th className="py-3 px-4">Enrolled Students</th>
+                <th className="py-3 px-4">Avg Attendance Rate</th>
+                <th className="py-3 px-4 text-right">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {filtered.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-800/40">
+                  <td className="py-3.5 px-4 font-bold text-white">
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="w-3.5 h-3.5 text-indigo-400" />
+                      {item.college}
+                    </div>
+                    <div className="text-xs text-slate-500 font-normal">{item.flaggedStudents ?? 0} students below 75% threshold</div>
+                  </td>
+                  <td className="py-3.5 px-4 text-slate-300 font-medium">{item.batch}</td>
+                  <td className="py-3.5 px-4 text-slate-300 font-mono">{item.totalStudents} Students</td>
+                  <td className="py-3.5 px-4 font-bold text-emerald-400">{item.avgAttendance}</td>
+                  <td className="py-3.5 px-4 text-right">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${statusStyle(item.status)}`}>
+                      {item.status || 'No Data'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

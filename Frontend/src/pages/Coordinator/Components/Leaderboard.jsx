@@ -1,25 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Trophy, Medal, Award, Search, ArrowUp, Star } from "lucide-react";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/Students.css";
 
 export default function CoordinatorLeaderboard() {
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState("All");
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const leaderboardData = [
-    { rank: 1, name: "Aarav Sharma", rollNo: "CSE-2026-001", batch: "CSE-2026-A", score: 2840, problemsSolved: 142, attendance: 98, badge: "🥇 Rank 1", avatar: "AS" },
-    { rank: 2, name: "Ananya Iyer", rollNo: "IT-2026-031", batch: "IT-2026-Beta", score: 2710, problemsSolved: 135, attendance: 96, badge: "🥈 Rank 2", avatar: "AI" },
-    { rank: 3, name: "Riya Patel", rollNo: "CSE-2026-014", batch: "CSE-2026-A", score: 2590, problemsSolved: 128, attendance: 94, badge: "🥉 Rank 3", avatar: "RP" },
-    { rank: 4, name: "Rohan Kulkarni", rollNo: "CSE-2026-045", batch: "CSE-2026-B", score: 2420, problemsSolved: 119, attendance: 92, badge: "Top 5%", avatar: "RK" },
-    { rank: 5, name: "Siddharth Verma", rollNo: "AI-2026-009", batch: "AI-DS-2026-Alpha", score: 2310, problemsSolved: 112, attendance: 88, badge: "Top 5%", avatar: "SV" },
-    { rank: 6, name: "Neha Gupta", rollNo: "CSE-2026-022", batch: "CSE-2026-A", score: 2190, problemsSolved: 104, attendance: 91, badge: "Top 10%", avatar: "NG" },
-  ];
+  useEffect(() => {
+    apiFetch("/leaderboards")
+      .then((res) => {
+        const data = (res && res.data) || {};
+        const overall = Array.isArray(data.overall) ? data.overall : [];
+        const batches = Array.isArray(data.topBatches) ? data.topBatches : [];
+        setBatchFilter("All");
+        setLeaderboardData(overall.map((s, idx) => ({
+          rank: s.rank || idx + 1,
+          name: s.name,
+          rollNo: `#${s.id || ''}`.trim(),
+          batch: s.sub || "Engineering",
+          score: s.score || 0,
+          problemsSolved: 0,
+          attendance: Math.round(s.score || 0),
+          badge: (s.rank === 1 && "🥇 Rank 1") || (s.rank === 2 && "🥈 Rank 2") || (s.rank === 3 && "🥉 Rank 3") || (s.rank <= 5 && "Top 5%") || (s.rank <= 10 && "Top 10%") || "Contender",
+          avatar: s.initials || (s.name ? s.name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "?"),
+          batchList: batches,
+        })));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const batchOptions = Array.from(new Set(leaderboardData.map((s) => s.batch).filter(Boolean)));
 
   const filteredLeaderboard = leaderboardData.filter((s) => {
     const matchesSearch = s.name.toLowerCase().includes(search.toLowerCase()) || s.rollNo.toLowerCase().includes(search.toLowerCase());
     const matchesBatch = batchFilter === "All" || s.batch === batchFilter;
     return matchesSearch && matchesBatch;
   });
+
+  const top3 = leaderboardData.slice(0, 3);
 
   return (
     <div>
@@ -30,28 +52,29 @@ export default function CoordinatorLeaderboard() {
             Department Student Leaderboard
           </h1>
           <p className="coord-page-sub">
-            Real-time gamified XP points, coding problems solved, and weekly rank standings across all batches.
+            Real ranking computed from assessment (60%) and attendance (40%) performance across enrolled students.
           </p>
         </div>
       </div>
 
       {/* Top 3 Podium Highlights */}
       <div className="coord-stats-grid">
-        <div className="coord-stat-card" style={{ borderColor: "#fde68a", background: "#fffbeb" }}>
-          <div className="coord-stat-label">🥇 Rank 1 · Department Champion</div>
-          <div className="coord-stat-value" style={{ color: "#d97706" }}>Aarav Sharma</div>
-          <div className="coord-stat-subtext">2,840 XP · 142 Problems Solved</div>
-        </div>
-        <div className="coord-stat-card">
-          <div className="coord-stat-label">🥈 Rank 2 · Runner Up</div>
-          <div className="coord-stat-value" style={{ color: "#475569" }}>Ananya Iyer</div>
-          <div className="coord-stat-subtext">2,710 XP · 135 Problems Solved</div>
-        </div>
-        <div className="coord-stat-card">
-          <div className="coord-stat-label">🥉 Rank 3 · Second Runner Up</div>
-          <div className="coord-stat-value" style={{ color: "#b45309" }}>Riya Patel</div>
-          <div className="coord-stat-subtext">2,590 XP · 128 Problems Solved</div>
-        </div>
+        {top3.length === 0 ? (
+          <div className="coord-stat-card">
+            <div className="coord-stat-value" style={{ color: "#475569" }}>No rankings yet</div>
+            <div className="coord-stat-subtext">Ranks appear once students complete assessments or attend sessions.</div>
+          </div>
+        ) : (
+          top3.map((s, i) => (
+            <div key={s.rank} className="coord-stat-card" style={i === 0 ? { borderColor: "#fde68a", background: "#fffbeb" } : {}}>
+              <div className="coord-stat-label">{s.badge}</div>
+              <div className="coord-stat-value" style={{ color: i === 0 ? "#d97706" : i === 1 ? "#475569" : "#b45309" }}>
+                {s.name}
+              </div>
+              <div className="coord-stat-subtext">{s.score}% Performance Score</div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -61,7 +84,7 @@ export default function CoordinatorLeaderboard() {
           <input
             type="text"
             className="coord-search-input coord-search-input--with-icon"
-            placeholder="Search student or roll number..."
+            placeholder="Search student..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -72,53 +95,56 @@ export default function CoordinatorLeaderboard() {
           onChange={(e) => setBatchFilter(e.target.value)}
         >
           <option value="All">All Batches</option>
-          <option value="CSE-2026-A">CSE-2026-A</option>
-          <option value="AI-DS-2026-Alpha">AI-DS-2026-Alpha</option>
-          <option value="IT-2026-Beta">IT-2026-Beta</option>
-          <option value="CSE-2026-B">CSE-2026-B</option>
+          {batchOptions.map((b) => <option key={b} value={b}>{b}</option>)}
         </select>
       </div>
 
       {/* Table Card */}
       <div className="coord-table-card">
-        <table className="coord-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Student</th>
-              <th>Batch</th>
-              <th>Total XP</th>
-              <th>Problems Solved</th>
-              <th>Attendance</th>
-              <th>Standing Badge</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredLeaderboard.map((s) => (
-              <tr key={s.rank}>
-                <td>
-                  <span style={{ fontWeight: 800, fontSize: "14px", color: s.rank <= 3 ? "#d97706" : "#64748b" }}>
-                    #{s.rank}
-                  </span>
-                </td>
-                <td>
-                  <div className="coord-cell-user">
-                    <div className="coord-avatar-sm">{s.avatar}</div>
-                    <div>
-                      <div className="coord-cell-bold">{s.name}</div>
-                      <div className="coord-cell-meta">{s.rollNo}</div>
-                    </div>
-                  </div>
-                </td>
-                <td><span className="coord-badge coord-badge--batch">{s.batch}</span></td>
-                <td><span className="coord-cell-bold" style={{ color: "#4f46e5" }}>{s.score.toLocaleString()} XP</span></td>
-                <td><span className="coord-cell-bold">{s.problemsSolved} Solved</span></td>
-                <td><span className="coord-cell-bold">{s.attendance}%</span></td>
-                <td><span className="coord-badge coord-badge--primary">{s.badge}</span></td>
+        {loading ? (
+          <div className="coord-empty-state" style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>Loading leaderboard…</div>
+        ) : filteredLeaderboard.length === 0 ? (
+          <div className="coord-empty-state" style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
+            No students with performance data yet.
+          </div>
+        ) : (
+          <table className="coord-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Student</th>
+                <th>Department / Batch</th>
+                <th>Performance Score</th>
+                <th>Attendance Index</th>
+                <th>Standing Badge</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredLeaderboard.map((s) => (
+                <tr key={s.rank}>
+                  <td>
+                    <span style={{ fontWeight: 800, fontSize: "14px", color: s.rank <= 3 ? "#d97706" : "#64748b" }}>
+                      #{s.rank}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="coord-cell-user">
+                      <div className="coord-avatar-sm">{s.avatar}</div>
+                      <div>
+                        <div className="coord-cell-bold">{s.name}</div>
+                        <div className="coord-cell-meta">{s.rollNo}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span className="coord-badge coord-badge--batch">{s.batch}</span></td>
+                  <td><span className="coord-cell-bold" style={{ color: "#4f46e5" }}>{s.score}%</span></td>
+                  <td><span className="coord-cell-bold">{s.attendance}%</span></td>
+                  <td><span className="coord-badge coord-badge--primary">{s.badge}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

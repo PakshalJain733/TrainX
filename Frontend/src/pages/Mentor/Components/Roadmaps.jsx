@@ -1,82 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Target, Search, CheckCircle, Clock, ChevronRight } from 'lucide-react';
+import { Target, Search, CheckCircle, Clock, ChevronRight, RefreshCw } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
 import '../Styles/Roadmaps.css';
 
-const defaultRoadmaps = [
-  {
-    id: 1,
-    studentName: "Rahul Verma",
-    rollNo: "CS202601",
-    department: "Computer Engineering",
-    batch: "BE-CS-2026-A",
-    track: "Full Stack Web Development (MERN)",
-    completion: "78%",
-    status: "In Progress",
-    currentModule: "Backend API Integration & JWT Auth",
-    nextMilestone: "System Design & Microservices Architecture",
-  },
-  {
-    id: 2,
-    studentName: "Ananya Patel",
-    rollNo: "CS202604",
-    department: "Computer Engineering",
-    batch: "BE-CS-2026-A",
-    track: "AI & Machine Learning Engineering",
-    completion: "84%",
-    status: "Advanced",
-    currentModule: "Deep Learning & Computer Vision",
-    nextMilestone: "NLP & Large Language Models Deployment",
-  },
-  {
-    id: 3,
-    studentName: "Siddharth Rao",
-    rollNo: "IT202612",
-    department: "Information Technology",
-    batch: "TE-IT-2026-B",
-    track: "Data Structures & Competitive Programming",
-    completion: "55%",
-    status: "Needs Focus",
-    currentModule: "Dynamic Programming & Graph Algorithms",
-    nextMilestone: "LeetCode Hard & System Optimization",
-  },
-  {
-    id: 4,
-    studentName: "Pooja Deshmukh",
-    rollNo: "IT202615",
-    department: "Information Technology",
-    batch: "TE-IT-2026-B",
-    track: "Java Enterprise & Cloud Computing",
-    completion: "92%",
-    status: "On Track",
-    currentModule: "Spring Boot Microservices & AWS Deployment",
-    nextMilestone: "Kubernetes & DevOps CI/CD Pipeline",
-  },
-];
-
 export default function Roadmaps() {
   const [search, setSearch] = useState('');
-  const [tracks, setTracks] = useState(defaultRoadmaps);
+  const [tracks, setTracks] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    apiFetch("/students")
+    setLoading(true);
+    apiFetch("/mentor/students/roadmaps")
       .then((res) => {
-        if (res && res.data && res.data.length > 0) {
-          setTracks(res.data.map((s, idx) => ({
-            id: s.id || idx,
-            studentName: s.name || s.full_name || `Student ${idx + 1}`,
-            rollNo: s.roll_number || s.rollNo || `CS20260${idx + 1}`,
-            department: s.department || "Computer Engineering",
-            batch: s.batch_name || "BE-CS-2026-A",
-            track: s.track || "Full Stack & Software Engineering",
-            completion: `${s.progress || 65 + (idx % 30)}%`,
-            status: (s.progress || 70) > 80 ? "On Track" : "In Progress",
-            currentModule: "DSA & Core Engineering Fundamentals",
-            nextMilestone: "Capstone Web Project & AI Integration",
-          })));
+        if (res && res.data && Array.isArray(res.data.roadmaps)) {
+          setTracks(res.data.roadmaps);
         }
       })
-      .catch(() => {});
+      .catch(() => setTracks([]))
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = tracks.filter((t) =>
@@ -126,50 +67,63 @@ export default function Roadmaps() {
         </div>
       </div>
 
-      {/* Grid of Student Roadmaps */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((t) => (
-          <div key={t.id} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                  {t.batch} · {t.department}
-                </span>
-                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                  <CheckCircle size={13} /> {t.status}
-                </span>
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', color: '#64748b', gap: 12 }}>
+          <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', color: '#4f46e5' }} />
+          <p style={{ fontSize: 13 }}>Loading student roadmaps...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filtered.length === 0 && (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm text-center text-slate-400 text-sm">
+              No roadmap data available for assigned students yet.
+            </div>
+          )}
+          {filtered.map((t) => (
+            <div key={t.id} className="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <span className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                    {t.batch} · {t.department}
+                  </span>
+                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                    {t.status === "On Track" ? <><CheckCircle size={13} /> {t.status}</> : <><Clock size={13} /> {t.status}</>}
+                  </span>
+                </div>
+
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">{t.studentName}</h3>
+                <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-3">{t.track}</p>
+
+                <div className="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs mb-4">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Modules Completed</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {t.completedModules ?? "N/A"} <span className="text-slate-400">of {t.totalModules ?? "N/A"}</span>
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Roll No</span>
+                    <span className="font-semibold text-slate-500 dark:text-slate-400">{t.rollNo}</span>
+                  </div>
+                </div>
               </div>
 
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">{t.studentName}</h3>
-              <p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-3">{t.track}</p>
-
-              <div className="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800 text-xs mb-4">
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Active Module</span>
-                  <span className="font-semibold text-slate-700 dark:text-slate-300">{t.currentModule}</span>
+              <div className="mentor-roadmap-progress-wrap pt-2 border-t border-slate-100 dark:border-slate-800">
+                <div className="mentor-roadmap-progress-head flex justify-between text-xs font-bold mb-1">
+                  <span className="text-slate-500">Curriculum Completion</span>
+                  <span className="text-indigo-600">{t.completion}</span>
                 </div>
-                <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Upcoming Milestone</span>
-                  <span className="font-semibold text-slate-500 dark:text-slate-400">{t.nextMilestone}</span>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                    style={{ width: `${Math.min(100, t.completionPct || 0)}%` }}
+                  />
                 </div>
               </div>
             </div>
-
-            <div className="mentor-roadmap-progress-wrap pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="mentor-roadmap-progress-head flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-500">Curriculum Completion</span>
-                <span className="text-indigo-600">{t.completion}</span>
-              </div>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div
-                  className="bg-indigo-600 h-full rounded-full transition-all duration-300"
-                  style={{ width: t.completion }}
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

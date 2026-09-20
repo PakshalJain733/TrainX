@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   GraduationCap,
@@ -17,8 +17,9 @@ import {
   Award,
   Send,
   UserCheck,
+  RefreshCw,
 } from "lucide-react";
-import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/Students.css";
 
 const careerTracks = [
@@ -213,7 +214,9 @@ const roadmapData = {
 };
 
 export default function CoordinatorStudents() {
-  const [students, setStudents] = useState(coordinatorStudents);
+  const [students, setStudents] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState("All");
   const [riskFilter, setRiskFilter] = useState("All");
@@ -221,6 +224,41 @@ export default function CoordinatorStudents() {
   const [activeTab, setActiveTab] = useState("roadmap"); // 'roadmap', 'overview', 'skills'
   const [selectedGoal, setSelectedGoal] = useState("python-backend");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      apiFetch("/coordinator/students"),
+      apiFetch("/coordinator/batches"),
+    ])
+      .then(([stuRes, batchRes]) => {
+        const raw = (stuRes && stuRes.data && Array.isArray(stuRes.data.students)) ? stuRes.data.students : [];
+        const bch = (batchRes && batchRes.data && Array.isArray(batchRes.data.batches)) ? batchRes.data.batches : [];
+        setStudents(
+          raw.map((s) => ({
+            ...s,
+            rollNo: s.rollNumber || `R-${s.studentId || s.id}`,
+            attendance: parseFloat(s.attendance) || 0,
+            avgScore: parseFloat(s.avgScore) || 0,
+            interviewScore: "N/A",
+            selectedGoalName: "—",
+            phone: "—",
+            placementStatus: "Not yet assessed",
+            selectedGoal: "python-backend",
+            riskStatus:
+              s.riskStatus === "Good Standing"
+                ? "Good"
+                : s.riskStatus === "Moderate Risk"
+                ? "Moderate"
+                : s.riskStatus === "High Risk"
+                ? "High Risk"
+                : "Good",
+          }))
+        );
+        setBatches(bch);
+      })
+      .catch(() => setStudents([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleOpenStudentDetail = (student) => {
     setSelectedStudent(student);
@@ -231,9 +269,9 @@ export default function CoordinatorStudents() {
 
   const filteredStudents = students.filter((s) => {
     const matchesSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.rollNo.toLowerCase().includes(search.toLowerCase()) ||
-      s.email.toLowerCase().includes(search.toLowerCase());
+      String(s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(s.rollNo || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(s.email || "").toLowerCase().includes(search.toLowerCase());
     const matchesBatch = batchFilter === "All" || s.batch === batchFilter;
     const matchesRisk = riskFilter === "All" || s.riskStatus === riskFilter;
     return matchesSearch && matchesBatch && matchesRisk;
@@ -555,6 +593,15 @@ export default function CoordinatorStudents() {
   }
 
   // DEFAULT STUDENT DIRECTORY TABLE VIEW
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px", color: "#64748b", gap: 12 }}>
+        <RefreshCw size={24} style={{ animation: "spin 1s linear infinite", color: "#4f46e5" }} />
+        <p style={{ fontSize: 13 }}>Loading student directory...</p>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="coord-page-header">
@@ -585,7 +632,7 @@ export default function CoordinatorStudents() {
           onChange={(e) => setBatchFilter(e.target.value)}
         >
           <option value="All">All Batches</option>
-          {coordinatorBatches.map((b) => (
+          {batches.map((b) => (
             <option key={b.id} value={b.name}>
               {b.name}
             </option>

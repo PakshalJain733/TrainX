@@ -1,71 +1,6 @@
 import { query } from '../config/db.js';
 import { getStudentByUserId } from './user.model.js';
 
-// Fallback mock stores in case of database unavailability
-let mockSkillGaps = [
-  {
-    id: 1,
-    topic: 'Database Indexing & B-Trees',
-    batch: 'Batch TE-A (2026)',
-    batch_id: 1,
-    college_id: 1,
-    deficiencyRate: '48%',
-    avgScore: '52%',
-    priority: 'High',
-    affectedStudentsCount: 26,
-    status: 'open',
-  },
-  {
-    id: 2,
-    topic: 'Dynamic Programming & Memoization',
-    batch: 'Batch TE-A (2026)',
-    batch_id: 1,
-    college_id: 1,
-    deficiencyRate: '42%',
-    avgScore: '58%',
-    priority: 'High',
-    affectedStudentsCount: 22,
-    status: 'open',
-  },
-  {
-    id: 3,
-    topic: 'REST API Authentication & JWT Security',
-    batch: 'Batch TE-A (2026)',
-    batch_id: 1,
-    college_id: 1,
-    deficiencyRate: '35%',
-    avgScore: '64%',
-    priority: 'Medium',
-    affectedStudentsCount: 18,
-    status: 'in_remedial',
-  },
-  {
-    id: 4,
-    topic: 'Graph Algorithms (BFS / DFS / Shortest Path)',
-    batch: 'Batch TE-A (2026)',
-    batch_id: 1,
-    college_id: 1,
-    deficiencyRate: '31%',
-    avgScore: '66%',
-    priority: 'Medium',
-    affectedStudentsCount: 15,
-    status: 'open',
-  },
-  {
-    id: 5,
-    topic: 'CSS Flexbox & Responsive Layouts',
-    batch: 'Batch TE-A (2026)',
-    batch_id: 1,
-    college_id: 1,
-    deficiencyRate: '16%',
-    avgScore: '81%',
-    priority: 'Low',
-    affectedStudentsCount: 7,
-    status: 'resolved',
-  },
-];
-
-let mockRemedialInterventions = [];
 let tablesInitialized = false;
 
 /**
@@ -262,14 +197,7 @@ export const getBatchSkillGapsModel = async (collegeId = null, batchId = null) =
     console.warn(`[SkillGap Model] Read batch gaps warning: ${error.message}`);
   }
 
-  // Fallback to mock only when DB is completely unavailable
-  if (!dbAvailable) {
-    return mockSkillGaps.filter((g) => {
-      if (collegeId && g.college_id && g.college_id !== Number(collegeId)) return false;
-      if (batchId && g.batch_id && g.batch_id !== Number(batchId)) return false;
-      return true;
-    });
-  }
+  // Fallback: when the database is completely unavailable, return empty (no fabricated data)
   return [];
 };
 
@@ -483,19 +411,7 @@ export const saveRemedialInterventionModel = async (interventionData) => {
     console.warn(`[SkillGap Model] Save remedial intervention warning: ${error.message}`);
   }
 
-  // Update in mock store
-  if (skill_gap_id) {
-    const gap = mockSkillGaps.find((g) => g.id === Number(skill_gap_id));
-    if (gap) gap.status = 'in_remedial';
-  }
-
-  const newIntervention = {
-    id: mockRemedialInterventions.length + 1,
-    ...interventionData,
-    created_at: new Date().toISOString(),
-  };
-  mockRemedialInterventions.push(newIntervention);
-  return newIntervention;
+  throw new Error('Failed to persist remedial intervention');
 };
 
 /**
@@ -529,7 +445,7 @@ export const getRemedialInterventionsModel = async (collegeId = null, batchId = 
     console.warn(`[SkillGap Model] Fetch interventions warning: ${error.message}`);
   }
 
-  return mockRemedialInterventions;
+  return [];
 };
 
 // Get stored skill gap analysis for a student from MySQL DB

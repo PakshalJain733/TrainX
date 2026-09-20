@@ -122,6 +122,7 @@
 
 .mentor-table td {
   padding: 14px 20px;
+  vertical-align: middle;
 }
 
 .mentor-student-name {

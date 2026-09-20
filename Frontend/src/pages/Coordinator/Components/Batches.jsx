@@ -1,44 +1,73 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square } from "lucide-react";
-import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../../../data/coordinatorMockData";
+import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square, RefreshCw } from "lucide-react";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/Batches.css";
 
 export default function CoordinatorBatches() {
   const location = useLocation();
-  const [batches, setBatches] = useState(coordinatorBatches);
+  const [batches, setBatches] = useState([]);
+  const [mentors, setMentors] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  const loadData = () => {
+    setLoading(true);
+    Promise.all([
+      apiFetch("/coordinator/batches"),
+      apiFetch("/coordinator/mentors"),
+      apiFetch("/coordinator/students"),
+    ])
+      .then(([bRes, mRes, sRes]) => {
+        const rawBatches = (bRes && bRes.data && Array.isArray(bRes.data.batches)) ? bRes.data.batches : [];
+        setBatches(rawBatches.map((b) => ({
+          ...b,
+          code: `B-${b.id}`,
+          department: b.schedule || "Regular Schedule",
+          progress: b.avgQuizScore || 0,
+        })));
+        setMentors((mRes && mRes.data && Array.isArray(mRes.data.mentors)) ? mRes.data.mentors : []);
+        setStudents((sRes && sRes.data && Array.isArray(sRes.data.students)) ? sRes.data.students : []);
+      })
+      .catch(() => { setBatches([]); })
+      .finally(() => setLoading(false));
+  };
+
   useEffect(() => {
+    loadData();
     const params = new URLSearchParams(location.search);
     if (params.get("create") === "true" || location.state?.openCreateModal) {
       setShowCreateModal(true);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location]);
 
   // New batch form state
   const [newBatchName, setNewBatchName] = useState("");
   const [newBatchCode, setNewBatchCode] = useState("");
-  const [newMentor, setNewMentor] = useState(coordinatorMentors[0].name);
+  const [newSchedule, setNewSchedule] = useState("Mon, Wed, Fri (02:00 PM - 04:00 PM)");
+  const [newMentorId, setNewMentorId] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [studentSearch, setStudentSearch] = useState("");
 
   const filteredBatches = batches.filter((b) => {
     const matchesSearch =
-      b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.code.toLowerCase().includes(search.toLowerCase()) ||
-      b.mentor.toLowerCase().includes(search.toLowerCase());
+      String(b.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(b.code || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(b.mentor || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "All" || b.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const filteredStudents = coordinatorStudents.filter(
+  const filteredStudents = students.filter(
     (s) =>
-      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      s.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      (s.department && s.department.toLowerCase().includes(studentSearch.toLowerCase()))
+      String(s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
+      String(s.rollNumber || s.rollNo || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
+      String(s.department || "").toLowerCase().includes(studentSearch.toLowerCase())
   );
 
   const toggleStudentSelection = (studentId) => {
@@ -50,43 +79,54 @@ export default function CoordinatorBatches() {
   };
 
   const handleSelectAllStudents = () => {
-    if (selectedStudentIds.length === coordinatorStudents.length) {
+    if (selectedStudentIds.length === filteredStudents.length) {
       setSelectedStudentIds([]);
     } else {
-      setSelectedStudentIds(coordinatorStudents.map((s) => s.id));
+      setSelectedStudentIds(filteredStudents.map((s) => s.studentId || s.id));
     }
   };
 
   const handleCreateBatch = (e) => {
     e.preventDefault();
     if (!newBatchName.trim() || !newBatchCode.trim()) return;
+    setSaving(true);
 
-    const created = {
-      id: Date.now(),
-      name: newBatchName,
-      code: newBatchCode,
-      college: "Apex Institute of Technology",
-      department: "Computer Science & Engineering",
-      enrolledStudents: selectedStudentIds.length,
-      selectedStudentIds: selectedStudentIds,
-      progress: 0,
-      schedule: "Mon, Wed, Fri (02:00 PM - 04:00 PM)",
-      nextSession: "Next Mon at 02:00 PM",
-      mentor: newMentor,
-      status: "Active",
-      avgAttendance: 100,
-      avgQuizScore: 0,
-      topPerformer: "N/A",
-      defaultersCount: 0,
-    };
+    const selectedMentor = mentors.find((m) => String(m.id) === newMentorId);
 
-    setBatches([created, ...batches]);
-    setShowCreateModal(false);
-    setNewBatchName("");
-    setNewBatchCode("");
-    setSelectedStudentIds([]);
-    setStudentSearch("");
+    apiFetch("/batches", {
+      method: "POST",
+      body: JSON.stringify({
+        name: newBatchName.trim(),
+        code: newBatchCode.trim(),
+        trainer: selectedMentor ? selectedMentor.name : null,
+        mentorId: selectedMentor ? selectedMentor.id : null,
+        schedule: newSchedule,
+      }),
+    })
+      .then((res) => {
+        if (res && res.success) {
+          setShowCreateModal(false);
+          setNewBatchName("");
+          setNewBatchCode("");
+          setSelectedStudentIds([]);
+          setStudentSearch("");
+          loadData();
+        } else {
+          alert(res?.message || "Failed to create batch");
+        }
+      })
+      .catch((err) => alert(err.message || "Failed to create batch"))
+      .finally(() => setSaving(false));
   };
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "60px 20px", color: "#64748b", gap: 12 }}>
+        <RefreshCw size={24} style={{ animation: "spin 1s linear infinite", color: "#4f46e5" }} />
+        <p style={{ fontSize: 13 }}>Loading batches...</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -94,7 +134,7 @@ export default function CoordinatorBatches() {
         <div>
           <h1 className="coord-page-title">Batches Governance</h1>
           <p className="coord-page-sub">
-            Manage training cohorts, allocate industry mentors, and track syllabus completion.
+            Manage training cohorts, allocate industry mentors, and track batch-level metrics.
           </p>
         </div>
         <button
@@ -124,7 +164,7 @@ export default function CoordinatorBatches() {
         >
           <option value="All">All Statuses</option>
           <option value="Active">Active</option>
-          <option value="Near Completion">Near Completion</option>
+          <option value="Inactive">Inactive</option>
         </select>
       </div>
 
@@ -135,82 +175,90 @@ export default function CoordinatorBatches() {
               <th>Batch Details</th>
               <th>Enrolled</th>
               <th>Assigned Mentor</th>
-              <th>Completion Progress</th>
+              <th>Avg Quiz Score</th>
               <th>Avg Attendance</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredBatches.map((b) => (
-              <tr key={b.id}>
-                <td>
-                  <div style={{ fontWeight: 700, color: "#0f172a" }}>{b.name}</div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>
-                    {b.code} · {b.department}
-                  </div>
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                    <Users size={14} color="#64748b" /> {b.enrolledStudents} Students
-                  </div>
-                </td>
-                <td>
-                  <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                    <UserCheck size={14} color="#4f46e5" /> {b.mentor}
-                  </div>
-                </td>
-                <td>
-                  <div style={{ width: "140px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "2px" }}>
-                      <span style={{ fontWeight: 700, color: "#4f46e5" }}>{b.progress}%</span>
-                    </div>
-                    <div style={{ height: "6px", width: "100%", background: "#e2e8f0", borderRadius: "999px" }}>
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${b.progress}%`,
-                          background: "#4f46e5",
-                          borderRadius: "999px",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span
-                    style={{
-                      fontWeight: 700,
-                      color: b.avgAttendance >= 90 ? "#059669" : b.avgAttendance >= 80 ? "#d97706" : "#dc2626",
-                    }}
-                  >
-                    {b.avgAttendance}%
-                  </span>
-                </td>
-                <td>
-                  <span
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "999px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      background: b.status === "Active" ? "#ecfdf5" : "#eff6ff",
-                      color: b.status === "Active" ? "#047857" : "#1d4ed8",
-                    }}
-                  >
-                    {b.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="coord-btn"
-                    style={{ padding: "6px 12px", fontSize: "12px", background: "#f1f5f9", color: "#334155" }}
-                  >
-                    Manage
-                  </button>
+            {filteredBatches.length === 0 ? (
+              <tr>
+                <td colSpan="7" style={{ padding: "48px", textAlign: "center", color: "#94a3b8" }}>
+                  No batches found.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredBatches.map((b) => (
+                <tr key={b.id}>
+                  <td>
+                    <div style={{ fontWeight: 700, color: "#0f172a" }}>{b.name}</div>
+                    <div style={{ fontSize: "11px", color: "#64748b" }}>
+                      {b.code} · {b.department}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Users size={14} color="#64748b" /> {b.enrolledStudents} Students
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                      <UserCheck size={14} color="#4f46e5" /> {b.mentor || "Unassigned"}
+                    </div>
+                  </td>
+                  <td>
+                    <div style={{ width: "140px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", marginBottom: "2px" }}>
+                        <span style={{ fontWeight: 700, color: "#4f46e5" }}>{b.avgQuizScore}%</span>
+                      </div>
+                      <div style={{ height: "6px", width: "100%", background: "#e2e8f0", borderRadius: "999px" }}>
+                        <div
+                          style={{
+                            height: "100%",
+                            width: `${b.avgQuizScore}%`,
+                            background: "#4f46e5",
+                            borderRadius: "999px",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: b.avgAttendance >= 90 ? "#059669" : b.avgAttendance >= 80 ? "#d97706" : "#dc2626",
+                      }}
+                    >
+                      {b.avgAttendance}%
+                    </span>
+                  </td>
+                  <td>
+                    <span
+                      style={{
+                        padding: "4px 10px",
+                        borderRadius: "999px",
+                        fontSize: "11px",
+                        fontWeight: 700,
+                        background: b.status === "Active" ? "#ecfdf5" : "#f1f5f9",
+                        color: b.status === "Active" ? "#047857" : "#64748b",
+                      }}
+                    >
+                      {b.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="coord-btn"
+                      style={{ padding: "6px 12px", fontSize: "12px", background: "#f1f5f9", color: "#334155" }}
+                    >
+                      Manage
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -258,10 +306,27 @@ export default function CoordinatorBatches() {
               </div>
 
               <div>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Schedule</label>
+                <input
+                  type="text"
+                  placeholder="Mon, Wed, Fri (02:00 PM - 04:00 PM)"
+                  value={newSchedule}
+                  onChange={(e) => setNewSchedule(e.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #cbd5e1",
+                    marginTop: "4px",
+                  }}
+                />
+              </div>
+
+              <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assign Industry Mentor</label>
                 <select
-                  value={newMentor}
-                  onChange={(e) => setNewMentor(e.target.value)}
+                  value={newMentorId}
+                  onChange={(e) => setNewMentorId(e.target.value)}
                   style={{
                     width: "100%",
                     padding: "8px 12px",
@@ -270,9 +335,10 @@ export default function CoordinatorBatches() {
                     marginTop: "4px",
                   }}
                 >
-                  {coordinatorMentors.map((m) => (
-                    <option key={m.id} value={m.name}>
-                      {m.name} ({m.specialization})
+                  <option value="">Unassigned</option>
+                  {mentors.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
                     </option>
                   ))}
                 </select>
@@ -288,7 +354,7 @@ export default function CoordinatorBatches() {
                     onClick={handleSelectAllStudents}
                     style={{ fontSize: "11px", fontWeight: 700, color: "#4f46e5", background: "none", border: "none", cursor: "pointer" }}
                   >
-                    {selectedStudentIds.length === coordinatorStudents.length ? "Deselect All" : "Select All"}
+                    {selectedStudentIds.length === filteredStudents.length ? "Deselect All" : "Select All"}
                   </button>
                 </div>
 
@@ -329,11 +395,12 @@ export default function CoordinatorBatches() {
                     </div>
                   ) : (
                     filteredStudents.map((s) => {
-                      const isSelected = selectedStudentIds.includes(s.id);
+                      const sid = s.studentId || s.id;
+                      const isSelected = selectedStudentIds.includes(sid);
                       return (
                         <div
-                          key={s.id}
-                          onClick={() => toggleStudentSelection(s.id)}
+                          key={sid}
+                          onClick={() => toggleStudentSelection(sid)}
                           style={{
                             display: "flex",
                             alignItems: "center",
@@ -354,7 +421,7 @@ export default function CoordinatorBatches() {
                             )}
                             <div>
                               <div style={{ fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>{s.name}</div>
-                              <div style={{ fontSize: "11px", color: "#64748b" }}>{s.rollNo} · {s.department || "CSE"}</div>
+                              <div style={{ fontSize: "11px", color: "#64748b" }}>{s.rollNumber} · {s.department || "CSE"}</div>
                             </div>
                           </div>
                           <span
@@ -385,8 +452,8 @@ export default function CoordinatorBatches() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="coord-btn coord-btn--primary">
-                  Save & Launch Batch
+                <button type="submit" className="coord-btn coord-btn--primary" disabled={saving}>
+                  {saving ? "Saving..." : "Save & Launch Batch"}
                 </button>
               </div>
             </form>

@@ -1,7 +1,13 @@
 import { query } from '../config/db.js';
 
+const toNum = (value) => {
+  const n = parseFloat(value);
+  return Number.isFinite(n) ? n : null;
+};
+
 /**
- * Service to calculate and aggregate student performance from real DB tables
+ * Service to calculate and aggregate student performance from real DB tables.
+ * No fabricated fallbacks — any dimension without real data is null.
  */
 export const getStudentPerformanceService = async (userId) => {
   const numId = parseInt(userId, 10);
@@ -20,16 +26,21 @@ export const getStudentPerformanceService = async (userId) => {
     throw new Error('Student not found');
   }
 
-  // 2. Fetch Attendance Summary
+  // 2. Fetch real Attendance Summary
   const [att] = await query(
     `SELECT attendance_percentage, total_classes, present_count, absent_count
      FROM attendance_summary
      WHERE user_id = ?`,
     [numId]
   );
-  const attendanceScore = att ? Math.round(parseFloat(att.attendance_percentage) || 0) : 75;
+  const attendanceScore = att && att.attendance_percentage != null
+    ? Math.round(toNum(att.attendance_percentage))
+    : null;
+  const totalClasses = att ? Number(att.total_classes || 0) : null;
+  const presentCount = att ? Number(att.present_count || 0) : null;
+  const absentCount = att ? Number(att.absent_count || 0) : null;
 
-  // 3. Fetch Assessment Attempts
+  // 3. Fetch real Assessment Attempts
   const attempts = await query(
     `SELECT percentage, marks_obtained, total_marks, status, submitted_at, started_at
      FROM assessment_attempts
@@ -38,13 +49,17 @@ export const getStudentPerformanceService = async (userId) => {
     [numId]
   );
 
-  let assessmentScore = 70;
+  let assessmentScore = null;
   if (attempts && attempts.length > 0) {
-    const totalPct = attempts.reduce((acc, a) => acc + (parseFloat(a.percentage) || 0), 0);
-    assessmentScore = Math.round(totalPct / attempts.length);
+    const validPcts = attempts
+      .map((a) => toNum(a.percentage))
+      .filter((v) => v != null);
+    if (validPcts.length > 0) {
+      assessmentScore = Math.round(validPcts.reduce((acc, p) => acc + p, 0) / validPcts.length);
+    }
   }
 
-  // 4. Fetch Skill Gaps / Weak Areas
+  // 4. Fetch Skill Gaps / Weak Areas (real records only)
   const [skillGap] = await query(
     `SELECT weak_areas, overall_status, suggestions
      FROM skill_gap_analysis
@@ -57,55 +72,57 @@ export const getStudentPerformanceService = async (userId) => {
     try {
       const parsed = typeof skillGap.weak_areas === 'string' ? JSON.parse(skillGap.weak_areas) : skillGap.weak_areas;
       if (Array.isArray(parsed)) {
-        weakAreas = parsed.map((item, idx) => ({
-          id: `wa-${idx + 1}`,
-          skill: typeof item === 'string' ? item : item.skill || item.topic || 'Core Module',
-          score: typeof item === 'object' && item.score ? item.score : 58,
-          target: 75,
-          reason: typeof item === 'object' && item.reason ? item.reason : `Score in ${typeof item === 'string' ? item : item.skill} needs improvement.`,
-          topics: typeof item === 'object' && Array.isArray(item.topics) ? item.topics : ['Concepts', 'Practice Problems', 'Quiz Review'],
-          actions: ['Practice 2 sessions this week', 'Review weak topic resources'],
-          priority: idx === 0 ? 'Critical' : 'High',
-        }));
+        weakAreas = parsed
+          .filter((item) => item !== null && item !== undefined)
+          .map((item, idx) => ({
+            id: `wa-${idx + 1}`,
+            skill: typeof item === 'string' ? item : (item.skill || item.topic || 'Core Module'),
+            score: typeof item === 'object' && item.score != null ? Number(item.score) : null,
+            target: typeof item === 'object' && item.target != null ? Number(item.target) : 75,
+            reason: typeof item === 'object' && item.reason
+              ? item.reason
+              : `Score in ${typeof item === 'string' ? item : (item.skill || 'this area')} needs improvement.`,
+            topics: typeof item === 'object' && Array.isArray(item.topics) && item.topics.length
+              ? item.topics
+              : ['Concepts', 'Practice Problems', 'Quiz Review'],
+            actions: typeof item === 'object' && Array.isArray(item.actions) && item.actions.length
+              ? item.actions
+              : ['Review weak topic resources'],
+            priority: idx === 0 ? 'Critical' : 'High',
+          }));
       }
-    } catch (_) {}
-  }
-
-  if (weakAreas.length === 0) {
-    if (attendanceScore < 75) {
-      weakAreas.push({
-        id: 'wa-att',
-        skill: 'Attendance Regularity',
-        score: attendanceScore,
-        target: 80,
-        reason: 'Attendance is currently below the mandatory 75% threshold.',
-        topics: ['Regular Lecture Attendance', 'Lab Sessions'],
-        actions: ['Attend all upcoming sessions without absence', 'Submit medical leaves if applicable'],
-        priority: 'Critical',
-      });
-    }
-    if (assessmentScore < 70) {
-      weakAreas.push({
-        id: 'wa-quiz',
-        skill: 'Technical Assessments',
-        score: assessmentScore,
-        target: 75,
-        reason: 'Average quiz scores need reinforcement in core topics.',
-        topics: ['Core Concepts', 'MCQ Accuracy', 'Time Management'],
-        actions: ['Re-attempt previous quizzes', 'Practice with AI-generated quizzes'],
-        priority: 'High',
-      });
+    } catch (_) {
+      weakAreas = [];
     }
   }
 
-  const codingScore = Math.round(assessmentScore * 0.95);
-  const interviewScore = Math.round(assessmentScore * 0.88);
-  const milestoneScore = Math.round((attendanceScore + assessmentScore) / 2);
-  const overallScore = Math.round((attendanceScore * 0.3) + (assessmentScore * 0.4) + (codingScore * 0.3));
+  // 5. Milestone score from real roadmap progress (latest roadmap only)
+  const [milestoneRow] = await query(
+    `SELECT ROUND(AVG(ri.progress), 0) AS avg_progress, COUNT(ri.id) AS item_count
+     FROM roadmaps r
+     JOIN roadmap_items ri ON ri.roadmap_id = r.id
+     WHERE r.student_id = ?
+       AND r.id = (SELECT MAX(id) FROM roadmaps WHERE student_id = ?)`,
+    [numId, numId]
+  );
+  const milestoneScore = milestoneRow && Number(milestoneRow.item_count) > 0
+    ? Math.round(Number(milestoneRow.avg_progress))
+    : null;
 
-  let status = 'Average';
-  if (overallScore >= 80) status = 'Excellent';
-  else if (overallScore < 60) status = 'Needs Work';
+  // 6. Coding / Interview / Mock Drive — not yet backed by real evaluator data.
+  const codingScore = null;
+  const interviewScore = null;
+
+  // 7. Overall score from whichever real dimensions exist
+  const realScores = [attendanceScore, assessmentScore].filter((s) => s != null);
+  const overallScore = realScores.length > 0
+    ? Math.round(realScores.reduce((acc, s) => acc + s, 0) / realScores.length)
+    : null;
+
+  let status = 'N/A';
+  if (overallScore != null) {
+    status = overallScore >= 80 ? 'Excellent' : overallScore < 60 ? 'Needs Work' : 'Average';
+  }
 
   const suggestions = [
     { id: 's-1', icon: 'interview', text: 'Schedule an AI Mock Interview to practice technical and behavioural articulation.', action: 'Go to AI Interview', link: '/student/ai-interview' },
@@ -114,14 +131,28 @@ export const getStudentPerformanceService = async (userId) => {
     { id: 's-4', icon: 'attendance', text: 'Maintain 80%+ attendance to preserve placement eligibility.', action: 'View Attendance', link: '/student/attendance' },
   ];
 
-  // Score history from recent attempts or progressive progression
-  const scoreHistory = [
-    { week: 'W1', assessment: Math.max(40, assessmentScore - 12), coding: Math.max(40, codingScore - 15), interview: Math.max(40, interviewScore - 12) },
-    { week: 'W2', assessment: Math.max(45, assessmentScore - 8), coding: Math.max(45, codingScore - 10), interview: Math.max(42, interviewScore - 8) },
-    { week: 'W3', assessment: Math.max(50, assessmentScore - 5), coding: Math.max(50, codingScore - 6), interview: Math.max(45, interviewScore - 5) },
-    { week: 'W4', assessment: Math.max(55, assessmentScore - 2), coding: Math.max(52, codingScore - 2), interview: Math.max(48, interviewScore - 2) },
-    { week: 'W5', assessment: assessmentScore, coding: codingScore, interview: interviewScore },
-  ];
+  // 8. Real score history from actual attempt records
+  const historyAttempts = (attempts || []).slice(0, 5).slice().reverse();
+  const scoreHistory = historyAttempts.map((a) => ({
+    week: a.submitted_at ? String(a.submitted_at).slice(0, 10) : 'Attempt',
+    assessment: toNum(a.percentage) != null ? Math.round(toNum(a.percentage)) : null,
+    coding: null,
+    interview: null,
+  }));
+
+  let trend = 'stable';
+  let trendDelta = '0%';
+  if (scoreHistory.length >= 2) {
+    const first = scoreHistory[0].assessment;
+    const last = scoreHistory[scoreHistory.length - 1].assessment;
+    if (first != null && last != null) {
+      const delta = last - first;
+      trend = delta > 0 ? 'up' : delta < 0 ? 'down' : 'stable';
+      trendDelta = `${delta === 0 ? '' : (delta > 0 ? '+' : '')}${delta}%`;
+    }
+  } else if (scoreHistory.length === 1) {
+    trendDelta = 'First attempt recorded';
+  }
 
   return {
     studentName: user.name,
@@ -129,9 +160,12 @@ export const getStudentPerformanceService = async (userId) => {
     batch: user.batch_name || 'General Batch',
     overallScore,
     status,
-    trend: overallScore >= 70 ? 'up' : 'down',
-    trendDelta: overallScore >= 70 ? '+4%' : '-2%',
+    trend,
+    trendDelta,
     lastUpdated: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+    totalClasses,
+    presentCount,
+    absentCount,
     scores: {
       assessment: assessmentScore,
       coding: codingScore,

@@ -2,15 +2,29 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ShieldCheck, Users, GraduationCap } from "lucide-react";
 import { MentorSidebar } from "./MentorSidebar";
-import { mentorProfile } from "../../../data/mentorMockData";
+import apiFetch from "../../../utils/api";
 import "../Styles/MentorLayout.css";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "document", title: "12 Assignment Submissions Pending Grading", time: "15 min ago", unread: true },
-    { id: 2, type: "calendar", title: "Live Class scheduled for 02:00 PM Today", time: "1h ago", unread: true },
-    { id: 3, type: "success", title: "Weekly Governance Report Approved", time: "3h ago", unread: false },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    apiFetch("/mentor/notifications")
+      .then((res) => {
+        const items = (res && res.success && Array.isArray(res.data) ? res.data : [])
+          .filter((n) => n && n.title)
+          .map((n) => ({
+            id: n.id,
+            type: "document",
+            title: n.title,
+            desc: n.message || n.desc_text || "",
+            time: n.created_at ? new Date(n.created_at).toLocaleString() : "Recently",
+            unread: false,
+          }));
+        setNotifications(items);
+      })
+      .catch(() => setNotifications([]));
+  }, []);
 
   const [activeTab, setActiveTab] = useState("all");
 
@@ -164,10 +178,19 @@ export default function MentorLayout() {
   const [userData, setUserData] = useState(() => {
     try {
       const u = JSON.parse(localStorage.getItem("user"));
-      if (u) return u;
+      if (u && u.name) return u;
     } catch(e) {}
-    return { name: mentorProfile.name || "Vikram Sharma", role: mentorProfile.role || "Senior Trainer" };
+    return { name: "", role: "Senior Trainer" };
   });
+
+  useEffect(() => {
+    apiFetch("/mentor/overview")
+      .then((res) => {
+        const p = res && res.success && res.data && res.data.profile;
+        if (p && p.name) setUserData((prev) => ({ ...prev, name: p.name, role: p.role || prev.role, email: p.email }));
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -295,7 +318,7 @@ export default function MentorLayout() {
                     aria-label="User menu"
                   >
                     <div className="mentor-header__user-info">
-                      <span className="mentor-header__name">{userData.name || mentorProfile.name || "Vikram Sharma"}</span>
+                      <span className="mentor-header__name">{userData.name || "Mentor"}</span>
                     </div>
                     <div className="mentor-header__avatar" aria-label={`User profile ${userData.name}`}>
                       {getInitials(userData.name)}
@@ -308,8 +331,8 @@ export default function MentorLayout() {
                         <div className="mentor-header__profile-top">
                           <div className="mentor-header__profile-avatar">{getInitials(userData.name)}</div>
                           <div className="mentor-header__profile-info">
-                            <span className="mentor-header__profile-name">{userData.name || mentorProfile.name || "Vikram Sharma"}</span>
-                            <span className="mentor-header__profile-sub">{userData.role || mentorProfile.role || "Senior Trainer"}</span>
+                            <span className="mentor-header__profile-name">{userData.name || "Mentor"}</span>
+                            <span className="mentor-header__profile-sub">{userData.role || "Senior Trainer"}</span>
                           </div>
                         </div>
                         <div className="mentor-header__profile-divider" />

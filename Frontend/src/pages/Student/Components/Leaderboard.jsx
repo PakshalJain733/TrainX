@@ -16,8 +16,11 @@ const getInitials = (name) => {
 export default function Leaderboard() {
   const [activeTab, setActiveTab] = useState("overall");
   const [allStudents, setAllStudents] = useState([]);
+  const [deptStudents, setDeptStudents] = useState([]);
+  const [milestoneStudents, setMilestoneStudents] = useState([]);
   const [userDept, setUserDept] = useState("Computer Engineering & IT");
-  const [myRank, setMyRank] = useState("#1");
+  const [myRank, setMyRank] = useState("#—");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     try {
@@ -27,33 +30,41 @@ export default function Leaderboard() {
       }
     } catch (e) {}
 
-    // Fetch live dashboard leaderboard data
-    apiFetch("/student/dashboard")
+    // Fetch real leaderboard rankings from the leaderboard API
+    apiFetch("/leaderboards")
       .then((res) => {
-        if (res && res.data && res.data.leaderboard && res.data.leaderboard.length > 0) {
-          const list = res.data.leaderboard.map((item, idx) => ({
-            rank: item.rank || idx + 1,
+        const data = (res && res.data) || {};
+        const overall = Array.isArray(data.overall) ? data.overall : [];
+        const department = Array.isArray(data.department) ? data.department : [];
+        const milestone = Array.isArray(data.milestone) ? data.milestone : [];
+
+        const fmt = (list) =>
+          list.map((item) => ({
+            rank: item.rank,
             name: item.name,
-            score: "0 XP",
+            score: `${item.score}%`,
             initials: item.initials || getInitials(item.name),
-            department: item.department || userDept || "Computer Engineering & IT",
-            sub: item.you ? "Your Account" : (item.department || "Enrolled Student"),
-            isCurrentUser: item.you,
+            department: item.sub || userDept,
+            sub: item.isCurrentUser ? "Your Account" : (item.sub || "Enrolled Student"),
+            isCurrentUser: item.isCurrentUser,
           }));
-          setAllStudents(list);
-          const currentUser = list.find((s) => s.isCurrentUser);
-          if (currentUser) {
-            setMyRank(`#${currentUser.rank}`);
-          }
+
+        setAllStudents(fmt(overall));
+        setDeptStudents(fmt(department));
+        setMilestoneStudents(fmt(milestone));
+
+        const list = activeTab === "department" ? department : activeTab === "milestone" ? milestone : overall;
+        const currentUser = list.find((s) => s.isCurrentUser);
+        if (currentUser) {
+          setMyRank(`#${currentUser.rank}`);
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [activeTab]);
 
-  // Filter students based on activeTab: Overall (all) vs Department (specific department students)
-  const displayedStudents = activeTab === "department"
-    ? allStudents.filter((s) => s.isCurrentUser || (s.department && s.department.toLowerCase().includes(userDept.toLowerCase().split(' ')[0])))
-    : allStudents;
+  const displayedStudents =
+    activeTab === "department" ? deptStudents : activeTab === "milestone" ? milestoneStudents : allStudents;
 
   const getRankClass = (r) => {
     if (r === 1) return "rank-1";
@@ -118,13 +129,15 @@ export default function Leaderboard() {
             {activeTab === "department" && "Department-level ranking"}
             {activeTab === "milestone" && "Milestone velocity ranking"}
           </h3>
-          <p className="leaderboard-list-desc">Ranked by overall academic and technical performance score</p>
+          <p className="leaderboard-list-desc">Ranked by real attendance (40%) and assessment (60%) performance</p>
         </div>
 
         <div className="leaderboard-items-list">
-          {displayedStudents.length === 0 ? (
+          {loading ? (
+            <div className="leaderboard-empty-state">Loading rankings…</div>
+          ) : displayedStudents.length === 0 ? (
             <div className="leaderboard-empty-state">
-              No students found for this department leaderboard.
+              No students found with performance data yet.
             </div>
           ) : (
             displayedStudents.map((st, idx) => (

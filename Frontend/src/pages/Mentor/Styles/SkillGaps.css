@@ -554,3 +554,254 @@
 .btn-modal-secondary:hover {
   background: #f1f5f9;
 }
+
+/* ---------------------------------------------------------------------------
+ * Shared Mentor UI states / modal / form styles
+ * ------------------------------------------------------------------------- */
+
+/* Loading + empty card states */
+.mentor-card-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 20px;
+  color: #64748b;
+}
+
+.mentor-card-state-spinner {
+  color: #4f46e5;
+  animation: spin 1s linear infinite;
+}
+
+.mentor-card-state-text {
+  font-size: 13px;
+  margin: 0;
+}
+
+.mentor-empty-table-cell {
+  text-align: center;
+  padding: 48px 16px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Success alert banner */
+.mentor-alert-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Error alert banner */
+.mentor-alert-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Modal overlay + card */
+.mentor-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.mentor-modal-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  width: 100%;
+  max-width: 620px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+}
+
+.mentor-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.mentor-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.mentor-modal-close {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mentor-modal-close:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.mentor-modal-body {
+  padding: 20px;
+}
+
+.mentor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mentor-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 520px) {
+  .mentor-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mentor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mentor-field--full {
+  grid-column: 1 / -1;
+}
+
+.mentor-field-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.mentor-field-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 2px 0 0 0;
+}
+
+.mentor-input,
+.mentor-select,
+.mentor-textarea {
+  width: 100%;
+  padding: 9px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.mentor-input:focus,
+.mentor-select:focus,
+.mentor-textarea:focus {
+  background: #ffffff;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.mentor-textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+/* Modal footer + buttons */
+.mentor-modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.mentor-btn-secondary {
+  padding: 9px 18px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mentor-btn-secondary:hover {
+  background: #f1f5f9;
+}
+
+.mentor-btn-submit {
+  padding: 9px 18px;
+  background: #4f46e5;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+  transition: all 0.15s ease;
+}
+
+.mentor-btn-submit:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.mentor-btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mentor-btn-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

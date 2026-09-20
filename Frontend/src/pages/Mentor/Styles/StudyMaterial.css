@@ -2,12 +2,54 @@
 .mentor-studymaterial-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 18px;
 }
 
-.mentor-material-title {
+/* Summary strip */
+.mentor-material-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mentor-material-summary-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.mentor-material-summary-item svg {
+  color: #4f46e5;
+}
+
+.mentor-material-summary-item strong {
+  color: #0f172a;
+}
+
+/* Title cell */
+.mentor-material-title-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.mentor-material-file-icon {
+  display: inline-flex;
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.mentor-material-subject {
+  font-weight: 600;
+  color: #334155;
 }
 
 .mentor-material-batch {
@@ -30,9 +72,11 @@
   color: #64748b;
 }
 
-.mentor-material-downloads {
-  font-weight: 600;
-  color: #1e293b;
+.mentor-material-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .mentor-btn-download {
@@ -54,4 +98,67 @@
   background: #eff6ff;
   color: #4f46e5;
   border-color: #c7d2fe;
+}
+
+.mentor-btn-download--disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+.mentor-btn-download--disabled:hover {
+  background: #f8fafc;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+}
+
+.mentor-btn-icon {
+  padding: 6px;
+  background: transparent;
+  border: 1px solid #e2e8f0;
+  color: #94a3b8;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.mentor-btn-icon:hover {
+  color: #dc2626;
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+/* Empty state inside the table */
+.mentor-material-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 24px 16px;
+}
+
+.mentor-material-empty svg {
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.mentor-material-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 0;
+}
+
+.mentor-material-empty-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Compact modal for the add form */
+.mentor-modal-card--compact {
+  max-width: 560px;
 }

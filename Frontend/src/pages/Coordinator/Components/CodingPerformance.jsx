@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Code,
   Search,
@@ -10,19 +10,64 @@ import {
   X,
   RefreshCw,
   SlidersHorizontal,
+  Info,
 } from "lucide-react";
-import { coordinatorCodingPerformance, coordinatorBatches } from "../../../data/coordinatorMockData";
+import apiFetch from "../../../utils/api";
 import "../Styles/CodingPerformance.css";
 
 export default function CodingPerformance() {
+  const [students, setStudents] = useState([]);
+  const [batches, setBatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [selectedLanguage, setSelectedLanguage] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedStudent, setSelectedStudent] = useState(null);
 
+  useEffect(() => {
+    let mounted = true;
+    Promise.all([
+      apiFetch("/coordinator/students"),
+      apiFetch("/coordinator/batches"),
+    ])
+      .then(([stuRes, batchRes]) => {
+        if (!mounted) return;
+        const batchList = batchRes?.batches || [];
+        const codingRecords = (stuRes?.students || []).map((s, idx) => ({
+          id: `st-${s.studentId}`,
+          leaderboardRank: idx + 1,
+          studentName: s.name || "Unknown Student",
+          rollNo: s.rollNumber || "—",
+          batch: s.batch || "General Batch",
+          totalSolved: 0,
+          easySolved: 0,
+          mediumSolved: 0,
+          hardSolved: 0,
+          accuracyRate: 0,
+          totalSubmissions: 0,
+          primaryLanguage: "—",
+          streakDays: 0,
+          status: "N/A",
+          lastActive: "No coding activity recorded",
+          topics: {},
+          recentSubmissions: [],
+        }));
+        setBatches(batchList);
+        setStudents(codingRecords);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err.message || "Failed to load coding performance data");
+        setLoading(false);
+      });
+    return () => { mounted = false; };
+  }, []);
+
   // Filtered Students
-  const filteredData = coordinatorCodingPerformance.filter((s) => {
+  const filteredData = students.filter((s) => {
     const matchesSearch =
       s.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.rollNo.toLowerCase().includes(searchTerm.toLowerCase());
@@ -33,14 +78,11 @@ export default function CodingPerformance() {
   });
 
   // Calculate high-level metrics
-  const totalSubmissionsSum = coordinatorCodingPerformance.reduce((acc, curr) => acc + curr.totalSubmissions, 0);
-  const totalSolvedSum = coordinatorCodingPerformance.reduce((acc, curr) => acc + curr.totalSolved, 0);
-  const avgAccuracy = (
-    coordinatorCodingPerformance.reduce((acc, curr) => acc + curr.accuracyRate, 0) /
-    coordinatorCodingPerformance.length
-  ).toFixed(1);
-  const hardSolvedSum = coordinatorCodingPerformance.reduce((acc, curr) => acc + curr.hardSolved, 0);
-  const activeCoders = coordinatorCodingPerformance.filter((s) => s.streakDays > 0).length;
+  const totalSubmissionsSum = students.reduce((acc, curr) => acc + curr.totalSubmissions, 0);
+  const totalSolvedSum = students.reduce((acc, curr) => acc + curr.totalSolved, 0);
+  const avgAccuracy = students.length > 0 ? (students.reduce((acc, curr) => acc + curr.accuracyRate, 0) / students.length).toFixed(1) : "0";
+  const hardSolvedSum = students.reduce((acc, curr) => acc + curr.hardSolved, 0);
+  const activeCoders = students.filter((s) => s.streakDays > 0).length;
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -57,8 +99,21 @@ export default function CodingPerformance() {
     }
   };
 
+  if (loading) {
+    return <div className="coord-perf-container" style={{ padding: "48px", textAlign: "center", color: "#64748b" }}>Loading coding performance...</div>;
+  }
+
+  if (error) {
+    return <div className="coord-perf-container" style={{ padding: "48px", textAlign: "center", color: "#e11d48" }}>{error}</div>;
+  }
+
   return (
     <div className="coord-perf-container">
+      {/* Data availability banner */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 16px", borderRadius: "12px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1e40af", fontSize: "13px", fontWeight: 600, marginBottom: "16px" }}>
+        <Info size={16} />
+        Coding problem submissions (platform integration) are not available in the system yet. Scores below reflect enrolled students only.
+      </div>
       {/* Header */}
       <div className="coord-perf-header-bar">
         <div className="coord-perf-header-left">
@@ -103,7 +158,7 @@ export default function CodingPerformance() {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Avg Accuracy Rate</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{avgAccuracy}%</span>
-            <span className="coord-perf-kpi-sub">+2.4% vs last week</span>
+            <span className="coord-perf-kpi-sub">No trend data available yet</span>
           </div>
         </div>
 
@@ -136,7 +191,7 @@ export default function CodingPerformance() {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Struggling Coders</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">
-              {coordinatorCodingPerformance.filter((s) => s.status === "Struggling").length}
+              {students.filter((s) => s.status === "Struggling").length}
             </span>
             <span className="coord-perf-kpi-sub">Needs remediation</span>
           </div>
@@ -180,7 +235,7 @@ export default function CodingPerformance() {
               className="coord-perf-select"
             >
               <option value="all">All Batches</option>
-              {coordinatorBatches.map((b) => (
+              {batches.map((b) => (
                 <option key={b.id} value={b.name}>
                   {b.name}
                 </option>
@@ -239,7 +294,7 @@ export default function CodingPerformance() {
           <div>
             <h3 className="coord-perf-card-title">Student Coding Matrix</h3>
             <p className="coord-perf-card-sub">
-              Showing {filteredData.length} of {coordinatorCodingPerformance.length} enrolled coders
+              Showing {filteredData.length} of {students.length} enrolled coders
             </p>
           </div>
         </div>
@@ -399,7 +454,7 @@ export default function CodingPerformance() {
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudent.studentName}</h3>
                     <span className="coord-perf-status-badge coord-perf-status--good">
-                      Rank #{selectedStudent.leaderboardRank}
+                      Enrolled
                     </span>
                   </div>
                   <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "4px 0 0 0" }}>
@@ -437,7 +492,8 @@ export default function CodingPerformance() {
                   Topic Mastery & Skill Breakdown
                 </h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>
-                  {Object.entries(selectedStudent.topics).map(([topic, pct]) => (
+                  {Object.entries(selectedStudent.topics).length > 0 ? (
+                    Object.entries(selectedStudent.topics).map(([topic, pct]) => (
                     <div key={topic} style={{ padding: "12px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
                         <span>{topic}</span>
@@ -450,7 +506,10 @@ export default function CodingPerformance() {
                         />
                       </div>
                     </div>
-                  ))}
+                  ))
+                  ) : (
+                    <p style={{ color: "#94a3b8", fontSize: "12px", margin: 0 }}>No topic mastery data available.</p>
+                  )}
                 </div>
               </div>
 
@@ -472,7 +531,14 @@ export default function CodingPerformance() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedStudent.recentSubmissions.map((sub) => (
+                      {selectedStudent.recentSubmissions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: "center", padding: "24px", color: "#94a3b8" }}>
+                            No coding submissions recorded yet.
+                          </td>
+                        </tr>
+                      ) : (
+                      selectedStudent.recentSubmissions.map((sub) => (
                         <tr key={sub.id}>
                           <td style={{ fontWeight: 700, color: "#0f172a" }}>{sub.problem}</td>
                           <td>
@@ -509,7 +575,8 @@ export default function CodingPerformance() {
                             {sub.submittedAt}
                           </td>
                         </tr>
-                      ))}
+                      ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -535,3 +602,5 @@ export default function CodingPerformance() {
     </div>
   );
 }
+
+

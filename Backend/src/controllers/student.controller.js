@@ -151,7 +151,7 @@ export const getStudentAttendance = async (req, res, next) => {
       // 2. Query Attendance logs for user's joined batches from DB
       try {
         const rows = await query(
-          `SELECT a.*, b.name AS batch_name, b.code AS batch_code
+          `SELECT a.*, b.name AS batch_name, b.join_code AS batch_code
            FROM attendance a
            LEFT JOIN batches b ON a.batch_id = b.id
            WHERE a.user_id = ?
@@ -276,17 +276,6 @@ export const getStudentNotifications = async (req, res, next) => {
         type: b.type || 'alert',
         read: false,
       }));
-    } else {
-      notifications = [
-        {
-          id: 1,
-          title: 'Training Schedule Active',
-          message: 'Your training modules and assessments are active. Check your roadmap.',
-          time: 'Today',
-          type: 'roadmap',
-          read: false,
-        },
-      ];
     }
     return sendSuccess(res, 'Notifications retrieved successfully', notifications);
   } catch (error) {
@@ -299,6 +288,64 @@ export const getStudentPerformance = async (req, res, next) => {
     const userId = req.user?.userId || req.user?.id;
     const performanceData = await getStudentPerformanceService(userId);
     return sendSuccess(res, 'Performance data retrieved successfully', performanceData);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStudentStudyMaterials = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id;
+
+    // Resolve the student's batch via student_batches (single identity mapping)
+    let studentBatchId = null;
+    try {
+      const sbRows = await query(
+        'SELECT batch_id FROM student_batches WHERE user_id = ? ORDER BY id DESC LIMIT 1',
+        [userId]
+      );
+      if (sbRows && sbRows.length > 0) {
+        studentBatchId = sbRows[0].batch_id;
+      } else {
+        const stuInfo = await getStudentByUserId(userId);
+        if (stuInfo && stuInfo.batch_id) {
+          studentBatchId = stuInfo.batch_id;
+        }
+      }
+    } catch (err) {
+      console.warn(`[Student Controller] Batch lookup warning: ${err.message}`);
+    }
+
+    // Materials targeted at the student's batch, or generic materials shared college-wide
+    let rows = [];
+    try {
+      rows = await query(
+        `SELECT sm.*, u.name AS uploaded_by_name
+         FROM study_materials sm
+         JOIN users u ON sm.uploaded_by = u.id
+         WHERE sm.batch_id IS NULL
+            OR (sm.batch_id IS NOT NULL AND sm.batch_id = ?)
+         ORDER BY sm.id DESC`,
+        [studentBatchId || -1]
+      );
+    } catch (err) {
+      console.warn(`[Student Controller] Study materials lookup warning: ${err.message}`);
+    }
+
+    const materials = (rows || []).map((m) => ({
+      id: m.id,
+      title: m.title,
+      category: m.subject || 'General',
+      type: m.type || 'PDF',
+      duration: 'Self-paced',
+      status: 'Pending',
+      batch: m.batch || 'All Batches',
+      uploadedBy: m.uploaded_by_name || 'Faculty',
+      fileUrl: m.file_url || '',
+      createdAt: m.created_at,
+    }));
+
+    return sendSuccess(res, 'Study materials retrieved successfully', { materials, studentBatchId });
   } catch (error) {
     next(error);
   }

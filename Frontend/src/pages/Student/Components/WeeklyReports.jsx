@@ -11,70 +11,24 @@ import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/WeeklyReports.css";
 
-const defaultReports = [
-  {
-    id: "week-32",
-    title: "Week 32 · 10–16 Aug 2026",
-    score: "78%",
-    attendance: 86,
-    quiz: 79,
-    coding: 68,
-    interview: 72,
-    milestones: "2 completed · 2 in progress",
-    skillGaps: ["SQL indexing", "API versioning"],
-    nextSteps: [
-      "Finish Transactions & ACID material",
-      "Attempt Database Indexing quiz",
-      "Solve 3 medium SQL problems in Practice Arena",
-    ],
-  },
-  {
-    id: "week-31",
-    title: "Week 31 · 03–09 Aug 2026",
-    score: "74%",
-    attendance: 90,
-    quiz: 75,
-    coding: 62,
-    interview: 68,
-    milestones: "2 completed · 1 in progress",
-    skillGaps: ["FastAPI Validation", "Query Optimization"],
-    nextSteps: [
-      "Review Pydantic request models",
-      "Practice multi-table JOIN problem sets",
-    ],
-  },
-  {
-    id: "week-30",
-    title: "Week 30 · 27 Jul–02 Aug 2026",
-    score: "70%",
-    attendance: 88,
-    quiz: 70,
-    coding: 60,
-    interview: 64,
-    milestones: "1 completed · 1 in progress",
-    skillGaps: ["OOP Magic Methods", "Error Handling"],
-    nextSteps: [
-      "Solidify Python OOP inheritance and encapsulation drills",
-      "Re-attempt Unit 2 Quiz",
-    ],
-  },
-];
-
 export default function WeeklyReports() {
-  const [reports, setReports] = useState(defaultReports);
-  const [openWeek, setOpenWeek] = useState("week-32");
+  const [reports, setReports] = useState([]);
+  const [openWeek, setOpenWeek] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadReports() {
       try {
         const res = await apiFetch("/reports/weekly");
-        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        if (res && res.success && Array.isArray(res.data)) {
           setReports(res.data);
-          setOpenWeek(res.data[0].id);
+          if (res.data.length > 0) setOpenWeek(res.data[0].id);
+        } else {
+          setReports([]);
         }
       } catch (err) {
         console.warn("Failed to load weekly reports:", err);
+        setReports([]);
       } finally {
         setLoading(false);
       }
@@ -89,6 +43,18 @@ export default function WeeklyReports() {
   const handleDownload = (reportTitle) => {
     alert(`Downloading ${reportTitle} dossier summary (PDF)...`);
   };
+
+  const pct = (v) => {
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 0;
+  };
+
+  const fmt = (v) => {
+    const n = Number.parseFloat(v);
+    return Number.isFinite(n) ? `${Math.round(n)}%` : "N/A";
+  };
+
+  const tags = (items) => (Array.isArray(items) ? items : []);
 
   return (
     <div className="weekly-reports-page stack-6">
@@ -117,8 +83,22 @@ export default function WeeklyReports() {
 
       {/* Accordion List */}
       <div className="weekly-reports-list">
-        {reports.map((report) => {
+        {loading ? (
+          <div className="weekly-empty-state">Loading weekly reports...</div>
+        ) : reports.length === 0 ? (
+          <div className="weekly-empty-state">
+            <FileCheck2 size={32} className="text-slate-300 mb-2" />
+            <h4>No weekly reports generated yet</h4>
+            <p>
+              No faculty mentor scorecards are available for your account yet. Reports appear here once mentors
+              publish weekly evaluations.
+            </p>
+          </div>
+        ) : (
+        reports.map((report) => {
           const isOpen = openWeek === report.id;
+          const skillGapTags = tags(report.skillGaps);
+          const nextStepItems = tags(report.nextSteps);
           return (
             <div
               key={report.id}
@@ -136,12 +116,13 @@ export default function WeeklyReports() {
                 <div className="weekly-header-info">
                   <h3 className="weekly-card-title">{report.title}</h3>
                   <div className="weekly-meta-row">
-                    <span className="weekly-meta-pill">Score: {report.score}</span>
+                    <span className="weekly-meta-pill">Score: {fmt(report.score)}</span>
                     <span className="weekly-meta-pill">
-                      Attendance: {report.attendance}%
+                      Attendance: {fmt(report.attendance)}
                     </span>
-                    <span className="weekly-meta-pill">Quiz: {report.quiz}%</span>
-                    <span className="weekly-meta-pill">Coding: {report.coding}%</span>
+                    <span className="weekly-meta-pill">Quiz: {fmt(report.quiz)}</span>
+                    <span className="weekly-meta-pill">Coding: N/A</span>
+                    <span className="weekly-meta-pill">Interview: N/A</span>
                   </div>
                 </div>
 
@@ -174,16 +155,16 @@ export default function WeeklyReports() {
                         <div
                           className="weekly-metric-bar-fill"
                           style={{
-                            width: `${report.attendance}%`,
+                            width: `${pct(report.attendance)}%`,
                             background:
-                              report.attendance >= 85
+                              pct(report.attendance) >= 85
                                 ? "var(--color-primary-green)"
                                 : "var(--color-accent-gold)",
                           }}
                         />
                       </div>
                       <span className="weekly-metric-val">
-                        {report.attendance}%
+                        {fmt(report.attendance)}
                       </span>
                     </div>
 
@@ -193,12 +174,12 @@ export default function WeeklyReports() {
                         <div
                           className="weekly-metric-bar-fill"
                           style={{
-                            width: `${report.quiz}%`,
+                            width: `${pct(report.quiz)}%`,
                             background: "var(--color-primary-navy)",
                           }}
                         />
                       </div>
-                      <span className="weekly-metric-val">{report.quiz}%</span>
+                      <span className="weekly-metric-val">{fmt(report.quiz)}</span>
                     </div>
 
                     <div className="weekly-metric-item">
@@ -207,12 +188,12 @@ export default function WeeklyReports() {
                         <div
                           className="weekly-metric-bar-fill"
                           style={{
-                            width: `${report.coding}%`,
+                            width: "0%",
                             background: "#8b5cf6",
                           }}
                         />
                       </div>
-                      <span className="weekly-metric-val">{report.coding}%</span>
+                      <span className="weekly-metric-val weekly-metric-na">N/A</span>
                     </div>
 
                     <div className="weekly-metric-item">
@@ -221,13 +202,13 @@ export default function WeeklyReports() {
                         <div
                           className="weekly-metric-bar-fill"
                           style={{
-                            width: `${report.interview}%`,
+                            width: "0%",
                             background: "#06b6d4",
                           }}
                         />
                       </div>
-                      <span className="weekly-metric-val">
-                        {report.interview}%
+                      <span className="weekly-metric-val weekly-metric-na">
+                        N/A
                       </span>
                     </div>
                   </div>
@@ -236,7 +217,7 @@ export default function WeeklyReports() {
                     {/* Milestones info */}
                     <div className="weekly-section-box">
                       <h4 className="weekly-section-title">Milestones</h4>
-                      <p className="weekly-section-sub">{report.milestones}</p>
+                      <p className="weekly-section-sub">{report.milestones || "N/A"}</p>
                     </div>
 
                     {/* Skill Gaps Identified */}
@@ -244,14 +225,18 @@ export default function WeeklyReports() {
                       <h4 className="weekly-section-title">
                         Identified Skill Gaps
                       </h4>
-                      <div className="weekly-tags-row">
-                        {report.skillGaps.map((gap) => (
-                          <span key={gap} className="weekly-gap-tag">
-                            <AlertTriangle size={12} className="text-amber-600" />
-                            {gap}
-                          </span>
-                        ))}
-                      </div>
+                      {skillGapTags.length > 0 ? (
+                        <div className="weekly-tags-row">
+                          {skillGapTags.map((gap) => (
+                            <span key={gap} className="weekly-gap-tag">
+                              <AlertTriangle size={12} className="text-amber-600" />
+                              {gap}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="weekly-section-sub">N/A</p>
+                      )}
                     </div>
                   </div>
 
@@ -260,23 +245,28 @@ export default function WeeklyReports() {
                     <h4 className="weekly-section-title">
                       Mentor Action Steps for Upcoming Sprint
                     </h4>
-                    <ul className="weekly-steps-list">
-                      {report.nextSteps.map((step, idx) => (
-                        <li key={idx} className="weekly-step-item">
-                          <CheckCircle
-                            size={14}
-                            className="text-emerald-600 flex-shrink-0"
-                          />
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
+                    {nextStepItems.length > 0 ? (
+                      <ul className="weekly-steps-list">
+                        {nextStepItems.map((step, idx) => (
+                          <li key={idx} className="weekly-step-item">
+                            <CheckCircle
+                              size={14}
+                              className="text-emerald-600 flex-shrink-0"
+                            />
+                            <span>{step}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="weekly-section-sub">N/A</p>
+                    )}
                   </div>
                 </div>
               )}
             </div>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );

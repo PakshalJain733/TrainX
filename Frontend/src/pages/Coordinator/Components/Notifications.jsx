@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Bell,
   Send,
@@ -15,80 +15,34 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-
-const defaultCoordinatorNotifications = [
-  {
-    id: 1,
-    title: "New Student Coding Practice Submissions",
-    body: "94 students from CSE 2026 Alpha Cohort completed the 'Two Sum Target Index Pair' coding practice assignment.",
-    time: "15 min ago",
-    category: "Coding Practice",
-    icon: Terminal,
-    iconColor: "#4f46e5",
-    iconBg: "#e0e7ff",
-    unread: true,
-    actionLabel: "View Submissions",
-    actionUrl: "/coordinator/practice",
-  },
-  {
-    id: 2,
-    title: "Attendance Alert: 6 High-Risk Defaulters Flagged",
-    body: "Data Science & ML 2025 batch has 6 students below 75% mandatory attendance requirement. Advisory notices sent.",
-    time: "2 hours ago",
-    category: "Attendance",
-    icon: AlertTriangle,
-    iconColor: "#e11d48",
-    iconBg: "#ffe4e6",
-    unread: true,
-    actionLabel: "View Defaulters",
-    actionUrl: "/coordinator/improvement",
-  },
-  {
-    id: 3,
-    title: "AI Interview Performance Dossier Generated",
-    body: "Week 35 AI mock interview drill completed across 3 department batches. Average technical score: 82.4%.",
-    time: "5 hours ago",
-    category: "AI Interview",
-    icon: Bot,
-    iconColor: "#7c3aed",
-    iconBg: "#f5f3ff",
-    unread: true,
-    actionLabel: "View Interviews",
-    actionUrl: "/coordinator/interviews",
-  },
-  {
-    id: 4,
-    title: "Placement Drive Live: Goldman Sachs & Morgan Stanley",
-    body: "Registration portal is now active for FinTech Systems Coding Challenge for eligible 2025/2026 cohorts.",
-    time: "Yesterday",
-    category: "Placement",
-    icon: Award,
-    iconColor: "#059669",
-    iconBg: "#ecfdf5",
-    unread: false,
-    actionLabel: "View Placement",
-    actionUrl: "/coordinator/assessments",
-  },
-  {
-    id: 5,
-    title: "Weekly Governance Compliance Report Ready",
-    body: "Audit logs for faculty session delivery, batch attendance, and coding assessments have been generated.",
-    time: "2 days ago",
-    category: "Governance",
-    icon: Info,
-    iconColor: "#0891b2",
-    iconBg: "#ecfeff",
-    unread: false,
-    actionLabel: "View Reports",
-    actionUrl: "/coordinator/reports",
-  },
-];
+import apiFetch from "../../../utils/api";
 
 export default function CoordinatorNotifications() {
-  const [notifications, setNotifications] = useState(defaultCoordinatorNotifications);
+  const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("All");
 
-  const categories = ["All", "Unread", "Coding Practice", "Attendance", "AI Interview", "Placement", "Governance"];
+  useEffect(() => {
+    apiFetch("/coordinator/notifications")
+      .then((res) => {
+        const items = (res && res.success && Array.isArray(res.data) ? res.data : [])
+          .filter((n) => n && n.title)
+          .map((n) => ({
+            id: n.id,
+            title: n.title,
+            body: n.message || n.desc_text || "",
+            time: n.created_at ? new Date(n.created_at).toLocaleString() : "Recently",
+            category: "Broadcast",
+            icon: Bell,
+            iconColor: "#4f46e5",
+            iconBg: "#e0e7ff",
+            unread: false,
+          }));
+        setNotifications(items);
+      })
+      .catch(() => setNotifications([]));
+  }, []);
+
+  const categories = ["All", "Unread", "Broadcast"];
 
   const markAllRead = () => {
     setNotifications((prev) => prev.map((item) => ({ ...item, unread: false })));

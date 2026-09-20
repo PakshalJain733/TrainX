@@ -3,17 +3,11 @@ import { TrendingUp, Users, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import apiFetch from "../../../utils/api";
 import "../Styles/AdminProgress.css";
 
-const API_BASE = "/api/v1";
-
-function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
-}
+const getInitials = (name) =>
+  name ? name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "ST";
 
 export default function AdminProgress() {
   const [students, setStudents] = useState([]);
@@ -25,33 +19,24 @@ export default function AdminProgress() {
     async function loadData() {
       setLoading(true);
       try {
-        const [usersRes, batchesRes] = await Promise.all([
-          fetch(`${API_BASE}/admin/users?role=student`, { headers: getAuthHeaders() }),
-          fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() })
-        ]);
+        const data = await apiFetch("/admin/performance");
+        const studentUsers = (data.success && Array.isArray(data.data?.students)) ? data.data.students : [];
+        const batchNames = (data.success && Array.isArray(data.data?.batches))
+          ? data.data.batches.map(b => b.name)
+          : Array.from(new Set(studentUsers.map(s => s.batch).filter(Boolean)));
 
-        const usersData = await usersRes.json();
-        const batchesData = await batchesRes.json();
-
-        if (batchesData.success && Array.isArray(batchesData.data)) {
-          setBatches(batchesData.data);
-        }
-
-        const studentUsers = usersData.success && Array.isArray(usersData.data) ? usersData.data : [];
-
-        // Map student records with calculated progress & quiz averages
-        const mappedStudents = studentUsers.map((s, idx) => ({
-          id: s.id,
+        setBatches(batchNames.map(name => ({ id: name, name })));
+        setStudents(studentUsers.map((s) => ({
+          id: s.id || s.studentId,
           name: s.name,
-          initials: s.name ? s.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'ST',
-          batch: s.batch_name || 'General Batch',
-          quizAvg: Math.round(75 + (idx % 4) * 6),
-          attendance: Math.round(85 + (idx % 3) * 5),
-          codingRank: idx + 1,
-          xp: (1200 + (studentUsers.length - idx) * 150),
-        }));
-
-        setStudents(mappedStudents);
+          initials: getInitials(s.name),
+          batch: s.batch || "General Batch",
+          quizAvg: s.quiz || 0,
+          attendance: s.attendance || 0,
+          overallScore: s.overallScore || 0,
+          progress: s.progress || 0,
+          status: s.status || "Average",
+        })));
       } catch (err) {
         console.error("Failed to load student progress:", err);
       } finally {
@@ -67,7 +52,7 @@ export default function AdminProgress() {
     <div className="admin-progress-container">
       <SectionHeader
         title="Student Progress & Assessment Performance"
-        description="Monitor student quiz scores, department metrics, and department coordinator analytics."
+        description="Monitor real student quiz scores, attendance, and overall assessment analytics."
         action={
           <select className="progress-batch-filter" value={selectedBatch} onChange={e => setSelectedBatch(e.target.value)}>
             <option value="All Batches">All Batches</option>
@@ -80,49 +65,53 @@ export default function AdminProgress() {
 
       <Card className="progress-table-card">
         <CardContent className="progress-table-body">
-          <table className="progress-table">
-            <thead>
-              <tr>
-                <th>Student</th>
-                <th>Batch</th>
-                <th>Quiz Avg</th>
-                <th>Attendance</th>
-                <th>Coding Rank</th>
-                <th>XP Points</th>
-                <th>Progress</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
+          {loading ? (
+            <div className="admin-table-empty-cell">Loading progress data…</div>
+          ) : (
+            <table className="progress-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" className="admin-table-empty-cell">
-                    No student progress records found.
-                  </td>
+                  <th>Student</th>
+                  <th>Batch</th>
+                  <th>Quiz Avg</th>
+                  <th>Attendance</th>
+                  <th>Overall</th>
+                  <th>Status</th>
+                  <th>Progress</th>
                 </tr>
-              ) : (
-                filtered.map(s => (
-                  <tr key={s.id} className="progress-row">
-                    <td>
-                      <div className="progress-student-cell">
-                        <Avatar size="32"><AvatarFallback>{s.initials}</AvatarFallback></Avatar>
-                        <span className="progress-student-name">{s.name}</span>
-                      </div>
-                    </td>
-                    <td><span className="progress-batch-pill">{s.batch}</span></td>
-                    <td><span className={`progress-score ${s.quizAvg >= 85 ? "score-high" : s.quizAvg >= 70 ? "score-mid" : "score-low"}`}>{s.quizAvg}%</span></td>
-                    <td><span className={`progress-score ${s.attendance >= 90 ? "score-high" : s.attendance >= 75 ? "score-mid" : "score-low"}`}>{s.attendance}%</span></td>
-                    <td><span className="progress-rank">#{s.codingRank}</span></td>
-                    <td><span className="progress-xp">{s.xp.toLocaleString()} XP</span></td>
-                    <td>
-                      <div className="progress-bar-wrap">
-                        <div className="progress-bar-fill" style={{ width: `${Math.min(s.xp / 25, 100)}%` }} />
-                      </div>
+              </thead>
+              <tbody>
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan="7" className="admin-table-empty-cell">
+                      No student progress records found.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  filtered.map(s => (
+                    <tr key={s.id} className="progress-row">
+                      <td>
+                        <div className="progress-student-cell">
+                          <Avatar size="32"><AvatarFallback>{s.initials}</AvatarFallback></Avatar>
+                          <span className="progress-student-name">{s.name}</span>
+                        </div>
+                      </td>
+                      <td><span className="progress-batch-pill">{s.batch}</span></td>
+                      <td><span className={`progress-score ${s.quizAvg >= 85 ? "score-high" : s.quizAvg >= 70 ? "score-mid" : "score-low"}`}>{s.quizAvg}%</span></td>
+                      <td><span className={`progress-score ${s.attendance >= 90 ? "score-high" : s.attendance >= 75 ? "score-mid" : "score-low"}`}>{s.attendance}%</span></td>
+                      <td><span className={`progress-score ${s.overallScore >= 80 ? "score-high" : s.overallScore >= 60 ? "score-mid" : "score-low"}`}>{s.overallScore}%</span></td>
+                      <td><span className="progress-xp">{s.status}</span></td>
+                      <td>
+                        <div className="progress-bar-wrap">
+                          <div className="progress-bar-fill" style={{ width: `${Math.min(s.progress, 100)}%` }} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
         </CardContent>
       </Card>
     </div>
