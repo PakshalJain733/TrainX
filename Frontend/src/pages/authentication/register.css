@@ -1074,16 +1074,16 @@
 /* Secret Key Card */
 .totp-secret-card {
     background: #f8fafc;
-    border: 1.5px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 6px 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 14px;
     transition: all 0.25s ease;
 }
 
 .totp-secret-card.highlight {
-    border-color: #3b82f6;
-    background: #eff6ff;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    box-shadow: none;
 }
 
 .secret-card-header {
@@ -1132,7 +1132,7 @@
 
 .secret-code-display {
     background: #ffffff;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 8px 10px;
     text-align: center;

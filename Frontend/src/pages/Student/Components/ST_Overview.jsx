@@ -357,8 +357,8 @@ export default function Overview() {
                 <Trophy size={18} className="overview-header-icon text-amber-500" />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Batch Leaderboard</CardTitle>
-                <CardDescription className="overview-card-desc">Top performers in your department</CardDescription>
+                <CardTitle className="overview-card-title">All Batches Leaderboard</CardTitle>
+                <CardDescription className="overview-card-desc">Top performers across all training batches</CardDescription>
               </div>
             </div>
             <Link to="/student/leaderboard" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
@@ -368,7 +368,7 @@ export default function Overview() {
           <CardContent style={{ padding: '20px 24px' }}>
             {leaderboardList.length === 0 ? (
               <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
-                No active leaderboard scores recorded yet. Rankings will update automatically as cohort students complete coding tasks and quizzes.
+                No active leaderboard scores recorded yet. Rankings will update automatically across all batches as students complete coding tasks and quizzes.
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -428,7 +428,7 @@ export default function Overview() {
                           {item.name}
                         </span>
                         <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '500', marginTop: '3px' }}>
-                          {item.badge || 'Batch Performer'}
+                          {item.batch ? `${item.batch} • ${item.badge || 'Overall Performer'}` : (item.badge || 'All Batches Performer')}
                         </span>
                       </div>
                     </div>

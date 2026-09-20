@@ -265,6 +265,7 @@ export default function ProfilePage() {
       });
 
       if (res && res.data) {
+        localStorage.setItem("st_first_login_dismissed", "true");
         window.dispatchEvent(new Event("userProfileUpdated"));
       }
     } catch (err) {

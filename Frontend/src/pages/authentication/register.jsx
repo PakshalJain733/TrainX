@@ -345,7 +345,7 @@ function Register() {
       if (data.success && data.data?.qrCode) {
         setTotpSetupData(data.data);
         setShowTotpSetup(true);
-        setSuccessMsg("Account created! Scan the QR Code with Microsoft or Google Authenticator.");
+        setSuccessMsg("");
       } else if (data.success) {
         setSuccessMsg("Account created successfully! Redirecting to login...");
         if (data.data?.token) {
@@ -409,7 +409,7 @@ function Register() {
         )}
 
         {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
-        {successMsg && <div className="auth-success-msg">{successMsg}</div>}
+        {!showTotpSetup && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showTotpSetup ? (
           <form onSubmit={handleVerifyTotpSetup} className="totp-setup-form">
@@ -455,7 +455,7 @@ function Register() {
 
             {/* Tab 2: Secret Key Card (Only shown when Manual Key tab is active) */}
             {totpTab === "manual" && (
-              <div className="totp-secret-card highlight">
+              <div className="totp-secret-card">
                 <div className="secret-card-header">
                   <span className="secret-card-label">{Icons.key} Secret Setup Key</span>
                   <button

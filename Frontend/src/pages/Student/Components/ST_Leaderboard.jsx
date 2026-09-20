@@ -114,12 +114,6 @@ export default function Leaderboard() {
             <Medal size={16} style={{ marginRight: 6 }} /> Department Ranking
           </button>
           <button
-            className={`leaderboard-tab-btn ${activeTab === "milestone" ? "active" : ""}`}
-            onClick={() => setActiveTab("milestone")}
-          >
-            <Award size={16} style={{ marginRight: 6 }} /> Milestone Velocity
-          </button>
-          <button
             className={`leaderboard-tab-btn ${activeTab === "batches" ? "active" : ""}`}
             onClick={() => setActiveTab("batches")}
           >
@@ -132,11 +126,10 @@ export default function Leaderboard() {
             <h3 className="leaderboard-list-title">
               {activeTab === "overall" && "College-Wide Overall Ranking"}
               {activeTab === "department" && "Department Standing Ranking"}
-              {activeTab === "milestone" && "Milestone Velocity Ranking"}
               {activeTab === "batches" && "Top Batches Ranking"}
             </h3>
             <p className="leaderboard-list-desc">
-              {activeTab === "milestone" ? "Ranked by completed roadmap milestones & progress percentage" : "Ranked by overall academic, coding, and assessment performance score"}
+              Ranked by overall academic, coding, and assessment performance score
             </p>
           </div>
           <button
@@ -189,14 +182,14 @@ export default function Leaderboard() {
                         {st.isCurrentUser && <span className="you-pill">You</span>}
                       </div>
                       <div className="leaderboard-user-sub">
-                        {activeTab === "batches" ? `${st.students} Enrolled Students` : (st.department || st.sub || st.college || "Student")}
+                        {activeTab === "batches" ? `${st.students} Enrolled Students` : [st.batch || "All Batches", st.department || st.sub].filter(Boolean).join(" • ")}
                       </div>
                     </div>
                   </div>
 
                   <div className="leaderboard-score-val" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Flame size={16} color="#ea580c" />
-                    <span>{st.score !== undefined ? st.score : (st.overall_score || 0)} {activeTab === "milestone" ? "%" : "XP"}</span>
+                    <span>{st.score !== undefined ? st.score : (st.overall_score || 0)} XP</span>
                   </div>
                 </div>
               ))

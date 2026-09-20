@@ -277,7 +277,8 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
-          const dismissed = sessionStorage.getItem("st_first_login_dismissed");
+          const userKey = `st_first_login_dismissed_${fetchedUser.id || fetchedUser.email}`;
+          const dismissed = localStorage.getItem(userKey) || localStorage.getItem("st_first_login_dismissed");
           if ((!res.data.gender || !res.data.city) && !dismissed) {
             setShowFirstLoginFlash(true);
           }
@@ -533,7 +534,9 @@ export default function StudentLayout() {
               <button
                 className="st-firstlogin-btn-secondary"
                 onClick={() => {
-                  sessionStorage.setItem("st_first_login_dismissed", "true");
+                  const userKey = `st_first_login_dismissed_${user.id || user.email}`;
+                  localStorage.setItem(userKey, "true");
+                  localStorage.setItem("st_first_login_dismissed", "true");
                   setShowFirstLoginFlash(false);
                 }}
               >
@@ -542,7 +545,9 @@ export default function StudentLayout() {
               <button
                 className="st-firstlogin-btn-primary"
                 onClick={() => {
-                  sessionStorage.setItem("st_first_login_dismissed", "true");
+                  const userKey = `st_first_login_dismissed_${user.id || user.email}`;
+                  localStorage.setItem(userKey, "true");
+                  localStorage.setItem("st_first_login_dismissed", "true");
                   setShowFirstLoginFlash(false);
                   navigate('/student/profile');
                 }}

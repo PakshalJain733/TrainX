@@ -97,6 +97,26 @@ function Login() {
   const API_BASE_URL = `${getApiBaseUrl()}/auth`;
 
   useEffect(() => {
+    const isRemembered = localStorage.getItem("tx_remember_me") === "true";
+    if (isRemembered) {
+      const savedEmail = localStorage.getItem("tx_remembered_email") || "";
+      const savedPassword = localStorage.getItem("tx_remembered_password") || "";
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPassword) setPassword(savedPassword);
+      setRememberMe(true);
+    }
+  }, []);
+
+  const handleRememberMeChange = (checked) => {
+    setRememberMe(checked);
+    if (!checked) {
+      localStorage.removeItem("tx_remember_me");
+      localStorage.removeItem("tx_remembered_email");
+      localStorage.removeItem("tx_remembered_password");
+    }
+  };
+
+  useEffect(() => {
     let interval = null;
     if (resendTimer > 0) {
       interval = setInterval(() => {
@@ -231,6 +251,17 @@ function Login() {
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
+
+    if (rememberMe) {
+      localStorage.setItem("tx_remember_me", "true");
+      localStorage.setItem("tx_remembered_email", email);
+      localStorage.setItem("tx_remembered_password", password);
+    } else {
+      localStorage.removeItem("tx_remember_me");
+      localStorage.removeItem("tx_remembered_email");
+      localStorage.removeItem("tx_remembered_password");
+    }
+
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -523,7 +554,7 @@ function Login() {
                         type="checkbox"
                         id="remember-me"
                         checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
+                        onChange={(e) => handleRememberMeChange(e.target.checked)}
                       />
                       <span>Remember Me</span>
                     </label>
@@ -584,9 +615,6 @@ function Login() {
                         />
                       ))}
                     </div>
-                    <p style={{ fontSize: "11.5px", color: "#64748b", marginTop: "6px", textAlign: "center" }}>
-                      📱 Open Microsoft or Google Authenticator on your phone to get your live code.
-                    </p>
                   </div>
 
                   <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
@@ -635,7 +663,7 @@ function Login() {
                       <input
                         type="checkbox"
                         checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
+                        onChange={(e) => handleRememberMeChange(e.target.checked)}
                       />
                       <span>Remember Me</span>
                     </label>

@@ -28,26 +28,23 @@ const getInitials = (name) => {
 };
 
 /**
- * Standard Competition Ranking (1, 2, 2, 4) with deterministic secondary sort
+ * Standard Competition Ranking with registration order (user_created_at / user_id ASC) as tie-breaker
  */
 const applyStandardTieRanking = (items, scoreKey = 'score') => {
   if (!items || items.length === 0) return [];
 
-  // Deterministic sort: Primary by score DESC, secondary by ID ASC
+  // Sort: Primary by score DESC, secondary by registration order (earliest registered student comes first)
   items.sort((a, b) => {
     if (b[scoreKey] !== a[scoreKey]) {
-      return b[scoreKey] - a[scoreKey];
+      return (b[scoreKey] || 0) - (a[scoreKey] || 0);
     }
-    return (a.id || a.user_id || 0) - (b.id || b.user_id || 0);
+    const aTime = a.user_created_at ? new Date(a.user_created_at).getTime() : (a.user_id || a.student_id || a.id || 0);
+    const bTime = b.user_created_at ? new Date(b.user_created_at).getTime() : (b.user_id || b.student_id || b.id || 0);
+    return aTime - bTime;
   });
 
-  let currentRank = 1;
   return items.map((item, index) => {
-    if (index > 0 && item[scoreKey] === items[index - 1][scoreKey]) {
-      item.rank = items[index - 1].rank;
-    } else {
-      item.rank = index + 1;
-    }
+    item.rank = index + 1;
     return item;
   });
 };
@@ -65,6 +62,7 @@ export const getStudentsRawPerformance = async (filters = {}) => {
         s.user_id,
         u.name,
         u.email,
+        u.created_at AS user_created_at,
         s.roll_number,
         s.college_id,
         c.name AS college_name,
@@ -80,20 +78,20 @@ export const getStudentsRawPerformance = async (filters = {}) => {
         (
           SELECT COALESCE(AVG(ts.score), 0) 
           FROM task_submissions ts 
-          WHERE ts.user_id = u.id OR ts.student_id = s.id
+          WHERE ts.user_id = u.id
         ) AS coding_score,
         (
           SELECT COALESCE(AVG(iv.overall_score), 0) 
           FROM interview_sessions iv 
-          WHERE iv.user_id = u.id OR iv.student_id = s.id
+          WHERE iv.user_id = u.id
         ) AS interview_score,
         (
           SELECT COALESCE(
             (SUM(CASE WHEN att.status = 'present' THEN 1 ELSE 0 END) / COUNT(att.id)) * 100, 
-            90
+            0
           ) 
           FROM attendance att 
-          WHERE att.student_id = s.id OR att.user_id = u.id
+          WHERE att.user_id = u.id
         ) AS attendance_score,
         (
           SELECT COUNT(*) 
@@ -129,6 +127,8 @@ export const getStudentsRawPerformance = async (filters = {}) => {
       params.push(parseInt(batch_id, 10));
     }
 
+    sql += ' ORDER BY u.created_at ASC, u.id ASC';
+
     const rows = await query(sql, params);
 
     if (rows && Array.isArray(rows) && rows.length > 0) {
@@ -149,6 +149,7 @@ export const getStudentsRawPerformance = async (filters = {}) => {
           id: r.user_id || r.student_id,
           student_id: r.student_id,
           user_id: r.user_id,
+          user_created_at: r.user_created_at,
           name: r.name,
           roll_number: r.roll_number || 'N/A',
           college_id: r.college_id,
@@ -205,6 +206,7 @@ export const getOverallLeaderboard = async (filters = {}) => {
   const mapped = students.map((s) => ({
     id: s.user_id || s.id,
     student_id: s.student_id || s.id,
+    user_created_at: s.user_created_at,
     name: s.name,
     roll_number: s.roll_number,
     sub: s.department_name,
@@ -212,14 +214,14 @@ export const getOverallLeaderboard = async (filters = {}) => {
     college: s.college_name,
     college_id: s.college_id,
     batch: s.batch_name,
-    score: s.overall_score,
-    overall_score: s.overall_score,
+    score: s.overall_score || 0,
+    overall_score: s.overall_score || 0,
     initials: getInitials(s.name),
     progress_info: {
-      quiz_score: s.quiz_score,
-      coding_score: s.coding_score,
-      interview_score: s.interview_score,
-      attendance_score: s.attendance_score,
+      quiz_score: s.quiz_score || 0,
+      coding_score: s.coding_score || 0,
+      interview_score: s.interview_score || 0,
+      attendance_score: s.attendance_score || 0,
     },
   }));
 
@@ -230,7 +232,7 @@ export const getOverallLeaderboard = async (filters = {}) => {
  * 2. DEPARTMENT LEADERBOARD (Department Isolation & College Isolation)
  */
 export const getDepartmentLeaderboard = async (filters = {}) => {
-  const { department_id, college_id } = filters;
+  const { department_id } = filters;
 
   const students = await getStudentsRawPerformance(filters);
 
@@ -249,6 +251,7 @@ export const getDepartmentLeaderboard = async (filters = {}) => {
   const mapped = filtered.map((s) => ({
     id: s.user_id || s.id,
     student_id: s.student_id || s.id,
+    user_created_at: s.user_created_at,
     name: s.name,
     roll_number: s.roll_number,
     sub: s.department_name,
@@ -256,8 +259,8 @@ export const getDepartmentLeaderboard = async (filters = {}) => {
     college: s.college_name,
     college_id: s.college_id,
     batch: s.batch_name,
-    score: s.overall_score,
-    overall_score: s.overall_score,
+    score: s.overall_score || 0,
+    overall_score: s.overall_score || 0,
     initials: getInitials(s.name),
   }));
 
@@ -272,26 +275,16 @@ export const getMilestoneLeaderboard = async (filters = {}) => {
 
   if (!students || students.length === 0) return [];
 
-  // Check if real milestone data exists
-  const hasRealMilestones = students.some((s) => s.total_milestones > 0);
-
-  if (!hasRealMilestones) {
-    // Check if fallback students have milestones
-    const validWithMilestones = students.filter((s) => (s.total_milestones || 10) > 0);
-    if (validWithMilestones.length === 0) {
-      return [];
-    }
-  }
-
   const mapped = students
     .map((s) => {
-      const total = s.total_milestones > 0 ? s.total_milestones : 10;
-      const completed = s.milestones_completed !== undefined ? s.milestones_completed : 5;
-      const progressPct = Math.round((completed / total) * 100);
+      const total = s.total_milestones || 0;
+      const completed = s.milestones_completed || 0;
+      const progressPct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
       return {
         id: s.user_id || s.id,
         student_id: s.student_id || s.id,
+        user_created_at: s.user_created_at,
         name: s.name,
         roll_number: s.roll_number,
         sub: s.department_name,
@@ -303,11 +296,10 @@ export const getMilestoneLeaderboard = async (filters = {}) => {
         total_milestones: total,
         progress_pct: progressPct,
         score: progressPct,
-        overall_score: s.overall_score,
+        overall_score: s.overall_score || 0,
         initials: getInitials(s.name),
       };
-    })
-    .sort((a, b) => b.progress_pct - a.progress_pct || b.overall_score - a.overall_score || a.id - b.id);
+    });
 
   return applyStandardTieRanking(mapped, 'progress_pct');
 };
@@ -404,7 +396,7 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
   if (currentStudentInOverall || role === ROLES.STUDENT) {
     const studentEntry = currentStudentInOverall || markedOverall[0] || {};
     const myRank = studentEntry.rank || 1;
-    const myScore = studentEntry.score || studentEntry.overall_score || 85;
+    const myScore = studentEntry.score !== undefined ? studentEntry.score : (studentEntry.overall_score !== undefined ? studentEntry.overall_score : 0);
 
     // Get nearby students surrounding rank (e.g. ±2 ranks)
     const totalStudents = markedOverall.length;

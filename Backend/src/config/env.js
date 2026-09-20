@@ -33,8 +33,8 @@ export const config = {
     from: process.env.EMAIL_FROM || '"Campus Training Portal" <noreply@pvppcoe.ac.in>',
   },
   ai: {
-    apiKey: process.env.AI_API_KEY || '',
-    model: process.env.AI_MODEL || 'gemini-1.5-flash',
+    apiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '',
+    model: process.env.AI_MODEL || 'gemini-3.6-flash',
   },
   supabase: {
     url: process.env.SUPABASE_URL || '',
