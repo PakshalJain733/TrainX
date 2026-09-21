@@ -10,7 +10,8 @@
     "test": "node tests/isolation.test.js && node tests/skill_gap.test.js && node tests/attendance.test.js",
     "test:isolation": "node tests/isolation.test.js",
     "test:attendance": "node tests/attendance.test.js",
-    "test:skillgap": "node tests/skill_gap.test.js"
+    "test:skillgap": "node tests/skill_gap.test.js",
+    "test:code": "node tests/code.runner.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

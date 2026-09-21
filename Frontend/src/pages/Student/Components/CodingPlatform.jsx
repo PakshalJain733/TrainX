@@ -145,6 +145,14 @@ const problemPresets = {
   }
 };
 
+const VERDICT_LABELS = {
+  accepted: "ACCEPTED",
+  wrong_answer: "WRONG ANSWER",
+  compilation_error: "COMPILATION ERROR",
+  runtime_error: "RUNTIME ERROR",
+  time_limit_exceeded: "TIME LIMIT EXCEEDED",
+};
+
 export default function CodingPlatform() {
   const { taskId } = useParams();
   const navigate = useNavigate();
@@ -167,11 +175,15 @@ export default function CodingPlatform() {
   const [code, setCode] = useState(starterCodeTemplates.python);
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("normal"); // normal, error, success
+  const [customInput, setCustomInput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("description"); // description, submissions
   const [mobileView, setMobileView] = useState("problem"); // problem, code
   const [submissions, setSubmissions] = useState([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
+  const [submitResult, setSubmitResult] = useState(null);
+  const [submitError, setSubmitError] = useState(null);
 
   useEffect(() => {
     const fetchProblemDetails = async () => {
@@ -251,22 +263,111 @@ export default function CodingPlatform() {
     }
   };
 
-  const handleRun = () => {
-    setConsoleOutput("Running code...\n\n> Output:\nTests executed successfully in 14ms.\nStatus: Accepted");
+  const formatRunResult = (res) => {
+    const { stdout, stderr, exitCode, executionTime, timedOut, compilationError } = res || {};
+    const timeMs = executionTime ? `${executionTime}ms` : "n/a";
+
+    if (compilationError) {
+      return {
+        status: "error",
+        text: `Compilation Error\n\n${stderr || "Compilation failed."}\n\nTime: ${timeMs}`,
+      };
+    }
+    if (timedOut) {
+      return {
+        status: "error",
+        text: `Time Limit Exceeded\n\nYour program ran longer than the allowed time and was terminated.\n\nTime: ${timeMs}`,
+      };
+    }
+    const runtimeError = exitCode !== 0;
+    const outputText = stdout || "";
+    const errorText = runtimeError ? `\n\nRuntime Error (exit code ${exitCode}):\n${stderr || "(no stderr)"}` : "";
+    const timedText = timedOut ? `\n\n(Timed out after ${timeMs})` : "";
+    return {
+      status: runtimeError ? "error" : "success",
+      text: `> Output:\n${outputText}${errorText}\n\nTime: ${timeMs}${timedText}`,
+    };
+  };
+
+  const handleRun = async () => {
+    if (!code.trim()) return;
+    setIsRunning(true);
     setConsoleStatus("normal");
+    setConsoleOutput("Running code...");
+    setSubmitResult(null);
+    setSubmitError(null);
     setMobileView("code");
+    try {
+      const res = await apiFetch("/code/run", {
+        method: "POST",
+        body: JSON.stringify({ language, code, stdin: customInput }),
+      });
+      if (res && res.data) {
+        const fmt = formatRunResult(res.data);
+        setConsoleStatus(fmt.status);
+        setConsoleOutput(fmt.text);
+      } else {
+        setConsoleStatus("error");
+        setConsoleOutput(`Execution failed:\n\n${res?.message || res?.error || "Unknown error"}`);
+      }
+    } catch (err) {
+      setConsoleStatus("error");
+      setConsoleOutput(`Execution failed:\n\n${err.message || err}`);
+    } finally {
+      setIsRunning(false);
+    }
   };
 
   const handleSubmit = async () => {
+    if (!code.trim()) return;
     setIsSubmitting(true);
     setConsoleStatus("normal");
-    setConsoleOutput("Evaluating all test cases...\n...");
+    setConsoleOutput("Evaluating all test cases...");
+    setSubmitResult(null);
+    setSubmitError(null);
     setMobileView("code");
-    setTimeout(() => {
+    try {
+      const res = await apiFetch("/code/submit", {
+        method: "POST",
+        body: JSON.stringify({ problem_id: currentProblemId, language, code }),
+      });
+      if (res && res.data) {
+        const d = res.data;
+        const statusLabel = VERDICT_LABELS[d.status] || (d.status || "unknown").toUpperCase();
+        setSubmitResult(d);
+        const lines = [
+          `> Test Cases Passed: ${d.passed_tests} / ${d.total_tests}`,
+          `Marks: ${d.marks} / ${d.total_marks}`,
+          `Verdict: ${statusLabel}`,
+          `Execution Time: ${d.execution_time_ms}ms`,
+          `See the "Test Cases / Results" section below for per-test-case details.`,
+        ];
+        if (d.compilation_error) {
+          lines.push("", "Compilation failed on submission.");
+        }
+        if (d.timed_out) {
+          lines.push("", "Time Limit Exceeded on a test case.");
+        }
+        setConsoleStatus(d.status === "accepted" ? "success" : "error");
+        setConsoleOutput(lines.join("\n"));
+        fetchSubmissionsHistory();
+      } else {
+        setConsoleStatus("error");
+        if ((res?.error || "").includes("No test cases")) {
+          setSubmitError("No test cases configured for this problem.");
+          setConsoleOutput("No test cases configured for this problem.");
+        } else {
+          setSubmitError(res?.message || res?.error || "Unknown error");
+          setConsoleOutput(`Submission failed:\n\n${res?.message || res?.error || "Unknown error"}`);
+        }
+      }
+    } catch (err) {
+      setConsoleStatus("error");
+      setSubmitError("Submission failed. Please try again.");
+      setConsoleOutput(`Submission failed:\n\n${err.message || err}`);
+    } finally {
       setIsSubmitting(false);
-      setConsoleStatus("success");
-      setConsoleOutput("Evaluating all test cases...\n\n✅ 15 / 15 test cases passed.\nTime Complexity: O(n)\nSpace Complexity: O(1)\n\nSuccess: Code submitted.");
-    }, 1500);
+    }
   };
 
   return (
@@ -312,12 +413,12 @@ export default function CodingPlatform() {
               <option value="cpp">C++ 20</option>
             </select>
             
-            <button className="cp-run-btn" onClick={handleRun} disabled={isSubmitting}>
-              <Play size={14} fill="currentColor" /> <span>Run</span>
+            <button className="cp-run-btn" onClick={handleRun} disabled={isSubmitting || isRunning}>
+              <Play size={14} fill="currentColor" /> <span>{isRunning ? "Running..." : "Run"}</span>
             </button>
-            <button className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting}>
+            <button className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting || isRunning}>
               {isSubmitting ? (
-                <span>Submitting...</span>
+                <span>Evaluating...</span>
               ) : (
                 <>
                   <CheckCircle2 size={15} /> <span>Submit</span>
@@ -412,19 +513,20 @@ export default function CodingPlatform() {
                           onClick={() => {
                             setCode(s.submitted_code);
                             if (s.language) setLanguage(s.language);
+                            const subVerdict = VERDICT_LABELS[s.status] || String(s.status || "passed").toUpperCase();
                             setConsoleStatus("info");
-                            setConsoleOutput(`Loaded code from Submission #${s.id} (${s.status.toUpperCase()}, Score: ${s.score}, ${s.passed_test_cases}/${s.total_test_cases} test cases passed).`);
+                            setConsoleOutput(`Loaded code from Submission #${s.id} (${subVerdict})\nMarks: ${s.score ?? s.marks} / ${s.problem_total_marks ?? s.total_test_cases}\nTest Cases Passed: ${s.passed_test_cases} / ${s.total_test_cases}`);
                           }}
                         >
                           <div className="cp-submission-header">
                             <span className="cp-submission-id">Submission #{s.id} ({s.language})</span>
                             <span className={`cp-status-pill ${s.status?.toLowerCase() || 'passed'}`}>
-                              {s.status || 'passed'}
+                              {VERDICT_LABELS[s.status] || s.status || 'passed'}
                             </span>
                           </div>
                           <div className="cp-submission-meta">
                             <span className="cp-submission-score">
-                              Score: {s.score} ({s.percentage}%) • {s.passed_test_cases}/{s.total_test_cases} Passed
+                              Marks: {s.score ?? s.marks} / {s.problem_total_marks ?? s.total_test_cases} • Test Cases Passed: {s.passed_test_cases}/{s.total_test_cases}
                             </span>
                             <span className="cp-submission-time">
                               {new Date(s.submitted_at || s.created_at).toLocaleDateString()} {new Date(s.submitted_at || s.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -462,15 +564,102 @@ export default function CodingPlatform() {
                   <Layout size={14} cursor="pointer" />
                 </div>
               </div>
+              <div className="cp-custom-input">
+                <span className="cp-custom-input-label">Custom Input (stdin)</span>
+                <textarea
+                  className="cp-custom-input-area"
+                  value={customInput}
+                  onChange={(e) => setCustomInput(e.target.value)}
+                  placeholder={"Paste input for your program here (e.g. \"4 9\\n2 7 11 15\")"}
+                  spellCheck={false}
+                />
+              </div>
               <div className={`cp-console-output ${!consoleOutput ? 'empty' : consoleStatus === 'error' ? 'error' : ''}`}>
                 {consoleOutput ? (
                   <pre className="cp-pre-output">
                     {consoleOutput}
                   </pre>
                 ) : (
-                  <span>Click "Submit Code" to evaluate against backend test cases and save marks.</span>
+                  <span>Click "Run" to execute your code, or "Submit" to evaluate against backend test cases and save marks.</span>
                 )}
               </div>
+            </div>
+            <div className="cp-test-results">
+              <div className="cp-test-results-header">
+                <span className="cp-test-results-title">
+                  <CheckCircle2 size={14} /> Test Cases / Results
+                </span>
+                {submitResult && (
+                  <span className={`cp-final-verdict cp-verdict-${String(submitResult.status || "").toLowerCase()}`}>
+                    {VERDICT_LABELS[submitResult.status] || (submitResult.status || "unknown").toUpperCase()}
+                  </span>
+                )}
+              </div>
+              {submitError ? (
+                <div className="cp-test-results-empty">{submitError}</div>
+              ) : !submitResult ? (
+                <div className="cp-test-results-empty">
+                  No results yet. Submit your code to evaluate against the problem's stored test cases.
+                </div>
+              ) : (
+                <>
+                  <div className="cp-test-results-summary">
+                    <span className="cp-passed-count">
+                      Test Cases Passed: {submitResult.passed_tests} / {submitResult.total_tests}
+                    </span>
+                    <span className="cp-marks-line">
+                      Marks: {submitResult.marks !== undefined ? submitResult.marks : submitResult.score} / {submitResult.total_marks}
+                    </span>
+                    <span className="cp-verdict-line">
+                      Verdict: {VERDICT_LABELS[submitResult.status] || (submitResult.status || "unknown").toUpperCase()}
+                    </span>
+                    {submitResult.execution_time_ms !== undefined && (
+                      <span>Time: {submitResult.execution_time_ms}ms</span>
+                    )}
+                  </div>
+                  {Array.isArray(submitResult.test_results) && submitResult.test_results.length > 0 ? (
+                    <div className="cp-test-case-list">
+                      {submitResult.test_results.map((t, i) => {
+                        const tcNumber = t.test_case_number ?? i + 1;
+                        const tcVerdict = !t.passed && t.not_evaluated ? "FAILED (not evaluated)" : t.passed ? "PASSED" : "FAILED";
+                        return (
+                          <div
+                            key={t.test_case_id ?? i}
+                            className={`cp-test-case ${t.passed ? "passed" : "failed"}`}
+                          >
+                            <div className="cp-test-case-row">
+                              <span className="cp-test-case-name">
+                                {t.is_hidden ? `Hidden Test Case ${tcNumber}` : `Test Case ${tcNumber}`}
+                                <span className={`cp-test-case-verdict ${t.passed ? "is-passed" : "is-failed"}`}>
+                                  — {tcVerdict}
+                                </span>
+                              </span>
+                            </div>
+                            {!t.is_hidden && !t.not_evaluated && (
+                              <div className="cp-test-case-details">
+                                <div className="cp-tc-detail">
+                                  <span className="cp-tc-detail-label">Input:</span>
+                                  <pre className="cp-tc-detail-value">{t.input || ""}</pre>
+                                </div>
+                                <div className="cp-tc-detail">
+                                  <span className="cp-tc-detail-label">Expected Output:</span>
+                                  <pre className="cp-tc-detail-value">{t.expected_output || ""}</pre>
+                                </div>
+                                <div className="cp-tc-detail">
+                                  <span className="cp-tc-detail-label">Actual Output:</span>
+                                  <pre className="cp-tc-detail-value">{t.actual_output || ""}</pre>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="cp-test-results-empty">No test case results available.</div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

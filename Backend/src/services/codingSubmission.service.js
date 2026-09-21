@@ -6,6 +6,11 @@ import {
   getSubmissionByIdModel,
   getStudentSubmissionsModel,
 } from '../models/codingSubmission.model.js';
+import {
+  runCodeInSandbox,
+  normalizeOutput,
+  deriveSubmissionStatus,
+} from './code.executor.service.js';
 
 /**
  * Safe Evaluation Sandbox Adapter Layer:
@@ -33,7 +38,223 @@ export const evaluateCodeInSandbox = async ({ submittedCode, language, testCases
 };
 
 /**
- * Save student coding attempt and calculate marks
+ * Evaluate a student's code against the stored test cases for a problem using
+ * the real Docker sandbox, then persist the result in MySQL.
+ * Hidden expected outputs are never included in the payload returned to the
+ * client.
+ */
+export const submitCodeAndSaveService = async ({ student_id, problem_id, code, language }) => {
+  if (!problem_id) {
+    const error = new Error('problem_id is required');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (code === undefined || code === null || String(code).trim() === '') {
+    const error = new Error('source_code is required');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!language || String(language).trim() === '') {
+    const error = new Error('language is required');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!student_id) {
+    const error = new Error('Authenticated student id is required');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const student = await findStudentById(student_id);
+  if (!student) {
+    const error = new Error(`Student with ID ${student_id} not found`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const problem = await findCodingProblemById(problem_id);
+  if (!problem) {
+    const error = new Error(`Coding problem with ID ${problem_id} not found`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const testCases = await findCodingTestCasesByProblemId(problem_id);
+  if (!testCases || testCases.length === 0) {
+    const error = new Error(`No test cases configured for problem ID ${problem_id}`);
+    error.statusCode = 409;
+    throw error;
+  }
+
+  const problemTimeLimitMs = parseInt(problem.time_limit_ms, 10) || 5000;
+  const timeoutSeconds = Math.min(Math.max(Math.round(problemTimeLimitMs / 1000), 5), 10);
+
+  const totalTests = testCases.length;
+  let passedTests = 0;
+  let overallTimedOut = false;
+  let overallCompilationError = false;
+  let overallRuntimeError = false;
+  let totalExecutionMs = 0;
+
+  const executed = [];
+
+  for (let tcIdx = 0; tcIdx < testCases.length; tcIdx++) {
+    const tc = testCases[tcIdx];
+    const tcNumber = tcIdx + 1;
+    if (overallCompilationError || overallTimedOut) break;
+
+    let runResult;
+    try {
+      runResult = await runCodeInSandbox({ language, code, stdin: tc.input || '', timeoutSeconds });
+    } catch (error) {
+      // Propagate controlled compiler service errors (503) so the controller
+      // can surface a clean message without crashing the backend.
+      if (error.statusCode) throw error;
+      throw error;
+    }
+
+    totalExecutionMs += runResult.executionTime;
+
+    if (runResult.compilationError) {
+      overallCompilationError = true;
+      executed.push({
+        test_case_id: tc.id,
+        test_case_number: tcNumber,
+        is_hidden: Boolean(tc.is_hidden),
+        passed: false,
+        execution_time_ms: runResult.executionTime,
+      });
+      break;
+    }
+
+    if (runResult.timedOut) {
+      overallTimedOut = true;
+      executed.push({
+        test_case_id: tc.id,
+        test_case_number: tcNumber,
+        is_hidden: Boolean(tc.is_hidden),
+        passed: false,
+        timed_out: true,
+        execution_time_ms: runResult.executionTime,
+      });
+      break;
+    }
+
+    const runtimeError = runResult.exitCode !== 0;
+    if (runtimeError) overallRuntimeError = true;
+
+    const actual = normalizeOutput(runResult.stdout);
+    const expected = normalizeOutput(tc.expected_output);
+    const passed = actual === expected;
+
+    if (passed) passedTests += 1;
+
+    if (Boolean(tc.is_hidden)) {
+      executed.push({
+        test_case_id: tc.id,
+        test_case_number: tcNumber,
+        is_hidden: true,
+        passed,
+        execution_time_ms: runResult.executionTime,
+      });
+    } else {
+      executed.push({
+        test_case_id: tc.id,
+        test_case_number: tcNumber,
+        is_hidden: false,
+        passed,
+        execution_time_ms: runResult.executionTime,
+        input: tc.input,
+        expected_output: tc.expected_output,
+        actual_output: runResult.stdout,
+        stderr: runResult.stderr,
+      });
+    }
+  }
+
+  // If evaluation stopped early (compilation error / time limit exceeded),
+  // still report every stored test case so the UI can render a complete list.
+  for (let i = executed.length; i < testCases.length; i++) {
+    const tc = testCases[i];
+    if (Boolean(tc.is_hidden)) {
+      executed.push({
+        test_case_id: tc.id,
+        test_case_number: i + 1,
+        is_hidden: true,
+        passed: false,
+        not_evaluated: true,
+      });
+    } else {
+      executed.push({
+        test_case_id: tc.id,
+        test_case_number: i + 1,
+        is_hidden: false,
+        passed: false,
+        not_evaluated: true,
+        input: tc.input,
+        expected_output: tc.expected_output,
+        actual_output: null,
+      });
+    }
+  }
+
+  const status = deriveSubmissionStatus({
+    timedOut: overallTimedOut,
+    compilationError: overallCompilationError,
+    runtimeError: overallRuntimeError,
+    passedTests,
+    totalTests,
+  });
+
+  const problemTotalMarks = parseInt(problem.total_marks, 10) || 100;
+  const marks = totalTests > 0 ? Math.round((passedTests / totalTests) * problemTotalMarks) : 0;
+  const score = marks;
+  const percentage = totalTests > 0 ? Number(((passedTests / totalTests) * 100).toFixed(2)) : 0;
+
+  const submissionRecord = await createSubmissionModel({
+    student_id: student.id || student_id,
+    problem_id: problem.id,
+    submitted_code: code,
+    language,
+    passed_test_cases: passedTests,
+    total_test_cases: totalTests,
+    score,
+    marks: score,
+    percentage,
+    status,
+    execution_details: {
+      sandbox: 'docker',
+      status,
+      passed_test_cases: passedTests,
+      total_test_cases: totalTests,
+      execution_time_ms: totalExecutionMs,
+      results: executed,
+    },
+  });
+
+  const { execution_details, submitted_code, ...safeSubmission } =
+    submissionRecord && typeof submissionRecord === 'object' ? submissionRecord : {};
+
+  return {
+    problem_id: problem.id,
+    language,
+    status,
+    passed_tests: passedTests,
+    total_tests: totalTests,
+    marks,
+    total_marks: problemTotalMarks,
+    score,
+    percentage,
+    execution_time_ms: totalExecutionMs,
+    compilation_error: overallCompilationError,
+    timed_out: overallTimedOut,
+    test_results: executed,
+    submission: safeSubmission || null,
+  };
+};
+
+/**
+ * Save student coding attempt and calculate marks (backwards-compatible path).
  */
 export const saveCodingSubmissionService = async ({
   student_id,

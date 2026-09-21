@@ -2,15 +2,69 @@ import { query } from '../config/db.js';
 
 // Fallback mock stores in case of database unavailability
 const mockCodingProblems = [
-  { id: 1, title: 'Two Sum', description: 'Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.', difficulty: 'Easy', category: 'Arrays & Hashing', total_marks: 100 },
-  { id: 2, title: 'Valid Palindrome', description: 'A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.', difficulty: 'Easy', category: 'Two Pointers', total_marks: 100 },
-  { id: 3, title: 'Longest Substring Without Repeating Characters', description: 'Given a string s, find the length of the longest substring without repeating characters.', difficulty: 'Medium', category: 'Sliding Window', total_marks: 150 },
-  { id: 4, title: 'Reverse Linked List', description: 'Given the head of a singly linked list, reverse the list, and return the reversed list.', difficulty: 'Easy', category: 'Linked List', total_marks: 100 },
-  { id: 5, title: 'Maximum Subarray (Kadane\'s Algorithm)', description: 'Given an integer array nums, find the subarray with the largest sum, and return its sum.', difficulty: 'Medium', category: 'Dynamic Programming', total_marks: 150 },
-  { id: 6, title: 'Binary Tree Level Order Traversal', description: 'Given the root of a binary tree, return the level order traversal of its nodes\' values.', difficulty: 'Medium', category: 'Trees & Graphs', total_marks: 150 },
-  { id: 7, title: 'Merge k Sorted Lists', description: 'You are given an array of k linked-lists lists, each linked-list is sorted in ascending order. Merge all the linked-lists into one sorted linked-list and return it.', difficulty: 'Hard', category: 'Heap / Priority Queue', total_marks: 250 },
-  { id: 8, title: 'Trapping Rain Water', description: 'Given n non-negative integers representing an elevation map where the width of each bar is 1, compute how much water it can trap after raining.', difficulty: 'Hard', category: 'Two Pointers', total_marks: 250 },
+  { id: 1, title: 'Two Sum', description: 'Given an array of integers nums and an integer target, return the indices of the two numbers that add up to target. Each input has exactly one solution and the same element may not be used twice.\n\nInput: line 1 = n target, line 2 = n integers space-separated.\nOutput: the two indices space-separated.', difficulty: 'Easy', category: 'Arrays & Hashing', total_marks: 100 },
+  { id: 2, title: 'Valid Palindrome', description: 'A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.\n\nInput: single line (the phrase).\nOutput: true if palindrome, else false.', difficulty: 'Easy', category: 'Two Pointers', total_marks: 100 },
+  { id: 3, title: 'Longest Substring Without Repeating Characters', description: "Given a string s, find the length of the longest substring without repeating characters.\n\nInput: single line (the string).\nOutput: the length of the longest substring.", difficulty: 'Medium', category: 'Sliding Window', total_marks: 150 },
+  { id: 4, title: 'Reverse Linked List', description: 'Given the head of a singly linked list, reverse it and return the reversed list.\n\nInput: line 1 = n, line 2 = n values space-separated.\nOutput: the reversed values space-separated.', difficulty: 'Easy', category: 'Linked List', total_marks: 100 },
+  { id: 5, title: "Maximum Subarray (Kadane's Algorithm)", description: "Given an integer array nums, find the contiguous subarray with the largest sum, and return its sum.\n\nInput: line 1 = n, line 2 = n integers space-separated.\nOutput: maximum subarray sum.", difficulty: 'Medium', category: 'Dynamic Programming', total_marks: 150 },
+  { id: 6, title: 'Binary Tree Level Order Traversal', description: "Given the root of a binary tree, return the level order traversal of its nodes' values (left to right, level by level).\n\nInput: level-order values space-separated, 'null' for empty nodes.\nOutput: each level on its own line, values space-separated.", difficulty: 'Medium', category: 'Trees & Graphs', total_marks: 150 },
+  { id: 7, title: 'Merge k Sorted Lists', description: 'You are given k sorted linked lists. Merge them into one sorted list and return it.\n\nInput: line 1 = k, then k lines, each a space-separated sorted list.\nOutput: merged sorted values space-separated.', difficulty: 'Hard', category: 'Heap / Priority Queue', total_marks: 250 },
+  { id: 8, title: 'Trapping Rain Water', description: 'Given n non-negative integers representing an elevation map, compute how much water it can trap after raining.\n\nInput: line 1 = n, line 2 = n heights space-separated.\nOutput: total trapped water units.', difficulty: 'Hard', category: 'Two Pointers', total_marks: 250 },
 ];
+
+// Real, executable test cases for the built-in problems. Each problem gets
+// 2 public + 2 hidden cases. Input/output follow the I/O contracts in the
+// descriptions above so that student solutions can be judged automatically.
+const mockTestCases = {
+  1: [
+    { input: '4 9\n2 7 11 15', expected_output: '0 1', is_hidden: false },
+    { input: '3 6\n3 2 4', expected_output: '1 2', is_hidden: false },
+    { input: '2 6\n3 3', expected_output: '0 1', is_hidden: true },
+    { input: '4 0\n-1 0 1 2', expected_output: '0 2', is_hidden: true },
+  ],
+  2: [
+    { input: 'A man, a plan, a canal: Panama', expected_output: 'true', is_hidden: false },
+    { input: 'race a car', expected_output: 'false', is_hidden: false },
+    { input: 'a.', expected_output: 'true', is_hidden: true },
+    { input: 'abc', expected_output: 'false', is_hidden: true },
+  ],
+  3: [
+    { input: 'abcabcbb', expected_output: '3', is_hidden: false },
+    { input: 'bbbbb', expected_output: '1', is_hidden: false },
+    { input: ' ', expected_output: '0', is_hidden: true },
+    { input: 'pwwkew', expected_output: '3', is_hidden: true },
+  ],
+  4: [
+    { input: '5\n1 2 3 4 5', expected_output: '5 4 3 2 1', is_hidden: false },
+    { input: '1\n1', expected_output: '1', is_hidden: false },
+    { input: '3\n1 2 3', expected_output: '3 2 1', is_hidden: true },
+    { input: '4\n4 3 2 1', expected_output: '1 2 3 4', is_hidden: true },
+  ],
+  5: [
+    { input: '2\n-2 1', expected_output: '1', is_hidden: false },
+    { input: '9\n-2 1 -3 4 -1 2 1 -5 4', expected_output: '6', is_hidden: false },
+    { input: '1\n-1', expected_output: '-1', is_hidden: true },
+    { input: '5\n5 4 -1 7 8', expected_output: '23', is_hidden: true },
+  ],
+  6: [
+    { input: '3 9 20 null null 15 7', expected_output: '3\n9 20\n15 7', is_hidden: false },
+    { input: '1', expected_output: '1', is_hidden: false },
+    { input: '1 2 3 4 null null 5', expected_output: '1\n2 3\n4 5', is_hidden: true },
+    { input: '2 1 3', expected_output: '2\n1 3', is_hidden: true },
+  ],
+  7: [
+    { input: '3\n1 4 5\n1 3 4\n2 6', expected_output: '1 1 2 3 4 4 5 6', is_hidden: false },
+    { input: '2\n1 3\n2 4', expected_output: '1 2 3 4', is_hidden: false },
+    { input: '1\n1 2 3', expected_output: '1 2 3', is_hidden: true },
+    { input: '2\n1\n2', expected_output: '1 2', is_hidden: true },
+  ],
+  8: [
+    { input: '12\n0 1 0 2 1 0 1 3 2 1 2 1', expected_output: '6', is_hidden: false },
+    { input: '6\n4 2 0 3 2 5', expected_output: '9', is_hidden: false },
+    { input: '3\n3 1 3', expected_output: '2', is_hidden: true },
+    { input: '4\n0 0 0 0', expected_output: '0', is_hidden: true },
+  ],
+};
 
 const mockSubmissions = [];
 
@@ -81,18 +135,78 @@ export const ensureCodingTablesExist = async () => {
           'INSERT INTO coding_problems (id, title, description, difficulty, category, total_marks) VALUES (?, ?, ?, ?, ?, ?)',
           [p.id, p.title, p.description, p.difficulty, p.category, p.total_marks]
         );
-        for (let i = 1; i <= 5; i++) {
-          await query(
-            'INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden, weightage) VALUES (?, ?, ?, ?, ?)',
-            [p.id, `sample_input_${i}`, `sample_output_${i}`, i > 2, 20]
-          );
-        }
       }
     }
+
+    // Reconcile built-in problems: update descriptions and replace placeholder
+    // test cases (older seeds) with real, executable ones.
+    const reconcile = async () => {
+      for (const p of mockCodingProblems) {
+        await updateProblemWithTestCases(p);
+      }
+    };
+    await reconcile();
 
     tablesInitialized = true;
   } catch (error) {
     console.warn(`[Coding Model] Auto table initialization fallback: ${error.message}`);
+  }
+};
+
+/**
+ * Upsert a built-in problem's metadata and its real test cases.
+ */
+const updateProblemWithTestCases = async (problem) => {
+  const numId = parseInt(problem.id, 10);
+  try {
+    await query(
+      `INSERT INTO coding_problems (id, title, description, difficulty, category, total_marks)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE
+         description = VALUES(description),
+         difficulty = VALUES(difficulty),
+         category = VALUES(category),
+         total_marks = VALUES(total_marks)
+      `,
+      [numId, problem.title, problem.description, problem.difficulty, problem.category, problem.total_marks]
+    );
+
+    const existing = await query('SELECT COUNT(*) AS cnt FROM coding_test_cases WHERE problem_id = ?', [numId]);
+    const totalCount = existing && existing[0] ? parseInt(existing[0].cnt, 10) : 0;
+
+    let needsReseed = false;
+    if (totalCount === 0) {
+      needsReseed = true;
+    } else {
+      const ph = await query(
+        `SELECT COUNT(*) AS cnt FROM coding_test_cases
+         WHERE problem_id = ? AND (input LIKE 'sample_input_%' OR expected_output LIKE 'sample_output_%')`,
+        [numId]
+      );
+      const phCount = ph && ph[0] ? parseInt(ph[0].cnt, 10) : 0;
+
+      const pubRows = await query('SELECT COUNT(*) AS cnt FROM coding_test_cases WHERE problem_id = ? AND is_hidden = 0', [numId]);
+      const pubCount = pubRows && pubRows[0] ? parseInt(pubRows[0].cnt, 10) : 0;
+      const hidRows = await query('SELECT COUNT(*) AS cnt FROM coding_test_cases WHERE problem_id = ? AND is_hidden = 1', [numId]);
+      const hidCount = hidRows && hidRows[0] ? parseInt(hidRows[0].cnt, 10) : 0;
+
+      // Multiple test cases required, with both public and hidden coverage.
+      needsReseed = phCount > 0 || totalCount < 2 || pubCount === 0 || hidCount === 0;
+    }
+
+    if (needsReseed) {
+      await query('DELETE FROM coding_test_cases WHERE problem_id = ?', [numId]);
+      const cases = mockTestCases[numId] || [];
+      for (const tc of cases) {
+        await query(
+          'INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden, weightage) VALUES (?, ?, ?, ?, ?)',
+          [numId, tc.input, tc.expected_output, tc.is_hidden ? 1 : 0, 25]
+        );
+      }
+      console.log(`[Coding Model] Seeded ${cases.length} real test cases for problem ${numId}.`);
+    }
+  } catch (error) {
+    console.warn(`[Coding Model] Test-case reconcile skipped for problem ${numId}: ${error.message}`);
   }
 };
 

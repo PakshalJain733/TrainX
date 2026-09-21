@@ -36,6 +36,14 @@ export const config = {
     apiKey: process.env.AI_API_KEY || '',
     model: process.env.AI_MODEL || 'gemini-flash-latest',
   },
+  compiler: {
+    image: process.env.CODE_RUNNER_IMAGE || 'trainx-code-runner',
+    memoryMb: parseInt(process.env.CODE_RUNNER_MEMORY_MB || '256', 10),
+    cpus: process.env.CODE_RUNNER_CPUS || '0.5',
+    pids: parseInt(process.env.CODE_RUNNER_PIDS || '64', 10),
+    timeoutSeconds: parseInt(process.env.CODE_RUNNER_TIMEOUT_S || '5', 10),
+    maxTimeoutSeconds: parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10),
+  },
 };
 
 // Validate critical env vars — error in production, warn in development
