@@ -252,6 +252,25 @@ export function SystemMaintenanceProvider({ children }) {
     return config.modules[moduleKey];
   };
 
+  // Check whether a module is currently active (not under maintenance)
+  const isModuleActive = (moduleKey) => {
+    if (config.globalEmergencyMode) return false;
+    const mod = config.modules[moduleKey];
+    return mod ? mod.active === true : true;
+  };
+
+  // Get the maintenance config for a module (with a safe fallback)
+  const getModuleConfig = (moduleKey) => {
+    return config.modules[moduleKey] || {
+      key: moduleKey,
+      name: "Module Temporarily Offline",
+      category: "Platform System",
+      role: "All Roles",
+      message: "This section is currently undergoing maintenance by the platform engineering team.",
+      updatedAt: "Active",
+    };
+  };
+
   // Toggle single module ON/OFF
   const toggleModule = (moduleKey) => {
     setConfig((prev) => {
@@ -318,6 +337,18 @@ export function SystemMaintenanceProvider({ children }) {
     });
   };
 
+  // Check if a module is active
+  const isModuleActive = (moduleKey) => {
+    if (config.globalEmergencyMode) return false;
+    const mod = config.modules[moduleKey];
+    return mod ? mod.active : true; // Default to true if not found in config
+  };
+
+  // Get config for a specific module
+  const getModuleConfig = (moduleKey) => {
+    return config.modules[moduleKey] || {};
+  };
+
   return (
     <SystemMaintenanceContext.Provider
       value={{
@@ -328,6 +359,8 @@ export function SystemMaintenanceProvider({ children }) {
         updateModuleMessage,
         toggleGlobalEmergencyMode,
         turnAllModulesOn,
+        isModuleActive,
+        getModuleConfig,
       }}
     >
       {children}
