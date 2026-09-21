@@ -1,21 +1,21 @@
 /* ─── StudentSidebar.css ─────────────────────────────────────────────────── */
 
 :root {
-  --sidebar-bg:          #f1f5f9;
-  --sidebar-border:      #cbd2eb;
-  --sidebar-width:       240px;
-  --sidebar-width-icon:  68px;
-  --sidebar-text:        #64748b;
+  --sidebar-bg: #f1f5f9;
+  --sidebar-border: #cbd2eb;
+  --sidebar-width: 240px;
+  --sidebar-width-icon: 68px;
+  --sidebar-text: #64748b;
   --sidebar-text-bright: #0f172a;
-  --sidebar-primary:     #4f46e5;
-  --sidebar-primary-fg:  #ffffff;
-  --sidebar-hover-bg:    #f1f5f9;
-  --sidebar-active-bg:   #4f46e5;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-fg: #ffffff;
+  --sidebar-hover-bg: #f1f5f9;
+  --sidebar-active-bg: #4f46e5;
   --sidebar-active-text: #ffffff;
-  --sidebar-active-bar:  #4f46e5;
-  --sidebar-radius:      8px;
-  --sidebar-transition:  width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                         opacity 0.2s ease;
+  --sidebar-active-bar: #4f46e5;
+  --sidebar-radius: 8px;
+  --sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
 }
 
 /* ── Shell ── */
@@ -74,11 +74,9 @@
   width: 46px;
   height: 46px;
   border-radius: 10px;
-  
   border: 1px solid #e2e8f0;
   padding: 5px;
   flex-shrink: 0;
- 
 }
 
 .sidebar-brand-logo {
@@ -170,8 +168,14 @@
   overflow-x: hidden;
 }
 
-.sidebar-content::-webkit-scrollbar { width: 3px; }
-.sidebar-content::-webkit-scrollbar-track { background: transparent; }
+.sidebar-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .sidebar-content::-webkit-scrollbar-thumb {
   background: rgba(0, 85, 186, 0.3);
   border-radius: 4px;
@@ -340,18 +344,22 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   z-index: 199;
   animation: backdrop-fade-in 0.2s ease;
 }
 
 @keyframes backdrop-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {
+
   .mentor-sidebar,
   .fac-sidebar,
   .faculty-sidebar,

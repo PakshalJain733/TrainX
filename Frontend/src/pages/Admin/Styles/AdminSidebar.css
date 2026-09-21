@@ -1,21 +1,21 @@
 /* ─── StudentSidebar.css ─────────────────────────────────────────────────── */
 
 :root {
-  --sidebar-bg:          #f1f5f9;
-  --sidebar-border:      #cbd2eb;
-  --sidebar-width:       240px;
-  --sidebar-width-icon:  68px;
-  --sidebar-text:        #64748b;
+  --sidebar-bg: #f1f5f9;
+  --sidebar-border: #cbd2eb;
+  --sidebar-width: 240px;
+  --sidebar-width-icon: 68px;
+  --sidebar-text: #64748b;
   --sidebar-text-bright: #0f172a;
-  --sidebar-primary:     #4f46e5;
-  --sidebar-primary-fg:  #ffffff;
-  --sidebar-hover-bg:    #f1f5f9;
-  --sidebar-active-bg:   #4f46e5;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-fg: #ffffff;
+  --sidebar-hover-bg: #f1f5f9;
+  --sidebar-active-bg: #4f46e5;
   --sidebar-active-text: #ffffff;
-  --sidebar-active-bar:  #4f46e5;
-  --sidebar-radius:      8px;
-  --sidebar-transition:  width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                         opacity 0.2s ease;
+  --sidebar-active-bar: #4f46e5;
+  --sidebar-radius: 8px;
+  --sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
 }
 
 /* ── Shell ── */
@@ -44,11 +44,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
-  border-bottom: none;
-  height: var(--navbar-height, 64px);
+  padding: 0 16px 14px 16px;
+  border-bottom: 1.5px solid #cbd2eb !important;
+  height: auto;
+  min-height: 64px;
   gap: 8px;
   box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+/* ── Footer ── */
+.sidebar-footer {
+  padding: 14px 12px 12px 12px;
+  border-top: 1.5px solid #cbd2eb !important;
+  margin-top: 8px;
 }
 
 .sidebar-brand {
@@ -154,13 +163,19 @@
 /* ── Content ── */
 .sidebar-content {
   flex: 1;
-  padding: 12px 8px;
+  padding: 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-.sidebar-content::-webkit-scrollbar { width: 3px; }
-.sidebar-content::-webkit-scrollbar-track { background: transparent; }
+.sidebar-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .sidebar-content::-webkit-scrollbar-thumb {
   background: rgba(0, 85, 186, 0.3);
   border-radius: 4px;
@@ -191,7 +206,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .sidebar-menu-item {
@@ -329,18 +344,22 @@
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
   z-index: 199;
   animation: backdrop-fade-in 0.2s ease;
 }
 
 @keyframes backdrop-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 768px) {
+
   .admin-sidebar,
   .fac-sidebar,
   .faculty-sidebar,

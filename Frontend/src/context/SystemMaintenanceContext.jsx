@@ -286,6 +286,18 @@ export function SystemMaintenanceProvider({ children }) {
     });
   };
 
+  // Check if a module is active
+  const isModuleActive = (moduleKey) => {
+    if (config.globalEmergencyMode) return false;
+    const mod = config.modules[moduleKey];
+    return mod ? mod.active : true; // Default to true if not found in config
+  };
+
+  // Get config for a specific module
+  const getModuleConfig = (moduleKey) => {
+    return config.modules[moduleKey] || {};
+  };
+
   return (
     <SystemMaintenanceContext.Provider
       value={{
@@ -294,6 +306,8 @@ export function SystemMaintenanceProvider({ children }) {
         updateModuleMessage,
         toggleGlobalEmergencyMode,
         turnAllModulesOn,
+        isModuleActive,
+        getModuleConfig,
       }}
     >
       {children}
