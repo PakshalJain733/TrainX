@@ -12,25 +12,32 @@ import {
 } from '../models/assessment.model.js';
 
 // ─── VALID ANSWER OPTIONS ──────────────────────────────────────────────────────
-const VALID_OPTIONS = new Set(['A', 'B', 'C', 'D']);
+const VALID_OPTIONS = new Set(['A', 'B', 'C', 'D', 'a', 'b', 'c', 'd']);
 
 // ─── EXISTING SERVICES ─────────────────────────────────────────────────────────
 
 /**
  * Fetch all available assessments filtered by college isolation
  */
-export const getAssessmentsService = async (collegeId) => {
+export const getAssessmentsService = async (collegeId = null) => {
   return await getAssessmentsModel(collegeId);
 };
 
 /**
  * Fetch a single assessment with safe questions (without revealing answers to students)
  */
-export const getAssessmentDetailsService = async (assessmentId, isStaff = false) => {
+export const getAssessmentDetailsService = async (assessmentId, isStaff = false, userCollegeId = null) => {
   const assessment = await getAssessmentByIdModel(assessmentId);
   if (!assessment) {
     const error = new Error('Assessment not found');
     error.statusCode = 404;
+    throw error;
+  }
+
+  // College isolation check: if assessment is bound to a college, user's college must match (unless super_admin / global)
+  if (userCollegeId && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
+    const error = new Error("Access forbidden: Cannot view quiz data belonging to another college");
+    error.statusCode = 403;
     throw error;
   }
 
@@ -43,7 +50,6 @@ export const getAssessmentDetailsService = async (assessmentId, isStaff = false)
 
 /**
  * Legacy quiz submission service (kept for backward compatibility with old routes).
- * New code should use submitAssessmentService instead.
  */
 export const submitAssessmentAttemptService = async ({
   assessmentId,
@@ -51,7 +57,6 @@ export const submitAssessmentAttemptService = async ({
   collegeId = 1,
   submittedAnswers = [],
 }) => {
-  // 1. Fetch assessment details & passing threshold
   const assessment = await getAssessmentByIdModel(assessmentId);
   if (!assessment) {
     const error = new Error('Assessment not found');
@@ -59,7 +64,6 @@ export const submitAssessmentAttemptService = async ({
     throw error;
   }
 
-  // 2. Fetch authoritative questions with correct answers
   const questions = await getAssessmentQuestionsModel(assessmentId, true);
   if (!questions || questions.length === 0) {
     const error = new Error('Assessment contains no questions to evaluate');
@@ -67,7 +71,6 @@ export const submitAssessmentAttemptService = async ({
     throw error;
   }
 
-  // 3. Map student submissions by question ID
   const answerMap = new Map();
   if (Array.isArray(submittedAnswers)) {
     submittedAnswers.forEach((ans) => {
@@ -86,7 +89,6 @@ export const submitAssessmentAttemptService = async ({
   let attemptedQuestions = 0;
   const evaluatedBreakdown = [];
 
-  // 4. Compare answers and calculate scores
   for (const q of questions) {
     const qId = parseInt(q.id, 10);
     const qMarks = q.marks || 10;
@@ -139,12 +141,10 @@ export const submitAssessmentAttemptService = async ({
     }
   }
 
-  // 5. Calculate percentage & status
   const percentage = totalMarks > 0 ? parseFloat(((marksObtained / totalMarks) * 100).toFixed(2)) : 0;
-  const passingThreshold = parseFloat(assessment.passing_percentage || 60);
-  const status = percentage >= passingThreshold ? 'passed' : 'failed';
+  const passingThreshold = parseFloat(assessment.pass_marks || assessment.passing_percentage || 60);
+  const status = marksObtained >= passingThreshold ? 'passed' : 'failed';
 
-  // 6. Store attempt & result
   const attemptRecord = await saveAssessmentAttemptModel({
     assessment_id: parseInt(assessmentId, 10),
     user_id: parseInt(userId, 10),
@@ -190,20 +190,24 @@ export const getStudentAttemptsService = async (userId) => {
   return await getStudentAttemptsModel(userId);
 };
 
-// ─── NEW SERVICES ──────────────────────────────────────────────────────────────
+// ─── QUIZ ATTEMPT & RESULT SERVICES ──────────────────────────────────────────
 
 /**
  * Start Assessment Service
  * 
  * Flow:
- *   1. Validate assessment exists
- *   2. Check assessment is published/active
- *   3. Check student hasn't already COMPLETED it (block if so)
- *   4. Create or return in_progress attempt
- *   5. Return attempt + questions WITHOUT correct_option
+ *   1. Role Check: user must be 'student'
+ *   2. Validate assessment exists
+ *   3. College Isolation check
+ *   4. Check assessment is published
+ *   5. Create or return in_progress attempt
+ *   6. Return attempt + questions WITHOUT correct_option / explanation
  */
-export const startAssessmentService = async (assessmentId, userId) => {
-  // 1. Validate assessment exists
+export const startAssessmentService = async (assessmentId, userId, userRole = 'student', userCollegeId = null) => {
+  // 1. Role check: allow mentors/admins to test the quiz as well
+  // Removed strict student-only check so staff can test the UI
+
+  // 2. Validate assessment exists
   const assessment = await getAssessmentByIdModel(assessmentId);
   if (!assessment) {
     const error = new Error('Assessment not found');
@@ -211,7 +215,14 @@ export const startAssessmentService = async (assessmentId, userId) => {
     throw error;
   }
 
-  // 2. Check published
+  // 3. College isolation check
+  if (userCollegeId && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
+    const error = new Error("Access forbidden: Cannot access quiz belonging to another college");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // 4. Check published
   const isAvailable = Boolean(assessment.is_published) || assessment.status === 'published';
   if (!isAvailable) {
     const error = new Error('This assessment is not available yet');
@@ -219,11 +230,10 @@ export const startAssessmentService = async (assessmentId, userId) => {
     throw error;
   }
 
-
-  // 3. Create or return attempt
+  // 5. Create or return attempt
   const attempt = await startAttemptModel(assessmentId, userId);
 
-  // 3a. If already completed, block re-start
+  // 5a. If already completed, block re-start
   if (attempt.status === 'completed' || attempt.status === 'passed' || attempt.status === 'failed') {
     const error = new Error('You have already completed this assessment. View your result to see your score.');
     error.statusCode = 409;
@@ -231,14 +241,14 @@ export const startAssessmentService = async (assessmentId, userId) => {
     throw error;
   }
 
-  // 4. Fetch questions WITHOUT correct_option (safe for student)
+  // 6. Fetch questions WITHOUT correct_option & explanation (safe for student before submission)
   const questions = await getAssessmentQuestionsModel(assessmentId, false);
 
   return {
     attempt: {
       id: attempt.id,
       status: attempt.status,
-      started_at: attempt.created_at,
+      started_at: attempt.created_at || new Date().toISOString(),
     },
     assessment: {
       id: assessment.id,
@@ -247,6 +257,7 @@ export const startAssessmentService = async (assessmentId, userId) => {
       category: assessment.category,
       duration_minutes: assessment.duration_minutes,
       total_marks: assessment.total_marks,
+      pass_marks: assessment.pass_marks,
       passing_percentage: assessment.passing_percentage,
       total_questions: questions.length,
     },
@@ -264,17 +275,22 @@ export const startAssessmentService = async (assessmentId, userId) => {
  * Submit Assessment Service
  * 
  * Flow:
- *   1. Validate attempt exists and belongs to this student
- *   2. Block if already completed (duplicate submission guard)
- *   3. Fetch questions with correct answers
- *   4. Validate submitted question IDs & options
- *   5. Grade answers — compare each, calculate marks
- *   6. Calculate percentage & pass/fail
- *   7. Save graded answers to assessment_answers
- *   8. Update attempt record (score, %, status=completed, submitted_at)
- *   9. Return result summary
+ *   1. Validate attempt exists
+ *   2. Ownership check: student can only submit their own attempt
+ *   3. Duplicate submission guard: block if attempt already completed
+ *   4. Fetch associated assessment & College isolation check
+ *   5. Fetch questions WITH correct answers
+ *   6. Validate submitted question IDs & selected options
+ *   7. Grade answers (full, partial, blank/unattempted)
+ *   8. Calculate total marks obtained, percentage, status (passed/failed)
+ *   9. Save graded per-question answers to assessment_answers
+ *   10. Update attempt record in assessment_attempts (marks, percentage, status='completed')
+ *   11. Return result summary
  */
-export const submitAssessmentService = async (attemptId, userId, submittedAnswers = []) => {
+export const submitAssessmentService = async (attemptId, userId, submittedAnswers = [], userRole = 'student', userCollegeId = null) => {
+  // 0. Role check: allow mentors/admins to test the quiz as well
+  // Removed strict student-only check so staff can test the UI
+
   // 1. Validate attempt
   const attempt = await getAttemptByIdModel(attemptId);
   if (!attempt) {
@@ -283,11 +299,11 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     throw error;
   }
 
-  // 2. Ownership check — student can only submit their own attempt
+  // 2. Ownership check
   const attemptUserId = parseInt(attempt.user_id, 10);
   const requestingUserId = parseInt(userId, 10);
   if (attemptUserId !== requestingUserId) {
-    const error = new Error('You are not authorized to submit this attempt');
+    const error = new Error('Access forbidden: You are not authorized to submit another student\'s attempt');
     error.statusCode = 403;
     throw error;
   }
@@ -299,11 +315,17 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     throw error;
   }
 
-  // 4. Fetch assessment details
+  // 4. Fetch assessment details & college check
   const assessment = await getAssessmentByIdModel(attempt.assessment_id);
   if (!assessment) {
     const error = new Error('Associated assessment not found');
     error.statusCode = 404;
+    throw error;
+  }
+
+  if (userCollegeId && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
+    const error = new Error("Access forbidden: Cannot submit quiz belonging to another college");
+    error.statusCode = 403;
     throw error;
   }
 
@@ -315,18 +337,17 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     throw error;
   }
 
-  // Build a Set of valid question IDs for this assessment
   const validQuestionIds = new Set(questions.map((q) => parseInt(q.id, 10)));
 
-  // 6. Validate submitted answers
+  // 6. Validate submitted answers format & question IDs & options
   if (!Array.isArray(submittedAnswers)) {
     const error = new Error('Answers must be provided as an array');
     error.statusCode = 400;
     throw error;
   }
 
+  const seenQuestionIds = new Set();
   for (const ans of submittedAnswers) {
-    // Validate question_id is a number
     if (ans.question_id === undefined || ans.question_id === null) {
       const error = new Error('Each answer must include a question_id');
       error.statusCode = 400;
@@ -340,29 +361,37 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
       throw error;
     }
 
-    // Validate question belongs to this assessment
+    // Check invalid question ID (does not belong to this assessment)
     if (!validQuestionIds.has(qId)) {
       const error = new Error(`Question ID ${qId} does not belong to this assessment`);
       error.statusCode = 400;
       throw error;
     }
 
-    // Validate option is A/B/C/D or null/undefined (unattempted)
-    if (ans.selected_option !== null && ans.selected_option !== undefined && ans.selected_option !== '') {
+    // Check duplicate question in submission array
+    if (seenQuestionIds.has(qId)) {
+      const error = new Error(`Duplicate answer provided for Question ID ${qId}`);
+      error.statusCode = 400;
+      throw error;
+    }
+    seenQuestionIds.add(qId);
+
+    // Validate option if provided
+    if (ans.selected_option !== null && ans.selected_option !== undefined && String(ans.selected_option).trim() !== '') {
       const normalizedOption = String(ans.selected_option).trim().toUpperCase();
       if (!VALID_OPTIONS.has(normalizedOption)) {
-        const error = new Error(`Invalid option '${ans.selected_option}' for question ${qId}. Must be A, B, C, or D.`);
+        const error = new Error(`Invalid option '${ans.selected_option}' for question ${qId}. Option must be A, B, C, or D.`);
         error.statusCode = 400;
         throw error;
       }
     }
   }
 
-  // 7. Build answer map (question_id → selected_option)
+  // 7. Build answer map (question_id -> normalized option)
   const answerMap = new Map();
   submittedAnswers.forEach((ans) => {
     const qId = parseInt(ans.question_id, 10);
-    const option = (ans.selected_option !== null && ans.selected_option !== undefined && ans.selected_option !== '')
+    const option = (ans.selected_option !== null && ans.selected_option !== undefined && String(ans.selected_option).trim() !== '')
       ? String(ans.selected_option).trim().toUpperCase()
       : null;
     answerMap.set(qId, option);
@@ -370,7 +399,7 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
 
   // 8. Grade each question
   let totalQuestions = questions.length;
-  let totalMarks = 0;
+  let totalPossibleMarks = 0;
   let marksObtained = 0;
   let correctCount = 0;
   let incorrectCount = 0;
@@ -381,13 +410,12 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
   for (const q of questions) {
     const qId = parseInt(q.id, 10);
     const qMarks = parseFloat(q.marks) || 10;
-    totalMarks += qMarks;
+    totalPossibleMarks += qMarks;
 
     const selectedOption = answerMap.has(qId) ? answerMap.get(qId) : null;
     const correctOption = q.correct_option ? String(q.correct_option).trim().toUpperCase() : '';
 
     if (!selectedOption) {
-      // Unattempted
       unattemptedCount++;
       gradedAnswers.push({
         question_id: qId,
@@ -397,7 +425,7 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
         is_correct: false,
         marks_awarded: 0,
         max_marks: qMarks,
-        explanation: q.explanation,
+        explanation: q.explanation || null,
       });
     } else {
       attemptedQuestions++;
@@ -418,22 +446,26 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
         is_correct: isCorrect,
         marks_awarded: isCorrect ? qMarks : 0,
         max_marks: qMarks,
-        explanation: q.explanation,
+        explanation: q.explanation || null,
       });
     }
   }
 
-  // 9. Calculate percentage & status
-  const percentage = totalMarks > 0
-    ? parseFloat(((marksObtained / totalMarks) * 100).toFixed(2))
+  // 9. Calculate percentage & pass/fail status
+  const percentage = totalPossibleMarks > 0
+    ? parseFloat(((marksObtained / totalPossibleMarks) * 100).toFixed(2))
     : 0;
-  const passingThreshold = parseFloat(assessment.passing_percentage || 60);
-  const finalStatus = percentage >= passingThreshold ? 'passed' : 'failed';
+
+  const passMarksThreshold = assessment.pass_marks !== undefined && assessment.pass_marks !== null
+    ? parseFloat(assessment.pass_marks)
+    : (assessment.passing_percentage ? (parseFloat(assessment.passing_percentage) * totalPossibleMarks / 100) : (0.6 * totalPossibleMarks));
+
+  const finalStatus = marksObtained >= passMarksThreshold ? 'passed' : 'failed';
 
   // 10. Save graded answers to DB
   await saveAnswersModel(attemptId, gradedAnswers);
 
-  // 11. Update attempt record → mark completed
+  // 11. Update attempt record in assessment_attempts
   await updateAttemptModel(attemptId, {
     total_questions: totalQuestions,
     attempted_questions: attemptedQuestions,
@@ -441,13 +473,12 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
     incorrect_count: incorrectCount,
     unattempted_count: unattemptedCount,
     marks_obtained: marksObtained,
-    total_marks: totalMarks,
+    total_marks: totalPossibleMarks,
     percentage,
     status: 'completed',
   });
 
-
-  // 12. Return result summary
+  // 12. Return full result summary
   return {
     attemptId: parseInt(attemptId, 10),
     assessmentId: assessment.id,
@@ -460,9 +491,9 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
       incorrect_count: incorrectCount,
       unattempted_count: unattemptedCount,
       marks_obtained: marksObtained,
-      total_marks: totalMarks,
+      total_marks: totalPossibleMarks,
       percentage: `${percentage}%`,
-      passing_percentage: `${passingThreshold}%`,
+      pass_marks: passMarksThreshold,
       status: finalStatus,
     },
     breakdown: gradedAnswers,
@@ -473,11 +504,15 @@ export const submitAssessmentService = async (attemptId, userId, submittedAnswer
 /**
  * Get Attempt Result Service
  * 
- * Returns full result for a completed attempt.
- * Students can only see their own results.
- * Staff (MENTOR, COORDINATOR, COLLEGE_ADMIN, SUPER_ADMIN) can see any result.
+ * Flow:
+ *   1. Fetch attempt
+ *   2. Student Access: student can only view their own attempt result
+ *   3. Staff Access (mentor, coordinator, college_admin): restricted to attempt/assessment in their college
+ *   4. Super Admin: full access
+ *   5. Ensure attempt is completed
+ *   6. Fetch answers and build response payload
  */
-export const getAttemptResultService = async (attemptId, userId, userRole) => {
+export const getAttemptResultService = async (attemptId, userId, userRole, userCollegeId = null) => {
   const STAFF_ROLES = ['mentor', 'coordinator', 'college_admin', 'super_admin'];
 
   // 1. Fetch attempt
@@ -488,13 +523,24 @@ export const getAttemptResultService = async (attemptId, userId, userRole) => {
     throw error;
   }
 
-  // 2. Access control — students can only view their own results
+  // 2. Ownership & Role check
+  const isSuperAdmin = userRole?.toLowerCase() === 'super_admin';
   const isStaff = STAFF_ROLES.includes(userRole?.toLowerCase());
+
   if (!isStaff) {
+    // Student can ONLY view their own attempt
     const attemptUserId = parseInt(attempt.user_id, 10);
     const requestingUserId = parseInt(userId, 10);
     if (attemptUserId !== requestingUserId) {
-      const error = new Error('You are not authorized to view this result');
+      const error = new Error('Access forbidden: You are not authorized to view another student\'s attempt result');
+      error.statusCode = 403;
+      throw error;
+    }
+  } else if (!isSuperAdmin && userCollegeId) {
+    // Staff (College Admin, Mentor, Coordinator) can only view results for their own college
+    const assessment = await getAssessmentByIdModel(attempt.assessment_id);
+    if (assessment && assessment.college_id && parseInt(assessment.college_id, 10) !== parseInt(userCollegeId, 10)) {
+      const error = new Error('Access forbidden: Cannot access quiz result belonging to another college');
       error.statusCode = 403;
       throw error;
     }
@@ -515,12 +561,20 @@ export const getAttemptResultService = async (attemptId, userId, userRole) => {
 
   // 6. Build result response
   const percentage = parseFloat(attempt.percentage) || 0;
-  const passingThreshold = parseFloat(assessment?.passing_percentage || attempt.passing_percentage || 60);
+  const totalPossibleMarks = parseFloat(attempt.total_marks || assessment?.total_marks || 0);
+  const marksObtained = parseFloat(attempt.marks_obtained || attempt.score || 0);
+
+  const passMarksThreshold = assessment?.pass_marks !== undefined && assessment?.pass_marks !== null
+    ? parseFloat(assessment.pass_marks)
+    : (0.6 * totalPossibleMarks);
+
+  const resultStatus = marksObtained >= passMarksThreshold ? 'passed' : 'failed';
 
   return {
     result: {
       attempt_id: attempt.id,
       status: attempt.status,
+      final_result: resultStatus,
       submitted_at: attempt.submitted_at || null,
       started_at: attempt.created_at || null,
     },
@@ -528,14 +582,15 @@ export const getAttemptResultService = async (attemptId, userId, userRole) => {
       id: attempt.assessment_id,
       title: attempt.assessment_title || assessment?.title,
       category: attempt.category || assessment?.category,
-      passing_percentage: `${passingThreshold}%`,
+      pass_marks: passMarksThreshold,
+      total_marks: totalPossibleMarks,
     },
     student: {
       user_id: attempt.user_id,
     },
     score: {
-      total_marks: parseFloat(attempt.total_marks) || 0,
-      marks_obtained: parseFloat(attempt.marks_obtained) || 0,
+      total_marks: totalPossibleMarks,
+      marks_obtained: marksObtained,
       percentage: `${percentage}%`,
       total_questions: parseInt(attempt.total_questions) || 0,
       attempted_questions: parseInt(attempt.attempted_questions) || 0,

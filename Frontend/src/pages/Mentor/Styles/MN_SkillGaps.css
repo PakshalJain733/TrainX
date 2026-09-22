@@ -1,0 +1,260 @@
+/* SkillGaps.css - Mentor Skill Gaps Tab Styles */
+.mentor-skillgaps-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mentor-search-wrapper {
+  position: relative;
+  max-width: 420px;
+  width: 100%;
+}
+
+.mentor-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.mentor-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+  font-size: 13.5px;
+  background: #ffffff;
+  outline: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  color: #0f172a;
+}
+
+.mentor-search-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.mentor-toast-banner {
+  background-color: #ecfdf5;
+  border: 1px solid #10b981;
+  color: #047857;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.mentor-btn-primary {
+  padding: 10px 18px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.mentor-btn-primary:hover {
+  background: #4338ca;
+}
+
+.mentor-student-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.mentor-student-name {
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mentor-student-college {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.mentor-skillgap-topic {
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.mentor-skillgap-batch {
+  font-weight: 500;
+  color: #334155;
+}
+
+.mentor-skillgap-deficiency {
+  font-weight: 700;
+  color: #e11d48;
+}
+
+.mentor-skillgap-score {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.mentor-empty-table-cell {
+  text-align: center;
+  padding: 40px;
+  color: #64748b;
+}
+
+.mentor-priority-badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  display: inline-block;
+}
+
+.mentor-priority-badge--high {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.mentor-priority-badge--medium {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+
+.mentor-priority-badge--low {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+/* Modal Styling */
+.mentor-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 1rem;
+}
+
+.mentor-modal-card {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  width: 100%;
+  max-width: 500px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+
+.mentor-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.mentor-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.mentor-modal-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.mentor-modal-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mentor-modal-form {
+  padding: 1.5rem;
+}
+
+.mentor-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.mentor-form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.4rem;
+}
+
+.mentor-form-control {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+  font-size: 0.9rem;
+  outline: none;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.mentor-form-control:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.mentor-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.mentor-btn-cancel {
+  padding: 0.6rem 1.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mentor-btn-submit {
+  padding: 0.6rem 1.25rem;
+  border-radius: 0.5rem;
+  border: none;
+  background-color: #4f46e5;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

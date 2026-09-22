@@ -1,4 +1,10 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
+export const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return "/api/v1";
+  }
+  return "https://trainx-6w8m.onrender.com/api/v1";
+};
 
 export async function apiFetch(endpoint, options = {}) {
   try {
@@ -9,7 +15,8 @@ export async function apiFetch(endpoint, options = {}) {
       ...options.headers,
     };
 
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}${endpoint}`, {
       ...options,
       headers,
     });
@@ -21,7 +28,7 @@ export async function apiFetch(endpoint, options = {}) {
 
     return await res.json();
   } catch (error) {
-    // If backend is not active or unreachable in development, fallback gracefully
+    // Fallback gracefully
     console.warn(`[apiFetch] ${endpoint}:`, error.message);
     return { data: null, error: error.message };
   }

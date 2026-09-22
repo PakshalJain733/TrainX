@@ -1,0 +1,411 @@
+/* ─── StudentSidebar.css ─────────────────────────────────────────────────── */
+
+:root {
+  --sidebar-bg: #dbe5ee;
+  --sidebar-border: #cbd2eb;
+  --sidebar-width: 240px;
+  --sidebar-width-icon: 68px;
+  --sidebar-text: #64748b;
+  --sidebar-text-bright: #0f172a;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-fg: #ffffff;
+  --sidebar-hover-bg: #f1f5f9;
+  --sidebar-active-bg: #4f46e5;
+  --sidebar-active-text: #ffffff;
+  --sidebar-active-bar: #4f46e5;
+  --sidebar-radius: 8px;
+  --sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
+}
+
+/* ── Shell ── */
+.admin-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  min-height: 100vh;
+  background: var(--sidebar-bg);
+  border-right: none;
+  transition: var(--sidebar-transition);
+  overflow: hidden;
+  position: relative;
+  z-index: 100;
+  flex-shrink: 0;
+  padding: 12px 0;
+  box-sizing: border-box;
+}
+
+.admin-sidebar.sidebar--collapsed {
+  width: var(--sidebar-width-icon);
+}
+
+/* ── Header ── */
+.sidebar-header-admin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 0px 16px;
+  border-bottom: 1.5px solid #cbd2eb !important;
+  height: auto;
+  min-height: 64px;
+  gap: 8px;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.sidebar-brand-logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+.sidebar-brand-logo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  justify-content: center;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.brand-name1 {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.4px;
+  line-height: 1.1;
+}
+
+.brand-x-img-admin {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  padding-bottom: 3px;
+}
+
+.sidebar-brand-sub {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 2px;
+  line-height: 1.2;
+  letter-spacing: 0.1px;
+}
+
+.sidebar-brand-sub {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sidebar-text);
+  margin-top: 2px;
+  line-height: 1;
+  letter-spacing: 0.1px;
+}
+
+/* ── Toggle button ── */
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  border: 1px solid var(--sidebar-border);
+  background: #f8fafc;
+  color: var(--sidebar-text);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.sidebar-toggle svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2px;
+  fill: none;
+  display: block;
+}
+
+.sidebar-toggle:hover {
+  background: var(--sidebar-hover-bg);
+  color: var(--sidebar-primary);
+  border-color: #b5cde2;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Content ── */
+.sidebar-content {
+  flex: 1;
+  padding: 12px 8px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 85, 186, 0.3);
+  border-radius: 4px;
+}
+
+/* ── Group label ── */
+.sidebar-group-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #4a6785;
+  padding: 4px 8px 8px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* ── Section gap between groups ── */
+.sidebar-section-gap {
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* ── Menu ── */
+.sidebar-menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-menu-item {
+  width: 100%;
+}
+
+/* ── Menu button / link ── */
+.sidebar-menu-btn-admin {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--sidebar-text);
+  font-size: 13.5px;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.18s, color 0.18s;
+  white-space: nowrap;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sidebar-menu-btn-admin:hover {
+  background: #eff6ff !important;
+  color: #0052cc !important;
+  font-weight: 600;
+}
+
+.sidebar-menu-btn-admin:hover .sidebar-icon-admin,
+.sidebar-menu-btn-admin:hover svg {
+  stroke: #0052cc !important;
+  color: #0052cc !important;
+  opacity: 1 !important;
+}
+
+.sidebar-menu-btn-admin--active {
+  background: #0055ba !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  box-shadow: 0 3px 10px rgba(0, 85, 186, 0.22);
+}
+
+.sidebar-menu-btn-admin--active .sidebar-icon-admin,
+.sidebar-menu-btn-admin--active svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.sidebar-menu-btn-admin--active:hover {
+  background: #003e8c !important;
+  color: #ffffff !important;
+}
+
+.sidebar-menu-btn-admin--active:hover .sidebar-icon-admin,
+.sidebar-menu-btn-admin--active:hover svg {
+  stroke: #ffffff !important;
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.sidebar-menu-btn-admin--active::before {
+  display: none;
+}
+
+.sidebar-icon-admin {
+  flex-shrink: 0;
+  stroke: currentColor;
+  opacity: 0.85;
+}
+
+.sidebar-label-admin {
+  flex: 1;
+}
+
+.sidebar-active-dot {
+  display: none;
+}
+
+/* ── Footer ── */
+.sidebar-footer {
+  padding: 12px 8px;
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.sidebar-signout {
+  color: var(--sidebar-text);
+}
+
+.sidebar-signout:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: #dc2626;
+}
+
+/* ── Collapsed icon centering ── */
+.sidebar--collapsed .sidebar-menu-btn {
+  justify-content: center;
+  padding: 10px;
+}
+
+.sidebar--collapsed .sidebar-toggle {
+  margin: 0 auto;
+}
+
+.sidebar--collapsed .sidebar-header-admin {
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.sidebar--collapsed .sidebar-content {
+  padding: 12px 4px;
+}
+
+.sidebar--collapsed .sidebar-footer {
+  padding: 12px 4px;
+}
+
+.sidebar--collapsed .sidebar-group-label {
+  display: none;
+}
+
+.sidebar--collapsed .sidebar-section-gap {
+  height: 12px;
+}
+
+/* ── Mobile Sidebar Drawer & Backdrop ── */
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 199;
+  animation: backdrop-fade-in 0.2s ease;
+}
+
+@keyframes backdrop-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+
+  .admin-sidebar,
+  .fac-sidebar,
+  .faculty-sidebar,
+  .hod-sidebar,
+  .admin-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    z-index: 1000 !important;
+    width: 260px !important;
+    transform: translateX(-100%) !important;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15) !important;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  .admin-sidebar.mobile-open,
+  .fac-sidebar.mobile-open,
+  .faculty-sidebar.mobile-open,
+  .hod-sidebar.mobile-open,
+  .admin-sidebar.mobile-open {
+    transform: translateX(0) !important;
+  }
+
+  .admin-sidebar.sidebar--collapsed,
+  .fac-sidebar.sidebar--collapsed,
+  .faculty-sidebar.sidebar--collapsed,
+  .hod-sidebar.sidebar--collapsed,
+  .admin-sidebar.sidebar--collapsed {
+    width: 260px !important;
+  }
+
+  .sidebar--collapsed .sidebar-label,
+  .sidebar--collapsed .sidebar-group-label,
+  .sidebar--collapsed .fac-sidebar__section-label,
+  .sidebar--collapsed .sidebar-brand-text {
+    display: flex !important;
+  }
+}
+
+.sidebar--collapsed .fac-sidebar__section-label,
+.sidebar--collapsed .sidebar-brand-text {
+  display: flex !important;
+}

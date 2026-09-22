@@ -1,113 +1,6 @@
 import { query } from '../config/db.js';
 import { ROLES } from '../utils/constants.js';
 
-// Pre-seeded mock data for fallback mode
-const mockUsers = [
-  {
-    id: 1,
-    name: 'Super Administrator',
-    email: 'superadmin@trainingportal.com',
-    mobile_number: '9999999999',
-    role: ROLES.SUPER_ADMIN,
-    college_id: null,
-    is_active: 1,
-    created_at: new Date('2026-01-01'),
-  },
-  {
-    id: 2,
-    name: 'PVPPCOE College Admin',
-    email: 'admin@pvppcoe.ac.in',
-    mobile_number: '9888888881',
-    role: ROLES.COLLEGE_ADMIN,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-01-05'),
-  },
-  {
-    id: 3,
-    name: 'DBIT College Admin',
-    email: 'admin@dbit.ac.in',
-    mobile_number: '9888888882',
-    role: ROLES.COLLEGE_ADMIN,
-    college_id: 2,
-    is_active: 1,
-    created_at: new Date('2026-01-05'),
-  },
-  {
-    id: 4,
-    name: 'Dr. Coordinator PVPPCOE',
-    email: 'coordinator@pvppcoe.ac.in',
-    mobile_number: '9777777771',
-    role: ROLES.COORDINATOR,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-01-10'),
-  },
-  {
-    id: 5,
-    name: 'Prof. Mentor PVPPCOE',
-    email: 'mentor@pvppcoe.ac.in',
-    mobile_number: '9666666661',
-    role: ROLES.MENTOR,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-01-15'),
-  },
-  {
-    id: 6,
-    name: 'Ganesh Shinde',
-    email: 'ganesh@student.pvppcoe.ac.in',
-    mobile_number: '9555555551',
-    role: ROLES.STUDENT,
-    college_id: 1,
-    is_active: 1,
-    created_at: new Date('2026-02-01'),
-  },
-  {
-    id: 7,
-    name: 'DBIT Student',
-    email: 'rahul@student.dbit.ac.in',
-    mobile_number: '9555555552',
-    role: ROLES.STUDENT,
-    college_id: 2,
-    is_active: 1,
-    created_at: new Date('2026-02-01'),
-  },
-];
-
-const mockStudents = [
-  {
-    id: 1,
-    user_id: 6,
-    college_id: 1,
-    department_id: 1,
-    batch_id: 1,
-    roll_number: '2026COMP042',
-    department: 'Computer Engineering',
-    year: 'TE',
-    division: 'A',
-    semester: 'Semester 6',
-    cgpa: '8.85',
-    skills: 'JavaScript, React, Node.js, Python, SQL',
-  },
-  {
-    id: 2,
-    user_id: 7,
-    college_id: 2,
-    department_id: 5,
-    batch_id: 3,
-    roll_number: '2026DBIT018',
-    department: 'Computer Engineering',
-    year: 'TE',
-    division: 'A',
-    semester: 'Semester 6',
-    cgpa: '8.40',
-    skills: 'Java, Spring Boot, MySQL',
-  },
-];
-
-const mockOtps = {};
-
 export const findUserByEmailOrMobile = async (identifier) => {
   if (!identifier) return null;
   const cleanId = identifier.trim().toLowerCase();
@@ -118,16 +11,11 @@ export const findUserByEmailOrMobile = async (identifier) => {
       return results[0];
     }
   } catch (error) {
-    console.warn(`[User Model] Database query fallback: ${error.message}`);
+    console.error(`[User Model Error] findUserByEmailOrMobile failed: ${error.message}`);
+    throw error;
   }
 
-  return (
-    mockUsers.find(
-      (u) =>
-        (u.email && u.email.toLowerCase() === cleanId) ||
-        (u.mobile_number && u.mobile_number.trim() === cleanId)
-    ) || null
-  );
+  return null;
 };
 
 export const findUserById = async (id) => {
@@ -138,38 +26,60 @@ export const findUserById = async (id) => {
       return results[0];
     }
   } catch (error) {
-    console.warn(`[User Model] Database query fallback: ${error.message}`);
+    console.error(`[User Model Error] findUserById failed: ${error.message}`);
+    throw error;
   }
-  return mockUsers.find((u) => u.id === numId) || null;
+  return null;
 };
 
 export const findUserByEmail = findUserByEmailOrMobile;
 
-export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1 }) => {
+const getValidCollegeId = async (collegeId) => {
+  if (!collegeId) return null;
   try {
-    const res = await query(
-      'INSERT INTO users (name, email, mobile_number, role, college_id) VALUES (?, ?, ?, ?, ?)',
-      [name, email, mobile_number, role, college_id]
-    );
-    if (res && res.insertId) {
-      return { id: res.insertId, name, email, mobile_number, role, college_id };
-    }
-  } catch (error) {
-    console.warn(`[User Model] Database insert fallback: ${error.message}`);
+    const rows = await query('SELECT id FROM colleges WHERE id = ?', [collegeId]);
+    if (rows && rows.length > 0) return rows[0].id;
+    const firstRow = await query('SELECT id FROM colleges LIMIT 1');
+    if (firstRow && firstRow.length > 0) return firstRow[0].id;
+  } catch (e) {
+    // ignore
   }
+  return null;
+};
 
-  const newUser = {
-    id: mockUsers.length + 1,
-    name,
-    email,
-    mobile_number,
-    role,
-    college_id,
-    is_active: 1,
-    created_at: new Date(),
-  };
-  mockUsers.push(newUser);
-  return newUser;
+export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', password_hash = '', two_factor_secret = null }) => {
+  const pwd = password || password_hash || '';
+  const validCollegeId = await getValidCollegeId(college_id);
+  const res = await query(
+    'INSERT INTO users (name, email, mobile_number, role, college_id, password, password_hash, two_factor_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, email, mobile_number, role, validCollegeId, pwd, pwd, two_factor_secret]
+  );
+  if (res && res.insertId) {
+    return { id: res.insertId, name, email, mobile_number, role, college_id: validCollegeId, password: pwd, two_factor_secret };
+  }
+  throw new Error('Failed to create user in MySQL database');
+};
+
+export const updateUser = async (userId, updateData) => {
+  const numId = parseInt(userId, 10);
+  const fields = [];
+  const values = [];
+  if (updateData.name !== undefined) { fields.push('name = ?'); values.push(updateData.name); }
+  if (updateData.email !== undefined) { fields.push('email = ?'); values.push(updateData.email); }
+  if (updateData.mobile_number !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.mobile_number); }
+  if (updateData.phone !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.phone); }
+  if (updateData.password !== undefined) { fields.push('password = ?'); values.push(updateData.password); fields.push('password_hash = ?'); values.push(updateData.password); }
+  if (updateData.password_hash !== undefined) { fields.push('password_hash = ?'); values.push(updateData.password_hash); }
+
+  if (fields.length > 0) {
+    values.push(numId);
+    await query(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
+  }
+};
+
+export const updateUserTwoFactorSecret = async (userId, secret) => {
+  const numId = parseInt(userId, 10);
+  await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = TRUE WHERE id = ?', [secret, numId]);
 };
 
 export const saveStudentDetails = async ({
@@ -185,60 +95,32 @@ export const saveStudentDetails = async ({
   cgpa = '8.5',
   skills = '',
 }) => {
-  try {
-    const res = await query(
-      `INSERT INTO students 
-        (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills]
-    );
-    if (res && res.insertId) {
-      return { id: res.insertId, user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills };
-    }
-  } catch (error) {
-    console.warn(`[Student Model] Database insert fallback: ${error.message}`);
+  const validCollegeId = await getValidCollegeId(college_id);
+  const res = await query(
+    `INSERT INTO students 
+      (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [user_id, validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills]
+  );
+  if (res && res.insertId) {
+    return { id: res.insertId, user_id, college_id: validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills };
   }
-
-  const newStudent = {
-    id: mockStudents.length + 1,
-    user_id,
-    college_id,
-    department_id,
-    batch_id,
-    roll_number,
-    department,
-    year,
-    division,
-    semester,
-    cgpa,
-    skills,
-  };
-  mockStudents.push(newStudent);
-  return newStudent;
+  return { user_id, college_id: validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills };
 };
 
 export const getStudentByUserId = async (userId) => {
   const numId = parseInt(userId, 10);
-  try {
-    const results = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
-    if (results && results.length > 0) {
-      return results[0];
-    }
-  } catch (error) {
-    console.warn(`[Student Model] Database query fallback: ${error.message}`);
+  const results = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
+  if (results && results.length > 0) {
+    return results[0];
   }
-  return mockStudents.find((s) => s.user_id === numId) || null;
+  return null;
 };
 
 export const saveOtpRecord = async (identifier, otp) => {
   const cleanId = identifier.trim().toLowerCase();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
-  try {
-    await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
-  } catch (error) {
-    console.warn(`[OTP Model] Database insert fallback: ${error.message}`);
-  }
-  mockOtps[cleanId] = { otp, expiresAt };
+  await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
 };
 
 export const verifyOtpRecord = async (identifier, inputOtp) => {
@@ -246,78 +128,47 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
   if (inputOtp === '123456') return true;
 
   const cleanId = identifier.trim().toLowerCase();
-  try {
-    const results = await query(
-      'SELECT * FROM otps WHERE (email = ? OR email = ?) AND otp = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
-      [cleanId, identifier, inputOtp]
-    );
-    if (results && results.length > 0) {
-      return true;
-    }
-  } catch (error) {
-    console.warn(`[OTP Model] Database query fallback: ${error.message}`);
-  }
-
-  const record = mockOtps[cleanId];
-  if (record && record.otp === inputOtp && record.expiresAt > new Date()) {
+  const results = await query(
+    'SELECT * FROM otps WHERE (email = ? OR email = ?) AND otp = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
+    [cleanId, identifier, inputOtp]
+  );
+  if (results && results.length > 0) {
     return true;
   }
   return false;
 };
 
 /**
- * Get all users with College Isolation filtering support
+ * Get all users from MySQL DB with College Isolation filtering support
  * @param {number|null} collegeId - If provided, restricts to only this college
  */
 export const getAllUsersModel = async (collegeId = null) => {
-  try {
-    let sql = `
-      SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
-             s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills
-      FROM users u
-      LEFT JOIN students s ON u.id = s.user_id
-    `;
-    const params = [];
-    if (collegeId) {
-      sql += ' WHERE u.college_id = ?';
-      params.push(collegeId);
-    }
-    sql += ' ORDER BY u.id DESC';
-
-    const results = await query(sql, params);
-    if (results && Array.isArray(results) && results.length > 0) {
-      return results;
-    }
-  } catch (error) {
-    console.warn(`[User Model] Database query fallback for getAllUsers: ${error.message}`);
+  let sql = `
+    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
+           c.name as college_name,
+           s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills,
+           COALESCE(s.gender, u.gender) as gender,
+           COALESCE(s.city, u.city) as city,
+           COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
+           COALESCE(s.linkedin_url, u.linkedin_url) as linkedin_url,
+           COALESCE(s.target_track, u.target_track) as target_track
+    FROM users u
+    LEFT JOIN colleges c ON u.college_id = c.id
+    LEFT JOIN students s ON u.id = s.user_id
+  `;
+  const params = [];
+  if (collegeId) {
+    sql += ' WHERE u.college_id = ?';
+    params.push(collegeId);
   }
+  sql += ' ORDER BY u.id DESC';
 
-  // Fallback to mock storage with college isolation
-  return mockUsers
-    .filter((u) => {
-      if (!collegeId) return true;
-      return u.college_id === collegeId;
-    })
-    .map((u) => {
-      const student = mockStudents.find((s) => s.user_id === u.id) || {};
-      return {
-        ...u,
-        is_active: u.is_active !== undefined ? u.is_active : 1,
-        roll_number: student.roll_number || '',
-        department_id: student.department_id || null,
-        batch_id: student.batch_id || null,
-        department: student.department || '',
-        year: student.year || '',
-        division: student.division || '',
-        semester: student.semester || '',
-        cgpa: student.cgpa || '',
-        skills: student.skills || '',
-      };
-    });
+  const results = await query(sql, params);
+  return results && Array.isArray(results) ? results : [];
 };
 
 /**
- * Update user and assigned hierarchy (College, Department, Batch, Role)
+ * Update user and assigned hierarchy strictly in MySQL DB
  */
 export const updateUserModel = async (id, data) => {
   const numId = parseInt(id, 10);
@@ -325,130 +176,132 @@ export const updateUserModel = async (id, data) => {
     name,
     email,
     mobile_number,
+    phone,
     role,
     college_id,
     department_id,
     batch_id,
     is_active,
     roll_number,
+    rollNo,
+    roll_no,
     department,
     year,
     division,
     semester,
     cgpa,
     skills,
+    gender,
+    city,
+    emergency_contact,
+    guardianContact,
+    linkedin_url,
+    linkedinUrl,
+    target_track,
+    track,
+    password,
+    password_hash,
   } = data;
 
-  try {
-    await query(
-      'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active) WHERE id = ?',
-      [name, email, mobile_number, role, college_id, is_active, numId]
-    );
+  const rollVal = roll_number || rollNo || roll_no || null;
+  const phoneVal = mobile_number || phone || null;
+  const passVal = password || password_hash || null;
+  const genderVal = gender !== undefined ? gender : null;
+  const cityVal = city !== undefined ? city : null;
+  const emergencyVal = emergency_contact !== undefined ? emergency_contact : (guardianContact !== undefined ? guardianContact : null);
+  const linkedinVal = linkedin_url !== undefined ? linkedin_url : (linkedinUrl !== undefined ? linkedinUrl : null);
+  const trackVal = target_track !== undefined ? target_track : (track !== undefined ? track : null);
+  const nameVal = name || null;
+  const emailVal = email || null;
+  const roleVal = role || null;
+  const validCollegeId = college_id ? await getValidCollegeId(college_id) : null;
+  const isActiveVal = is_active !== undefined ? is_active : null;
 
-    if (
-      roll_number !== undefined ||
-      department !== undefined ||
-      department_id !== undefined ||
-      batch_id !== undefined ||
-      year !== undefined ||
-      division !== undefined ||
-      semester !== undefined ||
-      cgpa !== undefined ||
-      skills !== undefined
-    ) {
-      const existing = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
-      if (existing && existing.length > 0) {
-        await query(
-          `UPDATE students SET 
-            roll_number = COALESCE(?, roll_number), 
-            college_id = COALESCE(?, college_id),
-            department_id = COALESCE(?, department_id),
-            batch_id = COALESCE(?, batch_id),
-            department = COALESCE(?, department), 
-            year = COALESCE(?, year), 
-            division = COALESCE(?, division), 
-            semester = COALESCE(?, semester),
-            cgpa = COALESCE(?, cgpa),
-            skills = COALESCE(?, skills)
-           WHERE user_id = ?`,
-          [roll_number, college_id, department_id, batch_id, department, year, division, semester, cgpa, skills, numId]
-        );
-      } else {
-        await query(
-          `INSERT INTO students 
-            (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, college_id || 1, department_id || null, batch_id || null, roll_number || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '']
-        );
-      }
+  await query(
+    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track) WHERE id = ?',
+    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
+  );
+
+  if (
+    rollVal !== undefined ||
+    department !== undefined ||
+    department_id !== undefined ||
+    batch_id !== undefined ||
+    year !== undefined ||
+    division !== undefined ||
+    semester !== undefined ||
+    cgpa !== undefined ||
+    skills !== undefined ||
+    genderVal !== null ||
+    cityVal !== null ||
+    emergencyVal !== null ||
+    linkedinVal !== null ||
+    trackVal !== null
+  ) {
+    const existing = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
+    if (existing && existing.length > 0) {
+      await query(
+        `UPDATE students SET 
+          roll_number = COALESCE(?, roll_number), 
+          college_id = COALESCE(?, college_id),
+          department_id = COALESCE(?, department_id),
+          batch_id = COALESCE(?, batch_id),
+          department = COALESCE(?, department), 
+          year = COALESCE(?, year), 
+          division = COALESCE(?, division), 
+          semester = COALESCE(?, semester),
+          cgpa = COALESCE(?, cgpa),
+          skills = COALESCE(?, skills),
+          gender = COALESCE(?, gender),
+          city = COALESCE(?, city),
+          emergency_contact = COALESCE(?, emergency_contact),
+          linkedin_url = COALESCE(?, linkedin_url),
+          target_track = COALESCE(?, target_track)
+         WHERE user_id = ?`,
+        [
+          rollVal,
+          validCollegeId,
+          department_id || null,
+          batch_id || null,
+          department || null,
+          year || null,
+          division || null,
+          semester || null,
+          cgpa || null,
+          skills || null,
+          genderVal,
+          cityVal,
+          emergencyVal,
+          linkedinVal,
+          trackVal,
+          numId,
+        ]
+      );
+    } else {
+      await query(
+        `INSERT INTO students 
+          (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, linkedin_url, target_track) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', linkedinVal || '', trackVal || '']
+      );
     }
-  } catch (error) {
-    console.warn(`[User Model] Database update fallback: ${error.message}`);
   }
 
-  // Update in-memory mock store
-  const uIdx = mockUsers.findIndex((u) => u.id === numId);
-  if (uIdx !== -1) {
-    mockUsers[uIdx] = {
-      ...mockUsers[uIdx],
-      ...(name !== undefined && { name }),
-      ...(email !== undefined && { email }),
-      ...(mobile_number !== undefined && { mobile_number }),
-      ...(role !== undefined && { role }),
-      ...(college_id !== undefined && { college_id }),
-      ...(is_active !== undefined && { is_active }),
-    };
-  }
-
-  const sIdx = mockStudents.findIndex((s) => s.user_id === numId);
-  if (sIdx !== -1) {
-    mockStudents[sIdx] = {
-      ...mockStudents[sIdx],
-      ...(roll_number !== undefined && { roll_number }),
-      ...(college_id !== undefined && { college_id }),
-      ...(department_id !== undefined && { department_id }),
-      ...(batch_id !== undefined && { batch_id }),
-      ...(department !== undefined && { department }),
-      ...(year !== undefined && { year }),
-      ...(division !== undefined && { division }),
-      ...(semester !== undefined && { semester }),
-      ...(cgpa !== undefined && { cgpa }),
-      ...(skills !== undefined && { skills }),
-    };
-  } else if (roll_number || department || department_id || batch_id) {
-    mockStudents.push({
-      id: mockStudents.length + 1,
-      user_id: numId,
-      college_id: college_id || 1,
-      department_id: department_id || null,
-      batch_id: batch_id || null,
-      roll_number: roll_number || '',
-      department: department || '',
-      year: year || '',
-      division: division || '',
-      semester: semester || '',
-      cgpa: cgpa || '8.5',
-      skills: skills || '',
-    });
-  }
-
-  return { id: numId, ...data };
+  return {
+    id: numId,
+    ...data,
+    gender: genderVal,
+    city: cityVal,
+    emergency_contact: emergencyVal,
+    linkedin_url: linkedinVal,
+    target_track: trackVal,
+  };
 };
 
 export const deleteUserModel = async (id) => {
   const numId = parseInt(id, 10);
-  try {
-    await query('DELETE FROM students WHERE user_id = ?', [numId]);
-    await query('DELETE FROM users WHERE id = ?', [numId]);
-  } catch (error) {
-    console.warn(`[User Model] Database delete fallback: ${error.message}`);
-  }
-
-  const uIdx = mockUsers.findIndex((u) => u.id === numId);
-  if (uIdx !== -1) mockUsers.splice(uIdx, 1);
-  const sIdx = mockStudents.findIndex((s) => s.user_id === numId);
-  if (sIdx !== -1) mockStudents.splice(sIdx, 1);
-
+  await query('DELETE FROM students WHERE user_id = ?', [numId]);
+  await query('DELETE FROM users WHERE id = ?', [numId]);
   return true;
 };
 

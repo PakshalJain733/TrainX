@@ -1,105 +1,45 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 
-let mockDepartments = [
-  {
-    id: 1,
-    name: "Computer Science & Engineering",
-    code: "CSE",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    hodName: "Dr. Arvind Kulkarni",
-    hodEmail: "hod.cse@apex.edu.in",
-    studentsCount: 420,
-    batchesCount: 4,
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Artificial Intelligence & Data Science",
-    code: "AI-DS",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    hodName: "Dr. Meera Nambiar",
-    hodEmail: "hod.aids@apex.edu.in",
-    studentsCount: 380,
-    batchesCount: 3,
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Information Technology",
-    code: "IT",
-    collegeId: 1,
-    collegeName: "Apex Institute of Technology",
-    hodName: "Prof. Rajesh Verma",
-    hodEmail: "hod.it@apex.edu.in",
-    studentsCount: 340,
-    batchesCount: 3,
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Computer Engineering",
-    code: "CE",
-    collegeId: 2,
-    collegeName: "St. Xavier Engineering College",
-    hodName: "Dr. Sanjay Joshi",
-    hodEmail: "hod.ce@sxec.edu.in",
-    studentsCount: 450,
-    batchesCount: 4,
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "Electronics & Telecommunication",
-    code: "EXTC",
-    collegeId: 2,
-    collegeName: "St. Xavier Engineering College",
-    hodName: "Dr. Sunita Rao",
-    hodEmail: "hod.extc@sxec.edu.in",
-    studentsCount: 300,
-    batchesCount: 3,
-    status: "Active",
-  },
-  {
-    id: 6,
-    name: "Data Science",
-    code: "DS",
-    collegeId: 3,
-    collegeName: "Vidyalankar Institute of Tech",
-    hodName: "Prof. Anand Sharma",
-    hodEmail: "hod.ds@vit.edu.in",
-    studentsCount: 280,
-    batchesCount: 2,
-    status: "Active",
-  },
-];
+let tablesInitialized = false;
+async function ensureDeptTable() {
+  if (tablesInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS departments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT DEFAULT 1,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        hod_name VARCHAR(100) NULL,
+        hod_email VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'Active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    tablesInitialized = true;
+  } catch (e) {
+    console.warn('[DB ensureDeptTable error]', e.message);
+  }
+}
 
 export const getDepartments = async (req, res, next) => {
   try {
-    const { collegeId, college } = req.query;
+    await ensureDeptTable();
+    const { collegeId } = req.query;
 
-    let result = mockDepartments;
-
-    try {
-      const dbDepts = await query('SELECT * FROM departments');
-      if (dbDepts && dbDepts.length > 0) {
-        result = dbDepts;
-      }
-    } catch (err) {
-      // Fallback to mock
-    }
+    let sql = 'SELECT * FROM departments WHERE 1=1';
+    const params = [];
 
     if (collegeId) {
-      const cid = Number(collegeId);
-      result = result.filter((d) => d.collegeId === cid || d.collegeId === collegeId);
-    } else if (college) {
-      const cname = college.toLowerCase();
-      result = result.filter((d) => d.collegeName && d.collegeName.toLowerCase().includes(cname));
+      sql += ' AND college_id = ?';
+      params.push(collegeId);
     }
 
-    return sendSuccess(res, 'Departments retrieved successfully', result);
+    sql += ' ORDER BY id DESC';
+
+    const dbDepts = await query(sql, params);
+    return sendSuccess(res, 'Departments retrieved successfully', dbDepts || []);
   } catch (error) {
     next(error);
   }
@@ -107,26 +47,32 @@ export const getDepartments = async (req, res, next) => {
 
 export const createDepartment = async (req, res, next) => {
   try {
-    const { name, code, collegeId, collegeName, hodName, hodEmail } = req.body;
+    await ensureDeptTable();
+    const { name, code, collegeId, hodName, hodEmail } = req.body;
     if (!name || !code) {
       return sendError(res, 'Department Name and Code are required', 400);
     }
 
-    const newDept = {
-      id: Date.now(),
+    const result = await query(
+      `INSERT INTO departments (college_id, name, code, hod_name, hod_email, status)
+       VALUES (?, ?, ?, ?, ?, 'Active')`,
+      [
+        collegeId || 1,
+        name.trim(),
+        code.trim(),
+        hodName || 'Dr. Department HOD',
+        hodEmail || `hod.${code.toLowerCase()}@college.edu.in`
+      ]
+    );
+
+    const [newDept] = await query('SELECT * FROM departments WHERE id = ?', [result.insertId]);
+
+    return sendSuccess(res, 'Department created successfully', newDept || {
+      id: result.insertId,
       name,
       code,
-      collegeId: collegeId ? Number(collegeId) : 1,
-      collegeName: collegeName || "Apex Institute of Technology",
-      hodName: hodName || "Dr. Department HOD",
-      hodEmail: hodEmail || `hod.${code.toLowerCase()}@college.edu.in`,
-      studentsCount: 0,
-      batchesCount: 0,
-      status: "Active",
-    };
-
-    mockDepartments = [newDept, ...mockDepartments];
-    return sendSuccess(res, 'Department created successfully', newDept, 201);
+      college_id: collegeId || 1
+    }, 201);
   } catch (error) {
     next(error);
   }
@@ -134,23 +80,27 @@ export const createDepartment = async (req, res, next) => {
 
 export const updateDepartment = async (req, res, next) => {
   try {
+    await ensureDeptTable();
     const { id } = req.params;
-    const numId = Number(id);
+    const { name, code, hodName, hodEmail, status } = req.body;
 
-    let updatedDept = null;
-    mockDepartments = mockDepartments.map((d) => {
-      if (d.id === numId || d.id === id) {
-        updatedDept = { ...d, ...req.body };
-        return updatedDept;
-      }
-      return d;
-    });
+    await query(
+      `UPDATE departments
+       SET name = COALESCE(?, name),
+           code = COALESCE(?, code),
+           hod_name = COALESCE(?, hod_name),
+           hod_email = COALESCE(?, hod_email),
+           status = COALESCE(?, status)
+       WHERE id = ?`,
+      [name, code, hodName, hodEmail, status, id]
+    );
 
-    if (!updatedDept) {
+    const [updated] = await query('SELECT * FROM departments WHERE id = ?', [id]);
+    if (!updated) {
       return sendError(res, 'Department not found', 404);
     }
 
-    return sendSuccess(res, 'Department updated successfully', updatedDept);
+    return sendSuccess(res, 'Department updated successfully', updated);
   } catch (error) {
     next(error);
   }
@@ -158,10 +108,9 @@ export const updateDepartment = async (req, res, next) => {
 
 export const deleteDepartment = async (req, res, next) => {
   try {
+    await ensureDeptTable();
     const { id } = req.params;
-    const numId = Number(id);
-
-    mockDepartments = mockDepartments.filter((d) => d.id !== numId && d.id !== id);
+    await query('DELETE FROM departments WHERE id = ?', [id]);
     return sendSuccess(res, 'Department deleted successfully');
   } catch (error) {
     next(error);

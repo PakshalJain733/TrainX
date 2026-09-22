@@ -1,0 +1,315 @@
+/* Departments.css - Dedicated Stylesheet for SuperAdmin Departments Module */
+.departments-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.departments-header-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.departments-header-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+  line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.departments-header-icon {
+  width: 22px;
+  height: 22px;
+  color: #4f46e5;
+}
+
+.departments-header-subtitle {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+.departments-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+.dept-btn-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dept-btn-icon:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Filter & Search Bar */
+.departments-filter-card {
+  background: #ffffff;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.departments-filter-card .dept-search-box {
+  position: relative;
+  flex: 1;
+  width: auto !important;
+}
+
+.departments-filter-card .dept-select-wrap {
+  width: 280px;
+  flex-shrink: 0;
+}
+
+.dept-select-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 36px 0 12px;
+  height: 38px;
+  min-width: 260px;
+  transition: all 0.2s ease;
+}
+
+.dept-select-box:hover {
+  background: #ffffff;
+  border-color: #a5b4fc;
+}
+
+.dept-select-icon {
+  width: 16px;
+  height: 16px;
+  color: #4f46e5;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.dept-select-element {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  appearance: none;
+}
+
+.dept-select-arrow {
+  position: absolute;
+  right: 12px;
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+/* Department Cards Grid */
+.departments-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 20px;
+}
+
+.dept-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 22px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.dept-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4f46e5, #818cf8);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.dept-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(79, 70, 229, 0.12);
+  border-color: #c7d2fe;
+}
+
+.dept-card:hover::before {
+  opacity: 1;
+}
+
+.dept-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.dept-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dept-code-tag {
+  display: inline-block;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 800;
+  border-radius: 999px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.dept-college-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dept-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.dept-hod-info {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dept-hod-name {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+/* Stat Pills Row */
+.dept-stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.dept-stat-pill {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: center;
+}
+
+.dept-stat-val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.dept-stat-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+
+/* ── Departments Filter Dropdown ── */
+.dept-select-wrap { position: relative; display: block; width: 100%; box-sizing: border-box; }
+.dept-select-wrap--open { z-index: 999; }
+.dept-select-wrap--disabled { opacity: 0.6; pointer-events: none; }
+.dept-select-trigger {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; height: 36px; padding: 0 12px;
+  background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px;
+  color: #0f172a; font-size: 13px; font-weight: 600; cursor: pointer;
+  outline: none; transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,.04); box-sizing: border-box;
+}
+.dept-select-trigger:hover { background: #f8fafc; border-color: #94a3b8; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,.06); }
+.dept-select-trigger--open { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79,70,229,.15); }
+.dept-select-icon { width: 16px; height: 16px; color: #4f46e5; flex-shrink: 0; }
+.dept-select-text { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #0f172a; font-size: 13px; font-weight: 600; }
+.dept-select-arrow { width: 15px; height: 15px; color: #64748b; flex-shrink: 0; transition: transform .2s ease, color .2s ease; }
+.dept-select-arrow--rotate { transform: rotate(180deg); color: #4f46e5; }
+.dept-select-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; width: 100%;
+  max-height: 200px; overflow-y: auto; background: #ffffff;
+  border: 1px solid #e2e8f0; border-radius: 10px;
+  box-shadow: 0 8px 24px -4px rgba(15,23,42,.14), 0 3px 10px -2px rgba(15,23,42,.08);
+  z-index: 99999; padding: 4px; box-sizing: border-box;
+  animation: deptSelectFadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+.dept-select-dropdown--up {
+  top: auto; bottom: calc(100% + 4px);
+  animation: deptSelectFadeUp 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes deptSelectFadeIn { from { opacity:0; transform:translateY(-6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+@keyframes deptSelectFadeUp { from { opacity:0; transform:translateY(6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+.dept-select-option { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 500; color: #334155; cursor: pointer; transition: background .15s ease, color .15s ease; user-select: none; }
+.dept-select-option:hover { background: #eff6ff; color: #1d4ed8; font-weight: 600; }
+.dept-select-option--selected { background: #eef2ff; color: #4338ca; font-weight: 700; }
+.dept-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.dept-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
+.dept-select-placeholder { color: #94a3b8; }
+.dept-modal-520 { max-width: 520px !important; }
+.dept-modal-540 { max-width: 540px !important; }
+.dept-modal-440 { max-width: 440px !important; }
+.dept-hod-email-value { font-size: 12px !important; }
+.dept-delete-modal-icon { background: #fef2f2 !important; color: #ef4444 !important; border-color: #fecdd3 !important; }
+.dept-btn-delete-confirm { height: 38px !important; padding: 0 16px !important; }

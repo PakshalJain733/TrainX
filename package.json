@@ -95,6 +95,7 @@
     "picomatch": "^4.0.5",
     "prelude-ls": "^1.2.1",
     "punycode": "^2.3.1",
+    "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-is": "^19.2.8",
@@ -122,18 +123,18 @@
     "vite": "^8.2.1",
     "which": "^2.0.2",
     "word-wrap": "^1.2.5",
+    "xlsx": "^0.18.5",
     "yallist": "^3.1.1",
     "yocto-queue": "^0.1.0",
     "zod": "^4.4.3",
     "zod-validation-error": "^4.0.2"
   },
   "devDependencies": {
-    "autoprefixer": "^10.5.4",
-    "nodemon": "^3.1.14",
-    "postcss": "^8.5.26",
-    "tailwindcss": "^3.4.19"
+    "nodemon": "^3.1.14"
   },
   "scripts": {
+    "start": "node backend/server.js",
+    "build": "cd Frontend && npm install && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
