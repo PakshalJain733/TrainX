@@ -41,22 +41,6 @@ export async function initializeDatabase() {
       try { await conn.query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (_) { }
     }
 
-    // Seed default colleges if empty
-    try {
-      const [colCheck] = await conn.query('SELECT COUNT(*) as count FROM colleges');
-      if (colCheck && colCheck[0] && colCheck[0].count === 0) {
-        console.log('[DB Init] Seeding default partner colleges...');
-        await conn.query(`
-          INSERT INTO colleges (name, code, location, city, type, status, contact_email, contact_phone) VALUES
-          ("Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)", 'PVPPCOE', 'Sion, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@pvppcoe.ac.in', '+91 98200 12345'),
-          ("Don Bosco Institute of Technology (DBIT)", 'DBIT', 'Kurla, Mumbai', 'Mumbai', 'Affiliated', 'Active', 'admin@dbit.in', '+91 98200 23456'),
-          ("K. J. Somaiya College of Engineering (KJSCE)", 'KJSCE', 'Vidyavihar, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@somaiya.edu', '+91 98200 34567')
-        `);
-      }
-    } catch (e) {
-      console.warn('[DB Init] College seeding warning:', e.message);
-    }
-
     // 2. Ensure Departments
     await conn.query(`
       CREATE TABLE IF NOT EXISTS departments (
@@ -76,23 +60,6 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) {}
     try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) {}
     try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) {}
-
-    // Seed default departments if empty
-    try {
-      const [deptCheck] = await conn.query('SELECT COUNT(*) as count FROM departments');
-      if (deptCheck && deptCheck[0] && deptCheck[0].count === 0) {
-        console.log('[DB Init] Seeding default academic departments...');
-        await conn.query(`
-          INSERT INTO departments (college_id, name, code, hod_name, hod_email, status) VALUES
-          (1, 'Computer Engineering', 'COMPS', 'Dr. A. R. Patil', 'hod.comps@pvppcoe.ac.in', 'Active'),
-          (1, 'Information Technology', 'IT', 'Dr. S. M. Kulkarni', 'hod.it@pvppcoe.ac.in', 'Active'),
-          (1, 'Artificial Intelligence & Data Science', 'AIDS', 'Dr. V. N. Deshmukh', 'hod.aids@pvppcoe.ac.in', 'Active'),
-          (1, 'Electronics & Telecommunication', 'EXTC', 'Dr. P. K. Joshi', 'hod.extc@pvppcoe.ac.in', 'Active')
-        `);
-      }
-    } catch (e) {
-      console.warn('[DB Init] Department seeding warning:', e.message);
-    }
 
     // 3. Ensure Batches table
     await conn.query(`
@@ -151,6 +118,17 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
+
+    // 4.1 Ensure OTPs Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS otps (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL,
+        otp VARCHAR(20) NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
 
     // 5. Ensure Students Table
     await conn.query(`
@@ -564,7 +542,64 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN score_delta VARCHAR(50) DEFAULT '+0%'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) { }
+    // 23. Ensure Practice Problems Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS practice_problems (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT DEFAULT 1,
+        batch_id INT NULL,
+        batch_name VARCHAR(255) DEFAULT 'All Batches',
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        difficulty VARCHAR(50) DEFAULT 'Medium',
+        category VARCHAR(100) DEFAULT 'General DSA',
+        tags VARCHAR(255) NULL,
+        points INT DEFAULT 100,
+        created_by INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    // 24. Ensure Mock Drives Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS mock_drives (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        scheduled_date DATE NULL,
+        college_id INT DEFAULT 1,
+        eligible_batches JSON NULL,
+        status VARCHAR(50) DEFAULT 'Upcoming',
+        aptitude_component JSON NULL,
+        coding_component JSON NULL,
+        interview_component JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
+      )
+    `);
+
+    // 25. Ensure Drive Participations Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS drive_participations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        drive_id INT NOT NULL,
+        student_id INT NOT NULL,
+        status VARCHAR(50) DEFAULT 'Completed',
+        overall_score DECIMAL(5,2) DEFAULT 0.00,
+        grade VARCHAR(50) DEFAULT 'B',
+        aptitude_score DECIMAL(5,2) DEFAULT 0.00,
+        coding_score DECIMAL(5,2) DEFAULT 0.00,
+        interview_score DECIMAL(5,2) DEFAULT 0.00,
+        strength_areas JSON NULL,
+        weak_areas JSON NULL,
+        completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (drive_id) REFERENCES mock_drives(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_drive_student (drive_id, student_id)
+      )
+    `);
 
     // 18. Ensure Super Admin Account
     try {

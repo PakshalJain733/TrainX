@@ -134,7 +134,24 @@ export const getStudentByUserId = async (userId) => {
 export const saveOtpRecord = async (identifier, otp) => {
   const cleanId = identifier.trim().toLowerCase();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
-  await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
+  try {
+    await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
+  } catch (err) {
+    if (err.message && err.message.includes("otps' doesn't exist")) {
+      await query(`
+        CREATE TABLE IF NOT EXISTS otps (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          email VARCHAR(255) NOT NULL,
+          otp VARCHAR(20) NOT NULL,
+          expires_at DATETIME NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
+    } else {
+      throw err;
+    }
+  }
 };
 
 export const verifyOtpRecord = async (identifier, inputOtp) => {
@@ -142,12 +159,16 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
   if (inputOtp === '123456') return true;
 
   const cleanId = identifier.trim().toLowerCase();
-  const results = await query(
-    'SELECT * FROM otps WHERE (email = ? OR email = ?) AND otp = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
-    [cleanId, identifier, inputOtp]
-  );
-  if (results && results.length > 0) {
-    return true;
+  try {
+    const results = await query(
+      'SELECT * FROM otps WHERE (email = ? OR email = ?) AND otp = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
+      [cleanId, identifier, inputOtp]
+    );
+    if (results && results.length > 0) {
+      return true;
+    }
+  } catch (_) {
+    return false;
   }
   return false;
 };

