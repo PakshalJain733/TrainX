@@ -229,7 +229,20 @@ function Login() {
     localStorage.setItem("user", JSON.stringify(mergedUser));
 
     // Set flag for First Login Profile Update Alert
-    if (!localStorage.getItem(`profile_updated_${mergedUser.id || mergedUser.email}`)) {
+    const userKey = mergedUser.id || mergedUser.email;
+    const isUpdatedInStorage = localStorage.getItem(`profile_updated_${userKey}`) === "true";
+    const isUpdatedOnServer = Boolean(
+      mergedUser.is_profile_updated ||
+      mergedUser.profileCompleted ||
+      mergedUser.studentProfile?.is_profile_updated ||
+      (mergedUser.department && mergedUser.semester && mergedUser.roll_number && (mergedUser.skills || mergedUser.studentProfile?.skills)) ||
+      (mergedUser.studentProfile?.department && mergedUser.studentProfile?.semester && mergedUser.studentProfile?.roll_number && (mergedUser.skills || mergedUser.studentProfile?.skills))
+    );
+
+    if (isUpdatedOnServer || isUpdatedInStorage) {
+      if (userKey) localStorage.setItem(`profile_updated_${userKey}`, "true");
+      sessionStorage.removeItem("showFirstLoginAlert");
+    } else {
       sessionStorage.setItem("showFirstLoginAlert", "true");
     }
 

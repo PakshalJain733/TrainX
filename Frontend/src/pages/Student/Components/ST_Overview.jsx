@@ -107,9 +107,26 @@ export default function Overview() {
           const sem = student.semester || u.semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
           const rollNum = student.roll_number || u.roll_number || "";
-          const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(cgpa && (student.skills || u.skills));
+          const userKey = u.id || u.email;
+          const isCompleted = Boolean(
+            u.is_profile_updated ||
+            student.is_profile_updated ||
+            u.profileCompleted ||
+            (userKey && localStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+            ((dept || sem || rollNum) && (student.skills || u.skills))
+          );
 
           setProfileCompleted(isCompleted);
+
+          if (isCompleted) {
+            if (userKey) localStorage.setItem(`profile_updated_${userKey}`, "true");
+            sessionStorage.removeItem("showFirstLoginAlert");
+            setShowFirstLoginAlert(false);
+          } else {
+            if (sessionStorage.getItem("showFirstLoginAlert") === "true") {
+              setShowFirstLoginAlert(true);
+            }
+          }
 
           setDashboard((prev) => ({
             ...prev,

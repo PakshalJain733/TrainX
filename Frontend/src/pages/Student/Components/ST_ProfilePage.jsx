@@ -266,6 +266,13 @@ export default function ProfilePage() {
       });
 
       if (res && res.data) {
+        let u = {};
+        try { u = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+        const userKey = u.id || u.email || res.data.id || res.data.email;
+        if (userKey) {
+          localStorage.setItem(`profile_updated_${userKey}`, "true");
+        }
+        sessionStorage.removeItem("showFirstLoginAlert");
         localStorage.removeItem("st_first_login_dismissed");
         window.dispatchEvent(new Event("userProfileUpdated"));
       }

@@ -77,10 +77,20 @@ export const getMe = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
     const studentProfile = await getStudentByUserId(userId) || {};
+    const isProfileUpdated = Boolean(
+      user.is_profile_updated ||
+      studentProfile.is_profile_updated ||
+      (studentProfile.department && studentProfile.semester && studentProfile.roll_number && studentProfile.skills) ||
+      (user.department && user.semester && user.roll_number && user.skills)
+    );
     return sendSuccess(res, 'Authenticated user data retrieved', {
       ...user,
       ...studentProfile,
-      studentProfile,
+      is_profile_updated: isProfileUpdated,
+      studentProfile: {
+        ...studentProfile,
+        is_profile_updated: isProfileUpdated,
+      },
       department: user.department || studentProfile.department || '',
       semester: user.semester || studentProfile.semester || '',
       cgpa: user.cgpa || studentProfile.cgpa || '',

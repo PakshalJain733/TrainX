@@ -34,21 +34,21 @@ export const generateTotpSetup = async (email) => {
 };
 
 export const verifyTotpToken = (secret, token) => {
-  if (!token) return false;
+  if (!token || !secret) return false;
   const cleanToken = String(token).trim();
-  if (cleanToken === '123456') return true;
-  if (!secret) return true;
+  if (!/^\d{6}$/.test(cleanToken)) return false;
 
   try {
-    return speakeasy.totp.verify({
+    const verified = speakeasy.totp.verify({
       secret: secret,
       encoding: 'base32',
       token: cleanToken,
       window: 2,
     });
+    return Boolean(verified);
   } catch (err) {
     console.warn(`[TOTP] Verification exception: ${err.message}`);
-    return cleanToken === '123456';
+    return false;
   }
 };
 
@@ -214,6 +214,11 @@ export const verifyTotpAndLogin = async (identifier, totpCode) => {
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
+      is_profile_updated: Boolean(
+        user.is_profile_updated ||
+        studentProfile?.is_profile_updated ||
+        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+      ),
       studentProfile,
     },
   };
@@ -298,6 +303,11 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
+      is_profile_updated: Boolean(
+        user.is_profile_updated ||
+        studentProfile?.is_profile_updated ||
+        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+      ),
       studentProfile,
     },
   };
@@ -352,6 +362,11 @@ export const loginWithPassword = async (identifier, password) => {
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
+      is_profile_updated: Boolean(
+        user.is_profile_updated ||
+        studentProfile?.is_profile_updated ||
+        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+      ),
       studentProfile,
     },
   };

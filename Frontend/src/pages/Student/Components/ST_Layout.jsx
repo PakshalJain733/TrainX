@@ -277,10 +277,13 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
+          const userKey = fetchedUser.id || fetchedUser.email;
           const isUpdated = Boolean(
             res.data.is_profile_updated ||
             res.data.studentProfile?.is_profile_updated ||
-            (res.data.gender && res.data.city)
+            (userKey && localStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+            (res.data.gender && res.data.city) ||
+            ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
           );
 
           if (!isUpdated) {
@@ -304,10 +307,13 @@ export default function StudentLayout() {
           if (res && res.data) {
             const fetchedUser = resolveUser(res.data);
             setUser(fetchedUser);
+            const userKey = fetchedUser.id || fetchedUser.email;
             const isUpdated = Boolean(
               res.data.is_profile_updated ||
               res.data.studentProfile?.is_profile_updated ||
-              (res.data.gender && res.data.city)
+              (userKey && localStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+              (res.data.gender && res.data.city) ||
+              ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
             );
             if (isUpdated) {
               setShowFirstLoginFlash(false);
