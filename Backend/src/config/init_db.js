@@ -19,9 +19,43 @@ export async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
+        location VARCHAR(255) DEFAULT 'Main Campus',
+        city VARCHAR(100) DEFAULT 'Metropolis',
+        type VARCHAR(100) DEFAULT 'Autonomous',
+        status VARCHAR(50) DEFAULT 'Active',
+        contact_email VARCHAR(255) NULL,
+        contact_phone VARCHAR(50) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    const colColumns = [
+      "location VARCHAR(255) DEFAULT 'Main Campus'",
+      "city VARCHAR(100) DEFAULT 'Metropolis'",
+      "type VARCHAR(100) DEFAULT 'Autonomous'",
+      "status VARCHAR(50) DEFAULT 'Active'",
+      "contact_email VARCHAR(255) NULL",
+      "contact_phone VARCHAR(50) NULL",
+    ];
+    for (const c of colColumns) {
+      try { await conn.query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (_) { }
+    }
+
+    // Seed default colleges if empty
+    try {
+      const [colCheck] = await conn.query('SELECT COUNT(*) as count FROM colleges');
+      if (colCheck && colCheck[0] && colCheck[0].count === 0) {
+        console.log('[DB Init] Seeding default partner colleges...');
+        await conn.query(`
+          INSERT INTO colleges (name, code, location, city, type, status, contact_email, contact_phone) VALUES
+          ("Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)", 'PVPPCOE', 'Sion, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@pvppcoe.ac.in', '+91 98200 12345'),
+          ("Don Bosco Institute of Technology (DBIT)", 'DBIT', 'Kurla, Mumbai', 'Mumbai', 'Affiliated', 'Active', 'admin@dbit.in', '+91 98200 23456'),
+          ("K. J. Somaiya College of Engineering (KJSCE)", 'KJSCE', 'Vidyavihar, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@somaiya.edu', '+91 98200 34567')
+        `);
+      }
+    } catch (e) {
+      console.warn('[DB Init] College seeding warning:', e.message);
+    }
 
     // 2. Ensure Departments
     await conn.query(`
@@ -30,11 +64,35 @@ export async function initializeDatabase() {
         college_id INT NOT NULL DEFAULT 1,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(50) NOT NULL,
+        hod_name VARCHAR(100) NULL,
+        hod_email VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'Active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
       )
     `);
+
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) {}
+
+    // Seed default departments if empty
+    try {
+      const [deptCheck] = await conn.query('SELECT COUNT(*) as count FROM departments');
+      if (deptCheck && deptCheck[0] && deptCheck[0].count === 0) {
+        console.log('[DB Init] Seeding default academic departments...');
+        await conn.query(`
+          INSERT INTO departments (college_id, name, code, hod_name, hod_email, status) VALUES
+          (1, 'Computer Engineering', 'COMPS', 'Dr. A. R. Patil', 'hod.comps@pvppcoe.ac.in', 'Active'),
+          (1, 'Information Technology', 'IT', 'Dr. S. M. Kulkarni', 'hod.it@pvppcoe.ac.in', 'Active'),
+          (1, 'Artificial Intelligence & Data Science', 'AIDS', 'Dr. V. N. Deshmukh', 'hod.aids@pvppcoe.ac.in', 'Active'),
+          (1, 'Electronics & Telecommunication', 'EXTC', 'Dr. P. K. Joshi', 'hod.extc@pvppcoe.ac.in', 'Active')
+        `);
+      }
+    } catch (e) {
+      console.warn('[DB Init] Department seeding warning:', e.message);
+    }
 
     // 3. Ensure Batches table
     await conn.query(`
@@ -92,6 +150,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
 
     // 5. Ensure Students Table
     await conn.query(`
@@ -113,6 +172,7 @@ export async function initializeDatabase() {
         emergency_contact VARCHAR(50) NULL,
         linkedin_url VARCHAR(255) NULL,
         target_track VARCHAR(150) NULL,
+        is_profile_updated BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
@@ -126,6 +186,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
 
     // 6. Ensure Assessments Table
     await conn.query(`

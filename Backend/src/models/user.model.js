@@ -35,16 +35,30 @@ export const findUserById = async (id) => {
 export const findUserByEmail = findUserByEmailOrMobile;
 
 const getValidCollegeId = async (collegeId) => {
-  if (!collegeId) return null;
   try {
-    const rows = await query('SELECT id FROM colleges WHERE id = ?', [collegeId]);
-    if (rows && rows.length > 0) return rows[0].id;
-    const firstRow = await query('SELECT id FROM colleges LIMIT 1');
+    if (collegeId) {
+      const numId = parseInt(collegeId, 10);
+      if (!isNaN(numId)) {
+        const rows = await query('SELECT id FROM colleges WHERE id = ?', [numId]);
+        if (rows && rows.length > 0) return rows[0].id;
+      }
+
+      const strVal = String(collegeId).trim();
+      if (strVal) {
+        const rows = await query(
+          'SELECT id FROM colleges WHERE LOWER(code) = LOWER(?) OR LOWER(name) = LOWER(?) OR LOWER(name) LIKE ? ORDER BY id ASC LIMIT 1',
+          [strVal, strVal, `%${strVal}%`]
+        );
+        if (rows && rows.length > 0) return rows[0].id;
+      }
+    }
+
+    const firstRow = await query('SELECT id FROM colleges ORDER BY id ASC LIMIT 1');
     if (firstRow && firstRow.length > 0) return firstRow[0].id;
   } catch (e) {
     // ignore
   }
-  return null;
+  return 1;
 };
 
 export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', password_hash = '', two_factor_secret = null }) => {
@@ -151,7 +165,8 @@ export const getAllUsersModel = async (collegeId = null) => {
            COALESCE(s.city, u.city) as city,
            COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
            COALESCE(s.linkedin_url, u.linkedin_url) as linkedin_url,
-           COALESCE(s.target_track, u.target_track) as target_track
+           COALESCE(s.target_track, u.target_track) as target_track,
+           COALESCE(s.is_profile_updated, u.is_profile_updated, 0) as is_profile_updated
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
@@ -201,6 +216,7 @@ export const updateUserModel = async (id, data) => {
     track,
     password,
     password_hash,
+    is_profile_updated,
   } = data;
 
   const rollVal = roll_number || rollNo || roll_no || null;
@@ -214,12 +230,14 @@ export const updateUserModel = async (id, data) => {
   const nameVal = name || null;
   const emailVal = email || null;
   const roleVal = role || null;
-  const validCollegeId = college_id ? await getValidCollegeId(college_id) : null;
+  const targetCollege = college_id || data.college || data.college_name || data.collegeName;
+  const validCollegeId = targetCollege ? await getValidCollegeId(targetCollege) : null;
   const isActiveVal = is_active !== undefined ? is_active : null;
+  const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : 1;
 
   await query(
-    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track) WHERE id = ?',
-    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, numId]
+    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
+    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, isProfileUpdatedVal, numId]
   );
 
   if (
@@ -236,7 +254,8 @@ export const updateUserModel = async (id, data) => {
     cityVal !== null ||
     emergencyVal !== null ||
     linkedinVal !== null ||
-    trackVal !== null
+    trackVal !== null ||
+    is_profile_updated !== undefined
   ) {
     const existing = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
     if (existing && existing.length > 0) {
@@ -256,7 +275,8 @@ export const updateUserModel = async (id, data) => {
           city = COALESCE(?, city),
           emergency_contact = COALESCE(?, emergency_contact),
           linkedin_url = COALESCE(?, linkedin_url),
-          target_track = COALESCE(?, target_track)
+          target_track = COALESCE(?, target_track),
+          is_profile_updated = COALESCE(?, is_profile_updated)
          WHERE user_id = ?`,
         [
           rollVal,
@@ -274,6 +294,7 @@ export const updateUserModel = async (id, data) => {
           emergencyVal,
           linkedinVal,
           trackVal,
+          isProfileUpdatedVal,
           numId,
         ]
       );

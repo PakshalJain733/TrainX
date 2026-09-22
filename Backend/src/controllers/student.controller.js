@@ -34,10 +34,20 @@ export const getStudentProfile = async (req, res, next) => {
       });
     }
     const studentProfile = (await getStudentByUserId(userId)) || {};
+    const isProfileUpdated = Boolean(
+      user.is_profile_updated ||
+      studentProfile.is_profile_updated ||
+      (studentProfile.gender && studentProfile.city) ||
+      (user.gender && user.city)
+    );
     return sendSuccess(res, 'Student profile retrieved successfully', {
       ...user,
       ...studentProfile,
-      studentProfile,
+      is_profile_updated: isProfileUpdated,
+      studentProfile: {
+        ...studentProfile,
+        is_profile_updated: isProfileUpdated,
+      },
     });
   } catch (error) {
     next(error);
@@ -47,7 +57,7 @@ export const getStudentProfile = async (req, res, next) => {
 export const updateStudentProfile = async (req, res, next) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const updated = await updateUserModel(userId, req.body);
+    const updated = await updateUserModel(userId, { ...req.body, is_profile_updated: true });
     return sendSuccess(res, 'Student profile updated successfully', updated);
   } catch (error) {
     next(error);

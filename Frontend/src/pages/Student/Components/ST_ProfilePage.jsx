@@ -254,6 +254,7 @@ export default function ProfilePage() {
         emergency_contact: form.guardianContact,
         linkedin_url: form.linkedinUrl,
         target_track: form.track,
+        is_profile_updated: true,
         notif_milestones: form.notifMilestones,
         notif_weekly_report: form.notifWeeklyReport,
         notif_interview: form.notifInterview,
@@ -265,7 +266,7 @@ export default function ProfilePage() {
       });
 
       if (res && res.data) {
-        localStorage.setItem("st_first_login_dismissed", "true");
+        localStorage.removeItem("st_first_login_dismissed");
         window.dispatchEvent(new Event("userProfileUpdated"));
       }
     } catch (err) {

@@ -261,9 +261,7 @@ export default function CoordinatorBroadcast() {
                   onChange={setPriority}
                   options={[
                     { value: "General Announcement", label: "General Announcement" },
-                    { value: "Urgent Notice", label: "Urgent Notice" },
-                    { value: "Exam & Quiz Schedule", label: "Exam & Quiz Schedule" },
-                    { value: "Placement Drive Alert", label: "Placement Drive Alert" },
+                    { value: "Urgent Notice", label: "Urgent Notice" }
                   ]}
                 />
               </div>

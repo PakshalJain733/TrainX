@@ -581,16 +581,6 @@ export default function AdminPracticeProblems() {
                       className="form-input-admin"
                     />
                   </div>
-                  <div className="form-group-admin">
-                    <label>Target Companies</label>
-                    <input
-                      type="text"
-                      placeholder="TCS, Infosys, Wipro"
-                      value={newProb.companies}
-                      onChange={(e) => setNewProb({ ...newProb, companies: e.target.value })}
-                      className="form-input-admin"
-                    />
-                  </div>
                 </div>
 
                 <div className="form-group-admin">

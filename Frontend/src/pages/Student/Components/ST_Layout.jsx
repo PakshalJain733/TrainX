@@ -277,10 +277,19 @@ export default function StudentLayout() {
           const fetchedUser = resolveUser(res.data);
           setUser(fetchedUser);
 
-          const userKey = `st_first_login_dismissed_${fetchedUser.id || fetchedUser.email}`;
-          const dismissed = localStorage.getItem(userKey) || localStorage.getItem("st_first_login_dismissed");
-          if ((!res.data.gender || !res.data.city) && !dismissed) {
-            setShowFirstLoginFlash(true);
+          const isUpdated = Boolean(
+            res.data.is_profile_updated ||
+            res.data.studentProfile?.is_profile_updated ||
+            (res.data.gender && res.data.city)
+          );
+
+          if (!isUpdated) {
+            const sessionSkipped = sessionStorage.getItem(`st_flash_skipped_${fetchedUser.id || fetchedUser.email}`);
+            if (!sessionSkipped) {
+              setShowFirstLoginFlash(true);
+            }
+          } else {
+            setShowFirstLoginFlash(false);
           }
         }
       })
@@ -292,7 +301,18 @@ export default function StudentLayout() {
     const handleUpdate = () => {
       apiFetch("/student/profile")
         .then((res) => {
-          if (res && res.data) setUser(resolveUser(res.data));
+          if (res && res.data) {
+            const fetchedUser = resolveUser(res.data);
+            setUser(fetchedUser);
+            const isUpdated = Boolean(
+              res.data.is_profile_updated ||
+              res.data.studentProfile?.is_profile_updated ||
+              (res.data.gender && res.data.city)
+            );
+            if (isUpdated) {
+              setShowFirstLoginFlash(false);
+            }
+          }
         })
         .catch(() => {});
     };
@@ -534,9 +554,8 @@ export default function StudentLayout() {
               <button
                 className="st-firstlogin-btn-secondary"
                 onClick={() => {
-                  const userKey = `st_first_login_dismissed_${user.id || user.email}`;
-                  localStorage.setItem(userKey, "true");
-                  localStorage.setItem("st_first_login_dismissed", "true");
+                  const userKey = `st_flash_skipped_${user.id || user.email}`;
+                  sessionStorage.setItem(userKey, "true");
                   setShowFirstLoginFlash(false);
                 }}
               >
@@ -545,9 +564,6 @@ export default function StudentLayout() {
               <button
                 className="st-firstlogin-btn-primary"
                 onClick={() => {
-                  const userKey = `st_first_login_dismissed_${user.id || user.email}`;
-                  localStorage.setItem(userKey, "true");
-                  localStorage.setItem("st_first_login_dismissed", "true");
                   setShowFirstLoginFlash(false);
                   navigate('/student/profile');
                 }}

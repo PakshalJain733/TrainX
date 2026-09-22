@@ -23,6 +23,17 @@ async function ensureCollegeTable() {
     for (const c of cols) {
       try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) {}
     }
+    try {
+      const existing = await query('SELECT COUNT(*) as count FROM colleges');
+      if (existing && existing[0] && existing[0].count === 0) {
+        await query(`
+          INSERT INTO colleges (name, code, location, city, type, status, contact_email, contact_phone) VALUES
+          ("Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)", 'PVPPCOE', 'Sion, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@pvppcoe.ac.in', '+91 98200 12345'),
+          ("Don Bosco Institute of Technology (DBIT)", 'DBIT', 'Kurla, Mumbai', 'Mumbai', 'Affiliated', 'Active', 'admin@dbit.in', '+91 98200 23456'),
+          ("K. J. Somaiya College of Engineering (KJSCE)", 'KJSCE', 'Vidyavihar, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@somaiya.edu', '+91 98200 34567')
+        `);
+      }
+    } catch (_) {}
     tablesInitialized = true;
   } catch (e) {
     console.warn('[DB ensureCollegeTable error]', e.message);

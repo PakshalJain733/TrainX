@@ -85,9 +85,7 @@ export default function CoordinatorOverview() {
   };
 
   const categories = [
-    { id: "general", label: "General Notice", icon: Megaphone },
-    { id: "urgent", label: "Urgent Exam", icon: BellRing },
-    { id: "syllabus", label: "Syllabus & Quiz", icon: FileText },
+    { id: "general", label: "General Notice", icon: Megaphone } 
   ];
 
   const statsList = [
