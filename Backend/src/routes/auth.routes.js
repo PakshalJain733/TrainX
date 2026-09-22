@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp } from '../controllers/auth.controller.js';
+import { register, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -25,5 +25,7 @@ router.put('/profile', authenticateToken, updateProfile);
 router.patch('/profile', authenticateToken, updateProfile);
 router.post('/change-password', authenticateToken, changePassword);
 router.post('/reset-password-otp', resetPasswordWithOtp);
+router.post('/setup-2fa', authenticateToken, setup2FA);
+router.post('/verify-2fa', authenticateToken, verify2FA);
 
 export default router;

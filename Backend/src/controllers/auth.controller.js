@@ -1,4 +1,4 @@
-import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
+import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, getStudentByUserId, updateUserModel } from '../models/user.model.js';
 
@@ -138,5 +138,26 @@ export const updateProfile = async (req, res, next) => {
     return sendSuccess(res, 'Profile updated successfully in database', updated);
   } catch (error) {
     next(error);
+  }
+};
+
+export const setup2FA = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const result = await setupUser2FA(userId);
+    return sendSuccess(res, '2FA setup QR Code generated successfully', result);
+  } catch (error) {
+    return sendError(res, error.message || 'Failed to generate 2FA setup QR Code', 400);
+  }
+};
+
+export const verify2FA = async (req, res, next) => {
+  try {
+    const userId = req.user.userId || req.user.id;
+    const { secret, code } = req.body;
+    const result = await verifyAndEnableUser2FA(userId, secret, code);
+    return sendSuccess(res, 'Google Authenticator 2FA paired successfully', result);
+  } catch (error) {
+    return sendError(res, error.message || 'Failed to verify 2FA code', 400);
   }
 };

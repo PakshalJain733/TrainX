@@ -403,3 +403,36 @@ export const resetUserPasswordWithOtp = async (email, otp, newPassword) => {
   return { message: 'Password reset successfully' };
 };
 
+export const setupUser2FA = async (userId) => {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
+  return {
+    secret: totpSetup.secret,
+    qrCode: totpSetup.qrCode,
+    email: user.email,
+  };
+};
+
+export const verifyAndEnableUser2FA = async (userId, secret, code) => {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (!secret || !code) {
+    throw new Error('Secret and 6-digit verification code are required');
+  }
+
+  const isValid = verifyTotpToken(secret, code);
+  if (!isValid) {
+    throw new Error('Invalid 6-digit Authenticator code. Please check your Google Authenticator app.');
+  }
+
+  await updateUserTwoFactorSecret(userId, secret);
+  return { message: 'Google Authenticator 2FA paired and enabled successfully!' };
+};
+
