@@ -93,22 +93,62 @@ export const getBatches = async (req, res, next) => {
     await ensureTables();
     const { collegeId, departmentId } = req.query;
 
-    let sql = 'SELECT * FROM batches WHERE 1=1';
+    let sql = `
+      SELECT 
+        b.*,
+        c.name AS collegeName,
+        d.name AS departmentName,
+        (
+          SELECT COUNT(*) 
+          FROM students s 
+          WHERE s.batch_id = b.id OR (b.department_id IS NOT NULL AND s.department_id = b.department_id)
+        ) AS dynamicStudentsCount,
+        (
+          SELECT COALESCE(ROUND(AVG(att.percentage), 0), 0) 
+          FROM assessment_attempts att 
+          JOIN students st ON att.user_id = st.user_id 
+          WHERE st.batch_id = b.id OR (b.department_id IS NOT NULL AND st.department_id = b.department_id)
+        ) AS dynamicProgressPct
+      FROM batches b
+      LEFT JOIN colleges c ON b.college_id = c.id
+      LEFT JOIN departments d ON b.department_id = d.id
+      WHERE 1=1
+    `;
     const params = [];
 
-    if (collegeId) {
-      sql += ' AND college_id = ?';
+    if (collegeId && collegeId !== 'all') {
+      sql += ' AND (b.college_id = ? OR b.college_id IS NULL)';
       params.push(collegeId);
     }
-    if (departmentId) {
-      sql += ' AND department_id = ?';
+    if (departmentId && departmentId !== 'all') {
+      sql += ' AND (b.department_id = ? OR b.department_id IS NULL)';
       params.push(departmentId);
     }
 
-    sql += ' ORDER BY id DESC';
+    sql += ' ORDER BY b.id DESC';
 
     const dbBatches = await query(sql, params);
-    return sendSuccess(res, 'Batches retrieved successfully', dbBatches || []);
+
+    const formatted = (dbBatches || []).map((b) => {
+      const sCount = Number(b.dynamicStudentsCount || b.students || 0);
+      const pPct = Number(b.dynamicProgressPct || 0);
+      return {
+        ...b,
+        collegeId: b.college_id || 1,
+        departmentId: b.department_id || 1,
+        collegeName: b.collegeName || b.college_name || 'College Campus',
+        departmentName: b.departmentName || b.department_name || 'Academic Stream',
+        trainer: b.trainer || b.mentor || 'Faculty Instructor',
+        schedule: b.schedule || 'Mon, Wed, Fri (10:00 AM)',
+        studentsCount: sCount,
+        students: sCount,
+        completionRate: `${pPct}%`,
+        progressPct: pPct,
+        status: b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : 'Active',
+      };
+    });
+
+    return sendSuccess(res, 'Batches retrieved successfully', formatted);
   } catch (error) {
     next(error);
   }
@@ -142,17 +182,33 @@ export const createBatch = async (req, res, next) => {
     );
 
     const insertedId = result.insertId;
-    const [newBatch] = await query('SELECT * FROM batches WHERE id = ?', [insertedId]);
+    const [newBatch] = await query(`
+      SELECT 
+        b.*,
+        c.name AS collegeName,
+        d.name AS departmentName
+      FROM batches b
+      LEFT JOIN colleges c ON b.college_id = c.id
+      LEFT JOIN departments d ON b.department_id = d.id
+      WHERE b.id = ?
+    `, [insertedId]);
 
-    return sendSuccess(res, 'Batch created successfully', newBatch || {
-      id: insertedId,
-      name: name.trim(),
-      code: batchCode,
-      join_code: batchCode,
-      trainer: batchTrainer,
-      schedule: batchSchedule,
-      status: 'Active'
-    }, 201);
+    const formattedCreated = {
+      ...newBatch,
+      collegeId: newBatch?.college_id || collegeId || 1,
+      departmentId: newBatch?.department_id || departmentId || 1,
+      collegeName: newBatch?.collegeName || 'College Campus',
+      departmentName: newBatch?.departmentName || 'Academic Stream',
+      trainer: newBatch?.trainer || batchTrainer,
+      schedule: newBatch?.schedule || batchSchedule,
+      studentsCount: 0,
+      students: 0,
+      completionRate: '0%',
+      progressPct: 0,
+      status: 'Active',
+    };
+
+    return sendSuccess(res, 'Batch created successfully', formattedCreated, 201);
   } catch (error) {
     next(error);
   }

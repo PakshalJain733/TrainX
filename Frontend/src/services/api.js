@@ -2,8 +2,10 @@ const API_BASE_URL = "/api/v1";
 
 async function request(endpoint, options = {}) {
   const url = endpoint.startsWith("/api/v1") ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const token = localStorage.getItem("token") || localStorage.getItem("auth_token");
   const headers = {
     "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 

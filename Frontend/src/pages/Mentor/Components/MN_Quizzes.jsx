@@ -241,25 +241,9 @@ export default function MentorQuizzes() {
     try {
       const r = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const d = await r.json();
-      if (d.success && Array.isArray(d.data) && d.data.length > 0) {
-        setAvailableBatches(d.data);
-      } else {
-        setAvailableBatches([
-          { id: 1, name: "BE-CS-2026-A" },
-          { id: 2, name: "TE-IT-2026-B" },
-          { id: 3, name: "BE-EXTC-2026-C" },
-          { id: 4, name: "CSE 2026 Alpha Cohort" },
-          { id: 5, name: "Fullstack React & Node Specialization" }
-        ]);
-      }
+      setAvailableBatches(d.success && Array.isArray(d.data) ? d.data : []);
     } catch {
-      setAvailableBatches([
-        { id: 1, name: "BE-CS-2026-A" },
-        { id: 2, name: "TE-IT-2026-B" },
-        { id: 3, name: "BE-EXTC-2026-C" },
-        { id: 4, name: "CSE 2026 Alpha Cohort" },
-        { id: 5, name: "Fullstack React & Node Specialization" }
-      ]);
+      setAvailableBatches([]);
     }
   };
 
@@ -310,8 +294,13 @@ export default function MentorQuizzes() {
     fetchQuizzes();
     fetchBatches();
     const handleUpdate = () => fetchQuizzes();
+    const handleBatchUpdate = () => fetchBatches();
     window.addEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
-    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    return () => {
+      window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+      window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    };
   }, []);
 
   const saveQuizToDB = async (questionsList, quizType) => {

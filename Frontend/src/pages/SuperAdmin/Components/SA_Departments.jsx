@@ -260,7 +260,7 @@ export default function Departments() {
 
     const matchesCollege =
       selectedCollegeId === 'all' ||
-      String(d.collegeId) === String(selectedCollegeId);
+      String(d.collegeId || d.college_id) === String(selectedCollegeId);
 
     return matchesSearch && matchesCollege;
   });
@@ -271,26 +271,25 @@ export default function Departments() {
 
     const selectedCol = colleges.find((c) => String(c.id) === String(deptForm.collegeId));
 
-    const newDept = {
-      id: Date.now(),
+    const payload = {
       name: deptForm.name,
       code: deptForm.code,
       collegeId: deptForm.collegeId || (colleges[0] ? colleges[0].id : 1),
-      collegeName: selectedCol ? selectedCol.name : "Apex Institute of Technology",
+      college_id: deptForm.collegeId || (colleges[0] ? colleges[0].id : 1),
       hodName: deptForm.hodName || "Dr. Department HOD",
       hodEmail: deptForm.hodEmail || `hod.${deptForm.code.toLowerCase()}@college.edu.in`,
-      activeStudents: 0,
-      studentsCount: 0,
-      batchesCount: 0,
-      collegesCount: 1,
-      status: "Active",
     };
 
     try {
-      const created = await departmentAPI.createDepartment(newDept);
-      setDepartments([created, ...departments]);
+      const created = await departmentAPI.createDepartment(payload);
+      if (created) {
+        setDepartments([created, ...departments.filter(d => d.id !== created.id)]);
+      } else {
+        loadData();
+      }
     } catch (err) {
-      setDepartments([newDept, ...departments]);
+      console.error("Failed to save department to database:", err);
+      loadData();
     }
 
     setIsAddModalOpen(false);

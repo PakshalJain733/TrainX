@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Trophy, Flame, Medal, Users, RefreshCw, Award } from "lucide-react";
+import { Trophy, Flame, Medal, Users, RefreshCw, Filter, BookOpen, Brain } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { collegeAPI, departmentAPI } from "../../../services/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
@@ -9,40 +10,105 @@ import "../Styles/AD_Leaderboard.css";
 const getRankClass = (r) => r === 1 ? "admin-rank-1" : r === 2 ? "admin-rank-2" : r === 3 ? "admin-rank-3" : "";
 
 export default function AdminLeaderboard() {
-  const [activeTab, setActiveTab] = useState("overall"); // 'overall' | 'department' | 'milestone' | 'batches'
-  const [data, setData] = useState({ overall: [], department: [], milestone: [], topBatches: [] });
+  const [activeTab, setActiveTab] = useState("overall"); // 'overall' | 'department' | 'batches'
+  const [data, setData] = useState({ overall: [], department: [], topBatches: [] });
   const [loading, setLoading] = useState(true);
+
+  // Filters for Department Ranking tab
+  const [colleges, setColleges] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [selectedCollege, setSelectedCollege] = useState("");
+  const [selectedDept, setSelectedDept] = useState("");
+
+  // Sort metric for Overall Ranking tab
+  const [sortByMetric, setSortByMetric] = useState("overall"); // 'overall' | 'quiz' | 'interview' | 'coding' | 'attendance'
+
+  useEffect(() => {
+    // Load colleges list on mount
+    collegeAPI.getColleges()
+      .then((res) => {
+        if (Array.isArray(res)) setColleges(res);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    // Fetch departments when college changes
+    if (selectedCollege) {
+      departmentAPI.getDepartments(selectedCollege)
+        .then((res) => {
+          if (Array.isArray(res)) setDepartments(res);
+          else setDepartments([]);
+        })
+        .catch(() => setDepartments([]));
+    } else {
+      departmentAPI.getDepartments()
+        .then((res) => {
+          if (Array.isArray(res)) setDepartments(res);
+          else setDepartments([]);
+        })
+        .catch(() => setDepartments([]));
+    }
+  }, [selectedCollege]);
 
   useEffect(() => {
     fetchLeaderboard();
-  }, []);
+  }, [selectedCollege, selectedDept]);
 
   const fetchLeaderboard = () => {
     setLoading(true);
-    apiFetch("/leaderboards")
+    let url = "/leaderboards";
+    const params = new URLSearchParams();
+    if (selectedCollege) params.append("college_id", selectedCollege);
+    if (selectedDept) params.append("department_id", selectedDept);
+    if (params.toString()) {
+      url += `?${params.toString()}`;
+    }
+
+    apiFetch(url)
       .then((res) => {
         if (res && res.data) {
-          setData(res.data);
+          setData({
+            overall: res.data.overall || [],
+            department: res.data.department || [],
+            topBatches: res.data.topBatches || [],
+          });
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch admin leaderboard data:", err);
+        console.error("Failed to fetch leaderboard data:", err);
       })
       .finally(() => setLoading(false));
   };
 
+  // Process overall list sorting
   let currentList = [];
-  if (activeTab === "overall") currentList = data.overall || [];
-  else if (activeTab === "department") currentList = data.department || [];
-  else if (activeTab === "milestone") currentList = data.milestone || [];
-  else if (activeTab === "batches") currentList = data.topBatches || [];
+  if (activeTab === "overall") {
+    const rawList = [...(data.overall || [])];
+    if (sortByMetric === "quiz") {
+      rawList.sort((a, b) => (b.quiz_score || 0) - (a.quiz_score || 0));
+    } else if (sortByMetric === "interview") {
+      rawList.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0));
+    } else if (sortByMetric === "coding") {
+      rawList.sort((a, b) => (b.coding_score || 0) - (a.coding_score || 0));
+    } else if (sortByMetric === "attendance") {
+      rawList.sort((a, b) => (b.attendance_score || 0) - (a.attendance_score || 0));
+    } else {
+      rawList.sort((a, b) => (b.score || b.overall_score || 0) - (a.score || a.overall_score || 0));
+    }
+    currentList = rawList.map((item, idx) => ({ ...item, displayRank: idx + 1 }));
+  } else if (activeTab === "department") {
+    currentList = (data.department || []).map((item, idx) => ({ ...item, displayRank: idx + 1 }));
+  } else if (activeTab === "batches") {
+    currentList = (data.topBatches || []).map((item, idx) => ({ ...item, displayRank: idx + 1 }));
+  }
 
   return (
     <div className="admin-leaderboard-container">
       <SectionHeader
         icon={Trophy}
         title="Leaderboard & Rankings"
-        description="Campus-wide student overall standings, department level performance, and milestone rankings."
+        description="Campus-wide student overall standings, department level performance, and best batch rankings."
         action={
           <button onClick={fetchLeaderboard} className="admin-refresh-btn">
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -57,27 +123,101 @@ export default function AdminLeaderboard() {
           onClick={() => setActiveTab('overall')}
           className={`admin-lb-tab-btn ${activeTab === 'overall' ? 'admin-lb-tab-btn--active' : ''}`}
         >
+          <Trophy size={15} />
           Overall Ranking
         </button>
         <button
           onClick={() => setActiveTab('department')}
           className={`admin-lb-tab-btn ${activeTab === 'department' ? 'admin-lb-tab-btn--active' : ''}`}
         >
+          <Medal size={15} />
           Department Ranking
-        </button>
-        <button
-          onClick={() => setActiveTab('milestone')}
-          className={`admin-lb-tab-btn ${activeTab === 'milestone' ? 'admin-lb-tab-btn--active' : ''}`}
-        >
-          Milestone Velocity
         </button>
         <button
           onClick={() => setActiveTab('batches')}
           className={`admin-lb-tab-btn ${activeTab === 'batches' ? 'admin-lb-tab-btn--active' : ''}`}
         >
-          Top Batches
+          <Users size={15} />
+          Best Batches
         </button>
       </div>
+
+      {/* Department Filter Controls (Task 02) */}
+      {activeTab === 'department' && (
+        <div className="admin-lb-filter-bar">
+          <div className="admin-lb-filter-group">
+            <label><Filter size={13} /> Select College Institution</label>
+            <select
+              value={selectedCollege}
+              onChange={(e) => {
+                setSelectedCollege(e.target.value);
+                setSelectedDept("");
+              }}
+              className="admin-lb-select"
+            >
+              <option value="">All Colleges</option>
+              {colleges.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.code ? `(${c.code})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="admin-lb-filter-group">
+            <label><BookOpen size={13} /> Select Department</label>
+            <select
+              value={selectedDept}
+              onChange={(e) => setSelectedDept(e.target.value)}
+              className="admin-lb-select"
+            >
+              <option value="">All Departments</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} {d.code ? `(${d.code})` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* Overall Metric Sort Bar (Task 01) */}
+      {activeTab === 'overall' && (
+        <div className="admin-lb-metric-pills">
+          <span className="admin-lb-metric-label">Rank By Category:</span>
+          <button
+            onClick={() => setSortByMetric('overall')}
+            className={`admin-metric-pill ${sortByMetric === 'overall' ? 'active' : ''}`}
+          >
+            🔥 Overall Composite
+          </button>
+          <button
+            onClick={() => setSortByMetric('quiz')}
+            className={`admin-metric-pill ${sortByMetric === 'quiz' ? 'active' : ''}`}
+          >
+            📝 Quiz Score
+          </button>
+          <button
+            onClick={() => setSortByMetric('interview')}
+            className={`admin-metric-pill ${sortByMetric === 'interview' ? 'active' : ''}`}
+          >
+            🤖 AI Interview
+          </button>
+          <button
+            onClick={() => setSortByMetric('coding')}
+            className={`admin-metric-pill ${sortByMetric === 'coding' ? 'active' : ''}`}
+          >
+            🗺️ Roadmap / Coding
+          </button>
+          <button
+            onClick={() => setSortByMetric('attendance')}
+            className={`admin-metric-pill ${sortByMetric === 'attendance' ? 'active' : ''}`}
+          >
+            📅 Attendance
+          </button>
+        </div>
+      )}
 
       <Card className="lb-card">
         <CardHeader className="lb-card-header">
@@ -86,13 +226,14 @@ export default function AdminLeaderboard() {
           </div>
           <div>
             <CardTitle>
-              {activeTab === 'overall' && 'Top Students (Overall)'}
-              {activeTab === 'department' && 'Department Rankings'}
-              {activeTab === 'milestone' && 'Milestone Velocity Rankings'}
-              {activeTab === 'batches' && 'Top Batches Rankings'}
+              {activeTab === 'overall' && 'Top Students (Overall Standings)'}
+              {activeTab === 'department' && 'Department Rankings & Standings'}
+              {activeTab === 'batches' && 'Best Batches Rankings'}
             </CardTitle>
             <CardDescription>
-              {activeTab === 'milestone' ? 'Ranked by completed roadmap items & progress percentage' : 'Ranked by overall composite score across assessments, coding, and interviews'}
+              {activeTab === 'overall' && 'Ranked across quiz assessments, AI interviews, roadmap progress, and attendance.'}
+              {activeTab === 'department' && 'Ranked by department level performance and composite student scores.'}
+              {activeTab === 'batches' && 'Ranked by average performance score, quiz, coding, and attendance across cohorts.'}
             </CardDescription>
           </div>
         </CardHeader>
@@ -105,29 +246,148 @@ export default function AdminLeaderboard() {
           ) : currentList.length === 0 ? (
             <div className="admin-empty-state-card">
               <Trophy size={32} className="admin-empty-state-icon" />
-              <p className="admin-empty-state-title">No leaderboard entries found for this category</p>
+              <p className="admin-empty-state-title">No leaderboard entries found for this selection</p>
             </div>
           ) : (
             <>
-              <div className="admin-lb-table-head">
-                <div className="admin-lb-head-rank">Rank</div>
-                <div className="admin-lb-head-entity">{activeTab === 'batches' ? 'Batch' : 'Student'}</div>
-                <div className="admin-lb-head-score">Score</div>
-              </div>
-              {currentList.map((s, idx) => (
-                <div key={s.id || s.rank || idx} className="lb-item">
-                  <span className={`lb-rank ${getRankClass(s.rank || idx + 1)}`}>#{s.rank || idx + 1}</span>
-                  <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
-                  <div className="lb-info">
-                    <span className="lb-name">{s.name}</span>
-                    <span className="lb-sub">{activeTab === 'batches' ? `${s.students} Enrolled Students` : (s.department || s.sub || s.college || 'Enrolled Student')}</span>
-                  </div>
-                  <div className="lb-xp-pill">
-                    <Flame size={12} className="lb-flame-icon" />
-                    <span>{s.score !== undefined ? s.score : s.overall_score || 0} {activeTab === 'milestone' ? '%' : 'pts'}</span>
-                  </div>
+              {activeTab === 'overall' && (
+                <div className="admin-lb-grid-header">
+                  <div className="col-rank">Rank</div>
+                  <div className="col-student">Student</div>
+                  <div className="col-metric">Quiz</div>
+                  <div className="col-metric">AI Interview</div>
+                  <div className="col-metric">Roadmap</div>
+                  <div className="col-metric">Attendance</div>
+                  <div className="col-score">Composite XP</div>
                 </div>
-              ))}
+              )}
+
+              {activeTab === 'department' && (
+                <div className="admin-lb-grid-header">
+                  <div className="col-rank">Rank</div>
+                  <div className="col-student">Student</div>
+                  <div className="col-metric">Department</div>
+                  <div className="col-metric">College</div>
+                  <div className="col-score">Score</div>
+                </div>
+              )}
+
+              {activeTab === 'batches' && (
+                <div className="admin-lb-grid-header">
+                  <div className="col-rank">Rank</div>
+                  <div className="col-student">Batch Name</div>
+                  <div className="col-metric">Enrolled</div>
+                  <div className="col-metric">Avg Quiz</div>
+                  <div className="col-metric">Avg Coding</div>
+                  <div className="col-metric">Avg Interview</div>
+                  <div className="col-score">Batch Score</div>
+                </div>
+              )}
+
+              {currentList.map((s, idx) => {
+                const displayRank = s.displayRank || idx + 1;
+
+                if (activeTab === 'overall') {
+                  return (
+                    <div key={s.id || idx} className="lb-grid-row">
+                      <div className="col-rank">
+                        <span className={`lb-rank ${getRankClass(displayRank)}`}>#{displayRank}</span>
+                      </div>
+                      <div className="col-student">
+                        <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
+                        <div className="lb-info">
+                          <span className="lb-name">{s.name}</span>
+                          <span className="lb-sub">{s.department || s.college || 'Student'}</span>
+                        </div>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-blue">📝 {s.quiz_score || 0}%</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-purple">🤖 {s.interview_score || 0}%</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-emerald">🗺️ {s.coding_score || 0}%</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-amber">📅 {s.attendance_score || 0}%</span>
+                      </div>
+                      <div className="col-score">
+                        <div className="lb-xp-pill">
+                          <Flame size={12} className="lb-flame-icon" />
+                          <span>{s.score !== undefined ? s.score : s.overall_score || 0} pts</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (activeTab === 'department') {
+                  return (
+                    <div key={s.id || idx} className="lb-grid-row">
+                      <div className="col-rank">
+                        <span className={`lb-rank ${getRankClass(displayRank)}`}>#{displayRank}</span>
+                      </div>
+                      <div className="col-student">
+                        <Avatar size="34"><AvatarFallback>{s.initials || 'ST'}</AvatarFallback></Avatar>
+                        <div className="lb-info">
+                          <span className="lb-name">{s.name}</span>
+                          <span className="lb-sub">{s.roll_number || 'Roll N/A'}</span>
+                        </div>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-dept-tag">{s.department || 'General'}</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-college-tag">{s.college || 'College'}</span>
+                      </div>
+                      <div className="col-score">
+                        <div className="lb-xp-pill">
+                          <Flame size={12} className="lb-flame-icon" />
+                          <span>{s.score || s.overall_score || 0} pts</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                if (activeTab === 'batches') {
+                  return (
+                    <div key={s.name || idx} className="lb-grid-row">
+                      <div className="col-rank">
+                        <span className={`lb-rank ${getRankClass(displayRank)}`}>#{displayRank}</span>
+                      </div>
+                      <div className="col-student">
+                        <div className="lb-batch-avatar">{s.initials || 'BT'}</div>
+                        <div className="lb-info">
+                          <span className="lb-name">{s.name}</span>
+                          <span className="lb-sub">{s.college || 'Institution Batch'}</span>
+                        </div>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-students-count">👥 {s.students || 0} Students</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-blue">📝 {s.avg_quiz || 0}%</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-emerald">🗺️ {s.avg_coding || 0}%</span>
+                      </div>
+                      <div className="col-metric">
+                        <span className="lb-metric-badge badge-purple">🤖 {s.avg_interview || 0}%</span>
+                      </div>
+                      <div className="col-score">
+                        <div className="lb-xp-pill">
+                          <Flame size={12} className="lb-flame-icon" />
+                          <span>{s.score || 0} pts</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                return null;
+              })}
             </>
           )}
         </CardContent>

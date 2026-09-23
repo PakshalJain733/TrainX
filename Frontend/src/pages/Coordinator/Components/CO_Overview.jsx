@@ -52,6 +52,9 @@ export default function CoordinatorOverview() {
     }
   });
 
+  const [liveBatches, setLiveBatches] = useState([]);
+  const [studentCount, setStudentCount] = useState(0);
+
   useEffect(() => {
     apiFetch("/auth/me")
       .then((res) => {
@@ -60,6 +63,22 @@ export default function CoordinatorOverview() {
         }
       })
       .catch(() => { });
+
+    apiFetch("/batches")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setLiveBatches(res.data);
+        }
+      })
+      .catch(() => {});
+
+    apiFetch("/coordinator/students")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setStudentCount(res.data.length);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
@@ -91,10 +110,10 @@ export default function CoordinatorOverview() {
   ];
 
   const statsList = [
-    { label: "Enrolled Students", value: "480", hint: `Active in ${dept}`, icon: GraduationCap },
-    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
-    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
+    { label: "Enrolled Students", value: String(studentCount || 0), hint: `Active in ${dept}`, icon: GraduationCap },
+    { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: "Live DB", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: "Active", hint: "Department average", icon: LineChart },
   ];
 
   const liveSessions = [

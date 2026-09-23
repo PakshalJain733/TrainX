@@ -61,6 +61,23 @@ const getValidCollegeId = async (collegeId) => {
   return 1;
 };
 
+export const findCollegeByAdminEmail = async (email) => {
+  if (!email) return null;
+  const cleanEmail = String(email).trim().toLowerCase();
+  try {
+    const rows = await query(
+      'SELECT id, name, code, admin_name, contact_email FROM colleges WHERE LOWER(contact_email) = ? LIMIT 1',
+      [cleanEmail]
+    );
+    if (rows && rows.length > 0) {
+      return rows[0];
+    }
+  } catch (err) {
+    console.warn(`[User Model] findCollegeByAdminEmail error: ${err.message}`);
+  }
+  return null;
+};
+
 export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', password_hash = '', two_factor_secret = null }) => {
   const pwd = password || password_hash || '';
   const validCollegeId = await getValidCollegeId(college_id);
@@ -177,7 +194,7 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
  * Get all users from MySQL DB with College Isolation filtering support
  * @param {number|null} collegeId - If provided, restricts to only this college
  */
-export const getAllUsersModel = async (collegeId = null) => {
+export const getAllUsersModel = async (collegeId = null, department = null) => {
   let sql = `
     SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
            c.name as college_name,
@@ -191,11 +208,17 @@ export const getAllUsersModel = async (collegeId = null) => {
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
+    WHERE 1=1
   `;
   const params = [];
   if (collegeId) {
-    sql += ' WHERE u.college_id = ?';
+    sql += ' AND u.college_id = ?';
     params.push(collegeId);
+  }
+  if (department && department !== 'all' && department !== 'All') {
+    const cleanDept = String(department).trim().toLowerCase();
+    sql += ' AND (LOWER(s.department) LIKE ? OR LOWER(s.department) = ? OR CAST(s.department_id AS CHAR) = ?)';
+    params.push(`%${cleanDept}%`, cleanDept, cleanDept);
   }
   sql += ' ORDER BY u.id DESC';
 

@@ -83,7 +83,7 @@ export default function CodingPractice() {
   const [assignForm, setAssignForm] = useState({
     problemId: "",
     department: "Computer Science",
-    batch: "CSE 2026 Alpha Cohort",
+    batch: "All Batches",
     dueDate: "",
     scoreWeightage: 100,
     instructions: "",
@@ -294,7 +294,7 @@ export default function CodingPractice() {
     setAssignForm({
       problemId: "",
       department: "Computer Science",
-      batch: "CSE 2026 Alpha Cohort",
+      batch: "All Batches",
       dueDate: "",
       scoreWeightage: 100,
       instructions: "",

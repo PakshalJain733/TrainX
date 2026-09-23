@@ -412,10 +412,17 @@ export default function CoordinatorProfilePage() {
                     className="profile-input"
                     value={form.phone}
                     onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                  />
+                </div>
+
+                <div className="profile-field">
+                  <label className="profile-label">Office Hours</label>
+                  <input
                     type="text"
                     className="profile-input"
                     value={form.officeHours}
                     onChange={(e) => setForm((p) => ({ ...p, officeHours: e.target.value }))}
+                    placeholder="e.g. Mon-Fri 10:00 AM - 5:00 PM"
                   />
                 </div>
               </div>

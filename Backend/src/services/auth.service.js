@@ -10,6 +10,7 @@ import {
   saveOtpRecord,
   verifyOtpRecord,
   updateUserTwoFactorSecret,
+  findCollegeByAdminEmail,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
@@ -106,6 +107,32 @@ export const registerUser = async (data) => {
     }
   }
 
+  // Strict College Admin verification: email and name MUST match the college created by Super Admin
+  let assignedCollegeId = 1;
+  if (canonicalRole === ROLES.COLLEGE_ADMIN) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanName = String(name || '').trim().toLowerCase();
+
+    const matchingCollege = await findCollegeByAdminEmail(cleanEmail);
+
+    if (!matchingCollege) {
+      const error = new Error(`Admin registration denied: Email '${email}' has not been registered as a College Admin by Super Admin.`);
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (matchingCollege.admin_name && matchingCollege.admin_name.trim().length > 0) {
+      const dbAdminName = matchingCollege.admin_name.trim().toLowerCase();
+      if (dbAdminName !== cleanName) {
+        const error = new Error(`Admin registration denied: Name '${name}' does not match the pre-registered Admin Name '${matchingCollege.admin_name}' registered for email '${email}'.`);
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    assignedCollegeId = matchingCollege.id;
+  }
+
   // Create base User
   const user = await createUser({
     name,
@@ -113,6 +140,7 @@ export const registerUser = async (data) => {
     mobile_number: mobile_number || '',
     password: password || '',
     role: canonicalRole,
+    college_id: assignedCollegeId,
   });
 
   // Mark secure code as used in DB if applicable

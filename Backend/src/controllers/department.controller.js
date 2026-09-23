@@ -26,20 +26,28 @@ async function ensureDeptTable() {
 export const getDepartments = async (req, res, next) => {
   try {
     await ensureDeptTable();
-    const { collegeId } = req.query;
+    const { collegeId, college_id } = req.query;
+    const cid = collegeId || college_id;
 
     let sql = 'SELECT * FROM departments WHERE 1=1';
     const params = [];
 
-    if (collegeId) {
-      sql += ' AND college_id = ?';
-      params.push(collegeId);
+    if (cid && cid !== 'all') {
+      sql += ' AND (college_id = ? OR college_id IS NULL)';
+      params.push(cid);
     }
 
     sql += ' ORDER BY id DESC';
 
     const dbDepts = await query(sql, params);
-    return sendSuccess(res, 'Departments retrieved successfully', dbDepts || []);
+    const formatted = (dbDepts || []).map((d) => ({
+      ...d,
+      collegeId: d.collegeId || d.college_id || 1,
+      college_id: d.college_id || d.collegeId || 1,
+      hodName: d.hodName || d.hod_name || '',
+      hodEmail: d.hodEmail || d.hod_email || '',
+    }));
+    return sendSuccess(res, 'Departments retrieved successfully', formatted);
   } catch (error) {
     next(error);
   }
@@ -48,31 +56,37 @@ export const getDepartments = async (req, res, next) => {
 export const createDepartment = async (req, res, next) => {
   try {
     await ensureDeptTable();
-    const { name, code, collegeId, hodName, hodEmail } = req.body;
+    const { name, code, collegeId, college_id, hodName, hod_name, hodEmail, hod_email } = req.body;
     if (!name || !code) {
       return sendError(res, 'Department Name and Code are required', 400);
     }
+    const cId = collegeId || college_id || 1;
+    const hName = hodName || hod_name || 'Dr. Department HOD';
+    const hEmail = hodEmail || hod_email || `hod.${code.toLowerCase()}@college.edu.in`;
 
     const result = await query(
       `INSERT INTO departments (college_id, name, code, hod_name, hod_email, status)
        VALUES (?, ?, ?, ?, ?, 'Active')`,
       [
-        collegeId || 1,
+        cId,
         name.trim(),
         code.trim(),
-        hodName || 'Dr. Department HOD',
-        hodEmail || `hod.${code.toLowerCase()}@college.edu.in`
+        hName,
+        hEmail
       ]
     );
 
     const [newDept] = await query('SELECT * FROM departments WHERE id = ?', [result.insertId]);
 
-    return sendSuccess(res, 'Department created successfully', newDept || {
-      id: result.insertId,
-      name,
-      code,
-      college_id: collegeId || 1
-    }, 201);
+    const formatted = {
+      ...newDept,
+      collegeId: newDept?.college_id || cId,
+      college_id: newDept?.college_id || cId,
+      hodName: newDept?.hod_name || hName,
+      hodEmail: newDept?.hod_email || hEmail,
+    };
+
+    return sendSuccess(res, 'Department created successfully', formatted, 201);
   } catch (error) {
     next(error);
   }

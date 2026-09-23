@@ -19,6 +19,7 @@ import departmentRoutes from './routes/department.routes.js';
 import batchRoutes from './routes/batch.routes.js';
 import sharedContentRoutes from './routes/sharedContent.routes.js';
 import secureCodeRoutes from './routes/secureCode.routes.js';
+import mentorRoutes from './routes/mentor.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
 
@@ -46,6 +47,7 @@ app.get('/api/v1/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
+app.use('/api/v1/coordinator/students', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/colleges', collegeRoutes);
 app.use('/api/v1/departments', departmentRoutes);
@@ -64,6 +66,7 @@ app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
 app.use('/api/v1/secure-codes', secureCodeRoutes);
+app.use('/api/v1/mentor', mentorRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

@@ -16,24 +16,22 @@ async function ensureCollegeTable() {
         status VARCHAR(50) DEFAULT 'Active',
         contact_email VARCHAR(255) NULL,
         contact_phone VARCHAR(50) NULL,
+        admin_name VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    const cols = ['location VARCHAR(255) DEFAULT \'Main Campus\'', 'city VARCHAR(100) DEFAULT \'Metropolis\'', 'type VARCHAR(100) DEFAULT \'Autonomous\'', 'status VARCHAR(50) DEFAULT \'Active\'', 'contact_email VARCHAR(255) NULL', 'contact_phone VARCHAR(50) NULL'];
+    const cols = [
+      "location VARCHAR(255) DEFAULT 'Main Campus'",
+      "city VARCHAR(100) DEFAULT 'Metropolis'",
+      "type VARCHAR(100) DEFAULT 'Autonomous'",
+      "status VARCHAR(50) DEFAULT 'Active'",
+      "contact_email VARCHAR(255) NULL",
+      "contact_phone VARCHAR(50) NULL",
+      "admin_name VARCHAR(255) NULL",
+    ];
     for (const c of cols) {
       try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) {}
     }
-    try {
-      const existing = await query('SELECT COUNT(*) as count FROM colleges');
-      if (existing && existing[0] && existing[0].count === 0) {
-        await query(`
-          INSERT INTO colleges (name, code, location, city, type, status, contact_email, contact_phone) VALUES
-          ("Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)", 'PVPPCOE', 'Sion, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@pvppcoe.ac.in', '+91 98200 12345'),
-          ("Don Bosco Institute of Technology (DBIT)", 'DBIT', 'Kurla, Mumbai', 'Mumbai', 'Affiliated', 'Active', 'admin@dbit.in', '+91 98200 23456'),
-          ("K. J. Somaiya College of Engineering (KJSCE)", 'KJSCE', 'Vidyavihar, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@somaiya.edu', '+91 98200 34567')
-        `);
-      }
-    } catch (_) {}
     tablesInitialized = true;
   } catch (e) {
     console.warn('[DB ensureCollegeTable error]', e.message);
@@ -46,12 +44,19 @@ export const getColleges = async (req, res, next) => {
     const dbColleges = await query(`
       SELECT 
         c.*,
+        c.contact_email AS adminEmail,
+        c.admin_name AS adminName,
         (SELECT COUNT(*) FROM departments d WHERE d.college_id = c.id) AS department_count,
         (SELECT COUNT(*) FROM users u WHERE u.college_id = c.id AND u.role = 'student') AS student_count
       FROM colleges c 
       ORDER BY c.id DESC
     `);
-    return sendSuccess(res, 'Colleges retrieved successfully', dbColleges || []);
+    const formatted = (dbColleges || []).map((c) => ({
+      ...c,
+      adminEmail: c.adminEmail || c.contact_email || '',
+      adminName: c.adminName || c.admin_name || '',
+    }));
+    return sendSuccess(res, 'Colleges retrieved successfully', formatted);
   } catch (error) {
     next(error);
   }
@@ -60,35 +65,37 @@ export const getColleges = async (req, res, next) => {
 export const createCollege = async (req, res, next) => {
   try {
     await ensureCollegeTable();
-    const { name, code, location, city, type, contactEmail, contactPhone } = req.body;
+    const { name, code, location, city, type, contactEmail, contactPhone, adminName, adminEmail } = req.body;
     if (!name || !code) {
       return sendError(res, 'College Name and Code are required', 400);
     }
+    const finalEmail = (contactEmail || adminEmail || `admin@${code.toLowerCase()}.edu.in`).trim();
+    const finalAdminName = (adminName || '').trim();
 
     const result = await query(
-      `INSERT INTO colleges (name, code, location, city, type, contact_email, contact_phone, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      `INSERT INTO colleges (name, code, location, city, type, contact_email, contact_phone, admin_name, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
         name.trim(),
         code.trim(),
         location || 'Main Campus',
         city || 'Metropolis',
         type || 'Autonomous',
-        contactEmail || `admin@${code.toLowerCase()}.edu.in`,
-        contactPhone || '+91 90000 00000'
+        finalEmail,
+        contactPhone || '+91 90000 00000',
+        finalAdminName,
       ]
     );
 
     const [newCollege] = await query('SELECT * FROM colleges WHERE id = ?', [result.insertId]);
 
-    return sendSuccess(res, 'College created successfully', newCollege || {
-      id: result.insertId,
-      name,
-      code,
-      location,
-      city,
-      type
-    }, 201);
+    const formattedCollege = {
+      ...newCollege,
+      adminEmail: newCollege?.contact_email || finalEmail,
+      adminName: newCollege?.admin_name || finalAdminName,
+    };
+
+    return sendSuccess(res, 'College created successfully', formattedCollege, 201);
   } catch (error) {
     next(error);
   }

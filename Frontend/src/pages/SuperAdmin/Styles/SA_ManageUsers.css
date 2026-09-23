@@ -688,3 +688,76 @@
   z-index: 10 !important;
 }
 
+/* ── SuperAdmin Dedicated Create User Modal Compact Layout Styles ── */
+.sa-create-user-modal {
+  max-width: 520px !important;
+  width: 100% !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+.sa-create-user-modal .modal-body {
+  padding: 16px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  position: relative !important;
+  z-index: 20 !important;
+  overflow: visible !important;
+}
+
+.sa-create-user-modal .modal-footer {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+.sa-form-group-full {
+  width: 100% !important;
+  margin-bottom: 0 !important;
+}
+
+.sa-form-row-2 {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  margin-bottom: 0 !important;
+}
+
+.sa-create-user-modal .form-group-admin {
+  margin-bottom: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  position: relative;
+}
+
+.sa-create-user-modal .form-group-admin label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  margin-bottom: 0 !important;
+}
+
+.sa-create-user-modal .form-input-admin {
+  height: 38px !important;
+  font-size: 13px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
+}
+
+.sa-create-user-modal .mu-select-trigger {
+  height: 38px !important;
+  font-size: 13px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
+}
+
+.mu-select-dropdown {
+  z-index: 999999 !important;
+}
+
+
+
+
+
+

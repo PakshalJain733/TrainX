@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, Plus, Download, CheckCircle2, X } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { batchAPI } from "../../../services/api";
+import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/MN_StudyMaterial.css";
 
@@ -9,43 +11,133 @@ const defaultMaterials = [];
 
 export default function StudyMaterial() {
   const [materials, setMaterials] = useState(defaultMaterials);
+  const [batchesList, setBatchesList] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form states
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Document");
-  const [batch, setBatch] = useState("CSE 2026 Alpha Cohort");
-  const [fileName, setFileName] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState("PDF Guide");
+  const [batch, setBatch] = useState("All Batches");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [resourceLink, setResourceLink] = useState("");
+
+  const fetchBatches = async () => {
+    try {
+      const data = await batchAPI.getBatches();
+      if (Array.isArray(data) && data.length > 0) setBatchesList(data);
+    } catch {}
+  };
+
+  const fetchMaterials = async () => {
+    try {
+      const res = await apiFetch("/mentor/study-materials");
+      const shared = await getSharedLearningContent([]);
+      let dbMaterials = (res && res.data && Array.isArray(res.data)) ? res.data : [];
+
+      const mappedShared = shared.map(s => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        batch: s.batch_name || s.data?.batch || "All Batches",
+        category: s.data?.type || "Document",
+        date: "Recently Added",
+        file_url: s.data?.url !== '#' ? s.data?.url : null,
+        link: s.data?.url !== '#' ? s.data?.url : null,
+        downloads: 0,
+      }));
+
+      const existingIds = new Set(dbMaterials.map(m => String(m.id)));
+      const combined = [...dbMaterials, ...mappedShared.filter(s => !existingIds.has(String(s.id)))];
+
+      if (combined.length > 0) {
+        setMaterials(combined);
+      }
+    } catch (err) {
+      console.warn("[StudyMaterial] load error:", err);
+    }
+  };
 
   useEffect(() => {
-    apiFetch("/mentor/study-materials")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setMaterials(res.data);
-        }
-      })
-      .catch(() => {});
+    fetchMaterials();
+    fetchBatches();
+    const handleUpdate = () => fetchMaterials();
+    window.addEventListener(EVENTS.LEARNING_UPDATED, handleUpdate);
+    window.addEventListener(EVENTS.BATCH_UPDATED, fetchBatches);
+    return () => {
+      window.removeEventListener(EVENTS.LEARNING_UPDATED, handleUpdate);
+      window.removeEventListener(EVENTS.BATCH_UPDATED, fetchBatches);
+    };
   }, []);
 
-  const handleUploadSubmit = (e) => {
+  const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    const newMat = {
-      id: `mat-${Date.now()}`,
-      title: title || "Untitled Resource",
-      batch: batch,
-      category: category,
-      date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-      downloads: 0,
-    };
-    setMaterials([newMat, ...materials]);
+    if (!title.trim()) return;
+    setIsSubmitting(true);
+
+    const token = sessionStorage.getItem("token") || localStorage.getItem("token") || "";
+    let uploadedUrl = resourceLink || "";
+
+    try {
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("title", title);
+        formData.append("description", description || "");
+        formData.append("subject", category || "General");
+        formData.append("batch", batch);
+        formData.append("type", category);
+        formData.append("link", resourceLink || "");
+        formData.append("file", selectedFile);
+
+        const res = await fetch("/api/v1/mentor/materials", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: formData,
+        });
+        const json = await res.json();
+        if (json && json.data) {
+          uploadedUrl = json.data.file_url || json.data.link || uploadedUrl;
+        }
+      } else {
+        await apiFetch("/mentor/materials", {
+          method: "POST",
+          body: JSON.stringify({
+            title,
+            description,
+            subject: category || "General",
+            batch,
+            type: category,
+            link: resourceLink,
+          }),
+        });
+      }
+
+      await addSharedLearningContent({
+        title,
+        description,
+        batch,
+        type: category,
+        url: uploadedUrl,
+      });
+
+      window.dispatchEvent(new CustomEvent(EVENTS.LEARNING_UPDATED));
+      fetchMaterials();
+    } catch (err) {
+      console.warn("Upload fallback local:", err);
+    }
+
+    setIsSubmitting(false);
     setUploadSuccess(true);
     setTimeout(() => {
       setUploadSuccess(false);
       setIsModalOpen(false);
       setTitle("");
-      setFileName("");
-    }, 1500);
+      setDescription("");
+      setSelectedFile(null);
+      setResourceLink("");
+    }, 1200);
   };
 
   return (
@@ -89,24 +181,54 @@ export default function StudyMaterial() {
                   </td>
                 </tr>
               ) : (
-                materials.map((m) => (
-                  <tr key={m.id}>
-                    <td className="mentor-material-title">{m.title}</td>
-                    <td className="mentor-material-batch">{m.batch}</td>
-                    <td>
-                      <span className="mentor-material-tag">
-                        {m.category}
-                      </span>
-                    </td>
-                    <td className="mentor-material-date">{m.date}</td>
-                    <td className="mentor-material-downloads">{m.downloads || 0} downloads</td>
-                    <td className="mentor-actions-cell">
-                      <button className="mentor-btn-download">
-                        <Download size={14} /> Download
-                      </button>
-                    </td>
-                  </tr>
-                ))
+                materials.map((m) => {
+                  const targetUrl = m.file_url || m.link || "#";
+                  return (
+                    <tr key={m.id}>
+                      <td className="mentor-material-title">
+                        <div style={{ fontWeight: 700 }}>{m.title}</div>
+                        {m.description && <div style={{ fontSize: "12px", color: "#64748b" }}>{m.description}</div>}
+                      </td>
+                      <td className="mentor-material-batch">{m.batch || "All Batches"}</td>
+                      <td>
+                        <span className="mentor-material-tag">
+                          {m.type || m.category || "Document"}
+                        </span>
+                      </td>
+                      <td className="mentor-material-date">{m.created_at ? new Date(m.created_at).toLocaleDateString("en-IN") : (m.date || "Today")}</td>
+                      <td className="mentor-material-downloads">{m.downloads || 0} downloads</td>
+                      <td className="mentor-actions-cell" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        {targetUrl !== "#" ? (
+                          <a
+                            href={targetUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download
+                            className="mentor-btn-download"
+                            style={{ textDecoration: "none" }}
+                          >
+                            <Download size={14} /> Download
+                          </a>
+                        ) : (
+                          <span style={{ color: "#94a3b8", fontSize: "12px" }}>N/A</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await apiFetch(`/mentor/materials/${m.id}`, { method: "DELETE" });
+                              window.dispatchEvent(new CustomEvent(EVENTS.LEARNING_UPDATED));
+                              fetchMaterials();
+                            } catch {}
+                          }}
+                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "12px", fontWeight: 600 }}
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -174,6 +296,8 @@ export default function StudyMaterial() {
                     </label>
                     <textarea
                       rows={3}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
                       placeholder="Enter brief details or instructions for students..."
                       className="mentor-textarea"
                     />
@@ -188,11 +312,11 @@ export default function StudyMaterial() {
                       <CustomSelect
                         value={category}
                         options={[
-                          { value: "Document", label: "Document" },
                           { value: "PDF Guide", label: "PDF Guide" },
+                          { value: "Document", label: "Document" },
                           { value: "Video Lecture", label: "Video Lecture" },
                           { value: "Web Link / URL", label: "Web Link / URL" },
-                          { value: "Code Repo", label: "Code Repo" },
+                          { value: "Cheat Sheet", label: "Cheat Sheet" },
                         ]}
                         onChange={(val) => setCategory(val)}
                         placeholder="Select type..."
@@ -207,9 +331,7 @@ export default function StudyMaterial() {
                         value={batch}
                         options={[
                           { value: "All Batches", label: "All Batches" },
-                          { value: "CSE 2026 Alpha Cohort", label: "CSE 2026 Alpha Cohort" },
-                          { value: "Fullstack React & Node Track", label: "Fullstack React & Node Track" },
-                          { value: "Data Science & AI/ML 2025", label: "Data Science & AI/ML 2025" },
+                          ...batchesList.map(b => ({ value: b.name, label: b.name }))
                         ]}
                         onChange={(val) => setBatch(val)}
                         placeholder="Select batch..."
@@ -220,12 +342,12 @@ export default function StudyMaterial() {
                   {/* Upload Document / File */}
                   <div>
                     <label className="mentor-form-label">
-                      Upload Document / File *
+                      Upload Document / File (PDF, DOCX, ZIP)
                     </label>
                     <div className="mentor-file-input-box">
                       <input
                         type="file"
-                        onChange={(e) => setFileName(e.target.files[0]?.name || '')}
+                        onChange={(e) => setSelectedFile(e.target.files[0] || null)}
                         className="mentor-file-input"
                       />
                     </div>
@@ -238,6 +360,8 @@ export default function StudyMaterial() {
                     </label>
                     <input
                       type="url"
+                      value={resourceLink}
+                      onChange={(e) => setResourceLink(e.target.value)}
                       placeholder="e.g. https://drive.google.com/... or https://..."
                       className="mentor-input-text"
                     />
@@ -249,14 +373,16 @@ export default function StudyMaterial() {
                       type="button"
                       onClick={() => setIsModalOpen(false)}
                       className="mentor-btn-cancel-modal"
+                      disabled={isSubmitting}
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       className="mentor-btn-submit-modal"
+                      disabled={isSubmitting}
                     >
-                      Add Content
+                      {isSubmitting ? "Uploading..." : "Publish Resource"}
                     </button>
                   </div>
                 </form>

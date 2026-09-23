@@ -145,25 +145,10 @@ export default function AdminQuizzes() {
     try {
       const res = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const data = await res.json();
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-        setAvailableBatches(data.data);
-      } else {
-        setAvailableBatches([
-          { id: 1, name: "CSE 2026 Alpha Cohort" },
-          { id: 2, name: "Fullstack React & Node Specialization" },
-          { id: 3, name: "BE-CS-2026-A" },
-          { id: 4, name: "TE-IT-2026-B" },
-          { id: 5, name: "BE-EXTC-2026-C" }
-        ]);
-      }
+      setAvailableBatches(data.success && Array.isArray(data.data) ? data.data : []);
     } catch (err) {
-      setAvailableBatches([
-        { id: 1, name: "CSE 2026 Alpha Cohort" },
-        { id: 2, name: "Fullstack React & Node Specialization" },
-        { id: 3, name: "BE-CS-2026-A" },
-        { id: 4, name: "TE-IT-2026-B" },
-        { id: 5, name: "BE-EXTC-2026-C" }
-      ]);
+      console.warn("Failed to fetch batches from DB:", err);
+      setAvailableBatches([]);
     }
   };
 
@@ -217,8 +202,13 @@ export default function AdminQuizzes() {
     fetchQuizzes();
     fetchBatches();
     const handleUpdate = () => fetchQuizzes();
+    const handleBatchUpdate = () => fetchBatches();
     window.addEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
-    return () => window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    return () => {
+      window.removeEventListener(EVENTS.QUIZ_UPDATED, handleUpdate);
+      window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    };
   }, []);
 
 

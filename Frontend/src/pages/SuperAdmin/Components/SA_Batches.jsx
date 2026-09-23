@@ -1,46 +1,93 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Layers, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check } from 'lucide-react';
+import { Layers, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Sparkles } from 'lucide-react';
 import { batchAPI, collegeAPI, departmentAPI } from '../../../services/api';
+import { EVENTS } from '../../../utils/sharedStore';
 import "../Styles/SA_Batches.css";
+
+const generateJoinCode = (batchName = "") => {
+  const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
+  const prefix = clean ? clean.slice(0, 4).toUpperCase() : "BTCH";
+  const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${randomPart}`;
+};
 
 /* ── Inline dropdown for Batches (CSS: Batches.css .batch-select-*) ── */
 function BatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, disabled = false, direction }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [dropUp, setDropUp] = React.useState(false);
-  const ref = React.useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
   const selected = options.find(o => String(o.value) === String(value));
 
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const handleToggle = () => {
-    if (!disabled && !isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
+  const updateCoords = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      if (direction === 'up') {
-        setDropUp(true);
-      } else if (direction === 'down') {
-        setDropUp(false);
-      } else {
-        setDropUp(spaceBelow < 220);
-      }
+      const isUp = direction === 'up' || (direction !== 'down' && spaceBelow < 220);
+      setCoords({
+        top: isUp ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        dropUp: isUp,
+      });
     }
-    if (!disabled) setIsOpen(v => !v);
   };
 
+  const handleToggle = () => {
+    if (!disabled) {
+      if (!isOpen) updateCoords();
+      setIsOpen(v => !v);
+    }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleScrollOrResize() {
+      if (isOpen) updateCoords();
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen]);
+
   return (
-    <div className={`batch-select-wrap${isOpen ? ' batch-select-wrap--open' : ''}${disabled ? ' batch-select-wrap--disabled' : ''}`} ref={ref}>
+    <div className={`batch-select-wrap${isOpen ? ' batch-select-wrap--open' : ''}${disabled ? ' batch-select-wrap--disabled' : ''}`} ref={triggerRef}>
       <button type="button" disabled={disabled} onClick={handleToggle} className={`batch-select-trigger${isOpen ? ' batch-select-trigger--open' : ''}`}>
         {Icon && <Icon className="batch-select-icon" />}
         <span className="batch-select-text">{selected ? selected.label : <span className="batch-select-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`batch-select-arrow${isOpen ? ' batch-select-arrow--rotate' : ''}`} />
       </button>
-      {isOpen && !disabled && (
-        <div className={`batch-select-dropdown${dropUp ? ' batch-select-dropdown--up' : ''}`}>
+
+      {isOpen && !disabled && createPortal(
+        <div
+          ref={dropdownRef}
+          className="batch-select-dropdown"
+          style={{
+            position: 'fixed',
+            top: coords.dropUp ? 'auto' : `${coords.top}px`,
+            bottom: coords.dropUp ? `${window.innerHeight - coords.top}px` : 'auto',
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: '220px',
+            overflowY: 'auto',
+            zIndex: 99999,
+          }}
+        >
           {options.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
@@ -50,7 +97,8 @@ function BatchSelect({ value, options = [], onChange, placeholder = 'Select...',
               </div>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -260,15 +308,23 @@ export default function Batches() {
 
   useEffect(() => {
     loadData();
+    const handleBatchUpdate = () => loadData();
+    const handleCollegeUpdate = () => loadData();
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    window.addEventListener(EVENTS.COLLEGE_UPDATED, handleCollegeUpdate);
+    return () => {
+      window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+      window.removeEventListener(EVENTS.COLLEGE_UPDATED, handleCollegeUpdate);
+    };
   }, [filterCollegeId, filterDeptId]);
 
   const availableFilterDepartments = filterCollegeId === 'all'
     ? departments
-    : departments.filter((d) => String(d.collegeId) === String(filterCollegeId));
+    : departments.filter((d) => String(d.collegeId || d.college_id) === String(filterCollegeId));
 
   const availableModalDepartments = modalCollegeId
-    ? departments.filter((d) => String(d.collegeId) === String(modalCollegeId))
-    : [];
+    ? departments.filter((d) => String(d.collegeId || d.college_id) === String(modalCollegeId))
+    : departments;
 
   const handleCollegeFilterChange = (e) => {
     const cid = e.target.value;
@@ -312,7 +368,7 @@ export default function Batches() {
       departmentName: selectedDep ? selectedDep.name : 'Computer Science',
       trainer: batchForm.trainer || 'Prof. Active Trainer',
       schedule: batchForm.schedule || 'Mon, Wed, Fri (10:00 AM)',
-      studentsCount: 45,
+      studentsCount: 0,
       completionRate: '0%',
       status: 'Active',
     };
@@ -320,8 +376,10 @@ export default function Batches() {
     try {
       const created = await batchAPI.createBatch(newBatch);
       setBatches([created, ...batches]);
+      window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: created }));
     } catch (err) {
       setBatches([newBatch, ...batches]);
+      window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: newBatch }));
     }
 
     setIsModalOpen(false);
@@ -375,7 +433,7 @@ export default function Batches() {
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder="Search cohort name, code, or college..."
+            placeholder="Search Batch name, code, or college..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sa-search-input"
@@ -448,7 +506,7 @@ export default function Batches() {
                   <td className="batches-td">
                     <div className="batches-students-count">
                       <Users size={13} />
-                      <span>{b.studentsCount || 45}</span>
+                      <span>{b.studentsCount !== undefined && b.studentsCount !== null ? b.studentsCount : (b.students !== undefined ? b.students : 0)}</span>
                     </div>
                   </td>
                   <td className="batches-td">
@@ -462,10 +520,10 @@ export default function Batches() {
                       <div className="batches-progress-bar-bg">
                         <div
                           className="batches-progress-bar-fill"
-                          style={{ width: b.completionRate || '65%' }}
+                          style={{ width: b.completionRate || (b.progressPct !== undefined ? `${b.progressPct}%` : '0%') }}
                         ></div>
                       </div>
-                      <span className="batches-progress-text">{b.completionRate || '65%'}</span>
+                      <span className="batches-progress-text">{b.completionRate || (b.progressPct !== undefined ? `${b.progressPct}%` : '0%')}</span>
                     </div>
                   </td>
                   <td className="batches-td">
@@ -528,13 +586,13 @@ export default function Batches() {
                   <label>Select Academic Department *</label>
                   <BatchSelect
                     value={modalDeptId}
-                    disabled={!modalCollegeId}
+                    disabled={!modalCollegeId && availableModalDepartments.length === 0}
                     options={availableModalDepartments.map((d) => ({
                       value: d.id,
                       label: `${d.name} (${d.code})`
                     }))}
                     onChange={(val) => setModalDeptId(val)}
-                    placeholder={!modalCollegeId ? "Select a college first..." : "Select Department"}
+                    placeholder="Select Department"
                   />
                 </div>
 
@@ -552,14 +610,41 @@ export default function Batches() {
                   </div>
                   <div className="form-group-admin">
                     <label>Batch Code *</label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-admin"
-                      placeholder="e.g. FS-2026-A"
-                      value={batchForm.code}
-                      onChange={(e) => setBatchForm({ ...batchForm, code: e.target.value })}
-                    />
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+                      <input
+                        type="text"
+                        required
+                        className="form-input-admin"
+                        style={{ flex: 1, minWidth: 0 }}
+                        placeholder="e.g. FS-2026-A"
+                        value={batchForm.code}
+                        onChange={(e) => setBatchForm({ ...batchForm, code: e.target.value.toUpperCase() })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const generated = generateJoinCode(batchForm.name);
+                          setBatchForm({ ...batchForm, code: generated });
+                        }}
+                        title="Auto-generate or regenerate batch code"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '42px',
+                          height: '42px',
+                          flexShrink: 0,
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          backgroundColor: '#f8fafc',
+                          color: '#4f46e5',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <RefreshCw size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -661,7 +746,7 @@ export default function Batches() {
                     <Users size={13} className="text-indigo-500" />
                     <span>Enrolled Students</span>
                   </span>
-                  <span className="sa-modal-detail-value">{viewBatch.studentsCount || 45} Students</span>
+                  <span className="sa-modal-detail-value">{viewBatch.studentsCount !== undefined && viewBatch.studentsCount !== null ? viewBatch.studentsCount : (viewBatch.students !== undefined ? viewBatch.students : 0)} Students</span>
                 </div>
 
                 <div className="sa-modal-detail-item">
@@ -708,7 +793,7 @@ export default function Batches() {
                 </div>
                 <div>
                   <h2 className="modal-title">Edit Batch Record</h2>
-                  <p className="modal-subtitle">Update cohort parameters and mentor assignment</p>
+                  <p className="modal-subtitle">Update Batch parameters and mentor assignment</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setEditBatch(null)}>
@@ -735,13 +820,40 @@ export default function Batches() {
                   </div>
                   <div className="form-group-admin">
                     <label>Batch Code *</label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-admin"
-                      value={editBatch.code || ''}
-                      onChange={(e) => setEditBatch({ ...editBatch, code: e.target.value })}
-                    />
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+                      <input
+                        type="text"
+                        required
+                        className="form-input-admin"
+                        style={{ flex: 1, minWidth: 0 }}
+                        value={editBatch.code || ''}
+                        onChange={(e) => setEditBatch({ ...editBatch, code: e.target.value.toUpperCase() })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const generated = generateJoinCode(editBatch.name);
+                          setEditBatch({ ...editBatch, code: generated });
+                        }}
+                        title="Auto-generate or regenerate batch code"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: '42px',
+                          height: '42px',
+                          flexShrink: 0,
+                          borderRadius: '8px',
+                          border: '1px solid #cbd5e1',
+                          backgroundColor: '#f8fafc',
+                          color: '#4f46e5',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        <RefreshCw size={18} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 

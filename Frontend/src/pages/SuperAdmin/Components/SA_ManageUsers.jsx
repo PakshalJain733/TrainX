@@ -27,42 +27,55 @@ import {
 } from 'lucide-react';
 import EmptyState from '../../../components/ui/EmptyState';
 import { apiFetch } from '../../../utils/api';
-import { collegeAPI } from '../../../services/api';
+import { collegeAPI, departmentAPI } from '../../../services/api';
 import "../Styles/SA_ManageUsers.css";
 
 /* ── Inline dropdown for ManageUsers (CSS: ManageUsers.css .mu-select-*) ── */
-function MuSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
+function MuSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction, disabled }) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [dropUp, setDropUp] = React.useState(false);
   const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const selected = options.find((o) => String(o.value) === String(value));
 
   React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
+    const handleOutsideClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
   }, []);
 
-  const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      setDropUp(direction === 'up');
-    }
-    setIsOpen(v => !v);
-  };
-
   return (
-    <div className={`mu-select-wrap${isOpen ? ' mu-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={handleToggle} className={`mu-select-trigger${isOpen ? ' mu-select-trigger--open' : ''}`}>
+    <div className={`mu-select-wrap${isOpen ? ' mu-select-wrap--open' : ''}${disabled ? ' opacity-60 pointer-events-none' : ''}`} ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen((v) => !v)}
+        className={`mu-select-trigger${isOpen ? ' mu-select-trigger--open' : ''}`}
+      >
         {Icon && <Icon className="mu-select-icon" />}
-        <span className="mu-select-text">{selected ? selected.label : <span className="mu-select-placeholder">{placeholder}</span>}</span>
+        <span className="mu-select-text">
+          {selected ? selected.label : <span className="mu-select-placeholder">{placeholder}</span>}
+        </span>
         <ChevronDown className={`mu-select-arrow${isOpen ? ' mu-select-arrow--rotate' : ''}`} />
       </button>
+
       {isOpen && (
-        <div className={`mu-select-dropdown${dropUp ? ' mu-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
+        <div className={`mu-select-dropdown${direction === 'up' ? ' mu-select-dropdown--up' : ''}`}>
+          {options.map((opt) => {
             const isSel = String(opt.value) === String(value);
             return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mu-select-option${isSel ? ' mu-select-option--selected' : ''}`}>
+              <div
+                key={opt.value}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`mu-select-option${isSel ? ' mu-select-option--selected' : ''}`}
+              >
                 <span className="mu-select-option-label">{opt.label}</span>
                 {isSel && <Check className="mu-select-check" />}
               </div>
@@ -109,8 +122,8 @@ const mockStudentsRisk = [];
 function RiskBadge({ risk }) {
   const color =
     risk === "Low Risk" ? { bg: "#ecfdf5", text: "#065f46", border: "#a7f3d0" } :
-    risk === "Moderate Risk" ? { bg: "#fffbeb", text: "#92400e", border: "#fcd34d" } :
-    { bg: "#fef2f2", text: "#991b1b", border: "#fca5a5" };
+      risk === "Moderate Risk" ? { bg: "#fffbeb", text: "#92400e", border: "#fcd34d" } :
+        { bg: "#fef2f2", text: "#991b1b", border: "#fca5a5" };
   return (
     <span style={{
       background: color.bg, color: color.text, border: `1px solid ${color.border}`,
@@ -253,10 +266,10 @@ export default function ManageUsers() {
   );
 
   const tabs = [
-    { id: "admins", label: "College Administrators", icon: ShieldCheck, count: adminRequests.length },
+    { id: "admins", label: "Admin", icon: ShieldCheck, count: adminRequests.length },
+    { id: "students", label: "Students", icon: Users, count: students.length },
     { id: "coordinators", label: "Coordinators", icon: UserCheck, count: coordinators.length },
-    { id: "mentors", label: "Mentors & Trainers", icon: GraduationCap, count: mentors.length },
-    { id: "students", label: "Students Risk", icon: Users, count: students.length },
+    { id: "mentors", label: "Mentors", icon: GraduationCap, count: mentors.length },
   ];
 
   // Modal states
@@ -269,13 +282,43 @@ export default function ManageUsers() {
     name: '',
     email: '',
     role: 'students',
-    college: 'PVPPCOE Mumbai',
-    department: 'COMPS',
+    collegeId: '',
+    college: '',
+    departmentId: '',
+    department: '',
     phone: '',
     rollNo: '',
     year: 'FE',
     division: 'A',
   });
+  const [collegeDepartments, setCollegeDepartments] = useState([]);
+  const [isLoadingDepts, setIsLoadingDepts] = useState(false);
+
+  const handleCollegeChange = async (colId) => {
+    const selectedCol = collegesList.find((c) => String(c.id) === String(colId));
+    setNewUserForm((prev) => ({
+      ...prev,
+      collegeId: colId,
+      college: selectedCol ? selectedCol.name : '',
+      departmentId: '',
+      department: '',
+    }));
+    setCollegeDepartments([]);
+
+    if (!colId) return;
+
+    setIsLoadingDepts(true);
+    try {
+      const depts = await departmentAPI.getDepartments(colId);
+      if (Array.isArray(depts)) {
+        setCollegeDepartments(depts);
+      }
+    } catch (err) {
+      console.error("Error fetching departments for college:", err);
+    } finally {
+      setIsLoadingDepts(false);
+    }
+  };
 
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
@@ -293,7 +336,7 @@ export default function ManageUsers() {
         setGeneratedCodesList(res.data.map(c => ({
           id: c.id,
           code: c.code,
-          role: c.role === 'college_admin' ? 'Admin' : c.role === 'coordinator' ? 'Coordinator' : c.role === 'mentor' ? 'Mentor' : c.role === 'trainer' ? 'Trainer' : c.role === 'company' ? 'Company' : c.role,
+          role: c.role === 'college_admin' ? 'Admin' : c.role === 'coordinator' ? 'Coordinator' : c.role === 'mentor' ? 'Mentor' : c.role === 'company' ? 'Company' : c.role,
           college: c.college_name || 'All Colleges',
           maxUses: c.max_uses,
           usesCount: c.uses_count || 0,
@@ -388,15 +431,25 @@ export default function ManageUsers() {
       students: 'student'
     };
 
+    const targetRole = roleMapping[newUserForm.role] || 'student';
+    const payload = {
+      name: newUserForm.name,
+      email: newUserForm.email,
+      mobile_number: newUserForm.phone,
+      role: targetRole,
+      college_id: newUserForm.collegeId,
+      college_name: newUserForm.college,
+      department_id: newUserForm.departmentId,
+      department: newUserForm.department,
+      roll_number: newUserForm.rollNo,
+      year: newUserForm.year,
+      division: newUserForm.division
+    };
+
     try {
       await apiFetch('/admin/users', {
         method: 'POST',
-        body: JSON.stringify({
-          name: newUserForm.name,
-          email: newUserForm.email,
-          mobile_number: newUserForm.phone,
-          role: roleMapping[newUserForm.role] || 'student',
-        })
+        body: JSON.stringify(payload)
       });
     } catch (err) {
       console.warn("User created in local state:", err);
@@ -407,9 +460,9 @@ export default function ManageUsers() {
         id: Date.now(),
         name: newUserForm.name,
         email: newUserForm.email,
-        college: newUserForm.college || 'PVPPCOE Mumbai',
+        college: newUserForm.college || 'College',
         designation: 'Institutional Admin',
-        date: '2026-09-09',
+        date: new Date().toISOString().split('T')[0],
         status: 'Verified',
       };
       setAdminRequests([newAdmin, ...adminRequests]);
@@ -418,9 +471,9 @@ export default function ManageUsers() {
         id: Date.now(),
         name: newUserForm.name,
         email: newUserForm.email,
-        phone: newUserForm.phone || '+91 98765 00000',
-        college: newUserForm.college || 'PVPPCOE Mumbai',
-        department: newUserForm.department || 'Computer Engineering',
+        phone: newUserForm.phone || '',
+        college: newUserForm.college || 'College',
+        department: newUserForm.department || 'Department',
         status: 'Active',
       };
       setCoordinators([newCoord, ...coordinators]);
@@ -429,20 +482,20 @@ export default function ManageUsers() {
         id: Date.now(),
         name: newUserForm.name,
         email: newUserForm.email,
-        phone: newUserForm.phone || '+91 98765 00000',
-        college: newUserForm.college || 'PVPPCOE Mumbai',
+        phone: newUserForm.phone || '',
+        college: newUserForm.college || 'College',
         track: newUserForm.department ? `${newUserForm.department} Faculty` : 'Full Stack Web Engineering',
         studentsAssigned: 0,
         rating: '5.0/5',
       };
       setMentors([newMentor, ...mentors]);
-    } else if (newUserForm.role === 'students') {
+    } else {
       const newStudent = {
         id: Date.now(),
         name: newUserForm.name,
         rollNo: newUserForm.rollNo || `STD-${Math.floor(100 + Math.random() * 900)}`,
-        college: newUserForm.college || 'PVPPCOE Mumbai',
-        batch: `${newUserForm.department || 'COMPS'} ${newUserForm.year || 'FE'} ${newUserForm.division || 'A'}`,
+        college: newUserForm.college || 'College',
+        batch: `${newUserForm.department || 'Dept'} ${newUserForm.year || 'FE'} ${newUserForm.division || 'A'}`,
         attendance: '100%',
         risk: 'Low Risk',
         status: 'Active',
@@ -455,13 +508,16 @@ export default function ManageUsers() {
       name: '',
       email: '',
       role: 'students',
-      college: 'PVPPCOE Mumbai',
-      department: 'COMPS',
+      collegeId: '',
+      college: '',
+      departmentId: '',
+      department: '',
       phone: '',
       rollNo: '',
       year: 'FE',
       division: 'A',
     });
+    setCollegeDepartments([]);
   };
 
 
@@ -545,7 +601,7 @@ export default function ManageUsers() {
           <div className="manageusers-banner">
             <ShieldCheck className="manageusers-banner-icon" />
             <p className="manageusers-banner-text">
-              HODs and College Administrators register using pre-authorized secure invitation codes issued directly by the Super Admin.
+              College Admin register using pre-authorized secure invitation codes issued directly by the Super Admin.
             </p>
           </div>
 
@@ -554,8 +610,8 @@ export default function ManageUsers() {
             {filteredAdmins.length === 0 ? (
               <EmptyState
                 icon={ShieldCheck}
-                title="No HOD / Admin Accounts Found"
-                description="HODs and College Administrators register using secure invitation codes. No manual verification required."
+                title="No Admin Accounts Found"
+                description="College Admin register using secure invitation codes. No manual verification required."
               />
             ) : (
               <div className="manageusers-table-wrap">
@@ -652,7 +708,7 @@ export default function ManageUsers() {
                     <td className="manageusers-td font-bold text-slate-900">
                       <div className="manageusers-user-flex">
                         <div className="manageusers-avatar">
-                          {c.name.split(' ').map(n=>n[0]).join('')}
+                          {c.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <span>{c.name}</span>
                       </div>
@@ -707,7 +763,7 @@ export default function ManageUsers() {
                     <td className="manageusers-td font-bold text-slate-900">
                       <div className="manageusers-user-flex">
                         <div className="manageusers-avatar manageusers-avatar--emerald">
-                          {m.name.split(' ').map(n=>n[0]).join('')}
+                          {m.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
                           <div>{m.name}</div>
@@ -803,141 +859,142 @@ export default function ManageUsers() {
             </div>
 
             <div className="modal-body modal-body-overflow-visible">
+              <div className="form-group-admin">
+                <label>Assign Target Role *</label>
+                <MuSelect
+                  value={codeRole}
+                  wrapperClass="mu-select"
+                  options={[
+                    { value: "mentors", label: "Mentor" },
+                    { value: "coordinators", label: "Coordinator" },
+                    { value: "admins", label: "Admin" },
+                  ]}
+                  onChange={(val) => setCodeRole(val)}
+                />
+              </div>
+
+              <div className="form-group-admin">
+                <label>Target College *</label>
+                <MuSelect
+                  value={codeCollege}
+                  wrapperClass="mu-select"
+                  options={collegesList.length > 0
+                    ? collegesList.map(c => ({ value: c.name, label: c.name }))
+                    : [{ value: "No colleges registered", label: "No colleges registered" }]
+                  }
+                  onChange={(val) => setCodeCollege(val)}
+                />
+              </div>
+
+              <div className="form-row-2">
                 <div className="form-group-admin">
-                  <label>Assign Target Role *</label>
+                  <label>Usage Limit (Max Uses) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100000"
+                    required
+                    className="form-input-admin"
+                    placeholder="1 (Single-use token)"
+                    value={codeMaxUses}
+                    onChange={(e) => setCodeMaxUses(e.target.value)}
+                  />
+                </div>
+
+                <div className="form-group-admin">
+                  <label>Expiry Time Duration *</label>
                   <MuSelect
-                    value={codeRole}
+                    value={codeExpiry}
+                    direction="up"
                     wrapperClass="mu-select"
                     options={[
-                      { value: "mentors", label: "Mentor & Trainer" },
-                      { value: "coordinators", label: "Department Coordinator" },
-                      { value: "admins", label: "College Administrator (Admin)" },
+                      { value: "24 Hours", label: "24 Hours" },
+                      { value: "3 Days", label: "3 Days" },
+                      { value: "7 Days", label: "7 Days" },
+                      { value: "30 Days", label: "30 Days" },
+                      { value: "90 Days", label: "90 Days" },
+                      { value: "Never", label: "Never" },
                     ]}
-                    onChange={(val) => setCodeRole(val)}
+                    onChange={(val) => setCodeExpiry(val)}
                   />
                 </div>
+              </div>
 
-                <div className="form-group-admin">
-                  <label>Target College *</label>
-                  <MuSelect
-                    value={codeCollege}
-                    wrapperClass="mu-select"
-                    options={collegesList.length > 0
-                      ? collegesList.map(c => ({ value: c.name, label: c.name }))
-                      : [{ value: "No colleges registered", label: "No colleges registered" }]
-                    }
-                    onChange={(val) => setCodeCollege(val)}
-                  />
-                </div>
-
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Usage Limit (Max Uses) *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="100000"
-                      required
-                      className="form-input-admin"
-                      placeholder="1 (Single-use token)"
-                      value={codeMaxUses}
-                      onChange={(e) => setCodeMaxUses(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="form-group-admin">
-                    <label>Expiry Time Duration *</label>
-                    <MuSelect
-                      value={codeExpiry}
-                      wrapperClass="mu-select"
-                      options={[
-                        { value: "24 Hours", label: "24 Hours (1 Day)" },
-                        { value: "3 Days", label: "3 Days" },
-                        { value: "7 Days", label: "7 Days (1 Week)" },
-                        { value: "30 Days", label: "30 Days (1 Month)" },
-                        { value: "90 Days", label: "90 Days (3 Months)" },
-                        { value: "Never", label: "Never (No Expiry)" },
-                      ]}
-                      onChange={(val) => setCodeExpiry(val)}
-                    />
-                  </div>
-                </div>
-
-                {/* Display Newly Generated Code Hero Banner */}
-                {generatedCode && (
-                  <div className="manageusers-token-hero">
-                    <div>
-                      <div className="manageusers-token-label">
-                        <Sparkles size={13} className="mu-sparkles-icon" />
-                        <span className="manageusers-token-tag">Newly Issued Token</span>
-                      </div>
-                      <div className="manageusers-token-code">{generatedCode}</div>
+              {/* Display Newly Generated Code Hero Banner */}
+              {generatedCode && (
+                <div className="manageusers-token-hero">
+                  <div>
+                    <div className="manageusers-token-label">
+                      <Sparkles size={13} className="mu-sparkles-icon" />
+                      <span className="manageusers-token-tag">Newly Issued Token</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCode(generatedCode, 'hero')}
-                      className={`manageusers-hero-copy-btn ${copiedCodeId === 'hero' ? 'manageusers-hero-copy-btn--copied' : ''}`}
-                    >
-                      {copiedCodeId === 'hero' ? <Check size={15} /> : <Copy size={15} />}
-                      <span>{copiedCodeId === 'hero' ? 'Copied!' : 'Copy Token'}</span>
-                    </button>
+                    <div className="manageusers-token-code">{generatedCode}</div>
                   </div>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(generatedCode, 'hero')}
+                    className={`manageusers-hero-copy-btn ${copiedCodeId === 'hero' ? 'manageusers-hero-copy-btn--copied' : ''}`}
+                  >
+                    {copiedCodeId === 'hero' ? <Check size={15} /> : <Copy size={15} />}
+                    <span>{copiedCodeId === 'hero' ? 'Copied!' : 'Copy Token'}</span>
+                  </button>
+                </div>
+              )}
 
-                {/* Recent Active Codes List */}
-                <div className="flex flex-col gap-2.5 mt-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Recently Issued Tokens</span>
-                    <span className="text-[11px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{generatedCodesList.length} Active</span>
-                  </div>
-                  <div className="manageusers-token-list">
-                    {generatedCodesList.map((c) => (
-                      <div key={c.id} className="manageusers-token-item">
-                        <div className="manageusers-item-left">
-                          <span className="manageusers-code-text">{c.code}</span>
-                          <span className="manageusers-role-tag">{c.role}</span>
-                          <span className="manageusers-uses-tag">
-                            Uses: {c.usesCount || 0}/{c.maxUses === 0 ? '∞' : (c.maxUses || 1)}
-                          </span>
-                        </div>
-                        <div className="manageusers-item-actions">
-                          <button
-                            type="button"
-                            onClick={() => handleCopyCode(c.code, c.id)}
-                            className={`manageusers-item-copy-btn ${copiedCodeId === c.id ? 'manageusers-item-copy-btn--copied' : ''}`}
-                          >
-                            {copiedCodeId === c.id ? <Check size={13} /> : <Copy size={13} />}
-                            <span>{copiedCodeId === c.id ? 'Copied' : 'Copy'}</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteCode(c.id)}
-                            title="Delete / Revoke Code"
-                            className="manageusers-item-delete-btn"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        </div>
+              {/* Recent Active Codes List */}
+              <div className="flex flex-col gap-2.5 mt-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Recently Issued Tokens</span>
+                  <span className="text-[11px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{generatedCodesList.length} Active</span>
+                </div>
+                <div className="manageusers-token-list">
+                  {generatedCodesList.map((c) => (
+                    <div key={c.id} className="manageusers-token-item">
+                      <div className="manageusers-item-left">
+                        <span className="manageusers-code-text">{c.code}</span>
+                        <span className="manageusers-role-tag">{c.role}</span>
+                        <span className="manageusers-uses-tag">
+                          Uses: {c.usesCount || 0}/{c.maxUses === 0 ? '∞' : (c.maxUses || 1)}
+                        </span>
                       </div>
-                    ))}
-                  </div>
+                      <div className="manageusers-item-actions">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyCode(c.code, c.id)}
+                          className={`manageusers-item-copy-btn ${copiedCodeId === c.id ? 'manageusers-item-copy-btn--copied' : ''}`}
+                        >
+                          {copiedCodeId === c.id ? <Check size={13} /> : <Copy size={13} />}
+                          <span>{copiedCodeId === c.id ? 'Copied' : 'Copy'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCode(c.id)}
+                          title="Delete / Revoke Code"
+                          className="manageusers-item-delete-btn"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
+            </div>
 
-              <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsGenerateCodeModalOpen(false)}>
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  onClick={handleGenerateCode}
-                  disabled={isGeneratingCode}
-                  className="btn-modal-submit inline-flex items-center gap-1.5"
-                >
-                  <Sparkles size={16} />
-                  <span>{isGeneratingCode ? 'Generating...' : 'Generate Code'}</span>
-                </button>
-              </div>
+            <div className="modal-footer">
+              <button type="button" className="btn-modal-cancel" onClick={() => setIsGenerateCodeModalOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={handleGenerateCode}
+                disabled={isGeneratingCode}
+                className="btn-modal-submit inline-flex items-center gap-1.5"
+              >
+                <Sparkles size={16} />
+                <span>{isGeneratingCode ? 'Generating...' : 'Generate Code'}</span>
+              </button>
+            </div>
           </form>
         </div>,
         document.body
@@ -946,7 +1003,7 @@ export default function ManageUsers() {
       {/* Create New User Modal */}
       {isAddUserModalOpen && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddUserModalOpen(false); }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog sa-create-user-modal">
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap modal-header-icon--indigo">
@@ -964,7 +1021,40 @@ export default function ManageUsers() {
 
             <form onSubmit={handleAddUserSubmit}>
               <div className="modal-body">
-                <div className="form-group-admin">
+                {/* Row 1: College Selection & Role Assignment (Side by Side) */}
+                <div className="form-row-2 sa-form-row-2">
+                  <div className="form-group-admin">
+                    <label>Select College Institution *</label>
+                    <MuSelect
+                      value={newUserForm.collegeId}
+                      placeholder="Select College Institution"
+                      wrapperClass="mu-select"
+                      options={collegesList.map((c) => ({
+                        value: c.id,
+                        label: `${c.name} (${c.code || ''})`
+                      }))}
+                      onChange={(val) => handleCollegeChange(val)}
+                    />
+                  </div>
+
+                  <div className="form-group-admin">
+                    <label>Assign Role *</label>
+                    <MuSelect
+                      value={newUserForm.role}
+                      wrapperClass="mu-select"
+                      options={[
+                        { value: "students", label: "Student" },
+                        { value: "mentors", label: "Mentor" },
+                        { value: "coordinators", label: "Coordinator" },
+                        { value: "admins", label: "College Administrator (Admin)" },
+                      ]}
+                      onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
+                    />
+                  </div>
+                </div>
+
+                {/* Full Name */}
+                <div className="form-group-admin sa-form-group-full">
                   <label>Full Name *</label>
                   <input
                     type="text"
@@ -976,8 +1066,9 @@ export default function ManageUsers() {
                   />
                 </div>
 
-                <div className="form-row-2">
-                  <div className="form-group-admin">
+                {/* Email & Mobile Number (Mobile Number included for non-students) */}
+                {newUserForm.role === 'students' ? (
+                  <div className="form-group-admin sa-form-group-full">
                     <label>College Email *</label>
                     <input
                       type="email"
@@ -988,36 +1079,36 @@ export default function ManageUsers() {
                       onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
                     />
                   </div>
-                  <div className="form-group-admin">
-                    <label>Mobile Number</label>
-                    <input
-                      type="tel"
-                      className="form-input-admin"
-                      placeholder="9876543210"
-                      value={newUserForm.phone}
-                      onChange={(e) => setNewUserForm({ ...newUserForm, phone: e.target.value })}
-                    />
+                ) : (
+                  <div className="form-row-2 sa-form-row-2">
+                    <div className="form-group-admin">
+                      <label>College Email *</label>
+                      <input
+                        type="email"
+                        required
+                        className="form-input-admin"
+                        placeholder="user@pvppcoe.ac.in"
+                        value={newUserForm.email}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, email: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label>Mobile Number</label>
+                      <input
+                        type="tel"
+                        className="form-input-admin"
+                        placeholder="9876543210"
+                        value={newUserForm.phone}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, phone: e.target.value })}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="form-group-admin">
-                  <label>Assign Role *</label>
-                  <MuSelect
-                    value={newUserForm.role}
-                    wrapperClass="mu-select"
-                    options={[
-                      { value: "students", label: "Student" },
-                      { value: "mentors", label: "Mentor / Faculty" },
-                      { value: "coordinators", label: "Coordinator" },
-                      { value: "admins", label: "College Administrator (Admin)" },
-                    ]}
-                    onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
-                  />
-                </div>
-
+                {/* Student specific fields */}
                 {newUserForm.role === 'students' && (
                   <>
-                    <div className="form-row-2">
+                    <div className="form-row-2 sa-form-row-2">
                       <div className="form-group-admin">
                         <label>College / Roll ID</label>
                         <input
@@ -1028,29 +1119,41 @@ export default function ManageUsers() {
                           onChange={(e) => setNewUserForm({ ...newUserForm, rollNo: e.target.value })}
                         />
                       </div>
+
                       <div className="form-group-admin">
-                        <label>Department</label>
+                        <label>Department *</label>
                         <MuSelect
-                          value={newUserForm.department || 'COMPS'}
+                          value={newUserForm.departmentId}
+                          direction="up"
+                          placeholder={
+                            !newUserForm.collegeId
+                              ? "Select College First"
+                              : (isLoadingDepts ? "Loading Departments..." : (collegeDepartments.length === 0 ? "No Departments Found" : "Select Department"))
+                          }
                           wrapperClass="mu-select"
-                          options={[
-                            { value: "COMPS", label: "COMPS" },
-                            { value: "IT", label: "IT" },
-                            { value: "AIML", label: "AIML" },
-                            { value: "ECS", label: "ECS" },
-                            { value: "MTRX", label: "MTRX" },
-                            { value: "EXTC", label: "EXTC" },
-                          ]}
-                          onChange={(val) => setNewUserForm({ ...newUserForm, department: val })}
+                          disabled={!newUserForm.collegeId || collegeDepartments.length === 0 || isLoadingDepts}
+                          options={collegeDepartments.map((d) => ({
+                            value: d.id,
+                            label: `${d.name} (${d.code || ''})`
+                          }))}
+                          onChange={(val) => {
+                            const selectedDep = collegeDepartments.find((d) => String(d.id) === String(val));
+                            setNewUserForm((prev) => ({
+                              ...prev,
+                              departmentId: val,
+                              department: selectedDep ? selectedDep.name : ''
+                            }));
+                          }}
                         />
                       </div>
                     </div>
 
-                    <div className="form-row-2">
+                    <div className="form-row-2 sa-form-row-2">
                       <div className="form-group-admin">
                         <label>Academic Year</label>
                         <MuSelect
                           value={newUserForm.year || 'FE'}
+                          direction="up"
                           wrapperClass="mu-select"
                           options={[
                             { value: "FE", label: "FE" },
@@ -1065,6 +1168,7 @@ export default function ManageUsers() {
                         <label>Division</label>
                         <MuSelect
                           value={newUserForm.division || 'A'}
+                          direction="up"
                           wrapperClass="mu-select"
                           options={[
                             { value: "A", label: "Division A" },
@@ -1076,6 +1180,36 @@ export default function ManageUsers() {
                       </div>
                     </div>
                   </>
+                )}
+
+                {/* Coordinator Department Selection (Department removed for Mentors) */}
+                {newUserForm.role === 'coordinators' && (
+                  <div className="form-group-admin sa-form-group-full">
+                    <label>Department *</label>
+                    <MuSelect
+                      value={newUserForm.departmentId}
+                      direction="up"
+                      placeholder={
+                        !newUserForm.collegeId
+                          ? "Select College First"
+                          : (isLoadingDepts ? "Loading Departments..." : (collegeDepartments.length === 0 ? "No Departments Found" : "Select Department"))
+                      }
+                      wrapperClass="mu-select"
+                      disabled={!newUserForm.collegeId || collegeDepartments.length === 0 || isLoadingDepts}
+                      options={collegeDepartments.map((d) => ({
+                        value: d.id,
+                        label: `${d.name} (${d.code || ''})`
+                      }))}
+                      onChange={(val) => {
+                        const selectedDep = collegeDepartments.find((d) => String(d.id) === String(val));
+                        setNewUserForm((prev) => ({
+                          ...prev,
+                          departmentId: val,
+                          department: selectedDep ? selectedDep.name : ''
+                        }));
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 
