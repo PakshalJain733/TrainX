@@ -38,6 +38,7 @@ import AdminWeeklyReports from "./pages/Admin/Components/AD_WeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AD_Help";
 import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
+import AdminAssignTrainer from './pages/Admin/Components/AD_AssignTrainer';
 
 
 // Super Admin Workspace Imports
@@ -138,6 +139,7 @@ function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="batches" element={<AdminBatches />} />
             <Route path="attendance" element={<AdminAttendance />} />
+            <Route path="assign-trainer" element={<AdminAssignTrainer />} />
             <Route path="learning" element={<AdminLearningContent />} />
             <Route path="quiz" element={<AdminQuizzes />} />
             <Route path="practice" element={<AdminPracticeProblems />} />

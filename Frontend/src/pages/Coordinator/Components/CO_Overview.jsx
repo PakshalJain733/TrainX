@@ -103,25 +103,28 @@ export default function CoordinatorOverview() {
     {
       id: 1,
       trainerName: "Anubhav Shukla",
-      topic: "Java OOPS",
+      topic: "Java Masterclass: Core to Advanced",
+      topicDetail: "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
       batch: "CSE 2026 Cohort",
-      time: "10:00 AM - 11:30 AM",
+      time: "10:00 AM - 05:00 PM",
       status: "Live",
     },
     {
       id: 2,
       trainerName: "Priya Sharma",
-      topic: "React Fundamentals",
+      topic: "React Intensive Bootcamp",
+      topicDetail: "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
       batch: "Fullstack Specialization",
-      time: "11:00 AM - 12:30 PM",
+      time: "09:30 AM - 04:30 PM",
       status: "Live",
     },
     {
       id: 3,
       trainerName: "Rahul Verma",
-      topic: "Data Structures & Algorithms",
+      topic: "DSA Marathon: Trees & Graphs",
+      topicDetail: "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
       batch: "CSE 2025 Alpha",
-      time: "10:30 AM - 12:00 PM",
+      time: "11:00 AM - 06:00 PM",
       status: "Live",
     }
   ];
@@ -334,7 +337,7 @@ export default function CoordinatorOverview() {
 
       {/* Current Training Sessions Row */}
       <Card className="overview-subcard mt-4">
-        <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
+        <CardHeader className="overview-card-header-between" style={{ borderBottom: 'none' }}>
           <div className="overview-header-left">
             <div className="overview-header-icon-wrap bg-indigo-100 text-indigo-600">
               <Activity size={18} className="overview-header-icon animate-pulse" />
@@ -356,23 +359,20 @@ export default function CoordinatorOverview() {
                 className="session-card"
               >
                 {/* Topic Info */}
-                <div className="session-topic-box" style={{ marginTop: '0' }}>
+                <div className="session-topic-box" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
                   <div className="session-topic-label">
-                    <BookOpen size={14} />
-                    <span>Topic</span>
+                    <UserCheck size={14} />
+                    <span>Trainer</span>
                   </div>
-                  <h4 className="session-topic-title">{session.topic}</h4>
+                  <h4 className="session-topic-title">{session.trainerName}</h4>
                 </div>
 
                 {/* Trainer Info */}
                 <div className="session-trainer">
-                  <div className="session-trainer-avatar">
-                    {session.trainerName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
-                  </div>
                   <div className="session-trainer-info">
-                    <h5>{session.trainerName}</h5>
-                    <p>
-                      <UserCheck size={12} /> Expert Trainer
+                    <h5>{session.topic}</h5>
+                    <p style={{ fontSize: '12px', marginTop: '4px', lineHeight: '1.4', color: '#64748b' }}>
+                      {session.topicDetail}
                     </p>
                   </div>
                 </div>
