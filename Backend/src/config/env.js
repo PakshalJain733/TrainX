@@ -16,7 +16,7 @@ export const config = {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'Ganeshvs@2006',
+    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : 'Ganeshvs@2006',
     database: process.env.DB_NAME || 'training_portal_db',
   },
   jwt: {

@@ -332,55 +332,55 @@ export default function CoordinatorOverview() {
         </Card>
       </div>
 
-      {/* Live Training Sessions Row */}
+      {/* Current Training Sessions Row */}
       <Card className="overview-subcard mt-4">
         <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
           <div className="overview-header-left">
-            <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
+            <div className="overview-header-icon-wrap bg-indigo-100 text-indigo-600">
               <Activity size={18} className="overview-header-icon animate-pulse" />
             </div>
             <div>
-              <CardTitle className="overview-card-title">Live Training Sessions</CardTitle>
+              <CardTitle className="overview-card-title">Current Training Sessions</CardTitle>
               <CardDescription className="overview-card-desc">Currently ongoing classes and topics being taught</CardDescription>
             </div>
           </div>
-          <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
+          <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200">
             {liveSessions.length} Active Sessions
           </Badge>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 pt-0">
+        <CardContent className="overview-card-content-no-padding">
+          <div className="session-grid">
             {liveSessions.map((session) => (
               <div
                 key={session.id}
-                className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col gap-3 transition-all hover:border-emerald-300 hover:shadow-md relative overflow-hidden group"
+                className="session-card"
               >
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 group-hover:w-1.5 transition-all"></div>
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
-                      {session.status}
-                    </span>
+                {/* Topic Info */}
+                <div className="session-topic-box" style={{ marginTop: '0' }}>
+                  <div className="session-topic-label">
+                    <BookOpen size={14} />
+                    <span>Topic</span>
                   </div>
-                  <div className="flex items-center text-slate-500 text-[11px] font-semibold gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
-                    <Clock size={12} /> {session.time}
+                  <h4 className="session-topic-title">{session.topic}</h4>
+                </div>
+
+                {/* Trainer Info */}
+                <div className="session-trainer">
+                  <div className="session-trainer-avatar">
+                    {session.trainerName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  </div>
+                  <div className="session-trainer-info">
+                    <h5>{session.trainerName}</h5>
+                    <p>
+                      <UserCheck size={12} /> Expert Trainer
+                    </p>
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 mb-1">{session.topic}</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    <span className="font-semibold text-slate-800">{session.trainerName}</span> (Trainer) is teaching a <span className="font-semibold text-indigo-600">{session.topic}</span> topic to students.
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2">
-                  <Users size={14} className="text-slate-400" />
-                  <span className="text-[11px] font-semibold text-slate-600">{session.batch}</span>
+                {/* Footer: Batch */}
+                <div className="session-footer">
+                  <Users size={14} />
+                  <span>{session.batch}</span>
                 </div>
               </div>
             ))}
