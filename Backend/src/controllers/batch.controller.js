@@ -298,6 +298,7 @@ export const joinBatch = async (req, res, next) => {
       `INSERT IGNORE INTO student_batches (user_id, batch_id) VALUES (?, ?)`,
       [userId, foundBatch.id]
     );
+    await query(`UPDATE students SET batch_id = ? WHERE user_id = ?`, [foundBatch.id, userId]);
 
     return sendSuccess(res, `Successfully joined batch '${foundBatch.name}'!`, {
       batch: foundBatch,

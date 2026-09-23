@@ -96,7 +96,7 @@ export default function Overview() {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const stored = JSON.parse(localStorage.getItem('user') || '{}');
+        const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
         const name = stored.name || stored.fullName || stored.email?.split('@')[0] || "Super Admin";
         setUserName(name);
         setUserEmail(stored.email || "");

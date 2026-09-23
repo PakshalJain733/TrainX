@@ -50,7 +50,7 @@ export default function ProfilePage() {
 
   const resolveUser = () => {
     let localUser = {};
-    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
     let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile.name || "Faculty Mentor";
     let email = localUser.email || mentorProfile.email || "mentor@pvppcoe.ac.in";
     return { name, email, ...localUser };

@@ -192,7 +192,7 @@ export default function AdminLearningContent() {
     setResources(prev => [tempEntry, ...prev]);
 
     try {
-      const token = sessionStorage.getItem("token") || localStorage.getItem("token") || "";
+      const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
       let res;
 
       if (selectedFile) {

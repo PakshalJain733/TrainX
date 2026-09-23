@@ -35,18 +35,37 @@ import "../Styles/ST_Batches.css";
 const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
-// Built-in catalog details map to enrich API batches
-const defaultBatchTemplates = [];
+const getStoredUserName = () => {
+  try {
+    const raw = sessionStorage.getItem("user");
+    if (!raw) return "Student";
+    const u = JSON.parse(raw);
+    return u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+  } catch {
+    return "Student";
+  }
+};
+
+const getInitials = (name) => {
+  if (!name || name.trim().length === 0) return "ST";
+  const parts = name.trim().split(" ");
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
 
 function mapApiBatch(b) {
   const code = b.join_code || b.code || `BATCH-${b.id}`;
+  const userName = getStoredUserName();
+  const userInitials = getInitials(userName);
 
   return {
     id: b.id || `batch-${b.id}`,
@@ -64,7 +83,7 @@ function mapApiBatch(b) {
     description: b.description || `${b.name} training cohort curriculum and assignments.`,
     stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
-      { rank: 1, name: "Student (You)", xp: 0, initials: "ST", self: true },
+      { rank: 1, name: `${userName} (You)`, xp: b.xp || 0, initials: userInitials, self: true },
     ],
     modules: [],
     apiTasks: [],
@@ -137,7 +156,17 @@ export default function Batches() {
   };
 
   useEffect(() => {
-    fetchMyBatches();
+    fetch(`${API_BASE}/auth/me`, { headers: getAuthHeaders() })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          sessionStorage.setItem("user", JSON.stringify(data.data));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        fetchMyBatches();
+      });
   }, []);
 
   // Handle batch join submission
@@ -156,7 +185,11 @@ export default function Batches() {
       const res = await fetch(`${API_BASE}/batches/join`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ join_code: joinCodeInput.trim() }),
+        body: JSON.stringify({
+          join_code: joinCodeInput.trim(),
+          joinCode: joinCodeInput.trim(),
+          code: joinCodeInput.trim()
+        }),
       });
       const data = await res.json();
 

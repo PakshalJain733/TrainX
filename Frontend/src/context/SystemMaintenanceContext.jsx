@@ -206,7 +206,7 @@ export function SystemMaintenanceProvider({ children }) {
   const [config, setConfig] = useState(initialMaintenanceConfig);
 
   useEffect(() => {
-    const token = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+    const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
     if (!token) return;
     // Fetch maintenance config directly from MySQL Database
     fetch('/api/v1/shared-content?type=maintenance', {

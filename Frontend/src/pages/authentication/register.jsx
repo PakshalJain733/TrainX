@@ -290,8 +290,8 @@ function Register() {
             ...totpSetupData.user,
             name: formData.name || totpSetupData.user?.name || "Student",
           };
-          localStorage.setItem("token", totpSetupData.token);
-          localStorage.setItem("user", JSON.stringify(registeredUser));
+          sessionStorage.setItem("token", totpSetupData.token);
+          sessionStorage.setItem("user", JSON.stringify(registeredUser));
           sessionStorage.setItem("showFirstLoginAlert", "true");
         }
         setTimeout(() => {
@@ -349,8 +349,8 @@ function Register() {
       } else if (data.success) {
         setSuccessMsg("Account created successfully! Redirecting to login...");
         if (data.data?.token) {
-          localStorage.setItem("token", data.data.token);
-          localStorage.setItem("user", JSON.stringify(data.data.user));
+          sessionStorage.setItem("token", data.data.token);
+          sessionStorage.setItem("user", JSON.stringify(data.data.user));
         }
         setTimeout(() => {
           navigate("/");

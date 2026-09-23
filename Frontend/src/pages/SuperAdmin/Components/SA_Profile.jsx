@@ -47,7 +47,7 @@ export default function SuperAdminProfile() {
 
   const [form, setForm] = useState(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
       return {
         name: stored.name || "Super Admin",
         email: stored.email || "training.portal0987@gmail.com",

@@ -206,8 +206,8 @@ export default function AdminLayout() {
 
   const loadProfile = () => {
     try {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}');
-      const adminProf = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+      const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
+      const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || '{}');
       const name = adminProf.name || stored.name || stored.email || "System Admin";
       const email = adminProf.email || stored.email || "admin@pvppcoe.ac.in";
       return {
@@ -225,7 +225,7 @@ export default function AdminLayout() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       if (!token) return;
       const res = await fetch('/api/v1/admin/profile', {
         headers: { Authorization: `Bearer ${token}` }
@@ -234,7 +234,7 @@ export default function AdminLayout() {
         const data = await res.json();
         if (data && data.data) {
           const u = data.data;
-          const adminProf = JSON.parse(localStorage.getItem('adminProfile') || '{}');
+          const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || '{}');
           const name = adminProf.name || u.name || u.email || "System Admin";
           const updated = {
             name: name,
@@ -244,8 +244,8 @@ export default function AdminLayout() {
           };
           setUser(updated);
           let localUser = {};
-          try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-          localStorage.setItem("user", JSON.stringify({ ...localUser, ...updated }));
+          try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+          sessionStorage.setItem("user", JSON.stringify({ ...localUser, ...updated }));
         }
       }
     } catch (err) {

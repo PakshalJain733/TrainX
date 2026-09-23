@@ -97,10 +97,10 @@ function Login() {
   const API_BASE_URL = `${getApiBaseUrl()}/auth`;
 
   useEffect(() => {
-    const isRemembered = localStorage.getItem("tx_remember_me") === "true";
+    const isRemembered = sessionStorage.getItem("tx_remember_me") === "true";
     if (isRemembered) {
-      const savedEmail = localStorage.getItem("tx_remembered_email") || "";
-      const savedPassword = localStorage.getItem("tx_remembered_password") || "";
+      const savedEmail = sessionStorage.getItem("tx_remembered_email") || "";
+      const savedPassword = sessionStorage.getItem("tx_remembered_password") || "";
       if (savedEmail) setEmail(savedEmail);
       if (savedPassword) setPassword(savedPassword);
       setRememberMe(true);
@@ -110,9 +110,9 @@ function Login() {
   const handleRememberMeChange = (checked) => {
     setRememberMe(checked);
     if (!checked) {
-      localStorage.removeItem("tx_remember_me");
-      localStorage.removeItem("tx_remembered_email");
-      localStorage.removeItem("tx_remembered_password");
+      sessionStorage.removeItem("tx_remember_me");
+      sessionStorage.removeItem("tx_remembered_email");
+      sessionStorage.removeItem("tx_remembered_password");
     }
   };
 
@@ -216,7 +216,7 @@ function Login() {
 
   const handlePostLoginRedirect = (serverUser) => {
     let existingUser = {};
-    try { existingUser = JSON.parse(localStorage.getItem("user")) || {}; } catch { }
+    try { existingUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
 
     let finalName = serverUser.name || existingUser.name || serverUser.email?.split("@")[0] || "Student";
 
@@ -226,11 +226,11 @@ function Login() {
       name: finalName,
     };
 
-    localStorage.setItem("user", JSON.stringify(mergedUser));
+    sessionStorage.setItem("user", JSON.stringify(mergedUser));
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;
-    const isUpdatedInStorage = localStorage.getItem(`profile_updated_${userKey}`) === "true";
+    const isUpdatedInStorage = sessionStorage.getItem(`profile_updated_${userKey}`) === "true";
     const isUpdatedOnServer = Boolean(
       mergedUser.is_profile_updated ||
       mergedUser.profileCompleted ||
@@ -240,7 +240,7 @@ function Login() {
     );
 
     if (isUpdatedOnServer || isUpdatedInStorage) {
-      if (userKey) localStorage.setItem(`profile_updated_${userKey}`, "true");
+      if (userKey) sessionStorage.setItem(`profile_updated_${userKey}`, "true");
       sessionStorage.removeItem("showFirstLoginAlert");
     } else {
       sessionStorage.setItem("showFirstLoginAlert", "true");
@@ -266,13 +266,13 @@ function Login() {
     if (!email || !password) return;
 
     if (rememberMe) {
-      localStorage.setItem("tx_remember_me", "true");
-      localStorage.setItem("tx_remembered_email", email);
-      localStorage.setItem("tx_remembered_password", password);
+      sessionStorage.setItem("tx_remember_me", "true");
+      sessionStorage.setItem("tx_remembered_email", email);
+      sessionStorage.setItem("tx_remembered_password", password);
     } else {
-      localStorage.removeItem("tx_remember_me");
-      localStorage.removeItem("tx_remembered_email");
-      localStorage.removeItem("tx_remembered_password");
+      sessionStorage.removeItem("tx_remember_me");
+      sessionStorage.removeItem("tx_remembered_email");
+      sessionStorage.removeItem("tx_remembered_password");
     }
 
     setLoading(true);
@@ -410,7 +410,7 @@ function Login() {
       if (data.success && (data.data?.token || pendingUserData?.token)) {
         const finalToken = data.data?.token || pendingUserData?.token;
         const finalUser = data.data?.user || pendingUserData?.user || {};
-        localStorage.setItem("token", finalToken);
+        sessionStorage.setItem("token", finalToken);
         handlePostLoginRedirect(finalUser);
       } else {
         setErrorMsg(data.message || "Invalid Authenticator Code from Microsoft or Google Authenticator.");

@@ -9,7 +9,7 @@ const BASE = '/api/v1/shared-content';
 
 /** Resolve an auth token from session — honours existing JWT pattern */
 const getToken = () => {
-  const s = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+  const s = sessionStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
   return s;
 };
 

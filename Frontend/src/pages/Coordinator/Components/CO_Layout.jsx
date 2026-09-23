@@ -250,8 +250,8 @@ export default function CoordinatorLayout() {
   const resolveUser = (rawUser) => {
     let localUser = {};
     let coordProf = {};
-    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-    try { coordProf = JSON.parse(localStorage.getItem("coordinatorProfile")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+    try { coordProf = JSON.parse(sessionStorage.getItem("coordinatorProfile")) || {}; } catch {}
     const u = rawUser || {};
     let name = coordProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Department Coordinator";
     let email = coordProf.email || localUser.email || u.email || "coordinator@pvppcoe.ac.in";
@@ -441,8 +441,9 @@ export default function CoordinatorLayout() {
                         className="coordinator-header__profile-item coordinator-header__profile-item--danger"
                         onClick={() => {
                           setProfileOpen(false);
-                          localStorage.removeItem("user");
-                          localStorage.removeItem("token");
+                          sessionStorage.removeItem("user");
+                          sessionStorage.removeItem("token");
+                          sessionStorage.removeItem("authToken");
                           navigate("/");
                         }}
                       >

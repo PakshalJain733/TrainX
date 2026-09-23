@@ -72,7 +72,7 @@ export default function CoordinatorBatches() {
 
   const getCoordinatorDept = () => {
     try {
-      const local = JSON.parse(localStorage.getItem("user") || "{}");
+      const local = JSON.parse(sessionStorage.getItem("user") || "{}");
       return local.department || local.dept || null;
     } catch {
       return null;

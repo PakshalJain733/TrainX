@@ -281,7 +281,7 @@ export default function StudentLayout() {
           const isUpdated = Boolean(
             res.data.is_profile_updated ||
             res.data.studentProfile?.is_profile_updated ||
-            (userKey && localStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+            (userKey && sessionStorage.getItem(`profile_updated_${userKey}`) === "true") ||
             (res.data.gender && res.data.city) ||
             ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
           );
@@ -311,7 +311,7 @@ export default function StudentLayout() {
             const isUpdated = Boolean(
               res.data.is_profile_updated ||
               res.data.studentProfile?.is_profile_updated ||
-              (userKey && localStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+              (userKey && sessionStorage.getItem(`profile_updated_${userKey}`) === "true") ||
               (res.data.gender && res.data.city) ||
               ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
             );

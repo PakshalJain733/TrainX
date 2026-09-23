@@ -42,7 +42,7 @@ function AdminProgSelect({ value, options = [], onChange, placeholder = 'Select.
 const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

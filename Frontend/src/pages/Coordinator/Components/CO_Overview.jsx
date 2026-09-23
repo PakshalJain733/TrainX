@@ -46,7 +46,7 @@ export default function CoordinatorOverview() {
 
   const [coordUser, setCoordUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }

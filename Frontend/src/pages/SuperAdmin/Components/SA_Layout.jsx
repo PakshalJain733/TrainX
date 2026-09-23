@@ -174,7 +174,7 @@ export default function SuperAdminLayout() {
 
   const loadProfile = () => {
     try {
-      const stored = JSON.parse(localStorage.getItem('user') || '{}');
+      const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
       const name = stored.name || stored.email || "Super Admin";
       const initials = name
         ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
@@ -194,7 +194,7 @@ export default function SuperAdminLayout() {
 
   const fetchUser = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       if (!token) return;
       const res = await fetch('/api/v1/auth/me', {
         headers: { Authorization: `Bearer ${token}` }
@@ -214,7 +214,7 @@ export default function SuperAdminLayout() {
             email: data.user.email || "admin@trainingportal.com",
             initials: initials || "SA"
           });
-          localStorage.setItem('user', JSON.stringify(data.user));
+          sessionStorage.setItem('user', JSON.stringify(data.user));
         }
       }
     } catch (err) {
@@ -278,9 +278,10 @@ export default function SuperAdminLayout() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('role');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('authToken');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('role');
     navigate('/login');
   };
 

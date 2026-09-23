@@ -21,7 +21,7 @@ export default function AdminOverview() {
   const [loading, setLoading] = useState(true);
   const [adminUser, setAdminUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }

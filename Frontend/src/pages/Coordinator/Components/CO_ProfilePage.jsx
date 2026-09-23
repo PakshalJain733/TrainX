@@ -47,7 +47,7 @@ export default function CoordinatorProfilePage() {
 
   const resolveUser = () => {
     let localUser = {};
-    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
     let name = localUser.name || localUser.fullName || localUser.full_name || coordinatorProfile.name || "Department Coordinator";
     let email = localUser.email || coordinatorProfile.email || "coordinator@pvppcoe.ac.in";
     return { name, email, ...localUser };

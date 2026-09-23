@@ -77,7 +77,7 @@ export default function StudyMaterial() {
     if (!title.trim()) return;
     setIsSubmitting(true);
 
-    const token = sessionStorage.getItem("token") || localStorage.getItem("token") || "";
+    const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
     let uploadedUrl = resourceLink || "";
 
     try {
