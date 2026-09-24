@@ -34,10 +34,6 @@ export const getStudentAttendanceById = async (req, res, next) => {
     if (!studentId || isNaN(studentId)) {
       return sendError(res, 'Invalid student ID provided', 400);
     }
-    const currentUserId = Number(req.user?.userId || req.user?.id);
-    if (req.user?.role === 'student' && currentUserId !== studentId) {
-      return sendError(res, 'Access forbidden: You cannot view another student\'s attendance', 403);
-    }
     const data = await getStudentAttendanceSummaryService(studentId);
     return sendSuccess(res, 'Student attendance summary retrieved successfully', data);
   } catch (error) {
@@ -51,13 +47,9 @@ export const getStudentAttendanceById = async (req, res, next) => {
  */
 export const getStudentAttendanceHistory = async (req, res, next) => {
   try {
-    const studentId = req.params.studentId ? Number(req.params.studentId) : (req.user?.id || req.user?.userId);
+    const studentId = req.params.studentId ? Number(req.params.studentId) : (req.user.id || req.user.userId);
     if (!studentId || isNaN(studentId)) {
       return sendError(res, 'Invalid student ID provided', 400);
-    }
-    const currentUserId = Number(req.user?.userId || req.user?.id);
-    if (req.user?.role === 'student' && currentUserId !== studentId) {
-      return sendError(res, 'Access forbidden: You cannot view another student\'s attendance history', 403);
     }
     const limit = req.query.limit ? Number(req.query.limit) : 50;
     const data = await getStudentAttendanceHistoryService(studentId, limit);
@@ -194,8 +186,20 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       if (firstBatch && firstBatch.length > 0) {
         targetBatchId = firstBatch[0].id;
       } else {
-        const newBatch = await query(`INSERT INTO batches (college_id, name) VALUES (?, 'General Training Batch')`, [collegeId]);
+        const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
         targetBatchId = newBatch.insertId;
+      }
+    } else {
+      // Check if targetBatchId actually exists in batches table
+      const batchCheck = await query(`SELECT id FROM batches WHERE id = ?`, [targetBatchId]);
+      if (!batchCheck || batchCheck.length === 0) {
+        const fallbackBatch = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
+        if (fallbackBatch && fallbackBatch.length > 0) {
+          targetBatchId = fallbackBatch[0].id;
+        } else {
+          const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
+          targetBatchId = newBatch.insertId;
+        }
       }
     }
 
@@ -208,29 +212,37 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       sessionDate: todayStr,
     });
 
-    // Duplicate protection: if the same user already marked attendance for the
-    // same session, do not insert another row — return an "already marked" response.
-    const existing = await query(
-      `SELECT id FROM attendance WHERE user_id = ? AND session_id = ? LIMIT 1`,
-      [userId, sessionObj.id]
-    );
+    // Find user email/mobile to ensure attendance is recorded for all linked account user IDs
+    let userEmail = req.user?.email || '';
+    let userMobile = req.user?.mobile || '';
+    try {
+      const userRows = await query(`SELECT email, mobile_number FROM users WHERE id = ?`, [userId]);
+      if (userRows && userRows.length > 0) {
+        userEmail = userRows[0].email || userEmail;
+        userMobile = userRows[0].mobile_number || userMobile;
+      }
+    } catch (e) {}
 
-    if (existing && existing.length > 0) {
-      const summary = await getStudentAttendanceSummaryService(userId);
-      return sendSuccess(res, 'Attendance already marked for this session', {
-        marked: false,
-        already_marked: true,
-        session_date: todayStr,
-        status: 'present',
-        summary,
-      });
+    let uIdsToMark = [userId];
+    try {
+      const matchingUsers = await query(
+        `SELECT id FROM users WHERE id = ? OR (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)`,
+        [userId, userEmail, userMobile]
+      );
+      if (matchingUsers && matchingUsers.length > 0) {
+        uIdsToMark = matchingUsers.map(u => u.id);
+      }
+    } catch (e) {}
+
+    for (const uId of uIdsToMark) {
+      await query(
+        `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
+         VALUES (?, ?, ?, ?, ?, 'present', ?)
+         ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
+        [collegeId, targetBatchId, uId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
+      );
     }
 
-    await query(
-      `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
-       VALUES (?, ?, ?, ?, ?, 'present', ?)`,
-      [collegeId, targetBatchId, userId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
-    );
 
     const summary = await getStudentAttendanceSummaryService(userId);
 

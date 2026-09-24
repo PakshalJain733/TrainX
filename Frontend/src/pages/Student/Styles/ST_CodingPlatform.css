@@ -1,0 +1,480 @@
+/* CodingPlatform.css — Modern IDE Interface */
+
+.coding-platform-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 80px); /* Adjust based on your header/layout height */
+  margin: -24px; /* Negate padding from student-page-inner to go edge-to-edge if needed, or keep padding */
+  background: #ffffff; /* Light IDE background */
+  color: #0f172a;
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.cp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cp-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  background: #f1f5f9;
+}
+
+.cp-back-btn:hover {
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.cp-task-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-task-badge {
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.cp-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cp-lang-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.cp-run-btn, .cp-submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cp-run-btn {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cp-run-btn:hover {
+  background: #e2e8f0;
+}
+
+.cp-submit-btn {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.cp-submit-btn:hover {
+  background: #059669;
+}
+
+/* ── Split Workspace ── */
+.cp-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Pane: Problem Description */
+.cp-problem-pane {
+  width: 40%;
+  min-width: 300px;
+  background: #ffffff;
+  color: #334155;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-pane-tabs {
+  display: flex;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-pane-tab {
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-pane-tab.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background: #ffffff;
+}
+
+.cp-problem-content {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cp-problem-desc {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #475569;
+  margin-bottom: 16px;
+}
+
+.cp-test-case {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.cp-test-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+  margin: 0 0 8px 0;
+}
+
+.cp-test-code {
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  color: #0f172a;
+  margin: 0 0 12px 0;
+  background: #ffffff;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+/* Right Pane: Code Editor & Console */
+.cp-editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+}
+
+.cp-editor-area {
+  flex: 1;
+  display: flex;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.cp-line-numbers {
+  display: flex;
+  flex-direction: column;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #475569;
+  text-align: right;
+  padding-right: 16px;
+  user-select: none;
+}
+
+.cp-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #e2e8f0;
+  font-family: 'Fira Code', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  white-space: pre;
+}
+
+/* Console / Terminal */
+.cp-console {
+  height: 200px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cp-console-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+}
+
+.cp-console-output {
+  padding: 16px;
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  color: #10b981;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cp-console-output.error {
+  color: #ef4444;
+}
+
+.cp-console-output.empty {
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* Inline CSS Replacements */
+.cp-header-actions-group {
+  display: flex;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+.cp-req-heading {
+  margin: 0 0 16px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cp-constraints-list {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 13px;
+  color: #475569;
+}
+
+.cp-no-submissions {
+  text-align: center;
+  color: #64748b;
+  margin-top: 40px;
+}
+
+.cp-no-submissions-icon {
+  opacity: 0.5;
+  margin-bottom: 12px;
+}
+
+.cp-console-actions {
+  display: flex;
+  gap: 10px;
+  color: #94a3b8;
+}
+
+.cp-pre-output {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+}
+
+/* Mobile Tab Switcher Bar */
+.cp-mobile-tab-bar {
+  display: none;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  gap: 8px;
+}
+
+.cp-mobile-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #64748b;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cp-mobile-tab.active {
+  background: #ffffff;
+  color: #2563eb;
+  border-color: #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+  .coding-platform-container {
+    height: auto;
+    min-height: calc(100vh - 70px);
+    margin: 0;
+    border-radius: 12px;
+  }
+
+  .cp-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 14px;
+  }
+
+  .cp-header-left {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .cp-task-title {
+    font-size: 13.5px;
+  }
+
+  .cp-header-right {
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+  }
+
+  .cp-lang-select {
+    padding: 5px 8px;
+    font-size: 12px;
+    max-width: 110px;
+  }
+
+  .cp-run-btn, .cp-submit-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .cp-mobile-tab-bar {
+    display: flex;
+  }
+
+  .cp-workspace {
+    flex-direction: column;
+    height: calc(100vh - 160px);
+    overflow: hidden;
+  }
+
+  .cp-problem-pane,
+  .cp-editor-pane {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1;
+  }
+
+  .cp-pane-mobile-hidden {
+    display: none !important;
+  }
+
+  .cp-pane-mobile-active {
+    display: flex !important;
+  }
+
+  .cp-problem-content {
+    padding: 16px;
+  }
+
+  .cp-editor-area {
+    padding: 12px 8px;
+  }
+
+  .cp-textarea {
+    font-size: 13px;
+  }
+
+  .cp-console {
+    height: 160px;
+  }
+}
+
+/* ── Student Coding Platform Custom Dropdown ── */
+.student-cp-select-wrap { position: relative; display: inline-block; width: 130px; box-sizing: border-box; }
+.student-cp-select-wrap--open { z-index: 999; }
+.student-cp-select-trigger {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; height: 32px; padding: 0 10px;
+  background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+  color: #e2e8f0; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  outline: none; transition: all 0.2s ease; box-sizing: border-box;
+}
+.student-cp-select-trigger:hover { background: #334155; border-color: #475569; }
+.student-cp-select-trigger--open { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.2); }
+.student-cp-select-icon { width: 14px; height: 14px; color: #818cf8; flex-shrink: 0; }
+.student-cp-select-text { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f8fafc; font-size: 12px; font-weight: 600; }
+.student-cp-select-arrow { width: 13px; height: 13px; color: #94a3b8; flex-shrink: 0; transition: transform .2s ease, color .2s ease; }
+.student-cp-select-arrow--rotate { transform: rotate(180deg); color: #818cf8; }
+.student-cp-select-dropdown {
+  position: absolute; top: calc(100% + 4px); right: 0; min-width: 100%;
+  max-height: 180px; overflow-y: auto; background: #0f172a;
+  border: 1px solid #334155; border-radius: 8px;
+  box-shadow: 0 8px 24px -4px rgba(0,0,0,.5);
+  z-index: 99999; padding: 4px; box-sizing: border-box;
+  animation: studentCpSelectFadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes studentCpSelectFadeIn { from { opacity:0; transform:translateY(-6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
+.student-cp-select-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 5px; font-size: 12px; font-weight: 500; color: #cbd5e1; cursor: pointer; transition: background .15s ease, color .15s ease; user-select: none; }
+.student-cp-select-option:hover { background: #1e293b; color: #ffffff; }
+.student-cp-select-option--selected { background: #312e81; color: #818cf8; font-weight: 700; }
+.student-cp-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+.student-cp-select-check { width: 13px; height: 13px; color: #818cf8; flex-shrink: 0; }
+

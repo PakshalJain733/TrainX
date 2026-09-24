@@ -1,12 +1,21 @@
 import { Router } from 'express';
-import { getWeeklyReports, getAllReports } from '../controllers/report.controller.js';
+import {
+  getReportData,
+  generateWeeklyReportController,
+  getStudentWeeklyReportsController,
+  getMentorWeeklyReportsController,
+  getAdminWeeklyReportsController,
+} from '../controllers/report.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
+
 router.use(authenticateToken);
 
-router.get('/', getWeeklyReports);
-router.get('/weekly', getWeeklyReports);
-router.get('/all', getAllReports);
+router.get('/', getReportData);
+router.post('/weekly/generate', generateWeeklyReportController);
+router.get('/student/my-reports', getStudentWeeklyReportsController);
+router.get('/mentor/batch-reports', getMentorWeeklyReportsController);
+router.get('/admin/college-reports', getAdminWeeklyReportsController);
 
 export default router;

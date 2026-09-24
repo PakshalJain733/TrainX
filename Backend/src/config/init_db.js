@@ -19,14 +19,42 @@ export async function initializeDatabase() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(50) UNIQUE NOT NULL,
+        location VARCHAR(255) DEFAULT 'Main Campus',
+        city VARCHAR(100) DEFAULT 'Metropolis',
+        type VARCHAR(100) DEFAULT 'Autonomous',
+        status VARCHAR(50) DEFAULT 'Active',
+        contact_email VARCHAR(255) NULL,
+        contact_phone VARCHAR(50) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    const [colleges] = await conn.query('SELECT id FROM colleges WHERE id = 1');
-    if (colleges.length === 0) {
-      await conn.query(`INSERT INTO colleges (id, name, code) VALUES (1, 'Vasantdada Patil Pratishthan College of Engineering', 'PVPPCOE')`);
-      console.log('[DB Init] Inserted default college PVPPCOE (ID: 1)');
+    const colColumns = [
+      "location VARCHAR(255) DEFAULT 'Main Campus'",
+      "city VARCHAR(100) DEFAULT 'Metropolis'",
+      "type VARCHAR(100) DEFAULT 'Autonomous'",
+      "status VARCHAR(50) DEFAULT 'Active'",
+      "contact_email VARCHAR(255) NULL",
+      "contact_phone VARCHAR(50) NULL",
+    ];
+    for (const c of colColumns) {
+      try { await conn.query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (_) { }
+    }
+
+    // Seed default colleges if empty
+    try {
+      const [colCheck] = await conn.query('SELECT COUNT(*) as count FROM colleges');
+      if (colCheck && colCheck[0] && colCheck[0].count === 0) {
+        console.log('[DB Init] Seeding default partner colleges...');
+        await conn.query(`
+          INSERT INTO colleges (name, code, location, city, type, status, contact_email, contact_phone) VALUES
+          ("Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)", 'PVPPCOE', 'Sion, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@pvppcoe.ac.in', '+91 98200 12345'),
+          ("Don Bosco Institute of Technology (DBIT)", 'DBIT', 'Kurla, Mumbai', 'Mumbai', 'Affiliated', 'Active', 'admin@dbit.in', '+91 98200 23456'),
+          ("K. J. Somaiya College of Engineering (KJSCE)", 'KJSCE', 'Vidyavihar, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@somaiya.edu', '+91 98200 34567')
+        `);
+      }
+    } catch (e) {
+      console.warn('[DB Init] College seeding warning:', e.message);
     }
 
     // 2. Ensure Departments
@@ -36,22 +64,34 @@ export async function initializeDatabase() {
         college_id INT NOT NULL DEFAULT 1,
         name VARCHAR(255) NOT NULL,
         code VARCHAR(50) NOT NULL,
+        hod_name VARCHAR(100) NULL,
+        hod_email VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'Active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE
       )
     `);
 
-    const [depts] = await conn.query('SELECT id FROM departments');
-    if (depts.length === 0) {
-      await conn.query(`
-        INSERT INTO departments (college_id, name, code) VALUES 
-        (1, 'Computer Engineering', 'COMPS'),
-        (1, 'Information Technology', 'IT'),
-        (1, 'Artificial Intelligence & Data Science', 'AIDS'),
-        (1, 'Electronics & Telecommunication', 'EXTC')
-      `);
-      console.log('[DB Init] Inserted standard departments');
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) {}
+
+    // Seed default departments if empty
+    try {
+      const [deptCheck] = await conn.query('SELECT COUNT(*) as count FROM departments');
+      if (deptCheck && deptCheck[0] && deptCheck[0].count === 0) {
+        console.log('[DB Init] Seeding default academic departments...');
+        await conn.query(`
+          INSERT INTO departments (college_id, name, code, hod_name, hod_email, status) VALUES
+          (1, 'Computer Engineering', 'COMPS', 'Dr. A. R. Patil', 'hod.comps@pvppcoe.ac.in', 'Active'),
+          (1, 'Information Technology', 'IT', 'Dr. S. M. Kulkarni', 'hod.it@pvppcoe.ac.in', 'Active'),
+          (1, 'Artificial Intelligence & Data Science', 'AIDS', 'Dr. V. N. Deshmukh', 'hod.aids@pvppcoe.ac.in', 'Active'),
+          (1, 'Electronics & Telecommunication', 'EXTC', 'Dr. P. K. Joshi', 'hod.extc@pvppcoe.ac.in', 'Active')
+        `);
+      }
+    } catch (e) {
+      console.warn('[DB Init] Department seeding warning:', e.message);
     }
 
     // 3. Ensure Batches table
@@ -62,7 +102,6 @@ export async function initializeDatabase() {
         department_id INT NULL,
         name VARCHAR(255) NOT NULL,
         mentor VARCHAR(255) NULL,
-        mentor_id INT NULL,
         schedule VARCHAR(255) NULL,
         join_code VARCHAR(50) NULL,
         code_expires_at BIGINT NULL,
@@ -85,14 +124,16 @@ export async function initializeDatabase() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         mobile_number VARCHAR(20),
+        password VARCHAR(255) NULL,
         role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
         college_id INT DEFAULT 1,
-        password_hash VARCHAR(255) NULL,
-        gender VARCHAR(20) NULL,
+        gender VARCHAR(50) NULL,
         city VARCHAR(100) NULL,
         emergency_contact VARCHAR(50) NULL,
         linkedin_url VARCHAR(255) NULL,
-        target_track VARCHAR(100) NULL,
+        target_track VARCHAR(150) NULL,
+        two_factor_secret VARCHAR(255) NULL,
+        two_factor_enabled BOOLEAN DEFAULT TRUE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -100,18 +141,16 @@ export async function initializeDatabase() {
       )
     `);
 
-    // Add columns to users if table already existed
-    const userCols = [
-      "ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL",
-      "ALTER TABLE users ADD COLUMN gender VARCHAR(20) NULL",
-      "ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL",
-      "ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL",
-      "ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL",
-      "ALTER TABLE users ADD COLUMN target_track VARCHAR(100) NULL",
-    ];
-    for (const alterSql of userCols) {
-      try { await conn.query(alterSql); } catch (_) {}
-    }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
 
     // 5. Ensure Students Table
     await conn.query(`
@@ -128,11 +167,12 @@ export async function initializeDatabase() {
         semester VARCHAR(20),
         cgpa VARCHAR(10) DEFAULT '8.5',
         skills TEXT NULL,
-        gender VARCHAR(20) NULL,
+        gender VARCHAR(50) NULL,
         city VARCHAR(100) NULL,
         emergency_contact VARCHAR(50) NULL,
         linkedin_url VARCHAR(255) NULL,
-        target_track VARCHAR(100) NULL,
+        target_track VARCHAR(150) NULL,
+        is_profile_updated BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
@@ -141,75 +181,19 @@ export async function initializeDatabase() {
       )
     `);
 
-    const studentCols = [
-      "ALTER TABLE students ADD COLUMN gender VARCHAR(20) NULL",
-      "ALTER TABLE students ADD COLUMN city VARCHAR(100) NULL",
-      "ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL",
-      "ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL",
-      "ALTER TABLE students ADD COLUMN target_track VARCHAR(100) NULL",
-    ];
-    for (const alterSql of studentCols) {
-      try { await conn.query(alterSql); } catch (_) {}
-    }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
 
-    // 6. Ensure OTPs Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS otps (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
-        otp VARCHAR(10) NOT NULL,
-        expires_at DATETIME NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_email_otp (email, otp)
-      )
-    `);
-
-    // 7. Ensure Student Batches Junction Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS student_batches (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        batch_id INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
-        UNIQUE KEY unique_student_batch (user_id, batch_id)
-      )
-    `);
-
-    // 8. Ensure Mentor Assignments Junction Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS mentor_assignments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        mentor_id INT NOT NULL,
-        batch_id INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE,
-        UNIQUE KEY unique_mentor_batch (mentor_id, batch_id)
-      )
-    `);
-
-    // 9. Ensure Coordinator Departments Junction Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS coordinator_departments (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        coordinator_id INT NOT NULL,
-        department_id INT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (coordinator_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE,
-        UNIQUE KEY unique_coord_dept (coordinator_id, department_id)
-      )
-    `);
-
-    // 10. Ensure Assessments Table
+    // 6. Ensure Assessments Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS assessments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         college_id INT DEFAULT 1,
         batch_id INT NULL,
-        department_id INT NULL,
         title VARCHAR(255) NOT NULL,
         description TEXT,
         category VARCHAR(100) DEFAULT 'Technical Quiz',
@@ -225,7 +209,7 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 11. Ensure Assessment Questions Table
+    // 7. Ensure Assessment Questions Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS assessment_questions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -244,7 +228,7 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 12. Ensure Assessment Attempts Table
+    // 8. Ensure Assessment Attempts Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS assessment_attempts (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -270,22 +254,7 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 13. Ensure Assessment Answers Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS assessment_answers (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        attempt_id INT NOT NULL,
-        question_id INT NOT NULL,
-        selected_option ENUM('a', 'b', 'c', 'd') NULL,
-        is_correct BOOLEAN DEFAULT FALSE,
-        marks_awarded INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
-        FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
-      )
-    `);
-
-    // 14. Ensure Attendance Sessions Table
+    // 9a. Ensure Attendance Sessions Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS attendance_sessions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -302,7 +271,7 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 15. Ensure Attendance Records Table
+    // 9b. Ensure Attendance Records Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS attendance (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -319,9 +288,12 @@ export async function initializeDatabase() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
-    try { await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`); } catch (_) {}
 
-    // 16. Ensure Attendance Summary Table
+    try {
+      await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`);
+    } catch (_) { }
+
+    // 9c. Ensure Attendance Summary Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS attendance_summary (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -338,27 +310,20 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 17. Ensure Broadcasts Table
+    // 10. Ensure Broadcast Notifications Table
     await conn.query(`
-      CREATE TABLE IF NOT EXISTS broadcasts (
+      CREATE TABLE IF NOT EXISTS broadcast_notifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
         college_id INT NULL,
         title VARCHAR(255) NOT NULL,
-        message TEXT NOT NULL,
-        desc_text TEXT NULL,
-        target VARCHAR(100) DEFAULT 'All Batches',
-        priority VARCHAR(50) DEFAULT 'General Announcement',
-        type ENUM('calendar', 'alert', 'success', 'document', 'general') DEFAULT 'general',
+        desc_text TEXT NOT NULL,
+        type ENUM('calendar', 'alert', 'success', 'document') DEFAULT 'calendar',
         unread BOOLEAN DEFAULT TRUE,
-        created_by INT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN desc_text TEXT NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN message TEXT NULL`); } catch (_) {}
 
-    // 18. Ensure Live Sessions Table
+    // 11. Ensure Live Sessions Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS live_sessions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -366,7 +331,6 @@ export async function initializeDatabase() {
         title VARCHAR(255) NOT NULL,
         subject VARCHAR(100) NOT NULL,
         batch VARCHAR(100) DEFAULT 'All Batches',
-        batch_id INT NULL,
         date VARCHAR(50) NOT NULL,
         time VARCHAR(50) NOT NULL,
         duration VARCHAR(50) DEFAULT '60 mins',
@@ -377,23 +341,31 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 19. Ensure Study Materials Table
+    // 12. Ensure Study Materials Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS study_materials (
         id INT AUTO_INCREMENT PRIMARY KEY,
         uploaded_by INT NOT NULL,
         title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
         subject VARCHAR(100) NOT NULL,
         batch VARCHAR(100) DEFAULT 'All Batches',
-        batch_id INT NULL,
         type VARCHAR(50) DEFAULT 'PDF',
         file_url VARCHAR(500) NULL,
+        link VARCHAR(500) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (uploaded_by) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
 
-    // 20. Ensure Support Tickets Table
+    try {
+      await conn.query(`ALTER TABLE study_materials ADD COLUMN description TEXT NULL`);
+    } catch (_) { }
+    try {
+      await conn.query(`ALTER TABLE study_materials ADD COLUMN link VARCHAR(500) NULL`);
+    } catch (_) { }
+
+    // 13. Ensure Support Tickets Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS support_tickets (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -408,7 +380,7 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 21. Ensure Skill Gap Analysis Table
+    // 14. Ensure Skill Gap Analysis Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS skill_gap_analysis (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -424,227 +396,199 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 22. Ensure Skill Gaps Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS skill_gaps (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        college_id INT DEFAULT 1,
-        batch_id INT NULL,
-        student_id INT NULL,
-        topic VARCHAR(255) NOT NULL,
-        category VARCHAR(100) DEFAULT 'Technical',
-        deficiency_rate DECIMAL(5,2) DEFAULT 0.00,
-        avg_score DECIMAL(5,2) DEFAULT 0.00,
-        priority ENUM('High', 'Medium', 'Low') DEFAULT 'Medium',
-        affected_students_count INT DEFAULT 0,
-        status ENUM('open', 'in_remedial', 'resolved') DEFAULT 'open',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
-        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
-      )
-    `);
-
-    // 23. Ensure Remedial Interventions Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS remedial_interventions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        college_id INT DEFAULT 1,
-        skill_gap_id INT NULL,
-        batch_id INT NULL,
-        student_id INT NULL,
-        topic VARCHAR(255) NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        description TEXT,
-        assignment_details JSON NULL,
-        recommended_problems JSON NULL,
-        recommended_materials JSON NULL,
-        created_by INT NULL,
-        status ENUM('assigned', 'in_progress', 'completed') DEFAULT 'assigned',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-        FOREIGN KEY (skill_gap_id) REFERENCES skill_gaps(id) ON DELETE SET NULL,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
-        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-      )
-    `);
-
-    // 24. Ensure General Defaulter / Mentor Interventions Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS interventions (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        college_id INT DEFAULT 1,
-        student_id INT NOT NULL,
-        mentor_id INT NULL,
-        batch_id INT NULL,
-        type ENUM('call', 'warning', 'counseling', 'remedial', 'meeting', 'other') DEFAULT 'warning',
-        title VARCHAR(255) NOT NULL,
-        notes TEXT NULL,
-        action_taken TEXT NULL,
-        status ENUM('pending', 'in_progress', 'resolved') DEFAULT 'pending',
-        date DATE NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
-        FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE SET NULL
-      )
-    `);
-
-    // 25. Ensure Weekly Reports Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS weekly_reports (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        college_id INT DEFAULT 1,
-        batch_id INT NULL,
-        mentor_id INT NULL,
-        week_number INT NOT NULL,
-        year INT NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        summary TEXT NULL,
-        attendance_rate DECIMAL(5,2) DEFAULT 0.00,
-        avg_quiz_score DECIMAL(5,2) DEFAULT 0.00,
-        topics_covered TEXT NULL,
-        challenges_faced TEXT NULL,
-        recommendations TEXT NULL,
-        metrics JSON NULL,
-        status ENUM('draft', 'submitted', 'reviewed') DEFAULT 'submitted',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
-        FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE SET NULL
-      )
-    `);
-
-    // 26. Ensure Reports Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS reports (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        college_id INT DEFAULT 1,
-        generated_by INT NULL,
-        report_type VARCHAR(100) NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        parameters JSON NULL,
-        data JSON NULL,
-        file_url VARCHAR(500) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE CASCADE,
-        FOREIGN KEY (generated_by) REFERENCES users(id) ON DELETE SET NULL
-      )
-    `);
-
-    // 27. Ensure Leave Requests Table
+    // 15. Ensure Leave Requests Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS leave_requests (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         college_id INT NULL,
-        title VARCHAR(255) DEFAULT 'Leave Request',
+        title VARCHAR(255) NOT NULL,
         category VARCHAR(100) DEFAULT 'General Leave',
         status ENUM('Pending', 'Approved', 'Rejected') DEFAULT 'Pending',
         days INT DEFAULT 1,
         start_date DATE NULL,
         end_date DATE NULL,
         reason TEXT NULL,
-        attachment VARCHAR(500) NULL,
         remarks VARCHAR(255) NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
       )
     `);
-    try { await conn.query(`ALTER TABLE leave_requests MODIFY COLUMN title VARCHAR(255) DEFAULT 'Leave Request'`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE leave_requests ADD COLUMN attachment VARCHAR(500) NULL`); } catch (_) {}
 
-    // 28. Ensure Practice Problems / Coding Tasks Table
+    // 16. Ensure Shared Content Table (cross-dashboard sync: quiz, coding, drive, learning, broadcast)
     await conn.query(`
-      CREATE TABLE IF NOT EXISTS practice_problems (
+      CREATE TABLE IF NOT EXISTS shared_content (
+        id          INT AUTO_INCREMENT PRIMARY KEY,
+        type        ENUM('quiz','coding','drive','learning','broadcast') NOT NULL,
+        title       VARCHAR(500) NOT NULL,
+        description TEXT,
+        data_json   TEXT,
+        status      VARCHAR(50)  DEFAULT 'Active',
+        college_id  INT          DEFAULT 1,
+        created_by  INT          DEFAULT NULL,
+        batch_name  VARCHAR(255) DEFAULT 'All Batches',
+        target      VARCHAR(255) DEFAULT 'All',
+        created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
+        updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_type    (type),
+        INDEX idx_college (college_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 17. Ensure Secure Codes Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS secure_codes (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        college_id INT DEFAULT 1,
-        batch_id INT NULL,
-        batch_name VARCHAR(100) DEFAULT 'All Batches',
-        title VARCHAR(255) NOT NULL,
-        description TEXT NULL,
-        difficulty ENUM('Easy', 'Medium', 'Hard') NOT NULL DEFAULT 'Medium',
-        category VARCHAR(100) DEFAULT 'General DSA',
-        tags VARCHAR(255) NULL,
-        points INT DEFAULT 100,
+        code VARCHAR(100) UNIQUE NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        college_name VARCHAR(255) NULL,
+        description VARCHAR(255) NULL,
+        max_uses INT DEFAULT 1,
+        uses_count INT DEFAULT 0,
+        status ENUM('active', 'used', 'expired', 'inactive') DEFAULT 'active',
         created_by INT NULL,
+        used_by INT NULL,
+        used_at DATETIME NULL,
+        expires_at DATETIME NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
-        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
-      )
+        INDEX idx_code_role (code, role)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 29. Ensure Batch Tasks Table
-    await conn.query(`
-      CREATE TABLE IF NOT EXISTS batch_tasks (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        batch_id INT NOT NULL,
-        title VARCHAR(255) NOT NULL,
-        topic VARCHAR(255) NULL,
-        difficulty ENUM('Easy', 'Medium', 'Hard') DEFAULT 'Medium',
-        points INT DEFAULT 100,
-        deadline VARCHAR(100) NULL,
-        description TEXT NULL,
-        test_cases JSON NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
-      )
-    `);
+    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN max_uses INT DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE secure_codes ADD COLUMN uses_count INT DEFAULT 0`); } catch (_) { }
 
-    // 30. Ensure Task Submissions Table
+    // 18. Ensure Roadmaps Table
     await conn.query(`
-      CREATE TABLE IF NOT EXISTS task_submissions (
+      CREATE TABLE IF NOT EXISTS roadmaps (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        task_id INT NOT NULL,
         user_id INT NOT NULL,
-        status VARCHAR(50) DEFAULT 'submitted',
-        score INT DEFAULT 0,
-        submitted_code LONGTEXT NULL,
-        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        goal_name VARCHAR(255) NOT NULL,
+        milestones JSON NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (task_id) REFERENCES batch_tasks(id) ON DELETE CASCADE,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
 
-    // 31. Ensure Roadmaps Table
+    // 19. Ensure Defaulters Table
     await conn.query(`
-      CREATE TABLE IF NOT EXISTS roadmaps (
+      CREATE TABLE IF NOT EXISTS defaulters (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        student_id INT NOT NULL,
-        target_role VARCHAR(255) NULL,
-        career_track VARCHAR(255) NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+        student_name VARCHAR(255) NOT NULL,
+        roll_no VARCHAR(100) NOT NULL,
+        batch VARCHAR(100) NOT NULL,
+        attendance VARCHAR(50),
+        missed_assignments VARCHAR(100),
+        last_test_score VARCHAR(50),
+        reason TEXT,
+        risk_level VARCHAR(50) DEFAULT 'High Risk',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    // 32. Ensure Roadmap Items Table
+    // 20. Ensure Weekly Reports Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS weekly_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        week_label VARCHAR(100) NOT NULL,
+        total_quizzes INT DEFAULT 0,
+        total_coding INT DEFAULT 0,
+        attendance_pct DECIMAL(5,2) DEFAULT 0.00,
+        summary TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 21. Ensure Interview Sessions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS interview_sessions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        interview_type VARCHAR(100) DEFAULT 'Technical Mock',
+        overall_score DECIMAL(5,2) DEFAULT 0.00,
+        grade VARCHAR(50) DEFAULT 'Average',
+        feedback TEXT,
+        conducted_date DATE,
+        status VARCHAR(50) DEFAULT 'Completed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
+    // 22. Ensure Roadmap Items Table & Column Compatibility
     await conn.query(`
       CREATE TABLE IF NOT EXISTS roadmap_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        roadmap_id INT NOT NULL,
-        sequence_order INT DEFAULT 0,
+        roadmap_id INT NULL,
         title VARCHAR(255) NOT NULL,
-        description TEXT NULL,
         status VARCHAR(50) DEFAULT 'locked',
-        progress INT DEFAULT 0,
-        tags JSON NULL,
-        quizzes INT DEFAULT 0,
-        exercises INT DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (roadmap_id) REFERENCES roadmaps(id) ON DELETE CASCADE
+        progress INT DEFAULT 0
       )
     `);
 
-    console.log('[DB Init] All database tables successfully created and verified!');
+    try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN goal_name VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN target_role VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN career_track VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN sequence_order INT DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN user_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN overall_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN reasons TEXT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN weak_areas JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN start_date DATE NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN end_date DATE NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN overall_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN quiz_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN coding_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN student_name VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN roll_no VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters MODIFY COLUMN batch VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN status VARCHAR(50) DEFAULT 'Needs Attention'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE defaulters ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN interview_score DECIMAL(5,2) DEFAULT 0.00`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN milestones_summary JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN strong_areas JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN weak_areas JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN suggestions JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN trend_status VARCHAR(50) DEFAULT 'On Track'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN score_delta VARCHAR(50) DEFAULT '+0%'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) { }
+
+    // 18. Ensure Super Admin Account
+    try {
+      const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
+      const superPass = process.env.SUPER_ADMIN_PASSWORD;
+      const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
+      if (!superUsers || superUsers.length === 0) {
+        await conn.query(
+          `INSERT INTO users (name, email, mobile_number, password, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, ?, 'super_admin', NULL, 1)`,
+          [superEmail, superPass, superPass]
+        );
+        console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
+      } else {
+        if (superPass) {
+          await conn.query(`UPDATE users SET role = 'super_admin', password = ?, password_hash = ? WHERE email = ?`, [superPass, superPass, superEmail]);
+        } else {
+          await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
+        }
+      }
+    } catch (e) {
+      console.warn('[DB Init] Super Admin seed notice:', e.message);
+    }
+
+    console.log('[DB Init] All database tables (including secure_codes) successfully created and verified!');
 
     await conn.end();
     return true;

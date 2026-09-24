@@ -17,14 +17,12 @@ import driveRoutes from './routes/drive.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import departmentRoutes from './routes/department.routes.js';
 import batchRoutes from './routes/batch.routes.js';
-import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
-import codingRoutes from './routes/coding.routes.js';
-import mentorRoutes from './routes/mentor.routes.js';
-import coordinatorRoutes from './routes/coordinator.routes.js';
-import superadminRoutes from './routes/superadmin.routes.js';
-
+import sharedContentRoutes from './routes/sharedContent.routes.js';
+import secureCodeRoutes from './routes/secureCode.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
+
+import path from 'path';
 
 const app = express();
 
@@ -32,6 +30,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // Health Check Endpoint (Section 28)
 app.get('/api/v1/health', (req, res) => {
@@ -61,11 +62,8 @@ app.use('/api/v1/skill-gap', skillGapRoutes);
 app.use('/api/v1/interventions', interventionRoutes);
 app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
-app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
-app.use('/api/v1/code', codingRoutes);
-app.use('/api/v1/mentor', mentorRoutes);
-app.use('/api/v1/coordinator', coordinatorRoutes);
-app.use('/api/v1/superadmin', superadminRoutes);
+app.use('/api/v1/shared-content', sharedContentRoutes);
+app.use('/api/v1/secure-codes', secureCodeRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

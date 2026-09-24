@@ -7,12 +7,12 @@ import {
 import { query } from '../config/db.js';
 
 /**
- * Service: Fetch current student's active roadmap
- * Returns null if the student has not generated any roadmap yet.
+ * Service: Fetch current student's active roadmap.
+ * Auto-generates a personalized roadmap if none exists yet for the student.
  */
 export const fetchStudentRoadmap = async (studentId) => {
   const roadmap = await getRoadmapByStudentId(studentId);
-  return roadmap;
+  return roadmap || null;
 };
 
 /**

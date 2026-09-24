@@ -140,68 +140,1331 @@
   min-height: 540px;
 }
 
-/* Left Hero Panel */
-.login-left-panel {
+/* ═══════════════════════════════════════════════════════════
+   ✨ TrainX MINIMAL & PREMIUM LOGO CREATION ANIMATION
+   GPU-Accelerated Pure CSS Keyframe Reveal System
+═══════════════════════════════════════════════════════════ */
+
+/* Left Hero Panel Container */
+.lp2-panel {
   flex: 1;
-  background: linear-gradient(150deg, #dce8f5 0%, #cae0f5 100%);
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 40px 36px 36px 36px;
+  align-items: center;
+  padding: 36px 28px 24px;
+  background: #081120;
+  min-height: 540px;
+  box-sizing: border-box;
 }
 
-.login-welcome-text {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.2;
-  margin-bottom: 2px;
+/* STEP 1 — Ambient Soft Blue Radial Glow in Center */
+.tx-ambient-radial-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.14) 0%, rgba(30, 64, 120, 0.08) 55%, transparent 75%);
+  filter: blur(50px);
+  pointer-events: none;
+  z-index: 1;
+  animation: txRadialBreathe 8s ease-in-out infinite alternate;
 }
 
-.brand-row-login {
+@keyframes txRadialBreathe {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+}
+
+/* Micro Floating Ambient Particles (5-6 small subtle dots) */
+.tx-micro-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 2;
+  animation: txMicroFloat 10s ease-in-out infinite;
+}
+
+.tx-micro-particle.p1 {
+  width: 3px;
+  height: 3px;
+  background: rgba(56, 189, 248, 0.6);
+  top: 38%;
+  left: 35%;
+  animation-delay: 0s;
+}
+
+.tx-micro-particle.p2 {
+  width: 4px;
+  height: 4px;
+  background: rgba(99, 102, 241, 0.5);
+  top: 45%;
+  right: 32%;
+  animation-delay: 1.5s;
+}
+
+.tx-micro-particle.p3 {
+  width: 2px;
+  height: 2px;
+  background: rgba(56, 189, 248, 0.7);
+  bottom: 42%;
+  left: 40%;
+  animation-delay: 3s;
+}
+
+.tx-micro-particle.p4 {
+  width: 3px;
+  height: 3px;
+  background: rgba(129, 140, 248, 0.5);
+  bottom: 38%;
+  right: 38%;
+  animation-delay: 2s;
+}
+
+.tx-micro-particle.p5 {
+  width: 2px;
+  height: 2px;
+  background: rgba(6, 182, 212, 0.6);
+  top: 30%;
+  right: 45%;
+  animation-delay: 4s;
+}
+
+.tx-micro-particle.p6 {
+  width: 3px;
+  height: 3px;
+  background: rgba(56, 189, 248, 0.4);
+  bottom: 30%;
+  left: 46%;
+  animation-delay: 0.5s;
+}
+
+@keyframes txMicroFloat {
+
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translateY(-12px) scale(1.3);
+    opacity: 0.7;
+  }
+}
+
+/* TOP HEADER — YOUR LEARNING JOURNEY */
+.tx-hero-header {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.tx-eyebrow-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #38bdf8;
+  background: linear-gradient(90deg, #38bdf8 0%, #818cf8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 16px rgba(56, 189, 248, 0.35);
+}
+
+.tx-top-sparkle {
+  font-size: 10px;
+  color: #38bdf8;
+  opacity: 0.8;
+  margin-top: 4px;
+  animation: txSparkleFade 3s ease-in-out infinite alternate;
+}
+
+@keyframes txSparkleFade {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* CENTER STAGE — MINIMAL LOGO CREATION ANIMATION */
+.tx-logo-reveal-stage {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+}
+
+/* STEP 2 — Energy Point of Light in Center */
+.tx-energy-point {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 20px 6px #38bdf8, 0 0 40px 12px #60a5fa;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 8;
+  animation: txEnergyPointPulse 10s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes txEnergyPointPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+
+  6% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 1;
+  }
+
+  12% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Backing Ambient Glow Pulse for Logo Reveal */
+.tx-logo-glow-pulse {
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.45) 0%, rgba(99, 102, 241, 0.15) 55%, transparent 75%);
+  filter: blur(20px);
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 3;
+  animation: txLogoGlowPulse 10s ease-in-out infinite;
+}
+
+@keyframes txLogoGlowPulse {
+
+  0%,
+  8% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+
+  22%,
+  35% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) scale(1.35);
+  }
+
+  42%,
+  90% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  98%,
+  100% {
+    opacity: 0.8;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
+}
+
+/* Main Logo Canvas */
+.tx-logo-canvas {
+  position: relative;
+  width: 140px;
+  height: 140px;
   display: flex;
   align-items: center;
-  gap: 0px;
-  margin-bottom: 10px;
-  font-size: 35px;
+  justify-content: center;
+  z-index: 6;
+  animation: txLogoBreathing 6s ease-in-out infinite alternate;
 }
 
-.brand-name-login1 {
+/* STEP 7 — Continuous Subtle Breathing/Floating */
+@keyframes txLogoBreathing {
+  0% {
+    transform: translateY(3px);
+  }
+
+  100% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Mask Layer for Logo.png Reveal */
+.tx-logo-mask-layer {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: txLogoReveal 10s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* STEP 3 & STEP 5 — Logo Creation Assembly via clip-path, opacity, scale, blur */
+@keyframes txLogoReveal {
+
+  0%,
+  8% {
+    clip-path: polygon(0 0, 0 0, 0 100%, 0 100%);
+    opacity: 0;
+    transform: scale(0.92);
+    filter: blur(8px);
+  }
+
+  28%,
+  90% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+
+  96%,
+  100% {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0px);
+  }
+}
+
+/* The actual Logo.png Image */
+.tx-logo-main-img {
+  width: 130px;
+  height: 130px;
+  max-width: 130px;
+  max-height: 130px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.65));
+}
+
+/* STEP 4 — Light Tracing Beam moving across logo */
+.tx-light-trace-beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent 0%, #ffffff 40%, #38bdf8 60%, transparent 100%);
+  box-shadow: 0 0 15px 4px #38bdf8, 0 0 30px 8px #60a5fa;
+  z-index: 7;
+  pointer-events: none;
+  animation: txTraceBeamTravel 10s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+
+@keyframes txTraceBeamTravel {
+
+  0%,
+  8% {
+    left: -10%;
+    opacity: 0;
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  28% {
+    left: 110%;
+    opacity: 1;
+  }
+
+  32%,
+  85% {
+    left: 110%;
+    opacity: 0;
+  }
+
+  92% {
+    left: -10%;
+    opacity: 0.8;
+  }
+
+  98%,
+  100% {
+    left: 110%;
+    opacity: 0;
+  }
+}
+
+/* STEP 6 — Subtle Shine Sweep Across Finished Logo */
+.tx-logo-shine-sweep {
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+  transform: skewX(-25deg);
+  pointer-events: none;
+  z-index: 7;
+  animation: txShineSweep 10s ease-in-out infinite;
+}
+
+@keyframes txShineSweep {
+
+  0%,
+  30% {
+    left: -100%;
+    opacity: 0;
+  }
+
+  36% {
+    opacity: 1;
+  }
+
+  45%,
+  85% {
+    left: 180%;
+    opacity: 0;
+  }
+
+  92% {
+    opacity: 0.8;
+  }
+
+  98%,
+  100% {
+    left: 180%;
+    opacity: 0;
+  }
+}
+
+/* BRAND TEXT BELOW LOGO */
+.tx-brand-text-block {
+  text-align: center;
+  margin-top: 18px;
+  z-index: 6;
+  animation: txTextFadeIn 10s ease-in-out infinite;
+}
+
+.tx-brand-name-title {
+  font-size: 30px;
   font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  margin: 0;
 }
 
-.brand-name-login2 {
-  font-weight: 800;
-  color: #2563eb;
-  letter-spacing: -0.5px;
-  line-height: 1.1;
+.tx-accent-x {
+  color: #38bdf8;
+  text-shadow: 0 0 20px rgba(56, 189, 248, 0.7);
 }
 
-.login-brand-tagline {
-  font-size: 14.5px;
-  color: #475569;
+.tx-slogan-text {
+  font-size: 12px;
   font-weight: 500;
-  line-height: 1.5;
+  color: #94a3b8;
+  letter-spacing: 1.5px;
+  margin-top: 6px;
 }
 
-.login-side-image-wrapper {
+@keyframes txTextFadeIn {
+
+  0%,
+  15% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  25%,
+  90% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  96%,
+  100% {
+    opacity: 0.85;
+    transform: translateY(0);
+  }
+}
+
+/* BOTTOM FOOTER SECTION */
+.tx-bottom-footer-bar {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  border-radius: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(56, 189, 248, 0.16);
+}
+
+.tx-footer-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #7dd3fc;
+  opacity: 0.9;
+  letter-spacing: 0.3px;
+  animation: txFooterTagFade 10s ease-in-out infinite;
+}
+
+.tx-footer-tag:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.tx-footer-tag:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.tx-footer-tag:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes txFooterTagFade {
+
+  0%,
+  20% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  30%,
+  90% {
+    opacity: 0.95;
+    transform: translateY(0);
+  }
+
+  96%,
+  100% {
+    opacity: 0.7;
+  }
+}
+
+
+
+/* ── AMBIENT RISING PARTICLES ───────────────────────── */
+.lp2-p {
+  position: absolute;
+  border-radius: 50%;
+  animation: lp2Rise 9s linear infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.p1 {
+  width: 4px;
+  height: 4px;
+  background: rgba(56, 189, 248, 0.6);
+  bottom: 2%;
+  left: 8%;
+  animation-delay: 0s;
+  animation-duration: 7s;
+}
+
+.p2 {
+  width: 3px;
+  height: 3px;
+  background: rgba(129, 140, 248, 0.6);
+  bottom: 2%;
+  left: 22%;
+  animation-delay: 1.5s;
+  animation-duration: 8.5s;
+}
+
+.p3 {
+  width: 5px;
+  height: 5px;
+  background: rgba(6, 182, 212, 0.5);
+  bottom: 2%;
+  left: 42%;
+  animation-delay: 3s;
+  animation-duration: 6.5s;
+}
+
+.p4 {
+  width: 3px;
+  height: 3px;
+  background: rgba(56, 189, 248, 0.5);
+  bottom: 2%;
+  left: 62%;
+  animation-delay: 0.8s;
+  animation-duration: 8s;
+}
+
+.p5 {
+  width: 4px;
+  height: 4px;
+  background: rgba(99, 102, 241, 0.6);
+  bottom: 2%;
+  left: 82%;
+  animation-delay: 2.2s;
+  animation-duration: 7.5s;
+}
+
+.p6 {
+  width: 3px;
+  height: 3px;
+  background: rgba(56, 189, 248, 0.4);
+  bottom: 2%;
+  left: 92%;
+  animation-delay: 4s;
+  animation-duration: 9s;
+}
+
+
+@keyframes lp2Rise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.9;
+  }
+
+  90% {
+    opacity: 0.5;
+  }
+
+  100% {
+    transform: translateY(-440px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* ── old lp-* theme marker (kept for reference) ────────── */
+
+
+/* Panel base */
+.login-left-panel {
+  flex: 1;
+  background: linear-gradient(160deg, #080e1f 0%, #0d1a36 40%, #0a1628 70%, #060d1e 100%);
+  display: flex;
+  flex-direction: column;
+  padding: 36px 28px 28px;
+  position: relative;
   overflow: hidden;
-  margin-top: auto;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+  min-height: 540px;
 }
 
-.login-side-image {
-  width: 100%;
+/* Text colors on dark */
+.login-left-panel .login-welcome-text {
+  color: #dbeafe;
+}
+
+.login-left-panel .brand-name-login1 {
+  color: #f1f5f9;
+}
+
+.login-left-panel .brand-name-login2 {
+  color: #60a5fa;
+  text-shadow: 0 0 20px rgba(96, 165, 250, 0.5);
+}
+
+.login-left-panel .login-brand-tagline {
+  color: #7ea8d8;
+  font-size: 13px;
+}
+
+/* ── Starfield dots ─────────────────────── */
+.lp-star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  animation: lpStarTwinkle 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.st1 {
+  width: 2px;
+  height: 2px;
+  top: 8%;
+  left: 15%;
+  animation-delay: 0s;
+  opacity: 0.6;
+}
+
+.st2 {
+  width: 1px;
+  height: 1px;
+  top: 14%;
+  left: 40%;
+  animation-delay: 0.4s;
+  opacity: 0.4;
+}
+
+.st3 {
+  width: 2px;
+  height: 2px;
+  top: 22%;
+  left: 72%;
+  animation-delay: 1.1s;
+  opacity: 0.7;
+}
+
+.st4 {
+  width: 1px;
+  height: 1px;
+  top: 35%;
+  left: 20%;
+  animation-delay: 0.8s;
+  opacity: 0.5;
+}
+
+.st5 {
+  width: 2px;
+  height: 2px;
+  top: 48%;
+  left: 85%;
+  animation-delay: 1.5s;
+  opacity: 0.6;
+}
+
+.st6 {
+  width: 1px;
+  height: 1px;
+  top: 60%;
+  left: 55%;
+  animation-delay: 0.3s;
+  opacity: 0.4;
+}
+
+.st7 {
+  width: 2px;
+  height: 2px;
+  top: 72%;
+  left: 10%;
+  animation-delay: 2.1s;
+  opacity: 0.5;
+}
+
+.st8 {
+  width: 1px;
+  height: 1px;
+  top: 82%;
+  left: 68%;
+  animation-delay: 0.9s;
+  opacity: 0.7;
+}
+
+.st9 {
+  width: 2px;
+  height: 2px;
+  top: 90%;
+  left: 32%;
+  animation-delay: 1.7s;
+  opacity: 0.4;
+}
+
+.st10 {
+  width: 1px;
+  height: 1px;
+  top: 5%;
+  left: 90%;
+  animation-delay: 0.6s;
+  opacity: 0.6;
+}
+
+@keyframes lpStarTwinkle {
+
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+}
+
+/* ── Aurora / nebula blobs ─────────────── */
+.lp-aurora {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(55px);
+  pointer-events: none;
+  z-index: 0;
+  animation: lpAuroraFloat 8s ease-in-out infinite;
+}
+
+.lp-aurora.a1 {
+  width: 260px;
+  height: 200px;
+  background: radial-gradient(ellipse, rgba(59, 130, 246, 0.18) 0%, transparent 70%);
+  top: 10%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.lp-aurora.a2 {
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(ellipse, rgba(99, 102, 241, 0.14) 0%, transparent 70%);
+  bottom: 5%;
+  right: -8%;
+  animation-delay: 3s;
+  animation-duration: 10s;
+}
+
+.lp-aurora.a3 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(ellipse, rgba(6, 182, 212, 0.12) 0%, transparent 70%);
+  top: 45%;
+  left: 30%;
+  animation-delay: 1.5s;
+  animation-duration: 7s;
+}
+
+@keyframes lpAuroraFloat {
+
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  33% {
+    transform: translate(15px, -20px) scale(1.1);
+  }
+
+  66% {
+    transform: translate(-10px, 15px) scale(0.92);
+  }
+}
+
+/* ── Mesh grid ─────────────────────────── */
+.lp-mesh-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(96, 165, 250, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(96, 165, 250, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Shimmer light streaks ─────────────── */
+.lp-shimmer {
+  position: absolute;
+  width: 1.5px;
+  height: 200px;
+  border-radius: 4px;
+  background: linear-gradient(to bottom,
+      transparent,
+      rgba(147, 186, 255, 0.5) 40%,
+      rgba(147, 186, 255, 0.5) 60%,
+      transparent);
+  pointer-events: none;
+  z-index: 0;
+  animation: lpShimmerFall 5s linear infinite;
+}
+
+.lp-shimmer.s1 {
+  left: 18%;
+  animation-delay: 0s;
+  animation-duration: 4.5s;
+}
+
+.lp-shimmer.s2 {
+  left: 50%;
+  animation-delay: 1.8s;
+  animation-duration: 5.2s;
+}
+
+.lp-shimmer.s3 {
+  left: 82%;
+  animation-delay: 3.2s;
+  animation-duration: 3.9s;
+}
+
+@keyframes lpShimmerFall {
+  0% {
+    transform: translateY(-220px);
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 1;
+  }
+
+  85% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateY(110vh);
+    opacity: 0;
+  }
+}
+
+/* ── Branding content ─────────────────── */
+.login-left-content {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+}
+
+/* ── Hero area ────────────────────────── */
+.lp-hero {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+  margin-top: 4px;
+}
+
+/* ── Central glow ─────────────────────── */
+.lp-glow-bg {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      rgba(59, 130, 246, 0.22) 0%,
+      rgba(99, 102, 241, 0.08) 50%,
+      transparent 70%);
+  animation: lpGlowPulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes lpGlowPulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.22);
+    opacity: 1;
+  }
+}
+
+/* ── Orbit rings ──────────────────────── */
+.lp-orbit {
+  position: absolute;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  animation: lpOrbitSpin 12s linear infinite;
+}
+
+.lp-orbit-outer {
+  width: 240px;
+  height: 240px;
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-top-color: rgba(96, 165, 250, 0.6);
+  transform: translate(-50%, -50%);
+  animation-duration: 14s;
+}
+
+.lp-orbit-inner {
+  width: 168px;
+  height: 168px;
+  border: 1px solid rgba(129, 140, 248, 0.15);
+  border-right-color: rgba(129, 140, 248, 0.5);
+  transform: translate(-50%, -50%);
+  animation-duration: 9s;
+  animation-direction: reverse;
+}
+
+@keyframes lpOrbitSpin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Orbit glowing dots */
+.lp-orbit-dot {
+  position: absolute;
+  border-radius: 50%;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.lp-dot-a {
+  width: 14px;
+  height: 14px;
+  background: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25), 0 0 16px 4px rgba(59, 130, 246, 0.7);
+}
+
+.lp-dot-b {
+  width: 9px;
+  height: 9px;
+  background: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25), 0 0 12px 3px rgba(129, 140, 248, 0.6);
+  top: auto;
+  bottom: -5px;
+  left: 25%;
+}
+
+.lp-dot-c {
+  width: 11px;
+  height: 11px;
+  background: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2), 0 0 14px 4px rgba(34, 211, 238, 0.6);
+  left: 75%;
+}
+
+/* ── Logo stage ───────────────────────── */
+.lp-logo-stage {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ripple rings from logo */
+.lp-pulse-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(96, 165, 250, 0.5);
+  animation: lpRipple 3s ease-out infinite;
+}
+
+.lp-pulse-ring.pr1 {
+  width: 90px;
+  height: 90px;
+  animation-delay: 0s;
+}
+
+.lp-pulse-ring.pr2 {
+  width: 125px;
+  height: 125px;
+  animation-delay: 1s;
+  border-color: rgba(96, 165, 250, 0.3);
+}
+
+.lp-pulse-ring.pr3 {
+  width: 160px;
+  height: 160px;
+  animation-delay: 2s;
+  border-color: rgba(96, 165, 250, 0.15);
+}
+
+@keyframes lpRipple {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Hexagon border ring */
+.lp-hex-ring {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border: 2px solid transparent;
+  border-radius: 28px;
+  background:
+    linear-gradient(#080e1f, #080e1f) padding-box,
+    conic-gradient(from 0deg, #3b82f6, #818cf8, #22d3ee, #3b82f6) border-box;
+  animation: lpHexSpin 6s linear infinite;
+}
+
+@keyframes lpHexSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lp-logo-img {
+  width: 88px;
   height: auto;
-  object-fit: cover;
-  object-position: center;
-  display: block;
+  object-fit: contain;
+  filter:
+    brightness(0) invert(1) drop-shadow(0 0 12px rgba(96, 165, 250, 1)) drop-shadow(0 0 28px rgba(59, 130, 246, 0.8));
+  animation: lpLogoFloat 5s ease-in-out infinite;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes lpLogoFloat {
+
+  0%,
+  100% {
+    transform: translateY(0px) scale(1);
+  }
+
+  50% {
+    transform: translateY(-12px) scale(1.04);
+  }
+}
+
+/* ── Floating feature cards ───────────── */
+.lp-card {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(22, 42, 82, 0.9);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-radius: 16px;
+  padding: 10px 14px;
+  white-space: nowrap;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(147, 197, 253, 0.15),
+    0 0 0 0.5px rgba(96, 165, 250, 0.2);
+  animation: lpCardFloat 5s ease-in-out infinite;
+  z-index: 10;
+}
+
+.lp-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(147, 197, 253, 0.5), transparent);
+}
+
+.lp-card-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.lp-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lp-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2eaf8;
+  line-height: 1;
+}
+
+.lp-card-sub {
+  font-size: 10px;
+  color: #7ea8d8;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.lp-card-bar {
+  width: 64px;
+  height: 3px;
+  background: rgba(96, 165, 250, 0.15);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.lp-card-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  animation: lpBarGrow 3s ease-in-out infinite;
+}
+
+.lp-card-tl .lp-card-bar-fill {
+  background: linear-gradient(to right, #3b82f6, #60a5fa);
+  animation-delay: 0s;
+}
+
+.lp-card-tr .lp-card-bar-fill {
+  background: linear-gradient(to right, #818cf8, #a5b4fc);
+  animation-delay: 0.7s;
+}
+
+.lp-card-bl .lp-card-bar-fill {
+  background: linear-gradient(to right, #22d3ee, #67e8f9);
+  animation-delay: 1.4s;
+}
+
+.lp-card-br .lp-card-bar-fill {
+  background: linear-gradient(to right, #34d399, #6ee7b7);
+  animation-delay: 2.1s;
+}
+
+@keyframes lpBarGrow {
+  0% {
+    width: 20%;
+  }
+
+  50% {
+    width: 88%;
+  }
+
+  100% {
+    width: 20%;
+  }
+}
+
+/* Card positions — anchored to login-left-panel */
+.lp-card-tl {
+  top: 42%;
+  left: 6%;
+  animation-delay: 0s;
+  animation-duration: 4.8s;
+}
+
+.lp-card-tr {
+  top: 42%;
+  right: 6%;
+  animation-delay: 1.2s;
+  animation-duration: 5.5s;
+}
+
+.lp-card-bl {
+  bottom: 8%;
+  left: 6%;
+  animation-delay: 2.5s;
+  animation-duration: 4.2s;
+}
+
+.lp-card-br {
+  bottom: 8%;
+  right: 6%;
+  animation-delay: 0.7s;
+  animation-duration: 6s;
+}
+
+@keyframes lpCardFloat {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+
+/* ── Ambient floating particles ──────── */
+.lp-dot {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: lpParticleRise 7s ease-in-out infinite;
+}
+
+.dp1 {
+  width: 6px;
+  height: 6px;
+  background: rgba(96, 165, 250, 0.7);
+  bottom: 10%;
+  left: 12%;
+  animation-delay: 0s;
+  animation-duration: 6s;
+}
+
+.dp2 {
+  width: 4px;
+  height: 4px;
+  background: rgba(129, 140, 248, 0.8);
+  bottom: 20%;
+  left: 25%;
+  animation-delay: 1.2s;
+  animation-duration: 8s;
+}
+
+.dp3 {
+  width: 8px;
+  height: 8px;
+  background: rgba(34, 211, 238, 0.5);
+  bottom: 15%;
+  right: 18%;
+  animation-delay: 2.4s;
+  animation-duration: 7s;
+}
+
+.dp4 {
+  width: 5px;
+  height: 5px;
+  background: rgba(96, 165, 250, 0.6);
+  bottom: 30%;
+  right: 30%;
+  animation-delay: 0.6s;
+  animation-duration: 9s;
+}
+
+.dp5 {
+  width: 7px;
+  height: 7px;
+  background: rgba(52, 211, 153, 0.5);
+  bottom: 5%;
+  right: 8%;
+  animation-delay: 3.6s;
+  animation-duration: 6.5s;
+}
+
+@keyframes lpParticleRise {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.8;
+  }
+
+  90% {
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: translateY(-320px) scale(0.5);
+    opacity: 0;
+  }
 }
 
 /* Right Panel - Login Card */
@@ -224,7 +1487,7 @@
   right: -10px;
   width: 130px;
   height: 130px;
-  background-image: radial-gradient(circle, rgba(37,99,235,0.18) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.18) 1.5px, transparent 1.5px);
   background-size: 14px 14px;
   pointer-events: none;
   z-index: 0;
@@ -239,7 +1502,7 @@
   left: -10px;
   width: 110px;
   height: 110px;
-  background-image: radial-gradient(circle, rgba(37,99,235,0.12) 1.5px, transparent 1.5px);
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.12) 1.5px, transparent 1.5px);
   background-size: 14px 14px;
   pointer-events: none;
   z-index: 0;
@@ -249,7 +1512,8 @@
 .login-logo {
   display: block;
   margin: 0 auto 16px auto;
-  width: 90px;
+  width: 170px;
+  max-width: 100%;
   height: auto;
   object-fit: contain;
 }
@@ -332,7 +1596,8 @@
 }
 
 .login-input-group input[type="email"],
-.login-input-group input[type="text"] {
+.login-input-group input[type="text"],
+.login-input-group input[type="password"] {
   width: 100%;
   padding: 12px 14px;
   border: 1.5px solid #cbd5e1;
@@ -563,22 +1828,28 @@
 /* OTP Boxes */
 .login-otp-input-row {
   display: flex;
-  gap: 10px;
-  justify-content: space-between;
+  gap: 8px;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .login-otp-digit-input {
+  width: 44px;
+  height: 48px;
+  min-width: 36px;
+  max-width: 48px;
   flex: 1;
-  height: 52px;
   text-align: center;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
-  border: 2px solid #e2e8f0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 10px;
   outline: none;
   background: #f8fafc;
   color: #0f172a;
   transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .login-otp-digit-input:focus {
@@ -640,11 +1911,13 @@
   .login-left-panel {
     display: none;
   }
+
   .login-wrapper {
     min-height: auto;
     max-width: 440px;
     border-radius: 20px;
   }
+
   .login-card {
     border-radius: 20px;
     width: 100%;
@@ -657,30 +1930,37 @@
   .login-page {
     padding: 10px;
   }
+
   .login-wrapper {
     max-width: 100%;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(0, 50, 150, 0.08);
   }
+
   .login-card {
     padding: 22px 18px;
     border-radius: 16px;
   }
+
   .login-logo {
     width: 75px;
     margin-bottom: 8px;
   }
+
   .login-subtitle {
     font-size: 13px;
     margin-bottom: 12px;
   }
+
   .login-input-group {
     margin-bottom: 12px;
   }
+
   .login-input-group input {
     padding: 9px 12px;
     font-size: 13px;
   }
+
   .login-links p,
   .login-links a {
     font-size: 13px;
@@ -692,6 +1972,10 @@
   margin-bottom: 0.8rem;
   text-align: center;
   font-size: 0.85rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 8px 12px;
+  border-radius: 8px;
 }
 
 .auth-success-msg {
@@ -699,4 +1983,226 @@
   margin-bottom: 0.8rem;
   text-align: center;
   font-size: 0.85rem;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+/* Segmented Auth Mode Switcher Bar */
+.login-mode-segmented-bar {
+  display: flex;
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 20px;
+  gap: 4px;
+}
+
+.login-mode-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 9px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.login-mode-tab svg {
+  width: 15px;
+  height: 15px;
+}
+
+.login-mode-tab.active {
+  background: #ffffff;
+  color: #2563eb;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+
+.login-mode-tab:hover:not(.active) {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Password Input Field with Toggle Eye */
+.password-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 42px !important;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  width: auto !important;
+}
+
+.password-toggle-btn:hover {
+  color: #2563eb;
+}
+
+/* Options row for remember me & forgot password */
+.login-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: text-decoration 0.2s;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Mobile Responsive Scaling for Background Circles & Decorative Rings ── */
+@media (max-width: 768px) {
+  .login-circle1 {
+    width: 200px !important;
+    height: 200px !important;
+    top: -80px !important;
+    left: -80px !important;
+    opacity: 0.18 !important;
+  }
+
+  .login-circle2 {
+    width: 110px !important;
+    height: 110px !important;
+    top: 20px !important;
+    right: 20px !important;
+    opacity: 0.15 !important;
+  }
+
+  .login-circle3 {
+    width: 160px !important;
+    height: 160px !important;
+    bottom: -40px !important;
+    right: 40px !important;
+    opacity: 0.14 !important;
+  }
+
+  .login-circle4 {
+    width: 70px !important;
+    height: 70px !important;
+    bottom: 30px !important;
+    left: 20px !important;
+    opacity: 0.15 !important;
+  }
+
+  .login-circle5 {
+    width: 120px !important;
+    height: 120px !important;
+    left: -50px !important;
+    opacity: 0.15 !important;
+  }
+
+  .login-circle6 {
+    width: 50px !important;
+    height: 50px !important;
+    opacity: 0.1 !important;
+  }
+
+  .login-blob1 {
+    width: 150px !important;
+    height: 120px !important;
+    bottom: -20px !important;
+    left: -30px !important;
+    opacity: 0.12 !important;
+  }
+
+  .login-blob2 {
+    width: 120px !important;
+    height: 140px !important;
+    top: -30px !important;
+    right: 40px !important;
+    opacity: 0.1 !important;
+  }
+
+  .login-ring1 {
+    width: 130px !important;
+    height: 130px !important;
+    border-width: 12px !important;
+    right: -30px !important;
+    opacity: 0.08 !important;
+  }
+
+  .login-ring2 {
+    width: 80px !important;
+    height: 80px !important;
+    border-width: 9px !important;
+    top: 40px !important;
+    left: 60px !important;
+    opacity: 0.09 !important;
+  }
+
+  /* Hide left panel on mobile so only the right login form card is shown */
+  .lp2-panel {
+    display: none !important;
+  }
+
+  .login-wrapper {
+    max-width: 440px !important;
+    min-height: auto !important;
+  }
+
+  /* Mobile Brand Logo Enlargement */
+  .login-logo {
+    width: 145px !important;
+    max-width: 85% !important;
+    height: auto !important;
+    margin: 0 auto 16px auto !important;
+    display: block !important;
+  }
+
+  /* Compact Auth Mode Switcher Bar on Mobile */
+  .login-mode-segmented-bar {
+    padding: 3px !important;
+    margin-bottom: 16px !important;
+    gap: 2px !important;
+  }
+
+  .login-mode-tab {
+    padding: 7px 6px !important;
+    font-size: 11.5px !important;
+    gap: 4px !important;
+    letter-spacing: -0.2px !important;
+  }
+
+  .login-mode-tab svg {
+    width: 13px !important;
+    height: 13px !important;
+  }
 }

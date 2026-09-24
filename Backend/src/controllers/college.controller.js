@@ -1,34 +1,57 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 
+let tablesInitialized = false;
+async function ensureCollegeTable() {
+  if (tablesInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS colleges (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        location VARCHAR(255) DEFAULT 'Main Campus',
+        city VARCHAR(100) DEFAULT 'Metropolis',
+        type VARCHAR(100) DEFAULT 'Autonomous',
+        status VARCHAR(50) DEFAULT 'Active',
+        contact_email VARCHAR(255) NULL,
+        contact_phone VARCHAR(50) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    const cols = ['location VARCHAR(255) DEFAULT \'Main Campus\'', 'city VARCHAR(100) DEFAULT \'Metropolis\'', 'type VARCHAR(100) DEFAULT \'Autonomous\'', 'status VARCHAR(50) DEFAULT \'Active\'', 'contact_email VARCHAR(255) NULL', 'contact_phone VARCHAR(50) NULL'];
+    for (const c of cols) {
+      try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) {}
+    }
+    try {
+      const existing = await query('SELECT COUNT(*) as count FROM colleges');
+      if (existing && existing[0] && existing[0].count === 0) {
+        await query(`
+          INSERT INTO colleges (name, code, location, city, type, status, contact_email, contact_phone) VALUES
+          ("Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)", 'PVPPCOE', 'Sion, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@pvppcoe.ac.in', '+91 98200 12345'),
+          ("Don Bosco Institute of Technology (DBIT)", 'DBIT', 'Kurla, Mumbai', 'Mumbai', 'Affiliated', 'Active', 'admin@dbit.in', '+91 98200 23456'),
+          ("K. J. Somaiya College of Engineering (KJSCE)", 'KJSCE', 'Vidyavihar, Mumbai', 'Mumbai', 'Autonomous', 'Active', 'admin@somaiya.edu', '+91 98200 34567')
+        `);
+      }
+    } catch (_) {}
+    tablesInitialized = true;
+  } catch (e) {
+    console.warn('[DB ensureCollegeTable error]', e.message);
+  }
+}
+
 export const getColleges = async (req, res, next) => {
   try {
+    await ensureCollegeTable();
     const dbColleges = await query(`
-      SELECT c.id, c.name, c.code, c.created_at,
-             COUNT(DISTINCT d.id) as departmentsCount,
-             COUNT(DISTINCT b.id) as batchesCount,
-             COUNT(DISTINCT u.id) as studentsCount
-      FROM colleges c
-      LEFT JOIN departments d ON c.id = d.college_id
-      LEFT JOIN batches b ON c.id = b.college_id
-      LEFT JOIN users u ON c.id = u.college_id AND u.role = 'student'
-      GROUP BY c.id
-      ORDER BY c.id ASC
+      SELECT 
+        c.*,
+        (SELECT COUNT(*) FROM departments d WHERE d.college_id = c.id) AS department_count,
+        (SELECT COUNT(*) FROM users u WHERE u.college_id = c.id AND u.role = 'student') AS student_count
+      FROM colleges c 
+      ORDER BY c.id DESC
     `);
-
-    const result = dbColleges.map((c) => ({
-      id: c.id,
-      name: c.name,
-      code: c.code,
-      codeName: (c.code || '').split('-')[0] || c.code,
-      departmentsCount: parseInt(c.departmentsCount, 10) || 0,
-      batchesCount: parseInt(c.batchesCount, 10) || 0,
-      studentsCount: parseInt(c.studentsCount, 10) || 0,
-      status: 'Active',
-      created_at: c.created_at,
-    }));
-
-    return sendSuccess(res, 'Colleges retrieved successfully', result);
+    return sendSuccess(res, 'Colleges retrieved successfully', dbColleges || []);
   } catch (error) {
     next(error);
   }
@@ -36,27 +59,35 @@ export const getColleges = async (req, res, next) => {
 
 export const createCollege = async (req, res, next) => {
   try {
-    const { name, code } = req.body;
+    await ensureCollegeTable();
+    const { name, code, location, city, type, contactEmail, contactPhone } = req.body;
     if (!name || !code) {
       return sendError(res, 'College Name and Code are required', 400);
     }
 
-    const cleanCode = code.trim().toUpperCase();
-    const cleanName = name.trim();
-
-    const insertResult = await query(
-      'INSERT INTO colleges (name, code) VALUES (?, ?)',
-      [cleanName, cleanCode]
+    const result = await query(
+      `INSERT INTO colleges (name, code, location, city, type, contact_email, contact_phone, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      [
+        name.trim(),
+        code.trim(),
+        location || 'Main Campus',
+        city || 'Metropolis',
+        type || 'Autonomous',
+        contactEmail || `admin@${code.toLowerCase()}.edu.in`,
+        contactPhone || '+91 90000 00000'
+      ]
     );
 
-    const [created] = await query('SELECT * FROM colleges WHERE id = ?', [insertResult.insertId]);
+    const [newCollege] = await query('SELECT * FROM colleges WHERE id = ?', [result.insertId]);
 
-    return sendSuccess(res, 'College created successfully', {
-      ...created,
-      departmentsCount: 0,
-      batchesCount: 0,
-      studentsCount: 0,
-      status: 'Active',
+    return sendSuccess(res, 'College created successfully', newCollege || {
+      id: result.insertId,
+      name,
+      code,
+      location,
+      city,
+      type
     }, 201);
   } catch (error) {
     next(error);
@@ -65,21 +96,29 @@ export const createCollege = async (req, res, next) => {
 
 export const updateCollege = async (req, res, next) => {
   try {
+    await ensureCollegeTable();
     const { id } = req.params;
-    const numId = Number(id);
-    const { name, code } = req.body;
+    const { name, code, location, city, type, status, contactEmail, contactPhone } = req.body;
 
-    const [existing] = await query('SELECT * FROM colleges WHERE id = ?', [numId]);
-    if (!existing) {
+    await query(
+      `UPDATE colleges 
+       SET name = COALESCE(?, name),
+           code = COALESCE(?, code),
+           location = COALESCE(?, location),
+           city = COALESCE(?, city),
+           type = COALESCE(?, type),
+           status = COALESCE(?, status),
+           contact_email = COALESCE(?, contact_email),
+           contact_phone = COALESCE(?, contact_phone)
+       WHERE id = ?`,
+      [name, code, location, city, type, status, contactEmail, contactPhone, id]
+    );
+
+    const [updated] = await query('SELECT * FROM colleges WHERE id = ?', [id]);
+    if (!updated) {
       return sendError(res, 'College not found', 404);
     }
 
-    await query(
-      'UPDATE colleges SET name = COALESCE(?, name), code = COALESCE(?, code) WHERE id = ?',
-      [name ? name.trim() : null, code ? code.trim().toUpperCase() : null, numId]
-    );
-
-    const [updated] = await query('SELECT * FROM colleges WHERE id = ?', [numId]);
     return sendSuccess(res, 'College updated successfully', updated);
   } catch (error) {
     next(error);
@@ -88,35 +127,9 @@ export const updateCollege = async (req, res, next) => {
 
 export const deleteCollege = async (req, res, next) => {
   try {
+    await ensureCollegeTable();
     const { id } = req.params;
-    const numId = Number(id);
-
-    const [existing] = await query('SELECT * FROM colleges WHERE id = ?', [numId]);
-    if (!existing) {
-      return sendError(res, 'College not found', 404);
-    }
-
-    const [userRefs] = await query(
-      `SELECT COUNT(*) as count FROM users WHERE college_id = ?`,
-      [numId]
-    );
-    const [batchRefs] = await query(
-      `SELECT COUNT(*) as count FROM batches WHERE college_id = ?`,
-      [numId]
-    );
-    const [deptRefs] = await query(
-      `SELECT COUNT(*) as count FROM departments WHERE college_id = ?`,
-      [numId]
-    );
-    if ((userRefs?.count || 0) > 0 || (batchRefs?.count || 0) > 0 || (deptRefs?.count || 0) > 0) {
-      return sendError(
-        res,
-        'Cannot delete college: it still has users, batches, or departments. Reassign or remove those records first.',
-        409
-      );
-    }
-
-    await query('DELETE FROM colleges WHERE id = ?', [numId]);
+    await query('DELETE FROM colleges WHERE id = ?', [id]);
     return sendSuccess(res, 'College deleted successfully');
   } catch (error) {
     next(error);

@@ -71,42 +71,37 @@ export const collectStudentPerformance = async (inputData = {}) => {
 export const detectWeakAreas = (performanceData) => {
   const { quizMarks, codingMarks, interviewScores, milestoneProgress } = performanceData;
 
-  // Collect all unique skill/topic names across all 4 categories
-  const skillNames = new Set([
-    ...Object.keys(quizMarks),
-    ...Object.keys(codingMarks),
-    ...Object.keys(interviewScores),
-    ...Object.keys(milestoneProgress),
-  ]);
+  // Map all raw skill/topic names to canonical technical skill domains
+  const getCanonicalSkill = (name) => {
+    if (!name) return 'General Technical';
+    const lower = name.toLowerCase();
+    if (lower.includes('sql') || lower.includes('mysql') || lower.includes('database') || lower.includes('dbms')) return 'MySQL & Databases';
+    if (lower.includes('java') || lower.includes('oop') || lower.includes('object')) return 'Java & Object Oriented Programming';
+    if (lower.includes('array') || lower.includes('algo') || lower.includes('data structure') || lower.includes('ds') || lower.includes('coding')) return 'Data Structures & Algorithms';
+    if (lower.includes('system') || lower.includes('design') || lower.includes('architecture')) return 'System Design';
+    return name;
+  };
+
+  const skillBuckets = {};
+
+  const addScoreToBucket = (rawSkill, score, categoryName) => {
+    const canonical = getCanonicalSkill(rawSkill);
+    if (!skillBuckets[canonical]) {
+      skillBuckets[canonical] = { scores: [], sources: [] };
+    }
+    skillBuckets[canonical].scores.push(score);
+    skillBuckets[canonical].sources.push(`${categoryName}: ${score}%`);
+  };
+
+  for (const [s, val] of Object.entries(quizMarks)) addScoreToBucket(s, val, 'Quizzes');
+  for (const [s, val] of Object.entries(codingMarks)) addScoreToBucket(s, val, 'Coding Practice & Tasks');
+  for (const [s, val] of Object.entries(interviewScores)) addScoreToBucket(s, val, 'AI Interview');
+  for (const [s, val] of Object.entries(milestoneProgress)) addScoreToBucket(s, val, 'Learning Milestone');
 
   const skillEvaluations = [];
 
-  for (const skill of skillNames) {
-    const sources = [];
-    const scores = [];
-
-    if (skill in quizMarks) {
-      const s = quizMarks[skill];
-      scores.push(s);
-      sources.push(`Quiz: ${s}%`);
-    }
-    if (skill in codingMarks) {
-      const s = codingMarks[skill];
-      scores.push(s);
-      sources.push(`Coding: ${s}%`);
-    }
-    if (skill in interviewScores) {
-      const s = interviewScores[skill];
-      scores.push(s);
-      sources.push(`Interview: ${s}%`);
-    }
-    if (skill in milestoneProgress) {
-      const s = milestoneProgress[skill];
-      scores.push(s);
-      sources.push(`Milestone Progress: ${s}%`);
-    }
-
-    const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  for (const [skill, bucket] of Object.entries(skillBuckets)) {
+    const avgScore = Math.round(bucket.scores.reduce((a, b) => a + b, 0) / bucket.scores.length);
 
     let weaknessLevel = 'None';
     let isWeak = false;
@@ -122,11 +117,11 @@ export const detectWeakAreas = (performanceData) => {
       priority = 'Medium';
     } else if (avgScore < 75) {
       weaknessLevel = 'Minor';
-      isWeak = false; // Slight weakness, but not major weak skill
+      isWeak = false;
       priority = 'Low';
     }
 
-    const reason = `Performance breakdown for ${skill}: ${sources.join(', ')}. Overall average score is ${avgScore}%.`;
+    const reason = `Evaluated across ${bucket.sources.join(', ')}. Aggregated Score: ${avgScore}%.`;
 
     skillEvaluations.push({
       skill,
@@ -135,7 +130,7 @@ export const detectWeakAreas = (performanceData) => {
       is_weak: isWeak,
       priority,
       reason,
-      sources,
+      sources: bucket.sources,
     });
   }
 

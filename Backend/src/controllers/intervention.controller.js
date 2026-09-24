@@ -1,104 +1,125 @@
+import {
+  evaluateStudentDefaulterStatus,
+  scanAndDetectDefaulters,
+  logMentorInterventionService,
+  getStudentInterventionHistory,
+  getMentorDefaulterQueueService,
+  getCoordinatorDefaulterQueueService,
+  getAdminDefaulterQueueService,
+  getSuperAdminDefaulterOverviewService,
+} from '../services/intervention.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { query } from '../config/db.js';
+import { ROLES } from '../utils/constants.js';
 
-export const getInterventions = async (req, res, next) => {
+/**
+ * GET /api/v1/interventions
+ * Role-aware endpoint for Defaulters & Interventions
+ */
+export const getInterventionData = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const userId = req.user?.userId || req.user?.id;
-    const userRole = req.user?.role;
+    const user = req.user || {};
+    const role = user.role || ROLES.STUDENT;
+    const userId = user.userId || user.id || 6;
 
-    let sql = `
-      SELECT i.*, u.name as student_name, u.email as student_email, s.roll_number, b.name as batch_name,
-             m.name as mentor_name
-      FROM interventions i
-      JOIN users u ON i.student_id = u.id
-      LEFT JOIN students s ON u.id = s.user_id
-      LEFT JOIN batches b ON s.batch_id = b.id
-      LEFT JOIN users m ON i.mentor_id = m.id
-      WHERE i.college_id = ?
-    `;
-    const params = [collegeId];
-
-    if (userRole === 'student') {
-      sql += ' AND i.student_id = ?';
-      params.push(userId);
+    if (role === ROLES.STUDENT) {
+      const data = await getStudentInterventionHistory(userId);
+      return sendSuccess(res, 'Student intervention status retrieved successfully', data);
     }
 
-    sql += ' ORDER BY i.id DESC';
-    const rows = await query(sql, params);
-    return sendSuccess(res, 'Interventions retrieved successfully', rows);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const getInterventionData = getInterventions;
-
-export const createIntervention = async (req, res, next) => {
-  try {
-    const mentorId = req.user?.userId || req.user?.id;
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const { student_id, studentId, type, title, notes, action_taken, status, date } = req.body;
-
-    const targetStudentId = student_id || studentId;
-    if (!targetStudentId || !title) {
-      return sendError(res, 'Student ID and title are required', 400);
+    if (role === ROLES.MENTOR) {
+      const data = await getMentorDefaulterQueueService(user, req.query);
+      return sendSuccess(res, 'Mentor defaulter queue retrieved successfully', data);
     }
 
-    const numStudentId = parseInt(String(targetStudentId).replace('st-', ''), 10);
-    const interventionDate = date || new Date().toISOString().split('T')[0];
+    if (role === ROLES.COORDINATOR) {
+      const data = await getCoordinatorDefaulterQueueService(user, req.query);
+      return sendSuccess(res, 'Coordinator students needing improvement retrieved successfully', data);
+    }
 
-    const result = await query(
-      `INSERT INTO interventions (college_id, student_id, mentor_id, type, title, notes, action_taken, status, date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [collegeId, numStudentId, mentorId, type || 'warning', title, notes || '', action_taken || '', status || 'pending', interventionDate]
-    );
+    if (role === ROLES.COLLEGE_ADMIN) {
+      const data = await getAdminDefaulterQueueService(user, req.query);
+      return sendSuccess(res, 'College admin defaulter records retrieved successfully', data);
+    }
 
-    return sendSuccess(res, 'Intervention logged successfully', { id: result.insertId }, 201);
+    if (role === ROLES.SUPER_ADMIN) {
+      const data = await getSuperAdminDefaulterOverviewService(req.query);
+      return sendSuccess(res, 'Super admin defaulter oversight retrieved successfully', data);
+    }
+
+    const defaultQueue = await getMentorDefaulterQueueService(user, req.query);
+    return sendSuccess(res, 'Defaulters queue retrieved successfully', defaultQueue);
   } catch (error) {
     next(error);
   }
 };
 
-export const updateIntervention = async (req, res, next) => {
+/**
+ * POST /api/v1/interventions/log
+ * Log mentor interaction, notes, action taken, and update status
+ */
+export const logInterventionController = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const { status, action_taken, notes } = req.body;
+    const mentorUser = req.user || {};
+    const payload = req.body || {};
 
-    await query(
-      `UPDATE interventions SET status = COALESCE(?, status), action_taken = COALESCE(?, action_taken), notes = COALESCE(?, notes) WHERE id = ?`,
-      [status || null, action_taken || null, notes || null, id]
-    );
+    if (!payload.student_id && !payload.studentId && !payload.user_id) {
+      return sendError(res, 'student_id is required to log an intervention', 400);
+    }
 
-    return sendSuccess(res, 'Intervention updated successfully');
+    const result = await logMentorInterventionService(mentorUser, payload);
+    return sendSuccess(res, 'Mentor intervention action logged successfully', result);
   } catch (error) {
     next(error);
   }
 };
 
-export const getDefaulters = async (req, res, next) => {
+/**
+ * GET /api/v1/interventions/student/my-status
+ */
+export const getStudentInterventionStatusController = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const userId = req.user?.userId || req.user?.id || 6;
+    const data = await getStudentInterventionHistory(userId);
+    return sendSuccess(res, 'Student intervention status retrieved successfully', data);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    const defaulters = await query(
-      `SELECT u.id, u.name, u.email, u.mobile_number, s.roll_number, s.department, b.name as batch_name,
-              COALESCE(att.attendance_percentage, 0) as attendance,
-              COALESCE(att.total_classes, 0) as total_classes,
-              COALESCE(att.absent_count, 0) as absent_count,
-              COALESCE(ROUND(AVG(aa.percentage), 1), 0) as avg_quiz_score
-       FROM users u
-       JOIN students s ON u.id = s.user_id
-       LEFT JOIN batches b ON s.batch_id = b.id
-       LEFT JOIN attendance_summary att ON u.id = att.user_id
-       LEFT JOIN assessment_attempts aa ON u.id = aa.user_id
-       WHERE u.college_id = ? AND u.role = 'student'
-       GROUP BY u.id, s.id, b.id, att.id
-       HAVING attendance < 75 OR avg_quiz_score < 50
-       ORDER BY attendance ASC`,
-      [collegeId]
-    );
+/**
+ * GET /api/v1/interventions/mentor
+ */
+export const getMentorDefaulterQueueController = async (req, res, next) => {
+  try {
+    const user = req.user || {};
+    const data = await getMentorDefaulterQueueService(user, req.query);
+    return sendSuccess(res, 'Mentor defaulter queue retrieved successfully', data);
+  } catch (error) {
+    next(error);
+  }
+};
 
-    return sendSuccess(res, 'Defaulters retrieved successfully', defaulters);
+/**
+ * GET /api/v1/interventions/coordinator
+ */
+export const getCoordinatorDefaulterQueueController = async (req, res, next) => {
+  try {
+    const user = req.user || {};
+    const data = await getCoordinatorDefaulterQueueService(user, req.query);
+    return sendSuccess(res, 'Coordinator students needing improvement retrieved successfully', data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/interventions/admin
+ */
+export const getAdminDefaultersController = async (req, res, next) => {
+  try {
+    const user = req.user || {};
+    const data = await getAdminDefaulterQueueService(user, req.query);
+    return sendSuccess(res, 'College admin defaulters overview retrieved successfully', data);
   } catch (error) {
     next(error);
   }

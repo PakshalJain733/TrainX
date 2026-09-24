@@ -1,16 +1,37 @@
-// Backwards-compatible shim over the single API client in ../services/api.js.
-// Preserves the historical contract of `apiFetch`:
-//   - success: resolves to the parsed JSON envelope
-//   - failure: resolves to { data: null, error, status }
-import { getApiBaseUrl, request } from "../services/api.js";
+export const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+    return "/api/v1";
+  }
+  return "https://trainx-6w8m.onrender.com/api/v1";
+};
 
 export async function apiFetch(endpoint, options = {}) {
   try {
-    return await request(endpoint, options);
+    const token = localStorage.getItem("token");
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    };
+
+    const baseUrl = getApiBaseUrl();
+    const res = await fetch(`${baseUrl}${endpoint}`, {
+      ...options,
+      headers,
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.message || `Request failed with status ${res.status}`);
+    }
+
+    return await res.json();
   } catch (error) {
-    return { data: null, error: error.message, status: error.status };
+    // Fallback gracefully
+    console.warn(`[apiFetch] ${endpoint}:`, error.message);
+    return { data: null, error: error.message };
   }
 }
 
-export { getApiBaseUrl };
 export default apiFetch;

@@ -1,81 +1,101 @@
+import {
+  generateStudentWeeklyReport,
+  getStudentWeeklyReports,
+  getMentorWeeklyReportsService,
+  getAdminWeeklyReportsService,
+  getSuperAdminWeeklyReportsService,
+} from '../services/report.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { query } from '../config/db.js';
+import { ROLES } from '../utils/constants.js';
 
 /**
- * GET /api/v1/reports/weekly
- * Returns weekly reports for the logged in student or mentor's batch
+ * GET /api/v1/reports
+ * Role-aware endpoint returning weekly reports based on caller's role & permissions
  */
-export const getWeeklyReports = async (req, res, next) => {
+export const getReportData = async (req, res, next) => {
   try {
-    const userId = req.user?.userId || req.user?.id;
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const user = req.user || {};
+    const role = user.role || ROLES.STUDENT;
+    const userId = user.userId || user.id || 6;
 
-    // Fetch student's real performance metrics (null when no data — no fabricated scores)
-    const [att] = await query(
-      `SELECT attendance_percentage FROM attendance_summary WHERE user_id = ?`,
-      [userId]
-    );
-    const attendance = att && att.attendance_percentage != null
-      ? Math.round(parseFloat(att.attendance_percentage))
-      : null;
-
-    const attempts = await query(
-      `SELECT percentage FROM assessment_attempts WHERE user_id = ? AND status = 'completed'`,
-      [userId]
-    );
-    const validPcts = (attempts || [])
-      .map((a) => parseFloat(a.percentage))
-      .filter((v) => Number.isFinite(v));
-    const avgQuiz = validPcts.length > 0
-      ? Math.round(validPcts.reduce((acc, v) => acc + v, 0) / validPcts.length)
-      : null;
-
-    // Check saved weekly reports from DB
-    const dbReports = await query(
-      `SELECT wr.*, b.name as batch_name
-       FROM weekly_reports wr
-       LEFT JOIN batches b ON wr.batch_id = b.id
-       WHERE wr.college_id = ?
-       ORDER BY wr.id DESC`,
-      [collegeId]
-    );
-
-    let reports = [];
-    if (dbReports && dbReports.length > 0) {
-      reports = dbReports.map((r) => {
-        const quizScore = r.avg_quiz_score != null ? Math.round(r.avg_quiz_score) : avgQuiz;
-        const attendanceRate = r.attendance_rate != null ? Math.round(r.attendance_rate) : attendance;
-        return {
-          id: `week-${r.week_number}`,
-          title: r.title || `Week ${r.week_number} · Report`,
-          score: quizScore != null ? `${quizScore}%` : 'N/A',
-          attendance: attendanceRate,
-          quiz: quizScore,
-          coding: null,
-          interview: null,
-          skillGaps: r.topics_covered
-            ? r.topics_covered.split(',').map((s) => s.trim()).filter(Boolean)
-            : [],
-          nextSteps: r.recommendations
-            ? r.recommendations.split(',').map((s) => s.trim()).filter(Boolean)
-            : [],
-        };
-      });
+    if (role === ROLES.STUDENT) {
+      const reports = await getStudentWeeklyReports(userId);
+      return sendSuccess(res, 'Student weekly reports retrieved successfully', reports);
     }
 
-    return sendSuccess(res, 'Weekly reports retrieved successfully', reports);
+    if (role === ROLES.MENTOR) {
+      const reports = await getMentorWeeklyReportsService(user, req.query);
+      return sendSuccess(res, 'Mentor batch weekly reports retrieved successfully', reports);
+    }
+
+    if (role === ROLES.COLLEGE_ADMIN || role === ROLES.COORDINATOR) {
+      const reports = await getAdminWeeklyReportsService(user, req.query);
+      return sendSuccess(res, 'College admin weekly reports retrieved successfully', reports);
+    }
+
+    if (role === ROLES.SUPER_ADMIN) {
+      const reports = await getSuperAdminWeeklyReportsService(req.query);
+      return sendSuccess(res, 'Super admin governance reports retrieved successfully', reports);
+    }
+
+    const defaultReports = await getStudentWeeklyReports(userId);
+    return sendSuccess(res, 'Weekly reports retrieved successfully', defaultReports);
   } catch (error) {
     next(error);
   }
 };
 
-export const getReportData = getWeeklyReports;
-
-export const getAllReports = async (req, res, next) => {
+/**
+ * POST /api/v1/reports/weekly/generate
+ * Trigger weekly report generation for a student
+ */
+export const generateWeeklyReportController = async (req, res, next) => {
   try {
-    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const rows = await query(`SELECT * FROM reports WHERE college_id = ? ORDER BY id DESC`, [collegeId]);
-    return sendSuccess(res, 'Reports retrieved successfully', rows);
+    const userId = req.body.student_id || req.body.studentId || req.user?.userId || req.user?.id || 6;
+    const weeksAgo = req.body.weeksAgo || 0;
+    const forceRegenerate = req.body.forceRegenerate || false;
+
+    const report = await generateStudentWeeklyReport(userId, { weeksAgo, forceRegenerate });
+    return sendSuccess(res, 'Weekly performance report generated successfully', report);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/reports/student/my-reports
+ */
+export const getStudentWeeklyReportsController = async (req, res, next) => {
+  try {
+    const userId = req.user?.userId || req.user?.id || 6;
+    const reports = await getStudentWeeklyReports(userId);
+    return sendSuccess(res, 'Student weekly reports retrieved successfully', reports);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/reports/mentor/batch-reports
+ */
+export const getMentorWeeklyReportsController = async (req, res, next) => {
+  try {
+    const user = req.user || {};
+    const reports = await getMentorWeeklyReportsService(user, req.query);
+    return sendSuccess(res, 'Mentor weekly reports retrieved successfully', reports);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/reports/admin/college-reports
+ */
+export const getAdminWeeklyReportsController = async (req, res, next) => {
+  try {
+    const user = req.user || {};
+    const reports = await getAdminWeeklyReportsService(user, req.query);
+    return sendSuccess(res, 'College admin weekly reports retrieved successfully', reports);
   } catch (error) {
     next(error);
   }

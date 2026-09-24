@@ -1,0 +1,135 @@
+/* WeeklyReports.css - Mentor Weekly Reports Tab Styles */
+.mentor-weeklyreports-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.mentor-btn-primary {
+  padding: 10px 18px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.mentor-btn-primary:hover {
+  background: #4338ca;
+}
+
+.mentor-table-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.mentor-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.mentor-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.mentor-table th {
+  padding: 12px 18px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.mentor-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.mentor-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mentor-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.mentor-actions-cell {
+  text-align: right;
+}
+
+.mentor-report-title {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mentor-report-batch {
+  font-weight: 500;
+  color: #334155;
+}
+
+.mentor-report-date {
+  color: #64748b;
+}
+
+.mentor-report-status {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  display: inline-block;
+}
+
+.mentor-btn-download {
+  padding: 6px 12px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  font-weight: 600;
+  font-size: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mentor-btn-download:hover {
+  background: #eff6ff;
+  color: #4f46e5;
+  border-color: #c7d2fe;
+}
+
+.mentor-page-header-wr {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px ;
+}
+
+@media (min-width: 640px) {
+  .mentor-page-header-wr {
+    flex-direction: row;
+    align-items: center;
+  }
+}
