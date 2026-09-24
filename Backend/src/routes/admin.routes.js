@@ -15,6 +15,7 @@ import {
   createAdminBroadcast,
   deleteAdminBroadcast,
   getAdminPerformance,
+  getAdminC2CEnrollments,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -49,5 +50,8 @@ router.delete('/broadcast/:id', deleteAdminBroadcast);
 
 // Performance Analysis
 router.get('/performance', getAdminPerformance);
+
+// C2C 2029 Training Enrollments
+router.get('/c2c/enrollments', getAdminC2CEnrollments);
 
 export default router;

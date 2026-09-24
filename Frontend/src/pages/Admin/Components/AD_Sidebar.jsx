@@ -43,6 +43,7 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Manage Users", url: "/admin/users", icon: UserCog },
+  { title: "C2C Enrollments", url: "/admin/c2c", icon: Briefcase },
   { title: "Batches", url: "/admin/batches", icon: Code2 },
   { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },

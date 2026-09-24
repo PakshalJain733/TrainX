@@ -11,6 +11,7 @@ import {
   getStudentNotifications,
   getStudentMaterials,
   getStudentPerformance,
+  getStudentTrainingEnrollment,
   getSupportTickets,
   createSupportTicket,
 } from '../controllers/student.controller.js';
@@ -38,6 +39,7 @@ router.get('/attendance', getStudentAttendance);
 router.post('/attendance/leave', applyStudentLeave);
 router.get('/notifications', getStudentNotifications);
 router.get('/performance', getStudentPerformance);
+router.get('/training-enrollment', getStudentTrainingEnrollment);
 router.get('/support/tickets', getSupportTickets);
 router.post('/support/tickets', createSupportTicket);
 

@@ -3,56 +3,47 @@ import { query } from '../config/db.js';
 
 export const getMentorStudentsPerformance = async (req, res, next) => {
   try {
-    const students = [
-      {
-        id: "st-1", name: "Ganesh Shinde", department: "ECS", batch: "Batch A",
-        overallScore: 71, assessment: 78, coding: 65, interview: 58, attendance: 82, milestone: 74,
-        status: "Average", trend: "up", trendDelta: "+4%",
-        weakAreas: [
-          { skill: "AI Mock Interview", score: 58, target: 75 },
-          { skill: "Coding / DSA", score: 65, target: 80 },
-        ],
-        recommendations: [
-          "Schedule 2 AI Mock Interview sessions this week.",
-          "Complete the Dynamic Programming problem set.",
-          "Maintain 80%+ attendance for placement eligibility.",
-        ],
-      },
-      {
-        id: "st-2", name: "Priya Nair", department: "CSE", batch: "Batch A",
-        overallScore: 85, assessment: 88, coding: 82, interview: 79, attendance: 91, milestone: 86,
-        status: "Excellent", trend: "up", trendDelta: "+6%",
-        weakAreas: [],
-        recommendations: ["Attempt advanced DSA problems to maintain rank.", "Try the AI Interview for leadership-track prep."],
-      },
-      {
-        id: "st-3", name: "Rahul Mehta", department: "IT", batch: "Batch B",
-        overallScore: 52, assessment: 55, coding: 48, interview: 42, attendance: 68, milestone: 50,
-        status: "Needs Work", trend: "down", trendDelta: "-3%",
-        weakAreas: [
-          { skill: "AI Mock Interview", score: 42, target: 65 },
-          { skill: "Coding / DSA", score: 48, target: 70 },
-          { skill: "Attendance", score: 68, target: 75 },
-        ],
-        recommendations: [
-          "Urgently improve attendance (currently 68%).",
-          "Complete 3 practice coding sessions before next assessment.",
-          "Schedule mentor one-on-one session immediately.",
-        ],
-      },
-      {
-        id: "st-4", name: "Sneha Patil", department: "ECS", batch: "Batch A",
-        overallScore: 68, assessment: 72, coding: 60, interview: 64, attendance: 78, milestone: 66,
-        status: "Average", trend: "stable", trendDelta: "0%",
-        weakAreas: [
-          { skill: "Coding / DSA", score: 60, target: 70 },
-        ],
-        recommendations: [
-          "Focus on graph algorithms in the practice module.",
-          "Review last quiz feedback and reattempt.",
-        ],
-      },
-    ];
+    const mentorId = req.user?.id || req.user?.userId;
+    let rows = [];
+    try {
+      rows = await query(
+        `SELECT
+           u.id AS user_id, u.name, u.email, u.mobile_number,
+           s.roll_number, s.department,
+           b.id AS batch_id, b.name AS batch_name
+         FROM mentor_student_assignments msa
+         JOIN users u ON u.id = msa.student_id
+         LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN batches b ON b.id = msa.batch_id
+         WHERE msa.mentor_id = ?
+         ORDER BY u.name`,
+        [mentorId]
+      );
+    } catch (e) {
+      console.warn('[DB getMentorStudentsPerformance fallback]', e.message);
+    }
+
+    const students = (rows || []).map((s) => ({
+      id: `u-${s.user_id}`,
+      name: s.name,
+      email: s.email || null,
+      mobile: s.mobile_number || null,
+      rollNo: s.roll_number || '',
+      department: s.department || '',
+      batch: s.batch_name || '',
+      batchId: s.batch_id || null,
+      overallScore: 0,
+      assessment: 0,
+      coding: 0,
+      interview: 0,
+      attendance: null,
+      milestone: 0,
+      status: 'No Records',
+      trend: 'none',
+      trendDelta: '0%',
+      weakAreas: [],
+      recommendations: ['No assessment/coding/interview records yet. Record attendance and assessments to populate analytics.'],
+    }));
 
     return sendSuccess(res, 'Mentor students performance retrieved successfully', { students });
   } catch (error) {
@@ -62,25 +53,36 @@ export const getMentorStudentsPerformance = async (req, res, next) => {
 
 export const getMentorAttendanceBatches = async (req, res, next) => {
   try {
-    const batches = [
-      {
-        id: 'b-1',
-        name: 'Full Stack Batch A',
-        students: [
-          { id: 'st-1', name: 'Ganesh Shinde', roll: 'CS-101', status: null },
-          { id: 'st-2', name: 'Priya Nair', roll: 'CS-102', status: null },
-          { id: 'st-4', name: 'Sneha Patil', roll: 'CS-104', status: null }
-        ]
-      },
-      {
-        id: 'b-2',
-        name: 'DSA Mastery Batch B',
-        students: [
-          { id: 'st-3', name: 'Rahul Mehta', roll: 'IT-201', status: null },
-          { id: 'st-5', name: 'Karan Singh', roll: 'IT-202', status: null }
-        ]
+    const mentorId = req.user?.id || req.user?.userId;
+    let batches = [];
+    try {
+      const batchList = await query(
+        `SELECT DISTINCT b.id, b.name, b.code
+         FROM mentor_assignments ma
+         JOIN batches b ON b.id = ma.batch_id
+         WHERE ma.mentor_id = ?
+         ORDER BY b.name`,
+        [mentorId]
+      );
+      for (const b of batchList || []) {
+        const roster = await query(
+          `SELECT u.id, u.name, s.roll_number AS roll
+           FROM student_batches sb
+           JOIN users u ON u.id = sb.user_id
+           LEFT JOIN students s ON s.user_id = u.id
+           WHERE sb.batch_id = ?
+           ORDER BY u.name`,
+          [b.id]
+        );
+        batches.push({
+          id: `b-${b.id}`,
+          name: b.name,
+          students: (roster || []).map((st) => ({ id: st.id, name: st.name, roll: st.roll || '', status: null })),
+        });
       }
-    ];
+    } catch (e) {
+      console.warn('[DB getMentorAttendanceBatches fallback]', e.message);
+    }
     return sendSuccess(res, 'Batches retrieved', { batches });
   } catch (error) {
     next(error);
@@ -106,34 +108,7 @@ export const getLiveSessions = async (req, res, next) => {
       console.warn('[DB getLiveSessions fallback]', e.message);
     }
     if (!sessions || sessions.length === 0) {
-      sessions = [
-        {
-          id: 1,
-          title: "System Design & Scalability Masterclass",
-          mentorName: "Prof. Rajesh Sharma",
-          subject: "System Design",
-          batch: "BE-CS-2026-A",
-          date: "2026-09-10",
-          time: "06:00 PM - 07:30 PM",
-          duration: "90 mins",
-          meetingLink: "https://meet.google.com/xyz-abcd-123",
-          status: "Upcoming",
-          attendeesCount: 42
-        },
-        {
-          id: 2,
-          title: "Dynamic Programming & Graph Patterns",
-          mentorName: "Dr. Ananya V.",
-          subject: "DSA",
-          batch: "TE-IT-2026-B",
-          date: "2026-09-08",
-          time: "04:00 PM - 05:00 PM",
-          duration: "60 mins",
-          meetingLink: "https://meet.google.com/dsa-graph-456",
-          status: "Live",
-          attendeesCount: 58
-        }
-      ];
+      sessions = [];
     }
     return sendSuccess(res, 'Live sessions retrieved', sessions);
   } catch (error) {
@@ -156,6 +131,9 @@ export const createLiveSession = async (req, res, next) => {
       if (result && result.insertId) insertId = result.insertId;
     } catch (e) {
       console.warn('[DB createLiveSession fallback]', e.message);
+      if (!e.code || e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR') {
+        return next(e);
+      }
     }
 
     const newSession = {

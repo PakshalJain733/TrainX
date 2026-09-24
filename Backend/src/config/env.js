@@ -51,6 +51,7 @@ export const config = {
     pids: parseInt(process.env.CODE_RUNNER_PIDS || '64', 10),
     timeoutSeconds: parseInt(process.env.CODE_RUNNER_TIMEOUT_S || '5', 10),
     maxTimeoutSeconds: parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10),
+    maxConcurrent: parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10),
   },
 };
 

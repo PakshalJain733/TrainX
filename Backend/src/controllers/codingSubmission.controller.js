@@ -12,7 +12,6 @@ import {
 export const createCodingSubmission = async (req, res, next) => {
   try {
     const {
-      student_id,
       problem_id,
       submitted_code,
       language,
@@ -25,8 +24,10 @@ export const createCodingSubmission = async (req, res, next) => {
       execution_details,
     } = req.body;
 
-    // Use student_id from body or fall back to authenticated user's ID
-    const effectiveStudentId = student_id || req.user?.userId || req.user?.id;
+    // Student identity ALWAYS comes from the authenticated JWT -- never from
+    // the client-supplied body (prevents inserting submissions under another
+    // student's account).
+    const effectiveStudentId = req.user?.userId || req.user?.id;
 
     if (!effectiveStudentId) {
       return sendError(res, 'student_id is required', 400);

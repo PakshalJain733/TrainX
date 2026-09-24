@@ -168,9 +168,7 @@ export const getSuperAdminMentors = async (req, res, next) => {
     const rows = await query(
       `SELECT u.id, u.name, u.email, c.name AS college_name,
               (SELECT COUNT(*) FROM mentor_assignments ma WHERE ma.mentor_id = u.id) AS batches_count,
-              (SELECT COUNT(DISTINCT sb.user_id) FROM mentor_assignments ma2
-                 JOIN student_batches sb ON sb.batch_id = ma2.batch_id
-               WHERE ma2.mentor_id = u.id) AS allocated_students
+              (SELECT COUNT(*) FROM mentor_student_assignments msa WHERE msa.mentor_id = u.id) AS allocated_students
        FROM users u
        LEFT JOIN colleges c ON u.college_id = c.id
        WHERE u.role = 'mentor'

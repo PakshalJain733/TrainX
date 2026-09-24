@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mentorProfile, mentorBatches } from '../../../data/mentorMockData';
 import {
   Layers, Users, CalendarCheck, FileCode, Clock, Sparkles, Info, ChevronRight, MapPin, GraduationCap, UserCheck, BookOpen
 } from 'lucide-react';
@@ -18,6 +17,10 @@ export default function Overview() {
       return {};
     }
   });
+  const [assignedStudents, setAssignedStudents] = useState(0);
+  const [assignedStudentsData, setAssignedStudentsData] = useState([]);
+  const [assignedBatches, setAssignedBatches] = useState(0);
+  const [liveSessions, setLiveSessions] = useState(0);
 
   useEffect(() => {
     apiFetch("/auth/me")
@@ -27,9 +30,37 @@ export default function Overview() {
         }
       })
       .catch(() => {});
+    apiFetch("/mentor/students/performance")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data.students)) {
+          setAssignedStudents(res.data.students.length);
+          setAssignedStudentsData(res.data.students);
+        }
+      })
+      .catch(() => {});
+    apiFetch("/mentor/attendance/batches")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data.batches)) setAssignedBatches(res.data.batches.length);
+      })
+      .catch(() => {});
+    apiFetch("/mentor/live-sessions")
+      .then((res) => {
+        if (res && Array.isArray(res.data)) setLiveSessions(res.data.length);
+      })
+      .catch(() => {});
   }, []);
 
-  const fullName = mentorUser.name || mentorUser.fullName || mentorUser.email?.split("@")[0] || mentorProfile.name || "Faculty Mentor";
+  const allocatedBatches = (() => {
+    const byName = {};
+    assignedStudentsData.forEach((s) => {
+      const key = s.batch || "Unassigned Cohort";
+      byName[key] = byName[key] || { name: key, studentsCount: 0 };
+      byName[key].studentsCount += 1;
+    });
+    return Object.values(byName);
+  })();
+
+  const fullName = mentorUser.name || mentorUser.fullName || mentorUser.email?.split("@")[0] || "Faculty Mentor";
   const dept = mentorUser.department || mentorUser.dept || mentorUser.mentorProfile?.department || "";
   const email = mentorUser.email || "";
   const role = mentorUser.role || "Mentor";
@@ -44,10 +75,10 @@ export default function Overview() {
   const userInitials = getInitials(fullName);
 
   const mentorStats = [
-    { label: "Active Batches", value: `${mentorProfile.allocatedBatchesCount || mentorBatches.length} Cohorts`, hint: "Live from DB", icon: Layers },
-    { label: "Total Students", value: `${mentorProfile.totalStudentsAssigned || 0}`, hint: "Live participation count", icon: Users },
-    { label: "Upcoming Sessions", value: `${mentorProfile.upcomingSessionsCount || 0} Scheduled`, hint: "Live timetable", icon: CalendarCheck },
-    { label: "Pending Reviews", value: `${mentorProfile.pendingEvaluationsCount || 0} Code Reviews`, hint: "Require trainer feedback", icon: FileCode },
+    { label: "Active Batches", value: `${assignedBatches} Cohorts`, hint: "Live from DB", icon: Layers },
+    { label: "Total Students", value: `${assignedStudents}`, hint: "Live allocation count", icon: Users },
+    { label: "Upcoming Sessions", value: `${liveSessions} Scheduled`, hint: "Live timetable", icon: CalendarCheck },
+    { label: "Pending Reviews", value: `0 Code Reviews`, hint: "Require trainer feedback", icon: FileCode },
   ];
 
   const upcomingTimetable = [];
@@ -129,22 +160,22 @@ export default function Overview() {
             </Link>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {mentorBatches.length === 0 ? (
+            {allocatedBatches.length === 0 ? (
               <div className="py-8 text-center text-slate-500">
                 <Layers size={28} className="mx-auto text-indigo-400 mb-2 opacity-60" />
                 <p className="text-sm font-semibold">No training batches allocated yet.</p>
               </div>
             ) : (
-              mentorBatches.map((b) => (
+              allocatedBatches.map((b) => (
                 <div
-                  key={b.id || b.name}
+                  key={b.name}
                   className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/80 transition-all shadow-xs hover:shadow-sm space-y-2.5"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-0.5 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          {b.code || b.department || "CSE"}
+                          C2C 2029
                         </span>
                         {b.studentsCount && (
                           <span className="text-[11px] font-semibold text-slate-500">
@@ -156,24 +187,24 @@ export default function Overview() {
                         {b.name}
                       </h4>
                       <p className="text-xs text-slate-500 font-medium truncate">
-                        {b.college || "PVPPCOE"} · {b.department || "Computer Engineering"}
+                        PVPPCOE · C2C Programme
                       </p>
                     </div>
                     <Badge variant="success" className="text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider flex-shrink-0">
-                      {b.status || "Active"}
+                      Active
                     </Badge>
                   </div>
 
                   <div className="space-y-1.5 pt-1">
                     <div className="flex justify-between text-xs font-bold">
-                      <span className="text-slate-600">Syllabus Progress</span>
-                      <span className="text-indigo-600">{b.progress || 0}%</span>
+                      <span className="text-slate-600">Enrolled Students</span>
+                      <span className="text-indigo-600">{b.studentsCount}</span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60">
                       <div
                         className="h-full rounded-full transition-all duration-300"
                         style={{
-                          width: `${b.progress || 0}%`,
+                          width: `${Math.min(100, b.studentsCount)}%`,
                           background: "linear-gradient(90deg, #6366f1 0%, #4f46e5 100%)"
                         }}
                       ></div>

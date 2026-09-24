@@ -20,11 +20,19 @@ Rule: PASS only with live runtime proof. Everything below was verified against t
 - Timer: 05:00 (`INTERVIEW_SECONDS = 5*60`), starts only after the first real question (`timerReady`), 01:00 warning, auto-end at 0, cleanup on rerender.
 - **PASS (static). Runtime camera/mic/TTS: MANUAL_BROWSER_CHECK** (no browser automation available in this environment).
 
-## 3. Docker compiler (code runner)
-- Docker CLI v29.8.0 present, but **Docker Desktop daemon NOT running** (engine pipe missing).
-- `/code/run` correctly returns `503 Compiler service unavailable…` — graceful, not a code bug (test PASS).
-- **Status: MANUAL_REQUIRED_START_DOCKER** (start Docker Desktop, `docker build` the `trainx-code-runner` image, then `npm run test:code`).
-- **Status: COMPILER_PRODUCTION_HOSTING_BLOCKER** — Render’s free tier does NOT expose a Docker daemon to apps, so the sandbox compiler cannot run on Render free. Code Run will stay 503 in production until the compiler moves to a host with Docker (e.g., Render paid background worker/private service with Docker, or a dedicated VM/EC2).
+## 3. Docker compiler (code runner) — IMPLEMENTED + VERIFIED LOCALLY
+- Docker Desktop daemon now running (**engine v29.8.0**, was down). `trainx-code-runner` image **built** from `Backend/docker/compiler/Dockerfile` (`docker build -t trainx-code-runner ./Backend/docker/compiler`).
+- Image contents (from `node:20-bookworm-slim`, non-root `codeuser`, `--read-only` + bind-mounted workspace): gcc, g++, openjdk-17-jdk-headless, python3, node (inherited). `USER codeuser` — never root.
+- `Backend/src/services/code.executor.service.js` executes each run in an isolated container: `--network none`, `--memory/--memory-swap`, `--cpus`, `--pids-limit`, `--cap-drop ALL`, `--security-opt no-new-privileges`, `--read-only`, `--rm`, per-request mkdtemp workspace, in-container `timeout` + Node watchdog, tmp workspace removed in `finally`. The runner `runner.sh` writes `compile_code`/`run_code`/`timed_out`/`compile_error.txt`/`run_stdout.txt`/`run_stderr.txt` back into the workspace (container always exits 0; verdicts derived from files).
+- **`npm run test:code` → 25/25 PASS, 0 FAILED, 0 SKIPPED** (static + REST auth/validation + MySQL submission save + full Docker e2e for C/C++/Java/Python/Node hello-world, **Java with non-Main/underscore class names**, stdin, python syntax-error → compilationError, C segfault → runtime error, infinite loop → timeout, submit flows WRONG_ANSWER and ACCEPTED).
+- **Live `/api/v1/code/run` verified against the running server** (not just tests): python `15`, node `2,4,6`, C `C OK` (status 200, `executionTime` ~0.7–0.9s); infinite loop → `timedOut=true, exitCode=124`.
+- Graceful path still intact: if Docker is down, `/code/run` returns `503 Compiler service unavailable…` (probe cached 30s).
+- **Fixes in this pass (audit of “not implemented properly”):**
+  - **Java class-name bug (proven live)**: the executor writes the source as `<ClassName>.java` for any public class, but `runner.sh` only compiled `Main.java`/`Solution.java` — any other class (e.g. `MyProgram`) failed with “class name mismatch”. Runner now discovers the single `.java` source via a plain glob (no shell interpolation of user strings) and compiles/runs it. Regression tests added (`MyProgram`, `Main_2`) → PASS.
+  - **Mock evaluator removed**: `saveCodingSubmissionService` → `evaluateCodeInSandbox` previously fabricated a full PASS for every test (`judge0_piston_structured_adapter`, fake `execution_time_ms:15, memory_used_kb:1024`) and never touched Docker. It now runs the real Docker sandbox per test case. Verified live: POST `/coding-submissions` (no `passed_test_cases`) → `sandbox: docker`, real `actual_output:"WRONG_ANSWER\n"` vs `expected_output:"0 1"`, verdict `failed`.
+  - **`student_id` spoofing closed**: `createCodingSubmission` accepted a body-supplied `student_id` (JWT only as fallback), letting a student insert submissions under another student. Now identity ALWAYS comes from the JWT, matching `/code/submit`.
+  - **Concurrency cap**: added a semaphore (default 4, `CODE_RUNNER_MAX_CONCURRENT`) so a flood of `/code/run|submit` requests can’t spawn unbounded `docker run` containers.
+- **Status: RESOLVED LOCALLY.** ⚠️ Production caveat unchanged — `COMPILER_PRODUCTION_HOSTING_BLOCKER`: Render’s free tier does NOT expose a Docker daemon to apps, so the sandbox compiler still needs a Docker-capable production host (Render paid Docker/background worker, or a VM/EC2). Local implementation is complete and proven.
 
 ## 4. Cross-role E2E (extended harness — `Backend/tests/e2e.core.test.js`)
 **25/25 PASS** (was 16, now extended). New coverage:
@@ -94,6 +102,9 @@ Also green: isolation suite 12/12, skill-gap 4/4, socket AI interview 4/4. Atten
 | E2E core (extended) | 25/25 PASS |
 | Socket AI interview | 4/4 PASS |
 | Isolation / Skill-gap | 12/12 / 4/4 PASS (prior, unchanged) |
+| **Docker code runner** (`npm run test:code`) | **25/25 PASS, 0 SKIPPED** (incl. full Docker e2e + Java custom class) |
+| **Live `/code/run`** (running server) | 200 — python/node/C output + timeout=124 verified |
+| **Live `/coding-submissions`** (Docker eval) | 201 — real eval, `sandbox: docker`, no mock pass |
 | Frontend build | PASS |
 | Backend `node --check` (changed files) | PASS |
 | DB post-test | 0 stray rows (seed-only) |
@@ -103,12 +114,12 @@ Also green: isolation suite 12/12, skill-gap 4/4, socket AI interview 4/4. Atten
 
 ### Blocking / manual actions before production sign-off
 1. `MANUAL_REQUIRED_GEMINI_KEY` — configure a real Gemini API key (local + Render).
-2. `MANUAL_REQUIRED_START_DOCKER` — start Docker Desktop, build `trainx-code-runner`, run `npm run test:code` locally.
-3. `COMPILER_PRODUCTION_HOSTING_BLOCKER` — select a Docker-capable hosting plan for the compiler (not Render free).
+2. ~~`MANUAL_REQUIRED_START_DOCKER`~~ **DONE** — Docker running, `trainx-code-runner` built, `npm run test:code` 23/23 PASS, live `/code/run` verified (2026-09-25). No action left locally.
+3. `COMPILER_PRODUCTION_HOSTING_BLOCKER` — select a Docker-capable hosting plan for the compiler (not Render free). Code runs locally; `docker-compose.yml`/CI can be added when the production host is chosen.
 4. `MANUAL_BROWSER_CHECK` — camera, mic/VTT, TTS, timers, and visual route clicks.
 5. Set on Render: `JWT_SECRET`, `DB_HOST/USER/PASSWORD/NAME`, `DB_SSL=true`, `PORT`, `FRONTEND_URL=<deployed frontend URL>`, `GEMINI_API_KEY`, `NODE_ENV=production`.
 
 ### Files changed (all uncommitted — never committed during this session)
-Backend: `server.js`, `src/app.js` (router mounts + CORS hardening), `src/ai/interview.ai.js`, `src/controllers/{assessment,interview,student}.controller.js`, `src/models/interview.model.js`, `src/routes/{assessment,batch,interview,secureCode,student}.routes.js`, `src/config/{db,env,init_db}.js`, `src/services/email.service.js`, `src/services/rag/` (new), `src/socket/` (new), `tests/{e2e.core,e2e.interview.socket,attendance,skill_gap,code.runner}.test.js`, `package.json`, `.env.example`.
+Backend: `server.js`, `src/app.js` (router mounts + CORS hardening), `src/ai/interview.ai.js`, `src/controllers/{assessment,interview,student}.controller.js`, `src/models/interview.model.js`, `src/routes/{assessment,batch,interview,secureCode,student}.routes.js`, `src/config/{db,env,init_db}.js`, `src/services/email.service.js`, `src/services/code.executor.service.js`, `src/controllers/coding.controller.js`, `docker/compiler/{Dockerfile,runner.sh}` (code-runner image), `src/services/rag/` (new), `src/socket/` (new), `tests/{e2e.core,e2e.interview.socket,attendance,skill_gap,code.runner}.test.js`, `package.json`, `.env.example`.
 Frontend: `src/App.jsx` (notifications + placement routes), `src/pages/Student/Components/{ST_AiInterview,ST_Batches,ST_CodingPlatform,ST_PracticeProblems}.jsx`, `ST_AiInterview.css`, `src/utils/api.js`, `vite.config.js`, `.env.example`, `package.json`.
 Docs: `END_TO_END_FUNCTIONALITY_REPORT.md` (new), `VERIFICATION_REPORT.md` (updated), `FINAL_DEPLOYMENT_READINESS_REPORT.md` (this file, new).

@@ -112,6 +112,31 @@ export const compilerUnavailableError = () => {
   return error;
 };
 
+// Concurrency cap: each run boots a container, so limit how many can be in
+// flight at once to protect the host from unbounded `docker run` spawns.
+const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(String(config.compiler.maxConcurrent || '4'), 10));
+let activeRuns = 0;
+const runWaiters = [];
+
+const acquireRunSlot = () =>
+  new Promise((resolve) => {
+    if (activeRuns < MAX_CONCURRENT_RUNS) {
+      activeRuns += 1;
+      resolve();
+    } else {
+      runWaiters.push(resolve);
+    }
+  });
+
+const releaseRunSlot = () => {
+  activeRuns -= 1;
+  const next = runWaiters.shift();
+  if (next) {
+    activeRuns += 1;
+    next();
+  }
+};
+
 const readWorkspaceFile = async (dir, name, fallback = '') => {
   try {
     return await fs.readFile(path.join(dir, name), 'utf8');
@@ -149,7 +174,16 @@ export const normalizeOutput = (text = '') => {
  * @returns {Promise<{stdout:string, stderr:string, exitCode:number,
  *   executionTime:number, timedOut:boolean, compilationError:boolean}>}
  */
-export const runCodeInSandbox = async ({ language, code, stdin = '', timeoutSeconds }) => {
+export const runCodeInSandbox = async (params) => {
+  await acquireRunSlot();
+  try {
+    return await runCodeInSandboxUnlimited(params);
+  } finally {
+    releaseRunSlot();
+  }
+};
+
+const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSeconds }) => {
   const langKey = LANGUAGE_ALIASES[String(language || '').toLowerCase()];
   if (!langKey) {
     const error = new Error(`Unsupported language: ${language}`);

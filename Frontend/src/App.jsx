@@ -38,6 +38,7 @@ import AdminWeeklyReports from "./pages/Admin/Components/AD_WeeklyReports";
 import AdminHelp from "./pages/Admin/Components/AD_Help";
 import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
+import AdminC2CEnrollments from './pages/Admin/Components/AD_C2CEnrollments';
 
 
 // Super Admin Workspace Imports
@@ -137,6 +138,7 @@ function App() {
             <Route index element={<AdminOverview />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="batches" element={<AdminBatches />} />
+            <Route path="c2c" element={<AdminC2CEnrollments />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="learning" element={<AdminLearningContent />} />
             <Route path="quiz" element={<AdminQuizzes />} />

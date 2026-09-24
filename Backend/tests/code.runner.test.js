@@ -240,6 +240,25 @@ if (hasDocker && hasImage) {
     });
   }
 
+  await check('executes JAVA with a non-Main public class name', async () => {
+    const code = 'public class MyProgram { public static void main(String[] args) { System.out.println("JavaCustomClassOK"); } }';
+    const { error, result } = await runOnce({ language: 'java', code });
+    if (error) throw error;
+    assert.strictEqual(result.compilationError, false, `unexpected compile error: ${result.stderr}`);
+    assert.ok(result.stdout.includes('JavaCustomClassOK'), `stdout was: ${result.stdout}`);
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.timedOut, false);
+  });
+
+  await check('executes JAVA with an underscore class name', async () => {
+    const code = 'public class Main_2 { public static void main(String[] args) { System.out.println("JavaUnderscoreOK"); } }';
+    const { error, result } = await runOnce({ language: 'java', code });
+    if (error) throw error;
+    assert.strictEqual(result.compilationError, false, `unexpected compile error: ${result.stderr}`);
+    assert.ok(result.stdout.includes('JavaUnderscoreOK'), `stdout was: ${result.stdout}`);
+    assert.strictEqual(result.exitCode, 0);
+  });
+
   await check('supports stdin (python sums stdin lines)', async () => {
     const code = 'import sys\nprint(sum(int(x) for x in sys.stdin.read().split()))';
     const { error, result } = await runOnce({ language: 'python', code, stdin: '1 2 3 4\n' });

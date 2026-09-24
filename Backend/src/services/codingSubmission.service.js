@@ -13,26 +13,117 @@ import {
 } from './code.executor.service.js';
 
 /**
- * Safe Evaluation Sandbox Adapter Layer:
- * Note: Untrusted code is NOT executed inside the Node.js process.
- * This adapter is structured to integrate with isolated remote sandboxes (e.g., Judge0 or Piston API).
- * In the absence of an external sandbox API configuration, it structures test case evaluations safely.
+ * Safe Evaluation Sandbox Layer:
+ * Untrusted code is NEVER executed inside the Node.js process. Every test case
+ * is executed inside an isolated `trainx-code-runner` Docker container via
+ * `runCodeInSandbox` (network disabled, memory/CPU/PID limits, timeout,
+ * read-only root, non-root user). Hidden expected outputs are never included
+ * in the returned results.
  */
-export const evaluateCodeInSandbox = async ({ submittedCode, language, testCases = [] }) => {
-  // Evaluation structured for Judge0 / Piston integration
-  const results = testCases.map((tc, idx) => ({
-    test_case_id: tc.id || idx + 1,
-    is_hidden: Boolean(tc.is_hidden),
-    status: 'passed',
-    passed: true,
-    execution_time_ms: 15,
-    memory_used_kb: 1024,
-  }));
+export const evaluateCodeInSandbox = async ({ submittedCode: code, language, testCases = [] }) => {
+  if (testCases.length === 0) {
+    return {
+      sandbox: 'docker',
+      total_test_cases: 0,
+      passed_test_cases: 0,
+      compilation_error: false,
+      timed_out: false,
+      runtime_error: false,
+      execution_time_ms: 0,
+      results: [],
+    };
+  }
+
+  const results = [];
+  let passed = 0;
+  let compilationError = false;
+  let timedOut = false;
+  let runtimeError = false;
+  let totalExecutionMs = 0;
+
+  for (let i = 0; i < testCases.length; i++) {
+    const tc = testCases[i];
+    if (compilationError || timedOut) break;
+
+    let runResult;
+    try {
+      runResult = await runCodeInSandbox({
+        language,
+        code,
+        stdin: tc.input || '',
+        timeoutSeconds: 5,
+      });
+    } catch (error) {
+      if (error.statusCode) throw error;
+      throw error;
+    }
+
+    totalExecutionMs += runResult.executionTime;
+
+    if (runResult.compilationError) {
+      compilationError = true;
+      results.push({
+        test_case_id: tc.id,
+        test_case_number: i + 1,
+        is_hidden: Boolean(tc.is_hidden),
+        passed: false,
+        execution_time_ms: runResult.executionTime,
+      });
+      break;
+    }
+    if (runResult.timedOut) {
+      timedOut = true;
+      results.push({
+        test_case_id: tc.id,
+        test_case_number: i + 1,
+        is_hidden: Boolean(tc.is_hidden),
+        passed: false,
+        timed_out: true,
+        execution_time_ms: runResult.executionTime,
+      });
+      break;
+    }
+    if (runResult.exitCode !== 0) runtimeError = true;
+
+    const actual = normalizeOutput(runResult.stdout);
+    const expected = normalizeOutput(tc.expected_output);
+    const casePassed = actual === expected;
+    if (casePassed) passed += 1;
+
+    const base = {
+      test_case_id: tc.id,
+      test_case_number: i + 1,
+      is_hidden: Boolean(tc.is_hidden),
+      passed: casePassed,
+      execution_time_ms: runResult.executionTime,
+    };
+    if (Boolean(tc.is_hidden)) {
+      results.push(base);
+    } else {
+      results.push({
+        ...base,
+        input: tc.input,
+        expected_output: tc.expected_output,
+        actual_output: runResult.stdout,
+        stderr: runResult.stderr,
+      });
+    }
+  }
+
+  for (let i = results.length; i < testCases.length; i++) {
+    const tc = testCases[i];
+    const base = { test_case_id: tc.id, test_case_number: i + 1, is_hidden: Boolean(tc.is_hidden), passed: false, not_evaluated: true };
+    results.push(Boolean(tc.is_hidden) ? base : { ...base, input: tc.input, expected_output: tc.expected_output, actual_output: null });
+  }
 
   return {
-    sandbox: 'judge0_piston_structured_adapter (mocked evaluation layer without unsafe node execution)',
+    sandbox: 'docker',
     total_test_cases: testCases.length,
-    passed_test_cases: results.filter((r) => r.passed).length,
+    passed_test_cases: passed,
+    compilation_error: compilationError,
+    timed_out: timedOut,
+    runtime_error: runtimeError,
+    execution_time_ms: totalExecutionMs,
     results,
   };
 };

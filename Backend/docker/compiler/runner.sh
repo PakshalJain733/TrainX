@@ -62,12 +62,15 @@ case "$LANG_RAW" in
     run_program ./main
     ;;
   java)
-    if [ -f Main.java ]; then
-      JSRC=Main.java
-    elif [ -f Solution.java ]; then
-      JSRC=Solution.java
-    else
-      echo "No Main.java or Solution.java found in workspace (detected class name mismatch)" > compile_error.txt
+    # The backend writes the source as <ClassName>.java (a public class must
+    # live in a file named after it). Discover the single source file via a
+    # plain glob -- never via shell expansion of user-supplied strings.
+    JSRC=""
+    for f in *.java; do
+      [ -f "$f" ] && JSRC="$f" && break
+    done
+    if [ -z "$JSRC" ]; then
+      echo "No .java source file found in workspace" > compile_error.txt
       echo 1 > compile_code
       exit 0
     fi

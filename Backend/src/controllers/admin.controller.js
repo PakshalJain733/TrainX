@@ -619,3 +619,82 @@ export const getAdminPerformance = async (req, res, next) => {
     next(error);
   }
 };
+
+// -------------------------------------------------------------
+// C2C Training Enrollments (Placement Season 2029)
+// -------------------------------------------------------------
+export const getAdminC2CEnrollments = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req);
+    const { search, branch, payment_status, program_code = 'C2C 2029' } = req.query;
+
+    let sql = `
+      SELECT te.id AS enrollment_id, te.training_option, te.fee_amount, te.amount_paid, te.payment_status,
+             te.payment_proof_url, te.payment_received_by, te.whatsapp_group_added, te.source_status, te.source_timestamp,
+             u.id AS user_id, u.name, u.email, u.mobile_number,
+             s.roll_number, s.department, s.department_id,
+             b.id AS batch_id, b.name AS batch_name,
+             mu.id AS mentor_id, mu.name AS mentor_name, mu.mobile_number AS mentor_phone
+      FROM training_enrollments te
+      JOIN users u ON u.id = te.student_user_id
+      LEFT JOIN students s ON s.user_id = u.id
+      LEFT JOIN batches b ON b.id = te.batch_id
+      LEFT JOIN mentor_student_assignments msa ON msa.student_id = te.student_user_id
+      LEFT JOIN users mu ON mu.id = msa.mentor_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (program_code) {
+      sql += ` AND te.program_id IN (SELECT id FROM training_programs WHERE code = ?)`;
+      params.push(program_code);
+    }
+    if (collegeId) {
+      sql += ` AND u.college_id = ?`;
+      params.push(collegeId);
+    }
+    if (payment_status) {
+      sql += ` AND te.payment_status = ?`;
+      params.push(payment_status);
+    }
+    if (branch) {
+      sql += ` AND s.department_id = ?`;
+      params.push(parseInt(branch, 10));
+    }
+    if (search) {
+      sql += ` AND (u.name LIKE ? OR s.roll_number LIKE ? OR u.email LIKE ? OR u.mobile_number LIKE ?)`;
+      const q = `%${String(search).trim()}%`;
+      params.push(q, q, q, q);
+    }
+    sql += ` ORDER BY s.department IS NULL, u.name ASC`;
+
+    const rows = await query(sql, params);
+    const enrollments = (rows || []).map((r) => ({
+      enrollmentId: r.enrollment_id,
+      trainingOption: r.training_option,
+      feeAmount: r.fee_amount,
+      amountPaid: r.amount_paid,
+      paymentStatus: r.payment_status,
+      paymentProofUrl: r.payment_proof_url,
+      paymentReceivedBy: r.payment_received_by,
+      whatsappGroupAdded: r.whatsapp_group_added,
+      sourceStatus: r.source_status,
+      sourceTimestamp: r.source_timestamp,
+      userId: r.user_id,
+      name: r.name,
+      email: r.email,
+      mobile: r.mobile_number,
+      rollNumber: r.roll_number,
+      branch: r.department,
+      departmentId: r.department_id,
+      batchId: r.batch_id,
+      batchName: r.batch_name,
+      mentorId: r.mentor_id,
+      mentorName: r.mentor_name,
+      mentorPhone: r.mentor_phone,
+    }));
+
+    return sendSuccess(res, 'C2C Training enrollments retrieved successfully', enrollments);
+  } catch (error) {
+    next(error);
+  }
+}
