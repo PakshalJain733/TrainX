@@ -19,25 +19,77 @@ import departmentRoutes from './routes/department.routes.js';
 import batchRoutes from './routes/batch.routes.js';
 import sharedContentRoutes from './routes/sharedContent.routes.js';
 import secureCodeRoutes from './routes/secureCode.routes.js';
+import codingRoutes from './routes/coding.routes.js';
+import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
+import mentorRoutes from './routes/mentor.routes.js';
+import coordinatorRoutes from './routes/coordinator.routes.js';
+import superadminRoutes from './routes/superadmin.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
+import { config } from './config/env.js';
+import { pool } from './config/db.js';
 
 import path from 'path';
 
 const app = express();
 
-// Global Middlewares
-app.use(cors());
+// Production-safe CORS: allow the configured frontend origin(s) plus local dev
+const allowedOrigins = new Set(
+  [
+    config.frontendUrl,
+    process.env.FRONTEND_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    config.nodeEnv === 'production' ? '' : 'http://localhost:5500',
+  ]
+    .filter(Boolean)
+    .filter((o) => typeof o === 'string')
+    .map((o) => o.replace(/\/$/, ''))
+);
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Allow non-browser / same-origin requests
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.has(origin.replace(/\/$/, ''))) return cb(null, true);
+      return cb(null, false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token'],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  // Global handler: mirror the CORS allowlist. Do NOT override for origins
+  // the allowlist rejected (otherwise the allowlist is bypassed).
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.has(String(origin).replace(/\/$/, ''))) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-access-token, token');
+  next();
+});
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
 // Health Check Endpoint (Section 28)
-app.get('/api/v1/health', (req, res) => {
+app.get('/api/v1/health', async (req, res) => {
+  let dbStatus = 'unknown';
+  try {
+    await pool.query('SELECT 1');
+    dbStatus = 'connected';
+  } catch {
+    dbStatus = 'unreachable';
+  }
   return sendSuccess(res, 'Training Portal API is running', {
     status: 'healthy',
+    database: dbStatus,
     timestamp: new Date().toISOString(),
   });
 });
@@ -64,6 +116,11 @@ app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
 app.use('/api/v1/secure-codes', secureCodeRoutes);
+app.use('/api/v1/code', codingRoutes);
+app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
+app.use('/api/v1/mentor', mentorRoutes);
+app.use('/api/v1/coordinator', coordinatorRoutes);
+app.use('/api/v1/superadmin', superadminRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

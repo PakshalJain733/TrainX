@@ -57,6 +57,7 @@ export default function CodingPlatform() {
 
   const [taskData, setTaskData] = useState(location.state?.task || null);
   const [loading, setLoading] = useState(!location.state?.task);
+  const [notFound, setNotFound] = useState(false);
   const [code, setCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -73,24 +74,56 @@ export default function CodingPlatform() {
 
     const fetchTaskDetails = async () => {
       setLoading(true);
+      setNotFound(false);
+      const requested = String(taskId || '');
+      const numeric = requested.replace(/[^0-9]/g, '');
       try {
         const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.success && data.data) {
           const t = data.data;
-          setTaskData({
-            id: t.id,
-            title: t.title,
-            topic: t.topic || "General Assignment",
-            difficulty: t.difficulty || "Medium",
-            points: t.points || 100,
-            deadline: t.deadline || "",
-            description: t.description || t.desc || "No problem description provided.",
-            testCases: t.testCases || t.test_cases || [],
-          });
+          const batchId = String(t.id ?? '');
+          const idMatch =
+            (batchId && (batchId === requested || batchId === numeric)) ||
+            (numeric && parseInt(batchId, 10) === parseInt(numeric, 10));
+          const nonNumericRequest = !/^\d+$/.test(requested.replace(/\D/g, '') ? requested : '') || false;
+          const slugLike = requested && !/^[^A-Za-z]*$/.test(requested) && !idMatch;
+          if (idMatch || slugLike) {
+            setTaskData({
+              id: t.id,
+              title: t.title,
+              topic: t.topic || "General Assignment",
+              difficulty: t.difficulty || "Medium",
+              points: t.points || 100,
+              deadline: t.deadline || "",
+              description: t.description || t.desc || "No problem description provided.",
+              testCases: t.testCases || t.test_cases || [],
+            });
+            return;
+          }
         }
+
+        const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
+        const probData = await probRes.json();
+        if (probRes.ok && probData.success && probData.data) {
+          const p = probData.data;
+          setTaskData({
+            id: p.id,
+            title: p.title,
+            topic: p.category || "General DSA",
+            difficulty: p.difficulty || "Medium",
+            points: p.points || 100,
+            deadline: "",
+            description: p.description || "No problem description provided.",
+            testCases: [],
+          });
+          return;
+        }
+
+        setNotFound(true);
       } catch (err) {
         console.error("Failed to fetch task details:", err);
+        setNotFound(true);
       } finally {
         setLoading(false);
       }
@@ -127,6 +160,17 @@ export default function CodingPlatform() {
   return (
     <div className="student-page-inner">
       <div className="coding-platform-container">
+        {notFound && (
+          <div className="cp-not-found" style={{ padding: "40px 24px", textAlign: "center" }}>
+            <h2 style={{ marginBottom: "10px", fontSize: "18px" }}>Problem not found</h2>
+            <p style={{ color: "#64748b", marginBottom: "16px" }}>
+              This task or problem is not available. It may have been deleted.
+            </p>
+            <Link to="/student/practice" className="cp-back-btn">← Back to Practice</Link>
+          </div>
+        )}
+        {!notFound && (
+        <>
         {/* IDE Header */}
         <div className="cp-header">
           <div className="cp-header-left">
@@ -312,6 +356,8 @@ export default function CodingPlatform() {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );

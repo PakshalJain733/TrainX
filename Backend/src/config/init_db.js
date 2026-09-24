@@ -9,6 +9,8 @@ export async function initializeDatabase() {
       user: config.db.user,
       password: config.db.password,
       database: config.db.database,
+      ...(config.db.ssl ? { ssl: config.db.ssl } : {}),
+      connectTimeout: config.db.connectTimeout,
     });
 
     console.log('[DB Init] Connected to MySQL database:', config.db.database);
@@ -565,6 +567,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
     try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN details JSON NULL`); } catch (_) { }
 
     // 18. Ensure Super Admin Account
     try {

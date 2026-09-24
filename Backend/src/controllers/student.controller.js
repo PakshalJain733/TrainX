@@ -174,11 +174,13 @@ export const getStudentDashboard = async (req, res, next) => {
   }
 };
 
-import { getPracticeProblemsModel } from '../models/practiceProblem.model.js';
+import { getPracticeProblemsModel, getPracticeProblemByIdModel } from '../models/practiceProblem.model.js';
 
 export const getStudentPracticeProblems = async (req, res, next) => {
   try {
-    const dbProblems = await getPracticeProblemsModel();
+    const dbProblems = await getPracticeProblemsModel({
+      collegeId: req.user?.collegeId || req.user?.college_id,
+    });
     if (dbProblems && dbProblems.length > 0) {
       const mapped = dbProblems.map((p) => ({
         id: p.id,
@@ -192,6 +194,19 @@ export const getStudentPracticeProblems = async (req, res, next) => {
     }
 
     return sendSuccess(res, 'Practice problems retrieved successfully', []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStudentPracticeProblemById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const problem = await getPracticeProblemByIdModel(id);
+    if (!problem) {
+      return sendError(res, 'Practice problem not found', 404);
+    }
+    return sendSuccess(res, 'Practice problem retrieved successfully', problem);
   } catch (error) {
     next(error);
   }
@@ -316,8 +331,30 @@ export const getStudentAttendance = async (req, res, next) => {
 export const applyStudentLeave = async (req, res, next) => {
   try {
     const { category, startDate, endDate, days, reason, attachment } = req.body;
+    const userId = req.user?.userId || req.user?.id;
+    if (!userId) {
+      return sendError(res, 'User identity required. Please log in again.', 401);
+    }
+    if (!startDate) {
+      return sendError(res, 'Start date is required', 400);
+    }
+
+    const result = await query(
+      `INSERT INTO leave_requests (user_id, category, start_date, end_date, days, reason, attachment, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending')`,
+      [
+        userId,
+        category || 'Medical Leave',
+        startDate,
+        endDate || startDate,
+        days || 1,
+        reason || 'Personal Leave',
+        attachment || null,
+      ]
+    );
+
     const newLeave = {
-      id: `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: `LV-${result?.insertId || '000'}`,
       category: category || 'Medical Leave',
       startDate,
       endDate: endDate || startDate,

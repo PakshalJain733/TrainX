@@ -1,6 +1,9 @@
 export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+  if (
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+  ) {
     return "/api/v1";
   }
   return "https://trainx-6w8m.onrender.com/api/v1";

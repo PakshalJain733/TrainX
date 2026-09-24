@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticateToken } from '../middleware/auth.middleware.js';
 import {
   getAssessments,
   getAvailableAssessments,
@@ -15,6 +16,7 @@ import {
 } from '../controllers/assessment.controller.js';
 
 const router = Router();
+router.use(authenticateToken);
 
 // Static GET routes MUST come before parameter /:id routes
 router.get('/', getAssessments);

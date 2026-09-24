@@ -5,6 +5,7 @@ import {
   updateStudentProfile,
   getStudentDashboard,
   getStudentPracticeProblems,
+  getStudentPracticeProblemById,
   getStudentAttendance,
   applyStudentLeave,
   getStudentNotifications,
@@ -30,6 +31,7 @@ router.get('/dashboard', getStudentDashboard);
 
 // Practice Problems, Materials & Attendance
 router.get('/practice-problems', getStudentPracticeProblems);
+router.get('/practice-problems/:id', getStudentPracticeProblemById);
 router.get('/materials', getStudentMaterials);
 router.get('/attendance', getStudentAttendance);
 

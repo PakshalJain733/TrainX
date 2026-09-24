@@ -35,6 +35,7 @@ export default function PracticeProblems() {
             solved: p.solve_status === "Solved",
             companies: ["TCS", "Infosys"],
             solutionAvailable: true,
+            description: p.description || "No problem description provided.",
           }));
         }
         const shared = await getSharedCodingTasks([]);
@@ -48,6 +49,7 @@ export default function PracticeProblems() {
           solved: false,
           companies: ["Core Tech"],
           solutionAvailable: true,
+          description: s.data?.description || s.description || "No problem description provided.",
         }));
         const existingIds = new Set(apiItems.map((i) => i.id));
         const uniqueShared = mappedShared.filter((s) => !existingIds.has(s.id));
@@ -328,7 +330,11 @@ export default function PracticeProblems() {
                     </td>
                     <td>
                       <div className="prob-title-box">
-                        <Link to={`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`} className="prob-title-link">
+                        <Link
+                          to={`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`}
+                          state={{ task: prob, source: 'practice' }}
+                          className="prob-title-link"
+                        >
                           {prob.title}
                         </Link>
                         <span className="prob-points">+{prob.points} XP</span>
@@ -348,7 +354,7 @@ export default function PracticeProblems() {
                       <Button
                         size="sm"
                         className="solve-btn"
-                        onClick={() => navigate(`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`)}
+                        onClick={() => navigate(`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`, { state: { task: prob, source: 'practice' } })}
                       >
                         <Terminal size={14} /> Solve
                       </Button>

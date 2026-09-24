@@ -300,9 +300,9 @@ export default function Batches() {
                       const taskSlug = task.taskNumber.replace(/\s+/g, '-').toLowerCase();
                       const platform = task.platform || "coding";
                       let taskHref = `/student/coding-platform/${taskSlug}`;
-                      if (platform === "mcq") taskHref = `/student/mcq-exam`;
+                      if (platform === "mcq") taskHref = `/student/quiz`;
                       else if (platform === "gd") taskHref = `/student/ai-interview`;
-                      else if (platform === "submission") taskHref = `/student/notes`;
+                      else if (platform === "submission") taskHref = `/student/coding-platform`;
 
                       return (
                         <Link

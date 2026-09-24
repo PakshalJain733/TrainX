@@ -6,6 +6,7 @@ import {
 } from '../src/services/attendance.service.js';
 import jwt from 'jsonwebtoken';
 import { config } from '../src/config/env.js';
+import { pool } from '../src/config/db.js';
 import app from '../src/app.js';
 import http from 'http';
 
@@ -37,8 +38,10 @@ const startServer = () => {
 
 const stopServer = () => {
   return new Promise((resolve) => {
-    if (server) server.close(resolve);
-    else resolve();
+    if (server) {
+      server.closeAllConnections?.();
+      server.close(resolve);
+    } else resolve();
   });
 };
 
@@ -189,6 +192,7 @@ async function runAttendanceTests() {
     failed++;
   } finally {
     await stopServer();
+    await pool.end().catch(() => {});
     console.log('\n================================================================');
     console.log(`SUMMARY: ${passed} PASSED, ${failed} FAILED`);
     console.log('================================================================\n');

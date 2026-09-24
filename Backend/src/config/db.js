@@ -10,6 +10,8 @@ export const pool = mysql.createPool({
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
+  ...(config.db.ssl ? { ssl: config.db.ssl } : {}),
+  connectTimeout: config.db.connectTimeout,
 });
 
 export const query = async (sql, params = []) => {

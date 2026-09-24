@@ -279,7 +279,7 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
       </div>
 
       <div style="text-align: center; margin-top: 32px;">
-        <a href="http://localhost:5173/login" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+        <a href="${config.frontendUrl}/login" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
           Log In to Your Dashboard &rarr;
         </a>
       </div>
