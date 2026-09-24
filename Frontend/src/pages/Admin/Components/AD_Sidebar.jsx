@@ -48,9 +48,7 @@ const primaryNavItems = [
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },
   { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
   { title: "Coding Practice", url: "/admin/practice", icon: Terminal },
-  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
   { title: "Student Progress", url: "/admin/progress", icon: LineChart },
-  { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
   { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle },
   // { title: "Mock Drives", url: "/admin/mock-drives", icon: Briefcase },
 ];

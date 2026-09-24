@@ -260,75 +260,202 @@
   color: #475569;
 }
 
-/* Custom High-Contrast Toggle Switch Button */
-.maintenancecontrols-switch-btn {
+/* Switch Actions Group Container */
+.mc-switch-actions-group {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.2s ease;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
-.maintenancecontrols-switch-btn--enabled {
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
-}
-
-.maintenancecontrols-switch-btn--enabled:hover {
-  background: #d1fae5;
-}
-
-.maintenancecontrols-switch-btn--disabled {
-  background: #fff1f2;
-  color: #be123c;
-  border: 1px solid #fecdd3;
-}
-
-.maintenancecontrols-switch-btn--disabled:hover {
-  background: #ffe4e6;
-}
-
-.maintenancecontrols-switch-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-}
-
-.maintenancecontrols-switch-dot--enabled {
-  background: #059669;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.2);
-}
-
-.maintenancecontrols-switch-dot--disabled {
-  background: #e11d48;
-  box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2);
-}
-
-/* Action Icon Buttons */
-.maintenancecontrols-action-icon-btn {
-  padding: 7px;
-  border-radius: 8px;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  background: #ffffff;
-  cursor: pointer;
-  transition: all 0.15s ease;
+/* Modern Standalone Sliding Toggle Switch Button */
+.mc-toggle-slider-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
 }
 
-.maintenancecontrols-action-icon-btn:hover {
-  background: #f8fafc;
+/* Track element (the sliding pill) */
+.mc-toggle-track {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+  display: block;
+  flex-shrink: 0;
+}
+
+.mc-toggle-slider-btn--active .mc-toggle-track {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+}
+
+.mc-toggle-slider-btn--inactive .mc-toggle-track {
+  background: #cbd5e1;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.mc-toggle-slider-btn:hover .mc-toggle-track {
+  filter: brightness(1.05);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Knob element (the sliding circle) */
+.mc-toggle-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
+}
+
+.mc-toggle-slider-btn--active .mc-toggle-knob {
+  transform: translateX(20px);
+}
+
+.mc-toggle-slider-btn--inactive .mc-toggle-knob {
+  transform: translateX(0);
+}
+
+/* Refined Action Icon Buttons */
+.mc-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.mc-action-btn--edit:hover {
+  background: #eef2ff;
   color: #4f46e5;
   border-color: #c7d2fe;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(79, 70, 229, 0.14);
+}
+
+.mc-action-btn--preview:hover {
+  background: #faf5ff;
+  color: #9333ea;
+  border-color: #e9d5ff;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 6px rgba(147, 51, 234, 0.14);
+}
+
+/* College Selector Card & Search Flex */
+.mc-college-filter-card {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.mc-college-selector-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.mc-college-icon {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.mc-college-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.mc-college-select {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 13px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  max-width: 420px;
+}
+
+.mc-college-select:focus {
+  border-color: #4f46e5;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.mc-search-flex {
+  max-width: 320px;
+}
+
+/* College Scope Banner */
+.mc-college-scope-banner {
+  background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  padding: 12px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mc-scope-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mc-scope-icon {
+  color: #4338ca;
+}
+
+.mc-scope-title {
+  font-size: 12.5px;
+  color: #1e1b4b;
+}
+
+.mc-scope-title strong {
+  color: #4338ca;
+}
+
+.mc-scope-sub {
+  font-size: 11px;
+  color: #6366f1;
 }
 
 /* Modals Overlay & Card */

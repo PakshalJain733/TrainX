@@ -19,7 +19,8 @@ import {
   MessageSquare,
   Lock,
   ArrowRight,
-  Info
+  Info,
+  Building2
 } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/SA_MaintenanceControls.css";
@@ -181,10 +182,41 @@ export default function MaintenanceControls() {
     turnAllModulesOn,
   } = useSystemMaintenance();
 
+  const defaultColleges = [
+    { id: "all", name: "All Partner Colleges (Global System Default)" },
+    { id: "vjti", name: "VJTI Autonomous Institute of Technology" },
+    { id: "iitb", name: "IIT Bombay - Department of Engineering" },
+    { id: "coep", name: "COEP Technological University" },
+    { id: "mitwpu", name: "MIT World Peace University" },
+    { id: "pict", name: "Pune Institute of Computer Technology (PICT)" },
+  ];
+
+  const [collegesList, setCollegesList] = useState(defaultColleges);
+  const [selectedCollege, setSelectedCollege] = useState("all");
+
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [editingModule, setEditingModule] = useState(null);
   const [previewModule, setPreviewModule] = useState(null);
+
+  React.useEffect(() => {
+    const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+    if (!token) return;
+    fetch('/api/v1/colleges', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => res.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data.data || data.colleges || []);
+        if (list && list.length > 0) {
+          setCollegesList([
+            { id: "all", name: "All Partner Colleges (Global System Default)" },
+            ...list.map(c => ({ id: String(c.id || c.code), name: c.name || c.college_name }))
+          ]);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const selectedCollegeObj = collegesList.find(c => c.id === selectedCollege) || collegesList[0];
 
   const modulesList = Object.values(config.modules);
 
@@ -205,16 +237,18 @@ export default function MaintenanceControls() {
 
   const getCategoryIcon = (category) => {
     switch (category) {
-      case "Auth & Gateways":
+      case "Auth & Security":
         return Shield;
-      case "Dashboards":
-        return Users;
-      case "AI Engine":
-        return Sparkles;
-      case "Learning & Practice":
+      case "Student Features":
         return Code;
-      case "Operations & Monitoring":
+      case "Mentor Features":
+        return Users;
+      case "Coordinator Features":
         return CalendarCheck;
+      case "College Admin":
+        return SlidersHorizontal;
+      case "Super Admin & Core AI":
+        return Sparkles;
       default:
         return SlidersHorizontal;
     }
@@ -226,12 +260,13 @@ export default function MaintenanceControls() {
   };
 
   const categories = [
-    { id: "all", label: "All Modules", count: totalModules },
-    { id: "Auth & Gateways", label: "Auth & Login", count: modulesList.filter(m => m.category === "Auth & Gateways").length },
-    { id: "Dashboards", label: "Role Dashboards", count: modulesList.filter(m => m.category === "Dashboards").length },
-    { id: "AI Engine", label: "AI Systems (USPs)", count: modulesList.filter(m => m.category === "AI Engine").length },
-    { id: "Learning & Practice", label: "Learning & Coding", count: modulesList.filter(m => m.category === "Learning & Practice").length },
-    { id: "Operations & Monitoring", label: "Operations & Reports", count: modulesList.filter(m => m.category === "Operations & Monitoring").length },
+    { id: "all", label: "All Sub-Features", count: totalModules },
+    { id: "Auth & Security", label: "Auth & Security", count: modulesList.filter(m => m.category === "Auth & Security").length },
+    { id: "Student Features", label: "Student Portal", count: modulesList.filter(m => m.category === "Student Features").length },
+    { id: "Mentor Features", label: "Mentor Workspace", count: modulesList.filter(m => m.category === "Mentor Features").length },
+    { id: "Coordinator Features", label: "Coordinator Faculty", count: modulesList.filter(m => m.category === "Coordinator Features").length },
+    { id: "College Admin", label: "College Admin", count: modulesList.filter(m => m.category === "College Admin").length },
+    { id: "Super Admin & Core AI", label: "Super Admin & Core AI", count: modulesList.filter(m => m.category === "Super Admin & Core AI").length },
   ];
 
   return (
@@ -244,7 +279,7 @@ export default function MaintenanceControls() {
             <span>Feature Switches &amp; Module Controls</span>
           </h2>
           <p className="maintenancecontrols-header-subtitle">
-            Manage live accessibility for all 18 platform modules across Student, Coordinator, Mentor, and Admin roles
+            Manage deep granular accessibility controls across all platform sub-features for Student, Coordinator, Mentor, and Admin roles
           </p>
         </div>
         <div className="maintenancecontrols-header-actions">
@@ -358,9 +393,25 @@ export default function MaintenanceControls() {
         })}
       </div>
 
-      {/* Search Input Card */}
-      <div className="departments-filter-card">
-        <div className="sa-search-wrap dept-search-box w-full">
+      {/* College Selector & Search Filter Bar */}
+      <div className="mc-college-filter-card">
+        <div className="mc-college-selector-wrap">
+          <Building2 size={18} className="mc-college-icon" />
+          <span className="mc-college-label">Institution Scope:</span>
+          <select
+            value={selectedCollege}
+            onChange={(e) => setSelectedCollege(e.target.value)}
+            className="mc-college-select"
+          >
+            {collegesList.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="sa-search-wrap dept-search-box mc-search-flex">
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
@@ -370,6 +421,21 @@ export default function MaintenanceControls() {
             className="sa-search-input"
           />
         </div>
+      </div>
+
+      {/* Selected Scope Banner */}
+      <div className="mc-college-scope-banner">
+        <div className="mc-scope-info">
+          <Building2 size={16} className="mc-scope-icon" />
+          <span className="mc-scope-title">
+            Managing Feature Switch Rules for: <strong>{selectedCollegeObj?.name}</strong>
+          </span>
+        </div>
+        <span className="mc-scope-sub font-mono">
+          {selectedCollege === "all"
+            ? "Global Default Policy (Applies across all university partner campuses)"
+            : `Custom Policy Override active for ${selectedCollegeObj?.name}`}
+        </span>
       </div>
 
       {/* Clean Table Card Layout */}
@@ -436,30 +502,28 @@ export default function MaintenanceControls() {
                     </td>
 
                     <td className="maintenancecontrols-td-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {/* High-Contrast Toggle Switch Button */}
+                      <div className="mc-switch-actions-group">
+                        {/* Modern Standalone Sliding Toggle Switch */}
                         <button
                           type="button"
                           onClick={() => toggleModule(mod.key)}
-                          className={`maintenancecontrols-switch-btn ${
+                          className={`mc-toggle-slider-btn ${
                             isCurrentlyActive
-                              ? 'maintenancecontrols-switch-btn--enabled'
-                              : 'maintenancecontrols-switch-btn--disabled'
+                              ? 'mc-toggle-slider-btn--active'
+                              : 'mc-toggle-slider-btn--inactive'
                           }`}
+                          title={isCurrentlyActive ? "Feature Enabled (Click to set into Maintenance Mode)" : "Feature Disabled (Click to Enable live)"}
                         >
-                          <span className={`maintenancecontrols-switch-dot ${
-                            isCurrentlyActive
-                              ? 'maintenancecontrols-switch-dot--enabled'
-                              : 'maintenancecontrols-switch-dot--disabled'
-                          }`}></span>
-                          <span>{isCurrentlyActive ? "Enabled" : "Maintenance"}</span>
+                          <span className="mc-toggle-track">
+                            <span className="mc-toggle-knob" />
+                          </span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => setEditingModule(mod)}
-                          className="maintenancecontrols-action-icon-btn"
-                          title="Edit Custom Notice Message"
+                          className="mc-action-btn mc-action-btn--edit"
+                          title="Edit Custom Maintenance Notice Message"
                         >
                           <Edit3 size={15} />
                         </button>
@@ -467,8 +531,8 @@ export default function MaintenanceControls() {
                         <button
                           type="button"
                           onClick={() => setPreviewModule(mod)}
-                          className="maintenancecontrols-action-icon-btn"
-                          title="Preview Simulated Live Screen"
+                          className="mc-action-btn mc-action-btn--preview"
+                          title="Preview Simulated Live Maintenance Screen"
                         >
                           <Eye size={15} />
                         </button>

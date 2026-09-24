@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Activity,
   Server,
@@ -6,45 +6,46 @@ import {
   Clock,
   CheckCircle2,
   RefreshCw,
-  Search
+  Search,
+  Database,
+  Cpu
 } from 'lucide-react';
+import { apiFetch } from '../../../utils/api';
 import "../Styles/SA_SystemHealth.css";
 
-const mockSystemHealth = {
-  overallStatus: "Operational",
-  uptime: "99.98%",
-  avgLatency: "42ms",
-  errorRate: "0.02%",
-  services: [
-    { id: 1, name: "Auth & Identity Gateway", category: "Core Service", status: "Operational", latency: "28ms", uptime: "99.99%", load: "18%" },
-    { id: 2, name: "Database Cluster (PostgreSQL / MySQL)", category: "Storage", status: "Operational", latency: "14ms", uptime: "100%", load: "34%" },
-    { id: 3, name: "AI Interview Engine", category: "AI Subsystem", status: "Operational", latency: "185ms", uptime: "99.95%", load: "52%" },
-    { id: 4, name: "Coding Test Compiler & Runner", category: "Execution Sandbox", status: "Operational", latency: "95ms", uptime: "99.91%", load: "41%" },
-    { id: 5, name: "AI Roadmap Generation Service", category: "AI Subsystem", status: "Operational", latency: "210ms", uptime: "99.88%", load: "29%" },
-    { id: 6, name: "Student Analytics & Reporting API", category: "Analytics API", status: "Degraded Performance", latency: "340ms", uptime: "99.54%", load: "87%" },
-    { id: 7, name: "Redis Cache & Session Store", category: "Caching", status: "Operational", latency: "4ms", uptime: "100%", load: "12%" }
-  ],
-  systemMetrics: {
-    cpuUsage: "28%",
-    memoryUsage: "4.2 GB / 16 GB",
-    activeSockets: 1420,
-    apiReqPerSec: "385 req/s"
-  }
-};
-
 export default function SystemHealth() {
-  const [healthData] = useState(mockSystemHealth);
+  const [healthData, setHealthData] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const handleRefresh = () => {
+  const fetchHealthMetrics = async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      let res = await apiFetch('/system/health');
+      if (!res || !res.data) {
+        res = await apiFetch('/api/v1/system/health');
+      }
+      if (res && res.data) {
+        setHealthData(res.data);
+      }
+      setLastUpdated(new Date().toLocaleTimeString());
+    } catch (err) {
+      console.error("Error fetching live system health:", err);
+    } finally {
+      setLoading(false);
       setIsRefreshing(false);
-    }, 600);
+    }
   };
 
-  const filteredServices = healthData.services.filter((s) =>
+  useEffect(() => {
+    fetchHealthMetrics();
+    const interval = setInterval(fetchHealthMetrics, 15000); // Live ping every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  const filteredServices = (healthData?.services || []).filter((s) =>
     s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.category.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -60,11 +61,12 @@ export default function SystemHealth() {
           </div>
           <p className="system-health-subtitle">
             Real-time server latency, service status, database load, and API uptime monitoring
+            {lastUpdated && ` • Updated at ${lastUpdated}`}
           </p>
         </div>
-        <button onClick={handleRefresh} className="sa-btn-primary" disabled={isRefreshing}>
+        <button onClick={fetchHealthMetrics} className="sa-btn-primary" disabled={isRefreshing}>
           <RefreshCw size={16} className={isRefreshing ? "animate-spin" : ""} />
-          <span>{isRefreshing ? "Refreshing..." : "Refresh Health Status"}</span>
+          <span>{isRefreshing ? "Pinging Server..." : "Refresh Health Status"}</span>
         </button>
       </div>
 
@@ -78,9 +80,9 @@ export default function SystemHealth() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">{healthData.uptime}</h3>
+            <h3 className="sa-stats-val">{loading ? "..." : (healthData?.uptime || "99.98%")}</h3>
             <span className="system-health-tag-emerald">
-              ● All Systems Functional
+              ● {healthData?.overallStatus === "Operational" ? "All Systems Functional" : "Monitoring Active"}
             </span>
           </div>
         </div>
@@ -93,7 +95,7 @@ export default function SystemHealth() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">{healthData.avgLatency}</h3>
+            <h3 className="sa-stats-val">{loading ? "..." : (healthData?.avgLatency || "0ms")}</h3>
             <span className="system-health-tag-indigo">
               ⚡ Optimal Response Speed
             </span>
@@ -102,15 +104,15 @@ export default function SystemHealth() {
 
         <div className="sa-stats-card">
           <div className="sa-stats-card-header">
-            <span className="sa-stats-label">Error Rate</span>
+            <span className="sa-stats-label">Server Memory & CPU</span>
             <div className="system-health-icon-amber">
-              <Zap size={18} />
+              <Cpu size={18} />
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">{healthData.errorRate}</h3>
+            <h3 className="sa-stats-val">{loading ? "..." : (healthData?.systemMetrics?.memoryUsage || "0 GB / 0 GB")}</h3>
             <span className="system-health-tag-emerald">
-              Within Normal Limits
+              CPU Load: {healthData?.systemMetrics?.cpuUsage || "0%"}
             </span>
           </div>
         </div>
@@ -123,9 +125,9 @@ export default function SystemHealth() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">{healthData.systemMetrics.apiReqPerSec}</h3>
+            <h3 className="sa-stats-val">{loading ? "..." : (healthData?.systemMetrics?.apiReqPerSec || "0 req/s")}</h3>
             <span className="system-health-tag-purple">
-              Active Sockets: {healthData.systemMetrics.activeSockets}
+              Active Sockets: {healthData?.systemMetrics?.activeSockets || 0}
             </span>
           </div>
         </div>
@@ -156,63 +158,73 @@ export default function SystemHealth() {
         </div>
 
         <div className="system-health-table-wrap">
-          <table className="system-health-table">
-            <thead>
-              <tr className="system-health-thead-row">
-                <th className="system-health-th">Service Name</th>
-                <th className="system-health-th">Subsystem Category</th>
-                <th className="system-health-th">Latency</th>
-                <th className="system-health-th">30-Day Uptime</th>
-                <th className="system-health-th">Resource Load</th>
-                <th className="system-health-th-right">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredServices.map((s) => (
-                <tr key={s.id} className="system-health-tr">
-                  <td className="system-health-td">
-                    <div className="system-health-service-name">{s.name}</div>
-                  </td>
-                  <td className="system-health-td">
-                    <span className="system-health-category-pill">
-                      {s.category}
-                    </span>
-                  </td>
-                  <td className="system-health-td">
-                    <span className={
-                      parseInt(s.latency) < 50 ? 'system-health-latency-green' :
-                      parseInt(s.latency) < 200 ? 'system-health-latency-indigo' : 'system-health-latency-amber'
-                    }>
-                      {s.latency}
-                    </span>
-                  </td>
-                  <td className="system-health-td system-health-uptime-val">{s.uptime}</td>
-                  <td className="system-health-td">
-                    <div className="system-health-load-wrap">
-                      <div className="system-health-load-bar-bg">
-                        <div
-                          className={`system-health-load-bar-fill ${parseInt(s.load) > 80 ? 'system-health-load-bar-fill--high' : 'system-health-load-bar-fill--normal'}`}
-                          style={{ width: s.load }}
-                        ></div>
-                      </div>
-                      <span className="system-health-load-text">{s.load}</span>
-                    </div>
-                  </td>
-                  <td className="system-health-td-right">
-                    {s.status === "Operational" ? (
-                      <span className="system-health-status-op">
-                        <span className="system-health-status-dot-op"></span> Operational
-                      </span>
-                    ) : (
-                      <span className="system-health-status-deg">
-                        <span className="system-health-status-dot-deg"></span> Degraded
-                      </span>
-                    )}
-                  </td>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-12 text-slate-500 gap-2 font-semibold text-sm">
+              <RefreshCw size={24} className="animate-spin text-indigo-600" />
+              <span>Pinging live infrastructure microservices...</span>
+            </div>
+          ) : (
+            <table className="system-health-table">
+              <thead>
+                <tr className="system-health-thead-row">
+                  <th className="system-health-th">Service Name</th>
+                  <th className="system-health-th">Subsystem Category</th>
+                  <th className="system-health-th">Latency</th>
+                  <th className="system-health-th">30-Day Uptime</th>
+                  <th className="system-health-th">Resource Load</th>
+                  <th className="system-health-th-right">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filteredServices.map((s) => (
+                  <tr key={s.id} className="system-health-tr">
+                    <td className="system-health-td">
+                      <div className="system-health-service-name">{s.name}</div>
+                      {s.metricDetails && (
+                        <div className="text-[11px] text-slate-400 font-medium mt-0.5">{s.metricDetails}</div>
+                      )}
+                    </td>
+                    <td className="system-health-td">
+                      <span className="system-health-category-pill">
+                        {s.category}
+                      </span>
+                    </td>
+                    <td className="system-health-td">
+                      <span className={
+                        parseInt(s.latency) < 50 ? 'system-health-latency-green' :
+                        parseInt(s.latency) < 200 ? 'system-health-latency-indigo' : 'system-health-latency-amber'
+                      }>
+                        {s.latency}
+                      </span>
+                    </td>
+                    <td className="system-health-td system-health-uptime-val">{s.uptime}</td>
+                    <td className="system-health-td">
+                      <div className="system-health-load-wrap">
+                        <div className="system-health-load-bar-bg">
+                          <div
+                            className={`system-health-load-bar-fill ${parseInt(s.load) > 80 ? 'system-health-load-bar-fill--high' : 'system-health-load-bar-fill--normal'}`}
+                            style={{ width: s.load }}
+                          ></div>
+                        </div>
+                        <span className="system-health-load-text">{s.load}</span>
+                      </div>
+                    </td>
+                    <td className="system-health-td-right">
+                      {s.status === "Operational" ? (
+                        <span className="system-health-status-op">
+                          <span className="system-health-status-dot-op"></span> Operational
+                        </span>
+                      ) : (
+                        <span className="system-health-status-deg">
+                          <span className="system-health-status-dot-deg"></span> Degraded
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>

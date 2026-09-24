@@ -1073,10 +1073,29 @@ body {
   flex-shrink: 0;
 }
 
-.sa-stats-icon-box--default {
+.sa-stats-icon-box--default,
+.sa-stats-icon-box--indigo {
   background: #eef2ff;
   color: #4f46e5;
   border: 1px solid #e0e7ff;
+}
+
+.sa-stats-icon-box--emerald {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.sa-stats-icon-box--purple {
+  background: #f3e8ff;
+  color: #9333ea;
+  border: 1px solid #e9d5ff;
+}
+
+.sa-stats-icon-box--sky {
+  background: #e0f2fe;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
 }
 
 .sa-stats-icon-box--warning {
@@ -1103,6 +1122,11 @@ body {
   line-height: 1.1;
 }
 
+.sa-stats-val--indigo { color: #1e1b4b; }
+.sa-stats-val--emerald { color: #047857; }
+.sa-stats-val--purple { color: #6b21a8; }
+.sa-stats-val--sky { color: #0369a1; }
+
 .sa-stats-change {
   margin-top: 6px;
   margin-bottom: 0;
@@ -1112,6 +1136,11 @@ body {
   gap: 4px;
   font-weight: 600;
 }
+
+.sa-stats-change-text--indigo { color: #4338ca; }
+.sa-stats-change-text--emerald { color: #059669; }
+.sa-stats-change-text--purple { color: #7e22ce; }
+.sa-stats-change-text--sky { color: #0284c7; }
 
 .sa-bottom-grid {
   display: grid;

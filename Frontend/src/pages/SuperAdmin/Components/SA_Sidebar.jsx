@@ -10,7 +10,6 @@ import {
   SlidersHorizontal,
   Activity,
   HelpCircle,
-  Trophy,
   FileCheck2,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
@@ -42,8 +41,6 @@ const primaryNavItems = [
   { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
   { title: "Batches", url: "/super-admin/batches", icon: Code2 },
   { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
-  { title: "Leaderboards", url: "/super-admin/leaderboard", icon: Trophy },
-  { title: "Weekly Reports", url: "/super-admin/weekly-reports", icon: FileCheck2 },
   { title: "Performance", url: "/super-admin/performance", icon: LineChart },
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },

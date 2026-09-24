@@ -263,8 +263,6 @@ export default function SuperAdminLayout() {
     if (path.startsWith("/super-admin/health")) return "System Health";
     if (path.startsWith("/super-admin/maintenance")) return "Feature Switches";
     if (path.startsWith("/super-admin/tickets")) return "Support Tickets";
-    if (path.startsWith("/super-admin/leaderboard")) return "Leaderboards";
-    if (path.startsWith("/super-admin/weekly-reports")) return "Weekly Reports";
     if (path.startsWith("/super-admin/profile")) return "Profile";
     return "Overview";
   };

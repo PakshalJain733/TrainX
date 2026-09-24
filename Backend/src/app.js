@@ -32,10 +32,13 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+import systemHealthRoutes from './routes/systemHealth.routes.js';
+
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
-// Health Check Endpoint (Section 28)
+// Health Check & Infrastructure Metrics Endpoints
+app.use('/api/v1/system/health', systemHealthRoutes);
 app.get('/api/v1/health', (req, res) => {
   return sendSuccess(res, 'Training Portal API is running', {
     status: 'healthy',

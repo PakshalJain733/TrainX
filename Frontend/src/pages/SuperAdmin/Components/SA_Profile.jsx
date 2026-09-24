@@ -294,14 +294,6 @@ export default function SuperAdminProfile() {
             <h4 className="profile-section-subtitle">Account Overview</h4>
 
             <div className="profile-detail-row">
-              <Building size={16} className="profile-detail-icon" />
-              <div>
-                <span className="profile-detail-label">Institution</span>
-                <p className="profile-detail-value">{form.organization}</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
               <ShieldCheck size={16} className="profile-detail-icon text-indigo-500" />
               <div>
                 <span className="profile-detail-label">Designation & Role</span>
@@ -416,16 +408,6 @@ export default function SuperAdminProfile() {
                   className="profile-input"
                   value={form.role}
                   disabled
-                />
-              </div>
-
-              <div className="profile-field">
-                <label className="profile-label">Institution / Organization</label>
-                <input
-                  type="text"
-                  className="profile-input"
-                  value={form.organization}
-                  onChange={(e) => setForm((p) => ({ ...p, organization: e.target.value }))}
                 />
               </div>
 
