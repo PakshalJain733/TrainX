@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   User,
   Camera,
@@ -15,83 +16,178 @@ import {
   BookOpen,
   Star,
   Key,
+  QrCode,
+  Copy,
+  Check,
+  Loader2,
+  X,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { mentorProfile } from "../../../data/mentorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_ProfilePage.css";
 
 export default function ProfilePage() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
-  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [showChangePassModal, setShowChangePassModal] = useState(false);
+
+  // 2FA Google Authenticator State
+  const [is2FASetupOpen, setIs2FASetupOpen] = useState(false);
+  const [loading2FASetup, setLoading2FASetup] = useState(false);
+  const [totpData, setTotpData] = useState(null);
+  const [totpCodeInput, setTotpCodeInput] = useState(["", "", "", "", "", ""]);
+  const [verifying2FA, setVerifying2FA] = useState(false);
+  const [totpError, setTotpError] = useState("");
+  const [totpSuccess, setTotpSuccess] = useState("");
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [copiedSecret, setCopiedSecret] = useState(false);
+  const totpInputRefs = useRef([]);
 
   const resolveUser = () => {
     let localUser = {};
-    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
     let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile.name || "Faculty Mentor";
     let email = localUser.email || mentorProfile.email || "mentor@pvppcoe.ac.in";
     return { name, email, ...localUser };
   };
 
-  const [form, setForm] = useState(() => {
-    const user = resolveUser();
-    try {
-      const stored = localStorage.getItem("mentorProfile");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        return { ...parsed, name: parsed.name || user.name, email: parsed.email || user.email };
-      }
-    } catch (e) {}
+  const initialUser = resolveUser();
 
-    return {
-      name: user.name,
-      email: user.email,
-      phone: "+91 98201 54321",
-      empId: "MENTOR-CSE-102",
-      role: mentorProfile.role || "Senior Technical Trainer & Mentor",
-      specialization: mentorProfile.specialization || "Full-Stack Web Development & DSA",
-      department: mentorProfile.department || "Computer Engineering",
-      college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering",
-      experience: mentorProfile.experience || "6+ Years Teaching & Industry",
-      rating: mentorProfile.rating || "4.8",
-      officeLocation: "Faculty Block C, Room 302",
-      officeHours: "Mon - Fri, 10:00 AM - 04:00 PM",
-      allocatedBatches: "3 Allocated Cohorts",
-      totalStudents: "120 Assigned Students",
-    };
+  const [form, setForm] = useState({
+    name: initialUser.name,
+    email: initialUser.email,
+    phone: initialUser.mobile_number || mentorProfile.phone,
+    department: initialUser.department || mentorProfile.department,
+    role: "Faculty Mentor",
+    college: mentorProfile.college,
+    officeLocation: mentorProfile.officeLocation,
+    officeHours: mentorProfile.officeHours,
+    allocatedBatches: mentorProfile.allocatedBatches,
+    totalStudents: mentorProfile.totalStudents,
+    rating: mentorProfile.rating,
+    experience: mentorProfile.experience,
   });
 
-  const deptOptions = [
-    { value: "Computer Engineering", label: "Computer Engineering" },
-    { value: "Information Technology", label: "Information Technology" },
-    { value: "Electronics & Computer Science", label: "Electronics & Computer Science" },
-    { value: "Artificial Intelligence & Data Science", label: "Artificial Intelligence & Data Science" },
-    { value: "Mechanical Engineering", label: "Mechanical Engineering" },
-  ];
+  useEffect(() => {
+    apiFetch("/auth/me")
+      .then((res) => {
+        if (res && (res.user || res.data)) {
+          const u = res.user || res.data;
+          setForm((prev) => ({
+            ...prev,
+            name: u.name || prev.name,
+            email: u.email || prev.email,
+            phone: u.mobile_number || u.phone || prev.phone,
+            department: u.department || prev.department,
+          }));
+          setIs2FAEnabled(Boolean(u.two_factor_enabled || u.two_factor_secret));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
-  const specOptions = [
-    { value: "Full-Stack Web Development & DSA", label: "Full-Stack Web Development & DSA" },
-    { value: "Data Science & Machine Learning", label: "Data Science & Machine Learning" },
-    { value: "Python Backend & Cloud Architecture", label: "Python Backend & Cloud Architecture" },
-    { value: "Mobile App Development (React Native / Flutter)", label: "Mobile App Development" },
-    { value: "DevOps, Docker & Kubernetes", label: "DevOps & Cloud Computing" },
-  ];
+  const handleOpen2FASetup = async () => {
+    setTotpError("");
+    setTotpSuccess("");
+    setTotpCodeInput(["", "", "", "", "", ""]);
+    setLoading2FASetup(true);
+    setIs2FASetupOpen(true);
 
-  const getInitials = (nameStr) => {
-    if (!nameStr) return "FM";
-    const parts = nameStr.trim().split(" ");
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
+    try {
+      const res = await apiFetch("/auth/setup-2fa", { method: "POST" });
+      if (res && (res.data || res.qrCode)) {
+        setTotpData(res.data || res);
+      }
+    } catch (err) {
+      setTotpError(err.message || "Failed to generate Google Authenticator QR Code");
+    } finally {
+      setLoading2FASetup(false);
     }
-    return nameStr.substring(0, 2).toUpperCase();
+  };
+
+  const handleCopySecret = () => {
+    if (totpData?.secret) {
+      navigator.clipboard.writeText(totpData.secret);
+      setCopiedSecret(true);
+      setTimeout(() => setCopiedSecret(false), 2000);
+    }
+  };
+
+  const handleTotpDigitChange = (index, value) => {
+    const cleanVal = value.replace(/\D/g, "").slice(-1);
+    const newCode = [...totpCodeInput];
+    newCode[index] = cleanVal;
+    setTotpCodeInput(newCode);
+
+    if (cleanVal && index < 5) {
+      totpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleTotpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !totpCodeInput[index] && index > 0) {
+      totpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleTotpPaste = (e) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pasteData) {
+      const digits = pasteData.split("");
+      const newCode = ["", "", "", "", "", ""];
+      digits.forEach((d, i) => {
+        newCode[i] = d;
+      });
+      setTotpCodeInput(newCode);
+      const nextIdx = Math.min(digits.length, 5);
+      totpInputRefs.current[nextIdx]?.focus();
+    }
+  };
+
+  const handleVerify2FASubmit = async (e) => {
+    e.preventDefault();
+    const code = totpCodeInput.join("");
+    if (code.length < 6) {
+      setTotpError("Please enter complete 6-digit Authenticator code.");
+      return;
+    }
+    setVerifying2FA(true);
+    setTotpError("");
+    setTotpSuccess("");
+
+    try {
+      const res = await apiFetch("/auth/verify-2fa", {
+        method: "POST",
+        body: JSON.stringify({
+          secret: totpData?.secret,
+          code: code,
+        }),
+      });
+
+      if (res && (res.success || res.data)) {
+        setTotpSuccess("Google Authenticator 2FA paired and activated successfully!");
+        setIs2FAEnabled(true);
+        setTimeout(() => {
+          setIs2FASetupOpen(false);
+        }, 1500);
+      } else {
+        setTotpError(res?.message || "Invalid Authenticator Code. Please check Google Authenticator.");
+      }
+    } catch (err) {
+      setTotpError(err.message || "Failed to verify 2FA code. Please try again.");
+    } finally {
+      setVerifying2FA(false);
+    }
   };
 
   const handleAvatarChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setAvatarUrl(url);
@@ -101,46 +197,49 @@ export default function ProfilePage() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      window.dispatchEvent(new Event("userProfileUpdated"));
-    } catch (err) {}
-
-    try {
-      await apiFetch("/auth/profile", {
+      await apiFetch("/admin/profile", {
         method: "PUT",
         body: JSON.stringify({
-          name: form.name.trim(),
-          email: form.email.trim(),
-          mobile_number: form.phone.trim(),
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
           department: form.department,
-          designation: form.designation,
-          office_location: form.officeLocation,
         }),
       });
-    } catch (err) {
-      console.warn("Failed to persist mentor profile to DB:", err);
-    }
 
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3500);
+      window.dispatchEvent(new Event("userProfileUpdated"));
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error("Failed to save mentor profile:", err);
+    }
+  };
+
+  const getInitials = (nameStr) => {
+    if (!nameStr) return "MN";
+    const parts = nameStr.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return nameStr.substring(0, 2).toUpperCase();
   };
 
   return (
     <div className="student-page-inner profile-container">
       <SectionHeader
-        eyebrow="Mentor Account"
-        title="My Profile & Academic Guidance Settings"
-        description="Manage your faculty contact details, primary specialization, office hours, and mentorship preferences."
+        eyebrow="Faculty & Mentorship"
+        title="Mentor Profile & Settings"
+        description="Manage your faculty dossier, office availability, and notification settings."
       />
 
       {saved && (
         <div className="profile-alert-success">
           <CheckCircle2 size={18} />
-          <span>Profile updated successfully! Official contact details, specialization, and settings have been saved.</span>
+          <span>Profile updated and saved successfully!</span>
         </div>
       )}
 
       <div className="profile-main-grid">
-        {/* LEFT COLUMN: Mentor Dossier Card */}
+        {/* LEFT COLUMN: Dossier Card */}
         <div className="profile-dossier-card">
           <div className="profile-avatar-section">
             <div className="profile-avatar-wrap">
@@ -153,7 +252,7 @@ export default function ProfilePage() {
                 type="button"
                 className="profile-camera-btn"
                 onClick={() => fileInputRef.current?.click()}
-                title="Change Avatar"
+                title="Change Avatar Image"
               >
                 <Camera size={14} />
               </button>
@@ -168,21 +267,20 @@ export default function ProfilePage() {
 
             <h2 className="profile-name">{form.name}</h2>
             <div className="profile-roll-chip">
-              <span className="profile-roll-label">Staff ID:</span>
-              <strong>{form.empId}</strong>
+              <ShieldCheck size={14} />
+              <strong>{form.role}</strong>
             </div>
 
             <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
               <Badge variant="success">Active Mentor</Badge>
-              <Badge variant="default">{form.department}</Badge>
+              <Badge variant="default">{form.department || "Engineering"}</Badge>
             </div>
           </div>
 
           <div className="profile-academic-divider" />
 
-          {/* Mentor Overview Details */}
           <div className="profile-academic-details">
-            <h4 className="profile-section-subtitle">Dossier Overview</h4>
+            <h4 className="profile-section-subtitle">Faculty Dossier</h4>
 
             <div className="profile-detail-row">
               <Building size={16} className="profile-detail-icon" />
@@ -201,26 +299,10 @@ export default function ProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <Award size={16} className="profile-detail-icon text-indigo-500" />
-              <div>
-                <span className="profile-detail-label">Specialization</span>
-                <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.specialization}</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
               <Users size={16} className="profile-detail-icon text-emerald-500" />
               <div>
-                <span className="profile-detail-label">Assigned Batches & Scope</span>
+                <span className="profile-detail-label">Assigned Scope</span>
                 <p className="profile-detail-value">{form.allocatedBatches} · {form.totalStudents}</p>
-              </div>
-            </div>
-
-            <div className="profile-detail-row">
-              <Star size={16} className="profile-detail-icon text-amber-500 fill-amber-400" />
-              <div>
-                <span className="profile-detail-label">Student Rating & Experience</span>
-                <p className="profile-detail-value font-bold text-amber-600">{form.rating} / 5.0 ⭐ ({form.experience})</p>
               </div>
             </div>
 
@@ -240,8 +322,8 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Change Password Button */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3">
+            {/* Change Password & 2FA Buttons */}
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex flex-col gap-2.5" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <button
                 type="button"
                 onClick={() => setShowChangePassModal(true)}
@@ -250,6 +332,32 @@ export default function ProfilePage() {
                 <Key size={16} />
                 <span>Change Password</span>
               </button>
+
+              <button
+                type="button"
+                className="profile-2fa-setup-btn"
+                onClick={handleOpen2FASetup}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  background: is2FAEnabled ? "#ecfdf5" : "#4f46e5",
+                  color: is2FAEnabled ? "#047857" : "#ffffff",
+                  border: is2FAEnabled ? "1.5px solid #a7f3d0" : "none",
+                  fontWeight: "600",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  boxShadow: "0 2px 6px rgba(79, 70, 229, 0.15)",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                <QrCode size={16} />
+                {is2FAEnabled ? "Reconfigure Google 2FA QR Code" : "Setup Google Authenticator 2FA"}
+              </button>
             </div>
           </div>
         </div>
@@ -257,13 +365,12 @@ export default function ProfilePage() {
         {/* RIGHT COLUMN: Edit Profile Form */}
         <div className="profile-form-card">
           <form onSubmit={handleSave}>
-            {/* Section 1: Personal Contact Details (FIRST) */}
             <div className="profile-form-section">
               <div className="profile-section-heading">
                 <User size={18} className="profile-heading-icon text-indigo-500" />
                 <div>
-                  <h3 className="profile-heading-title">Personal Contact & Availability</h3>
-                  <p className="profile-heading-desc">Used for student doubt clearing, session announcements, and faculty advisories.</p>
+                  <h3 className="profile-heading-title">Personal & Contact Details</h3>
+                  <p className="profile-heading-desc">Saved directly to your mentor profile in MySQL database.</p>
                 </div>
               </div>
 
@@ -280,7 +387,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Official Email Address *</label>
+                  <label className="profile-label">Email Address *</label>
                   <input
                     type="email"
                     className="profile-input"
@@ -291,7 +398,7 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="profile-field">
-                  <label className="profile-label">Contact Phone Number</label>
+                  <label className="profile-label">Phone Number *</label>
                   <input
                     type="text"
                     className="profile-input"
@@ -299,20 +406,9 @@ export default function ProfilePage() {
                     onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                   />
                 </div>
-
-                <div className="profile-field">
-                  <label className="profile-label">Office Hours / Availability</label>
-                  <input
-                    type="text"
-                    className="profile-input"
-                    value={form.officeHours}
-                    onChange={(e) => setForm((p) => ({ ...p, officeHours: e.target.value }))}
-                  />
-                </div>
               </div>
             </div>
 
-            {/* Section 2: Specialization & Academic Governance (SECOND) */}
             <div className="profile-form-section mt-6">
               <div className="profile-section-heading">
                 <Sparkles size={18} className="profile-heading-icon text-indigo-500" />

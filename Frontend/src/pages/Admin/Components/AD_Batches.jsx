@@ -4,45 +4,83 @@ import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, 
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Batches.css";
 
 /* ── Inline dropdown for Admin Batches (CSS: AdminBatches.css .admin-batch-select-*) ── */
 function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
   const selected = options.find(o => String(o.value) === String(value));
 
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
+  const updateCoords = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const isUp = direction === 'up' || (direction !== 'down' && spaceBelow < 240);
+      setCoords({
+        top: isUp ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        dropUp: isUp,
+      });
+    }
+  };
 
   const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (direction === 'up') {
-        setDropUp(true);
-      } else if (direction === 'down') {
-        setDropUp(false);
-      } else {
-        setDropUp(spaceBelow < 240);
-      }
-    }
+    if (!isOpen) updateCoords();
     setIsOpen(v => !v);
   };
 
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleScrollOrResize() {
+      if (isOpen) updateCoords();
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen]);
+
   return (
-    <div className={`admin-batch-select-wrap${isOpen ? ' admin-batch-select-wrap--open' : ''}`} ref={ref}>
+    <div className={`admin-batch-select-wrap${isOpen ? ' admin-batch-select-wrap--open' : ''}`} ref={triggerRef}>
       <button type="button" onClick={handleToggle} className={`admin-batch-select-trigger${isOpen ? ' admin-batch-select-trigger--open' : ''}`}>
         {Icon && <Icon className="admin-batch-select-icon" />}
         <span className="admin-batch-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
         <ChevronDown className={`admin-batch-select-arrow${isOpen ? ' admin-batch-select-arrow--rotate' : ''}`} />
       </button>
-      {isOpen && (
-        <div className={`admin-batch-select-dropdown${dropUp ? ' admin-batch-select-dropdown--up' : ''}`}>
+
+      {isOpen && createPortal(
+        <div
+          ref={dropdownRef}
+          className="admin-batch-select-dropdown"
+          style={{
+            position: 'fixed',
+            top: coords.dropUp ? 'auto' : `${coords.top}px`,
+            bottom: coords.dropUp ? `${window.innerHeight - coords.top}px` : 'auto',
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: '240px',
+            overflowY: 'auto',
+            zIndex: 99999,
+          }}
+        >
           {options.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
@@ -52,7 +90,8 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
               </div>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -146,6 +185,9 @@ export default function AdminBatches() {
 
   useEffect(() => {
     fetchBatches();
+    const handleBatchUpdate = () => fetchBatches();
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
   }, []);
 
   // Ticking timer for real-time countdown every second
@@ -217,9 +259,11 @@ export default function AdminBatches() {
           college_id: 1,
         }),
       });
+      window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: newBatchObj }));
       fetchBatches();
     } catch (err) {
       console.warn("Saved batch to local state fallback:", err);
+      window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: newBatchObj }));
     }
   };
 
@@ -391,15 +435,14 @@ export default function AdminBatches() {
   };
 
   const handleDeleteBatch = async (batchId, batchName) => {
-    if (!window.confirm(`Are you sure you want to delete batch "${batchName}"? This will remove the batch, student enrollments, and assigned tasks.`)) {
+    if (!window.confirm(`Are you sure you want to mark batch "${batchName}" as inactive?`)) {
       return;
     }
-    setBatches((prev) => prev.filter((b) => b.id !== batchId));
     try {
       await apiFetch(`/batches/${batchId}`, { method: "DELETE" });
       await fetchBatches();
     } catch (err) {
-      console.error("Failed to delete batch from DB:", err);
+      console.error("Failed to mark batch as inactive in DB:", err);
       fetchBatches();
     }
   };
@@ -1149,8 +1192,13 @@ export default function AdminBatches() {
                   <div className="batch-icon-container">
                     <Users size={20} />
                   </div>
-                  <div className="batch-header-text">
-                    <CardTitle className="batch-name">{b.name}</CardTitle>
+                  <div className="batch-header-text" style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <CardTitle className="batch-name">{b.name}</CardTitle>
+                      <Badge variant={(b.status === "Inactive" || b.status === "inactive") ? "destructive" : "primary"}>
+                        {(b.status === "Inactive" || b.status === "inactive") ? "Inactive" : "Active"}
+                      </Badge>
+                    </div>
                     <p className="batch-mentor">Mentor: {b.mentor}</p>
                   </div>
                 </CardHeader>

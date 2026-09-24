@@ -192,8 +192,35 @@ export const deleteLiveSession = async (req, res, next) => {
 };
 
 // --- Study Materials Database Endpoints ---
+let materialsTableInitialized = false;
+async function ensureMaterialsTable() {
+  if (materialsTableInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS study_materials (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        uploaded_by INT DEFAULT 1,
+        title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        subject VARCHAR(100) DEFAULT 'General',
+        batch VARCHAR(100) DEFAULT 'All Batches',
+        type VARCHAR(50) DEFAULT 'PDF',
+        file_url TEXT NULL,
+        link TEXT NULL,
+        downloads INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    materialsTableInitialized = true;
+  } catch (e) {
+    console.warn('[DB ensureMaterialsTable error]', e.message);
+  }
+}
+
 export const getStudyMaterials = async (req, res, next) => {
   try {
+    await ensureMaterialsTable();
     let materials = [];
     try {
       materials = await query(`SELECT * FROM study_materials ORDER BY id DESC`);
@@ -210,6 +237,7 @@ import { uploadFileToS3 } from '../utils/s3Upload.js';
 
 export const createStudyMaterial = async (req, res, next) => {
   try {
+    await ensureMaterialsTable();
     const { title, description, subject, batch, type, link } = req.body;
     let fileUrl = req.body.fileUrl || null;
 
@@ -224,7 +252,7 @@ export const createStudyMaterial = async (req, res, next) => {
       const result = await query(
         `INSERT INTO study_materials (uploaded_by, title, description, subject, batch, type, file_url, link)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [userId, title, description || null, subject || 'General', batch || 'All Batches', type || 'PDF', fileUrl || null, link || null]
+        [userId, title || 'Untitled Resource', description || null, subject || 'General', batch || 'All Batches', type || 'PDF', fileUrl || null, link || null]
       );
       if (result && result.insertId) insertId = result.insertId;
     } catch (e) {
@@ -233,13 +261,14 @@ export const createStudyMaterial = async (req, res, next) => {
     const newMaterial = {
       id: insertId,
       uploaded_by: userId,
-      title,
+      title: title || 'Untitled Resource',
       description: description || null,
       subject: subject || 'General',
       batch: batch || 'All Batches',
       type: type || 'PDF',
       file_url: fileUrl || null,
       link: link || null,
+      downloads: 0,
       created_at: new Date().toISOString()
     };
     return sendSuccess(res, 'Study material uploaded successfully', newMaterial, 201);

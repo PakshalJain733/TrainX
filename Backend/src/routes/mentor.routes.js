@@ -29,8 +29,11 @@ import { upload } from '../utils/s3Upload.js';
 
 // Study Materials
 router.get('/materials', getStudyMaterials);
+router.get('/study-materials', getStudyMaterials);
 router.post('/materials', upload.single('file'), createStudyMaterial);
+router.post('/study-materials', upload.single('file'), createStudyMaterial);
 router.delete('/materials/:id', deleteStudyMaterial);
+router.delete('/study-materials/:id', deleteStudyMaterial);
 
 export default router;
 

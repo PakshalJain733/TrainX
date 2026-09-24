@@ -21,6 +21,7 @@ import {
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/AD_LearningContent.css";
 
 /* ── Inline dropdown for Admin LearningContent (CSS: AdminLearningContent.css .admin-lc-select-*) ── */
@@ -92,11 +93,11 @@ export default function AdminLearningContent() {
 
   const loadResources = async () => {
     setLoading(true);
-    let apiDataLoaded = false;
     try {
       const res = await apiFetch("/mentor/materials");
+      let fetched = [];
       if (res && res.data && Array.isArray(res.data)) {
-        const fetched = res.data.map(item => ({
+        fetched = res.data.map(item => ({
           id: item.id,
           title: item.title,
           description: item.description,
@@ -109,11 +110,27 @@ export default function AdminLearningContent() {
           duration: item.type === "Link" ? "Web Link" : "Document",
           status: "Published",
         }));
-        if (fetched.length > 0) {
-          setResources(fetched);
-          apiDataLoaded = true;
-        }
       }
+
+      const shared = await getSharedLearningContent([]);
+      const existingIds = new Set(fetched.map(f => f.id));
+      const sharedMapped = shared
+        .filter(s => !existingIds.has(s.id))
+        .map(s => ({
+          id: s.id,
+          title: s.title,
+          description: s.description || "",
+          category: s.batch_name || s.data?.batch || "All Batches",
+          subject: s.data?.subject || "General",
+          type: s.data?.type || "Document",
+          file_url: s.data?.url || null,
+          link: s.data?.url || null,
+          file_name: null,
+          duration: s.data?.type === "Link" ? "Web Link" : "Document",
+          status: "Published",
+        }));
+
+      setResources([...fetched, ...sharedMapped]);
     } catch (err) {
       console.error("Failed to load study materials:", err);
     } finally {
@@ -121,8 +138,7 @@ export default function AdminLearningContent() {
     }
   };
 
-  useEffect(() => {
-    loadResources();
+  const fetchBatches = () => {
     apiFetch("/batches")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
@@ -130,6 +146,21 @@ export default function AdminLearningContent() {
         }
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    loadResources();
+    fetchBatches();
+
+    const handleLearningUpdate = () => loadResources();
+    const handleBatchUpdate = () => fetchBatches();
+
+    window.addEventListener(EVENTS.LEARNING_UPDATED, handleLearningUpdate);
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    return () => {
+      window.removeEventListener(EVENTS.LEARNING_UPDATED, handleLearningUpdate);
+      window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    };
   }, []);
 
   const categories = useMemo(() => {
@@ -161,7 +192,7 @@ export default function AdminLearningContent() {
     setResources(prev => [tempEntry, ...prev]);
 
     try {
-      const token = sessionStorage.getItem("token") || localStorage.getItem("token") || "";
+      const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
       let res;
 
       if (selectedFile) {
@@ -199,8 +230,17 @@ export default function AdminLearningContent() {
       }
 
       if (res && res.success) {
-        // Re-fetch clean list from database so inserted DB S3 file URL is preserved
         await loadResources();
+        window.dispatchEvent(new CustomEvent(EVENTS.LEARNING_UPDATED));
+      } else {
+        await addSharedLearningContent({
+          title: newTitle,
+          description: newDescription,
+          batch: newBatch,
+          type: newType,
+          url: resourceLink || fileUrl || '#',
+        });
+        window.dispatchEvent(new CustomEvent(EVENTS.LEARNING_UPDATED));
       }
     } catch (err) {
       console.warn("Backend save warning:", err);

@@ -130,9 +130,9 @@ export const updateBatch = async (id, {
   return getBatchByIdModel(numId);
 };
 
-// Delete batch
+// Delete batch (Soft delete - set status = 'inactive')
 export const deleteBatch = async (id) => {
-  return await query('DELETE FROM batches WHERE id = ?', [parseInt(id, 10)]);
+  return await query("UPDATE batches SET status = 'inactive' WHERE id = ?", [parseInt(id, 10)]);
 };
 
 // ─── Student Batch Join ───────────────────────────────────────────

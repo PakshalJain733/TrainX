@@ -48,7 +48,7 @@ export default function BroadcastToast() {
 
   const handleToastClick = () => {
     setToast(null);
-    const userRole = localStorage.getItem("role") || "student";
+    const userRole = sessionStorage.getItem("role") || "student";
     if (userRole === "student") {
       navigate("/student/notifications");
     } else if (userRole === "coordinator") {

@@ -13,7 +13,7 @@ import "../Styles/MN_Overview.css";
 export default function Overview() {
   const [mentorUser, setMentorUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }

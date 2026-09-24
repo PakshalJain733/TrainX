@@ -32,7 +32,8 @@ import CoordinatorAttendance from "./CO_Attendance";
 import CoordinatorPlacement from "./CO_Placement";
 import "../Styles/CO_Assessments.css";
 
-import { assessmentAPI } from "../../../services/api";
+import { assessmentAPI, batchAPI } from "../../../services/api";
+import { EVENTS, addSharedQuiz, getSharedQuizzes } from "../../../utils/sharedStore";
 
 export default function CoordinatorAssessments() {
   const location = useLocation();
@@ -45,6 +46,7 @@ export default function CoordinatorAssessments() {
 
   const [mainTab, setMainTab] = useState(getInitialTab);
   const [assessments, setAssessments] = useState(coordinatorAssessments);
+  const [batchesList, setBatchesList] = useState(coordinatorBatches);
   const [activityLogs, setActivityLogs] = useState(coordinatorQuizActivityLogs);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [activeTab, setActiveTab] = useState("directory"); // 'directory', 'live_feed', 'analytics'
@@ -55,15 +57,39 @@ export default function CoordinatorAssessments() {
 
   // Create Quiz Form
   const [title, setTitle] = useState("");
-  const [batch, setBatch] = useState(coordinatorBatches[0].name);
+  const [batch, setBatch] = useState("All Batches");
   const [type, setType] = useState("MCQ Quiz");
   const [dueDate, setDueDate] = useState("");
+
+  const fetchBatches = async () => {
+    try {
+      const data = await batchAPI.getBatches();
+      if (Array.isArray(data) && data.length > 0) {
+        setBatchesList(data);
+      }
+    } catch (err) {
+      console.warn("Using local batches fallback.");
+    }
+  };
 
   const fetchAssessments = async () => {
     try {
       const data = await assessmentAPI.getAssessments();
-      if (data && Array.isArray(data) && data.length > 0) {
-        setAssessments(data);
+      const shared = await getSharedQuizzes([]);
+      const dbAssessments = Array.isArray(data) ? data : [];
+      const combined = [...dbAssessments, ...shared.map(s => ({
+        id: s.id,
+        title: s.title,
+        batch: s.batch_name || s.data?.batch || "All Batches",
+        type: s.data?.subject || "MCQ Quiz",
+        dueDate: "2026-09-30",
+        submissions: "0 / 120",
+        avgScore: "--",
+        passRate: "--",
+        status: s.status || "Active",
+      }))];
+      if (combined.length > 0) {
+        setAssessments(combined);
       }
     } catch (err) {
       console.warn("Using local assessments fallback data.");
@@ -72,13 +98,25 @@ export default function CoordinatorAssessments() {
 
   useEffect(() => {
     fetchAssessments();
+    fetchBatches();
+
+    const handleBatchUpdate = () => fetchBatches();
+    const handleQuizUpdate = () => fetchAssessments();
+
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    window.addEventListener(EVENTS.QUIZ_UPDATED, handleQuizUpdate);
+    return () => {
+      window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+      window.removeEventListener(EVENTS.QUIZ_UPDATED, handleQuizUpdate);
+    };
   }, []);
 
   const filteredAssessments = assessments.filter((a) => {
     const matchesSearch =
-      a.title.toLowerCase().includes(search.toLowerCase()) ||
-      a.batch.toLowerCase().includes(search.toLowerCase());
-    const matchesBatch = batchFilter === "All" || a.batch === batchFilter;
+      (a.title || "").toLowerCase().includes(search.toLowerCase()) ||
+      (a.batch || a.batch_name || "").toLowerCase().includes(search.toLowerCase());
+    const targetB = a.batch || a.batch_name || "All Batches";
+    const matchesBatch = batchFilter === "All" || targetB === batchFilter || targetB === "All Batches";
     return matchesSearch && matchesBatch;
   });
 
@@ -86,10 +124,14 @@ export default function CoordinatorAssessments() {
     e.preventDefault();
     if (!title.trim()) return;
 
+    const selectedBatchObj = batchesList.find(b => b.name === batch);
+
     const newAssessment = {
       id: Date.now(),
-      title,
-      batch,
+      title: title.trim(),
+      batch: batch,
+      batch_name: batch,
+      batch_id: selectedBatchObj ? selectedBatchObj.id : null,
       type,
       dueDate: dueDate || "2026-09-10",
       submissions: "0 / 120",
@@ -99,8 +141,19 @@ export default function CoordinatorAssessments() {
     };
 
     try {
-      const created = await assessmentAPI.createAssessment(newAssessment);
-      setAssessments([created, ...assessments]);
+      await addSharedQuiz({
+        title: title.trim(),
+        batch: batch,
+        category: type,
+        description: `Quiz for ${batch}`,
+      });
+      await assessmentAPI.createAssessment({
+        title: title.trim(),
+        batch_id: selectedBatchObj ? selectedBatchObj.id : null,
+        batch_name: batch,
+        category: type,
+      });
+      fetchAssessments();
     } catch (err) {
       setAssessments([newAssessment, ...assessments]);
     }
@@ -234,7 +287,7 @@ export default function CoordinatorAssessments() {
               onChange={(e) => setBatchFilter(e.target.value)}
             >
               <option value="All">All Batches</option>
-              {coordinatorBatches.map((b) => (
+              {batchesList.map((b) => (
                 <option key={b.id} value={b.name}>
                   {b.name}
                 </option>
@@ -586,7 +639,8 @@ export default function CoordinatorAssessments() {
                   onChange={(e) => setBatch(e.target.value)}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
                 >
-                  {coordinatorBatches.map((b) => (
+                  <option value="All Batches">All Batches</option>
+                  {batchesList.map((b) => (
                     <option key={b.id} value={b.name}>{b.name}</option>
                   ))}
                 </select>

@@ -47,7 +47,7 @@ const primaryNavItems = [
   { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
   { title: "Progress", url: "/mentor/performance", icon: LineChart },
   { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy },
-  { title: "Mock Drives", url: "/mentor/mock-drives", icon: Briefcase },
+  // { title: "Mock Drives", url: "/mentor/mock-drives", icon: Briefcase },
   { title: "Defaulters", url: "/mentor/defaulters", icon: AlertTriangle },
   { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck },
   { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2 },

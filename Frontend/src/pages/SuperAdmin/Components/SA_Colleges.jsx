@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import EmptyState from '../../../components/ui/EmptyState';
 import { collegeAPI, departmentAPI } from '../../../services/api';
+import { EVENTS } from '../../../utils/sharedStore';
 import {
   Plus,
   Search,
@@ -297,37 +298,50 @@ export default function Colleges() {
         city: collegeForm.location,
         contactEmail: collegeForm.adminEmail,
         adminName: collegeForm.adminName,
+        adminEmail: collegeForm.adminEmail,
       });
       if (created) {
-        setColleges([created, ...colleges]);
+        setColleges([created, ...colleges.filter(c => c.id !== created.id)]);
+      } else {
+        const data = await collegeAPI.getColleges();
+        setColleges(Array.isArray(data) ? data : colleges);
       }
+      window.dispatchEvent(new CustomEvent(EVENTS.COLLEGE_UPDATED));
     } catch (err) {
       console.error("Failed to save college to backend:", err);
-      // Fallback local update
-      setColleges([{ ...collegeForm, id: Date.now(), status: 'Active' }, ...colleges]);
+      // Re-fetch from API to be consistent
+      collegeAPI.getColleges().then(data => setColleges(Array.isArray(data) ? data : colleges)).catch(() => {});
     }
     setIsAddCollegeModalOpen(false);
     setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0 });
   };
 
-  const handleAddDepartment = (e) => {
+  const handleAddDepartment = async (e) => {
     e.preventDefault();
     if (!deptForm.name || !deptForm.code) return;
 
-    const newDept = {
-      id: Date.now(),
+    const payload = {
       name: deptForm.name,
       code: deptForm.code,
       collegeId: collegeId || 1,
-      collegeName: selectedCollege ? selectedCollege.name : "College Campus",
+      college_id: collegeId || 1,
       hodName: deptForm.hodName || "Dr. Department HOD",
       hodEmail: deptForm.hodEmail || `hod.${deptForm.code.toLowerCase()}@college.edu.in`,
-      activeStudents: 0,
-      batchesCount: 0,
-      status: "Active",
     };
 
-    setDepartments([newDept, ...departments]);
+    try {
+      const created = await departmentAPI.createDepartment(payload);
+      if (created) {
+        setDepartments([created, ...departments.filter(d => d.id !== created.id)]);
+      } else {
+        const fresh = await departmentAPI.getDepartments(collegeId);
+        setDepartments(Array.isArray(fresh) ? fresh : departments);
+      }
+    } catch (err) {
+      console.error("Failed to save department to database:", err);
+      departmentAPI.getDepartments(collegeId).then(data => setDepartments(Array.isArray(data) ? data : departments)).catch(() => {});
+    }
+
     setIsAddDeptModalOpen(false);
     setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
   };
@@ -551,9 +565,7 @@ export default function Colleges() {
           <EmptyState
             icon={Building2}
             title="No Colleges Found"
-            description={searchQuery ? `No colleges matching "${searchQuery}"` : "Get started by registering the first partner college."}
-            actionText="Add New College"
-            onAction={() => setIsAddCollegeModalOpen(true)}
+            description={searchQuery ? `No colleges matching "${searchQuery}"` : "Get started by registering the first partner college."}            onAction={() => setIsAddCollegeModalOpen(true)}
           />
         ) : (
           <div className="colleges-table-wrap">

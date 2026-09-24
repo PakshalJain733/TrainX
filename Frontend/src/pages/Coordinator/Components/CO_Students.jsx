@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { batchAPI } from "../../../services/api";
+import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/CO_Students.css";
 
 const careerTracks = [
@@ -217,6 +219,7 @@ const roadmapData = {
 
 export default function CoordinatorStudents() {
   const [students, setStudents] = useState([]);
+  const [batchesList, setBatchesList] = useState(coordinatorBatches);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState("All");
@@ -226,20 +229,71 @@ export default function CoordinatorStudents() {
   const [selectedGoal, setSelectedGoal] = useState("python-backend");
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const fetchBatches = async () => {
+    try {
+      const data = await batchAPI.getBatches();
+      if (Array.isArray(data) && data.length > 0) {
+        setBatchesList(data);
+      }
+    } catch (err) {
+      console.warn("Using local batches fallback in CO_Students.");
+    }
+  };
+
+  const getCoordinatorDept = () => {
+    try {
+      const local = JSON.parse(sessionStorage.getItem("user") || "{}");
+      return local.department || local.dept || null;
+    } catch {
+      return null;
+    }
+  };
+  const coordDept = getCoordinatorDept();
+
   useEffect(() => {
     setLoading(true);
+    fetchBatches();
+    const handleBatchUpdate = () => fetchBatches();
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+
     apiFetch("/coordinator/students")
       .then((res) => {
+        let fetched = [];
         if (res && res.data && Array.isArray(res.data)) {
-          setStudents(res.data);
+          fetched = res.data;
         } else if (res && res.students && Array.isArray(res.students)) {
-          setStudents(res.students);
+          fetched = res.students;
         } else {
-          setStudents([]);
+          fetched = coordinatorStudents;
+        }
+        if (coordDept && fetched.length > 0) {
+          const targetDept = coordDept.toLowerCase();
+          const deptFiltered = fetched.filter(s => 
+            !s.department || 
+            s.department.toLowerCase().includes(targetDept) || 
+            targetDept.includes(s.department.toLowerCase())
+          );
+          setStudents(deptFiltered.length > 0 ? deptFiltered : fetched);
+        } else {
+          setStudents(fetched);
         }
       })
-      .catch(() => setStudents([]))
+      .catch(() => {
+        if (coordDept) {
+          const targetDept = coordDept.toLowerCase();
+          const deptFiltered = coordinatorStudents.filter(s => 
+            !s.department || 
+            s.department.toLowerCase().includes(targetDept) || 
+            targetDept.includes(s.department.toLowerCase())
+          );
+          setStudents(deptFiltered);
+        } else {
+          setStudents(coordinatorStudents);
+        }
+      })
       .finally(() => setLoading(false));
+
+    return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
   }, []);
 
   const handleOpenStudentDetail = (student) => {
@@ -251,12 +305,13 @@ export default function CoordinatorStudents() {
 
   const filteredStudents = students.filter((s) => {
     const matchesSearch =
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.rollNo.toLowerCase().includes(search.toLowerCase()) ||
-      s.email.toLowerCase().includes(search.toLowerCase());
+      (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.rollNo || s.roll_number || "").toLowerCase().includes(search.toLowerCase()) ||
+      (s.email || "").toLowerCase().includes(search.toLowerCase());
     const matchesBatch = batchFilter === "All" || s.batch === batchFilter;
     const matchesRisk = riskFilter === "All" || s.riskStatus === riskFilter;
-    return matchesSearch && matchesBatch && matchesRisk;
+    const matchesDept = !coordDept || !s.department || s.department.toLowerCase().includes(coordDept.toLowerCase()) || coordDept.toLowerCase().includes(s.department.toLowerCase());
+    return matchesSearch && matchesBatch && matchesRisk && matchesDept;
   });
 
   const milestones = roadmapData[selectedGoal] || roadmapData["python-backend"];
@@ -601,7 +656,7 @@ export default function CoordinatorStudents() {
             value={batchFilter}
             options={[
               { value: "All", label: "All Batches" },
-              ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
+              ...batchesList.map((b) => ({ value: b.name, label: b.name }))
             ]}
             onChange={(val) => setBatchFilter(val)}
             placeholder="Select batch..."

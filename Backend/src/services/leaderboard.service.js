@@ -216,6 +216,10 @@ export const getOverallLeaderboard = async (filters = {}) => {
     batch: s.batch_name,
     score: s.overall_score || 0,
     overall_score: s.overall_score || 0,
+    quiz_score: s.quiz_score || 0,
+    coding_score: s.coding_score || 0,
+    interview_score: s.interview_score || 0,
+    attendance_score: s.attendance_score || 0,
     initials: getInitials(s.name),
     progress_info: {
       quiz_score: s.quiz_score || 0,
@@ -261,6 +265,10 @@ export const getDepartmentLeaderboard = async (filters = {}) => {
     batch: s.batch_name,
     score: s.overall_score || 0,
     overall_score: s.overall_score || 0,
+    quiz_score: s.quiz_score || 0,
+    coding_score: s.coding_score || 0,
+    interview_score: s.interview_score || 0,
+    attendance_score: s.attendance_score || 0,
     initials: getInitials(s.name),
   }));
 
@@ -319,20 +327,34 @@ export const getTopBatchesLeaderboard = async (filters = {}) => {
     if (!batchMap.has(bName)) {
       batchMap.set(bName, {
         name: bName,
+        college: s.college_name || 'College',
         students: 0,
         totalScore: 0,
+        quizScore: 0,
+        codingScore: 0,
+        interviewScore: 0,
+        attendanceScore: 0,
         initials: bName.substring(0, 2).toUpperCase(),
       });
     }
     const b = batchMap.get(bName);
     b.students += 1;
     b.totalScore += s.overall_score;
+    b.quizScore += (s.quiz_score || 0);
+    b.codingScore += (s.coding_score || 0);
+    b.interviewScore += (s.interview_score || 0);
+    b.attendanceScore += (s.attendance_score || 0);
   });
 
   const batches = Array.from(batchMap.values()).map((b) => ({
     name: b.name,
+    college: b.college,
     students: b.students,
     score: Math.round(b.totalScore / b.students),
+    avg_quiz: Math.round(b.quizScore / b.students),
+    avg_coding: Math.round(b.codingScore / b.students),
+    avg_interview: Math.round(b.interviewScore / b.students),
+    avg_attendance: Math.round(b.attendanceScore / b.students),
     initials: b.initials,
   }));
 

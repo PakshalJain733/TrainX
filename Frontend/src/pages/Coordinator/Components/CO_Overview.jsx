@@ -16,7 +16,9 @@ import {
   Megaphone,
   BellRing,
   FileText,
-  Layers
+  Layers,
+  Activity,
+  Clock
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -44,11 +46,14 @@ export default function CoordinatorOverview() {
 
   const [coordUser, setCoordUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }
   });
+
+  const [liveBatches, setLiveBatches] = useState([]);
+  const [studentCount, setStudentCount] = useState(0);
 
   useEffect(() => {
     apiFetch("/auth/me")
@@ -58,6 +63,22 @@ export default function CoordinatorOverview() {
         }
       })
       .catch(() => { });
+
+    apiFetch("/batches")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setLiveBatches(res.data);
+        }
+      })
+      .catch(() => {});
+
+    apiFetch("/coordinator/students")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setStudentCount(res.data.length);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
@@ -85,16 +106,41 @@ export default function CoordinatorOverview() {
   };
 
   const categories = [
-    { id: "general", label: "General Notice", icon: Megaphone },
-    { id: "urgent", label: "Urgent Exam", icon: BellRing },
-    { id: "syllabus", label: "Syllabus & Quiz", icon: FileText },
+    { id: "general", label: "General Notice", icon: Megaphone } 
   ];
 
   const statsList = [
-    { label: "Enrolled Students", value: "480", hint: `Active in ${dept}`, icon: GraduationCap },
-    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
-    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
+    { label: "Enrolled Students", value: String(studentCount || 0), hint: `Active in ${dept}`, icon: GraduationCap },
+    { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: "Live DB", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: "Active", hint: "Department average", icon: LineChart },
+  ];
+
+  const liveSessions = [
+    {
+      id: 1,
+      trainerName: "Anubhav Shukla",
+      topic: "Java OOPS",
+      batch: "CSE 2026 Cohort",
+      time: "10:00 AM - 11:30 AM",
+      status: "Live",
+    },
+    {
+      id: 2,
+      trainerName: "Priya Sharma",
+      topic: "React Fundamentals",
+      batch: "Fullstack Specialization",
+      time: "11:00 AM - 12:30 PM",
+      status: "Live",
+    },
+    {
+      id: 3,
+      trainerName: "Rahul Verma",
+      topic: "Data Structures & Algorithms",
+      batch: "CSE 2025 Alpha",
+      time: "10:30 AM - 12:00 PM",
+      status: "Live",
+    }
   ];
 
   return (
@@ -302,6 +348,62 @@ export default function CoordinatorOverview() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Live Training Sessions Row */}
+      <Card className="overview-subcard mt-4">
+        <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
+          <div className="overview-header-left">
+            <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
+              <Activity size={18} className="overview-header-icon animate-pulse" />
+            </div>
+            <div>
+              <CardTitle className="overview-card-title">Live Training Sessions</CardTitle>
+              <CardDescription className="overview-card-desc">Currently ongoing classes and topics being taught</CardDescription>
+            </div>
+          </div>
+          <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
+            {liveSessions.length} Active Sessions
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 pt-0">
+            {liveSessions.map((session) => (
+              <div
+                key={session.id}
+                className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col gap-3 transition-all hover:border-emerald-300 hover:shadow-md relative overflow-hidden group"
+              >
+                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 group-hover:w-1.5 transition-all"></div>
+                <div className="flex justify-between items-start mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
+                      {session.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center text-slate-500 text-[11px] font-semibold gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
+                    <Clock size={12} /> {session.time}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-slate-900 mb-1">{session.topic}</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    <span className="font-semibold text-slate-800">{session.trainerName}</span> (Trainer) is teaching a <span className="font-semibold text-indigo-600">{session.topic}</span> topic to students.
+                  </p>
+                </div>
+
+                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2">
+                  <Users size={14} className="text-slate-400" />
+                  <span className="text-[11px] font-semibold text-slate-600">{session.batch}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

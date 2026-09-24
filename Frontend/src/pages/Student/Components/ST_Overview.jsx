@@ -16,7 +16,7 @@ import "../Styles/ST_Overview.css";
 const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -34,7 +34,7 @@ const getInitials = (name) => {
 
 const getStoredUserName = () => {
   try {
-    const u = JSON.parse(localStorage.getItem("user"));
+    const u = JSON.parse(sessionStorage.getItem("user") || "{}");
     if (!u) return "Student";
     return u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
   } catch { return "Student"; }
@@ -107,9 +107,26 @@ export default function Overview() {
           const sem = student.semester || u.semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
           const rollNum = student.roll_number || u.roll_number || "";
-          const isCompleted = u.profileCompleted !== undefined ? u.profileCompleted : Boolean(cgpa && (student.skills || u.skills));
+          const userKey = u.id || u.email;
+          const isCompleted = Boolean(
+            u.is_profile_updated ||
+            student.is_profile_updated ||
+            u.profileCompleted ||
+            (userKey && sessionStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+            ((dept || sem || rollNum) && (student.skills || u.skills))
+          );
 
           setProfileCompleted(isCompleted);
+
+          if (isCompleted) {
+            if (userKey) sessionStorage.setItem(`profile_updated_${userKey}`, "true");
+            sessionStorage.removeItem("showFirstLoginAlert");
+            setShowFirstLoginAlert(false);
+          } else {
+            if (sessionStorage.getItem("showFirstLoginAlert") === "true") {
+              setShowFirstLoginAlert(true);
+            }
+          }
 
           setDashboard((prev) => ({
             ...prev,
@@ -207,7 +224,11 @@ export default function Overview() {
       const res = await fetch(`${API_BASE}/batches/join`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ join_code: joinCodeInput.trim() }),
+        body: JSON.stringify({
+          join_code: joinCodeInput.trim(),
+          joinCode: joinCodeInput.trim(),
+          code: joinCodeInput.trim()
+        }),
       });
       const data = await res.json();
 

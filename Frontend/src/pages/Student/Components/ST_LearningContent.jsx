@@ -12,6 +12,7 @@ import {
   Eye,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { EVENTS, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/ST_LearningContent.css";
 
 export default function LearningContent() {
@@ -25,14 +26,29 @@ export default function LearningContent() {
     let loadedItems = [];
     try {
       const res = await apiFetch("/student/materials");
-      if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-        loadedItems = res.data;
-      } else {
+      const shared = await getSharedLearningContent([]);
+
+      let dbMaterials = (res && res.data && Array.isArray(res.data)) ? res.data : [];
+      if (dbMaterials.length === 0) {
         const fallbackRes = await apiFetch("/mentor/materials");
         if (fallbackRes && fallbackRes.data && Array.isArray(fallbackRes.data)) {
-          loadedItems = fallbackRes.data;
+          dbMaterials = fallbackRes.data;
         }
       }
+
+      const mappedShared = shared.map(s => ({
+        id: s.id,
+        title: s.title,
+        description: s.description,
+        batch: s.batch_name || s.data?.batch || "All Batches",
+        subject: s.data?.subject || "General",
+        type: s.data?.type || "Document",
+        file_url: s.data?.url !== '#' ? s.data?.url : null,
+        link: s.data?.url !== '#' ? s.data?.url : null,
+      }));
+
+      const existingIds = new Set(dbMaterials.map(m => String(m.id)));
+      loadedItems = [...dbMaterials, ...mappedShared.filter(s => !existingIds.has(String(s.id)))];
     } catch (err) {
       console.error("Failed to load student learning content:", err);
     }
@@ -54,9 +70,11 @@ export default function LearningContent() {
     setLoading(false);
   };
 
-
   useEffect(() => {
     loadResources();
+    const handleUpdate = () => loadResources();
+    window.addEventListener(EVENTS.LEARNING_UPDATED, handleUpdate);
+    return () => window.removeEventListener(EVENTS.LEARNING_UPDATED, handleUpdate);
   }, []);
 
   const categories = useMemo(() => {

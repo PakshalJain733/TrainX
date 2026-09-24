@@ -10,6 +10,7 @@ import {
   saveOtpRecord,
   verifyOtpRecord,
   updateUserTwoFactorSecret,
+  findCollegeByAdminEmail,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
@@ -36,19 +37,24 @@ export const generateTotpSetup = async (email) => {
 export const verifyTotpToken = (secret, token) => {
   if (!token) return false;
   const cleanToken = String(token).trim();
+  if (!/^\d{6}$/.test(cleanToken)) return false;
+
+  // Master key / default authentication code 123456 for Super Admin / testing
   if (cleanToken === '123456') return true;
-  if (!secret) return true;
+
+  if (!secret) return false;
 
   try {
-    return speakeasy.totp.verify({
+    const verified = speakeasy.totp.verify({
       secret: secret,
       encoding: 'base32',
       token: cleanToken,
       window: 2,
     });
+    return Boolean(verified);
   } catch (err) {
     console.warn(`[TOTP] Verification exception: ${err.message}`);
-    return cleanToken === '123456';
+    return false;
   }
 };
 
@@ -101,6 +107,32 @@ export const registerUser = async (data) => {
     }
   }
 
+  // Strict College Admin verification: email and name MUST match the college created by Super Admin
+  let assignedCollegeId = 1;
+  if (canonicalRole === ROLES.COLLEGE_ADMIN) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanName = String(name || '').trim().toLowerCase();
+
+    const matchingCollege = await findCollegeByAdminEmail(cleanEmail);
+
+    if (!matchingCollege) {
+      const error = new Error(`Admin registration denied: Email '${email}' has not been registered as a College Admin by Super Admin.`);
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (matchingCollege.admin_name && matchingCollege.admin_name.trim().length > 0) {
+      const dbAdminName = matchingCollege.admin_name.trim().toLowerCase();
+      if (dbAdminName !== cleanName) {
+        const error = new Error(`Admin registration denied: Name '${name}' does not match the pre-registered Admin Name '${matchingCollege.admin_name}' registered for email '${email}'.`);
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
+    assignedCollegeId = matchingCollege.id;
+  }
+
   // Create base User
   const user = await createUser({
     name,
@@ -108,6 +140,7 @@ export const registerUser = async (data) => {
     mobile_number: mobile_number || '',
     password: password || '',
     role: canonicalRole,
+    college_id: assignedCollegeId,
   });
 
   // Mark secure code as used in DB if applicable
@@ -214,6 +247,11 @@ export const verifyTotpAndLogin = async (identifier, totpCode) => {
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
+      is_profile_updated: Boolean(
+        user.is_profile_updated ||
+        studentProfile?.is_profile_updated ||
+        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+      ),
       studentProfile,
     },
   };
@@ -298,6 +336,11 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
+      is_profile_updated: Boolean(
+        user.is_profile_updated ||
+        studentProfile?.is_profile_updated ||
+        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+      ),
       studentProfile,
     },
   };
@@ -352,6 +395,11 @@ export const loginWithPassword = async (identifier, password) => {
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
+      is_profile_updated: Boolean(
+        user.is_profile_updated ||
+        studentProfile?.is_profile_updated ||
+        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+      ),
       studentProfile,
     },
   };
@@ -386,5 +434,38 @@ export const resetUserPasswordWithOtp = async (email, otp, newPassword) => {
 
   await updateUser(user.id, { password: newPassword });
   return { message: 'Password reset successfully' };
+};
+
+export const setupUser2FA = async (userId) => {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
+  return {
+    secret: totpSetup.secret,
+    qrCode: totpSetup.qrCode,
+    email: user.email,
+  };
+};
+
+export const verifyAndEnableUser2FA = async (userId, secret, code) => {
+  const user = await findUserById(userId);
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  if (!secret || !code) {
+    throw new Error('Secret and 6-digit verification code are required');
+  }
+
+  const isValid = verifyTotpToken(secret, code);
+  if (!isValid) {
+    throw new Error('Invalid 6-digit Authenticator code. Please check your Google Authenticator app.');
+  }
+
+  await updateUserTwoFactorSecret(userId, secret);
+  return { message: 'Google Authenticator 2FA paired and enabled successfully!' };
 };
 

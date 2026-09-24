@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square } from "lucide-react";
 import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../../../data/coordinatorMockData";
+import { batchAPI } from "../../../services/api";
+import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/CO_Batches.css";
 
 export default function CoordinatorBatches() {
@@ -10,6 +12,40 @@ export default function CoordinatorBatches() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const fetchBatches = async () => {
+    try {
+      const data = await batchAPI.getBatches();
+      if (Array.isArray(data) && data.length > 0) {
+        const normalized = data.map(b => ({
+          id: b.id,
+          name: b.name,
+          code: b.code || b.join_code || `BTCH-${b.id}`,
+          college: b.collegeName || "Apex Institute of Technology",
+          department: b.departmentName || "Computer Science",
+          enrolledStudents: b.studentsCount || b.students || 0,
+          progress: b.progressPct || 0,
+          schedule: b.schedule || "Mon, Wed, Fri (02:00 PM - 04:00 PM)",
+          mentor: b.trainer || b.mentor || "Faculty Mentor",
+          status: b.status || "Active",
+          avgAttendance: 100,
+          avgQuizScore: 0,
+          topPerformer: "N/A",
+          defaultersCount: 0,
+        }));
+        setBatches(normalized);
+      }
+    } catch (err) {
+      console.warn("[CO_Batches] Using local fallback state:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchBatches();
+    const handleBatchUpdate = () => fetchBatches();
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -21,24 +57,38 @@ export default function CoordinatorBatches() {
   // New batch form state
   const [newBatchName, setNewBatchName] = useState("");
   const [newBatchCode, setNewBatchCode] = useState("");
-  const [newMentor, setNewMentor] = useState(coordinatorMentors[0].name);
+  const [newMentor, setNewMentor] = useState(coordinatorMentors[0]?.name || "Faculty Mentor");
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [studentSearch, setStudentSearch] = useState("");
 
   const filteredBatches = batches.filter((b) => {
     const matchesSearch =
-      b.name.toLowerCase().includes(search.toLowerCase()) ||
-      b.code.toLowerCase().includes(search.toLowerCase()) ||
-      b.mentor.toLowerCase().includes(search.toLowerCase());
+      (b.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (b.code || "").toLowerCase().includes(search.toLowerCase()) ||
+      (b.mentor || "").toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "All" || b.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  const getCoordinatorDept = () => {
+    try {
+      const local = JSON.parse(sessionStorage.getItem("user") || "{}");
+      return local.department || local.dept || null;
+    } catch {
+      return null;
+    }
+  };
+  const coordDept = getCoordinatorDept();
+
   const filteredStudents = coordinatorStudents.filter(
-    (s) =>
-      s.name.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      s.rollNo.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      (s.department && s.department.toLowerCase().includes(studentSearch.toLowerCase()))
+    (s) => {
+      const matchesSearch =
+        (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
+        (s.rollNo || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
+        (s.department && s.department.toLowerCase().includes(studentSearch.toLowerCase()));
+      const matchesDept = !coordDept || !s.department || s.department.toLowerCase().includes(coordDept.toLowerCase()) || coordDept.toLowerCase().includes(s.department.toLowerCase());
+      return matchesSearch && matchesDept;
+    }
   );
 
   const toggleStudentSelection = (studentId) => {
@@ -57,7 +107,7 @@ export default function CoordinatorBatches() {
     }
   };
 
-  const handleCreateBatch = (e) => {
+  const handleCreateBatch = async (e) => {
     e.preventDefault();
     if (!newBatchName.trim() || !newBatchCode.trim()) return;
 
@@ -65,6 +115,7 @@ export default function CoordinatorBatches() {
       id: Date.now(),
       name: newBatchName,
       code: newBatchCode,
+      join_code: newBatchCode,
       college: "Apex Institute of Technology",
       department: "Computer Science & Engineering",
       enrolledStudents: selectedStudentIds.length,
@@ -73,6 +124,7 @@ export default function CoordinatorBatches() {
       schedule: "Mon, Wed, Fri (02:00 PM - 04:00 PM)",
       nextSession: "Next Mon at 02:00 PM",
       mentor: newMentor,
+      trainer: newMentor,
       status: "Active",
       avgAttendance: 100,
       avgQuizScore: 0,
@@ -80,7 +132,22 @@ export default function CoordinatorBatches() {
       defaultersCount: 0,
     };
 
-    setBatches([created, ...batches]);
+    try {
+      await batchAPI.createBatch({
+        name: created.name,
+        code: created.code,
+        join_code: created.code,
+        schedule: created.schedule,
+        trainer: created.mentor,
+        mentor: created.mentor,
+      });
+      fetchBatches();
+      window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: created }));
+    } catch (err) {
+      setBatches([created, ...batches]);
+      window.dispatchEvent(new CustomEvent(EVENTS.BATCH_UPDATED, { detail: created }));
+    }
+
     setShowCreateModal(false);
     setNewBatchName("");
     setNewBatchCode("");

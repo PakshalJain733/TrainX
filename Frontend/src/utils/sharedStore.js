@@ -9,7 +9,7 @@ const BASE = '/api/v1/shared-content';
 
 /** Resolve an auth token from session — honours existing JWT pattern */
 const getToken = () => {
-  const s = sessionStorage.getItem('token') || localStorage.getItem('token') || '';
+  const s = sessionStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
   return s;
 };
 
@@ -20,11 +20,14 @@ const authHeaders = () => ({
 
 // ─── Event names (still dispatched after successful DB write for instant UI refresh) ─────
 export const EVENTS = {
+  BATCH_UPDATED:      'portal_batch_updated',
   QUIZ_UPDATED:      'portal_quiz_updated',
   CODING_UPDATED:    'portal_coding_updated',
   DRIVE_UPDATED:     'portal_drive_updated',
   LEARNING_UPDATED:  'portal_learning_updated',
   BROADCAST_UPDATED: 'portal_broadcast_updated',
+  COLLEGE_UPDATED:   'portal_college_updated',
+  DEPARTMENT_UPDATED:'portal_department_updated',
 };
 
 const TYPE_EVENT_MAP = {

@@ -35,18 +35,38 @@ import "../Styles/ST_Batches.css";
 const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
-  const token = localStorage.getItem("token") || localStorage.getItem("authToken") || "";
+  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
 
-// Built-in catalog details map to enrich API batches
-const defaultBatchTemplates = [];
+const getStoredUserName = () => {
+  try {
+    const raw = sessionStorage.getItem("user");
+    if (!raw) return "Student";
+    const u = JSON.parse(raw);
+    return u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+  } catch {
+    return "Student";
+  }
+};
+
+const getInitials = (name) => {
+  if (!name || name.trim().length === 0) return "ST";
+  const parts = name.trim().split(" ");
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
 
 function mapApiBatch(b) {
   const code = b.join_code || b.code || `BATCH-${b.id}`;
+  const userName = getStoredUserName();
+  const userInitials = getInitials(userName);
+  const isInactive = b.status === "inactive" || b.status === "Inactive";
 
   return {
     id: b.id || `batch-${b.id}`,
@@ -57,14 +77,14 @@ function mapApiBatch(b) {
     timing: b.schedule || b.timing || "Regular Sessions",
     studentsEnrolled: b.students || b.studentsEnrolled || 1,
     progress: b.progress || 0,
-    status: b.status === "active" ? "Active" : b.status || "Active",
-    color: "#2563eb",
-    bg: "#eff6ff",
+    status: isInactive ? "Inactive" : (b.status === "active" ? "Active" : b.status || "Active"),
+    color: isInactive ? "#64748b" : "#2563eb",
+    bg: isInactive ? "#f1f5f9" : "#eff6ff",
     icon: Code2,
     description: b.description || `${b.name} training cohort curriculum and assignments.`,
     stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
-      { rank: 1, name: "Student (You)", xp: 0, initials: "ST", self: true },
+      { rank: 1, name: `${userName} (You)`, xp: b.xp || 0, initials: userInitials, self: true },
     ],
     modules: [],
     apiTasks: [],
@@ -137,7 +157,17 @@ export default function Batches() {
   };
 
   useEffect(() => {
-    fetchMyBatches();
+    fetch(`${API_BASE}/auth/me`, { headers: getAuthHeaders() })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data) {
+          sessionStorage.setItem("user", JSON.stringify(data.data));
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        fetchMyBatches();
+      });
   }, []);
 
   // Handle batch join submission
@@ -156,7 +186,11 @@ export default function Batches() {
       const res = await fetch(`${API_BASE}/batches/join`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ join_code: joinCodeInput.trim() }),
+        body: JSON.stringify({
+          join_code: joinCodeInput.trim(),
+          joinCode: joinCodeInput.trim(),
+          code: joinCodeInput.trim()
+        }),
       });
       const data = await res.json();
 
@@ -217,12 +251,31 @@ export default function Batches() {
             </div>
             <div className="coursework-meta-stat">
               <span className="coursework-meta-stat-label">Batch Status</span>
-              <Badge variant={selectedBatch.status === "Active" ? "primary" : "success"}>
+              <Badge variant={selectedBatch.status === "Inactive" ? "destructive" : "primary"}>
                 {selectedBatch.status}
               </Badge>
             </div>
           </div>
         </div>
+
+        {selectedBatch.status === "Inactive" && (
+          <div style={{
+            background: '#fff1f2',
+            border: '1px solid #fecdd3',
+            color: '#9f1239',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            fontWeight: 500,
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>This batch has been marked as <strong>Inactive</strong> by Admin. New registrations and modifications for this cohort are disabled.</span>
+          </div>
+        )}
 
         {/* 4 KPI Stats Row */}
         <div className="cw-stats-row">
@@ -478,7 +531,7 @@ export default function Batches() {
                       <Icon size={22} />
                     </div>
                     <Badge
-                      variant={b.status === "Active" ? "primary" : "success"}
+                      variant={b.status === "Inactive" ? "destructive" : (b.status === "Active" ? "primary" : "success")}
                       className="batch-card-status-badge"
                     >
                       {b.status}

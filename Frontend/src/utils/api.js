@@ -8,7 +8,7 @@ export const getApiBaseUrl = () => {
 
 export async function apiFetch(endpoint, options = {}) {
   try {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken");
     const headers = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

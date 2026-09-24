@@ -21,7 +21,7 @@ export default function AdminOverview() {
   const [loading, setLoading] = useState(true);
   const [adminUser, setAdminUser] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }
@@ -113,11 +113,6 @@ export default function AdminOverview() {
         </div>
 
         <div className="overview-hero-actions">
-          <Link to="/admin/users">
-            <Button className="overview-btn-primary">
-              <UserCog size={14} className="overview-btn-icon" /> Manage Users
-            </Button>
-          </Link>
           <Link to="/admin/batches">
             <Button className="overview-btn-secondary">
               <BookOpen size={14} className="overview-btn-icon" /> View Batches

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FileCheck2,
   Zap,
@@ -12,14 +12,35 @@ import {
   coordinatorAssessments,
   coordinatorBatches,
 } from "../../../data/coordinatorMockData";
+import { batchAPI } from "../../../services/api";
+import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/CO_CodingPerformance.css";
 
 export default function QuizPerformance() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("All");
+  const [batchesList, setBatchesList] = useState(coordinatorBatches);
+
+  const fetchBatches = async () => {
+    try {
+      const data = await batchAPI.getBatches();
+      if (Array.isArray(data) && data.length > 0) {
+        setBatchesList(data);
+      }
+    } catch (err) {
+      console.warn("Using fallback batches in QuizPerformance.");
+    }
+  };
+
+  useEffect(() => {
+    fetchBatches();
+    const handleBatchUpdate = () => fetchBatches();
+    window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+    return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
+  }, []);
 
   const filteredQuizzes = coordinatorAssessments.filter((q) => {
-    const matchesSearch = q.title.toLowerCase().includes(searchTerm.toLowerCase()) || q.batch.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (q.title || "").toLowerCase().includes(searchTerm.toLowerCase()) || (q.batch || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesBatch = selectedBatch === "All" || q.batch === selectedBatch;
     return matchesSearch && matchesBatch;
   });
@@ -118,7 +139,7 @@ export default function QuizPerformance() {
             className="coord-perf-select"
           >
             <option value="All">All Batches</option>
-            {coordinatorBatches.map((b) => (
+            {batchesList.map((b) => (
               <option key={b.id} value={b.name}>{b.name}</option>
             ))}
           </select>

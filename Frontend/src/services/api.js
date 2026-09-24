@@ -2,8 +2,10 @@ const API_BASE_URL = "/api/v1";
 
 async function request(endpoint, options = {}) {
   const url = endpoint.startsWith("/api/v1") ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const token = sessionStorage.getItem("token") || sessionStorage.getItem("auth_token") || sessionStorage.getItem("authToken");
   const headers = {
     "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options.headers,
   };
 

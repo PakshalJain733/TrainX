@@ -242,8 +242,8 @@ export default function MentorLayout() {
   const resolveUser = (rawUser) => {
     let localUser = {};
     let mentorProf = {};
-    try { localUser = JSON.parse(localStorage.getItem("user")) || {}; } catch {}
-    try { mentorProf = JSON.parse(localStorage.getItem("mentorProfile")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+    try { mentorProf = JSON.parse(sessionStorage.getItem("mentorProfile")) || {}; } catch {}
     const u = rawUser || {};
     let name = mentorProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Faculty Mentor";
     let email = mentorProf.email || localUser.email || u.email || "mentor@pvppcoe.ac.in";
@@ -438,8 +438,9 @@ export default function MentorLayout() {
                         className="mentor-header__profile-item mentor-header__profile-item--danger"
                         onClick={() => {
                           setProfileOpen(false);
-                          localStorage.removeItem("user");
-                          localStorage.removeItem("token");
+                          sessionStorage.removeItem("user");
+                          sessionStorage.removeItem("token");
+                          sessionStorage.removeItem("authToken");
                           navigate("/");
                         }}
                       >
