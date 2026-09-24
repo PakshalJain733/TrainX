@@ -6,6 +6,5 @@ export const generateToken = (payload) => {
     expiresIn: config.jwt.expiresIn,
   });
 };
-F
 
 
