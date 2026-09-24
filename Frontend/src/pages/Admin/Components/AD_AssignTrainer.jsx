@@ -130,6 +130,52 @@ export default function AdminAssignTrainer() {
           };
           setTopics([newTopic, ...topics]);
         }
+        
+        const session = {
+          id: Date.now() + 2,
+          trainerName: trainerObj.name,
+          topic: newTopicTitle || "General Training",
+          topicDetail: newTopicDesc || "Assigned for the upcoming training cycle.",
+          batch: batchObj.name,
+          time: "Ongoing",
+          status: "Live"
+        };
+        const existingSessionsStr = localStorage.getItem('coordinatorLiveSessions');
+        let existingSessions = [];
+        if (existingSessionsStr) {
+          try { existingSessions = JSON.parse(existingSessionsStr); } catch(e){}
+        } else {
+          existingSessions = [
+            {
+              id: 1,
+              trainerName: "Anubhav Shukla",
+              topic: "Java Masterclass: Core to Advanced",
+              topicDetail: "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
+              batch: "CSE 2026 Cohort",
+              time: "10:00 AM - 05:00 PM",
+              status: "Live",
+            },
+            {
+              id: 2,
+              trainerName: "Priya Sharma",
+              topic: "React Intensive Bootcamp",
+              topicDetail: "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
+              batch: "Fullstack Specialization",
+              time: "09:30 AM - 04:30 PM",
+              status: "Live",
+            },
+            {
+              id: 3,
+              trainerName: "Rahul Verma",
+              topic: "DSA Marathon: Trees & Graphs",
+              topicDetail: "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
+              batch: "CSE 2025 Alpha",
+              time: "11:00 AM - 06:00 PM",
+              status: "Live",
+            }
+          ];
+        }
+        localStorage.setItem('coordinatorLiveSessions', JSON.stringify([session, ...existingSessions]));
 
         setSelectedBatch("");
         setSelectedTrainer("");

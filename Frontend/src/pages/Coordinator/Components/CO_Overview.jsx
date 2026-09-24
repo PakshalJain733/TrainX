@@ -99,7 +99,7 @@ export default function CoordinatorOverview() {
     { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
   ];
 
-  const liveSessions = [
+  const [liveSessions, setLiveSessions] = useState([
     {
       id: 1,
       trainerName: "Anubhav Shukla",
@@ -127,7 +127,21 @@ export default function CoordinatorOverview() {
       time: "11:00 AM - 06:00 PM",
       status: "Live",
     }
-  ];
+  ]);
+
+  useEffect(() => {
+    const fetchSessions = () => {
+      const stored = localStorage.getItem('coordinatorLiveSessions');
+      if (stored) {
+        try {
+          setLiveSessions(JSON.parse(stored));
+        } catch (e) {}
+      }
+    };
+    fetchSessions();
+    window.addEventListener('storage', fetchSessions);
+    return () => window.removeEventListener('storage', fetchSessions);
+  }, []);
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">

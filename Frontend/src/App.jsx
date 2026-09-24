@@ -94,6 +94,7 @@ import CoordinatorPerformances from './pages/Coordinator/Components/CO_Performan
 import CoordinatorHelp from './pages/Coordinator/Components/CO_Help';
 import MentorBroadcast from './pages/Mentor/Components/MN_Broadcast';
 import CoordinatorBroadcast from './pages/Coordinator/Components/CO_Broadcast';
+import CoordinatorLeaderboard from './pages/Coordinator/Components/CO_Leaderboard';
 
 function App() {
   return (
@@ -213,7 +214,7 @@ function App() {
             <Route path="broadcast" element={<CoordinatorBroadcast />} />
             <Route path="support" element={<CoordinatorHelp />} />
             <Route path="help" element={<CoordinatorHelp />} />
-            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboards"><CoordinatorLeaderboard /></MaintenanceGuard>} />
             <Route path="weekly-reports" element={<AdminWeeklyReports />} />
             <Route path="profile" element={<CoordinatorProfilePage />} />
             <Route path="settings" element={<CoordinatorProfilePage />} />
