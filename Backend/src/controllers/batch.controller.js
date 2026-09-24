@@ -248,10 +248,8 @@ export const deleteBatch = async (req, res, next) => {
     await ensureTables();
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
-    await query('DELETE FROM batches WHERE id = ? OR id = ? OR code = ? OR join_code = ?', [id, cleanId, id, id]);
-    await query('DELETE FROM student_batches WHERE batch_id = ? OR batch_id = ?', [id, cleanId]);
-    await query('DELETE FROM batch_tasks WHERE batch_id = ? OR batch_id = ?', [id, cleanId]);
-    return sendSuccess(res, 'Batch deleted successfully');
+    await query("UPDATE batches SET status = 'inactive' WHERE id = ? OR id = ? OR code = ? OR join_code = ?", [id, cleanId, id, id]);
+    return sendSuccess(res, 'Batch marked as inactive successfully');
   } catch (error) {
     next(error);
   }
@@ -271,6 +269,10 @@ export const joinBatch = async (req, res, next) => {
     );
 
     let foundBatch = rows && rows.length > 0 ? rows[0] : null;
+
+    if (foundBatch && (foundBatch.status === 'inactive' || foundBatch.status === 'Inactive')) {
+      return sendError(res, 'This batch has been marked as inactive by administrator and cannot be joined.', 400);
+    }
 
     if (!foundBatch) {
       // Create batch dynamically in DB if missing

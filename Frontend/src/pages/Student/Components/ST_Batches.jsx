@@ -66,6 +66,7 @@ function mapApiBatch(b) {
   const code = b.join_code || b.code || `BATCH-${b.id}`;
   const userName = getStoredUserName();
   const userInitials = getInitials(userName);
+  const isInactive = b.status === "inactive" || b.status === "Inactive";
 
   return {
     id: b.id || `batch-${b.id}`,
@@ -76,9 +77,9 @@ function mapApiBatch(b) {
     timing: b.schedule || b.timing || "Regular Sessions",
     studentsEnrolled: b.students || b.studentsEnrolled || 1,
     progress: b.progress || 0,
-    status: b.status === "active" ? "Active" : b.status || "Active",
-    color: "#2563eb",
-    bg: "#eff6ff",
+    status: isInactive ? "Inactive" : (b.status === "active" ? "Active" : b.status || "Active"),
+    color: isInactive ? "#64748b" : "#2563eb",
+    bg: isInactive ? "#f1f5f9" : "#eff6ff",
     icon: Code2,
     description: b.description || `${b.name} training cohort curriculum and assignments.`,
     stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
@@ -250,12 +251,31 @@ export default function Batches() {
             </div>
             <div className="coursework-meta-stat">
               <span className="coursework-meta-stat-label">Batch Status</span>
-              <Badge variant={selectedBatch.status === "Active" ? "primary" : "success"}>
+              <Badge variant={selectedBatch.status === "Inactive" ? "destructive" : "primary"}>
                 {selectedBatch.status}
               </Badge>
             </div>
           </div>
         </div>
+
+        {selectedBatch.status === "Inactive" && (
+          <div style={{
+            background: '#fff1f2',
+            border: '1px solid #fecdd3',
+            color: '#9f1239',
+            padding: '12px 16px',
+            borderRadius: '10px',
+            marginBottom: '20px',
+            fontWeight: 500,
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <AlertCircle size={18} style={{ flexShrink: 0 }} />
+            <span>This batch has been marked as <strong>Inactive</strong> by Admin. New registrations and modifications for this cohort are disabled.</span>
+          </div>
+        )}
 
         {/* 4 KPI Stats Row */}
         <div className="cw-stats-row">
@@ -511,7 +531,7 @@ export default function Batches() {
                       <Icon size={22} />
                     </div>
                     <Badge
-                      variant={b.status === "Active" ? "primary" : "success"}
+                      variant={b.status === "Inactive" ? "destructive" : (b.status === "Active" ? "primary" : "success")}
                       className="batch-card-status-badge"
                     >
                       {b.status}

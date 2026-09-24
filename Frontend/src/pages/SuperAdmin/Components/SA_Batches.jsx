@@ -105,10 +105,10 @@ function BatchSelect({ value, options = [], onChange, placeholder = 'Select...',
 }
 function StatusBadge({ status }) {
   let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
-  if (status === 'Active' || status === 'Verified' || status === 'Available') {
+  if (status === 'Active' || status === 'active' || status === 'Verified' || status === 'Available') {
     badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (status === 'Inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  } else if (status === 'Inactive' || status === 'inactive' || status === 'Disabled') {
+    badgeStyles = 'bg-rose-50 text-rose-700 border-rose-200';
   } else if (status === 'High' || status === 'In Progress') {
     badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
   } else if (status === 'Busy' || status === 'Medium') {
@@ -392,9 +392,10 @@ export default function Batches() {
     try {
       await batchAPI.deleteBatch(id);
     } catch (err) {
-      // Fallback
+      console.error('Failed to mark batch as inactive:', err);
     }
-    setBatches(batches.filter((b) => b.id !== id));
+    fetchBatches();
+    window.dispatchEvent(new Event(EVENTS.BATCH_UPDATED));
   };
 
   return (
@@ -939,13 +940,15 @@ export default function Batches() {
               <button
                 type="button"
                 className="manageusers-btn-reject modal-btn-confirm-delete"
-                onClick={() => {
-                  setBatches(batches.filter(b => b.id !== deleteBatch.id));
-                  setDeleteBatch(null);
+                onClick={async () => {
+                  if (deleteBatch) {
+                    await handleDelete(deleteBatch.id);
+                    setDeleteBatch(null);
+                  }
                 }}
               >
                 <Trash2 size={15} />
-                <span>Confirm Remove</span>
+                <span>Confirm Deactivation</span>
               </button>
             </div>
           </div>

@@ -435,15 +435,14 @@ export default function AdminBatches() {
   };
 
   const handleDeleteBatch = async (batchId, batchName) => {
-    if (!window.confirm(`Are you sure you want to delete batch "${batchName}"? This will remove the batch, student enrollments, and assigned tasks.`)) {
+    if (!window.confirm(`Are you sure you want to mark batch "${batchName}" as inactive?`)) {
       return;
     }
-    setBatches((prev) => prev.filter((b) => b.id !== batchId));
     try {
       await apiFetch(`/batches/${batchId}`, { method: "DELETE" });
       await fetchBatches();
     } catch (err) {
-      console.error("Failed to delete batch from DB:", err);
+      console.error("Failed to mark batch as inactive in DB:", err);
       fetchBatches();
     }
   };
@@ -1193,8 +1192,13 @@ export default function AdminBatches() {
                   <div className="batch-icon-container">
                     <Users size={20} />
                   </div>
-                  <div className="batch-header-text">
-                    <CardTitle className="batch-name">{b.name}</CardTitle>
+                  <div className="batch-header-text" style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <CardTitle className="batch-name">{b.name}</CardTitle>
+                      <Badge variant={(b.status === "Inactive" || b.status === "inactive") ? "destructive" : "primary"}>
+                        {(b.status === "Inactive" || b.status === "inactive") ? "Inactive" : "Active"}
+                      </Badge>
+                    </div>
                     <p className="batch-mentor">Mentor: {b.mentor}</p>
                   </div>
                 </CardHeader>
