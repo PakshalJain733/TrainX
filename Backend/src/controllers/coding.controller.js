@@ -1,6 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { runCodeInSandbox, isLanguageSupported } from '../services/code.executor.service.js';
-import { submitCodeAndSaveService } from '../services/codingSubmission.service.js';
+import { submitCodeAndSaveService, getStudentSubmissionsService } from '../services/codingSubmission.service.js';
 
 /**
  * POST /api/v1/code/run
@@ -67,6 +67,27 @@ export const submitCodeController = async (req, res, next) => {
     });
 
     return sendSuccess(res, 'Submission evaluated and saved successfully', result, 201);
+  } catch (error) {
+    if (error.statusCode) {
+      return sendError(res, error.message, error.statusCode);
+    }
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/code/submissions/my
+ * Return all coding submissions for the authenticated student.
+ */
+export const mySubmissionsController = async (req, res, next) => {
+  try {
+    const studentId = req.user?.userId || req.user?.id;
+    if (!studentId) {
+      return sendError(res, 'Authenticated user not found', 401);
+    }
+
+    const result = await getStudentSubmissionsService(studentId);
+    return sendSuccess(res, 'Submissions retrieved successfully', result);
   } catch (error) {
     if (error.statusCode) {
       return sendError(res, error.message, error.statusCode);

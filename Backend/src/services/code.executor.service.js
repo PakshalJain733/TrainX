@@ -154,14 +154,24 @@ const resolveSourceFilename = (language, code) => {
 };
 
 /**
- * Normalize program output for test-case comparison: trim surrounding
- * whitespace, trim every line, and drop trailing blank lines.
+ * Normalize program output for test-case comparison.
+ * Rules:
+ *   1. Normalize line endings (CRLF → LF)
+ *   2. Trim leading/trailing whitespace from the whole string
+ *   3. Trim trailing whitespace from each individual line
+ *   4. Drop all trailing blank lines
+ *   5. Collapse multiple consecutive blank lines into one
+ *      (some judges differ here; keeping one blank line tolerates
+ *       problems that intentionally print blank lines between sections)
+ * Leading whitespace inside lines is preserved (indented output matters).
  */
 export const normalizeOutput = (text = '') => {
   const lines = String(text)
     .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
     .split('\n')
-    .map((line) => line.trim());
+    .map((line) => line.trimEnd()); // trim trailing spaces per line only
+  // Drop all trailing blank lines
   while (lines.length > 0 && lines[lines.length - 1] === '') {
     lines.pop();
   }
@@ -302,11 +312,23 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
       readWorkspaceFile(hostDir, 'run_stderr.txt'),
     ]);
 
-    // A non-zero docker CLI exit means the container itself never ran correctly
-    // (e.g. image missing, daemon error). Surface a clean, controlled error.
-    if (containerResult.code !== 0) {
+    // A non-zero docker CLI exit code normally means the daemon/image failed.
+    // However, we always check the workspace result files FIRST because:
+    //   • The runner.sh contract guarantees the container exits 0.
+    //   • A non-zero docker exit here means Docker Desktop/daemon error.
+    //   • But if result files are populated, the run actually succeeded
+    //     and the non-zero exit is a host-side artefact we can safely ignore.
+    const filesPopulated = compileCode.trim() !== '' || stdout.trim() !== '' || stderr.trim() !== '';
+    if (containerResult.code !== 0 && !filesPopulated) {
       const msg = containerResult.childErr || containerResult.childOut || `docker exited ${containerResult.code}`;
-      const error = new Error('Compiler service unavailable. Please ensure Docker is running.');
+      // Surface a useful hint if the image is simply missing.
+      const isMissingImage =
+        /unable to find image|pull access denied|not found|no such image/i.test(msg);
+      const error = new Error(
+        isMissingImage
+          ? `Docker image "${config.compiler.image}" not found. Run: docker build -t ${config.compiler.image} ./Backend/docker/compiler`
+          : 'Compiler service unavailable. Please ensure Docker is running.'
+      );
       error.statusCode = 503;
       error.code = 'COMPILER_UNAVAILABLE';
       error.details = msg.split('\n')[0];
@@ -315,12 +337,14 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
 
     const compilationError = compileCode.trim() === '1';
     const timedOut = timedOutFile.trim() === '1';
-    const exitCode = compilationError ? 1 : timedOut ? 124 : parseInt(runCode.trim() || '0', 10);
+    // run_code holds the raw exit code of the user's program (0=OK, non-zero=runtime error, 124=TLE)
+    const rawExitCode = parseInt(runCode.trim() || '0', 10);
+    const exitCode = compilationError ? 1 : timedOut ? 124 : rawExitCode;
 
     if (compilationError) {
       return {
         stdout: '',
-        stderr: compileError || 'Compilation failed.',
+        stderr: compileError.trim() || 'Compilation failed.',
         exitCode: 1,
         executionTime: containerResult.executionTime,
         timedOut: false,

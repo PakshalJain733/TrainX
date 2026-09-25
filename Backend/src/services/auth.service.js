@@ -59,7 +59,7 @@ const assertUserCanAuthenticate = (user) => {
 const DEFAULT_FALLBACK_2FA_SECRET = 'EV3GMLCDENJWOZSVIBRDUPDDPUXUSJS3';
 
 const hasTwoFactorAuthentication = (user) => {
-  if (user?.role === 'student') {
+  if (user?.role?.toLowerCase() === 'student') {
     return isTwoFactorEnabled(user?.two_factor_enabled);
   }
   return isTwoFactorEnabled(user?.two_factor_enabled) && !isBlank(user?.two_factor_secret);
@@ -137,7 +137,7 @@ const finalizePrimaryAuthentication = async (user) => {
   assertUserCanAuthenticate(user);
 
   if (hasTwoFactorAuthentication(user)) {
-    if (user?.role === 'student' && isBlank(user?.two_factor_secret)) {
+    if (user?.role?.toLowerCase() === 'student' && isBlank(user?.two_factor_secret)) {
       user.two_factor_secret = DEFAULT_FALLBACK_2FA_SECRET;
       try {
         await updateUserTwoFactorSecret(user.id, DEFAULT_FALLBACK_2FA_SECRET);

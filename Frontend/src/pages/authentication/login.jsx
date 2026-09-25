@@ -703,7 +703,17 @@ function Login() {
                     />
                   </div>
 
-                  {/* Remember Me hidden in OTP mode */}
+                  <div className="login-options-row">
+                    <label className="login-remember-label">
+                      <input
+                        type="checkbox"
+                        id="otp-remember-me"
+                        checked={rememberMe}
+                        onChange={(e) => handleRememberMeChange(e.target.checked)}
+                      />
+                      <span>Remember Me</span>
+                    </label>
+                  </div>
 
                   <button type="submit" className="login-send-otp-btn" disabled={loading}>
                     {Icons.send} {loading ? "Sending..." : "Send OTP"}
