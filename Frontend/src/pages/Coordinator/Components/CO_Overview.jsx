@@ -5,45 +5,19 @@ import {
   GraduationCap,
   UserCheck,
   LineChart,
-  PlusCircle,
   AlertTriangle,
-  Send,
   CheckCircle,
   Sparkles,
   Info,
   ChevronRight,
-  BookOpen,
-  Megaphone,
-  BellRing,
-  FileText,
-  Layers,
   Activity,
   Clock
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
-import { Badge } from "../../../components/ui/Badge";
-import { Button } from "../../../components/ui/Button";
+import { Card, CardContent } from "../../../components/ui/Card";
 import { apiFetch } from "../../../utils/api";
-import CustomSelect from "../../../components/ui/CustomSelect";
-import {
-  coordinatorStats,
-  coordinatorStudents,
-} from "../../../data/coordinatorMockData";
 import "../Styles/CO_Overview.css";
 
 export default function CoordinatorOverview() {
-  const [broadcastMsg, setBroadcastMsg] = useState("");
-  const [noticeCategory, setNoticeCategory] = useState("general");
-  const [targetAudience, setTargetAudience] = useState("all");
-  const [broadcastSent, setBroadcastSent] = useState(false);
-
-  const targetAudienceOptions = [
-    { value: "all", label: "All CSE Batches & Enrolled Students" },
-    { value: "cse26", label: "CSE 2026 Alpha Cohort" },
-    { value: "fs", label: "Fullstack React & Node Specialization" },
-    { value: "ds", label: "Data Science & AI/ML 2025" },
-  ];
-
   const [coordUser, setCoordUser] = useState(() => {
     try {
       return JSON.parse(sessionStorage.getItem("user") || "{}");
@@ -53,51 +27,94 @@ export default function CoordinatorOverview() {
   });
 
   const [liveBatches, setLiveBatches] = useState([]);
+  const [students, setStudents] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
   const [mentorCount, setMentorCount] = useState(0);
+  const [liveSessions, setLiveSessions] = useState([]);
+  const [highRiskStudents, setHighRiskStudents] = useState([]);
+  const [attendanceRate, setAttendanceRate] = useState("85%");
 
   useEffect(() => {
+    // 1. Fetch Logged-in User Profile from MySQL DB
     apiFetch("/auth/me")
       .then((res) => {
         if (res && res.data) {
           setCoordUser(res.data);
         }
       })
-      .catch(() => { });
+      .catch(() => {});
 
+    // 2. Fetch Active Batches from MySQL DB
     apiFetch("/batches")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
           setLiveBatches(res.data);
+        } else if (Array.isArray(res)) {
+          setLiveBatches(res);
         }
       })
       .catch(() => {});
 
+    // 3. Fetch Enrolled Department Students from DB & compute defaulters / avg attendance
     apiFetch("/coordinator/students")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setStudentCount(res.data.length);
+        const studentList = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(studentList)) {
+          setStudents(studentList);
+          setStudentCount(studentList.length);
+
+          // Calculate department average attendance from DB records
+          if (studentList.length > 0) {
+            const totalAtt = studentList.reduce((sum, s) => {
+              const val = Number(s.attendance ?? s.attendance_rate ?? s.studentProfile?.attendance ?? 85);
+              return sum + (isNaN(val) ? 85 : val);
+            }, 0);
+            setAttendanceRate(`${Math.round(totalAtt / studentList.length)}%`);
+          }
+
+          // Filter high risk students from DB records (<75% attendance or high risk status)
+          const flagged = studentList.filter((s) => {
+            const att = Number(s.attendance ?? s.attendance_rate ?? s.studentProfile?.attendance ?? 100);
+            const risk = String(s.riskStatus || s.risk_level || s.risk_status || "");
+            return att < 75 || risk.toLowerCase().includes("high");
+          });
+          setHighRiskStudents(flagged);
         }
       })
       .catch(() => {});
 
+    // 4. Fetch Department Assigned Mentors from MySQL DB
     apiFetch("/coordinator/mentors")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setMentorCount(res.data.length);
-        } else if (res && Array.isArray(res)) {
-          setMentorCount(res.length);
-        }
+        const mentorList = res?.data || (Array.isArray(res) ? res : []);
+        setMentorCount(mentorList.length);
       })
       .catch(() => {
         apiFetch("/mentors")
           .then((res) => {
-            if (res && res.data && Array.isArray(res.data)) {
-              setMentorCount(res.data.length);
-            }
+            const list = res?.data || (Array.isArray(res) ? res : []);
+            setMentorCount(list.length);
           })
           .catch(() => {});
       });
+
+    // 5. Fetch Live Sessions from MySQL DB
+    apiFetch("/mentor/live-sessions")
+      .then((res) => {
+        const sessionList = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(sessionList) && sessionList.length > 0) {
+          const mapped = sessionList.map((s) => ({
+            id: s.id,
+            trainerName: s.mentorName || s.trainerName || s.mentor_name || "Department Trainer",
+            topic: s.topic || s.title || s.subject || "Live Training Class",
+            batch: s.batch || s.batch_name || "CSE Cohort",
+            time: s.time || "10:00 AM - 11:30 AM",
+            status: s.status || "Live",
+          }));
+          setLiveSessions(mapped);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
@@ -114,52 +131,11 @@ export default function CoordinatorOverview() {
 
   const userInitials = getInitials(fullName);
 
-  const highRiskStudents = coordinatorStudents.filter((s) => s.riskStatus === "High Risk");
-
-  const handleBroadcast = (e) => {
-    e.preventDefault();
-    if (!broadcastMsg.trim()) return;
-    setBroadcastSent(true);
-    setBroadcastMsg("");
-    setTimeout(() => setBroadcastSent(false), 3000);
-  };
-
-  const categories = [
-    { id: "general", label: "General Notice", icon: Megaphone } 
-  ];
-
   const statsList = [
     { label: "Enrolled Students", value: String(studentCount || 0), hint: `Active in ${dept}`, icon: GraduationCap },
     { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
     { label: "Assigned Mentors", value: `${mentorCount} Mentors`, hint: `Assigned in ${dept}`, icon: UserCheck },
-    { label: "Attendance Rate", value: "Active", hint: "Department average", icon: LineChart },
-  ];
-
-  const liveSessions = [
-    {
-      id: 1,
-      trainerName: "Anubhav Shukla",
-      topic: "Java OOPS",
-      batch: "CSE 2026 Cohort",
-      time: "10:00 AM - 11:30 AM",
-      status: "Live",
-    },
-    {
-      id: 2,
-      trainerName: "Priya Sharma",
-      topic: "React Fundamentals",
-      batch: "Fullstack Specialization",
-      time: "11:00 AM - 12:30 PM",
-      status: "Live",
-    },
-    {
-      id: 3,
-      trainerName: "Rahul Verma",
-      topic: "Data Structures & Algorithms",
-      batch: "CSE 2025 Alpha",
-      time: "10:30 AM - 12:00 PM",
-      status: "Live",
-    }
+    { label: "Attendance Rate", value: attendanceRate, hint: "Department average", icon: LineChart },
   ];
 
   return (
@@ -228,39 +204,47 @@ export default function CoordinatorOverview() {
           </div>
 
           <div className="co-arena-card-body">
-            {liveSessions.map((session) => (
-              <div key={session.id} className="co-live-item-card">
-                {/* Top Row: Status Badge & Time */}
-                <div className="co-live-item-top">
-                  <div className="co-live-pill">
-                    <span className="co-live-dot"></span>
-                    {session.status}
-                  </div>
-
-                  <div className="co-live-time-tag">
-                    <Clock size={13} style={{ color: "#64748b" }} />
-                    <span>{session.time}</span>
-                  </div>
-                </div>
-
-                {/* Middle Row: Topic & Trainer */}
-                <div>
-                  <h4 className="co-live-topic-title">{session.topic}</h4>
-                  <p className="co-live-trainer-text">
-                    <strong>{session.trainerName}</strong> (Trainer) is conducting this live module.
-                  </p>
-                </div>
-
-                {/* Bottom Row: Batch & Status */}
-                <div className="co-live-item-bottom">
-                  <div className="co-live-batch-pill">
-                    <Users size={13} style={{ color: "#4f46e5" }} />
-                    <span>{session.batch}</span>
-                  </div>
-                  <span className="co-live-status-tag">Class in Progress</span>
-                </div>
+            {liveSessions.length === 0 ? (
+              <div className="co-risk-empty-box">
+                <Activity size={32} style={{ color: "#10b981" }} />
+                <h4 className="co-risk-empty-title">No live training sessions scheduled right now.</h4>
+                <p className="co-risk-empty-sub">Sessions scheduled by mentors will automatically appear here.</p>
               </div>
-            ))}
+            ) : (
+              liveSessions.map((session) => (
+                <div key={session.id} className="co-live-item-card">
+                  {/* Top Row: Status Badge & Time */}
+                  <div className="co-live-item-top">
+                    <div className="co-live-pill">
+                      <span className="co-live-dot"></span>
+                      {session.status}
+                    </div>
+
+                    <div className="co-live-time-tag">
+                      <Clock size={13} style={{ color: "#64748b" }} />
+                      <span>{session.time}</span>
+                    </div>
+                  </div>
+
+                  {/* Middle Row: Topic & Trainer */}
+                  <div>
+                    <h4 className="co-live-topic-title">{session.topic}</h4>
+                    <p className="co-live-trainer-text">
+                      <strong>{session.trainerName}</strong> (Trainer) is conducting this live module.
+                    </p>
+                  </div>
+
+                  {/* Bottom Row: Batch & Status */}
+                  <div className="co-live-item-bottom">
+                    <div className="co-live-batch-pill">
+                      <Users size={13} style={{ color: "#4f46e5" }} />
+                      <span>{session.batch}</span>
+                    </div>
+                    <span className="co-live-status-tag">Class in Progress</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
 
@@ -331,4 +315,3 @@ export default function CoordinatorOverview() {
     </div>
   );
 }
-
