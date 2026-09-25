@@ -57,26 +57,43 @@ export default function AdminLeaderboard() {
 
   const fetchLeaderboard = () => {
     setLoading(true);
-    let url = "/leaderboards";
-    const params = new URLSearchParams();
-    if (selectedCollege) params.append("college_id", selectedCollege);
-    if (selectedDept) params.append("department_id", selectedDept);
-    if (params.toString()) {
-      url += `?${params.toString()}`;
-    }
+    
+    const mockData = {
+      overall: [
+        { id: 1, rank: 1, name: "Aarav Sharma", department: "Computer Science", score: 98, initials: "AS" },
+        { id: 2, rank: 2, name: "Sneha Gupta", department: "Information Tech", score: 95, initials: "SG" },
+        { id: 3, rank: 3, name: "Rohan Patel", department: "Computer Science", score: 92, initials: "RP" },
+        { id: 4, rank: 4, name: "Priya Singh", department: "Electronics", score: 88, initials: "PS" },
+        { id: 5, rank: 5, name: "Vikram Verma", department: "Information Tech", score: 85, initials: "VV" },
+      ],
+      department: [
+        { id: 1, rank: 1, name: "Computer Science", department: "CS Dept", score: 94, initials: "CS" },
+        { id: 2, rank: 2, name: "Information Tech", department: "IT Dept", score: 90, initials: "IT" },
+        { id: 3, rank: 3, name: "Electronics", department: "ECE Dept", score: 85, initials: "EC" },
+        { id: 4, rank: 4, name: "Mechanical", department: "ME Dept", score: 78, initials: "ME" },
+      ],
+      milestone: [
+        { id: 1, rank: 1, name: "Aarav Sharma", department: "Computer Science", score: 100, initials: "AS" },
+        { id: 2, rank: 2, name: "Sneha Gupta", department: "Information Tech", score: 95, initials: "SG" },
+        { id: 3, rank: 3, name: "Priya Singh", department: "Electronics", score: 90, initials: "PS" },
+        { id: 4, rank: 4, name: "Rohan Patel", department: "Computer Science", score: 85, initials: "RP" },
+      ],
+      topBatches: [
+        { id: 1, rank: 1, name: "Batch 2024-CS-A", students: 60, score: 92, initials: "CA" },
+        { id: 2, rank: 2, name: "Batch 2024-IT-A", students: 55, score: 88, initials: "IA" },
+        { id: 3, rank: 3, name: "Batch 2024-CS-B", students: 62, score: 85, initials: "CB" },
+        { id: 4, rank: 4, name: "Batch 2024-EC-A", students: 50, score: 80, initials: "EA" },
+      ]
+    };
 
-    apiFetch(url)
+    apiFetch("/leaderboards")
       .then((res) => {
         if (res && res.data) {
-          setData({
-            overall: res.data.overall || [],
-            department: res.data.department || [],
-            topBatches: res.data.topBatches || [],
-          });
+          setData(res.data);
         }
       })
       .catch((err) => {
-        console.error("Failed to fetch leaderboard data:", err);
+        console.error("Failed to fetch admin leaderboard data:", err);
       })
       .finally(() => setLoading(false));
   };

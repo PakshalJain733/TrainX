@@ -37,6 +37,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AD_Leaderboard";
 import AdminHelp from "./pages/Admin/Components/AD_Help";
 import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
+import AdminAssignTrainer from './pages/Admin/Components/AD_AssignTrainer';
 
 
 // Super Admin Workspace Imports
@@ -92,6 +93,7 @@ import CoordinatorPerformances from './pages/Coordinator/Components/CO_Performan
 import CoordinatorHelp from './pages/Coordinator/Components/CO_Help';
 import MentorBroadcast from './pages/Mentor/Components/MN_Broadcast';
 import CoordinatorBroadcast from './pages/Coordinator/Components/CO_Broadcast';
+import CoordinatorLeaderboard from './pages/Coordinator/Components/CO_Leaderboard';
 
 function App() {
   return (
@@ -134,19 +136,21 @@ function App() {
           {/* Admin Dashboard Routes */}
           <Route path="/admin" element={<MaintenanceGuard moduleKey="adminDashboard"><AdminLayout /></MaintenanceGuard>}>
             <Route index element={<AdminOverview />} />
-            <Route path="users" element={<MaintenanceGuard moduleKey="manageUsers"><AdminUsers /></MaintenanceGuard>} />
-            <Route path="batches" element={<MaintenanceGuard moduleKey="adminBatches"><AdminBatches /></MaintenanceGuard>} />
-            <Route path="attendance" element={<MaintenanceGuard moduleKey="adminAttendance"><AdminAttendance /></MaintenanceGuard>} />
-            <Route path="learning" element={<MaintenanceGuard moduleKey="adminLearningContent"><AdminLearningContent /></MaintenanceGuard>} />
-            <Route path="quiz" element={<MaintenanceGuard moduleKey="adminQuizzes"><AdminQuizzes /></MaintenanceGuard>} />
-            <Route path="practice" element={<MaintenanceGuard moduleKey="adminPracticeProblems"><AdminPracticeProblems /></MaintenanceGuard>} />
-            <Route path="coding-practice" element={<MaintenanceGuard moduleKey="adminPracticeProblems"><AdminPracticeProblems /></MaintenanceGuard>} />
-            <Route path="broadcast" element={<MaintenanceGuard moduleKey="adminBroadcast"><AdminBroadcast /></MaintenanceGuard>} />
-            <Route path="progress" element={<MaintenanceGuard moduleKey="adminProgress"><AdminProgress /></MaintenanceGuard>} />
-            <Route path="defaulters" element={<MaintenanceGuard moduleKey="adminDefaulters"><MentorDefaulters /></MaintenanceGuard>} />
-            <Route path="mock-drives" element={<MaintenanceGuard moduleKey="adminMockDrives"><MentorMockDrives /></MaintenanceGuard>} />
-            <Route path="help" element={<MaintenanceGuard moduleKey="adminHelp"><AdminHelp /></MaintenanceGuard>} />
-            <Route path="profile" element={<MaintenanceGuard moduleKey="adminProfile"><AdminProfile /></MaintenanceGuard>} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="batches" element={<AdminBatches />} />
+            <Route path="attendance" element={<AdminAttendance />} />
+            <Route path="learning" element={<AdminLearningContent />} />
+            <Route path="quiz" element={<AdminQuizzes />} />
+            <Route path="practice" element={<AdminPracticeProblems />} />
+            <Route path="coding-practice" element={<AdminPracticeProblems />} />
+            <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="progress" element={<AdminProgress />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+            <Route path="defaulters" element={<MentorDefaulters />} />
+            <Route path="mock-drives" element={<MentorMockDrives />} />
+            <Route path="help" element={<AdminHelp />} />
+            <Route path="profile" element={<AdminProfile />} />
           </Route>
 
           {/* Mentor Workspace Routes */}
@@ -192,25 +196,26 @@ function App() {
             }
           >
             <Route index element={<CoordinatorOverview />} />
-            <Route path="batches" element={<MaintenanceGuard moduleKey="coordinatorBatches"><CoordinatorBatches /></MaintenanceGuard>} />
-            <Route path="students" element={<MaintenanceGuard moduleKey="coordinatorStudents"><CoordinatorStudents /></MaintenanceGuard>} />
-            <Route path="quizzes-and-codes" element={<MaintenanceGuard moduleKey="coordinatorPerformances"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
-            <Route path="performances" element={<MaintenanceGuard moduleKey="coordinatorPerformances"><CoordinatorPerformances /></MaintenanceGuard>} />
-            <Route path="practice" element={<MaintenanceGuard moduleKey="coordinatorPerformances"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
-            <Route path="coding-performance" element={<MaintenanceGuard moduleKey="coordinatorPerformances"><CoordinatorPerformances /></MaintenanceGuard>} />
-            <Route path="assessments" element={<MaintenanceGuard moduleKey="coordinatorPerformances"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
-            <Route path="interviews" element={<MaintenanceGuard moduleKey="coordinatorInterviewPerformance"><CoordinatorInterviewPerformance /></MaintenanceGuard>} />
-            <Route path="improvement" element={<MaintenanceGuard moduleKey="coordinatorStudentsNeedImprovement"><CoordinatorStudentsNeedImprovement /></MaintenanceGuard>} />
-            <Route path="attendance" element={<MaintenanceGuard moduleKey="coordinatorAttendance"><CoordinatorAttendance /></MaintenanceGuard>} />
-            <Route path="mentors" element={<MaintenanceGuard moduleKey="coordinatorMentors"><CoordinatorMentors /></MaintenanceGuard>} />
-            <Route path="requests" element={<MaintenanceGuard moduleKey="coordinatorRequests"><CoordinatorRequests /></MaintenanceGuard>} />
-            <Route path="notifications" element={<MaintenanceGuard moduleKey="coordinatorBroadcast"><CoordinatorNotifications /></MaintenanceGuard>} />
-            <Route path="broadcast" element={<MaintenanceGuard moduleKey="coordinatorBroadcast"><CoordinatorBroadcast /></MaintenanceGuard>} />
-            <Route path="placement" element={<MaintenanceGuard moduleKey="coordinatorPlacement"><CoordinatorPlacement /></MaintenanceGuard>} />
-            <Route path="support" element={<MaintenanceGuard moduleKey="coordinatorHelp"><CoordinatorHelp /></MaintenanceGuard>} />
-            <Route path="help" element={<MaintenanceGuard moduleKey="coordinatorHelp"><CoordinatorHelp /></MaintenanceGuard>} />
-            <Route path="profile" element={<MaintenanceGuard moduleKey="coordinatorProfile"><CoordinatorProfilePage /></MaintenanceGuard>} />
-            <Route path="settings" element={<MaintenanceGuard moduleKey="coordinatorProfile"><CoordinatorProfilePage /></MaintenanceGuard>} />
+            <Route path="batches" element={<CoordinatorBatches />} />
+            <Route path="students" element={<CoordinatorStudents />} />
+            <Route path="quizzes-and-codes" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="performances" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorPerformances /></MaintenanceGuard>} />
+            <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="coding-performance" element={<MaintenanceGuard moduleKey="practiceCoding"><CoordinatorPerformances /></MaintenanceGuard>} />
+            <Route path="assessments" element={<MaintenanceGuard moduleKey="academicQuizzes"><CoordinatorQuizAndCodes /></MaintenanceGuard>} />
+            <Route path="interviews" element={<MaintenanceGuard moduleKey="aiInterviews"><CoordinatorInterviewPerformance /></MaintenanceGuard>} />
+            <Route path="improvement" element={<MaintenanceGuard moduleKey="defaulters"><CoordinatorStudentsNeedImprovement /></MaintenanceGuard>} />
+            <Route path="attendance" element={<CoordinatorAttendance />} />
+            <Route path="mentors" element={<CoordinatorMentors />} />
+            <Route path="requests" element={<CoordinatorRequests />} />
+            <Route path="notifications" element={<CoordinatorNotifications />} />
+            <Route path="broadcast" element={<CoordinatorBroadcast />} />
+            <Route path="support" element={<CoordinatorHelp />} />
+            <Route path="help" element={<CoordinatorHelp />} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+            <Route path="profile" element={<CoordinatorProfilePage />} />
+            <Route path="settings" element={<CoordinatorProfilePage />} />
           </Route>
 
           {/* Super Admin Workspace Routes */}

@@ -1,0 +1,49 @@
+/* Leaderboard.css - Coordinator Leaderboard Tab Styles */
+.coordinator-leaderboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.co-lb-rank {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.co-lb-name {
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.co-lb-batch {
+  color: #334155;
+}
+
+.co-lb-points {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.co-lb-solved {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.co-lb-streak {
+  color: #d97706;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.co-lb-badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #4338ca;
+  border: 1px solid #bfdbfe;
+  display: inline-block;
+}

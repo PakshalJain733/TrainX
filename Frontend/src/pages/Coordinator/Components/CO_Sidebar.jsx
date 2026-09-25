@@ -17,6 +17,7 @@ import {
   Bot,
   AlertTriangle,
   Megaphone,
+  Trophy,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
@@ -46,6 +47,7 @@ const primaryNavItems = [
   { title: "Students", url: "/coordinator/students", icon: Users },
   { title: "Performances", url: "/coordinator/performances", icon: LineChart },
   { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle },
+  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
   { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone },
