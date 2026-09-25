@@ -59,7 +59,6 @@ const primaryNavItems = [
   { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles },
   { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
   { title: "Progress", url: "/student/progress", icon: LineChart },
-  { title: "Skill Gaps", url: "/student/skill-gaps", icon: Target },
   { title: "Leaderboard", url: "/student/leaderboard", icon: Trophy },
   { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
   { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
