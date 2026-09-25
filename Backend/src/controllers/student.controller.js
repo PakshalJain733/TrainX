@@ -7,6 +7,7 @@ import {
   getStudentByUserId,
   updateUserModel,
 } from '../models/user.model.js';
+import { getBroadcastsModel } from '../models/broadcast.model.js';
 import { ROLES } from '../utils/constants.js';
 import { getOverallLeaderboard } from '../services/leaderboard.service.js';
 
@@ -326,18 +327,7 @@ export const applyStudentLeave = async (req, res, next) => {
 export const getStudentNotifications = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || 1;
-    let broadcasts = [];
-    try {
-      const dbBroadcasts = await query(
-        `SELECT * FROM broadcasts WHERE college_id = ? OR college_id IS NULL ORDER BY id DESC`,
-        [collegeId]
-      );
-      if (dbBroadcasts && dbBroadcasts.length > 0) {
-        broadcasts = dbBroadcasts;
-      }
-    } catch (e) {
-      console.warn('[getStudentNotifications DB error]', e.message);
-    }
+    const broadcasts = await getBroadcastsModel(collegeId);
 
     return sendSuccess(res, 'Student notifications retrieved', broadcasts);
   } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Bot,
   ChevronRight,
@@ -87,6 +87,8 @@ export default function AIInterview() {
   const [answer, setAnswer] = useState("");
   const [submittedAnswers, setSubmittedAnswers] = useState({});
   const [isEvaluating, setIsEvaluating] = useState(false);
+  const recognitionRef = useRef(null);
+  const startAnswerRef = useRef("");
   
   // Speech & Interview State
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
@@ -164,6 +166,10 @@ export default function AIInterview() {
   }, [hasStarted, currentIdx, isInterviewFinished, isVoiceEnabled]);
 
   const handleNext = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    }
     const finalAnswer = answer.trim() || currentQ.sampleAnswer || "Candidate provided response during live interview.";
 
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -189,14 +195,46 @@ export default function AIInterview() {
   };
 
   const toggleRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setTimeout(() => {
-        setIsRecording(false);
-        setAnswer(currentQ.sampleAnswer);
-      }, 3000);
-    } else {
+    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
+      alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    if (isRecording) {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
       setIsRecording(false);
+    } else {
+      setIsRecording(true);
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      // Capture whatever text is already in the textarea
+      startAnswerRef.current = answer ? answer.trim() + " " : "";
+
+      recognition.onresult = (event) => {
+        let currentTranscript = '';
+        for (let i = 0; i < event.results.length; ++i) {
+          currentTranscript += event.results[i][0].transcript;
+        }
+        setAnswer(startAnswerRef.current + currentTranscript);
+      };
+
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        setIsRecording(false);
+      };
+
+      recognition.onend = () => {
+        setIsRecording(false);
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
     }
   };
 
@@ -376,7 +414,7 @@ export default function AIInterview() {
                   onClick={toggleRecording}
                 >
                   {isRecording ? <Mic size={16} /> : <MicOff size={16} />}
-                  {isRecording ? "Listening (3s)..." : "Simulate Speech Input"}
+                  {isRecording ? "Listening... (Click to Stop)" : "Start Voice Answer"}
                 </button>
 
                 <button

@@ -10,7 +10,10 @@ import BroadcastToast from "../../../components/ui/BroadcastToast";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([
+  const [notifications, setNotifications] = useState(() => {
+    const saved = localStorage.getItem('student_notifications');
+    if (saved) return JSON.parse(saved);
+    return [
     {
       id: 1,
       type: "calendar",
@@ -51,9 +54,15 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
       time: "Yesterday",
       unread: false,
     }
-  ]);
+  ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('student_notifications', JSON.stringify(notifications));
+  }, [notifications]);
 
   const [activeTab, setActiveTab] = useState("all");
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     // Fetch broadcast notifications from database (device-synced)
@@ -151,15 +160,7 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
           </div>
         </div>
         <div className="notif-header-actions-right">
-          <button
-            className="notif-view-all-btn"
-            onClick={() => {
-              if (onClose) onClose();
-              navigate("/student/notifications");
-            }}
-          >
-            View all
-          </button>
+
           <button
             className="notif-mark-read-btn"
             onClick={handleMarkAllRead}
@@ -198,24 +199,36 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             <div
               key={n.id}
               className={`notif-list-card ${n.unread ? "unread" : ""}`}
-              onClick={() => toggleSingleRead(n.id)}
-              style={{ cursor: "pointer" }}
-              title="Click to toggle read status"
+              style={{ cursor: "default", flexDirection: "column", gap: 0 }}
             >
-              <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
-              <div className="notif-content">
-                <div className="notif-content-top">
-                  <div className="notif-card-title">{n.title}</div>
-                  <div className="notif-card-time">{n.time}</div>
-                  <button
-                    className="notif-delete-btn"
-                    onClick={(e) => handleDeleteItem(e, n.id)}
-                    title="Delete notification"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+              <div style={{ display: 'flex', gap: '12px', width: '100%', alignItems: 'flex-start' }}>
+                <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
+                <div className="notif-content" style={{ flex: 1 }}>
+                  <div className="notif-content-top">
+                    <div 
+                      className="notif-card-title"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setExpandedId(n.id);
+                      }}
+                      style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                      title="Click to view full message"
+                    >
+                      {n.title}
+                      {n.unread && (
+                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#3b82f6", flexShrink: 0 }} />
+                      )}
+                    </div>
+                    <div className="notif-card-time">{n.time}</div>
+                    <button
+                      className="notif-delete-btn"
+                      onClick={(e) => { e.stopPropagation(); handleDeleteItem(e, n.id); }}
+                      title="Delete notification"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
-                {n.desc && <div className="notif-card-desc">{n.desc}</div>}
               </div>
             </div>
           ))
@@ -233,6 +246,43 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
           Clear all
         </button>
       </div>
+
+      {/* Modal for expanded message */}
+      {expandedId && (
+        <div 
+          className="notif-modal-overlay" 
+          onClick={() => { const notif = notifications.find(x => x.id === expandedId); if (notif && notif.unread) toggleSingleRead(notif.id); setExpandedId(null); }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div 
+            className="notif-modal-content" 
+            onClick={(e) => e.stopPropagation()} 
+            style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', position: 'relative' }}
+          >
+            {(() => {
+               const n = notifications.find(notif => notif.id === expandedId);
+               if (!n) return null;
+               return (
+                 <>
+                   <h3 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.25rem', marginBottom: '8px' }}>{n.title}</h3>
+                   <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '16px' }}>{n.time}</span>
+                   <p style={{ color: '#334155', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-wrap' }}>
+                     {n.desc ? n.desc.replace('...', ' 4B regarding upcoming semester evaluations.') : "No details available."}
+                   </p>
+                   <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+                     <button 
+                       onClick={() => { const notif = notifications.find(x => x.id === expandedId); if (notif && notif.unread) toggleSingleRead(notif.id); setExpandedId(null); }} 
+                       style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
+                     >
+                       Close
+                     </button>
+                   </div>
+                 </>
+               )
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -264,6 +314,7 @@ export default function StudentLayout() {
   };
 
   const [user, setUser] = useState(() => resolveUser(null));
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem("student_avatar"));
   const [headerNoticeDismissed, setHeaderNoticeDismissed] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
@@ -290,6 +341,7 @@ export default function StudentLayout() {
   useEffect(() => {
     // Re-fetch user profile from backend whenever profile is updated
     const handleUpdate = () => {
+      setAvatarUrl(localStorage.getItem("student_avatar"));
       apiFetch("/student/profile")
         .then((res) => {
           if (res && res.data) setUser(resolveUser(res.data));
@@ -446,7 +498,11 @@ export default function StudentLayout() {
                       <span className="student-header__name">{user.name}</span>
                     </div>
                     <div className="student-header__avatar" aria-label={`User profile ${user.name}`}>
-                      {user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
+                      )}
                     </div>
                   </button>
 

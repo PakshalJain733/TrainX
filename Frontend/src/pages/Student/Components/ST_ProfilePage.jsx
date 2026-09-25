@@ -65,6 +65,64 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
   );
 }
 
+function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add skill...' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, []);
+
+  const filtered = options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()));
+  const showAdd = query.trim().length > 0 && !options.find(o => o.label.toLowerCase() === query.trim().toLowerCase());
+
+  return (
+    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}`} ref={ref}>
+      <div className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`} style={{ padding: 0 }}>
+        <input 
+          type="text" 
+          value={query}
+          onChange={e => { setQuery(e.target.value); setIsOpen(true); }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && query.trim()) {
+              e.preventDefault();
+              onAdd(query.trim());
+              setQuery("");
+              setIsOpen(false);
+            }
+          }}
+          placeholder={placeholder}
+          style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a' }}
+        />
+        <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} style={{ marginRight: '14px', flexShrink: 0 }} />
+      </div>
+      {isOpen && (
+        <div className="student-prof-select-dropdown">
+          {filtered.map(opt => (
+            <div key={opt.value} onClick={() => { onAdd(opt.value); setQuery(""); setIsOpen(false); }} className="student-prof-select-option">
+              <span className="student-prof-select-option-label">{opt.label}</span>
+            </div>
+          ))}
+          {showAdd && (
+            <div onClick={() => { onAdd(query.trim()); setQuery(""); setIsOpen(false); }} className="student-prof-select-option" style={{ color: '#2563eb', fontWeight: 500 }}>
+              <Plus size={14} style={{ marginRight: '6px' }} /> Add "{query.trim()}"
+            </div>
+          )}
+          {filtered.length === 0 && !showAdd && (
+            <div className="student-prof-select-option" style={{ color: '#94a3b8', cursor: 'default' }}>
+              No options found
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const PREDEFINED_SKILLS = [
   "Python",
   "Java",
@@ -116,8 +174,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null);
   const trackWrapperRef = useRef(null);
   const [saved, setSaved] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [customSkillInput, setCustomSkillInput] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('student_avatar') || null);
   const [trackSearchFocus, setTrackSearchFocus] = useState(false);
 
   useEffect(() => {
@@ -201,8 +258,13 @@ export default function ProfilePage() {
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      const url = URL.createObjectURL(file);
-      setAvatarUrl(url);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarUrl(reader.result);
+        localStorage.setItem('student_avatar', reader.result);
+        window.dispatchEvent(new Event("userProfileUpdated"));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -225,15 +287,6 @@ export default function ProfilePage() {
     setForm((p) => ({ ...p, skills: updatedList.join(", ") }));
   };
 
-  const handleAddCustomSkill = (e) => {
-    e.preventDefault();
-    const trimmed = customSkillInput.trim();
-    if (trimmed && !currentSkillsList.some((s) => s.toLowerCase() === trimmed.toLowerCase())) {
-      const updatedList = [...currentSkillsList, trimmed];
-      setForm((p) => ({ ...p, skills: updatedList.join(", ") }));
-      setCustomSkillInput("");
-    }
-  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -759,76 +812,23 @@ export default function ProfilePage() {
                     </span>
                   </div>
 
-                  {/* Catalog Dropdown Selector */}
-                  <div style={{ marginBottom: "12px" }}>
-                    <StudentProfSelect
-                      value=""
-                      placeholder="-- 🔍 Click to select skills from standard catalog --"
+                  {/* Skill Search, Select & Add */}
+                  <div style={{ marginBottom: "16px" }}>
+                    <StudentSkillSelect
+                      placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
                       options={PREDEFINED_SKILLS.map((skill) => ({
                         value: skill,
                         label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
                       }))}
-                      onChange={(val) => {
-                        if (val) handleAddSkillFromDropdown(val);
-                      }}
-                    />
-                  </div>
-
-                  {/* Add Custom Skill Input + Gradient Button */}
-                  <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
-                    <input
-                      type="text"
-                      placeholder="Or type a custom skill (e.g. Docker, OpenCV, PyTorch)..."
-                      className="profile-input"
-                      style={{
-                        flex: 1,
-                        padding: "10px 14px",
-                        borderRadius: "12px",
-                        border: "1.5px solid #cbd5e1",
-                        fontSize: "13.5px"
-                      }}
-                      value={customSkillInput}
-                      onChange={(e) => setCustomSkillInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddCustomSkill(e);
+                      onAdd={(val) => {
+                        if (val) {
+                          const trimmed = val.trim();
+                          if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                            setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
+                          }
                         }
                       }}
                     />
-                    <button
-                      type="button"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        padding: "10px 20px",
-                        borderRadius: "12px",
-                        background: "linear-gradient(135deg, #4f46e5 0%, #2563eb 100%)",
-                        color: "#ffffff",
-                        fontWeight: "600",
-                        fontSize: "13px",
-                        border: "none",
-                        cursor: "pointer",
-                        boxShadow: "0 4px 12px rgba(37, 99, 235, 0.25)",
-                        transition: "all 0.2s ease",
-                        flexShrink: 0,
-                        outline: "none"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow = "0 6px 16px rgba(37, 99, 235, 0.35)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 4px 12px rgba(37, 99, 235, 0.25)";
-                      }}
-                      onClick={handleAddCustomSkill}
-                    >
-                      <Plus size={16} strokeWidth={2.5} style={{ color: "#ffffff" }} />
-                      <span>Add Skill</span>
-                    </button>
                   </div>
 
                   {/* Selected Skills Container with Ultra-Clean Badges */}
