@@ -12,11 +12,26 @@ export default function CoordinatorPlacement({ hideHeader }) {
     <div>
       {!hideHeader && (
         <div className="coord-page-header">
-          <div>
-            <h1 className="coord-page-title">Placement Readiness & Mock Recruitment Drives</h1>
-            <p className="coord-page-sub">
-              Track student registrations, tier-1 partner recruitment drives, and placed candidate records.
-            </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "10px",
+              background: "#eff6ff",
+              color: "#2563eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}>
+              <Briefcase size={22} />
+            </div>
+            <div>
+              <h1 className="coord-page-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>Placement Readiness & Mock Recruitment Drives</h1>
+              <p className="coord-page-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+                Track student registrations, tier-1 partner recruitment drives, and placed candidate records.
+              </p>
+            </div>
           </div>
         </div>
       )}

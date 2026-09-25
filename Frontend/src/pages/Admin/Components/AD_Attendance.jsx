@@ -138,6 +138,7 @@ export default function AdminAttendance() {
   const [timeLeft, setTimeLeft] = useState(30); // 30 secs validity
   const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
   const canvasRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
   // Fetch all active system & enrolled batches from backend API
   useEffect(() => {
@@ -181,10 +182,15 @@ export default function AdminAttendance() {
 
   // Update student roster & live attendance records from API when batch or date changes
   useEffect(() => {
+    isDirtyRef.current = false;
     const currentBatch = batches.find(b => b.code === selectedBatchCode);
     const batchId = currentBatch ? currentBatch.id : null;
 
-    const fetchStudentsAndAttendance = async () => {
+    const fetchStudentsAndAttendance = async (isPolling = false) => {
+      if (isPolling && isDirtyRef.current) {
+        return; // User has unsaved manual edits, skip overwriting local attendance state during background sync
+      }
+
       let fetchedStudents = [];
       if (batchId) {
         try {
@@ -251,8 +257,8 @@ export default function AdminAttendance() {
       setSaved(false);
     };
 
-    fetchStudentsAndAttendance();
-    const interval = setInterval(fetchStudentsAndAttendance, 5000); // 5 sec live sync poll
+    fetchStudentsAndAttendance(false);
+    const interval = setInterval(() => fetchStudentsAndAttendance(true), 5000); // 5 sec live sync poll
     return () => clearInterval(interval);
   }, [selectedBatchCode, batches, sessionDate]);
 
@@ -370,11 +376,13 @@ export default function AdminAttendance() {
   };
 
   const toggle = (id) => {
+    isDirtyRef.current = true;
     setAttendance((prev) => ({ ...prev, [id]: !prev[id] }));
     setSaved(false);
   };
 
   const markAll = (val) => {
+    isDirtyRef.current = true;
     const all = {};
     students.forEach(s => { all[s.id] = val; });
     setAttendance(all);
@@ -397,6 +405,8 @@ export default function AdminAttendance() {
         })
       });
     } catch (e) {}
+
+    isDirtyRef.current = false;
 
     // Save to Previous Attendance History list
     const newHistoryEntry = {
@@ -759,10 +769,10 @@ export default function AdminAttendance() {
       <Card className="attendance-table-card">
         <CardHeader className="att-table-header">
           <div>
-            <CardTitle style={{ fontSize: '16px', fontWeight: '700' }}>
+            <CardTitle className="att-card-title">
               Student Attendance Roster — {currentBatchObj ? currentBatchObj.name : selectedBatchCode}
             </CardTitle>
-            <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0' }}>
+            <p className="att-card-subtitle">
               Session Date: {sessionDate}
             </p>
           </div>
@@ -776,66 +786,68 @@ export default function AdminAttendance() {
           </div>
         </CardHeader>
         <CardContent className="att-table-body">
-          <table className="att-table">
-            <thead>
-              <tr>
-                <th style={{ width: '15%' }}>Roll No</th>
-                <th style={{ width: '30%' }}>Student Name</th>
-                <th style={{ width: '15%' }}>Status</th>
-                <th style={{ width: '20%' }}>Verification Mode</th>
-                <th style={{ width: '20%' }}>Toggle Presence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.length === 0 ? (
+          <div className="att-table-wrap">
+            <table className="att-table">
+              <thead>
                 <tr>
-                  <td colSpan="5" className="admin-table-empty-cell">
-                    No students enrolled in this batch.
-                  </td>
+                  <th className="att-col-roll">Roll No</th>
+                  <th className="att-col-name">Student Name</th>
+                  <th className="att-col-status">Status</th>
+                  <th className="att-col-vmode">Verification Mode</th>
+                  <th className="att-col-toggle">Toggle Presence</th>
                 </tr>
-              ) : (
-                students.map(s => (
-                  <tr key={s.id} className={attendance[s.id] ? "att-row-present" : "att-row-absent"}>
-                    <td className="att-roll">{s.rollNo}</td>
-                    <td className="att-name">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="att-avatar-circle">
-                          {s.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <span>{s.name}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={`att-status-pill ${attendance[s.id] ? "att-pill-present" : "att-pill-absent"}`}>
-                        {attendance[s.id] ? "Present" : "Absent"}
-                      </span>
-                    </td>
-                    <td>
-                      {qrScannedMap[s.id] ? (
-                        <span className="att-vmode-badge att-vmode-qr">
-                          <QrCode size={13} /> Scanned via QR
-                        </span>
-                      ) : (
-                        <span className="att-vmode-badge att-vmode-manual">
-                          <ShieldCheck size={13} /> Manual
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        className={`att-toggle-btn ${attendance[s.id] ? "att-toggle-btn--present" : "att-toggle-btn--absent"}`}
-                        onClick={() => toggle(s.id)}
-                        title={`Click to mark ${attendance[s.id] ? "Absent" : "Present"}`}
-                      >
-                        {attendance[s.id] ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
-                        <span>{attendance[s.id] ? "Present" : "Absent"}</span>
-                      </button>
+              </thead>
+              <tbody>
+                {students.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="admin-table-empty-cell">
+                      No students enrolled in this batch.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  students.map(s => (
+                    <tr key={s.id} className={attendance[s.id] ? "att-row-present" : "att-row-absent"}>
+                      <td className="att-roll">{s.rollNo}</td>
+                      <td className="att-name">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div className="att-avatar-circle">
+                            {s.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <span>{s.name}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`att-status-pill ${attendance[s.id] ? "att-pill-present" : "att-pill-absent"}`}>
+                          {attendance[s.id] ? "Present" : "Absent"}
+                        </span>
+                      </td>
+                      <td>
+                        {qrScannedMap[s.id] ? (
+                          <span className="att-vmode-badge att-vmode-qr">
+                            <QrCode size={13} /> Scanned via QR
+                          </span>
+                        ) : (
+                          <span className="att-vmode-badge att-vmode-manual">
+                            <ShieldCheck size={13} /> Manual
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          className={`att-toggle-btn ${attendance[s.id] ? "att-toggle-btn--present" : "att-toggle-btn--absent"}`}
+                          onClick={() => toggle(s.id)}
+                          title={`Click to mark ${attendance[s.id] ? "Absent" : "Present"}`}
+                        >
+                          {attendance[s.id] ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                          <span>{attendance[s.id] ? "Present" : "Absent"}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
           <div className="att-save-row">
             <button className="att-save-btn" onClick={handleSave} disabled={students.length === 0}>
               {saved ? "✓ Attendance Saved & Logged!" : "Save Batch Attendance"}

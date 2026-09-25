@@ -1,16 +1,16 @@
 /* CoordinatorSidebar.css - Aligned with Student & Mentor Workspace Design System */
 
 :root {
-  --sidebar-bg: #dbe5ee;
-  --sidebar-border: #cbd2eb;
+  --sidebar-bg: var(--app-sidebar-bg, #dbe5ee);
+  --sidebar-border: var(--app-sidebar-border, #cbd2eb);
   --sidebar-width: 240px;
   --sidebar-width-icon: 68px;
   --sidebar-text: #64748b;
   --sidebar-text-bright: #0f172a;
-  --sidebar-primary: #4f46e5;
+  --sidebar-primary: var(--primary-color, #4f46e5);
   --sidebar-primary-fg: #ffffff;
   --sidebar-hover-bg: #f1f5f9;
-  --sidebar-active-bg: #4f46e5;
+  --sidebar-active-bg: var(--primary-color, #4f46e5);
   --sidebar-active-text: #ffffff;
 }
 

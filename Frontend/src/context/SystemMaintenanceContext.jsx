@@ -840,10 +840,10 @@ const initialMaintenanceConfig = {
 const SystemMaintenanceContext = createContext(null);
 
 export function SystemMaintenanceProvider({ children }) {
-  // Always load from initialMaintenanceConfig merged with localStorage
+  // Always load from initialMaintenanceConfig merged with sessionStorage
   const loadStoredConfig = () => {
     try {
-      const saved = localStorage.getItem("system_maintenance_config_v2");
+      const saved = sessionStorage.getItem("system_maintenance_config_v2");
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
@@ -861,11 +861,11 @@ export function SystemMaintenanceProvider({ children }) {
 
   const [config, setConfig] = useState(loadStoredConfig);
 
-  // Sync with LocalStorage
+  // Sync with SessionStorage
   const saveConfig = (newConfig) => {
     setConfig(newConfig);
     try {
-      localStorage.setItem("system_maintenance_config_v2", JSON.stringify(newConfig));
+      sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(newConfig));
     } catch (e) {}
   };
 
@@ -892,7 +892,7 @@ export function SystemMaintenanceProvider({ children }) {
                 },
               };
               try {
-                localStorage.setItem("system_maintenance_config_v2", JSON.stringify(updated));
+                sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(updated));
               } catch (e) {}
               return updated;
             });

@@ -401,14 +401,15 @@ export default function CoordinatorStudents() {
         {/* Student Profile Overview Header Card */}
         <div
           style={{
-            background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)",
-            color: "#ffffff",
+            background: "#ffffff",
+            color: "#0f172a",
+            border: "1px solid #e2e8f0",
             borderRadius: "16px",
             padding: "24px 28px",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            boxShadow: "0 8px 24px rgba(30, 27, 75, 0.15)",
+            boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
           }}
         >
           <div>
@@ -621,11 +622,26 @@ export default function CoordinatorStudents() {
   return (
     <div>
       <div className="coord-page-header">
-        <div>
-          <h1 className="coord-page-title">Student Directory & AI Roadmap Audit</h1>
-          <p className="coord-page-sub">
-            Monitor student attendance %, academic scores, selected AI career roadmaps, and risk level.
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "10px",
+            background: "#eff6ff",
+            color: "#2563eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0
+          }}>
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <h1 className="coord-page-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>Student Directory & AI Roadmap Audit</h1>
+            <p className="coord-page-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+              Monitor student attendance %, academic scores, selected AI career roadmaps, and risk level.
+            </p>
+          </div>
         </div>
       </div>
 

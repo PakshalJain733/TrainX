@@ -28,11 +28,26 @@ export default function CoordinatorMentors() {
   return (
     <div>
       <div className="coord-page-header">
-        <div>
-          <h1 className="coord-page-title">Industry Trainers & Mentors</h1>
-          <p className="coord-page-sub">
-            Assigned specialized industry trainers for CSE & AI-DS cohorts, ratings, and batch allocations.
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "10px",
+            background: "#eff6ff",
+            color: "#2563eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0
+          }}>
+            <Users size={22} />
+          </div>
+          <div>
+            <h1 className="coord-page-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>Industry Trainers & Mentors</h1>
+            <p className="coord-page-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+              Assigned specialized industry trainers for CSE & AI-DS cohorts, ratings, and batch allocations.
+            </p>
+          </div>
         </div>
       </div>
 

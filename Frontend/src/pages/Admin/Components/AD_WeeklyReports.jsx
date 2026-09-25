@@ -16,59 +16,8 @@ import {
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_WeeklyReports.css";
 
-const MOCK_ADMIN_REPORTS = [
-  {
-    id: 1,
-    title: "CSE 2026 Batch - Week 8 Governance & Audit",
-    batch: "CSE 2026 Cohort",
-    department: "Computer Science",
-    author: "Prof. Anubhav Shukla",
-    submittedAt: "2026-09-22",
-    attendanceRate: "92%",
-    complianceScore: "95/100",
-    status: "Approved",
-    summary: "High participation in Java & Data Structures sprint. 3 defaulters flagged and assigned remediation tasks."
-  },
-  {
-    id: 2,
-    title: "Fullstack Specialization - Sprint 4 Progress",
-    batch: "Fullstack Specialization",
-    department: "Information Technology",
-    author: "Priya Sharma",
-    submittedAt: "2026-09-20",
-    attendanceRate: "88%",
-    complianceScore: "89/100",
-    status: "Approved",
-    summary: "React SPA development modules completed. All capstone projects evaluated on time."
-  },
-  {
-    id: 3,
-    title: "AIDS Alpha - Machine Learning Lab Review",
-    batch: "AIDS 2025 Alpha",
-    department: "AI & Data Science",
-    author: "Dr. Rajesh K.",
-    submittedAt: "2026-09-18",
-    attendanceRate: "79%",
-    complianceScore: "76/100",
-    status: "Pending Review",
-    summary: "Attendance dropped below threshold during mid-term submission window. Follow-up required with Department HOD."
-  },
-  {
-    id: 4,
-    title: "Cyber Security - Ethical Hacking Module Report",
-    batch: "CyberSec 2026",
-    department: "Cyber Security",
-    author: "Neha Verma",
-    submittedAt: "2026-09-15",
-    attendanceRate: "94%",
-    complianceScore: "98/100",
-    status: "Approved",
-    summary: "Network vulnerability lab simulations completed. 100% submission rate on practical assessments."
-  }
-];
-
 export default function AdminWeeklyReports() {
-  const [reports, setReports] = useState(MOCK_ADMIN_REPORTS);
+  const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -87,20 +36,23 @@ export default function AdminWeeklyReports() {
           const mapped = dataList.map((item, index) => ({
             id: item.id || index + 1,
             title: item.title || item.report_name || `Weekly Progress Report #${item.id || index + 1}`,
-            batch: item.batch_name || item.batch || "CSE 2026 Cohort",
-            department: item.department || "Computer Engineering",
-            author: item.mentorName || item.author || "Department Coordinator",
-            submittedAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "2026-09-22",
-            attendanceRate: item.attendance_score || "89%",
-            complianceScore: `${Math.round(item.overall_score || 90)}/100`,
+            batch: item.batch_name || item.batch || "General Batch",
+            department: item.department || "Engineering",
+            author: item.mentorName || item.author || "Coordinator",
+            submittedAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent",
+            attendanceRate: item.attendance_score || "85%",
+            complianceScore: `${Math.round(item.overall_score || 85)}/100`,
             status: item.status || "Approved",
-            summary: item.summary || item.suggestions || "Weekly batch performance and governance assessment completed."
+            summary: item.summary || item.suggestions || "Weekly report submitted."
           }));
           setReports(mapped);
+        } else {
+          setReports([]);
         }
       })
       .catch((err) => {
-        console.error("Failed to load reports from API, using default list:", err);
+        console.error("Failed to load reports from API:", err);
+        setReports([]);
       })
       .finally(() => setLoading(false));
   };
@@ -115,7 +67,13 @@ export default function AdminWeeklyReports() {
   });
 
   const approvedCount = reports.filter((r) => r.status === "Approved").length;
-  const pendingCount = reports.filter((r) => r.status === "Pending Review").length;
+  const pendingCount = reports.filter((r) => r.status === "Pending Review" || r.status === "Pending").length;
+
+  const totalScoreSum = reports.reduce((acc, curr) => {
+    const val = parseInt(curr.complianceScore) || 0;
+    return acc + val;
+  }, 0);
+  const avgCompliance = reports.length > 0 ? (totalScoreSum / reports.length).toFixed(1) + "%" : "0.0%";
 
   const handleDownloadPDF = (report) => {
     alert(`Downloading PDF report dossier for "${report.title}"...`);
@@ -190,8 +148,8 @@ export default function AdminWeeklyReports() {
         <div className="ad-wr-stat-card">
           <div className="ad-wr-stat-info">
             <h4>Avg Compliance Rate</h4>
-            <div className="ad-wr-stat-val">91.4%</div>
-            <div className="ad-wr-stat-sub">+2.3% this month</div>
+            <div className="ad-wr-stat-val">{avgCompliance}</div>
+            <div className="ad-wr-stat-sub">Live System Average</div>
           </div>
           <div className="ad-wr-stat-icon-wrap rose">
             <TrendingUp size={24} />

@@ -1,6 +1,36 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
+  /* ════════════════════════════════════════════════════════════════════
+     GLOBAL SINGLE-SOURCE-OF-TRUTH PRIMARY THEME COLOR FOR ALL DASHBOARDS
+     Change --primary-color here to automatically update ALL 5 Dashboards!
+     ════════════════════════════════════════════════════════════════════ */
+  --primary-color: #4f46e5;
+  --primary-color-hover: #4338ca;
+  --primary-color-light: #eef2ff;
+  --primary-color-border: #c7d2fe;
+  --primary-color-subtle: rgba(79, 70, 229, 0.1);
+  --primary-color-gradient: linear-gradient(135deg, var(--primary-color, #4f46e5) 0%, #3b82f6 100%);
+  --primary-color-gradient-hover: linear-gradient(135deg, var(--primary-color-hover, #4338ca) 0%, #2563eb 100%);
+  --primary-color-shadow: rgba(79, 70, 229, 0.3);
+
+  /* ════════════════════════════════════════════════════════════════════
+     GLOBAL SINGLE-SOURCE-OF-TRUTH PAGE & SIDEBAR BACKGROUNDS
+     Change --app-page-bg or --app-sidebar-bg here to update ALL Dashboards!
+     ════════════════════════════════════════════════════════════════════ */
+  --app-page-bg: #ffffff;
+  --app-card-bg: #ffffff;
+  --app-sidebar-bg: #dbe5ee;
+  --app-sidebar-border: #cbd2eb;
+  --app-header-bg: #eef1fa;
+
+  /* Shared Alias Variables */
+  --primary: var(--primary-color);
+  --primary-hover: var(--primary-color-hover);
+  --primary-light: var(--primary-color-light);
+  --primary-border: var(--primary-color-border);
+  --primary-fg: #ffffff;
+
   --sidebar-width: 240px;
   --navbar-height: 64px;
   --main-page-padding: 24px;

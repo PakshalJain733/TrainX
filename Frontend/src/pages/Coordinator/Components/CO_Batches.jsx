@@ -158,11 +158,26 @@ export default function CoordinatorBatches() {
   return (
     <div>
       <div className="coord-page-header">
-        <div>
-          <h1 className="coord-page-title">Batches Governance</h1>
-          <p className="coord-page-sub">
-            Manage training cohorts, allocate industry mentors, and track syllabus completion.
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "10px",
+            background: "#eff6ff",
+            color: "#2563eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0
+          }}>
+            <Calendar size={22} />
+          </div>
+          <div>
+            <h1 className="coord-page-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>Batches Governance</h1>
+            <p className="coord-page-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+              Manage training cohorts, allocate industry mentors, and track syllabus completion.
+            </p>
+          </div>
         </div>
         <button
           className="coord-btn coord-btn--primary"

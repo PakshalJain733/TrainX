@@ -63,20 +63,20 @@
 }
 
 :root {
-  --bg: #ffffff;
-  --card-bg: #ffffff;
+  --bg: var(--app-page-bg, #ffffff);
+  --card-bg: var(--app-card-bg, #ffffff);
   --border: #e2e8f0;
-  --border-hover: #6366f1;
+  --border-hover: var(--primary-color-hover, #4338ca);
   --text: #1e1b4b;
   --text-muted: #5c5f87;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --primary: var(--primary-color, #4f46e5);
+  --primary-hover: var(--primary-color-hover, #4338ca);
   --primary-fg: #ffffff;
-  --primary-subtle: rgba(79, 70, 229, 0.1);
+  --primary-subtle: var(--primary-color-subtle, rgba(79, 70, 229, 0.1));
   --muted-bg: #e8ecf8;
   --muted-bg-hover: #dbe1f4;
   --popover: #ffffff;
-  --header-bg: #eef1fa;
+  --header-bg: var(--app-header-bg, #eef1fa);
   --muted-foreground: #5c5f87;
 }
 

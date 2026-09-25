@@ -97,10 +97,7 @@ function Login() {
   const API_BASE_URL = `${getApiBaseUrl()}/auth`;
 
   useEffect(() => {
-    // Clear legacy localStorage credentials if any exist
-    localStorage.removeItem("tx_remember_me");
-    localStorage.removeItem("tx_remembered_email");
-    localStorage.removeItem("tx_remembered_password");
+    // Clear legacy sessionStorage credentials if any exist
     sessionStorage.removeItem("tx_remember_me");
     sessionStorage.removeItem("tx_remembered_email");
     sessionStorage.removeItem("tx_remembered_password");
@@ -229,7 +226,6 @@ function Login() {
     };
 
     sessionStorage.setItem("user", JSON.stringify(mergedUser));
-    localStorage.setItem("user", JSON.stringify(mergedUser));
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;
@@ -404,7 +400,6 @@ function Login() {
         const finalToken = data.data?.token || pendingUserData?.token;
         const finalUser = data.data?.user || pendingUserData?.user || {};
         sessionStorage.setItem("token", finalToken);
-        localStorage.setItem("token", finalToken);
         handlePostLoginRedirect(finalUser);
       } else {
         setErrorMsg(data.message || "Invalid Authenticator Code from Microsoft or Google Authenticator.");

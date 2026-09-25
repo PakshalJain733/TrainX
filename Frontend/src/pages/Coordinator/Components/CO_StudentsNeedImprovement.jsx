@@ -206,14 +206,29 @@ export default function StudentsNeedImprovement() {
       {/* Page Header */}
       <div className="coord-perf-header-bar">
         <div className="coord-perf-header-left">
-          <div style={{ display: "flex", itemsCenter: "center", gap: "10px" }}>
-            <h1 className="coord-perf-title">
-              Academic Support & Skill-Gap Analysis
-            </h1>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "42px",
+              height: "42px",
+              borderRadius: "10px",
+              background: "#eff6ff",
+              color: "#2563eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0
+            }}>
+              <ShieldAlert size={22} />
+            </div>
+            <div>
+              <h1 className="coord-perf-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
+                Academic Support & Skill-Gap Analysis
+              </h1>
+              <p className="coord-perf-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+                Identify students requiring academic intervention, inspect granular scores across quizzes, coding & interviews, and assign targeted remediation plans.
+              </p>
+            </div>
           </div>
-          <p className="coord-perf-sub">
-            Identify students requiring academic intervention, inspect granular scores across quizzes, coding & interviews, and assign targeted remediation plans.
-          </p>
         </div>
 
         <button

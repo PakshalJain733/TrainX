@@ -201,15 +201,39 @@
   background: #fee2e2;
 }
 
+.att-card-title {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+.att-card-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
 .att-table-body {
   padding: 0 !important;
 }
 
+.att-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .att-table {
   width: 100%;
+  min-width: 650px;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
+
+.att-col-roll { width: 15%; }
+.att-col-name { width: 30%; }
+.att-col-status { width: 15%; }
+.att-col-vmode { width: 20%; }
+.att-col-toggle { width: 20%; }
 
 .att-table th {
   padding: 12px 20px;

@@ -170,11 +170,26 @@ export default function CoordinatorAssessments() {
     <div>
       {/* Top Header */}
       <div className="coord-page-header">
-        <div>
-          <h1 className="coord-page-title">Quizzes & Assessments Governance</h1>
-          <p className="coord-page-sub">
-            Manage student MCQ quizzes, publish new tests, view live activity logs, and analyze scorecard performance.
-          </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div style={{
+            width: "42px",
+            height: "42px",
+            borderRadius: "10px",
+            background: "#eff6ff",
+            color: "#2563eb",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0
+          }}>
+            <FileCheck2 size={22} />
+          </div>
+          <div>
+            <h1 className="coord-page-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>Quizzes & Assessments Governance</h1>
+            <p className="coord-page-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+              Manage student MCQ quizzes, publish new tests, view live activity logs, and analyze scorecard performance.
+            </p>
+          </div>
         </div>
 
         <div style={{ display: "flex", gap: "10px" }}>
