@@ -273,6 +273,16 @@ const initialMaintenanceConfig = {
       message: "Student directory is updating.",
       updatedAt: "Just now",
     },
+    mentorLeaderboard: {
+      key: "mentorLeaderboard",
+      name: "Mentor Cohort Leaderboard & Student Rankings",
+      category: "Mentor Features",
+      active: true,
+      role: "Mentor",
+      description: "Batch leaderboard ranking students by coding points, solved problem counts, and active streaks",
+      message: "Mentor leaderboard is currently updating.",
+      updatedAt: "Just now",
+    },
     mentorRoadmaps: {
       key: "mentorRoadmaps",
       name: "Mentor Review of Student AI Roadmaps",

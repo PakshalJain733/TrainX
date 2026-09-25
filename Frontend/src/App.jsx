@@ -167,6 +167,7 @@ function App() {
             <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="mentorSkillGaps"><MentorSkillGaps /></MaintenanceGuard>} />
             <Route path="attendance" element={<MaintenanceGuard moduleKey="mentorAttendance"><MentorAttendance /></MaintenanceGuard>} />
             <Route path="performance" element={<MaintenanceGuard moduleKey="mentorPerformance"><MentorPerformance /></MaintenanceGuard>} />
+            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="mentorLeaderboard"><MentorLeaderboard /></MaintenanceGuard>} />
             <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mentorMockDrives"><MentorMockDrives /></MaintenanceGuard>} />
             <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
             <Route path="study-material" element={<MaintenanceGuard moduleKey="mentorStudyMaterial"><MentorStudyMaterial /></MaintenanceGuard>} />

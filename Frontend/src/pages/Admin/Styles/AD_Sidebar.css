@@ -309,10 +309,30 @@
   color: #dc2626;
 }
 
-/* ── Collapsed icon centering ── */
-.sidebar--collapsed .sidebar-menu-btn {
+/* ── Collapsed icon centering & state refinement ── */
+.sidebar--collapsed .sidebar-menu-btn,
+.sidebar--collapsed .sidebar-menu-btn-admin {
   justify-content: center;
-  padding: 10px;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  border-radius: 10px;
+  gap: 0;
+}
+
+.sidebar--collapsed .sidebar-brand {
+  justify-content: center;
+  width: 100%;
+  gap: 0;
+}
+
+.sidebar--collapsed .sidebar-brand-logo-container {
+  margin: 0 auto;
+}
+
+.sidebar--collapsed .sidebar-icon-admin {
+  margin: 0 auto;
 }
 
 .sidebar--collapsed .sidebar-toggle {
@@ -321,19 +341,22 @@
 
 .sidebar--collapsed .sidebar-header-admin {
   justify-content: center;
-  padding: 16px 0;
+  padding: 12px 0;
+  gap: 0;
 }
 
 .sidebar--collapsed .sidebar-content {
-  padding: 12px 4px;
+  padding: 12px 0;
 }
 
 .sidebar--collapsed .sidebar-footer {
-  padding: 12px 4px;
+  padding: 12px 0;
 }
 
+.sidebar--collapsed .sidebar-label-admin,
+.sidebar--collapsed .sidebar-label,
 .sidebar--collapsed .sidebar-group-label {
-  display: none;
+  display: none !important;
 }
 
 .sidebar--collapsed .sidebar-section-gap {
