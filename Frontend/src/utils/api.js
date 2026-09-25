@@ -9,9 +9,16 @@ export const getApiBaseUrl = () => {
   return "https://trainx-6w8m.onrender.com/api/v1";
 };
 
+// Read the auth token from whichever storage was used at login:
+//   sessionStorage → Remember Me was OFF (cleared when browser closes)
+//   localStorage   → Remember Me was ON  (persists across restarts)
+export function getAuthToken() {
+  return sessionStorage.getItem("token") || localStorage.getItem("token") || null;
+}
+
 export async function apiFetch(endpoint, options = {}) {
   try {
-    const token = localStorage.getItem("token");
+    const token = getAuthToken();
     const headers = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -235,11 +235,12 @@ export function initInterviewSocket(httpServer) {
           topic: session.topic,
           difficulty: session.difficulty,
           owner: session.owner,
+          sessionId: session.id,
         });
 
         if (!opening) {
           socket.emit('interview:error', {
-            message: 'AI service unavailable. Check Gemini API configuration.',
+            message: 'Could not generate an interview question. Please try again.',
           });
           return;
         }
@@ -302,6 +303,7 @@ export function initInterviewSocket(httpServer) {
           sessionId: session.id,
           index: session.evaluationHistory.length,
           score,
+          feedback: evaluation?.feedback || 'Answer recorded.',
           evaluation: evaluation || null,
         });
 
@@ -319,6 +321,7 @@ export function initInterviewSocket(httpServer) {
           owner: session.owner,
           priorQa: session.priorQa,
           askedTopics: session.askedTopics,
+          sessionId: session.id,
         });
 
         if (!followUp) {

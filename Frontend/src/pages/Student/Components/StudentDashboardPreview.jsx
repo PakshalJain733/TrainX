@@ -37,7 +37,7 @@ const toNumber = (value, fallback = 0) => {
 
 const parseTokenUserId = () => {
   try {
-    const token = localStorage.getItem("token");
+    const token = (sessionStorage.getItem("token") || localStorage.getItem("token"));
     if (!token || token.indexOf(".") === -1) return null;
     const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const raw = part + "=".repeat((4 - (part.length % 4)) % 4);

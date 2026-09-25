@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import apiFetch, { getApiBaseUrl } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
+import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
 
 const INTERVIEW_SECONDS = 5 * 60; // 5 minutes
 const WARNING_SECONDS = 60;
@@ -52,12 +53,10 @@ const fmtTime = (totalSeconds) => {
   return `${m}:${s}`;
 };
 
-const getVoice = (fallbackText) => {
-  const utterance = new SpeechSynthesisUtterance(fallbackText);
-  utterance.rate = 0.92;
-  utterance.pitch = 1.0;
+function pickVoice() {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices();
-  const englishVoice =
+  return (
     voices.find(
       (v) =>
         v.lang.startsWith("en") &&
@@ -65,73 +64,132 @@ const getVoice = (fallbackText) => {
           v.name.includes("Google") ||
           v.name.includes("Microsoft") ||
           v.name.includes("Samantha") ||
-          v.name.includes("Daniel") ||
           v.name.includes("Zira"))
-    ) || voices.find((v) => v.lang.startsWith("en"));
-  if (englishVoice) utterance.voice = englishVoice;
-  return utterance;
-};
+    ) ||
+    voices.find((v) => v.lang.startsWith("en")) ||
+    null
+  );
+}
+
+function speakNow(text, onEnd) {
+  if (!text || typeof window === "undefined" || !window.speechSynthesis) {
+    onEnd && onEnd();
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.92;
+  utterance.pitch = 1.0;
+  const voice = pickVoice();
+  if (voice) utterance.voice = voice;
+  utterance.onend = () => onEnd && onEnd();
+  utterance.onerror = () => onEnd && onEnd();
+  window.speechSynthesis.speak(utterance);
+}
+
+function getToken() {
+  return sessionStorage.getItem("token") || localStorage.getItem("token") || "";
+}
 
 export default function AIInterview() {
   const [phase, setPhase] = useState("setup"); // setup | live | result
   const [role, setRole] = useState(ROLE_OPTIONS[0]);
   const [topic, setTopic] = useState(TOPIC_OPTIONS[0]);
 
-  // Camera state
+  // Camera
   const [cameraState, setCameraState] = useState("idle"); // idle | on | denied | unsupported
   const cameraStreamRef = useRef(null);
   const videoRef = useRef(null);
 
-  // Speech support detection
+  // Speech recognition
   const SpeechRecognitionCtor =
     typeof window !== "undefined"
       ? window.SpeechRecognition || window.webkitSpeechRecognition
       : null;
+  const recognitionRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
 
   // Socket
   const socketRef = useRef(null);
   const [socketConnected, setSocketConnected] = useState(false);
 
-  // Question / conversation
-  const [question, setQuestion] = useState(null); // {index,total,question,topic,hint,sessionId}
+  // Interview state
+  const [question, setQuestion] = useState(null);
   const [answer, setAnswer] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [conversation, setConversation] = useState([]);
   const conversationEndRef = useRef(null);
   const sessionIdRef = useRef(null);
-  const questionIndexRef = useRef(0);
 
-  // Timer
+  // Timer — only starts after first question arrives
   const [remaining, setRemaining] = useState(INTERVIEW_SECONDS);
-  const [timerReady, setTimerReady] = useState(false);
-  const startedAtRef = useRef(null);
-  const timerRef = useRef(null);
+  const timerActiveRef = useRef(false);
+  const timerStartRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+  const [warningShown, setWarningShown] = useState(false);
+
+  // TTS
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const voiceEnabledRef = useRef(true); // kept in sync for use inside socket callbacks
+
+  // Flow control
   const completedRef = useRef(false);
   const endRequestedRef = useRef(false);
   const firstQuestionRef = useRef(false);
-
-  // Voice (TTS)
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
+  const phaseRef = useRef("setup");
 
   // Result
   const [result, setResult] = useState(null);
 
   // Errors
   const [errorMsg, setErrorMsg] = useState("");
-  const [warningShown, setWarningShown] = useState(false);
 
-  // Past interviews (real data from backend)
+  // Past interviews
   const [pastInterviews, setPastInterviews] = useState([]);
   const [pastLoading, setPastLoading] = useState(true);
   const [pastError, setPastError] = useState("");
 
   const studentName =
-    typeof window !== "undefined" && window.localStorage
-      ? JSON.parse(window.localStorage.getItem("user") || "{}")?.name
+    typeof window !== "undefined"
+      ? (() => {
+          try {
+            return JSON.parse(
+              localStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+            )?.name || "";
+          } catch {
+            return "";
+          }
+        })()
       : "";
 
+  // Keep refs in sync with state
+  useEffect(() => {
+    voiceEnabledRef.current = voiceEnabled;
+  }, [voiceEnabled]);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  // ─── TTS helpers ────────────────────────────────────────────────────────────
+  const stopSpeaking = useCallback(() => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsAiSpeaking(false);
+  }, []);
+
+  const speakQuestion = useCallback((text) => {
+    if (!voiceEnabledRef.current) return;
+    setIsAiSpeaking(true);
+    speakNow(text, () => setIsAiSpeaking(false));
+  }, []);
+
+  const replayQuestion = useCallback(() => {
+    if (question?.question) speakQuestion(question.question);
+  }, [question, speakQuestion]);
+
+  // ─── Camera ─────────────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
     if (videoRef.current) videoRef.current.srcObject = null;
     if (cameraStreamRef.current) {
@@ -141,99 +199,6 @@ export default function AIInterview() {
     setCameraState("idle");
   }, []);
 
-  // Attach the live stream to the <video> element whenever it is mounted.
-  // The camera can be enabled from the setup screen (no <video> yet), so the
-  // stream is attached here once the live phase renders the element.
-  useEffect(() => {
-    if (cameraState === "on" && cameraStreamRef.current && videoRef.current) {
-      videoRef.current.srcObject = cameraStreamRef.current;
-      videoRef.current.play().catch(() => {});
-    }
-  }, [cameraState, phase]);
-
-  const areSpeakersUsed = () =>
-    typeof window !== "undefined" && "speechSynthesis" in window;
-
-  // ---------- Text To Speech ----------
-  const stopSpeaking = useCallback(() => {
-    if (areSpeakersUsed()) window.speechSynthesis.cancel();
-    setIsAiSpeaking(false);
-  }, []);
-
-  const speakText = useCallback(
-    (text) => {
-      if (!voiceEnabled) return;
-      if (!areSpeakersUsed()) {
-        setIsAiSpeaking(true);
-        window.setTimeout(() => setIsAiSpeaking(false), 2500);
-        return;
-      }
-      window.speechSynthesis.cancel();
-      const utterance = getVoice(text);
-      utterance.onstart = () => setIsAiSpeaking(true);
-      utterance.onend = () => setIsAiSpeaking(false);
-      utterance.onerror = () => setIsAiSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    },
-    [voiceEnabled]
-  );
-
-  // ---------- Speech To Text ----------
-  const recognitionRef = useRef(null);
-
-  const stopRecognition = useCallback(() => {
-    try {
-      if (recognitionRef.current) {
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onend = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.stop();
-      }
-    } catch {
-      /* ignore */
-    }
-    recognitionRef.current = null;
-    setIsRecording(false);
-  }, []);
-
-  const toggleRecording = useCallback(() => {
-    if (isRecording) {
-      stopRecognition();
-      return;
-    }
-    if (!SpeechRecognitionCtor) return;
-
-    stopSpeaking();
-    const recognition = new SpeechRecognitionCtor();
-    recognitionRef.current = recognition;
-    recognition.lang = "en-IN";
-    recognition.interimResults = true;
-    recognition.continuous = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onresult = (event) => {
-      let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      setAnswer(transcript);
-    };
-    recognition.onend = () => setIsRecording(false);
-    recognition.onerror = (event) => {
-      setIsRecording(false);
-      if (event.error === "not-allowed") {
-        setErrorMsg("Microphone permission denied. You can still type your answer.");
-      }
-    };
-    setIsRecording(true);
-    try {
-      recognition.start();
-    } catch {
-      setIsRecording(false);
-    }
-  }, [isRecording, SpeechRecognitionCtor, stopSpeaking, stopRecognition]);
-
-  // ---------- Camera ----------
   const enableCamera = useCallback(async () => {
     if (!navigator?.mediaDevices?.getUserMedia) {
       setCameraState("unsupported");
@@ -252,27 +217,204 @@ export default function AIInterview() {
       }
     } catch {
       setCameraState("denied");
-      setErrorMsg("Camera permission was denied. You can continue without video.");
+      setErrorMsg("Camera permission denied. You can continue without video.");
     }
   }, []);
 
   const toggleCamera = useCallback(() => {
-    if (cameraState === "on") {
-      stopCamera();
-    } else {
-      enableCamera();
-    }
+    if (cameraState === "on") stopCamera();
+    else enableCamera();
   }, [cameraState, enableCamera, stopCamera]);
 
-  // ---------- Socket ----------
+  // Attach stream when videoRef mounts
+  useEffect(() => {
+    if (cameraState === "on" && cameraStreamRef.current && videoRef.current) {
+      videoRef.current.srcObject = cameraStreamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraState, phase]);
+
+  // ─── Speech Recognition ─────────────────────────────────────────────────────
+  const stopRecognition = useCallback(() => {
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.stop();
+      }
+    } catch { /* ignore */ }
+    recognitionRef.current = null;
+    setIsRecording(false);
+  }, []);
+
+  const startRecognition = useCallback(() => {
+    if (!SpeechRecognitionCtor) {
+      setErrorMsg("Voice input is not supported in this browser. Please type your answer.");
+      return;
+    }
+    stopSpeaking(); // stop TTS before listening
+    const recognition = new SpeechRecognitionCtor();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-IN";
+    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      setAnswer(transcript);
+    };
+    recognition.onend = () => setIsRecording(false);
+    recognition.onerror = (event) => {
+      setIsRecording(false);
+      if (event.error === "not-allowed") {
+        setErrorMsg("Microphone permission denied. Please type your answer.");
+      }
+    };
+    setIsRecording(true);
+    try { recognition.start(); } catch { setIsRecording(false); }
+  }, [SpeechRecognitionCtor, stopSpeaking]);
+
+  const toggleRecording = useCallback(() => {
+    if (isRecording) stopRecognition();
+    else startRecognition();
+  }, [isRecording, stopRecognition, startRecognition]);
+
+  // ─── Timer ───────────────────────────────────────────────────────────────────
+  const stopTimer = useCallback(() => {
+    timerActiveRef.current = false;
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+  }, []);
+
+  // endInterview forward declaration — defined after finishInterview
+  const endInterviewRef = useRef(null);
+
+  const startTimer = useCallback(() => {
+    if (timerActiveRef.current) return; // already running
+    timerActiveRef.current = true;
+    timerStartRef.current = Date.now();
+    setRemaining(INTERVIEW_SECONDS);
+    setWarningShown(false);
+    timerIntervalRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - timerStartRef.current) / 1000);
+      const left = Math.max(0, INTERVIEW_SECONDS - elapsed);
+      setRemaining(left);
+      if (left <= WARNING_SECONDS && left > 0 && !warningShown) {
+        setWarningShown(true);
+      }
+      if (left <= 0) {
+        stopTimer();
+        if (endInterviewRef.current) endInterviewRef.current();
+      }
+    }, 1000);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopTimer]);
+
+  // ─── Finish interview ────────────────────────────────────────────────────────
+  const finishInterview = useCallback(
+    (summary) => {
+      if (completedRef.current) return;
+      completedRef.current = true;
+      endRequestedRef.current = true;
+      firstQuestionRef.current = false;
+      stopTimer();
+      stopRecognition();
+      stopCamera();
+      stopSpeaking();
+      const socket = socketRef.current;
+      if (socket) {
+        socket.removeAllListeners();
+        socket.disconnect();
+        socketRef.current = null;
+      }
+      setSocketConnected(false);
+      const { scorecard, evaluationHistory, durationSeconds, questionsAnswered } = summary || {};
+      setResult({
+        scorecard: scorecard || null,
+        questionsAnswered: questionsAnswered ?? (evaluationHistory?.length ?? 0),
+        durationSeconds: durationSeconds ?? Math.round((Date.now() - (timerStartRef.current ?? Date.now())) / 1000),
+        evaluationHistory: evaluationHistory || [],
+      });
+      setPhase("result");
+    },
+    [stopTimer, stopRecognition, stopCamera, stopSpeaking]
+  );
+
+  // ─── End interview ───────────────────────────────────────────────────────────
+  const endInterview = useCallback(() => {
+    if (completedRef.current || endRequestedRef.current) return;
+    endRequestedRef.current = true;
+    stopRecognition();
+    stopTimer();
+    stopSpeaking();
+
+    const socket = socketRef.current;
+    if (socket && socket.connected && sessionIdRef.current) {
+      socket.emit("interview:end", { sessionId: sessionIdRef.current });
+      // Timeout fallback if server doesn't respond
+      setTimeout(() => {
+        if (phaseRef.current !== "result") finishInterview(null);
+      }, 8000);
+    } else {
+      finishInterview(null);
+    }
+  }, [stopRecognition, stopTimer, stopSpeaking, finishInterview]);
+
+  // Wire endInterview into ref so startTimer can call it
+  useEffect(() => {
+    endInterviewRef.current = endInterview;
+  }, [endInterview]);
+
+  // ─── Send Answer ─────────────────────────────────────────────────────────────
+  const sendAnswer = useCallback(() => {
+    const trimmed = answer.trim();
+    if (isEvaluating || !trimmed) return;
+    const socket = socketRef.current;
+    if (!socket || !socket.connected) {
+      setErrorMsg("Not connected to interview server. Please wait and retry.");
+      return;
+    }
+    if (completedRef.current) return;
+    stopRecognition();
+    setIsEvaluating(true);
+    stopSpeaking();
+    setConversation((prev) => [...prev, { type: "a", text: trimmed }]);
+    socket.emit("interview:answer", {
+      sessionId: sessionIdRef.current,
+      answer: trimmed,
+    });
+    setAnswer("");
+  }, [answer, isEvaluating, stopRecognition, stopSpeaking]);
+
+  // ─── Socket connection ───────────────────────────────────────────────────────
   const connectAndStart = useCallback(() => {
-    const token = window.localStorage.getItem("token") || "";
+    // Tear down any existing socket first
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
+    const token = getToken();
+    if (!token) {
+      setErrorMsg("You are not logged in. Please log in and try again.");
+      setPhase("setup");
+      return;
+    }
+
     const apiBase = getApiBaseUrl();
     const base = apiBase.replace(/\/api\/v1\/?$/, "") || "";
 
     const socket = io(`${base}/interviews`, {
       auth: { token },
       transports: ["websocket", "polling"],
+      reconnection: false, // we handle reconnection manually
     });
     socketRef.current = socket;
 
@@ -280,26 +422,26 @@ export default function AIInterview() {
       setSocketConnected(true);
       setErrorMsg("");
     });
-    socket.on("disconnect", () => setSocketConnected(false));
+
+    socket.on("disconnect", (reason) => {
+      setSocketConnected(false);
+      if (!completedRef.current && !endRequestedRef.current) {
+        setErrorMsg(`Connection lost (${reason}). Your answers so far are preserved.`);
+      }
+    });
+
     socket.on("connect_error", (e) => {
       setSocketConnected(false);
       const msg = e?.message || "Connection failed";
-      const tokenIssue =
-        /token|unauthor|forbidden|401|expired/i.test(msg) ||
-        /invalid.*token/i.test(msg);
+      const isAuthError = /token|unauthor|forbidden|401|expired|invalid/i.test(msg);
       setErrorMsg(
-        tokenIssue
-          ? "Socket authentication failed. Please log in again, then retry the interview."
-          : `Socket connection failed: ${msg}`
+        isAuthError
+          ? "Socket authentication failed — please log out and log in again."
+          : `Could not connect to interview server: ${msg}`
       );
-      // If the first question never arrived, the live phase is not a real
-      // interview yet — abort to setup instead of leaving a stuck live screen.
       if (!firstQuestionRef.current) {
-        try {
-          socket.disconnect();
-        } catch { /* ignore */ }
+        socket.disconnect();
         socketRef.current = null;
-        setSocketConnected(false);
         setPhase("setup");
       }
     });
@@ -307,168 +449,100 @@ export default function AIInterview() {
     socket.on("interview:question", (q) => {
       setIsEvaluating(false);
       sessionIdRef.current = q.sessionId;
-      questionIndexRef.current = q.index;
+
       if (!firstQuestionRef.current) {
         firstQuestionRef.current = true;
-        // Countdown begins only once the first real question is in hand.
-        startedAtRef.current = Date.now();
-        setRemaining(INTERVIEW_SECONDS);
-        setWarningShown(false);
-        setTimerReady(true);
+        // Start timer ONLY when first real question arrives
+        startTimer();
       }
+
       setQuestion(q);
+      setAnswer("");
       setConversation((prev) => [
         ...prev,
         { type: "q", index: q.index, text: q.question, topic: q.topic },
       ]);
-      if (voiceEnabled) speakText(q.question);
+
+      // Auto-speak the question
+      if (voiceEnabledRef.current) {
+        speakQuestion(q.question);
+      }
     });
 
     socket.on("interview:feedback", (f) => {
       setIsEvaluating(false);
-      setConversation((prev) => [...prev, { type: "feedback", text: f.feedback || "Answer evaluated.", score: f.score }]);
+      setConversation((prev) => [
+        ...prev,
+        {
+          type: "feedback",
+          text: f.feedback || f.evaluation?.feedback || "Answer evaluated.",
+          score: f.score,
+        },
+      ]);
     });
 
-    socket.on("interview:complete", (summary) => finishInterview(summary, socket));
+    socket.on("interview:complete", (summary) => {
+      finishInterview(summary);
+    });
 
     socket.on("interview:error", (e) => {
       setIsEvaluating(false);
-      setErrorMsg(e.message);
+      setErrorMsg(e?.message || "Interview error occurred.");
     });
 
+    // Tell server to start
+    const sessionId = `student-${Date.now()}`;
     socket.emit("interview:start", {
-      sessionId: `student-${token.split(".")[0]}-${Date.now()}`,
+      sessionId,
       role,
       topic,
       difficulty: "Medium",
       totalQuestions: 12,
     });
-  }, [role, topic, voiceEnabled, speakText]);
+  }, [role, topic, startTimer, speakQuestion, finishInterview]);
 
-  // ---------- Start ----------
-  const startInterview = () => {
+  // ─── Start Interview ─────────────────────────────────────────────────────────
+  const startInterview = useCallback(() => {
     if (!role.trim()) {
       setErrorMsg("Please choose a target role to begin.");
       return;
     }
+    // Reset all state
     completedRef.current = false;
     endRequestedRef.current = false;
     firstQuestionRef.current = false;
+    timerActiveRef.current = false;
+    stopTimer();
     setWarningShown(false);
     setErrorMsg("");
     setQuestion(null);
     setConversation([]);
     setAnswer("");
-    setPhase("live");
-    startedAtRef.current = Date.now();
-    setTimerReady(false);
+    setResult(null);
     setRemaining(INTERVIEW_SECONDS);
-    connectAndStart();
-  };
+    setPhase("live");
+    // Connect socket — must happen after phase change so UI renders
+    setTimeout(() => connectAndStart(), 50);
+  }, [role, stopTimer, connectAndStart]);
 
-  // ---------- Timer ----------
-  useEffect(() => {
-    // Timer must NOT run until the first Gemini question has actually arrived.
-    if (phase !== "live" || !timerReady) return undefined;
-    timerRef.current = window.setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startedAtRef.current) / 1000);
-      const left = Math.max(0, INTERVIEW_SECONDS - elapsed);
-      setRemaining(left);
-      if (left <= WARNING_SECONDS && left > 0 && !warningShown) {
-        setWarningShown(true);
-      }
-      if (left <= 0) {
-        endInterview();
-      }
-    }, 1000);
-    return () => {
-      if (timerRef.current) window.clearInterval(timerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, timerReady, warningShown]);
-
-  // ---------- Send Answer ----------
-  const sendAnswer = () => {
-    const trimmed = answer.trim();
-    if (isEvaluating || !trimmed) return;
-    if (!socketRef.current || !socketConnected) {
-      setErrorMsg("Not connected to interview. Please wait or restart.");
-      return;
-    }
-    if (completedRef.current) return;
-
-    setIsEvaluating(true);
-    stopSpeaking();
-    setConversation((prev) => [...prev, { type: "a", text: trimmed }]);
-    socketRef.current.emit("interview:answer", {
-      sessionId: sessionIdRef.current,
-      answer: trimmed,
-    });
-    setAnswer("");
-  };
-
-  // ---------- Finish ----------
-  const finishInterview = useCallback(
-    (summary, socket) => {
-      if (completedRef.current) return;
-      completedRef.current = true;
-      endRequestedRef.current = true;
-      firstQuestionRef.current = false;
-      setTimerReady(false);
-      stopRecognition();
-      stopCamera();
-      stopSpeaking();
-      if (timerRef.current) window.clearInterval(timerRef.current);
-      const { scorecard, evaluationHistory, durationSeconds, questionsAnswered } = summary || {};
-      setResult({
-        scorecard: scorecard || null,
-        questionsAnswered:
-          questionsAnswered ?? (evaluationHistory?.length ?? questionIndexRef.current),
-        durationSeconds: durationSeconds ?? Math.round((Date.now() - (startedAtRef.current ?? Date.now())) / 1000),
-        evaluationHistory: evaluationHistory || [],
-      });
-      setSocketConnected(false);
-      if (socket) socket.disconnect();
-      socketRef.current = null;
-      setPhase("result");
-    },
-    [stopRecognition, stopCamera, stopSpeaking]
-  );
-
-  const endInterview = useCallback(() => {
-    if (completedRef.current || endRequestedRef.current) return;
-    endRequestedRef.current = true;
-
-    const socket = socketRef.current;
-    if (socket && socketConnected && sessionIdRef.current) {
-      socket.emit("interview:end", { sessionId: sessionIdRef.current });
-      // Fallback: if the server does not respond, finalize locally with an honest summary
-      window.setTimeout(() => {
-        if (phase !== "result") {
-          finishInterview(null, socket);
-        }
-      }, 8000);
-    } else {
-      finishInterview(null, socket);
-    }
-  }, [socketConnected, phase, finishInterview]);
-
-  // ---------- Reset ----------
-  const resetInterview = () => {
+  // ─── Reset ───────────────────────────────────────────────────────────────────
+  const resetInterview = useCallback(() => {
+    stopTimer();
     stopRecognition();
     stopCamera();
     stopSpeaking();
-    if (timerRef.current) window.clearInterval(timerRef.current);
-    if (socketRef.current) {
-      socketRef.current.disconnect();
+    const socket = socketRef.current;
+    if (socket) {
+      socket.removeAllListeners();
+      socket.disconnect();
       socketRef.current = null;
     }
     completedRef.current = false;
     endRequestedRef.current = false;
     firstQuestionRef.current = false;
+    timerActiveRef.current = false;
     sessionIdRef.current = null;
     setSocketConnected(false);
-    setTimerReady(false);
     setQuestion(null);
     setConversation([]);
     setAnswer("");
@@ -477,53 +551,48 @@ export default function AIInterview() {
     setRemaining(INTERVIEW_SECONDS);
     setWarningShown(false);
     setPhase("setup");
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stopTimer, stopRecognition, stopCamera, stopSpeaking]);
 
-  // Speak new question when voice toggled while idle
-  const replayQuestion = () => {
-    if (question?.question) speakText(question.question);
-  };
-
-  // TTS cleanup on unmount
+  // ─── Cleanup on unmount ──────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
       stopSpeaking();
       stopRecognition();
       stopCamera();
-      if (timerRef.current) window.clearInterval(timerRef.current);
-      if (socketRef.current) {
-        socketRef.current.disconnect();
+      stopTimer();
+      const socket = socketRef.current;
+      if (socket) {
+        socket.removeAllListeners();
+        socket.disconnect();
         socketRef.current = null;
       }
     };
-  }, [stopSpeaking, stopRecognition, stopCamera]);
+  }, [stopSpeaking, stopRecognition, stopCamera, stopTimer]);
 
-  // Auto-scroll conversation
+  // ─── Auto-scroll conversation ─────────────────────────────────────────────────
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [conversation]);
 
-  // Load real past interviews from backend
+  // ─── Load past interviews ─────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setPastLoading(true);
-      const res = await apiFetch("/interviews");
+    setPastLoading(true);
+    apiFetch("/interviews").then((res) => {
       if (cancelled) return;
       setPastLoading(false);
-      if (res && Array.isArray(res.data)) {
-        setPastInterviews(res.data);
-      } else if (res && res.error) {
-        setPastError(res.error);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      if (res && Array.isArray(res.data)) setPastInterviews(res.data);
+      else if (res?.error) setPastError(res.error);
+    });
+    return () => { cancelled = true; };
   }, [phase]);
 
-  const isVoiceUnsupported = !areSpeakersUsed();
+  const hasTTS = typeof window !== "undefined" && "speechSynthesis" in window;
 
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="ai-interview-page stack-6">
       <div className="student-header-box">
@@ -536,12 +605,17 @@ export default function AIInterview() {
         </p>
       </div>
 
+      {/* ─── SETUP PHASE ─────────────────────────────────────────────────────── */}
       {phase === "setup" && (
         <div className="interview-practice-card ai-welcome-landing-card ai-setup-card">
           <div className="ai-welcome-content">
             <div className="ai-bot-graphic">
               <div className="ai-bot-circle">
-                <Bot size={54} className="ai-bot-icon" />
+                <img
+                  src={aiInterviewerRef}
+                  alt="AI Interviewer"
+                  style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover" }}
+                />
               </div>
               <div className="ai-bot-pulse" />
             </div>
@@ -557,7 +631,7 @@ export default function AIInterview() {
                 <div className="ai-meta-icon"><Timer size={18} /></div>
                 <div>
                   <div className="ai-meta-val">Duration: 5 Minutes</div>
-                  <div className="ai-meta-lbl">Single timed session</div>
+                  <div className="ai-meta-lbl">Timer starts on first question</div>
                 </div>
               </div>
               <div className={`ai-meta-item ${cameraState === "denied" ? "ai-meta-warn" : ""}`}>
@@ -566,11 +640,9 @@ export default function AIInterview() {
                 </div>
                 <div>
                   <div className="ai-meta-val">
-                    Camera {cameraState === "on" ? "Active" : cameraState === "denied" ? "Blocked" : cameraState === "unsupported" ? "Unavailable" : "Standby"}
+                    Camera {cameraState === "on" ? "Active" : cameraState === "denied" ? "Blocked" : "Standby"}
                   </div>
-                  <div className="ai-meta-lbl">
-                    {cameraState === "on" ? "Live video preview" : "Turn on for interview experience"}
-                  </div>
+                  <div className="ai-meta-lbl">Optional video preview</div>
                 </div>
               </div>
               <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
@@ -618,14 +690,13 @@ export default function AIInterview() {
                 onClick={toggleCamera}
               >
                 {cameraState === "on" ? <Camera size={16} /> : <CameraOff size={16} />}
-                {cameraState === "on" ? "Camera Off" : "Enable Camera"}
+                {cameraState === "on" ? "Camera On" : "Enable Camera"}
               </button>
 
               <button
                 type="button"
                 className="ai-start-interview-btn"
                 onClick={startInterview}
-                disabled={cameraState === "on" && !cameraStreamRef.current}
               >
                 <Play size={18} fill="currentColor" /> Start Interview
               </button>
@@ -634,6 +705,7 @@ export default function AIInterview() {
         </div>
       )}
 
+      {/* ─── LIVE PHASE ──────────────────────────────────────────────────────── */}
       {phase === "live" && (
         <>
           {/* Timer / Header bar */}
@@ -641,7 +713,7 @@ export default function AIInterview() {
             <div className="ai-timer-left">
               <Timer size={18} />
               <span className={`ai-timer-value ${remaining <= WARNING_SECONDS ? "ai-timer-critical" : ""}`}>
-                {fmtTime(remaining)}
+                {firstQuestionRef.current ? fmtTime(remaining) : "Waiting..."}
               </span>
               {warningShown && remaining > 0 && (
                 <span className="ai-time-lbl">1 minute remaining</span>
@@ -654,22 +726,9 @@ export default function AIInterview() {
 
               <button
                 type="button"
-                className="ai-speaker-play-btn"
-                onClick={() => {
-                  if (voiceEnabled) {
-                    setVoiceEnabled(false);
-                    stopSpeaking();
-                  } else {
-                    setVoiceEnabled(true);
-                    replayQuestion();
-                  }
-                }}
-                title={voiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}
+                className="ai-mic-btn ai-end-btn"
+                onClick={endInterview}
               >
-                {voiceEnabled ? <Volume2 size={18} className="ai-speak-icon" /> : <VolumeX size={18} className="muted-icon" />}
-              </button>
-
-              <button type="button" className="ai-mic-btn ai-end-btn" onClick={endInterview}>
                 End Interview
               </button>
             </div>
@@ -682,19 +741,10 @@ export default function AIInterview() {
           )}
 
           <div className="ai-live-grid">
-            {/* LEFT COLUMN (40%): Camera + Answer Box */}
+            {/* ── LEFT COLUMN: Webcam + Answer Box ── */}
             <div className="ai-left-column">
-              {/* Camera */}
+              {/* Webcam panel with controls INSIDE at bottom */}
               <div className={`ai-camera-panel ${cameraState === "on" ? "" : "ai-camera-off-panel"}`}>
-                <div className="ai-camera-header">
-                  <span className="ai-camera-title">
-                    {cameraState === "on" ? <Camera size={15} /> : <CameraOff size={15} />}
-                    {cameraState === "on" ? "Live Camera" : "Camera Off"}
-                  </span>
-                  <button type="button" className="ai-mini-toggle" onClick={toggleCamera}>
-                    {cameraState === "on" ? "Turn Off" : "Turn On"}
-                  </button>
-                </div>
                 {cameraState === "on" ? (
                   <video ref={videoRef} className="ai-camera-video" autoPlay playsInline muted />
                 ) : (
@@ -707,7 +757,7 @@ export default function AIInterview() {
                     ) : cameraState === "unsupported" ? (
                       <>
                         <XCircle size={32} />
-                        <span>Camera not supported in this browser</span>
+                        <span>Camera not supported</span>
                       </>
                     ) : (
                       <>
@@ -717,13 +767,39 @@ export default function AIInterview() {
                     )}
                   </div>
                 )}
+
+                {/* Controls INSIDE / at bottom of webcam panel */}
+                <div className="ai-camera-controls-bar">
+                  <button
+                    type="button"
+                    className={`ai-cam-ctrl-btn ${cameraState === "on" ? "active" : ""}`}
+                    onClick={toggleCamera}
+                    title={cameraState === "on" ? "Turn Camera Off" : "Turn Camera On"}
+                  >
+                    {cameraState === "on" ? <Camera size={14} /> : <CameraOff size={14} />}
+                    <span>{cameraState === "on" ? "Camera ON" : "Camera OFF"}</span>
+                  </button>
+
+                  {SpeechRecognitionCtor && (
+                    <button
+                      type="button"
+                      className={`ai-cam-ctrl-btn ${isRecording ? "active recording" : ""}`}
+                      onClick={toggleRecording}
+                      disabled={!question || isEvaluating}
+                      title={isRecording ? "Stop Microphone" : "Start Microphone"}
+                    >
+                      {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
+                      <span>{isRecording ? "Mic ON" : "Mic OFF"}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Answer Box */}
               <div className="ai-answer-card">
                 <div className="ai-answer-header">
                   <span className="ai-answer-title">
-                    {question ? `Question ${question.index}` : "Your Answer"}
+                    {question ? `Answer – Q${question.index}` : "Your Answer"}
                   </span>
                   {question && <span className="interview-topic-badge">{question.topic}</span>}
                 </div>
@@ -731,86 +807,81 @@ export default function AIInterview() {
                 <textarea
                   className="interview-textarea ai-answer-textarea"
                   placeholder={
-                    SpeechRecognitionCtor
-                      ? "Speak using the microphone, or type your answer here..."
-                      : "Voice input is not supported in this browser. Please type your answer."
+                    !question
+                      ? "Waiting for the AI question..."
+                      : SpeechRecognitionCtor
+                      ? "Speak via mic or type your answer here..."
+                      : "Type your answer here..."
                   }
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                   disabled={!question || isEvaluating}
                 />
 
-                <div className="interview-action-row">
-                  <button
-                    type="button"
-                    className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
-                    onClick={toggleRecording}
-                    disabled={!question || isEvaluating || !SpeechRecognitionCtor}
-                    title={SpeechRecognitionCtor ? "Use voice" : "Voice not supported"}
-                  >
-                    {isRecording ? <Mic size={16} /> : <MicOff size={16} />}
-                    {isRecording ? "Listening..." : "Voice Answer"}
-                  </button>
+                {isRecording && (
+                  <div className="ai-listening-indicator">
+                    <span className="ai-listening-dot" /> Listening — speak now...
+                  </div>
+                )}
 
+                <div className="interview-action-row" style={{ justifyContent: "flex-end" }}>
                   <button
                     type="button"
+                    id="submit-answer-btn"
                     className="interview-next-btn"
                     onClick={sendAnswer}
-                    disabled={!answer.trim() || isEvaluating || !socketConnected}
+                    disabled={!answer.trim() || isEvaluating || !socketConnected || !question}
                   >
                     {isEvaluating ? (
                       <>
                         <Loader2 size={15} className="ai-spin" /> Evaluating...
                       </>
                     ) : (
-                      <>Send Answer <Send size={15} /></>
+                      <>Submit Answer <Send size={15} /></>
                     )}
                   </button>
                 </div>
-
-                {isRecording && (
-                  <div className="ai-listening-indicator">
-                    <span className="ai-listening-dot" /> Listening — speak now...
-                  </div>
-                )}
-                {!SpeechRecognitionCtor && (
-                  <div className="ai-unsupported-note">
-                    Voice input is not supported in this browser. Please type your answer.
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* RIGHT COLUMN (60%): AI Interviewer */}
+            {/* ── RIGHT COLUMN: AI Interviewer ── */}
             <div className="interview-practice-card ai-interviewer-card">
               <div className="ai-interviewer-head">
-                <div className="ai-interviewer-avatar">
-                  <Bot size={26} className="ai-bot-icon" />
+                <div className="ai-interviewer-avatar" style={{ background: "none", padding: 0 }}>
+                  <img
+                    src={aiInterviewerRef}
+                    alt="AI Interviewer"
+                    style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }}
+                  />
                   {isAiSpeaking && <span className="ai-avatar-speaking" />}
                 </div>
                 <div>
                   <div className="ai-interviewer-name">AI Interviewer</div>
                   <div className="ai-interviewer-sub">
-                    {isAiSpeaking ? (
-                      <span className="ai-speaking-lbl">Speaking...</span>
-                    ) : (
-                      <span className="ai-waves-lbl">
-                        {question ? "Listening for your answer" : "Starting the interview..."}
+                    {isEvaluating ? (
+                      <span className="ai-speaking-lbl">
+                        <Loader2 size={12} className="ai-spin" /> Thinking...
                       </span>
+                    ) : isAiSpeaking ? (
+                      <span className="ai-speaking-lbl">Speaking...</span>
+                    ) : question ? (
+                      <span className="ai-waves-lbl">Listening for your answer</span>
+                    ) : (
+                      <span className="ai-waves-lbl">Starting interview...</span>
                     )}
                   </div>
                 </div>
+
+                {/* Single TTS toggle — right side of header */}
                 <button
                   type="button"
                   className={`ai-speaker-play-btn ${!voiceEnabled ? "voice-disabled" : ""}`}
                   onClick={() => {
-                    if (voiceEnabled) {
-                      setVoiceEnabled(false);
-                      stopSpeaking();
-                    } else {
-                      setVoiceEnabled(true);
-                      replayQuestion();
-                    }
+                    const next = !voiceEnabled;
+                    setVoiceEnabled(next);
+                    voiceEnabledRef.current = next;
+                    if (!next) stopSpeaking();
+                    else if (question?.question) speakQuestion(question.question);
                   }}
                   title={voiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}
                 >
@@ -822,9 +893,9 @@ export default function AIInterview() {
                 </button>
               </div>
 
-              {isVoiceUnsupported && (
+              {!hasTTS && (
                 <div className="ai-unsupported-note">
-                  Text-to-speech is not supported in this browser. Questions will be shown as text.
+                  Text-to-speech is not supported in this browser. Questions will be shown as text only.
                 </div>
               )}
 
@@ -843,18 +914,25 @@ export default function AIInterview() {
                 {question ? (
                   <>
                     <div className="ai-q-meta">
-                      Question {question.index} {question.total && <>/ {question.total}</>}
+                      Question {question.index}
+                      {question.total && <> / {question.total}</>}
                       {question.topic && <span className="ai-q-topic"> {question.topic}</span>}
                     </div>
                     <p className="ai-q-text">{question.question}</p>
-                    {question.hint && <p className="ai-q-hint">Hint: {question.hint}</p>}
-                    <button type="button" className="ai-replay-btn" onClick={replayQuestion} title="Replay question">
+                    {question.hint && <p className="ai-q-hint">💡 Hint: {question.hint}</p>}
+                    <button
+                      type="button"
+                      className="ai-replay-btn"
+                      onClick={replayQuestion}
+                      title="Replay question aloud"
+                    >
                       <Volume2 size={14} /> Replay
                     </button>
                   </>
                 ) : (
                   <div className="ai-q-empty">
-                    <Loader2 size={20} className="ai-spin" /> Waiting for the first question...
+                    <Loader2 size={20} className="ai-spin" />
+                    Waiting for the first question...
                   </div>
                 )}
               </div>
@@ -863,9 +941,7 @@ export default function AIInterview() {
               <div className="ai-conversation">
                 <div className="ai-conv-title">Conversation</div>
                 {conversation.length === 0 ? (
-                  <div className="ai-conv-empty">
-                    The interviewer will ask your first question shortly.
-                  </div>
+                  <div className="ai-conv-empty">The interviewer will ask your first question shortly.</div>
                 ) : (
                   <div className="ai-conv-list">
                     {conversation.map((c, idx) => {
@@ -887,9 +963,7 @@ export default function AIInterview() {
                       return (
                         <div className="ai-feedback-row" key={idx}>
                           <Sparkles size={14} />
-                          <span>
-                            Score {c.score}/10 — {c.text}
-                          </span>
+                          <span>Score {c.score}/10 — {c.text}</span>
                         </div>
                       );
                     })}
@@ -902,6 +976,7 @@ export default function AIInterview() {
         </>
       )}
 
+      {/* ─── RESULT PHASE ────────────────────────────────────────────────────── */}
       {phase === "result" && (
         <div className="interview-practice-card ai-result-card">
           {result?.scorecard ? (
@@ -910,8 +985,12 @@ export default function AIInterview() {
                 <Award size={44} className="ai-award-icon" />
                 <h2 className="ai-scorecard-title">AI Interview Completed</h2>
                 <p className="ai-scorecard-subtitle">
-                  {result.durationSeconds ? `Duration: ${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s` : ""}
-                  {result.questionsAnswered ? `  •  Questions Answered: ${result.questionsAnswered}` : ""}
+                  {result.durationSeconds
+                    ? `Duration: ${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s`
+                    : ""}
+                  {result.questionsAnswered
+                    ? `  •  Questions Answered: ${result.questionsAnswered}`
+                    : ""}
                 </p>
                 <div className="ai-score-big">{result.scorecard.overallScore}%</div>
                 <div className="ai-grade-pill">{result.scorecard.grade}</div>
@@ -942,31 +1021,25 @@ export default function AIInterview() {
                   <div className="ai-diagnostic-box">
                     <h4 className="ai-diagnostic-title">Strengths</h4>
                     <ul className="ai-list">
-                      {result.scorecard.strengths.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
+                      {result.scorecard.strengths.map((s, i) => <li key={i}>{s}</li>)}
                     </ul>
                   </div>
                 )}
 
                 {Array.isArray(result.scorecard.improvementAreas) && result.scorecard.improvementAreas.length > 0 && (
                   <div className="ai-diagnostic-box">
-                    <h4 className="ai-diagnostic-title">Weak Areas</h4>
+                    <h4 className="ai-diagnostic-title">Areas to Improve</h4>
                     <ul className="ai-list">
-                      {result.scorecard.improvementAreas.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
+                      {result.scorecard.improvementAreas.map((s, i) => <li key={i}>{s}</li>)}
                     </ul>
                   </div>
                 )}
 
                 {Array.isArray(result.scorecard.recommendedTopics) && result.scorecard.recommendedTopics.length > 0 && (
                   <div className="ai-diagnostic-box">
-                    <h4 className="ai-diagnostic-title">Skill Gaps & Recommendations</h4>
+                    <h4 className="ai-diagnostic-title">Recommended Topics</h4>
                     <ul className="ai-list">
-                      {result.scorecard.recommendedTopics.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
+                      {result.scorecard.recommendedTopics.map((s, i) => <li key={i}>{s}</li>)}
                     </ul>
                   </div>
                 )}
@@ -982,9 +1055,11 @@ export default function AIInterview() {
             <>
               <div className="ai-scorecard-hero">
                 <Award size={44} className="ai-award-icon" />
-                <h2 className="ai-scorecard-title">AI Interview Ended</h2>
+                <h2 className="ai-scorecard-title">Interview Session Ended</h2>
                 <p className="ai-scorecard-subtitle">
-                  The session could not reach the evaluation server. Your interview progress is preserved below.
+                  {result?.questionsAnswered
+                    ? `You answered ${result.questionsAnswered} question${result.questionsAnswered !== 1 ? "s" : ""}.`
+                    : "Your session has been saved."}
                 </p>
               </div>
               <div className="ai-result-stats">
@@ -1007,9 +1082,9 @@ export default function AIInterview() {
         </div>
       )}
 
-      {/* Past Interviews (real data) */}
+      {/* Past Interviews */}
       <div className="past-interviews-card">
-        <h3 className="past-interviews-header">Past interviews</h3>
+        <h3 className="past-interviews-header">Past Interviews</h3>
         <p className="past-interviews-subtitle">Your saved AI evaluation history</p>
 
         {pastLoading ? (

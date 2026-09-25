@@ -373,7 +373,7 @@ export default function AIInterviews() {
       return;
     }
 
-    const token = window.localStorage.getItem("token") || "";
+    const token = ((sessionStorage.getItem("token") || localStorage.getItem("token")) || "");
     if (!token) {
       setErrorMessage("An authenticated session is required to start the interview.");
       updateStatus("error");

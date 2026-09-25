@@ -76,10 +76,24 @@ function FieldLabel({ icon, children, htmlFor }) {
   );
 }
 
+// ── Auth token storage helper ────────────────────────────
+// rememberMe=true  → localStorage  (persists across browser restarts)
+// rememberMe=false → sessionStorage (cleared when tab/browser closes)
+function storeAuthToken(token, remember) {
+  // Always clear the other storage to avoid stale tokens
+  if (remember) {
+    sessionStorage.removeItem("token");
+    localStorage.setItem("token", token);
+  } else {
+    localStorage.removeItem("token");
+    sessionStorage.setItem("token", token);
+  }
+}
+
 function Login() {
   const navigate = useNavigate();
-  const [authMode, setAuthMode] = useState("password"); // "password" | "otp"
-  const [step, setStep] = useState("email"); // "email" | "otp"
+  const [authMode, setAuthMode] = useState("password"); // "password" | "otp" | "forgot"
+  const [step, setStep] = useState("email"); // "email" | "otp" | "new_password" | "authenticator"
   const [email, setEmail] = useState(() => {
     if (localStorage.getItem("tx_remember_me") !== "true") return "";
     return localStorage.getItem("tx_remembered_identifier") || localStorage.getItem("tx_remembered_email") || "";
@@ -89,6 +103,8 @@ function Login() {
   const [rememberMe, setRememberMe] = useState(
     () => localStorage.getItem("tx_remember_me") === "true"
   );
+  // Preserve rememberMe across the 2FA / authenticator step
+  const rememberMeRef = useRef(rememberMe);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -107,6 +123,7 @@ function Login() {
 
   const handleRememberMeChange = (checked) => {
     setRememberMe(checked);
+    rememberMeRef.current = checked;
     if (!checked) {
       localStorage.removeItem("tx_remember_me");
       localStorage.removeItem("tx_remembered_identifier");
@@ -150,36 +167,20 @@ function Login() {
     setPreAuthToken(null);
   };
 
-  const handleVerifyForgotOtp = async (e) => {
+  // Forgot-password OTP verify: do NOT call /verify-otp (login endpoint).
+  // Simply move to new_password step; the final reset step re-validates OTP.
+  const handleVerifyForgotOtp = (e) => {
     e.preventDefault();
     const enteredOtp = otp.join("");
     if (enteredOtp.length < 6) {
       setErrorMsg("Please enter the complete 6-digit OTP code.");
       return;
     }
-    setLoading(true);
+    // OTP digits are already in state; move straight to the new_password step.
+    // The /reset-password-otp endpoint will validate the OTP server-side.
     setErrorMsg("");
-    setSuccessMsg("");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: enteredOtp }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setStep("new_password");
-        setSuccessMsg("OTP verified successfully! Please enter your new password below.");
-      } else {
-        setErrorMsg(data.message || "Invalid or expired OTP code. Please check and try again.");
-      }
-    } catch (err) {
-      console.error("Verify OTP error:", err);
-      setErrorMsg("Unable to connect to server. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setSuccessMsg("OTP accepted. Please set your new password below.");
+    setStep("new_password");
   };
 
   const handleResetPasswordSubmit = async (e) => {
@@ -268,9 +269,11 @@ function Login() {
     const temporaryToken = data?.preAuthToken || data?.temporaryToken || data?.preauthToken;
     if (!temporaryToken) return false;
 
+    // Snapshot rememberMe into a ref so it survives the step change
+    rememberMeRef.current = rememberMe;
     setPreAuthToken(temporaryToken);
     setStep("authenticator");
-    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Microsoft or Google Authenticator.");
+    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Google Authenticator.");
     setOtp(["", "", "", "", "", ""]);
     setTimeout(() => {
       inputRefs.current[0]?.focus();
@@ -284,6 +287,7 @@ function Login() {
     if (!email || !password) return;
 
     persistRememberedIdentifier();
+    rememberMeRef.current = rememberMe;
 
     setLoading(true);
     setErrorMsg("");
@@ -297,13 +301,14 @@ function Login() {
       });
       const data = await response.json();
       if (data.success && data.data?.requiresTwoFactor) {
+        // 2FA required — store pre-auth token only, NOT the final JWT
         if (!beginAuthenticatorStep(data.data)) {
           setPreAuthToken(null);
           setErrorMsg("Two-factor verification could not be started. Please try again.");
         }
       } else if (data.success && data.data?.token) {
         setPreAuthToken(null);
-        localStorage.setItem("token", data.data.token);
+        storeAuthToken(data.data.token, rememberMeRef.current);
         handlePostLoginRedirect(data.data.user || {});
       } else {
         setErrorMsg(data.message || "Invalid credentials. Please check your identifier and password.");
@@ -321,6 +326,7 @@ function Login() {
     e.preventDefault();
     if (!email) return;
     persistRememberedIdentifier();
+    rememberMeRef.current = rememberMe;
     setPreAuthToken(null);
     setLoading(true);
     setErrorMsg("");
@@ -406,7 +412,7 @@ function Login() {
     e.preventDefault();
     const enteredOtp = otp.join("");
     if (enteredOtp.length < 6) {
-      setErrorMsg("Please enter complete 6-digit Authenticator code.");
+      setErrorMsg("Please enter the complete 6-digit code.");
       return;
     }
     setLoading(true);
@@ -417,31 +423,40 @@ function Login() {
       const isAuthenticatorStep = step === "authenticator";
       if (isAuthenticatorStep && !preAuthToken) {
         setErrorMsg("Your temporary authentication session expired. Please sign in again.");
+        setLoading(false);
         return;
       }
 
-      const endpoint = isAuthenticatorStep ? `${API_BASE_URL}/verify-totp` : `${API_BASE_URL}/verify-otp`;
+      // Authenticator step → TOTP verify (final JWT issued here)
+      // OTP login step   → verify-otp (may return requiresTwoFactor instead of token)
+      const endpoint = isAuthenticatorStep
+        ? `${API_BASE_URL}/verify-totp`
+        : `${API_BASE_URL}/verify-otp`;
       const requestBody = isAuthenticatorStep
         ? { preAuthToken, code: enteredOtp }
         : { identifier: email, otp: enteredOtp };
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
       const data = await response.json();
+
       if (data.success && data.data?.requiresTwoFactor && !isAuthenticatorStep) {
+        // OTP verified, but 2FA is enabled → show authenticator step; do NOT store JWT
         if (!beginAuthenticatorStep(data.data)) {
           setPreAuthToken(null);
           setErrorMsg("Two-factor verification could not be started. Please try again.");
         }
       } else if (data.success && data.data?.token) {
+        // Final JWT received — store based on rememberMe choice
         setPreAuthToken(null);
-        localStorage.setItem("token", data.data.token);
+        storeAuthToken(data.data.token, rememberMeRef.current);
         handlePostLoginRedirect(data.data.user || {});
       } else {
         setErrorMsg(data.message || (isAuthenticatorStep
-          ? "Invalid Authenticator Code from Microsoft or Google Authenticator."
+          ? "Invalid code from Google Authenticator. Please try again."
           : "Invalid or expired OTP code."));
       }
     } catch (err) {
@@ -484,24 +499,10 @@ function Login() {
 
           {/* Center Stage — Minimal Premium Logo Creation Animation */}
           <div className="tx-logo-reveal-stage">
-            {/* Step 2 Energy Light Point */}
-            <div className="tx-energy-point"></div>
-
-            {/* Backing Ambient Glow Pulse */}
             <div className="tx-logo-glow-pulse"></div>
-
-            {/* Main Logo Reveal Canvas using Logo.png */}
-            <div className="tx-logo-canvas">
-              {/* Light Tracing Beam */}
-              <div className="tx-light-trace-beam"></div>
-
-              {/* Masked Reveal Container for Logo.png */}
-              <div className="tx-logo-mask-layer">
-                <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
-              </div>
-
-              {/* Shine Sweep Overlay */}
-              <div className="tx-logo-shine-sweep"></div>
+            
+            <div className="tx-logo-premium-canvas">
+              <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
             </div>
 
             {/* Typography Below Logo */}
@@ -702,16 +703,7 @@ function Login() {
                     />
                   </div>
 
-                  <div className="login-options">
-                    <label className="login-remember-label">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => handleRememberMeChange(e.target.checked)}
-                      />
-                      <span>Remember Me</span>
-                    </label>
-                  </div>
+                  {/* Remember Me hidden in OTP mode */}
 
                   <button type="submit" className="login-send-otp-btn" disabled={loading}>
                     {Icons.send} {loading ? "Sending..." : "Send OTP"}

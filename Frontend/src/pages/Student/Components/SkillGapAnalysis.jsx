@@ -47,7 +47,7 @@ export default function SkillGapAnalysis() {
   const [errorMsg, setErrorMsg] = useState("");
 
   const loadGaps = useCallback(async () => {
-    const token = localStorage.getItem("token");
+    const token = (sessionStorage.getItem("token") || localStorage.getItem("token"));
     if (!token) {
       setErrorMsg("Your session has expired. Please log in again.");
       setStatus("auth");
