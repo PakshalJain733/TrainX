@@ -1906,6 +1906,105 @@
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
+.login-wrapper {
+  min-height: 520px;
+}
+
+.lp2-panel {
+  min-height: 520px;
+  padding: 30px 24px 20px;
+}
+
+.tx-ambient-radial-glow {
+  animation: none;
+  opacity: 0.85;
+}
+
+.tx-micro-particle,
+.tx-energy-point,
+.tx-light-trace-beam,
+.tx-logo-shine-sweep {
+  display: none;
+}
+
+.tx-top-sparkle,
+.tx-brand-text-block,
+.tx-footer-tag {
+  animation: none;
+}
+
+.tx-logo-reveal-stage {
+  gap: 12px;
+  animation: txLogoEntrance 650ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tx-logo-glow-pulse {
+  width: 240px;
+  height: 240px;
+  opacity: 0.9;
+  animation: none;
+}
+
+.tx-logo-canvas {
+  width: 190px;
+  height: 190px;
+  animation: none;
+}
+
+.tx-logo-mask-layer {
+  width: 190px;
+  height: 190px;
+  clip-path: none;
+  opacity: 1;
+  transform: scale(1);
+  filter: none;
+  animation: none;
+}
+
+.tx-logo-main-img {
+  width: 190px;
+  height: 190px;
+  max-width: 190px;
+  max-height: 190px;
+  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.8)) drop-shadow(0 0 32px rgba(6, 182, 212, 0.35));
+}
+
+.tx-brand-text-block {
+  margin-top: 12px;
+}
+
+.tx-bottom-footer-bar {
+  padding-top: 10px;
+}
+
+.login-logo {
+  width: 190px;
+}
+
+.login-card .login-options {
+  display: none;
+}
+
+@keyframes txLogoEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-logo-reveal-stage {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Responsive */
 @media (max-width: 860px) {
   .login-left-panel {

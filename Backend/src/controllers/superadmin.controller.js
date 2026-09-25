@@ -1,5 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
+import { getAvailableTables, tableExists } from '../utils/tableAvailability.js';
 
 const round1 = (v) => {
   const n = parseFloat(v);
@@ -9,6 +10,164 @@ const round1 = (v) => {
 const toInt = (v) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : 0;
+};
+
+// C2C 2029 is identified by the program code, never by a hard-coded id.
+const C2C_PROGRAM_CODE = 'C2C 2029';
+
+const loadC2CStats = async () => {
+  const available = await getAvailableTables([
+    'training_programs',
+    'training_enrollments',
+    'mentor_student_assignments',
+    'batches',
+  ]);
+
+  if (!available.has('training_programs') || !available.has('training_enrollments')) {
+    return {
+      available: false,
+      program: null,
+      totals: {
+        students: null,
+        mentors: null,
+        batches: null,
+        enrollments: null,
+        feePerStudent: null,
+        feeCollected: null,
+        feeOutstanding: null,
+      },
+      payments: { paid: null, partial: null, unpaid: null },
+      whatsapp: { added: null, notAdded: null },
+      branches: [],
+    };
+  }
+
+  const [program] = await query(
+    `SELECT id, name, code, short_name, placement_season_year, graduation_year, fee_amount, status
+       FROM training_programs
+      WHERE code = ?
+      ORDER BY id ASC
+      LIMIT 1`,
+    [C2C_PROGRAM_CODE]
+  );
+
+  if (!program) {
+    return {
+      available: false,
+      program: null,
+      totals: {
+        students: null,
+        mentors: null,
+        batches: null,
+        enrollments: null,
+        feePerStudent: null,
+        feeCollected: null,
+        feeOutstanding: null,
+      },
+      payments: { paid: null, partial: null, unpaid: null },
+      whatsapp: { added: null, notAdded: null },
+      branches: [],
+    };
+  }
+
+  const mentorSubquery = available.has('mentor_student_assignments')
+    ? `(SELECT COUNT(DISTINCT msa.mentor_id) FROM mentor_student_assignments msa
+         JOIN training_enrollments e2 ON e2.student_user_id = msa.student_id
+        WHERE e2.program_id = ?) AS mentors`
+    : `NULL AS mentors`;
+
+  const [totals] = await query(
+    `SELECT
+        (SELECT COUNT(DISTINCT e.student_user_id) FROM training_enrollments e WHERE e.program_id = ?) AS students,
+        ${mentorSubquery},
+        (SELECT COUNT(DISTINCT e3.batch_id) FROM training_enrollments e3
+          WHERE e3.program_id = ? AND e3.batch_id IS NOT NULL) AS batches,
+        (SELECT COUNT(*) FROM training_enrollments e4 WHERE e4.program_id = ?) AS enrollments,
+        (SELECT COALESCE(SUM(e5.amount_paid), 0) FROM training_enrollments e5 WHERE e5.program_id = ?) AS collected,
+        (SELECT COALESCE(SUM(GREATEST(e6.fee_amount - e6.amount_paid, 0)), 0) FROM training_enrollments e6
+          WHERE e6.program_id = ?) AS outstanding`,
+    [program.id, ...(available.has('mentor_student_assignments') ? [program.id] : []), program.id, program.id, program.id, program.id]
+  );
+
+  const [payments] = await query(
+    `SELECT
+        SUM(CASE WHEN e.payment_status = 'paid' THEN 1 ELSE 0 END) AS paid,
+        SUM(CASE WHEN e.payment_status = 'partial' THEN 1 ELSE 0 END) AS partial,
+        SUM(CASE WHEN e.payment_status = 'unpaid' THEN 1 ELSE 0 END) AS unpaid
+       FROM training_enrollments e
+      WHERE e.program_id = ?`,
+    [program.id]
+  );
+
+  const [whatsapp] = await query(
+    `SELECT
+        SUM(CASE WHEN LOWER(TRIM(e.whatsapp_group_added)) = 'yes' THEN 1 ELSE 0 END) AS added,
+        SUM(CASE WHEN LOWER(TRIM(e.whatsapp_group_added)) <> 'yes' OR e.whatsapp_group_added IS NULL THEN 1 ELSE 0 END) AS not_added
+       FROM training_enrollments e
+      WHERE e.program_id = ?`,
+    [program.id]
+  );
+
+  const branches = available.has('batches')
+    ? await query(
+        `SELECT b.id, b.name, COUNT(DISTINCT e.student_user_id) AS students
+           FROM training_enrollments e
+           JOIN batches b ON b.id = e.batch_id
+          WHERE e.program_id = ?
+          GROUP BY b.id, b.name
+          ORDER BY students DESC, b.name ASC`,
+        [program.id]
+      )
+    : [];
+
+  return {
+    available: true,
+    program: {
+      id: program.id,
+      name: program.name,
+      code: program.code,
+      shortName: program.short_name,
+      placementSeasonYear: program.placement_season_year,
+      graduationYear: program.graduation_year,
+      status: program.status,
+    },
+    totals: {
+      students: toInt(totals?.students) || 0,
+      mentors: toInt(totals?.mentors) || 0,
+      batches: toInt(totals?.batches) || 0,
+      enrollments: toInt(totals?.enrollments) || 0,
+      feePerStudent: toInt(program.fee_amount) || 0,
+      feeCollected: toInt(totals?.collected) || 0,
+      feeOutstanding: toInt(totals?.outstanding) || 0,
+    },
+    payments: {
+      paid: toInt(payments?.paid) || 0,
+      partial: toInt(payments?.partial) || 0,
+      unpaid: toInt(payments?.unpaid) || 0,
+    },
+    whatsapp: {
+      added: toInt(whatsapp?.added) || 0,
+      notAdded: toInt(whatsapp?.not_added) || 0,
+    },
+    branches: (branches || []).map((b) => ({
+      id: b.id,
+      name: b.name,
+      students: toInt(b.students),
+    })),
+  };
+};
+
+export const getSuperAdminC2CStats = async (req, res, next) => {
+  try {
+    const c2c = await loadC2CStats();
+    return sendSuccess(
+      res,
+      c2c.available ? 'C2C statistics retrieved successfully' : 'C2C data is not available yet',
+      c2c
+    );
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const getSuperAdminOverview = async (req, res, next) => {
@@ -418,6 +577,8 @@ export const getSuperAdminDashboardSummary = async (req, res, next) => {
       query('SELECT COUNT(*) AS n FROM departments'),
     ]);
 
+    const c2c = await loadC2CStats();
+
     return sendSuccess(res, 'Dashboard summary retrieved successfully', {
       colleges: toInt(colleges?.n),
       students: toInt(students?.n),
@@ -430,6 +591,19 @@ export const getSuperAdminDashboardSummary = async (req, res, next) => {
       averageAttendance: null,
       averageAssessment: null,
       defaulters: 0,
+      c2c: c2c.available
+        ? {
+            code: c2c.program.code,
+            students: c2c.totals.students,
+            mentors: c2c.totals.mentors,
+            batches: c2c.totals.batches,
+            feePerStudent: c2c.totals.feePerStudent,
+            feeCollected: c2c.totals.feeCollected,
+            feeOutstanding: c2c.totals.feeOutstanding,
+            payments: c2c.payments,
+            whatsapp: c2c.whatsapp,
+          }
+        : { available: false, code: C2C_PROGRAM_CODE, students: null, mentors: null, batches: null },
     });
   } catch (error) {
     next(error);

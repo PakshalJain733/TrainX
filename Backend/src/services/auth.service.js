@@ -1,3 +1,6 @@
+import { randomUUID } from 'crypto';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
 import {
@@ -10,17 +13,189 @@ import {
   saveOtpRecord,
   verifyOtpRecord,
   updateUserTwoFactorSecret,
+  enableTwoFactorForUser,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
 import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
+import { config } from '../config/env.js';
 
-export const generateTotpSetup = async (email) => {
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+const PREAUTH_TOKEN_TTL = '10m';
+const PREAUTH_TOKEN_TYPE = 'preauth';
+const PREAUTH_PURPOSE = 'totp';
+const consumedPreauthTokens = new Map();
+
+const createAuthError = (message, statusCode = 400) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+};
+
+const isBlank = (value) => value === undefined || value === null || String(value).trim() === '';
+
+const isTwoFactorEnabled = (value) => {
+  if (value === true || value === 1) return true;
+  return String(value).toLowerCase() === 'true' || String(value) === '1';
+};
+
+const isInactiveUser = (user) => {
+  if (!user || user.is_active === undefined) return false;
+  if (user.is_active === null || user.is_active === false || user.is_active === 0) return true;
+  return ['0', 'false', 'inactive', 'pending'].includes(String(user.is_active).toLowerCase());
+};
+
+const assertUserCanAuthenticate = (user) => {
+  if (!user) {
+    throw createAuthError('Invalid credentials.', 401);
+  }
+  if (isInactiveUser(user)) {
+    throw createAuthError('This account is inactive or pending verification.', 403);
+  }
+};
+
+const hasTwoFactorAuthentication = (user) => (
+  isTwoFactorEnabled(user?.two_factor_enabled) && !isBlank(user?.two_factor_secret)
+);
+
+const verifyStoredPassword = async (user, password) => {
+  if (!user || typeof password !== 'string' || password.length === 0) return false;
+
+  const candidates = [...new Set([user.password_hash, user.password]
+    .filter((value) => !isBlank(value))
+    .map((value) => String(value)))];
+  let matchedLegacyPassword = false;
+
+  for (const candidate of candidates) {
+    if (BCRYPT_HASH_PATTERN.test(candidate)) {
+      try {
+        if (await bcrypt.compare(password, candidate)) return true;
+      } catch {
+        continue;
+      }
+    } else if (candidate === password) {
+      matchedLegacyPassword = true;
+    }
+  }
+
+  if (matchedLegacyPassword) {
+    try {
+      await updateUser(user.id, { password });
+    } catch {
+      console.warn('[AUTH] Legacy password migration could not be persisted.');
+    }
+    return true;
+  }
+
+  return false;
+};
+
+const buildUserResponse = async (user) => {
+  const studentProfile = await getStudentByUserId(user.id);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email || null,
+    mobile_number: user.mobile_number || null,
+    role: user.role,
+    department: studentProfile?.department || '',
+    year: studentProfile?.year || '',
+    division: studentProfile?.division || '',
+    semester: studentProfile?.semester || '',
+    roll_number: studentProfile?.roll_number || '',
+    studentProfile,
+  };
+};
+
+const generateFinalToken = (user) => generateToken({
+  userId: user.id,
+  email: user.email || null,
+  mobile: user.mobile_number || null,
+  role: user.role,
+  collegeId: user.college_id ?? null,
+  tokenType: 'access',
+});
+
+const generatePreauthToken = (user) => jwt.sign({
+  userId: user.id,
+  tokenType: PREAUTH_TOKEN_TYPE,
+  purpose: PREAUTH_PURPOSE,
+  jti: randomUUID(),
+}, config.jwt.secret, {
+  expiresIn: PREAUTH_TOKEN_TTL,
+});
+
+const finalizePrimaryAuthentication = async (user) => {
+  assertUserCanAuthenticate(user);
+
+  if (hasTwoFactorAuthentication(user)) {
+    return {
+      requiresTwoFactor: true,
+      preAuthToken: generatePreauthToken(user),
+    };
+  }
+
+  return {
+    requiresTwoFactor: false,
+    token: generateFinalToken(user),
+    user: await buildUserResponse(user),
+  };
+};
+
+const pruneConsumedPreauthTokens = () => {
+  const now = Date.now();
+  for (const [jti, expiresAt] of consumedPreauthTokens.entries()) {
+    if (expiresAt <= now) consumedPreauthTokens.delete(jti);
+  }
+};
+
+const decodePreauthToken = (token) => {
+  if (isBlank(token)) {
+    throw createAuthError('A temporary authentication token is required.', 401);
+  }
+
+  const normalizedToken = String(token)
+    .trim()
+    .replace(/^Bearer\s+/i, '')
+    .replace(/^["']|["']$/g, '')
+    .trim();
+
+  let decoded;
+  try {
+    decoded = jwt.verify(normalizedToken, config.jwt.secret);
+  } catch {
+    throw createAuthError('Invalid or expired temporary authentication token.', 401);
+  }
+
+  if (
+    decoded?.tokenType !== PREAUTH_TOKEN_TYPE
+    || decoded?.purpose !== PREAUTH_PURPOSE
+    || !decoded?.userId
+    || !decoded?.jti
+  ) {
+    throw createAuthError('Invalid temporary authentication token.', 401);
+  }
+
+  pruneConsumedPreauthTokens();
+  if (consumedPreauthTokens.has(decoded.jti)) {
+    throw createAuthError('Temporary authentication token has already been used.', 401);
+  }
+
+  return decoded;
+};
+
+const consumePreauthToken = (decoded) => {
+  const expiresAt = Number(decoded.exp) * 1000 || Date.now() + 10 * 60 * 1000;
+  consumedPreauthTokens.set(decoded.jti, expiresAt);
+  pruneConsumedPreauthTokens();
+};
+
+export const generateTotpSetup = async (accountLabel) => {
   const secret = speakeasy.generateSecret({
     length: 20,
-    name: `TrainingPortal (${email})`,
+    name: `TrainingPortal (${accountLabel})`,
     issuer: 'TrainingPortal',
   });
 
@@ -34,47 +209,45 @@ export const generateTotpSetup = async (email) => {
 };
 
 export const verifyTotpToken = (secret, token) => {
-  if (!token) return false;
+  if (isBlank(secret) || isBlank(token)) return false;
   const cleanToken = String(token).trim();
-  if (cleanToken === '123456') return true;
-  if (!secret) return true;
 
   try {
     return speakeasy.totp.verify({
-      secret: secret,
+      secret: String(secret).trim(),
       encoding: 'base32',
       token: cleanToken,
       window: 2,
     });
-  } catch (err) {
-    console.warn(`[TOTP] Verification exception: ${err.message}`);
-    return cleanToken === '123456';
+  } catch {
+    return false;
   }
 };
 
 export const registerUser = async (data) => {
   const { name, email, mobile_number, password, role, secure_code, roll_number, department, year, division, semester } = data;
 
-  // Check if user exists by email or mobile number
+  if (isBlank(email) && isBlank(mobile_number)) {
+    throw createAuthError('An email address or mobile number is required.', 400);
+  }
+  if (typeof password !== 'string' || password.length < 6) {
+    throw createAuthError('Password must be at least 6 characters long.', 400);
+  }
+
   if (email) {
     const existingUser = await findUserByEmailOrMobile(email);
     if (existingUser) {
-      const error = new Error('User with this email already exists');
-      error.statusCode = 409;
-      throw error;
+      throw createAuthError('User with this email already exists', 409);
     }
   }
 
   if (mobile_number) {
     const existingMobileUser = await findUserByEmailOrMobile(mobile_number);
     if (existingMobileUser) {
-      const error = new Error('User with this mobile number already exists');
-      error.statusCode = 409;
-      throw error;
+      throw createAuthError('User with this mobile number already exists', 409);
     }
   }
 
-  // Map role
   let canonicalRole = ROLES.STUDENT;
   if (role) {
     const lowerRole = role.toLowerCase();
@@ -83,39 +256,31 @@ export const registerUser = async (data) => {
     else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
   }
 
-  // Verification of Secure Code in DB for non-student roles or if secure_code provided
   let codeRecord = null;
   const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
   if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
     if (!secure_code || String(secure_code).trim().length === 0) {
-      const error = new Error(`Secure access code is required to register for role: ${role || canonicalRole}`);
-      error.statusCode = 400;
-      throw error;
+      throw createAuthError(`Secure access code is required to register for role: ${role || canonicalRole}`, 400);
     }
 
     codeRecord = await findSecureCode(secure_code, canonicalRole);
     if (!codeRecord) {
-      const error = new Error(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`);
-      error.statusCode = 400;
-      throw error;
+      throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
     }
   }
 
-  // Create base User
   const user = await createUser({
     name,
-    email: email || '',
-    mobile_number: mobile_number || '',
-    password: password || '',
+    email: email || null,
+    mobile_number: mobile_number || null,
+    password,
     role: canonicalRole,
   });
 
-  // Mark secure code as used in DB if applicable
   if (codeRecord && codeRecord.id) {
     await markCodeAsUsed(codeRecord.id, user.id);
   }
 
-  // If student role, save student details
   let studentProfile = null;
   if (canonicalRole === ROLES.STUDENT) {
     let derivedSemester = semester || '';
@@ -136,28 +301,17 @@ export const registerUser = async (data) => {
     });
   }
 
-  // Send welcome email asynchronously
   if (user.email && user.email.includes('@')) {
-    sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch((err) => {
-      console.warn(`[AUTH] Welcome email notification skipped: ${err.message}`);
+    sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch((error) => {
+      console.warn(`[AUTH] Welcome email notification skipped: ${error.message}`);
     });
   }
 
-  // Generate Microsoft / Google Authenticator TOTP Setup
-  const totpSetup = await generateTotpSetup(user.email || name);
+  const totpSetup = await generateTotpSetup(user.email || user.mobile_number || name);
   await updateUserTwoFactorSecret(user.id, totpSetup.secret);
 
-  // Generate JWT token
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    mobile: user.mobile_number,
-    role: user.role,
-    collegeId: user.college_id || 1,
-  });
-
   return {
-    token,
+    token: generateFinalToken(user),
     qrCode: totpSetup.qrCode,
     secret: totpSetup.secret,
     user: {
@@ -177,214 +331,151 @@ export const registerUser = async (data) => {
   };
 };
 
-export const verifyTotpAndLogin = async (identifier, totpCode) => {
-  const user = await findUserByEmailOrMobile(identifier);
-  if (!user) {
-    const error = new Error('User not found');
-    error.statusCode = 404;
-    throw error;
+export const verifyTotpAndLogin = async (preAuthToken, totpCode) => {
+  const decoded = decodePreauthToken(preAuthToken);
+  const user = await findUserById(decoded.userId);
+  assertUserCanAuthenticate(user);
+
+  if (!hasTwoFactorAuthentication(user) || !verifyTotpToken(user.two_factor_secret, totpCode)) {
+    throw createAuthError('Invalid Authenticator Code from Microsoft/Google Authenticator app.', 400);
   }
 
-  const isValid = verifyTotpToken(user.two_factor_secret, totpCode);
-  if (!isValid) {
-    const error = new Error('Invalid Authenticator Code from Microsoft/Google Authenticator app.');
-    error.statusCode = 400;
-    throw error;
-  }
-
-  const studentProfile = await getStudentByUserId(user.id);
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    mobile: user.mobile_number,
-    role: user.role,
-    collegeId: user.college_id || 1,
-  });
+  consumePreauthToken(decoded);
 
   return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile_number: user.mobile_number,
-      role: user.role,
-      department: studentProfile?.department || '',
-      year: studentProfile?.year || '',
-      division: studentProfile?.division || '',
-      semester: studentProfile?.semester || '',
-      roll_number: studentProfile?.roll_number || '',
-      studentProfile,
-    },
+    requiresTwoFactor: false,
+    token: generateFinalToken(user),
+    user: await buildUserResponse(user),
+  };
+};
+
+export const verifyTotpPairing = async (identifier, totpCode) => {
+  if (isBlank(identifier) || isBlank(totpCode)) {
+    throw createAuthError('Identifier and Authenticator code are required.', 400);
+  }
+
+  const user = await findUserByEmailOrMobile(identifier);
+  if (!user) {
+    throw createAuthError('No account is pending Authenticator pairing for this identifier.', 400);
+  }
+  assertUserCanAuthenticate(user);
+
+  if (isTwoFactorEnabled(user.two_factor_enabled) || isBlank(user.two_factor_secret)) {
+    throw createAuthError('This account is not pending Authenticator pairing. Please sign in instead.', 400);
+  }
+
+  if (!verifyTotpToken(user.two_factor_secret, totpCode)) {
+    throw createAuthError('Invalid Authenticator Code from Microsoft/Google Authenticator app.', 400);
+  }
+
+  await enableTwoFactorForUser(user.id);
+
+  return {
+    requiresTwoFactor: false,
+    token: generateFinalToken(user),
+    user: await buildUserResponse(user),
   };
 };
 
 export const sendUserOtp = async (identifier) => {
-  let user = await findUserByEmailOrMobile(identifier);
-  if (!user) {
-    // Auto-onboard user if not registered yet
-    const isMobile = /^\d+$/.test(identifier.trim());
-    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
-    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-    user = await createUser({
-      name: formattedName || 'Student',
-      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
-      mobile_number: isMobile ? identifier : '',
-      role: ROLES.STUDENT,
-    });
+  if (isBlank(identifier)) {
+    throw createAuthError('Email or mobile number is required.', 400);
   }
+
+  const cleanIdentifier = String(identifier).trim();
+  const user = await findUserByEmailOrMobile(cleanIdentifier);
+  if (!user) {
+    throw createAuthError('No account found for this identifier.', 404);
+  }
+  assertUserCanAuthenticate(user);
 
   const otp = generateOtp(6);
-  await saveOtpRecord(identifier, otp);
-  console.log(`[AUTH SERVICE] Generated OTP for ${identifier}: ${otp}`);
-
-  // Dispatch OTP email via Nodemailer
-  const recipientEmail = user.email || (identifier.includes('@') ? identifier : null);
-  if (recipientEmail && recipientEmail.includes('@')) {
-    sendOtpEmail({ to: recipientEmail, otp, name: user.name }).catch((err) => {
-      console.warn(`[AUTH] Nodemailer email dispatch notice: ${err.message}`);
-    });
+  const recipientEmail = typeof user.email === 'string' && user.email.includes('@') ? user.email : null;
+  if (!recipientEmail) {
+    throw createAuthError('OTP delivery is not available for this account. Please use password login or contact your administrator.', 400);
   }
 
-  return {
-    identifier,
-    otp, // Included in response for testing/demo mode
-  };
+  await saveOtpRecord(cleanIdentifier, otp);
+  sendOtpEmail({ to: recipientEmail, otp, name: user.name }).catch((error) => {
+    console.warn(`[AUTH] OTP email dispatch skipped: ${error.message}`);
+  });
+
+  return { identifier: cleanIdentifier };
 };
 
 export const verifyUserOtpAndLogin = async (identifier, otp) => {
-  let user = await findUserByEmailOrMobile(identifier);
+  if (isBlank(identifier) || isBlank(otp)) {
+    throw createAuthError('Identifier and OTP are required.', 400);
+  }
+
+  const cleanIdentifier = String(identifier).trim();
+  const user = await findUserByEmailOrMobile(cleanIdentifier);
   if (!user) {
-    const isMobile = /^\d+$/.test(identifier.trim());
-    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
-    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-
-    user = await createUser({
-      name: formattedName || 'Student',
-      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
-      mobile_number: isMobile ? identifier : '',
-      role: ROLES.STUDENT,
-    });
+    throw createAuthError('Invalid credentials.', 401);
   }
+  assertUserCanAuthenticate(user);
 
-  const isValid = await verifyOtpRecord(identifier, otp);
+  const isValid = await verifyOtpRecord(cleanIdentifier, otp);
   if (!isValid) {
-    const error = new Error('Invalid or expired OTP');
-    error.statusCode = 400;
-    throw error;
+    throw createAuthError('Invalid or expired OTP', 400);
   }
 
-  const studentProfile = await getStudentByUserId(user.id);
-
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    mobile: user.mobile_number,
-    role: user.role,
-    collegeId: user.college_id || 1,
-  });
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile_number: user.mobile_number,
-      role: user.role,
-      department: studentProfile?.department || '',
-      year: studentProfile?.year || '',
-      division: studentProfile?.division || '',
-      semester: studentProfile?.semester || '',
-      roll_number: studentProfile?.roll_number || '',
-      studentProfile,
-    },
-  };
+  return finalizePrimaryAuthentication(user);
 };
 
 export const loginWithPassword = async (identifier, password) => {
-  let user = await findUserByEmailOrMobile(identifier);
+  if (isBlank(identifier) || isBlank(password)) {
+    throw createAuthError('Email/mobile and password are required.', 400);
+  }
+
+  const user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    const isMobile = /^\d+$/.test(identifier.trim());
-    const namePart = isMobile ? `User_${identifier}` : identifier.split('@')[0];
-    const formattedName = namePart.split(/[._]/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    throw createAuthError('Invalid credentials.', 401);
+  }
+  assertUserCanAuthenticate(user);
 
-    user = await createUser({
-      name: formattedName || 'Student',
-      email: isMobile ? `${identifier}@student.pvppcoe.ac.in` : identifier,
-      mobile_number: isMobile ? identifier : '',
-      role: ROLES.STUDENT,
-    });
+  const isValid = await verifyStoredPassword(user, password);
+  if (!isValid) {
+    throw createAuthError('Invalid password. Please check your credentials.', 401);
   }
 
-  // Password Verification Logic
-  const storedPassword = user.password || user.password_hash;
-  const envSuperEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
-  const envSuperPass = process.env.SUPER_ADMIN_PASSWORD;
-
-  const isSuperAdminMatch = (user.email.toLowerCase() === envSuperEmail.toLowerCase()) && (password === envSuperPass);
-
-  if (storedPassword && storedPassword !== password && !isSuperAdminMatch) {
-    throw new Error('Invalid password. Please check your credentials.');
-  }
-
-  const studentProfile = await getStudentByUserId(user.id);
-
-  const token = generateToken({
-    userId: user.id,
-    email: user.email,
-    mobile: user.mobile_number,
-    role: user.role,
-    collegeId: user.college_id || 1,
-  });
-
-  return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile_number: user.mobile_number,
-      role: user.role,
-      department: studentProfile?.department || '',
-      year: studentProfile?.year || '',
-      division: studentProfile?.division || '',
-      semester: studentProfile?.semester || '',
-      roll_number: studentProfile?.roll_number || '',
-      studentProfile,
-    },
-  };
+  return finalizePrimaryAuthentication(user);
 };
 
 export const changeUserPassword = async (userId, currentPassword, newPassword) => {
   const user = await findUserById(userId);
   if (!user) {
-    throw new Error('User not found');
+    throw createAuthError('User not found', 404);
+  }
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    throw createAuthError('New password must be at least 6 characters long', 400);
   }
 
-  if (user.password_hash && currentPassword) {
-    if (user.password_hash !== currentPassword) {
-      throw new Error('Current password is incorrect');
-    }
+  const isValid = await verifyStoredPassword(user, currentPassword);
+  if (!isValid) {
+    throw createAuthError('Current password is incorrect', 400);
   }
 
   await updateUser(userId, { password: newPassword });
   return { message: 'Password updated successfully' };
 };
 
-export const resetUserPasswordWithOtp = async (email, otp, newPassword) => {
-  const user = await findUserByEmailOrMobile(email);
-  if (!user) {
-    throw new Error('No user account found with this email address');
+export const resetUserPasswordWithOtp = async (identifier, otp, newPassword) => {
+  if (isBlank(identifier) || isBlank(otp) || typeof newPassword !== 'string' || newPassword.length < 6) {
+    throw createAuthError('Identifier, OTP, and a valid new password are required.', 400);
   }
 
-  const isValidOtp = await verifyOtpRecord(user.email, otp);
+  const user = await findUserByEmailOrMobile(identifier);
+  if (!user) {
+    throw createAuthError('No user account found with this identifier', 404);
+  }
+  assertUserCanAuthenticate(user);
+
+  const isValidOtp = await verifyOtpRecord(identifier, otp);
   if (!isValidOtp) {
-    throw new Error('Invalid or expired 6-digit security code');
+    throw createAuthError('Invalid or expired 6-digit security code', 400);
   }
 
   await updateUser(user.id, { password: newPassword });
   return { message: 'Password reset successfully' };
 };
-

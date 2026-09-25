@@ -10,8 +10,8 @@ export const getTrainingData = async (req, res, next) => {
         `SELECT
            tp.id AS program_id, tp.name AS program_name, tp.code AS program_code, tp.short_name,
            tp.placement_season_year, tp.graduation_year, tp.description, tp.fee_amount AS program_fee, tp.status AS program_status,
-           te.id AS enrollment_id, te.training_option, te.fee_amount, te.amount_paid, te.payment_status,
-           te.payment_proof_url, te.payment_received_by, te.whatsapp_group_added, te.source_status, te.source_timestamp,
+           te.id AS enrollment_id, te.training_option, te.fee_amount, te.amount_paid,            te.payment_status,
+           te.whatsapp_group_added, te.source_status, te.source_timestamp,
            te.batch_id, b.name AS batch_name,
            mu.name AS mentor_name, mu.mobile_number AS mentor_mobile
          FROM training_enrollments te
@@ -44,8 +44,6 @@ export const getTrainingData = async (req, res, next) => {
             feeAmount: r.fee_amount,
             amountPaid: r.amount_paid,
             paymentStatus: r.payment_status,
-            paymentProofUrl: r.payment_proof_url,
-            paymentReceivedBy: r.payment_received_by,
             whatsappGroupAdded: r.whatsapp_group_added,
             sourceStatus: r.source_status,
             sourceTimestamp: r.source_timestamp,

@@ -123,3 +123,31 @@
   font-weight: 700;
   color: #059669;
 }
+
+.mentor-mockdrive-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 56px 20px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  color: #94a3b8;
+}
+
+.mentor-mockdrive-empty h3 {
+  margin: 6px 0 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.mentor-mockdrive-empty p {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}

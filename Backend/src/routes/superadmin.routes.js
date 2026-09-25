@@ -13,6 +13,7 @@ import {
   getSuperAdminRoadmaps,
   getSuperAdminVerifications,
   getSuperAdminDashboardSummary,
+  getSuperAdminC2CStats,
 } from '../controllers/superadmin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -35,5 +36,6 @@ router.get('/performance', getSuperAdminPerformance);
 router.get('/weekly-reports', getSuperAdminWeeklyReports);
 router.get('/roadmaps', getSuperAdminRoadmaps);
 router.get('/verifications', getSuperAdminVerifications);
+router.get('/c2c/stats', getSuperAdminC2CStats);
 
 export default router;

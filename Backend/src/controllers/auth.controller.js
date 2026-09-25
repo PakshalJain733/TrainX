@@ -1,6 +1,6 @@
-import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
+import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { findUserById, getStudentByUserId, updateUserModel } from '../models/user.model.js';
+import { findUserById, getStudentByUserId, toSafeUser, updateUserModel } from '../models/user.model.js';
 
 export const register = async (req, res, next) => {
   try {
@@ -41,14 +41,32 @@ export const verifyOtpAndLogin = async (req, res, next) => {
 
 export const verifyTotp = async (req, res, next) => {
   try {
-    const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
-    const { code, otp, totp } = req.body;
+    const body = req.body || {};
+    const { code, otp, totp } = body;
     const inputCode = code || otp || totp;
-    if (!identifier || !inputCode) {
-      return sendError(res, 'Email and Authenticator code are required', 400);
+    const authorization = req.headers.authorization || req.headers.Authorization || '';
+    const headerToken = typeof authorization === 'string'
+      ? authorization.replace(/^Bearer\s+/i, '').trim()
+      : '';
+    const preAuthToken = body.preAuthToken || body.temporaryToken || body.preauthToken || body.token || headerToken;
+
+    if (!inputCode) {
+      return sendError(res, 'Authenticator code is required', 400);
     }
+
     const formattedCode = Array.isArray(inputCode) ? inputCode.join('') : inputCode;
-    const result = await verifyTotpAndLogin(identifier, formattedCode);
+
+    if (preAuthToken) {
+      const result = await verifyTotpAndLogin(preAuthToken, formattedCode);
+      return sendSuccess(res, 'Authenticator verification successful', result);
+    }
+
+    const identifier = body.email || body.mobile || body.identifier || body.mobile_number;
+    if (!identifier) {
+      return sendError(res, 'Temporary authentication token and Authenticator code are required', 400);
+    }
+
+    const result = await verifyTotpPairing(identifier, formattedCode);
     return sendSuccess(res, 'Authenticator verification successful', result);
   } catch (error) {
     next(error);
@@ -77,8 +95,9 @@ export const getMe = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
     const studentProfile = await getStudentByUserId(userId) || {};
+    const safeUser = toSafeUser(user);
     return sendSuccess(res, 'Authenticated user data retrieved', {
-      ...user,
+      ...safeUser,
       ...studentProfile,
       studentProfile,
       department: user.department || studentProfile.department || '',
@@ -107,14 +126,15 @@ export const changePassword = async (req, res, next) => {
 
 export const resetPasswordWithOtp = async (req, res, next) => {
   try {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword) {
-      return sendError(res, 'Email, OTP, and new password are required', 400);
+    const { otp, newPassword } = req.body;
+    const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
+    if (!identifier || !otp || !newPassword) {
+      return sendError(res, 'Email/mobile, OTP, and new password are required', 400);
     }
     if (newPassword.length < 6) {
       return sendError(res, 'New password must be at least 6 characters long', 400);
     }
-    const result = await resetUserPasswordWithOtp(email, otp, newPassword);
+    const result = await resetUserPasswordWithOtp(identifier, otp, newPassword);
     return sendSuccess(res, 'Password reset successfully', result);
   } catch (error) {
     return sendError(res, error.message || 'Failed to reset password', 400);

@@ -3,6 +3,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import {
   getAllUsersModel,
   findUserById,
+  toSafeUser,
   createUser,
   getStudentByUserId,
   updateUserModel,
@@ -48,7 +49,7 @@ export const getStudentProfile = async (req, res, next) => {
            tp.name AS program_name, tp.code AS program_code, tp.short_name, tp.placement_season_year,
            tp.graduation_year, tp.fee_amount AS program_fee,
            te.id AS enrollment_id, te.training_option, te.amount_paid, te.payment_status,
-           te.payment_received_by, te.whatsapp_group_added, te.source_status, te.source_timestamp,
+           te.whatsapp_group_added, te.source_status, te.source_timestamp,
            b.name AS batch_name, b.id AS batch_id,
            mu.name AS mentor_name, mu.mobile_number AS mentor_mobile
          FROM training_enrollments te
@@ -64,7 +65,7 @@ export const getStudentProfile = async (req, res, next) => {
         const t = tRows[0];
         training = {
           program: { name: t.program_name, code: t.program_code, shortName: t.short_name || t.program_code, placementSeasonYear: t.placement_season_year, graduationYear: t.graduation_year, feeAmount: t.program_fee },
-          enrollment: { id: t.enrollment_id, trainingOption: t.training_option, amountPaid: t.amount_paid, paymentStatus: t.payment_status, paymentReceivedBy: t.payment_received_by, whatsappGroupAdded: t.whatsapp_group_added, sourceStatus: t.source_status, sourceTimestamp: t.source_timestamp, batchId: t.batch_id, batchName: t.batch_name },
+          enrollment: { id: t.enrollment_id, trainingOption: t.training_option, amountPaid: t.amount_paid, paymentStatus: t.payment_status, whatsappGroupAdded: t.whatsapp_group_added, sourceStatus: t.source_status, sourceTimestamp: t.source_timestamp, batchId: t.batch_id, batchName: t.batch_name },
           mentor: t.mentor_name ? { name: t.mentor_name, mobile: t.mentor_mobile } : null,
         };
       }
@@ -73,7 +74,7 @@ export const getStudentProfile = async (req, res, next) => {
     }
 
     return sendSuccess(res, 'Student profile retrieved successfully', {
-      ...user,
+      ...toSafeUser(user),
       ...studentProfile,
       is_profile_updated: isProfileUpdated,
       training,
@@ -219,7 +220,7 @@ export const getStudentTrainingEnrollment = async (req, res, next) => {
            tp.id AS program_id, tp.name AS program_name, tp.code AS program_code, tp.short_name,
            tp.placement_season_year, tp.graduation_year, tp.description, tp.fee_amount AS program_fee, tp.status AS program_status,
            te.id AS enrollment_id, te.training_option, te.fee_amount, te.amount_paid, te.payment_status,
-           te.payment_proof_url, te.payment_received_by, te.whatsapp_group_added, te.source_status, te.source_timestamp,
+           te.whatsapp_group_added, te.source_status, te.source_timestamp,
            te.batch_id, b.name AS batch_name,
            mu.name AS mentor_name, mu.mobile_number AS mentor_mobile
          FROM training_enrollments te
@@ -251,8 +252,6 @@ export const getStudentTrainingEnrollment = async (req, res, next) => {
             feeAmount: t.fee_amount,
             amountPaid: t.amount_paid,
             paymentStatus: t.payment_status,
-            paymentProofUrl: t.payment_proof_url,
-            paymentReceivedBy: t.payment_received_by,
             whatsappGroupAdded: t.whatsapp_group_added,
             sourceStatus: t.source_status,
             sourceTimestamp: t.source_timestamp,
