@@ -81,26 +81,24 @@ export default function AdminLeaderboard() {
       .finally(() => setLoading(false));
   };
 
-  // Process overall list sorting
+  // Process list sorting based on activeTab
   let currentList = [];
-  if (activeTab === "overall") {
+  if (activeTab === "batches") {
+    currentList = (data.topBatches || []).map((item, idx) => ({ ...item, displayRank: idx + 1 }));
+  } else {
     const rawList = [...(data.overall || [])];
-    if (sortByMetric === "quiz") {
+    if (activeTab === "quiz") {
       rawList.sort((a, b) => (b.quiz_score || 0) - (a.quiz_score || 0));
-    } else if (sortByMetric === "interview") {
+    } else if (activeTab === "interview") {
       rawList.sort((a, b) => (b.interview_score || 0) - (a.interview_score || 0));
-    } else if (sortByMetric === "coding") {
+    } else if (activeTab === "coding") {
       rawList.sort((a, b) => (b.coding_score || 0) - (a.coding_score || 0));
-    } else if (sortByMetric === "attendance") {
+    } else if (activeTab === "attendance") {
       rawList.sort((a, b) => (b.attendance_score || 0) - (a.attendance_score || 0));
     } else {
       rawList.sort((a, b) => (b.score || b.overall_score || 0) - (a.score || a.overall_score || 0));
     }
     currentList = rawList.map((item, idx) => ({ ...item, displayRank: idx + 1 }));
-  } else if (activeTab === "department") {
-    currentList = (data.department || []).map((item, idx) => ({ ...item, displayRank: idx + 1 }));
-  } else if (activeTab === "batches") {
-    currentList = (data.topBatches || []).map((item, idx) => ({ ...item, displayRank: idx + 1 }));
   }
 
   return (
@@ -117,107 +115,46 @@ export default function AdminLeaderboard() {
         }
       />
 
-      {/* Tabs */}
-      <div className="admin-lb-tabs">
+      {/* Tabs / Rank by Category (Merged into single row) */}
+      <div className="admin-lb-tabs" style={{ alignItems: 'center' }}>
+        <span className="admin-lb-metric-label" style={{ marginRight: '10px' }}>Rank By Category:</span>
         <button
           onClick={() => setActiveTab('overall')}
           className={`admin-lb-tab-btn ${activeTab === 'overall' ? 'admin-lb-tab-btn--active' : ''}`}
         >
-          <Trophy size={15} />
-          Overall Ranking
-        </button>
-        <button
-          onClick={() => setActiveTab('department')}
-          className={`admin-lb-tab-btn ${activeTab === 'department' ? 'admin-lb-tab-btn--active' : ''}`}
-        >
-          <Medal size={15} />
-          Department Ranking
+          Overall
         </button>
         <button
           onClick={() => setActiveTab('batches')}
           className={`admin-lb-tab-btn ${activeTab === 'batches' ? 'admin-lb-tab-btn--active' : ''}`}
         >
-          <Users size={15} />
           Best Batches
         </button>
+        <button
+          onClick={() => setActiveTab('quiz')}
+          className={`admin-lb-tab-btn ${activeTab === 'quiz' ? 'admin-lb-tab-btn--active' : ''}`}
+        >
+          Quiz Score
+        </button>
+        <button
+          onClick={() => setActiveTab('interview')}
+          className={`admin-lb-tab-btn ${activeTab === 'interview' ? 'admin-lb-tab-btn--active' : ''}`}
+        >
+          AI Interview
+        </button>
+        <button
+          onClick={() => setActiveTab('coding')}
+          className={`admin-lb-tab-btn ${activeTab === 'coding' ? 'admin-lb-tab-btn--active' : ''}`}
+        >
+          Roadmap / Coding
+        </button>
+        <button
+          onClick={() => setActiveTab('attendance')}
+          className={`admin-lb-tab-btn ${activeTab === 'attendance' ? 'admin-lb-tab-btn--active' : ''}`}
+        >
+          Attendance
+        </button>
       </div>
-
-      {/* Department Filter Controls (Task 02) */}
-      {activeTab === 'department' && (
-        <div className="admin-lb-filter-bar">
-          <div className="admin-lb-filter-group">
-            <label><Filter size={13} /> Select College Institution</label>
-            <select
-              value={selectedCollege}
-              onChange={(e) => {
-                setSelectedCollege(e.target.value);
-                setSelectedDept("");
-              }}
-              className="admin-lb-select"
-            >
-              <option value="">All Colleges</option>
-              {colleges.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.code ? `(${c.code})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="admin-lb-filter-group">
-            <label><BookOpen size={13} /> Select Department</label>
-            <select
-              value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="admin-lb-select"
-            >
-              <option value="">All Departments</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {d.code ? `(${d.code})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* Overall Metric Sort Bar (Task 01) */}
-      {activeTab === 'overall' && (
-        <div className="admin-lb-metric-pills">
-          <span className="admin-lb-metric-label">Rank By Category:</span>
-          <button
-            onClick={() => setSortByMetric('overall')}
-            className={`admin-metric-pill ${sortByMetric === 'overall' ? 'active' : ''}`}
-          >
-            🔥 Overall Composite
-          </button>
-          <button
-            onClick={() => setSortByMetric('quiz')}
-            className={`admin-metric-pill ${sortByMetric === 'quiz' ? 'active' : ''}`}
-          >
-            📝 Quiz Score
-          </button>
-          <button
-            onClick={() => setSortByMetric('interview')}
-            className={`admin-metric-pill ${sortByMetric === 'interview' ? 'active' : ''}`}
-          >
-            🤖 AI Interview
-          </button>
-          <button
-            onClick={() => setSortByMetric('coding')}
-            className={`admin-metric-pill ${sortByMetric === 'coding' ? 'active' : ''}`}
-          >
-            🗺️ Roadmap / Coding
-          </button>
-          <button
-            onClick={() => setSortByMetric('attendance')}
-            className={`admin-metric-pill ${sortByMetric === 'attendance' ? 'active' : ''}`}
-          >
-            📅 Attendance
-          </button>
-        </div>
-      )}
 
       <Card className="lb-card">
         <CardHeader className="lb-card-header">

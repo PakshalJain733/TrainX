@@ -28,6 +28,7 @@ import { mentorProfile } from "../../../data/mentorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import { apiFetch } from "../../../utils/api";
+import "../../Admin/Styles/AD_Profile.css";
 import "../Styles/MN_ProfilePage.css";
 
 export default function ProfilePage() {
@@ -58,19 +59,34 @@ export default function ProfilePage() {
 
   const initialUser = resolveUser();
 
+  const deptOptions = [
+    { value: "Computer Science", label: "Computer Science" },
+    { value: "Information Technology", label: "Information Technology" },
+    { value: "AI & DS", label: "AI & DS" },
+    { value: "ECE", label: "ECE" }
+  ];
+
+  const specOptions = [
+    { value: "Full Stack Development", label: "Full Stack Development" },
+    { value: "Data Science & AI", label: "Data Science & AI" },
+    { value: "Cloud Computing", label: "Cloud Computing" },
+    { value: "Cybersecurity", label: "Cybersecurity" },
+    { value: "Database Management", label: "Database Management" }
+  ];
+
   const [form, setForm] = useState({
     name: initialUser.name,
     email: initialUser.email,
-    phone: initialUser.mobile_number || mentorProfile.phone,
-    department: initialUser.department || mentorProfile.department,
+    phone: initialUser.mobile_number || mentorProfile.phone || "",
+    department: initialUser.department || mentorProfile.department || "",
     role: "Faculty Mentor",
-    college: mentorProfile.college,
-    officeLocation: mentorProfile.officeLocation,
-    officeHours: mentorProfile.officeHours,
-    allocatedBatches: mentorProfile.allocatedBatches,
-    totalStudents: mentorProfile.totalStudents,
-    rating: mentorProfile.rating,
-    experience: mentorProfile.experience,
+    college: mentorProfile.college || "",
+    officeLocation: mentorProfile.officeLocation || "",
+    officeHours: mentorProfile.officeHours || "",
+    allocatedBatches: mentorProfile.allocatedBatches || mentorProfile.allocatedBatchesCount || "",
+    totalStudents: mentorProfile.totalStudents || mentorProfile.totalStudentsAssigned || 0,
+    rating: mentorProfile.rating || 0,
+    experience: mentorProfile.experience || "",
   });
 
   useEffect(() => {
@@ -496,6 +512,9 @@ export default function ProfilePage() {
           </form>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal isOpen={showChangePassModal} onClose={() => setShowChangePassModal(false)} />
     </div>
   );
 }

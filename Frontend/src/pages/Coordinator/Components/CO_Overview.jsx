@@ -116,6 +116,35 @@ export default function CoordinatorOverview() {
     { label: "Attendance Rate", value: "Active", hint: "Department average", icon: LineChart },
   ];
 
+  const getTopicEmoji = (topic = "") => {
+    const t = topic.toLowerCase();
+    if (t.includes("java") || t.includes("oops") || t.includes("oop")) return "☕";
+    if (t.includes("react") || t.includes("frontend") || t.includes("ui")) return "⚛️";
+    if (t.includes("data struct") || t.includes("algorithm") || t.includes("dsa")) return "🧮";
+    if (t.includes("python")) return "🐍";
+    if (t.includes("node") || t.includes("backend") || t.includes("express")) return "🟢";
+    if (t.includes("sql") || t.includes("database") || t.includes("db")) return "🗄️";
+    if (t.includes("machine learn") || t.includes("ml") || t.includes("ai")) return "🤖";
+    if (t.includes("cloud") || t.includes("aws") || t.includes("devops")) return "☁️";
+    if (t.includes("cybersec") || t.includes("security")) return "🔒";
+    if (t.includes("mobile") || t.includes("android") || t.includes("ios")) return "📱";
+    if (t.includes("git") || t.includes("version")) return "🔀";
+    if (t.includes("web") || t.includes("html") || t.includes("css")) return "🌐";
+    return "📚";
+  };
+
+  const getTopicColor = (topic = "") => {
+    const t = topic.toLowerCase();
+    if (t.includes("java") || t.includes("oops")) return { bg: "#fff7ed", color: "#ea580c" };
+    if (t.includes("react") || t.includes("frontend")) return { bg: "#eff6ff", color: "#2563eb" };
+    if (t.includes("data struct") || t.includes("algorithm")) return { bg: "#f0fdf4", color: "#16a34a" };
+    if (t.includes("python")) return { bg: "#fefce8", color: "#ca8a04" };
+    if (t.includes("node") || t.includes("backend")) return { bg: "#dcfce7", color: "#15803d" };
+    if (t.includes("sql") || t.includes("database")) return { bg: "#f0f9ff", color: "#0369a1" };
+    if (t.includes("machine learn") || t.includes("ml")) return { bg: "#fdf4ff", color: "#9333ea" };
+    return { bg: "#f1f5f9", color: "#475569" };
+  };
+
   const liveSessions = [
     {
       id: 1,
@@ -190,91 +219,71 @@ export default function CoordinatorOverview() {
 
       {/* 2-Column Main Arena */}
       <div className="overview-split-grid">
-        {/* Left: Broadcast Announcement Form */}
+        {/* Left: Live Training Sessions */}
         <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
+          <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
             <div className="overview-header-left">
-              <div className="overview-header-icon-wrap">
-                <Send size={18} className="overview-header-icon" />
+              <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
+                <Activity size={18} className="overview-header-icon animate-pulse" />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Broadcast Department Notice</CardTitle>
-                <CardDescription className="overview-card-desc">Send instant announcements to students & cohorts</CardDescription>
+                <CardTitle className="overview-card-title">Live Training Sessions</CardTitle>
+                <CardDescription className="overview-card-desc">Currently ongoing classes and topics being taught</CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold">CSE Dept</Badge>
+            <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
+              {liveSessions.length} Active Sessions
+            </Badge>
           </CardHeader>
-          <CardContent className="p-5">
-            <form onSubmit={handleBroadcast} className="broadcast-form-space">
-              {/* Category Pills */}
-              <div className="broadcast-field-group">
-                <label className="broadcast-label">Notice Type</label>
-                <div className="broadcast-type-pills">
-                  {categories.map((cat) => {
-                    const Icon = cat.icon;
-                    const isActive = noticeCategory === cat.id;
-                    return (
-                      <button
-                        type="button"
-                        key={cat.id}
-                        onClick={() => setNoticeCategory(cat.id)}
-                        className={`broadcast-type-pill ${isActive ? "active" : ""}`}
+          <CardContent className="p-0">
+            <div className="live-sessions-grid">
+              {liveSessions.map((session) => {
+                const emoji = getTopicEmoji(session.topic);
+                const { bg, color } = getTopicColor(session.topic);
+                return (
+                  <div key={session.id} className="live-session-card">
+                    <div className="live-session-card-top">
+                      <div
+                        className="live-session-emoji-box"
+                        style={{ background: bg, color }}
                       >
-                        <Icon size={14} />
-                        <span>{cat.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+                        <span className="live-session-emoji">{emoji}</span>
+                      </div>
+                      <div className="live-session-meta-right">
+                        <div className="live-session-status-row">
+                          <span className="live-session-live-dot">
+                            <span className="live-dot-ping"></span>
+                            <span className="live-dot-core"></span>
+                          </span>
+                          <span className="live-session-status-label">{session.status}</span>
+                        </div>
+                        <div className="live-session-time-pill">
+                          <Clock size={11} />
+                          {session.time}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Target Audience Dropdown */}
-              <div className="broadcast-field-group">
-                <label className="broadcast-label">Target Audience</label>
-                <CustomSelect
-                  value={targetAudience}
-                  options={targetAudienceOptions}
-                  onChange={(val) => setTargetAudience(val)}
-                  placeholder="Select target audience..."
-                  icon={Users}
-                />
-              </div>
+                    <div className="live-session-body">
+                      <h4 className="live-session-topic">{session.topic}</h4>
+                      <p className="live-session-desc">
+                        <span className="live-session-trainer">{session.trainerName}</span>
+                        {" "}(Trainer) is teaching{" "}
+                        <span className="live-session-topic-highlight">{session.topic}</span>
+                        {" "}to students.
+                      </p>
+                    </div>
 
-              {/* Notice Message Textarea */}
-              <div className="broadcast-field-group">
-                <div className="flex items-center justify-between">
-                  <label className="broadcast-label">Notice Message</label>
-                  <span className="broadcast-char-count">{broadcastMsg.length} / 500</span>
-                </div>
-                <div className="broadcast-textarea-wrap">
-                  <textarea
-                    rows={4}
-                    maxLength={500}
-                    placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10:00 AM in Lab 302)..."
-                    value={broadcastMsg}
-                    onChange={(e) => setBroadcastMsg(e.target.value)}
-                    className="broadcast-textarea-input"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="broadcast-footer-row">
-                <button
-                  type="submit"
-                  disabled={!broadcastMsg.trim()}
-                  className="broadcast-send-btn"
-                >
-                  <Send size={15} /> Send Announcement
-                </button>
-                {broadcastSent && (
-                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 animate-pulse">
-                    <CheckCircle size={16} /> Notice Broadcasted Successfully!
-                  </span>
-                )}
-              </div>
-            </form>
+                    <div className="live-session-footer">
+                      <Users size={13} className="live-session-footer-icon" />
+                      <span className="live-session-batch">{session.batch}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </CardContent>
+
         </Card>
 
         {/* Right: Flagged High Risk Students */}
@@ -349,61 +358,7 @@ export default function CoordinatorOverview() {
         </Card>
       </div>
 
-      {/* Live Training Sessions Row */}
-      <Card className="overview-subcard mt-4">
-        <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
-          <div className="overview-header-left">
-            <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
-              <Activity size={18} className="overview-header-icon animate-pulse" />
-            </div>
-            <div>
-              <CardTitle className="overview-card-title">Live Training Sessions</CardTitle>
-              <CardDescription className="overview-card-desc">Currently ongoing classes and topics being taught</CardDescription>
-            </div>
-          </div>
-          <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
-            {liveSessions.length} Active Sessions
-          </Badge>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 pt-0">
-            {liveSessions.map((session) => (
-              <div
-                key={session.id}
-                className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col gap-3 transition-all hover:border-emerald-300 hover:shadow-md relative overflow-hidden group"
-              >
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 group-hover:w-1.5 transition-all"></div>
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
-                      {session.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-slate-500 text-[11px] font-semibold gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
-                    <Clock size={12} /> {session.time}
-                  </div>
-                </div>
 
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 mb-1">{session.topic}</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    <span className="font-semibold text-slate-800">{session.trainerName}</span> (Trainer) is teaching a <span className="font-semibold text-indigo-600">{session.topic}</span> topic to students.
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2">
-                  <Users size={14} className="text-slate-400" />
-                  <span className="text-[11px] font-semibold text-slate-600">{session.batch}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }

@@ -270,6 +270,9 @@ body {
   width: max-content !important;
   min-width: 380px;
   max-width: min(440px, 92vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
   padding: 16px;
   border-radius: 12px;
 }

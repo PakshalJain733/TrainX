@@ -286,13 +286,6 @@ export default function AdminProfile() {
               </div>
             </div>
 
-            <div className="profile-detail-row">
-              <Briefcase size={16} className="profile-detail-icon" />
-              <div>
-                <span className="profile-detail-label">Department</span>
-                <p className="profile-detail-value">{form.department}</p>
-              </div>
-            </div>
 
             <div className="profile-detail-row">
               <Mail size={16} className="profile-detail-icon" />
@@ -413,17 +406,8 @@ export default function AdminProfile() {
                 />
               </div>
 
-              <div className="profile-field">
-                <label className="profile-label">Department</label>
-                <input
-                  type="text"
-                  className="profile-input"
-                  value={form.department}
-                  onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
-                />
-              </div>
 
-              <div className="profile-field">
+              <div className="profile-field" style={{ gridColumn: "1 / -1" }}>
                 <label className="profile-label">Institution / Organization</label>
                 <input
                   type="text"

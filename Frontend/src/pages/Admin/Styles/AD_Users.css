@@ -700,25 +700,12 @@ textarea.form-input-admin:focus,
 }
 
 .admin-user-select-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 999999 !important;
   background: #ffffff !important;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.2), 0 4px 12px -2px rgba(15, 23, 42, 0.12);
   padding: 6px;
-  max-height: 190px;
-  overflow-y: auto;
   animation: adminUserSelectFadeIn 0.15s ease-out;
-}
-
-.admin-user-select-dropdown--up {
-  top: auto;
-  bottom: calc(100% + 6px);
-  animation: adminUserSelectFadeUp 0.15s ease-out;
 }
 
 @keyframes adminUserSelectFadeIn {
@@ -732,16 +719,6 @@ textarea.form-input-admin:focus,
   }
 }
 
-@keyframes adminUserSelectFadeUp {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 .admin-user-select-option {
   display: flex;

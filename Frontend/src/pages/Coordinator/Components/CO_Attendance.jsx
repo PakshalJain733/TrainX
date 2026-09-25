@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState } from "react";
 import {
   Users,
@@ -208,16 +209,15 @@ export default function CoordinatorAttendance({ hideHeader }) {
         <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f8fafc", padding: "6px 14px", borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px", fontWeight: 600, color: "#475569" }}>
           <Sliders size={14} style={{ color: "#64748b" }} />
           <span>Configured Threshold:</span>
-          <select
+          <CustomSelect
             value={attendanceThreshold}
-            onChange={(e) => setAttendanceThreshold(Number(e.target.value))}
-            className="coord-perf-select"
-            style={{ height: "30px", padding: "0 8px" }}
-          >
-            <option value={75}>75% (Standard Default)</option>
-            <option value={70}>70% (Relaxed Threshold)</option>
-            <option value={80}>80% (Strict Requirement)</option>
-          </select>
+            onChange={(val) => setAttendanceThreshold(Number(val))}
+            options={[
+              { value: 75, label: "75% (Standard Default)" },
+              { value: 70, label: "70% (Relaxed Threshold)" },
+              { value: 80, label: "80% (Strict Requirement)" }
+            ]}
+          />
         </div>
       </div>
 
@@ -295,44 +295,36 @@ export default function CoordinatorAttendance({ hideHeader }) {
                 </div>
 
                 {/* Department Filter */}
-                <select
+                <CustomSelect
                   value={selectedDept}
-                  onChange={(e) => setSelectedDept(e.target.value)}
-                  className="coord-perf-select"
-                >
-                  <option value="all">All Departments</option>
-                  {departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d} Department
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedDept(val)}
+                  options={[
+                    { value: "all", label: "All Departments" },
+                    ...departments.map((d) => ({ value: d, label: `${d} Department` }))
+                  ]}
+                />
 
                 {/* Batch Filter */}
-                <select
+                <CustomSelect
                   value={selectedBatch}
-                  onChange={(e) => setSelectedBatch(e.target.value)}
-                  className="coord-perf-select"
-                >
-                  <option value="all">All Batches</option>
-                  {batches.map((b) => (
-                    <option key={b} value={b}>
-                      Batch {b}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedBatch(val)}
+                  options={[
+                    { value: "all", label: "All Batches" },
+                    ...batches.map((b) => ({ value: b, label: `Batch ${b}` }))
+                  ]}
+                />
 
                 {/* Attendance % Filter */}
-                <select
+                <CustomSelect
                   value={selectedPercentFilter}
-                  onChange={(e) => setSelectedPercentFilter(e.target.value)}
-                  className="coord-perf-select"
-                >
-                  <option value="all">All Attendance Range</option>
-                  <option value="above75">75%+ (Good)</option>
-                  <option value="65to74">65–74% (Warning)</option>
-                  <option value="below65">Below 65% (Critical)</option>
-                </select>
+                  onChange={(val) => setSelectedPercentFilter(val)}
+                  options={[
+                    { value: "all", label: "All Attendance Range" },
+                    { value: "above75", label: "75%+ (Good)" },
+                    { value: "65to74", label: "65–74% (Warning)" },
+                    { value: "below65", label: "Below 65% (Critical)" }
+                  ]}
+                />
 
                 {/* Defaulter Toggle */}
                 <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", padding: "0 12px", height: "38px", borderRadius: "10px", cursor: "pointer" }}>

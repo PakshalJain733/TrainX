@@ -27,35 +27,77 @@ import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_Users.css";
 
-/* ── Inline dropdown for Admin Users (CSS: AdminUsers.css .admin-user-select-*) ── */
+/* ── Portal-based dropdown for Admin Users (CSS: AdminUsers.css .admin-user-select-*) ── */
 function AdminUserSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
   const selected = options.find(o => String(o.value) === String(value));
 
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
+  const updateCoords = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const isUp = direction === 'up' || (direction !== 'down' && spaceBelow < 200);
+      setCoords({
+        top: isUp ? rect.top - 4 : rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        dropUp: isUp,
+      });
+    }
+  };
 
   const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      setDropUp(direction === 'up');
-    }
+    if (!isOpen) updateCoords();
     setIsOpen(v => !v);
   };
 
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
+        setIsOpen(false);
+      }
+    }
+    function handleScrollOrResize() {
+      if (isOpen) updateCoords();
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [isOpen]);
+
   return (
-    <div className={`admin-user-select-wrap${isOpen ? ' admin-user-select-wrap--open' : ''}`} ref={ref}>
+    <div className={`admin-user-select-wrap${isOpen ? ' admin-user-select-wrap--open' : ''}`} ref={triggerRef}>
       <button type="button" onClick={handleToggle} className={`admin-user-select-trigger${isOpen ? ' admin-user-select-trigger--open' : ''}`}>
         {Icon && <Icon className="admin-user-select-icon" />}
         <span className="admin-user-select-text">{selected ? selected.label : <span className="admin-user-select-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`admin-user-select-arrow${isOpen ? ' admin-user-select-arrow--rotate' : ''}`} />
       </button>
-      {isOpen && (
-        <div className={`admin-user-select-dropdown${dropUp ? ' admin-user-select-dropdown--up' : ''}`}>
+      {isOpen && createPortal(
+        <div
+          ref={dropdownRef}
+          className="admin-user-select-dropdown"
+          style={{
+            position: 'fixed',
+            top: coords.dropUp ? 'auto' : `${coords.top}px`,
+            bottom: coords.dropUp ? `${window.innerHeight - coords.top}px` : 'auto',
+            left: `${coords.left}px`,
+            width: `${coords.width}px`,
+            maxHeight: '200px',
+            overflowY: 'auto',
+            zIndex: 99999,
+          }}
+        >
           {options.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
@@ -65,7 +107,8 @@ function AdminUserSelect({ value, options = [], onChange, placeholder = 'Select.
               </div>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -273,49 +316,6 @@ export default function AdminUsers() {
         }
       />
 
-      {/* Stats Cards Row */}
-      <div className="admin-users-stats-grid">
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-icon stat-icon--indigo">
-            <Users size={22} />
-          </div>
-          <div className="admin-user-stat-info">
-            <span className="admin-user-stat-num">{stats.totalUsers}</span>
-            <span className="admin-user-stat-lbl">Total Registered Users</span>
-          </div>
-        </div>
-
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-icon stat-icon--blue">
-            <GraduationCap size={22} />
-          </div>
-          <div className="admin-user-stat-info">
-            <span className="admin-user-stat-num">{stats.students}</span>
-            <span className="admin-user-stat-lbl">Enrolled Students</span>
-          </div>
-        </div>
-
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-icon stat-icon--purple">
-            <Briefcase size={22} />
-          </div>
-          <div className="admin-user-stat-info">
-            <span className="admin-user-stat-num">{stats.mentors}</span>
-            <span className="admin-user-stat-lbl">Faculty & Mentors</span>
-          </div>
-        </div>
-
-        <div className="admin-user-stat-card">
-          <div className="admin-user-stat-icon stat-icon--emerald">
-            <Shield size={22} />
-          </div>
-          <div className="admin-user-stat-info">
-            <span className="admin-user-stat-num">{stats.coordinators}</span>
-            <span className="admin-user-stat-lbl">Program Coordinators</span>
-          </div>
-        </div>
-      </div>
-
       {/* Toolbar with Search and Filters */}
       <div className="admin-users-toolbar">
         <div className="admin-users-search-wrap">
@@ -360,6 +360,49 @@ export default function AdminUsers() {
           >
             Admins
           </button>
+        </div>
+      </div>
+
+      {/* Stats Cards Row */}
+      <div className="admin-users-stats-grid">
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-icon stat-icon--indigo">
+            <Users size={22} />
+          </div>
+          <div className="admin-user-stat-info">
+            <span className="admin-user-stat-num">{stats.totalUsers}</span>
+            <span className="admin-user-stat-lbl">Total Registered Users</span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-icon stat-icon--blue">
+            <GraduationCap size={22} />
+          </div>
+          <div className="admin-user-stat-info">
+            <span className="admin-user-stat-num">{stats.students}</span>
+            <span className="admin-user-stat-lbl">Enrolled Students</span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-icon stat-icon--purple">
+            <Briefcase size={22} />
+          </div>
+          <div className="admin-user-stat-info">
+            <span className="admin-user-stat-num">{stats.mentors}</span>
+            <span className="admin-user-stat-lbl">Faculty & Mentors</span>
+          </div>
+        </div>
+
+        <div className="admin-user-stat-card">
+          <div className="admin-user-stat-icon stat-icon--emerald">
+            <Shield size={22} />
+          </div>
+          <div className="admin-user-stat-info">
+            <span className="admin-user-stat-num">{stats.coordinators}</span>
+            <span className="admin-user-stat-lbl">Program Coordinators</span>
+          </div>
         </div>
       </div>
 
@@ -484,6 +527,20 @@ export default function AdminUsers() {
                   </div>
                 )}
                 <div className="form-group-admin">
+                  <label>Assign Role *</label>
+                  <AdminUserSelect
+                    value={formData.role}
+                    onChange={(val) => setFormData({ ...formData, role: val })}
+                    options={[
+                      { value: "student", label: "Student" },
+                      { value: "mentor", label: "Mentor / Faculty" },
+                      { value: "coordinator", label: "Coordinator" },
+                      { value: "college_admin", label: "College Admin" }
+                    ]}
+                  />
+                </div>
+
+                <div className="form-group-admin">
                   <label>Full Name *</label>
                   <input
                     type="text"
@@ -519,19 +576,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                <div className="form-group-admin">
-                  <label>Assign Role *</label>
-                  <AdminUserSelect
-                    value={formData.role}
-                    onChange={(val) => setFormData({ ...formData, role: val })}
-                    options={[
-                      { value: "student", label: "Student" },
-                      { value: "mentor", label: "Mentor / Faculty" },
-                      { value: "coordinator", label: "Coordinator" },
-                      { value: "college_admin", label: "College Admin" }
-                    ]}
-                  />
-                </div>
+                {/* Assign Role is now above Full Name */}
 
                 {formData.role === "student" && (
                   <>

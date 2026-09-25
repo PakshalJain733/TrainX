@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Square } from "lucide-react";
@@ -184,15 +185,16 @@ export default function CoordinatorBatches() {
             style={{ paddingLeft: "36px", width: "100%" }}
           />
         </div>
-        <select
+        <CustomSelect
           className="coord-select"
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="All">All Statuses</option>
-          <option value="Active">Active</option>
-          <option value="Near Completion">Near Completion</option>
-        </select>
+          onChange={(val) => setStatusFilter(val)}
+          options={[
+            { value: "All", label: "All Statuses" },
+            { value: "Active", label: "Active" },
+            { value: "Near Completion", label: "Near Completion" }
+          ]}
+        />
       </div>
 
       <div className="coord-table-card">
@@ -326,23 +328,11 @@ export default function CoordinatorBatches() {
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assign Industry Mentor</label>
-                <select
+                <CustomSelect
                   value={newMentor}
-                  onChange={(e) => setNewMentor(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    marginTop: "4px",
-                  }}
-                >
-                  {coordinatorMentors.map((m) => (
-                    <option key={m.id} value={m.name}>
-                      {m.name} ({m.specialization})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewMentor(val)}
+                  options={coordinatorMentors.map((m) => ({ value: m.name, label: `${m.name} (${m.specialization})` }))}
+                />
               </div>
 
               <div>

@@ -122,3 +122,35 @@
   font-weight: 700;
   color: #64748b;
 }
+
+/* Empty State */
+.coord-requests-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 64px 24px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px dashed #e2e8f0;
+}
+
+.coord-requests-empty-icon {
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.coord-requests-empty-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #64748b;
+  margin: 0 0 8px 0;
+}
+
+.coord-requests-empty-sub {
+  font-size: 13.5px;
+  color: #94a3b8;
+  margin: 0;
+  max-width: 380px;
+}

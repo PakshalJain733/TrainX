@@ -21,7 +21,7 @@ import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_CodingPerformance.css";
 
 export default function StudentsNeedImprovement() {
-  const [dataList, setDataList] = useState([]);
+  const [dataList, setDataList] = useState(coordinatorSkillGapStudents);
   const [activeTab, setActiveTab] = useState("all"); // "all", "immediate", "commonSkills", "improving", "notImproving"
   
   // Filters
@@ -262,6 +262,73 @@ export default function StudentsNeedImprovement() {
         </div>
       </div>
 
+      {/* Filters Bar */}
+      {activeTab !== "commonSkills" && (
+        <div className="coord-perf-filter-card" style={{ marginBottom: "16px" }}>
+          <div className="coord-perf-filter-row">
+            {/* Search Box */}
+            <div className="coord-perf-search-wrap">
+              <Search size={16} className="coord-perf-search-icon" />
+              <input
+                type="text"
+                placeholder="Search student, roll no, mentor..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="coord-perf-search-input"
+              />
+            </div>
+
+            <div className="coord-perf-filters-group">
+              <div className="coord-perf-filter-label">
+                <Filter size={14} />
+                <span>Filters:</span>
+              </div>
+
+              {/* Department Filter */}
+              <div style={{ minWidth: '160px', flex: '1 1 160px' }}>
+                <CustomSelect
+                  value={selectedDept}
+                  options={[
+                    { value: "all", label: "All Departments" },
+                    ...departments.map((dept) => ({ value: dept, label: `${dept} Department` }))
+                  ]}
+                  onChange={(val) => setSelectedDept(val)}
+                  placeholder="Select department..."
+                />
+              </div>
+
+              {/* Batch Filter */}
+              <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+                <CustomSelect
+                  value={selectedBatch}
+                  options={[
+                    { value: "all", label: "All Batches" },
+                    ...batches.map((b) => ({ value: b, label: `Batch ${b}` }))
+                  ]}
+                  onChange={(val) => setSelectedBatch(val)}
+                  placeholder="Select batch..."
+                />
+              </div>
+
+              {/* Priority Filter */}
+              <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+                <CustomSelect
+                  value={selectedPriority}
+                  options={[
+                    { value: "all", label: "All Priorities" },
+                    { value: "High", label: "High Priority" },
+                    { value: "Medium", label: "Medium Priority" },
+                    { value: "Low", label: "Low Priority" }
+                  ]}
+                  onChange={(val) => setSelectedPriority(val)}
+                  placeholder="Select priority..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Navigation Sub-Tabs */}
       <div className="coord-perf-tabs-nav">
         <button
@@ -352,70 +419,7 @@ export default function StudentsNeedImprovement() {
       ) : (
         /* Filterable Students List */
         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {/* Filters Bar */}
-          <div className="coord-perf-filter-card">
-            <div className="coord-perf-filter-row">
-              {/* Search Box */}
-              <div className="coord-perf-search-wrap">
-                <Search size={16} className="coord-perf-search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search student, roll no, mentor..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="coord-perf-search-input"
-                />
-              </div>
 
-              <div className="coord-perf-filters-group">
-                <div className="coord-perf-filter-label">
-                  <Filter size={14} />
-                  <span>Filters:</span>
-                </div>
-
-                {/* Department Filter */}
-                <div style={{ minWidth: '160px', flex: '1 1 160px' }}>
-                  <CustomSelect
-                    value={selectedDept}
-                    options={[
-                      { value: "all", label: "All Departments" },
-                      ...departments.map((dept) => ({ value: dept, label: `${dept} Department` }))
-                    ]}
-                    onChange={(val) => setSelectedDept(val)}
-                    placeholder="Select department..."
-                  />
-                </div>
-
-                {/* Batch Filter */}
-                <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
-                  <CustomSelect
-                    value={selectedBatch}
-                    options={[
-                      { value: "all", label: "All Batches" },
-                      ...batches.map((b) => ({ value: b, label: `Batch ${b}` }))
-                    ]}
-                    onChange={(val) => setSelectedBatch(val)}
-                    placeholder="Select batch..."
-                  />
-                </div>
-
-                {/* Priority Filter */}
-                <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
-                  <CustomSelect
-                    value={selectedPriority}
-                    options={[
-                      { value: "all", label: "All Priorities" },
-                      { value: "High", label: "High Priority" },
-                      { value: "Medium", label: "Medium Priority" },
-                      { value: "Low", label: "Low Priority" }
-                    ]}
-                    onChange={(val) => setSelectedPriority(val)}
-                    placeholder="Select priority..."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
 
           {/* Table View for Students Needing Improvement */}
           <div className="coord-perf-card">
@@ -662,25 +666,16 @@ export default function StudentsNeedImprovement() {
             <form onSubmit={handleAssignPlan} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", fontSize: "12.5px" }}>
               <div>
                 <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Select Action Plan Type</label>
-                <select
+                <CustomSelect
                   value={planType}
-                  onChange={(e) => setPlanType(e.target.value)}
-                  className="coord-perf-select"
-                  style={{ width: "100%" }}
-                >
-                  <option value="Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling">
-                    Custom Practice Set & Mentor Counseling
-                  </option>
-                  <option value="Mandatory DSA & System Design Coding Bootcamp">
-                    Mandatory Coding Bootcamp
-                  </option>
-                  <option value="Official Skill Defaulter Warning + Catchup Labs">
-                    Academic Skill Warning Notice
-                  </option>
-                  <option value="Retake AI Mock Interview Round #2">
-                    Retake AI Mock Interview Round
-                  </option>
-                </select>
+                  onChange={(val) => setPlanType(val)}
+                  options={[
+                    { value: "Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling", label: "Custom Practice Set & Mentor Counseling" },
+                    { value: "Mandatory DSA & System Design Coding Bootcamp", label: "Mandatory Coding Bootcamp" },
+                    { value: "Official Skill Defaulter Warning + Catchup Labs", label: "Academic Skill Warning Notice" },
+                    { value: "Retake AI Mock Interview Round #2", label: "Retake AI Mock Interview Round" }
+                  ]}
+                />
               </div>
 
               <div>

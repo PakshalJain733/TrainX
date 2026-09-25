@@ -169,8 +169,11 @@ function buildFallbackQuestions(topic, count) {
     },
   ];
 
-  return defaultQuestions.slice(0, count).map((q, idx) => ({
-    id: Date.now() + idx,
-    ...q,
-  }));
+  return Array.from({ length: count }, (_, i) => {
+    const q = defaultQuestions[i % defaultQuestions.length];
+    return {
+      id: Date.now() + i,
+      ...q,
+    };
+  });
 }

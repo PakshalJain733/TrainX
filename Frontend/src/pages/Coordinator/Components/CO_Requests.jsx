@@ -27,55 +27,65 @@ export default function CoordinatorRequests() {
       </div>
 
       <div className="coord-requests-list">
-        {requests.map((r) => (
-          <div key={r.id} className="coord-request-card">
-            <div>
-              <div className="coord-req-header">
-                <span className="coord-req-name">{r.studentName}</span>
-                <span className="coord-req-roll">Roll No: {r.rollNo}</span>
-                <span
-                  className={
-                    r.status === "Approved"
-                      ? "coord-req-status-approved"
-                      : r.status === "Rejected"
-                      ? "coord-req-status-rejected"
-                      : "coord-req-status-pending"
-                  }
-                >
-                  {r.status}
-                </span>
-              </div>
-
-              <div className="coord-req-type">
-                {r.requestType}
-              </div>
-              <div className="coord-req-reason">
-                Reason: {r.reason}
-              </div>
-            </div>
-
-            {r.status === "Pending" ? (
-              <div className="coord-req-actions">
-                <button
-                  className="coord-btn coord-btn--approve"
-                  onClick={() => handleAction(r.id, "Approved")}
-                >
-                  <CheckCircle size={14} /> Approve
-                </button>
-                <button
-                  className="coord-btn coord-btn--reject"
-                  onClick={() => handleAction(r.id, "Rejected")}
-                >
-                  <XCircle size={14} /> Reject
-                </button>
-              </div>
-            ) : (
-              <div className="coord-req-actioned">
-                Actioned ({r.status})
-              </div>
-            )}
+        {requests.length === 0 ? (
+          <div className="coord-requests-empty">
+            <Inbox size={48} className="coord-requests-empty-icon" />
+            <p className="coord-requests-empty-title">No Requests / Approvals</p>
+            <p className="coord-requests-empty-sub">
+              There are currently no pending student requests or approvals to review.
+            </p>
           </div>
-        ))}
+        ) : (
+          requests.map((r) => (
+            <div key={r.id} className="coord-request-card">
+              <div>
+                <div className="coord-req-header">
+                  <span className="coord-req-name">{r.studentName}</span>
+                  <span className="coord-req-roll">Roll No: {r.rollNo}</span>
+                  <span
+                    className={
+                      r.status === "Approved"
+                        ? "coord-req-status-approved"
+                        : r.status === "Rejected"
+                        ? "coord-req-status-rejected"
+                        : "coord-req-status-pending"
+                    }
+                  >
+                    {r.status}
+                  </span>
+                </div>
+
+                <div className="coord-req-type">
+                  {r.requestType}
+                </div>
+                <div className="coord-req-reason">
+                  Reason: {r.reason}
+                </div>
+              </div>
+
+              {r.status === "Pending" ? (
+                <div className="coord-req-actions">
+                  <button
+                    className="coord-btn coord-btn--approve"
+                    onClick={() => handleAction(r.id, "Approved")}
+                  >
+                    <CheckCircle size={14} /> Approve
+                  </button>
+                  <button
+                    className="coord-btn coord-btn--reject"
+                    onClick={() => handleAction(r.id, "Rejected")}
+                  >
+                    <XCircle size={14} /> Reject
+                  </button>
+                </div>
+              ) : (
+                <div className="coord-req-actioned">
+                  Actioned ({r.status})
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

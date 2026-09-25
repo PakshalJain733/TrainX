@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState, useEffect } from "react";
 import {
   FileCheck2,
@@ -133,16 +134,14 @@ export default function QuizPerformance() {
             />
           </div>
 
-          <select
+          <CustomSelect
             value={selectedBatch}
-            onChange={(e) => setSelectedBatch(e.target.value)}
-            className="coord-perf-select"
-          >
-            <option value="All">All Batches</option>
-            {batchesList.map((b) => (
-              <option key={b.id} value={b.name}>{b.name}</option>
-            ))}
-          </select>
+            onChange={(val) => setSelectedBatch(val)}
+            options={[
+              { value: "All", label: "All Batches" },
+              ...batchesList.map((b) => ({ value: b.name, label: b.name }))
+            ]}
+          />
 
           <button
             onClick={() => alert("Exporting Quiz Performance Report PDF...")}

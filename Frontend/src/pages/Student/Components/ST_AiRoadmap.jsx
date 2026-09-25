@@ -235,7 +235,7 @@ export default function AIRoadmap() {
         {userProfile?.skills && (
           <div className="mt-3 text-xs text-slate-500 flex items-center gap-1.5">
             <Check size={14} className="text-emerald-500" />
-            <span>Profile Skills Pruning Active: <strong>{typeof userProfile.skills === "string" ? userProfile.skills : userProfile.skills.join(", ")}</strong> will not be re-taught from scratch.</span>
+            <span>Profile Skills Pruning Active: <strong>{typeof userProfile.skills === "string" ? userProfile.skills : Array.isArray(userProfile.skills) ? userProfile.skills.join(", ") : ""}</strong> will not be re-taught from scratch.</span>
           </div>
         )}
       </div>

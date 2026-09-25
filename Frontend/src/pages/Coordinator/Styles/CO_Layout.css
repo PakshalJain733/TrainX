@@ -267,13 +267,8 @@ body {
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  min-width: 0;
-  overflow: hidden;
-  background: #dbe5ee;
-  padding: 12px 14px 14px 12px;
-  box-sizing: border-box;
+  padding: 16px;
+  border-radius: 12px;
 }
 
 .notif-tab {

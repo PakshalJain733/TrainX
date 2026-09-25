@@ -25,6 +25,7 @@ import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import { apiFetch } from "../../../utils/api";
+import "../../Admin/Styles/AD_Profile.css";
 import "../Styles/CO_ProfilePage.css";
 
 export default function CoordinatorProfilePage() {
@@ -55,22 +56,29 @@ export default function CoordinatorProfilePage() {
 
   const initialUser = resolveUser();
 
+  const deptOptions = [
+    { value: "Computer Science", label: "Computer Science" },
+    { value: "Information Technology", label: "Information Technology" },
+    { value: "AI & DS", label: "AI & DS" },
+    { value: "ECE", label: "ECE" }
+  ];
+
   const [form, setForm] = useState({
     name: initialUser.name,
     email: initialUser.email,
-    phone: initialUser.mobile_number || coordinatorProfile.phone,
-    department: initialUser.department || coordinatorProfile.department,
+    phone: initialUser.mobile_number || coordinatorProfile.phone || "",
+    department: initialUser.department || coordinatorProfile.department || "",
     role: "Department Coordinator",
-    college: coordinatorProfile.college,
-    officeLocation: coordinatorProfile.officeLocation,
-    officeHours: coordinatorProfile.officeHours,
-    managedBatches: coordinatorProfile.managedBatches,
-    totalStudents: coordinatorProfile.totalStudents,
-    skills: coordinatorProfile.skills.join(", "),
-    bio: coordinatorProfile.bio,
-    notifBatchAlerts: coordinatorProfile.notifications.notifBatchAlerts,
-    notifWeeklyReport: coordinatorProfile.notifications.notifWeeklyReport,
-    notifNewStudents: coordinatorProfile.notifications.notifNewStudents,
+    college: coordinatorProfile.college || "",
+    officeLocation: coordinatorProfile.officeLocation || "",
+    officeHours: coordinatorProfile.officeHours || "",
+    managedBatches: coordinatorProfile.managedBatches || "",
+    totalStudents: coordinatorProfile.totalStudents || 0,
+    skills: (coordinatorProfile.skills || []).join(", "),
+    bio: coordinatorProfile.bio || "",
+    notifBatchAlerts: coordinatorProfile.notifications?.notifBatchAlerts ?? true,
+    notifWeeklyReport: coordinatorProfile.notifications?.notifWeeklyReport ?? true,
+    notifNewStudents: coordinatorProfile.notifications?.notifNewStudents ?? true,
   });
 
   useEffect(() => {
@@ -496,9 +504,7 @@ export default function CoordinatorProfilePage() {
       </div>
 
       {/* Change Password Modal */}
-      {showChangePassModal && (
-        <ChangePasswordModal onClose={() => setShowChangePassModal(false)} />
-      )}
+      <ChangePasswordModal isOpen={showChangePassModal} onClose={() => setShowChangePassModal(false)} />
     </div>
   );
 }

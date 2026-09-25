@@ -305,3 +305,34 @@
   margin-top: 4px;
 }
 
+/* ── Empty State ── */
+.admin-empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  text-align: center;
+  grid-column: 1 / -1;
+}
+
+.admin-empty-state-icon {
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.admin-empty-state-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px;
+}
+
+.admin-empty-state-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}

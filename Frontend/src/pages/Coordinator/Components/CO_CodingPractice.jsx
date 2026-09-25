@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState } from "react";
 import {
   Code,
@@ -416,28 +417,24 @@ export default function CodingPractice() {
                 <span>Filters:</span>
               </div>
 
-              <select
+              <CustomSelect
                 value={difficultyFilter}
-                onChange={(e) => setDifficultyFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
-              >
-                <option value="All">All Difficulties</option>
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-              </select>
+                onChange={(val) => setDifficultyFilter(val)}
+                options={[
+                  { value: "All", label: "All Difficulties" },
+                  { value: "Easy", label: "Easy" },
+                  { value: "Medium", label: "Medium" },
+                  { value: "Hard", label: "Hard" }
+                ]}
+                className="w-[150px]"
+              />
 
-              <select
+              <CustomSelect
                 value={topicFilter}
-                onChange={(e) => setTopicFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
-              >
-                {topicsList.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTopicFilter(val)}
+                options={topicsList.map((t) => ({ value: t, label: t }))}
+                className="w-[150px]"
+              />
 
               <button
                 onClick={() => {
@@ -689,29 +686,27 @@ export default function CodingPractice() {
             </div>
 
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <select
+              <CustomSelect
                 value={verdictFilter}
-                onChange={(e) => setVerdictFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
-              >
-                <option value="All">All Verdicts</option>
-                <option value="Accepted">Accepted</option>
-                <option value="Wrong Answer">Wrong Answer</option>
-                <option value="Time Limit Exceeded">Time Limit Exceeded</option>
-              </select>
+                onChange={(val) => setVerdictFilter(val)}
+                options={[
+                  { value: "All", label: "All Verdicts" },
+                  { value: "Accepted", label: "Accepted" },
+                  { value: "Wrong Answer", label: "Wrong Answer" },
+                  { value: "Time Limit Exceeded", label: "Time Limit Exceeded" }
+                ]}
+                className="w-[160px]"
+              />
 
-              <select
+              <CustomSelect
                 value={batchFilter}
-                onChange={(e) => setBatchFilter(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700"
-              >
-                <option value="All">All Batches</option>
-                {coordinatorBatches.map((b) => (
-                  <option key={b.id} value={b.name}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setBatchFilter(val)}
+                options={[
+                  { value: "All", label: "All Batches" },
+                  ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
+                ]}
+                className="w-[150px]"
+              />
 
               <button
                 onClick={() => {
@@ -850,30 +845,24 @@ export default function CodingPractice() {
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Topic Category *</label>
-                  <select
+                  <CustomSelect
                     value={problemForm.topic}
-                    onChange={(e) => setProblemForm({ ...problemForm, topic: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
-                  >
-                    {topicsList.filter((t) => t !== "All").map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setProblemForm({ ...problemForm, topic: val })}
+                    options={topicsList.filter((t) => t !== "All").map((t) => ({ value: t, label: t }))}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Difficulty Level</label>
-                  <select
+                  <CustomSelect
                     value={problemForm.difficulty}
-                    onChange={(e) => setProblemForm({ ...problemForm, difficulty: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
+                    onChange={(val) => setProblemForm({ ...problemForm, difficulty: val })}
+                    options={[
+                      { value: "Easy", label: "Easy" },
+                      { value: "Medium", label: "Medium" },
+                      { value: "Hard", label: "Hard" }
+                    ]}
+                  />
                 </div>
 
                 <div>
@@ -1117,49 +1106,38 @@ export default function CodingPractice() {
             <form onSubmit={handleCreateAssignment} className="p-6 space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Select Coding Problem *</label>
-                <select
-                  required
+                <CustomSelect
                   value={assignForm.problemId}
-                  onChange={(e) => setAssignForm({ ...assignForm, problemId: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium focus:ring-2 focus:ring-indigo-500"
-                >
-                  <option value="">-- Choose Problem --</option>
-                  {problems.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.title} ({p.difficulty} · {p.topic})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setAssignForm({ ...assignForm, problemId: val })}
+                  options={[
+                    { value: "", label: "-- Choose Problem --" },
+                    ...problems.map((p) => ({ value: p.id, label: `${p.title} (${p.difficulty} · ${p.topic})` }))
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Department</label>
-                  <select
+                  <CustomSelect
                     value={assignForm.department}
-                    onChange={(e) => setAssignForm({ ...assignForm, department: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
-                  >
-                    <option value="Computer Science">Computer Science</option>
-                    <option value="Information Technology">Information Technology</option>
-                    <option value="AI & DS">AI & DS</option>
-                    <option value="ECE">ECE</option>
-                  </select>
+                    onChange={(val) => setAssignForm({ ...assignForm, department: val })}
+                    options={[
+                      { value: "Computer Science", label: "Computer Science" },
+                      { value: "Information Technology", label: "Information Technology" },
+                      { value: "AI & DS", label: "AI & DS" },
+                      { value: "ECE", label: "ECE" }
+                    ]}
+                  />
                 </div>
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Target Batch *</label>
-                  <select
+                  <CustomSelect
                     value={assignForm.batch}
-                    onChange={(e) => setAssignForm({ ...assignForm, batch: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"
-                  >
-                    {coordinatorBatches.map((b) => (
-                      <option key={b.id} value={b.name}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setAssignForm({ ...assignForm, batch: val })}
+                    options={coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))}
+                  />
                 </div>
               </div>
 

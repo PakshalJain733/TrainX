@@ -1178,7 +1178,7 @@ export default function AdminBatches() {
 
       <div className="batches-grid">
         {batches.length === 0 ? (
-          <div className="admin-empty-state-card">
+          <div className="admin-empty-state-card" style={{ gridColumn: "1 / -1" }}>
             <Users size={36} className="admin-empty-state-icon" />
             <p className="admin-empty-state-title">No batches created yet</p>
             <p className="admin-empty-state-sub">Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.</p>

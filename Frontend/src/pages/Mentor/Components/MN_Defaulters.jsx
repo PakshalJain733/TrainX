@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { mentorDefaulters as initialMentorDefaulters } from '../../../data/mentorMockData';
 import { AlertCircle, Bell, Search, Filter, ShieldAlert, CheckCircle2, UserX } from 'lucide-react';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/MN_Defaulters.css";
 
 const DEFAULT_DEFAULTERS = [];
@@ -27,13 +28,50 @@ export default function Defaulters() {
     return matchesSearch && matchesRisk;
   });
 
-  const handleNotifyStudent = (name) => {
-    setNotificationStatus(`Warning alert successfully sent to ${name}`);
+  const handleNotifyStudent = async (student) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/v1/interventions/warn', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          studentEmail: student.email || `${student.rollNo}@campus.edu`,
+          studentName: student.name,
+          reason: student.reason
+        })
+      });
+      if (!res.ok) throw new Error('Failed to send email');
+      setNotificationStatus(`Warning email successfully sent to ${student.name}`);
+    } catch (err) {
+      console.error(err);
+      setNotificationStatus(`Failed to send email to ${student.name}`);
+    }
     setTimeout(() => setNotificationStatus(null), 4000);
   };
 
-  const handleNotifyAll = () => {
-    setNotificationStatus(`Warning notices dispatched to all ${filteredDefaulters.length} defaulter students.`);
+  const handleNotifyAll = async () => {
+    try {
+      for (const student of filteredDefaulters) {
+        await fetch('http://localhost:5000/api/v1/interventions/warn', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            studentEmail: student.email || `${student.rollNo}@campus.edu`,
+            studentName: student.name,
+            reason: student.reason
+          })
+        });
+      }
+      setNotificationStatus(`Warning emails dispatched to all ${filteredDefaulters.length} defaulter students.`);
+    } catch (err) {
+      console.error(err);
+      setNotificationStatus('Error dispatching some emails.');
+    }
     setTimeout(() => setNotificationStatus(null), 4000);
   };
 
@@ -85,15 +123,16 @@ export default function Defaulters() {
 
           <div className="mentor-defaulter-filter-wrap">
             <Filter size={16} color="#64748b" />
-            <select 
+            <CustomSelect
               value={selectedRisk}
-              onChange={(e) => setSelectedRisk(e.target.value)}
+              onChange={(val) => setSelectedRisk(val)}
+              options={[
+                { label: "All Risk Levels", value: "All" },
+                { label: "High Risk", value: "High Risk" },
+                { label: "Medium Risk", value: "Medium Risk" }
+              ]}
               className="mentor-defaulter-select"
-            >
-              <option value="All">All Risk Levels</option>
-              <option value="High Risk">High Risk</option>
-              <option value="Medium Risk">Medium Risk</option>
-            </select>
+            />
           </div>
         </div>
 
@@ -142,7 +181,7 @@ export default function Defaulters() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <button 
-                          onClick={() => handleNotifyStudent(d.name)}
+                          onClick={() => handleNotifyStudent(d)}
                           className="mentor-notify-btn"
                         >
                           Notify Student

@@ -10,6 +10,7 @@ import {
 } from '../services/intervention.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { ROLES } from '../utils/constants.js';
+import { sendGenericEmail } from '../services/email.service.js';
 
 /**
  * GET /api/v1/interventions
@@ -120,6 +121,31 @@ export const getAdminDefaultersController = async (req, res, next) => {
     const user = req.user || {};
     const data = await getAdminDefaulterQueueService(user, req.query);
     return sendSuccess(res, 'College admin defaulters overview retrieved successfully', data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/interventions/warn
+ */
+export const sendWarningController = async (req, res, next) => {
+  try {
+    const { studentEmail, studentName, reason } = req.body;
+    if (!studentEmail) {
+      return sendError(res, 'Student email is required', 400);
+    }
+    const subject = `Urgent: Warning Alert from Campus Training Portal`;
+    const html = `
+      <div style="color: #0f172a; font-size: 16px;">
+        <p>Dear ${studentName || 'Student'},</p>
+        <p>This is an automated warning alert regarding your performance/attendance on the Campus Training Portal.</p>
+        <p><strong>Reason:</strong> ${reason || 'Low attendance or missed assignments'}</p>
+        <p>Please log in to the portal and contact your mentor immediately to resolve this issue.</p>
+      </div>
+    `;
+    await sendGenericEmail({ to: studentEmail, subject, html, text: 'Warning alert regarding your performance/attendance.' });
+    return sendSuccess(res, 'Warning email sent successfully');
   } catch (error) {
     next(error);
   }

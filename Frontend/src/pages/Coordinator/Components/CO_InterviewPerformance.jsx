@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState } from "react";
 import {
   Search,
@@ -359,41 +360,37 @@ export default function InterviewPerformance() {
               <span>Filters:</span>
             </div>
 
-            <select
+            <CustomSelect
               value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Departments</option>
-              <option value="CSE">CSE</option>
-              <option value="IT">IT</option>
-              <option value="AI & DS">AI & DS</option>
-              <option value="ECS">ECS</option>
-            </select>
+              onChange={(val) => setSelectedDept(val)}
+              options={[
+                { value: "all", label: "All Departments" },
+                { value: "CSE", label: "CSE" },
+                { value: "IT", label: "IT" },
+                { value: "AI & DS", label: "AI & DS" },
+                { value: "ECS", label: "ECS" }
+              ]}
+            />
 
-            <select
+            <CustomSelect
               value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Batches</option>
-              {coordinatorBatches.map((b) => (
-                <option key={b.id} value={b.name}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedBatch(val)}
+              options={[
+                { value: "all", label: "All Batches" },
+                ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
+              ]}
+            />
 
-            <select
+            <CustomSelect
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Statuses</option>
-              <option value="Completed">Completed</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Not Attempted">Not Attempted / Needs Work</option>
-            </select>
+              onChange={(val) => setSelectedStatus(val)}
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "Completed", label: "Completed" },
+                { value: "In Progress", label: "In Progress" },
+                { value: "Not Attempted", label: "Not Attempted / Needs Work" }
+              ]}
+            />
           </div>
         </div>
       </div>

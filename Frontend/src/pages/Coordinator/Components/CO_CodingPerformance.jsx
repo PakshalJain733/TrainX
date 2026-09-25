@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState } from "react";
 import {
   Code,
@@ -175,45 +176,47 @@ export default function CodingPerformance() {
             </div>
 
             {/* Batch Filter */}
-            <select
-              value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Batches</option>
-              {coordinatorBatches.map((b) => (
-                <option key={b.id} value={b.name}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+              <CustomSelect
+                value={selectedBatch}
+                onChange={(val) => setSelectedBatch(val)}
+                options={[
+                  { value: "all", label: "All Batches" },
+                  ...coordinatorBatches.map((b) => ({ value: b.name, label: b.name }))
+                ]}
+              />
+            </div>
 
             {/* Language Filter */}
-            <select
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Languages</option>
-              <option value="C++">C++</option>
-              <option value="Python">Python</option>
-              <option value="JavaScript">JavaScript</option>
-              <option value="Java">Java</option>
-              <option value="Go">Go</option>
-            </select>
+            <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+              <CustomSelect
+                value={selectedLanguage}
+                onChange={(val) => setSelectedLanguage(val)}
+                options={[
+                  { value: "all", label: "All Languages" },
+                  { value: "C++", label: "C++" },
+                  { value: "Python", label: "Python" },
+                  { value: "JavaScript", label: "JavaScript" },
+                  { value: "Java", label: "Java" },
+                  { value: "Go", label: "Go" }
+                ]}
+              />
+            </div>
 
             {/* Status Filter */}
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Statuses</option>
-              <option value="Top Performer">Top Performer</option>
-              <option value="Good">Good</option>
-              <option value="Average">Average</option>
-              <option value="Struggling">Struggling</option>
-            </select>
+            <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+              <CustomSelect
+                value={selectedStatus}
+                onChange={(val) => setSelectedStatus(val)}
+                options={[
+                  { value: "all", label: "All Statuses" },
+                  { value: "Top Performer", label: "Top Performer" },
+                  { value: "Good", label: "Good" },
+                  { value: "Average", label: "Average" },
+                  { value: "Struggling", label: "Struggling" }
+                ]}
+              />
+            </div>
 
             {(searchTerm || selectedBatch !== "all" || selectedLanguage !== "all" || selectedStatus !== "all") && (
               <button
