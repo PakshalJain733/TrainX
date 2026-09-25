@@ -10,7 +10,10 @@ import {
  */
 export const getRoadmapData = async (req, res, next) => {
   try {
-    const studentId = req.params.id || req.user?.id || req.user?.userId || 1;
+    let studentId = req.params.id || req.user?.id || req.user?.userId || 1;
+    if (req.user && req.user.role === 'student') {
+      studentId = req.user.id || req.user.userId;
+    }
     const roadmap = await fetchStudentRoadmap(studentId);
 
     return sendSuccess(res, 'Roadmap retrieved successfully', roadmap);
@@ -24,7 +27,10 @@ export const getRoadmapData = async (req, res, next) => {
  */
 export const generateRoadmap = async (req, res, next) => {
   try {
-    const studentId = req.params.id || req.user?.id || req.user?.userId || 1;
+    let studentId = req.params.id || req.user?.id || req.user?.userId || 1;
+    if (req.user && req.user.role === 'student') {
+      studentId = req.user.id || req.user.userId;
+    }
     const {
       targetRole,
       studentProfile,
