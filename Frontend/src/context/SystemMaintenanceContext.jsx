@@ -914,8 +914,10 @@ export function SystemMaintenanceProvider({ children }) {
   const getModuleConfig = (moduleKey) => {
     if (!moduleKey || !config.modules[moduleKey]) {
       return {
+        key: moduleKey || 'system',
         name: "Module Maintenance",
-        role: "Platform System",
+        category: "Platform System",
+        role: "All Roles",
         message: "This section is currently undergoing maintenance by the platform engineering team.",
         updatedAt: "Active",
       };

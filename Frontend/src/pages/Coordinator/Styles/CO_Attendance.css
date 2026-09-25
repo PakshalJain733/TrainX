@@ -56,3 +56,260 @@
   color: #be123c;
   font-size: 12px;
 }
+
+/* Student Leave Applications Review Block */
+.coord-leave-section {
+  margin-top: 20px;
+}
+
+.coord-leave-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.coord-leave-pending-badge {
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+}
+
+.coord-leave-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.coord-leave-feedback--success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.coord-leave-feedback--error {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.coord-leave-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px;
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.coord-leave-state--empty {
+  flex-direction: column;
+  color: #94a3b8;
+}
+
+.coord-leave-state--empty svg {
+  color: #94a3b8;
+}
+
+.coord-leave-spin {
+  animation: coord-leave-rotate 1s linear infinite;
+}
+
+@keyframes coord-leave-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.coord-leave-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coord-leave-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  transition: box-shadow 0.15s ease;
+}
+
+.coord-leave-card:hover {
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.08);
+}
+
+.coord-leave-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+}
+
+.coord-leave-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.coord-leave-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.coord-leave-name {
+  font-weight: 800;
+  font-size: 15px;
+  color: #0f172a;
+}
+
+.coord-leave-meta {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.coord-leave-meta strong {
+  color: #334155;
+}
+
+.coord-leave-batch {
+  color: #4f46e5;
+  font-weight: 600;
+}
+
+.coord-leave-status-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  white-space: nowrap;
+}
+
+.coord-leave-detail-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin-top: 10px;
+}
+
+.coord-leave-type {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4f46e5;
+  background: #eef2ff;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.coord-leave-dates,
+.coord-leave-days {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+}
+
+.coord-leave-dates svg,
+.coord-leave-days svg {
+  color: #94a3b8;
+}
+
+.coord-leave-reason {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.coord-leave-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.coord-leave-approve-btn {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-size: 12px;
+  padding: 8px 14px;
+}
+
+.coord-leave-approve-btn:hover {
+  background: #d1fae5;
+}
+
+.coord-leave-reject-btn {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  font-size: 12px;
+  padding: 8px 14px;
+}
+
+.coord-leave-reject-btn:hover {
+  background: #ffe4e6;
+}
+
+@media (max-width: 640px) {
+  .coord-leave-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .coord-leave-head {
+    flex-direction: column;
+  }
+
+  .coord-leave-actions {
+    flex-direction: row;
+  }
+
+  .coord-leave-actions .coord-btn {
+    flex: 1;
+    justify-content: center;
+  }
+}

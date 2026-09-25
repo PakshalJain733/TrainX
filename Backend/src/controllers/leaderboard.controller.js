@@ -41,6 +41,7 @@ export const getLeaderboardData = async (req, res, next) => {
 
     return sendSuccess(res, 'Leaderboard data retrieved successfully', data);
   } catch (error) {
+    console.error("[Leaderboard Controller] Error:", error.message);
     next(error);
   }
 };
@@ -111,3 +112,4 @@ export const getStudentRankController = async (req, res, next) => {
     next(error);
   }
 };
+
