@@ -97,23 +97,25 @@ function Login() {
   const API_BASE_URL = `${getApiBaseUrl()}/auth`;
 
   useEffect(() => {
-    const isRemembered = sessionStorage.getItem("tx_remember_me") === "true";
-    if (isRemembered) {
-      const savedEmail = sessionStorage.getItem("tx_remembered_email") || "";
-      const savedPassword = sessionStorage.getItem("tx_remembered_password") || "";
-      if (savedEmail) setEmail(savedEmail);
-      if (savedPassword) setPassword(savedPassword);
-      setRememberMe(true);
-    }
+    // Clear legacy localStorage credentials if any exist
+    localStorage.removeItem("tx_remember_me");
+    localStorage.removeItem("tx_remembered_email");
+    localStorage.removeItem("tx_remembered_password");
+    sessionStorage.removeItem("tx_remember_me");
+    sessionStorage.removeItem("tx_remembered_email");
+    sessionStorage.removeItem("tx_remembered_password");
+
+    try {
+      const storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
+      if (storedUser.remember_me || storedUser.rememberMe) {
+        setRememberMe(true);
+        if (storedUser.email) setEmail(storedUser.email);
+      }
+    } catch (_) {}
   }, []);
 
   const handleRememberMeChange = (checked) => {
     setRememberMe(checked);
-    if (!checked) {
-      sessionStorage.removeItem("tx_remember_me");
-      sessionStorage.removeItem("tx_remembered_email");
-      sessionStorage.removeItem("tx_remembered_password");
-    }
   };
 
   useEffect(() => {
@@ -265,16 +267,6 @@ function Login() {
     e.preventDefault();
     if (!email || !password) return;
 
-    if (rememberMe) {
-      sessionStorage.setItem("tx_remember_me", "true");
-      sessionStorage.setItem("tx_remembered_email", email);
-      sessionStorage.setItem("tx_remembered_password", password);
-    } else {
-      sessionStorage.removeItem("tx_remember_me");
-      sessionStorage.removeItem("tx_remembered_email");
-      sessionStorage.removeItem("tx_remembered_password");
-    }
-
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -283,7 +275,7 @@ function Login() {
       const response = await fetch(`${API_BASE_URL}/login-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await response.json();
       if (data.success && data.data?.token) {
@@ -404,7 +396,7 @@ function Login() {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: enteredOtp, otp: enteredOtp }),
+        body: JSON.stringify({ email, code: enteredOtp, otp: enteredOtp, rememberMe }),
       });
       const data = await response.json();
       if (data.success && (data.data?.token || pendingUserData?.token)) {
@@ -562,7 +554,7 @@ function Login() {
                   </div>
 
                   <div className="login-options-row">
-                    <label className="login-remember-label">
+                    <label htmlFor="remember-me" className="login-remember-label">
                       <input
                         type="checkbox"
                         id="remember-me"
@@ -672,9 +664,10 @@ function Login() {
                   </div>
 
                   <div className="login-options">
-                    <label className="login-remember-label">
+                    <label htmlFor="otp-remember-me" className="login-remember-label">
                       <input
                         type="checkbox"
+                        id="otp-remember-me"
                         checked={rememberMe}
                         onChange={(e) => handleRememberMeChange(e.target.checked)}
                       />

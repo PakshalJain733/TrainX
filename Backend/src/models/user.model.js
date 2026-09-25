@@ -113,6 +113,24 @@ export const updateUserTwoFactorSecret = async (userId, secret) => {
   await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = TRUE WHERE id = ?', [secret, numId]);
 };
 
+export const updateUserRememberMe = async (userId, rememberMe) => {
+  const numId = parseInt(userId, 10);
+  if (isNaN(numId)) return;
+  const isRemember = rememberMe ? 1 : 0;
+  try {
+    await query('UPDATE users SET remember_me = ? WHERE id = ?', [isRemember, numId]);
+  } catch (err) {
+    if (err.message && err.message.includes("Unknown column 'remember_me'")) {
+      try {
+        await query('ALTER TABLE users ADD COLUMN remember_me TINYINT(1) DEFAULT 0');
+        await query('UPDATE users SET remember_me = ? WHERE id = ?', [isRemember, numId]);
+      } catch (alterErr) {
+        console.warn(`[User Model] Failed to add remember_me column to users table: ${alterErr.message}`);
+      }
+    }
+  }
+};
+
 export const saveStudentDetails = async ({
   user_id,
   college_id = 1,

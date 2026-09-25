@@ -27,12 +27,13 @@ export const sendOtp = async (req, res, next) => {
 export const verifyOtpAndLogin = async (req, res, next) => {
   try {
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
-    const { otp } = req.body;
+    const { otp, rememberMe, remember_me } = req.body;
     if (!identifier || !otp) {
       return sendError(res, 'Email or Mobile number and OTP are required', 400);
     }
     const formattedOtp = Array.isArray(otp) ? otp.join('') : otp;
-    const result = await verifyUserOtpAndLogin(identifier, formattedOtp);
+    const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
+    const result = await verifyUserOtpAndLogin(identifier, formattedOtp, isRemember);
     return sendSuccess(res, 'Login successful', result);
   } catch (error) {
     next(error);
@@ -42,13 +43,14 @@ export const verifyOtpAndLogin = async (req, res, next) => {
 export const verifyTotp = async (req, res, next) => {
   try {
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
-    const { code, otp, totp } = req.body;
+    const { code, otp, totp, rememberMe, remember_me } = req.body;
     const inputCode = code || otp || totp;
     if (!identifier || !inputCode) {
       return sendError(res, 'Email and Authenticator code are required', 400);
     }
     const formattedCode = Array.isArray(inputCode) ? inputCode.join('') : inputCode;
-    const result = await verifyTotpAndLogin(identifier, formattedCode);
+    const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
+    const result = await verifyTotpAndLogin(identifier, formattedCode, isRemember);
     return sendSuccess(res, 'Authenticator verification successful', result);
   } catch (error) {
     next(error);
@@ -58,11 +60,12 @@ export const verifyTotp = async (req, res, next) => {
 export const passwordLogin = async (req, res, next) => {
   try {
     const identifier = req.body.email || req.body.mobile || req.body.identifier || req.body.mobile_number;
-    const { password } = req.body;
+    const { password, rememberMe, remember_me } = req.body;
     if (!identifier || !password) {
       return sendError(res, 'Email/Mobile and Password are required', 400);
     }
-    const result = await loginWithPassword(identifier, password);
+    const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
+    const result = await loginWithPassword(identifier, password, isRemember);
     return sendSuccess(res, 'Login successful', result);
   } catch (error) {
     next(error);
@@ -86,6 +89,7 @@ export const getMe = async (req, res, next) => {
     return sendSuccess(res, 'Authenticated user data retrieved', {
       ...user,
       ...studentProfile,
+      remember_me: Boolean(user.remember_me),
       is_profile_updated: isProfileUpdated,
       studentProfile: {
         ...studentProfile,

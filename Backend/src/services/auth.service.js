@@ -10,6 +10,7 @@ import {
   saveOtpRecord,
   verifyOtpRecord,
   updateUserTwoFactorSecret,
+  updateUserRememberMe,
   findCollegeByAdminEmail,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
@@ -210,7 +211,7 @@ export const registerUser = async (data) => {
   };
 };
 
-export const verifyTotpAndLogin = async (identifier, totpCode) => {
+export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = false) => {
   const user = await findUserByEmailOrMobile(identifier);
   if (!user) {
     const error = new Error('User not found');
@@ -224,6 +225,8 @@ export const verifyTotpAndLogin = async (identifier, totpCode) => {
     error.statusCode = 400;
     throw error;
   }
+
+  await updateUserRememberMe(user.id, rememberMe);
 
   const studentProfile = await getStudentByUserId(user.id);
   const token = generateToken({
@@ -242,6 +245,7 @@ export const verifyTotpAndLogin = async (identifier, totpCode) => {
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
+      remember_me: Boolean(rememberMe),
       department: studentProfile?.department || '',
       year: studentProfile?.year || '',
       division: studentProfile?.division || '',
@@ -291,7 +295,7 @@ export const sendUserOtp = async (identifier) => {
   };
 };
 
-export const verifyUserOtpAndLogin = async (identifier, otp) => {
+export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false) => {
   let user = await findUserByEmailOrMobile(identifier);
   if (!user) {
     const isMobile = /^\d+$/.test(identifier.trim());
@@ -313,6 +317,8 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
     throw error;
   }
 
+  await updateUserRememberMe(user.id, rememberMe);
+
   const studentProfile = await getStudentByUserId(user.id);
 
   const token = generateToken({
@@ -331,6 +337,7 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
+      remember_me: Boolean(rememberMe),
       department: studentProfile?.department || '',
       year: studentProfile?.year || '',
       division: studentProfile?.division || '',
@@ -346,7 +353,7 @@ export const verifyUserOtpAndLogin = async (identifier, otp) => {
   };
 };
 
-export const loginWithPassword = async (identifier, password) => {
+export const loginWithPassword = async (identifier, password, rememberMe = false) => {
   let user = await findUserByEmailOrMobile(identifier);
   if (!user) {
     const isMobile = /^\d+$/.test(identifier.trim());
@@ -372,6 +379,8 @@ export const loginWithPassword = async (identifier, password) => {
     throw new Error('Invalid password. Please check your credentials.');
   }
 
+  await updateUserRememberMe(user.id, rememberMe);
+
   const studentProfile = await getStudentByUserId(user.id);
 
   const token = generateToken({
@@ -390,6 +399,7 @@ export const loginWithPassword = async (identifier, password) => {
       email: user.email,
       mobile_number: user.mobile_number,
       role: user.role,
+      remember_me: Boolean(rememberMe),
       department: studentProfile?.department || '',
       year: studentProfile?.year || '',
       division: studentProfile?.division || '',

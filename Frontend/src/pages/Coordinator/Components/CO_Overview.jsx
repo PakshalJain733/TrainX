@@ -54,6 +54,7 @@ export default function CoordinatorOverview() {
 
   const [liveBatches, setLiveBatches] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
+  const [mentorCount, setMentorCount] = useState(0);
 
   useEffect(() => {
     apiFetch("/auth/me")
@@ -79,6 +80,24 @@ export default function CoordinatorOverview() {
         }
       })
       .catch(() => {});
+
+    apiFetch("/coordinator/mentors")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setMentorCount(res.data.length);
+        } else if (res && Array.isArray(res)) {
+          setMentorCount(res.length);
+        }
+      })
+      .catch(() => {
+        apiFetch("/mentors")
+          .then((res) => {
+            if (res && res.data && Array.isArray(res.data)) {
+              setMentorCount(res.data.length);
+            }
+          })
+          .catch(() => {});
+      });
   }, []);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
@@ -112,7 +131,7 @@ export default function CoordinatorOverview() {
   const statsList = [
     { label: "Enrolled Students", value: String(studentCount || 0), hint: `Active in ${dept}`, icon: GraduationCap },
     { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: "Live DB", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Assigned Mentors", value: `${mentorCount} Mentors`, hint: `Assigned in ${dept}`, icon: UserCheck },
     { label: "Attendance Rate", value: "Active", hint: "Department average", icon: LineChart },
   ];
 
@@ -190,114 +209,84 @@ export default function CoordinatorOverview() {
 
       {/* 2-Column Main Arena */}
       <div className="overview-split-grid">
-        {/* Left: Broadcast Announcement Form */}
-        <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
-            <div className="overview-header-left">
-              <div className="overview-header-icon-wrap">
-                <Send size={18} className="overview-header-icon" />
+        {/* Left: Live Training Sessions */}
+        <div className="co-arena-card">
+          <div className="co-arena-card-header">
+            <div className="co-arena-header-left">
+              <div className="co-arena-icon-wrap co-arena-icon-wrap--emerald">
+                <Activity size={18} className="animate-pulse" />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Broadcast Department Notice</CardTitle>
-                <CardDescription className="overview-card-desc">Send instant announcements to students & cohorts</CardDescription>
+                <h3 className="co-arena-header-title">Live Training Sessions</h3>
+                <p className="co-arena-header-sub">Currently ongoing classes and active topics</p>
               </div>
             </div>
-            <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold">CSE Dept</Badge>
-          </CardHeader>
-          <CardContent className="p-5">
-            <form onSubmit={handleBroadcast} className="broadcast-form-space">
-              {/* Category Pills */}
-              <div className="broadcast-field-group">
-                <label className="broadcast-label">Notice Type</label>
-                <div className="broadcast-type-pills">
-                  {categories.map((cat) => {
-                    const Icon = cat.icon;
-                    const isActive = noticeCategory === cat.id;
-                    return (
-                      <button
-                        type="button"
-                        key={cat.id}
-                        onClick={() => setNoticeCategory(cat.id)}
-                        className={`broadcast-type-pill ${isActive ? "active" : ""}`}
-                      >
-                        <Icon size={14} />
-                        <span>{cat.label}</span>
-                      </button>
-                    );
-                  })}
+            <span className="co-arena-badge-active">
+              <span className="co-live-dot"></span>
+              {liveSessions.length} Active Sessions
+            </span>
+          </div>
+
+          <div className="co-arena-card-body">
+            {liveSessions.map((session) => (
+              <div key={session.id} className="co-live-item-card">
+                {/* Top Row: Status Badge & Time */}
+                <div className="co-live-item-top">
+                  <div className="co-live-pill">
+                    <span className="co-live-dot"></span>
+                    {session.status}
+                  </div>
+
+                  <div className="co-live-time-tag">
+                    <Clock size={13} style={{ color: "#64748b" }} />
+                    <span>{session.time}</span>
+                  </div>
+                </div>
+
+                {/* Middle Row: Topic & Trainer */}
+                <div>
+                  <h4 className="co-live-topic-title">{session.topic}</h4>
+                  <p className="co-live-trainer-text">
+                    <strong>{session.trainerName}</strong> (Trainer) is conducting this live module.
+                  </p>
+                </div>
+
+                {/* Bottom Row: Batch & Status */}
+                <div className="co-live-item-bottom">
+                  <div className="co-live-batch-pill">
+                    <Users size={13} style={{ color: "#4f46e5" }} />
+                    <span>{session.batch}</span>
+                  </div>
+                  <span className="co-live-status-tag">Class in Progress</span>
                 </div>
               </div>
-
-              {/* Target Audience Dropdown */}
-              <div className="broadcast-field-group">
-                <label className="broadcast-label">Target Audience</label>
-                <CustomSelect
-                  value={targetAudience}
-                  options={targetAudienceOptions}
-                  onChange={(val) => setTargetAudience(val)}
-                  placeholder="Select target audience..."
-                  icon={Users}
-                />
-              </div>
-
-              {/* Notice Message Textarea */}
-              <div className="broadcast-field-group">
-                <div className="flex items-center justify-between">
-                  <label className="broadcast-label">Notice Message</label>
-                  <span className="broadcast-char-count">{broadcastMsg.length} / 500</span>
-                </div>
-                <div className="broadcast-textarea-wrap">
-                  <textarea
-                    rows={4}
-                    maxLength={500}
-                    placeholder="Type notice message (e.g., IA-2 Quiz rescheduled to Friday 10:00 AM in Lab 302)..."
-                    value={broadcastMsg}
-                    onChange={(e) => setBroadcastMsg(e.target.value)}
-                    className="broadcast-textarea-input"
-                  />
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="broadcast-footer-row">
-                <button
-                  type="submit"
-                  disabled={!broadcastMsg.trim()}
-                  className="broadcast-send-btn"
-                >
-                  <Send size={15} /> Send Announcement
-                </button>
-                {broadcastSent && (
-                  <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5 animate-pulse">
-                    <CheckCircle size={16} /> Notice Broadcasted Successfully!
-                  </span>
-                )}
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+            ))}
+          </div>
+        </div>
 
         {/* Right: Flagged High Risk Students */}
-        <Card className="overview-subcard">
-          <CardHeader className="overview-card-header-between">
-            <div className="overview-header-left">
-              <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
-                <AlertTriangle size={18} className="overview-header-icon text-rose-500" />
+        <div className="co-arena-card">
+          <div className="co-arena-card-header">
+            <div className="co-arena-header-left">
+              <div className="co-arena-icon-wrap co-arena-icon-wrap--rose">
+                <AlertTriangle size={18} />
               </div>
               <div>
-                <CardTitle className="overview-card-title">Defaulter & Risk Audit</CardTitle>
-                <CardDescription className="overview-card-desc">Students requiring intervention</CardDescription>
+                <h3 className="co-arena-header-title">Defaulter & Risk Audit</h3>
+                <p className="co-arena-header-sub">Students requiring active intervention</p>
               </div>
             </div>
-            <Link to="/coordinator/students" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+            <Link to="/coordinator/students" className="co-arena-badge-link">
               View All <ChevronRight size={14} />
             </Link>
-          </CardHeader>
-          <CardContent className="p-4 space-y-3">
+          </div>
+
+          <div className="co-arena-card-body">
             {highRiskStudents.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
-                <CheckCircle size={28} className="mx-auto text-emerald-500 mb-2" />
-                <p className="text-sm font-semibold">No high risk students flagged.</p>
+              <div className="co-risk-empty-box">
+                <CheckCircle size={32} style={{ color: "#10b981" }} />
+                <h4 className="co-risk-empty-title">No high risk students flagged.</h4>
+                <p className="co-risk-empty-sub">All department students are within attendance compliance.</p>
               </div>
             ) : (
               highRiskStudents.map((s) => {
@@ -313,97 +302,32 @@ export default function CoordinatorOverview() {
                 const perfVal = s.testAvg ?? s.avgScore ?? s.score ?? 58;
 
                 return (
-                  <div
-                    key={s.id}
-                    className="p-3.5 rounded-xl border border-rose-200/80 bg-rose-50/50 flex items-center justify-between gap-3 transition-all hover:bg-rose-50 hover:shadow-xs"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-700 font-bold text-xs flex items-center justify-center flex-shrink-0 border border-rose-200 shadow-xs">
-                        {initials}
-                      </div>
-                      <div className="min-w-0">
-                        <h5 className="text-xs font-bold text-slate-900 truncate">
-                          {s.name}
-                        </h5>
-                        <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
+                  <div key={s.id} className="co-risk-item-card">
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+                      <div className="co-risk-avatar">{initials}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <h5 className="co-risk-info-name">{s.name}</h5>
+                        <p className="co-risk-info-sub">
                           {s.rollNo || s.studentId || "CSE26-001"} · {s.batch || "CSE 2026 Cohort"}
                         </p>
-                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                          <span className="inline-flex items-center text-[11px] text-rose-700 font-bold bg-rose-100/80 px-2 py-0.5 rounded-md">
+                        <div className="co-risk-metrics-row">
+                          <span className="co-risk-metric-pill--danger">
                             Attendance: {attendanceVal}%
                           </span>
-                          <span className="inline-flex items-center text-[11px] text-amber-700 font-bold bg-amber-100/80 px-2 py-0.5 rounded-md">
+                          <span className="co-risk-metric-pill--warning">
                             Performance: {perfVal}%
                           </span>
                         </div>
                       </div>
                     </div>
-                    <Badge variant="destructive" className="text-[10px] px-2.5 py-1 font-bold uppercase tracking-wider flex-shrink-0 shadow-xs">
-                      High Risk
-                    </Badge>
+                    <span className="co-risk-badge">High Risk</span>
                   </div>
                 );
               })
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-
-      {/* Live Training Sessions Row */}
-      <Card className="overview-subcard mt-4">
-        <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
-          <div className="overview-header-left">
-            <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
-              <Activity size={18} className="overview-header-icon animate-pulse" />
-            </div>
-            <div>
-              <CardTitle className="overview-card-title">Live Training Sessions</CardTitle>
-              <CardDescription className="overview-card-desc">Currently ongoing classes and topics being taught</CardDescription>
-            </div>
-          </div>
-          <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
-            {liveSessions.length} Active Sessions
-          </Badge>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5 pt-0">
-            {liveSessions.map((session) => (
-              <div
-                key={session.id}
-                className="p-4 rounded-xl border border-slate-200 bg-white shadow-sm flex flex-col gap-3 transition-all hover:border-emerald-300 hover:shadow-md relative overflow-hidden group"
-              >
-                <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500 group-hover:w-1.5 transition-all"></div>
-                <div className="flex justify-between items-start mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="relative flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-                    </span>
-                    <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
-                      {session.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-slate-500 text-[11px] font-semibold gap-1 bg-slate-50 px-2 py-0.5 rounded-md">
-                    <Clock size={12} /> {session.time}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold text-slate-900 mb-1">{session.topic}</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed">
-                    <span className="font-semibold text-slate-800">{session.trainerName}</span> (Trainer) is teaching a <span className="font-semibold text-indigo-600">{session.topic}</span> topic to students.
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-3 border-t border-slate-100 flex items-center gap-2">
-                  <Users size={14} className="text-slate-400" />
-                  <span className="text-[11px] font-semibold text-slate-600">{session.batch}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
