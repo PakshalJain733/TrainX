@@ -121,6 +121,14 @@ case "$LANG_RAW" in
     run_program node main.js
     ;;
 
+  sql)
+    # For SQL, we usually have schema setup in input.txt and the query in main.sql.
+    # We combine them so sqlite3 executes both from stdin.
+    cat main.sql >> input.txt
+    printf '%s' "0" > compile_code
+    run_program sqlite3 -header -list :memory:
+    ;;
+
   *)
     printf '%s\n' "Unsupported language: $LANG_RAW" > compile_error.txt
     printf '%s' "1" > compile_code

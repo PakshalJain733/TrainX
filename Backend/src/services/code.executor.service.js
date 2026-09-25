@@ -36,6 +36,7 @@ export const LANGUAGE_ALIASES = {
   python: 'python',
   node: 'node',
   javascript: 'node',
+  sql: 'sql',
 };
 
 export const isLanguageSupported = (language) =>
@@ -47,6 +48,7 @@ const SOURCE_FILENAMES = {
   java: null, // resolved from the declared class name
   python: 'main.py',
   node: 'main.js',
+  sql: 'main.sql',
 };
 
 export function javaClassName(sourceCode) {

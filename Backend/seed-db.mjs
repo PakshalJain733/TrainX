@@ -24,7 +24,7 @@ const data = {
 };
 
 const sql = `
-  INSERT INTO shared_content (type, title, description, batch_name, status, data)
+  INSERT INTO shared_content (type, title, description, batch_name, status, data_json)
   VALUES (?, ?, ?, ?, ?, ?)
 `;
 

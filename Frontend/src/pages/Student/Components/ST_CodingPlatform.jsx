@@ -61,6 +61,9 @@ export default function CodingPlatform() {
   const [code, setCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState(""); // ""|"running"|"success"|"error"|"tle"|"ce"
+  const [consoleTab, setConsoleTab] = useState("output"); // "output"|"input"
+  const [customInput, setCustomInput] = useState("");
+  const [useCustomInput, setUseCustomInput] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLang, setSelectedLang] = useState("python");
@@ -156,10 +159,10 @@ export default function CodingPlatform() {
     setConsoleOutput("Running code...");
     setMobileView("code");
 
-    // Use the first visible (non-hidden) test case's input as stdin, or empty
+    // Use custom input if enabled, else the first visible (non-hidden) test case's input, or empty
     const sampleTc = (taskData?.testCases || taskData?.test_cases || [])
       .find((tc) => !tc.is_hidden);
-    const stdin = sampleTc?.input ?? "";
+    const stdin = useCustomInput ? customInput : (sampleTc?.input ?? "");
 
     try {
       const res = await fetch(`${API_BASE}/code/run`, {
@@ -381,6 +384,8 @@ export default function CodingPlatform() {
                 { value: "node", label: "Node.js 18" },
                 { value: "java", label: "Java 17" },
                 { value: "cpp", label: "C++ 20" },
+                { value: "c", label: "C (C11)" },
+                { value: "sql", label: "SQL (SQLite3)" },
               ]}
               onChange={(val) => setSelectedLang(val)}
             />
@@ -534,30 +539,68 @@ export default function CodingPlatform() {
             
             <div className="cp-console">
               <div className="cp-console-header">
-                <div className="cp-console-title">
-                  <Terminal size={14} />
-                  Console Output
-                  {consoleStatus === "running" && <span style={{ marginLeft: 8, fontSize: 11, color: "#6366f1", fontWeight: 700 }}>● Running...</span>}
-                  {consoleStatus === "success" && <span style={{ marginLeft: 8, fontSize: 11, color: "#16a34a", fontWeight: 700 }}>● Success</span>}
-                  {consoleStatus === "error" && <span style={{ marginLeft: 8, fontSize: 11, color: "#dc2626", fontWeight: 700 }}>● Failed</span>}
-                  {consoleStatus === "ce" && <span style={{ marginLeft: 8, fontSize: 11, color: "#9333ea", fontWeight: 700 }}>● Compilation Error</span>}
-                  {consoleStatus === "tle" && <span style={{ marginLeft: 8, fontSize: 11, color: "#d97706", fontWeight: 700 }}>● Time Limit Exceeded</span>}
+                <div className="cp-console-title" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Terminal size={14} />
+                    <span 
+                      onClick={() => setConsoleTab("output")} 
+                      style={{ cursor: "pointer", color: consoleTab === "output" ? "#0f172a" : "#64748b", borderBottom: consoleTab === "output" ? "2px solid #0f172a" : "2px solid transparent", paddingBottom: "2px" }}
+                    >
+                      Output
+                    </span>
+                    <span style={{ color: '#cbd5e1', margin: '0 4px' }}>|</span>
+                    <span 
+                      onClick={() => setConsoleTab("input")} 
+                      style={{ cursor: "pointer", color: consoleTab === "input" ? "#0f172a" : "#64748b", borderBottom: consoleTab === "input" ? "2px solid #0f172a" : "2px solid transparent", paddingBottom: "2px" }}
+                    >
+                      Custom Input
+                    </span>
+                  </div>
+                  {consoleStatus === "running" && <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>● Running...</span>}
+                  {consoleStatus === "success" && <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>● Success</span>}
+                  {consoleStatus === "error" && <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>● Failed</span>}
+                  {consoleStatus === "ce" && <span style={{ fontSize: 11, color: "#9333ea", fontWeight: 700 }}>● Compilation Error</span>}
+                  {consoleStatus === "tle" && <span style={{ fontSize: 11, color: "#d97706", fontWeight: 700 }}>● Time Limit Exceeded</span>}
                 </div>
                 <div className="cp-console-actions">
                   <Layout size={14} style={{ cursor: "pointer" }} onClick={() => { setConsoleOutput(""); setConsoleStatus(""); }} title="Clear console" />
                 </div>
               </div>
-              <div className={`cp-console-output ${!consoleOutput ? 'empty' : ''}`}
+              <div className={`cp-console-output ${consoleTab === "output" && !consoleOutput ? 'empty' : ''}`}
                 style={{
                   borderTop: consoleStatus === "success" ? "2px solid #16a34a" :
                              consoleStatus === "error" || consoleStatus === "ce" ? "2px solid #dc2626" :
-                             consoleStatus === "tle" ? "2px solid #d97706" : undefined
+                             consoleStatus === "tle" ? "2px solid #d97706" : undefined,
+                  display: 'flex', flexDirection: 'column'
                 }}
               >
-                {consoleOutput ? (
-                  <pre className="cp-pre-output">{consoleOutput}</pre>
+                {consoleTab === "output" ? (
+                  consoleOutput ? (
+                    <pre className="cp-pre-output">{consoleOutput}</pre>
+                  ) : (
+                    <span style={{ margin: 'auto' }}>Run your code to see output here.</span>
+                  )
                 ) : (
-                  <span>Run your code to see output here.</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px' }}>
+                    <label style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={useCustomInput} 
+                        onChange={(e) => setUseCustomInput(e.target.checked)} 
+                      />
+                      Test against custom input
+                    </label>
+                    <textarea 
+                      value={customInput}
+                      onChange={(e) => setCustomInput(e.target.value)}
+                      placeholder="Type your custom input here..."
+                      style={{ 
+                        flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', 
+                        fontFamily: "'Fira Code', monospace", fontSize: '13px', resize: 'none',
+                        background: '#ffffff', color: '#0f172a', outline: 'none'
+                      }}
+                    />
+                  </div>
                 )}
               </div>
             </div>
