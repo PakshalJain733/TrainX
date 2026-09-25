@@ -30,7 +30,35 @@ export default function CoordinatorOverview() {
   const [students, setStudents] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
   const [mentorCount, setMentorCount] = useState(0);
-  const [liveSessions, setLiveSessions] = useState([]);
+  const [liveSessions, setLiveSessions] = useState([
+    {
+      id: 1,
+      trainerName: "Anubhav Shukla",
+      topic: "Java Masterclass: Core to Advanced",
+      topicDetail: "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
+      batch: "CSE 2026 Cohort",
+      time: "10:00 AM - 05:00 PM",
+      status: "Live",
+    },
+    {
+      id: 2,
+      trainerName: "Priya Sharma",
+      topic: "React Intensive Bootcamp",
+      topicDetail: "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
+      batch: "Fullstack Specialization",
+      time: "09:30 AM - 04:30 PM",
+      status: "Live",
+    },
+    {
+      id: 3,
+      trainerName: "Rahul Verma",
+      topic: "DSA Marathon: Trees & Graphs",
+      topicDetail: "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
+      batch: "CSE 2025 Alpha",
+      time: "11:00 AM - 06:00 PM",
+      status: "Live",
+    }
+  ]);
   const [highRiskStudents, setHighRiskStudents] = useState([]);
   const [attendanceRate, setAttendanceRate] = useState("85%");
 
@@ -98,23 +126,43 @@ export default function CoordinatorOverview() {
           .catch(() => {});
       });
 
-    // 5. Fetch Live Sessions from MySQL DB
-    apiFetch("/mentor/live-sessions")
-      .then((res) => {
-        const sessionList = res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(sessionList) && sessionList.length > 0) {
-          const mapped = sessionList.map((s) => ({
-            id: s.id,
-            trainerName: s.mentorName || s.trainerName || s.mentor_name || "Department Trainer",
-            topic: s.topic || s.title || s.subject || "Live Training Class",
-            batch: s.batch || s.batch_name || "CSE Cohort",
-            time: s.time || "10:00 AM - 11:30 AM",
-            status: s.status || "Live",
-          }));
-          setLiveSessions(mapped);
-        }
-      })
-      .catch(() => {});
+    // 5. Fetch Live Sessions from LocalStorage / MySQL DB
+    const stored = localStorage.getItem('coordinatorLiveSessions');
+    if (stored) {
+      try {
+        setLiveSessions(JSON.parse(stored));
+      } catch (e) {}
+    } else {
+      apiFetch("/mentor/live-sessions")
+        .then((res) => {
+          const sessionList = res?.data || (Array.isArray(res) ? res : []);
+          if (Array.isArray(sessionList) && sessionList.length > 0) {
+            const mapped = sessionList.map((s) => ({
+              id: s.id,
+              trainerName: s.mentorName || s.trainerName || s.mentor_name || "Department Trainer",
+              topic: s.topic || s.title || s.subject || "Live Training Class",
+              batch: s.batch || s.batch_name || "CSE Cohort",
+              time: s.time || "10:00 AM - 11:30 AM",
+              status: s.status || "Live",
+            }));
+            setLiveSessions(mapped);
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const fetchSessions = () => {
+      const stored = localStorage.getItem('coordinatorLiveSessions');
+      if (stored) {
+        try {
+          setLiveSessions(JSON.parse(stored));
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('storage', fetchSessions);
+    return () => window.removeEventListener('storage', fetchSessions);
   }, []);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
@@ -132,55 +180,11 @@ export default function CoordinatorOverview() {
   const userInitials = getInitials(fullName);
 
   const statsList = [
-    { label: "Enrolled Students", value: "480", hint: `Active in ${dept}`, icon: GraduationCap },
-    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
-    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
+    { label: "Enrolled Students", value: studentCount ? `${studentCount}` : "480", hint: `Active in ${dept}`, icon: GraduationCap },
+    { label: "Managed Batches", value: liveBatches.length ? `${liveBatches.length} Batches` : "6 Batches", hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: mentorCount ? `${mentorCount} Trainers` : "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: attendanceRate || "88%", hint: "Department average", icon: LineChart },
   ];
-
-  const [liveSessions, setLiveSessions] = useState([
-    {
-      id: 1,
-      trainerName: "Anubhav Shukla",
-      topic: "Java Masterclass: Core to Advanced",
-      topicDetail: "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
-      batch: "CSE 2026 Cohort",
-      time: "10:00 AM - 05:00 PM",
-      status: "Live",
-    },
-    {
-      id: 2,
-      trainerName: "Priya Sharma",
-      topic: "React Intensive Bootcamp",
-      topicDetail: "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
-      batch: "Fullstack Specialization",
-      time: "09:30 AM - 04:30 PM",
-      status: "Live",
-    },
-    {
-      id: 3,
-      trainerName: "Rahul Verma",
-      topic: "DSA Marathon: Trees & Graphs",
-      topicDetail: "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
-      batch: "CSE 2025 Alpha",
-      time: "11:00 AM - 06:00 PM",
-      status: "Live",
-    }
-  ]);
-
-  useEffect(() => {
-    const fetchSessions = () => {
-      const stored = localStorage.getItem('coordinatorLiveSessions');
-      if (stored) {
-        try {
-          setLiveSessions(JSON.parse(stored));
-        } catch (e) {}
-      }
-    };
-    fetchSessions();
-    window.addEventListener('storage', fetchSessions);
-    return () => window.removeEventListener('storage', fetchSessions);
-  }, []);
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
@@ -353,62 +357,9 @@ export default function CoordinatorOverview() {
                 );
               })
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-
-      {/* Current Training Sessions Row */}
-      <Card className="overview-subcard mt-4">
-        <CardHeader className="overview-card-header-between" style={{ borderBottom: 'none' }}>
-          <div className="overview-header-left">
-            <div className="overview-header-icon-wrap bg-indigo-100 text-indigo-600">
-              <Activity size={18} className="overview-header-icon animate-pulse" />
-            </div>
-            <div>
-              <CardTitle className="overview-card-title">Current Training Sessions</CardTitle>
-              <CardDescription className="overview-card-desc">Currently ongoing classes and topics being taught</CardDescription>
-            </div>
-          </div>
-          <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold bg-indigo-50 text-indigo-700 border-indigo-200">
-            {liveSessions.length} Active Sessions
-          </Badge>
-        </CardHeader>
-        <CardContent className="overview-card-content-no-padding">
-          <div className="session-grid">
-            {liveSessions.map((session) => (
-              <div
-                key={session.id}
-                className="session-card"
-              >
-                {/* Topic Info */}
-                <div className="session-topic-box" style={{ marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div className="session-topic-label">
-                    <UserCheck size={14} />
-                    <span>Trainer</span>
-                  </div>
-                  <h4 className="session-topic-title">{session.trainerName}</h4>
-                </div>
-
-                {/* Trainer Info */}
-                <div className="session-trainer">
-                  <div className="session-trainer-info">
-                    <h5>{session.topic}</h5>
-                    <p style={{ fontSize: '12px', marginTop: '4px', lineHeight: '1.4', color: '#64748b' }}>
-                      {session.topicDetail}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Footer: Batch */}
-                <div className="session-footer">
-                  <Users size={14} />
-                  <span>{session.batch}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
