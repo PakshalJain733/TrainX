@@ -20,7 +20,6 @@ import {
   UserCheck,
   Target,
 } from "lucide-react";
-import { coordinatorStudents, coordinatorBatches } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -219,7 +218,7 @@ const roadmapData = {
 
 export default function CoordinatorStudents() {
   const [students, setStudents] = useState([]);
-  const [batchesList, setBatchesList] = useState(coordinatorBatches);
+  const [batchesList, setBatchesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [batchFilter, setBatchFilter] = useState("All");
@@ -234,9 +233,11 @@ export default function CoordinatorStudents() {
       const data = await batchAPI.getBatches();
       if (Array.isArray(data) && data.length > 0) {
         setBatchesList(data);
+      } else {
+        setBatchesList([]);
       }
     } catch (err) {
-      console.warn("Using local batches fallback in CO_Students.");
+      setBatchesList([]);
     }
   };
 
@@ -264,7 +265,7 @@ export default function CoordinatorStudents() {
         } else if (res && res.students && Array.isArray(res.students)) {
           fetched = res.students;
         } else {
-          fetched = coordinatorStudents;
+          fetched = [];
         }
         if (coordDept && fetched.length > 0) {
           const targetDept = coordDept.toLowerCase();
@@ -273,23 +274,13 @@ export default function CoordinatorStudents() {
             s.department.toLowerCase().includes(targetDept) || 
             targetDept.includes(s.department.toLowerCase())
           );
-          setStudents(deptFiltered.length > 0 ? deptFiltered : fetched);
+          setStudents(deptFiltered);
         } else {
           setStudents(fetched);
         }
       })
       .catch(() => {
-        if (coordDept) {
-          const targetDept = coordDept.toLowerCase();
-          const deptFiltered = coordinatorStudents.filter(s => 
-            !s.department || 
-            s.department.toLowerCase().includes(targetDept) || 
-            targetDept.includes(s.department.toLowerCase())
-          );
-          setStudents(deptFiltered);
-        } else {
-          setStudents(coordinatorStudents);
-        }
+        setStudents([]);
       })
       .finally(() => setLoading(false));
 

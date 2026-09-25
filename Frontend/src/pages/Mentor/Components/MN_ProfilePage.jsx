@@ -22,7 +22,6 @@ import {
   Loader2,
   X,
 } from "lucide-react";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { mentorProfile } from "../../../data/mentorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -225,11 +224,18 @@ export default function ProfilePage() {
 
   return (
     <div className="student-page-inner profile-container">
-      <SectionHeader
-        eyebrow="Faculty & Mentorship"
-        title="Mentor Profile & Settings"
-        description="Manage your faculty dossier, office availability, and notification settings."
-      />
+      <div className="ui-section-header-MN">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <span>Mentor Profile & Settings</span>
+            </h2>
+            <p className="ui-section-desc">
+              Manage your faculty dossier, office availability, and notification settings.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {saved && (
         <div className="profile-alert-success">

@@ -8,20 +8,29 @@
     padding: 0 !important;
     background: #dbe5ee !important;
   }
+
+  .mentor-page-inner,
+  .ui-section-header-MN {
+    margin-bottom: 0;
+  }
+
   .mentor-page-card {
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: #f1f5f9 !important;
-   
+
   }
+
   .mentor-main {
     padding: 0 !important;
     background: #f1f5f9 !important;
   }
+
   .mentor-header {
     border-radius: 0 !important;
   }
+
   .mentor-page-inner {
     padding: 12px !important;
     background: transparent !important;
@@ -453,10 +462,25 @@ body {
   flex-shrink: 0;
 }
 
-.notif-icon-box.type-calendar { background: #fee2e2; color: #ef4444; }
-.notif-icon-box.type-alert { background: #fef9c3; color: #eab308; }
-.notif-icon-box.type-success { background: #dcfce7; color: #22c55e; }
-.notif-icon-box.type-document { background: #e0e7ff; color: #6366f1; }
+.notif-icon-box.type-calendar {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.notif-icon-box.type-alert {
+  background: #fef9c3;
+  color: #eab308;
+}
+
+.notif-icon-box.type-success {
+  background: #dcfce7;
+  color: #22c55e;
+}
+
+.notif-icon-box.type-document {
+  background: #e0e7ff;
+  color: #6366f1;
+}
 
 .notif-content {
   flex: 1;
@@ -494,7 +518,10 @@ body {
   padding: 0;
   display: flex;
 }
-.notif-delete-btn:hover { color: #ef4444; }
+
+.notif-delete-btn:hover {
+  color: #ef4444;
+}
 
 .notif-card-desc {
   font-size: 12px;
@@ -519,7 +546,10 @@ body {
   font-weight: 600;
   cursor: pointer;
 }
-.notif-clear-all-btn:hover { text-decoration: underline; }
+
+.notif-clear-all-btn:hover {
+  text-decoration: underline;
+}
 
 /* Right side: header + main */
 .mentor-content {
@@ -1357,7 +1387,7 @@ body {
     max-width: 100vw !important;
     border-radius: 0 !important;
     background: #ffffff !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
   }
 
   .mentor-main {
@@ -1658,6 +1688,7 @@ button:active:not(:disabled),
    ════════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+
   /* Layout Padding & Spacing */
   .admin-content,
   .hod-content,

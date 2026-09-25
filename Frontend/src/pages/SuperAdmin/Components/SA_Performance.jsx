@@ -463,9 +463,19 @@ export default function Performance() {
     ...dynamicColleges.map((c) => ({ value: c.name, label: c.name }))
   ];
 
+  const totalStudentsDynamic = dynamicColleges.reduce(
+    (sum, c) => sum + (Number(c.student_count) || Number(c.studentsCount) || 0),
+    0
+  );
+
   // Retrieve current active college dataset or default to 'all'
   const currentDataSet = collegePerformanceDB[selectedCollege] || collegePerformanceDB['all'];
-  const currentKPI = currentDataSet.kpi;
+  const currentKPI = {
+    ...currentDataSet.kpi,
+    activeStudents: selectedCollege === 'all' && totalStudentsDynamic > 0
+      ? totalStudentsDynamic
+      : currentDataSet.kpi.activeStudents
+  };
   const currentFeatures = currentDataSet.features;
 
   const filteredFeatures = currentFeatures.filter((f) => {

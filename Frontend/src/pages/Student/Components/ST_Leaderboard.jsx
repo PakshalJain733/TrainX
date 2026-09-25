@@ -23,7 +23,31 @@ export default function Leaderboard() {
     apiFetch("/leaderboards")
       .then((res) => {
         if (res && res.data) {
-          setLeaderboardData(res.data);
+          if (Array.isArray(res.data)) {
+            setLeaderboardData({
+              overall: res.data,
+              department: [],
+              milestone: [],
+              topBatches: [],
+              studentContext: null,
+            });
+          } else {
+            setLeaderboardData({
+              overall: Array.isArray(res.data.overall) ? res.data.overall : [],
+              department: Array.isArray(res.data.department) ? res.data.department : [],
+              milestone: Array.isArray(res.data.milestone) ? res.data.milestone : [],
+              topBatches: Array.isArray(res.data.topBatches) ? res.data.topBatches : (Array.isArray(res.data.batches) ? res.data.batches : []),
+              studentContext: res.data.studentContext || null,
+            });
+          }
+        } else {
+          setLeaderboardData({
+            overall: [],
+            department: [],
+            milestone: [],
+            topBatches: [],
+            studentContext: null,
+          });
         }
       })
       .catch((err) => {
@@ -166,33 +190,42 @@ export default function Leaderboard() {
                 No rankings available for this category yet.
               </div>
             ) : (
-              currentList.map((st, idx) => (
-                <div
-                  key={st.id || st.rank || idx}
-                  className={`leaderboard-row-item ${st.isCurrentUser ? "is-current-user" : ""}`}
-                >
-                  <div className="leaderboard-row-left">
-                    <span className={`leaderboard-rank-num ${getRankClass(st.rank || idx + 1)}`}>
-                      #{st.rank || idx + 1}
-                    </span>
-                    <div className="leaderboard-avatar">{st.initials || "ST"}</div>
-                    <div className="leaderboard-user-meta">
-                      <div className="leaderboard-user-name">
-                        {st.name}
-                        {st.isCurrentUser && <span className="you-pill">You</span>}
-                      </div>
-                      <div className="leaderboard-user-sub">
-                        {activeTab === "batches" ? `${st.students} Enrolled Students` : [st.batch || "All Batches", st.department || st.sub].filter(Boolean).join(" • ")}
+              currentList.map((st, idx) => {
+                const displayName = st.name || st.username || st.student_name || st.batch_name || "Student";
+                const displayInitials = st.initials || displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "ST";
+                const displayScore = st.score !== undefined ? st.score : (st.overall_score !== undefined ? st.overall_score : (st.xp || 0));
+                const displaySub = activeTab === "batches"
+                  ? `${st.students || st.student_count || 0} Enrolled Students`
+                  : [st.batch || st.batch_name || "All Batches", st.department || st.dept_name || st.sub].filter(Boolean).join(" • ");
+
+                return (
+                  <div
+                    key={st.id || st.user_id || st.rank || idx}
+                    className={`leaderboard-row-item ${st.isCurrentUser ? "is-current-user" : ""}`}
+                  >
+                    <div className="leaderboard-row-left">
+                      <span className={`leaderboard-rank-num ${getRankClass(st.rank || idx + 1)}`}>
+                        #{st.rank || idx + 1}
+                      </span>
+                      <div className="leaderboard-avatar">{displayInitials}</div>
+                      <div className="leaderboard-user-meta">
+                        <div className="leaderboard-user-name">
+                          {displayName}
+                          {st.isCurrentUser && <span className="you-pill">You</span>}
+                        </div>
+                        <div className="leaderboard-user-sub">
+                          {displaySub}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="leaderboard-score-val" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Flame size={16} color="#ea580c" />
-                    <span>{st.score !== undefined ? st.score : (st.overall_score || 0)} XP</span>
+                    <div className="leaderboard-score-val">
+                      <Flame size={16} color="#ea580c" />
+                      <span>{displayScore} XP</span>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         )}

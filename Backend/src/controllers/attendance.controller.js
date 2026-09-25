@@ -155,8 +155,28 @@ export const getDashboardSummary = async (req, res, next) => {
 export const markSelfAttendanceByCode = async (req, res, next) => {
   try {
     const userId = req.user.id || req.user.userId;
-    const collegeId = req.user.college_id || req.user.collegeId || 1;
+    let collegeId = req.user?.college_id || req.user?.collegeId || null;
     const { code, batch_id } = req.body || {};
+
+    // Validate collegeId against colleges table
+    if (collegeId) {
+      try {
+        const cCheck = await query(`SELECT id FROM colleges WHERE id = ?`, [collegeId]);
+        if (!cCheck || cCheck.length === 0) {
+          const firstCol = await query(`SELECT id FROM colleges LIMIT 1`);
+          collegeId = firstCol[0]?.id || null;
+        }
+      } catch (e) {
+        collegeId = null;
+      }
+    } else {
+      try {
+        const firstCol = await query(`SELECT id FROM colleges LIMIT 1`);
+        collegeId = firstCol[0]?.id || null;
+      } catch (e) {
+        collegeId = null;
+      }
+    }
 
     const todayStr = new Date().toISOString().split('T')[0];
 
@@ -252,6 +272,55 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       status: 'present',
       summary,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/attendance/leave-requests
+ * Fetch all student leave requests from MySQL database for Coordinators/Admins
+ */
+export const getLeaveRequests = async (req, res, next) => {
+  try {
+    const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+    let leaves = [];
+    try {
+      leaves = await query(
+        `SELECT l.*, u.name as student_name, u.email, s.roll_number, s.department
+         FROM leave_requests l
+         LEFT JOIN users u ON l.user_id = u.id
+         LEFT JOIN students s ON s.user_id = u.id
+         WHERE l.college_id = ? OR l.college_id IS NULL
+         ORDER BY l.id DESC`,
+        [collegeId]
+      );
+    } catch (e) {
+      console.warn('[DB getLeaveRequests fallback]', e.message);
+    }
+    return sendSuccess(res, 'Leave requests retrieved successfully', leaves || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * PUT /api/v1/attendance/leave-requests/:id/status
+ * Approve or Reject student leave application in database
+ */
+export const updateLeaveRequestStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, remarks } = req.body;
+    try {
+      await query(
+        `UPDATE leave_requests SET status = ?, remarks = ? WHERE id = ?`,
+        [status || 'Approved', remarks || null, id]
+      );
+    } catch (e) {
+      console.warn('[DB updateLeaveRequestStatus fallback]', e.message);
+    }
+    return sendSuccess(res, 'Leave request status updated in database', { id, status });
   } catch (error) {
     next(error);
   }

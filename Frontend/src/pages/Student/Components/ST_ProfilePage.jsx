@@ -176,7 +176,7 @@ export default function ProfilePage() {
   const fileInputRef = useRef(null);
   const trackWrapperRef = useRef(null);
   const [saved, setSaved] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem('student_avatar') || null);
+  const [avatarUrl, setAvatarUrl] = useState(null);
   const [trackSearchFocus, setTrackSearchFocus] = useState(false);
 
   useEffect(() => {
@@ -371,7 +371,6 @@ export default function ProfilePage() {
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarUrl(reader.result);
-        localStorage.setItem('student_avatar', reader.result);
         window.dispatchEvent(new Event("userProfileUpdated"));
       };
       reader.readAsDataURL(file);

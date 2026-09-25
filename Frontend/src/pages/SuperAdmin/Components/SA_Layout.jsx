@@ -4,21 +4,48 @@ import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangl
 import SuperAdminSidebar from "./SA_Sidebar";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
+import { apiFetch } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange }) {
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('superadmin_notifications');
-    if (saved) return JSON.parse(saved);
-    return [
-    { id: 1, type: "success", title: "Secure College Access Key generated", time: "10 min ago", unread: true },
-    { id: 2, type: "success", title: "Apex Institute of Tech batch sync complete", time: "1h ago", unread: true },
-    { id: 3, type: "document", title: "Monthly Cross-College Placement Audit ready", time: "3h ago", unread: false },
-  ];
-  });
+  const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem('superadmin_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    apiFetch("/admin/broadcast")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setNotifications(res.data);
+        } else {
+          setNotifications([]);
+        }
+      })
+      .catch(() => {
+        setNotifications([]);
+      });
+  }, []);
+
+  const autoCloseTimerRef = useRef(null);
+
+  const startAutoCloseTimer = () => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = setTimeout(() => {
+      if (onClose) onClose();
+    }, 5000);
+  };
+
+  useEffect(() => {
+    startAutoCloseTimer();
+    return () => {
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    };
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+  };
+
+  const handleMouseLeave = () => {
+    startAutoCloseTimer();
+  };
 
   const [activeTab, setActiveTab] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
@@ -67,7 +94,11 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
   };
 
   return (
-    <div className="sa-header__profile-dropdown notif-dropdown-box">
+    <div 
+      className="notif-dropdown-box"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Header */}
       <div className="notif-header">
         <div className="notif-header-left">
@@ -118,43 +149,65 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
             No notifications to display
           </div>
         ) : (
-          visibleNotifications.map((n) => (
-            <div
-              key={n.id}
-              className={`notif-list-card ${n.unread ? "unread" : ""}`}
-              style={{ cursor: "default", flexDirection: "column", gap: 0 }}
-            >
-              <div style={{ display: 'flex', gap: '12px', width: '100%', alignItems: 'flex-start' }}>
-                <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
-                <div className="notif-content" style={{ flex: 1 }}>
-                  <div className="notif-content-top">
-                    <div 
-                      className="notif-card-title"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setExpandedId(n.id);
-                      }}
-                      style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
-                      title="Click to view full message"
-                    >
-                      {n.title}
-                      {n.unread && (
-                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#3b82f6", flexShrink: 0 }} />
-                      )}
+          visibleNotifications.map((n) => {
+            const isExpanded = expandedId === n.id;
+            return (
+              <div
+                key={n.id}
+                className={`notif-list-card ${n.unread ? "unread" : ""}`}
+                style={{ cursor: "default", flexDirection: "column", gap: isExpanded ? "8px" : 0 }}
+              >
+                <div style={{ display: 'flex', gap: '12px', width: '100%', alignItems: 'flex-start' }}>
+                  <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
+                  <div className="notif-content" style={{ flex: 1 }}>
+                    <div className="notif-content-top">
+                      <div 
+                        className="notif-card-title"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (n.unread) {
+                            toggleSingleRead(n.id);
+                          }
+                          setExpandedId(isExpanded ? null : n.id);
+                        }}
+                        style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
+                        title="Click to view details"
+                      >
+                        {n.title}
+                        {n.unread && (
+                          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#3b82f6", flexShrink: 0 }} />
+                        )}
+                      </div>
+                      <div className="notif-card-time">{n.time}</div>
+                      <button
+                        className="notif-delete-btn"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteItem(e, n.id); }}
+                        title="Delete notification"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                    <div className="notif-card-time">{n.time}</div>
-                    <button
-                      className="notif-delete-btn"
-                      onClick={(e) => { e.stopPropagation(); handleDeleteItem(e, n.id); }}
-                      title="Delete notification"
-                    >
-                      <Trash2 size={14} />
-                    </button>
                   </div>
                 </div>
+
+                {isExpanded && (
+                  <div style={{
+                    marginTop: "6px",
+                    padding: "10px 12px",
+                    background: "#f8fafc",
+                    borderRadius: "8px",
+                    border: "1px solid #e2e8f0",
+                    fontSize: "12px",
+                    color: "#334155",
+                    lineHeight: "1.5",
+                    whiteSpace: "pre-wrap"
+                  }}>
+                    {n.desc || "No additional details available for this notification."}
+                  </div>
+                )}
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -169,43 +222,6 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
           Clear all
         </button>
       </div>
-
-      {/* Modal for expanded message */}
-      {expandedId && (
-        <div 
-          className="notif-modal-overlay" 
-          onClick={() => { const notif = notifications.find(x => x.id === expandedId); if (notif && notif.unread) toggleSingleRead(notif.id); setExpandedId(null); }} 
-          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div 
-            className="notif-modal-content" 
-            onClick={(e) => e.stopPropagation()} 
-            style={{ background: '#fff', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '400px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', position: 'relative' }}
-          >
-            {(() => {
-               const n = notifications.find(notif => notif.id === expandedId);
-               if (!n) return null;
-               return (
-                 <>
-                   <h3 style={{ marginTop: 0, color: '#0f172a', fontSize: '1.25rem', marginBottom: '8px' }}>{n.title}</h3>
-                   <span style={{ fontSize: '0.85rem', color: '#64748b', display: 'block', marginBottom: '16px' }}>{n.time}</span>
-                   <p style={{ color: '#334155', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-wrap' }}>
-                     {n.desc ? n.desc.replace('...', ' 4B regarding upcoming semester evaluations.') : "No details available."}
-                   </p>
-                   <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-                     <button 
-                       onClick={() => { const notif = notifications.find(x => x.id === expandedId); if (notif && notif.unread) toggleSingleRead(notif.id); setExpandedId(null); }} 
-                       style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 500 }}
-                     >
-                       Close
-                     </button>
-                   </div>
-                 </>
-               )
-            })()}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

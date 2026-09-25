@@ -756,6 +756,784 @@
   z-index: 999999 !important;
 }
 
+/* ── Full-Screen Portal Overlay & Dialog (Plain White Header Theme) ── */
+.fs-portal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-portal-dialog {
+  width: 96vw;
+  height: 92vh;
+  max-width: 1440px;
+  max-height: 920px;
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+}
+
+/* ── Plain White Header (NO DARK/NAVY BACKGROUND, NO GRADIENTS) ── */
+.fs-portal-header {
+  padding: 18px 28px;
+  background: #ffffff;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fs-portal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.fs-portal-header-icon {
+  background: #e0e7ff;
+  border: 1px solid #c7d2fe;
+  color: #4f46e5;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-portal-header-icon.mentor-theme {
+  background: #dcfce7;
+  border-color: #a7f3d0;
+  color: #059669;
+}
+
+.fs-portal-header-title-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.fs-portal-header-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.fs-portal-header-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.fs-portal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.fs-portal-close-btn {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fs-portal-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* ── Split Body Layout ── */
+.fs-portal-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 20px;
+  padding: 20px;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+
+.fs-portal-panel-sidebar {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+}
+
+.fs-portal-panel-main {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.fs-portal-section-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fs-portal-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* ── High-Quality Modern "Edit Today's Topic" Button ── */
+.btn-edit-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #4f46e5;
+  color: #ffffff;
+  border: 1px solid #4338ca;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+
+.btn-edit-topic:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(79, 70, 229, 0.3);
+}
+
+.btn-edit-topic.active {
+  background: #312e81;
+  color: #ffffff;
+  border-color: #1e1b4b;
+  box-shadow: 0 2px 6px rgba(49, 46, 129, 0.3);
+}
+
+/* ── Primary Action Submit Button ── */
+.btn-portal-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 800;
+  background: #2563eb;
+  border-radius: 12px;
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-portal-submit:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+}
+
+/* ── Modal Portal Clean Utility Classes ── */
+.fs-portal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.fs-portal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fs-portal-label {
+  font-weight: 700;
+  color: #334155;
+  font-size: 13px;
+}
+
+.fs-portal-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fs-portal-btn-link {
+  background: none;
+  border: none;
+  color: #4f46e5;
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.fs-portal-preassigned-box {
+  padding: 11px 14px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fs-portal-preassigned-tag {
+  font-size: 11px;
+  color: #4338ca;
+  background: #e0e7ff;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: 800;
+}
+
+.fs-portal-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.fs-portal-textarea {
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  resize: none;
+}
+
+.fs-portal-icon-blue {
+  color: #2563eb;
+}
+
+.fs-portal-icon-indigo {
+  color: #4f46e5;
+}
+
+.fs-portal-batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+  align-content: start;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.fs-portal-batch-card {
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.fs-portal-batch-card--selected {
+  background: #eff6ff;
+  border-color: #2563eb;
+  box-shadow: 0 6px 16px -4px rgba(37, 99, 235, 0.18);
+}
+
+.fs-portal-batch-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.fs-portal-batch-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #1e40af;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+}
+
+.fs-portal-batch-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 6px 0 4px 0;
+  line-height: 1.3;
+}
+
+.fs-portal-batch-desc {
+  color: #64748b;
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.fs-portal-batch-footer {
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fs-portal-trainer-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fs-portal-trainer-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1e40af;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fs-portal-trainer-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.fs-portal-batch-status-active {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.fs-portal-batch-status-idle {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+/* Mentor Modal Specific Classes */
+.fs-portal-mentor-active-card {
+  padding: 14px;
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fs-portal-mentor-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.fs-portal-mentor-name {
+  font-weight: 800;
+  color: #1e40af;
+  font-size: 13.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fs-portal-mentor-meta {
+  color: #1d4ed8;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.fs-portal-dept-pill {
+  background: #dbeafe;
+  padding: 1px 7px;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.fs-portal-mentees-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+
+.fs-portal-mentees-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fs-portal-mentees-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.fs-portal-btn-clear {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.fs-portal-chips-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 170px;
+  padding: 10px;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.fs-portal-mentee-chip {
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+.fs-portal-chip-remove {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  padding: 1px;
+}
+
+.fs-portal-main-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fs-portal-checklist-title {
+  font-weight: 800;
+  color: #0f172a;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fs-portal-count-badge {
+  padding: 2px 9px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid #bfdbfe;
+}
+
+.fs-portal-checklist-meta {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.fs-portal-btn-select-all {
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  color: #1d4ed8;
+  font-weight: 800;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.fs-portal-btn-deselect-all {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.fs-portal-search-wrap {
+  width: 100%;
+  position: relative;
+}
+
+.fs-portal-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.fs-portal-search-input {
+  width: 100%;
+  height: 44px;
+  font-size: 13.5px;
+  padding-left: 42px;
+  padding-right: 40px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+}
+
+.fs-portal-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+.fs-portal-dept-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.fs-portal-dept-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #e2e8f0;
+  background: #ffffff;
+  color: #475569;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.fs-portal-dept-btn--active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.15);
+}
+
+.fs-portal-dept-count {
+  background: #e2e8f0;
+  color: #64748b;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+.fs-portal-dept-btn--active .fs-portal-dept-count {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+.fs-portal-students-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+  align-content: start;
+  min-height: 320px;
+}
+
+.fs-portal-student-card {
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  transition: all 0.15s ease;
+}
+
+.fs-portal-student-card--checked {
+  border-color: #2563eb;
+  background: #eff6ff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.15);
+}
+
+.fs-portal-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.fs-portal-student-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: #64748b;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.fs-portal-student-card--checked .fs-portal-student-avatar {
+  background: #2563eb;
+}
+
+.fs-portal-student-roll {
+  font-family: monospace;
+  font-weight: 800;
+  color: #1d4ed8;
+  background: #dbeafe;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.fs-portal-alert-success {
+  padding: 12px 16px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fs-portal-alert-info {
+  padding: 12px 16px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fs-portal-flex-center-gap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fs-portal-input-height {
+  height: 44px;
+  font-size: 13.5px;
+  border-radius: 10px;
+  border-color: #cbd5e1;
+}
+
+.fs-portal-submit-mt {
+  margin-top: auto;
+}
+
+.fs-portal-select-small {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+
 
 
 

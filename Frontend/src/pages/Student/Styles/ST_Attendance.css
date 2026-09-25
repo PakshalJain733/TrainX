@@ -9,7 +9,7 @@
   border: 1px solid #fecdd3;
   padding: 16px 20px;
   border-radius: 16px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   box-shadow: 0 4px 16px rgba(225, 29, 72, 0.08);
   animation: slideDownWarning 0.3s ease;
 }
@@ -64,7 +64,7 @@
   border-radius: 20px;
   border: 1px solid #e2e8f0;
   padding: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
@@ -1532,7 +1532,7 @@
   margin-bottom: 0;
 }
 
-.attendance-header-row .ui-section-header {
+.attendance-header-row .ui-section-header-ST {
   margin-bottom: 0;
 }
 

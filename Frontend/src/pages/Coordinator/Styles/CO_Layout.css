@@ -13,7 +13,8 @@
   width: 100%;
 }
 
-.coordinator-page-inner .ui-section-header {
+.coordinator-page-inner .ui-section-header-CO,
+.ui-section-header-CO {
   margin-bottom: 0;
 }
 
@@ -49,7 +50,8 @@
     gap: 12px !important;
     background: transparent !important;
   }
-  .coordinator-page-inner .ui-section-header {
+  .coordinator-page-inner .ui-section-header-CO,
+  .ui-section-header-CO {
     margin-bottom: 0;
   }
 }

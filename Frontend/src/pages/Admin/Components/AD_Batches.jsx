@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown } from "lucide-react";
+import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, Sparkles, Clock, AlertTriangle, X, Trophy, CheckSquare, Trash2, Eye, FileText, Code, ChevronDown, Terminal, BookOpen, Award, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
+import { Badge } from "../../../components/ui/Badge";
 import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Batches.css";
 
@@ -127,6 +127,7 @@ const formatTimeRemaining = (expiresAt, now) => {
 
 export default function AdminBatches() {
   const [batches, setBatches] = useState([]);
+  const [activeStatusTab, setActiveStatusTab] = useState("active"); // 'active' | 'inactive'
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -435,15 +436,45 @@ export default function AdminBatches() {
   };
 
   const handleDeleteBatch = async (batchId, batchName) => {
-    if (!window.confirm(`Are you sure you want to mark batch "${batchName}" as inactive?`)) {
+    if (!window.confirm(`Are you sure you want to move batch "${batchName}" to Inactive?`)) {
       return;
     }
+    setBatches((prev) =>
+      prev.map((b) => (b.id === batchId ? { ...b, status: "Inactive" } : b))
+    );
+    try {
+      await apiFetch(`/batches/${batchId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "inactive" }),
+      });
+    } catch (err) {
+      console.warn("Updated batch status in local state fallback:", err);
+    }
+  };
+
+  const handleReactivateBatch = async (batchId, batchName) => {
+    setBatches((prev) =>
+      prev.map((b) => (b.id === batchId ? { ...b, status: "Active" } : b))
+    );
+    try {
+      await apiFetch(`/batches/${batchId}`, {
+        method: "PUT",
+        body: JSON.stringify({ status: "active" }),
+      });
+    } catch (err) {
+      console.warn("Reactivated batch in local state fallback:", err);
+    }
+  };
+
+  const handlePermanentDeleteBatch = async (batchId, batchName) => {
+    if (!window.confirm(`Are you sure you want to permanently delete batch "${batchName}"? This action cannot be undone.`)) {
+      return;
+    }
+    setBatches((prev) => prev.filter((b) => b.id !== batchId));
     try {
       await apiFetch(`/batches/${batchId}`, { method: "DELETE" });
-      await fetchBatches();
     } catch (err) {
-      console.error("Failed to mark batch as inactive in DB:", err);
-      fetchBatches();
+      console.warn("Permanently deleted batch from local state fallback:", err);
     }
   };
 
@@ -619,188 +650,206 @@ export default function AdminBatches() {
 
           {/* TAB 3: Add Batch Task */}
           {batchTab === "addTask" && (
-            <div className="batch-tab-section" style={{ maxWidth: "800px" }}>
-              <div className="batch-tab-header" style={{ marginBottom: "20px" }}>
-                <h3 className="batch-tab-title" style={{ fontSize: "18px" }}>Assign Task to {selectedBatch.name}</h3>
-                <p className="batch-tab-sub">Create a new problem set or homework task specifically for all enrolled students in this batch.</p>
-              </div>
-              <form onSubmit={handleTaskSubmit} className="add-task-form">
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Task Title *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Solve Binary Tree Traversal & Recursion"
-                      className="form-input-admin"
-                      value={taskForm.title}
-                      onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))}
-                    />
+            <div className="batch-tab-section" style={{ width: "100%" }}>
+              <div className="add-task-card-container">
+                <div className="add-task-header-banner">
+                  <div className="add-task-banner-icon">
+                    <Code2 size={24} />
                   </div>
-                  <div className="form-group-admin">
-                    <label>Target Topic / Module *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Data Structures - Trees"
-                      className="form-input-admin"
-                      value={taskForm.topic}
-                      onChange={(e) => setTaskForm((p) => ({ ...p, topic: e.target.value }))}
-                    />
+                  <div>
+                    <h3 className="add-task-banner-title">Assign Task to {selectedBatch.name}</h3>
+                    <p className="add-task-banner-sub">Create a new problem set or homework task specifically for all enrolled students in this batch.</p>
                   </div>
                 </div>
 
-                <div className="form-row-3">
-                  <div className="form-group-admin">
-                    <label>Difficulty Level</label>
-                    <AdminBatchSelect
-                      value={taskForm.difficulty}
-                      onChange={(val) => setTaskForm((p) => ({ ...p, difficulty: val }))}
-                      options={[
-                        { value: "Easy", label: "Easy" },
-                        { value: "Medium", label: "Medium" },
-                        { value: "Hard", label: "Hard" }
-                      ]}
-                    />
-                  </div>
-                  <div className="form-group-admin">
-                    <label>XP Points Awarded</label>
-                    <input
-                      type="number"
-                      placeholder="100"
-                      className="form-input-admin"
-                      value={taskForm.points}
-                      onChange={(e) => setTaskForm((p) => ({ ...p, points: e.target.value }))}
-                    />
-                  </div>
-                  <div className="form-group-admin">
-                    <label>Submission Deadline</label>
-                    <input
-                      type="date"
-                      className="form-input-admin"
-                      value={taskForm.deadline}
-                      onChange={(e) => setTaskForm((p) => ({ ...p, deadline: e.target.value }))}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group-admin">
-                  <label>Task Instructions & Description</label>
-                  <textarea
-                    rows={4}
-                    placeholder="Detail the task problem statement, constraints, or submission criteria..."
-                    className="form-input-admin"
-                    style={{ height: "auto", minHeight: "100px" }}
-                    value={taskForm.desc}
-                    onChange={(e) => setTaskForm((p) => ({ ...p, desc: e.target.value }))}
-                  />
-                </div>
-
-                {/* Test Cases Builder Section */}
-                <div style={{ marginTop: "16px", padding: "16px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
-                    <div>
-                      <h4 style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a", margin: "0 0 2px" }}>Test Cases (For Code Evaluation)</h4>
-                      <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Add sample inputs and expected outputs to automatically evaluate student submissions.</p>
+                <form onSubmit={handleTaskSubmit} className="add-task-form-body">
+                  <div className="form-row-2">
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <FileText size={14} style={{ color: "#4f46e5" }} />
+                        <span>Task Title *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Solve Binary Tree Traversal & Recursion"
+                        className="form-input-admin"
+                        value={taskForm.title}
+                        onChange={(e) => setTaskForm((p) => ({ ...p, title: e.target.value }))}
+                      />
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setTaskForm((p) => ({
-                        ...p,
-                        testCases: [...p.testCases, { input: "", expectedOutput: "", isHidden: false }],
-                      }))}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "6px 12px",
-                        background: "#eef2ff",
-                        color: "#4f46e5",
-                        border: "1px solid #c7d2fe",
-                        borderRadius: "8px",
-                        fontSize: "12px",
-                        fontWeight: "700",
-                        cursor: "pointer"
-                      }}
-                    >
-                      <Plus size={14} /> Add Test Case
-                    </button>
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <BookOpen size={14} style={{ color: "#4f46e5" }} />
+                        <span>Target Topic / Module *</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Data Structures - Trees"
+                        className="form-input-admin"
+                        value={taskForm.topic}
+                        onChange={(e) => setTaskForm((p) => ({ ...p, topic: e.target.value }))}
+                      />
+                    </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {taskForm.testCases.map((tc, idx) => (
-                      <div key={idx} style={{ padding: "12px", background: "#ffffff", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                          <span style={{ fontSize: "12px", fontWeight: "700", color: "#334155" }}>Test Case #{idx + 1}</span>
-                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                            <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#64748b", cursor: "pointer" }}>
-                              <input
-                                type="checkbox"
-                                checked={tc.isHidden}
+                  <div className="form-row-3">
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Award size={14} style={{ color: "#4f46e5" }} />
+                        <span>Difficulty Level</span>
+                      </label>
+                      <AdminBatchSelect
+                        value={taskForm.difficulty}
+                        onChange={(val) => setTaskForm((p) => ({ ...p, difficulty: val }))}
+                        options={[
+                          { value: "Easy", label: "Easy" },
+                          { value: "Medium", label: "Medium" },
+                          { value: "Hard", label: "Hard" }
+                        ]}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Sparkles size={14} style={{ color: "#d97706" }} />
+                        <span>XP Points Awarded</span>
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="100"
+                        className="form-input-admin"
+                        value={taskForm.points}
+                        onChange={(e) => setTaskForm((p) => ({ ...p, points: e.target.value }))}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Calendar size={14} style={{ color: "#4f46e5" }} />
+                        <span>Submission Deadline</span>
+                      </label>
+                      <input
+                        type="date"
+                        className="form-input-admin"
+                        value={taskForm.deadline}
+                        onChange={(e) => setTaskForm((p) => ({ ...p, deadline: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-group-admin">
+                    <label className="add-task-label">
+                      <FileText size={14} style={{ color: "#64748b" }} />
+                      <span>Task Instructions & Description</span>
+                    </label>
+                    <textarea
+                      rows={4}
+                      placeholder="Detail the task problem statement, constraints, or submission criteria..."
+                      className="form-input-admin add-task-textarea"
+                      value={taskForm.desc}
+                      onChange={(e) => setTaskForm((p) => ({ ...p, desc: e.target.value }))}
+                    />
+                  </div>
+
+                  {/* Test Cases Builder Section */}
+                  <div className="test-cases-builder-card">
+                    <div className="test-cases-header">
+                      <div className="test-cases-header-left">
+                        <div className="test-cases-header-icon">
+                          <Terminal size={18} />
+                        </div>
+                        <div>
+                          <h4>Test Cases (For Code Evaluation)</h4>
+                          <p>Add sample inputs and expected outputs to automatically evaluate student submissions.</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="add-test-case-btn"
+                        onClick={() => setTaskForm((p) => ({
+                          ...p,
+                          testCases: [...p.testCases, { input: "", expectedOutput: "", isHidden: false }],
+                        }))}
+                      >
+                        <Plus size={14} /> Add Test Case
+                      </button>
+                    </div>
+
+                    <div className="test-cases-list">
+                      {taskForm.testCases.map((tc, idx) => (
+                        <div key={idx} className="test-case-box">
+                          <div className="test-case-top-bar">
+                            <span className="test-case-badge">Test Case #{idx + 1}</span>
+                            <div className="test-case-top-right">
+                              <label className="test-case-hidden-toggle">
+                                <input
+                                  type="checkbox"
+                                  checked={tc.isHidden}
+                                  onChange={(e) => {
+                                    const updated = [...taskForm.testCases];
+                                    updated[idx].isHidden = e.target.checked;
+                                    setTaskForm((p) => ({ ...p, testCases: updated }));
+                                  }}
+                                />
+                                <span>Hidden Test Case</span>
+                              </label>
+                              {taskForm.testCases.length > 1 && (
+                                <button
+                                  type="button"
+                                  className="test-case-remove-btn"
+                                  onClick={() => {
+                                    const updated = taskForm.testCases.filter((_, i) => i !== idx);
+                                    setTaskForm((p) => ({ ...p, testCases: updated }));
+                                  }}
+                                >
+                                  <Trash2 size={14} /> Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="test-case-inputs-grid">
+                            <div>
+                              <label className="test-case-field-label">Sample Input</label>
+                              <textarea
+                                rows={2}
+                                placeholder="e.g. [2, 7, 11, 15], target = 9"
+                                className="test-case-code-input"
+                                value={tc.input}
                                 onChange={(e) => {
                                   const updated = [...taskForm.testCases];
-                                  updated[idx].isHidden = e.target.checked;
+                                  updated[idx].input = e.target.value;
                                   setTaskForm((p) => ({ ...p, testCases: updated }));
                                 }}
                               />
-                              Hidden Test Case
-                            </label>
-                            {taskForm.testCases.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = taskForm.testCases.filter((_, i) => i !== idx);
+                            </div>
+                            <div>
+                              <label className="test-case-field-label">Expected Output</label>
+                              <textarea
+                                rows={2}
+                                placeholder="e.g. [0, 1]"
+                                className="test-case-code-input"
+                                value={tc.expectedOutput}
+                                onChange={(e) => {
+                                  const updated = [...taskForm.testCases];
+                                  updated[idx].expectedOutput = e.target.value;
                                   setTaskForm((p) => ({ ...p, testCases: updated }));
                                 }}
-                                style={{ color: "#ef4444", background: "none", border: "none", cursor: "pointer", fontSize: "12px", fontWeight: "700" }}
-                              >
-                                Remove
-                              </button>
-                            )}
+                              />
+                            </div>
                           </div>
                         </div>
-
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                          <div>
-                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Sample Input</label>
-                            <textarea
-                              rows={2}
-                              placeholder="e.g. [2, 7, 11, 15], target = 9"
-                              style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "12px", fontFamily: "monospace" }}
-                              value={tc.input}
-                              onChange={(e) => {
-                                const updated = [...taskForm.testCases];
-                                updated[idx].input = e.target.value;
-                                setTaskForm((p) => ({ ...p, testCases: updated }));
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <label style={{ fontSize: "11px", fontWeight: "700", color: "#475569", display: "block", marginBottom: "4px" }}>Expected Output</label>
-                            <textarea
-                              rows={2}
-                              placeholder="e.g. [0, 1]"
-                              style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #cbd5e1", fontSize: "12px", fontFamily: "monospace" }}
-                              value={tc.expectedOutput}
-                              onChange={(e) => {
-                                const updated = [...taskForm.testCases];
-                                updated[idx].expectedOutput = e.target.value;
-                                setTaskForm((p) => ({ ...p, testCases: updated }));
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
 
-                <div className="modal-footer" style={{ borderTop: "none", padding: "16px 0 0 0", justifyContent: "flex-start" }}>
-                  <button type="submit" className="btn-modal-submit" style={{ padding: "12px 24px", fontSize: "14px" }}>
-                    <Plus size={18} /> Assign Task to Batch
-                  </button>
-                </div>
-              </form>
+                  <div className="add-task-form-footer">
+                    <button type="submit" className="add-task-submit-btn">
+                      <Plus size={18} /> Assign Task to Batch
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 
@@ -1072,18 +1121,34 @@ export default function AdminBatches() {
     );
   }
 
+  const activeBatches = batches.filter(
+    (b) => b.status !== "Inactive" && b.status !== "inactive"
+  );
+  const inactiveBatches = batches.filter(
+    (b) => b.status === "Inactive" || b.status === "inactive"
+  );
+  const visibleBatches = activeStatusTab === "active" ? activeBatches : inactiveBatches;
+
   return (
     <div className="admin-batches-container">
-      <SectionHeader
-        icon={Code2}
-        title="Manage Batches"
-        description="Create cohorts, assign mentors, and generate unique batch join access codes."
-        action={
-          <Button onClick={handleOpenForm} className="create-batch-btn">
-            <Plus size={16} /> {showAddForm ? "Cancel" : "Create New Batch"}
-          </Button>
-        }
-      />
+      <div className="ui-section-header-AD">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <Code2 size={22} className="ui-section-title-icon" />
+              <span>Manage Batches</span>
+            </h2>
+            <p className="ui-section-desc">
+              Create cohorts, assign mentors, and generate unique batch join access codes.
+            </p>
+          </div>
+          <div className="ui-section-action">
+            <Button onClick={handleOpenForm} className="create-batch-btn">
+              <Plus size={16} /> {showAddForm ? "Cancel" : "Create New Batch"}
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {showAddForm && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false); }}>
@@ -1176,18 +1241,53 @@ export default function AdminBatches() {
         document.body
       )}
 
+      {/* Active vs Inactive Batch Status Tabs */}
+      <div className="batch-status-tabs-container">
+        <button
+          type="button"
+          className={`batch-status-tab-btn ${activeStatusTab === "active" ? "batch-status-tab-btn--active" : ""}`}
+          onClick={() => setActiveStatusTab("active")}
+        >
+          <CheckCircle2 size={16} />
+          <span>Active Batches</span>
+          <span className="batch-status-tab-count batch-status-tab-count--active">
+            {activeBatches.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          className={`batch-status-tab-btn ${activeStatusTab === "inactive" ? "batch-status-tab-btn--active" : ""}`}
+          onClick={() => setActiveStatusTab("inactive")}
+        >
+          <AlertTriangle size={16} />
+          <span>Inactive Batches</span>
+          <span className="batch-status-tab-count batch-status-tab-count--inactive">
+            {inactiveBatches.length}
+          </span>
+        </button>
+      </div>
+
       <div className="batches-grid">
-        {batches.length === 0 ? (
-          <div className="admin-empty-state-card">
+        {visibleBatches.length === 0 ? (
+          <div className="admin-empty-state-card" style={{ gridColumn: "1 / -1" }}>
             <Users size={36} className="admin-empty-state-icon" />
-            <p className="admin-empty-state-title">No batches created yet</p>
-            <p className="admin-empty-state-sub">Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.</p>
+            <p className="admin-empty-state-title">
+              {activeStatusTab === "active" ? "No active batches found" : "No inactive batches found"}
+            </p>
+            <p className="admin-empty-state-sub">
+              {activeStatusTab === "active"
+                ? 'Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.'
+                : 'Batches marked as inactive or deleted will appear here. You can reactivate them anytime.'}
+            </p>
           </div>
         ) : (
-          batches.map((b) => {
+          visibleBatches.map((b) => {
             const timerInfo = formatTimeRemaining(b.codeExpiresAt, now);
+            const isInactive = b.status === "Inactive" || b.status === "inactive";
+
             return (
-              <Card key={b.id} className="batch-card">
+              <Card key={b.id} className={`batch-card ${isInactive ? "batch-card--inactive" : ""}`}>
                 <CardHeader className="batch-card-header">
                   <div className="batch-icon-container">
                     <Users size={20} />
@@ -1195,8 +1295,8 @@ export default function AdminBatches() {
                   <div className="batch-header-text" style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                       <CardTitle className="batch-name">{b.name}</CardTitle>
-                      <Badge variant={(b.status === "Inactive" || b.status === "inactive") ? "destructive" : "primary"}>
-                        {(b.status === "Inactive" || b.status === "inactive") ? "Inactive" : "Active"}
+                      <Badge variant={isInactive ? "destructive" : "primary"}>
+                        {isInactive ? "Inactive" : "Active"}
                       </Badge>
                     </div>
                     <p className="batch-mentor">Mentor: {b.mentor}</p>
@@ -1212,70 +1312,72 @@ export default function AdminBatches() {
                     <span>{b.schedule}</span>
                   </div>
 
-                  {/* Join Code Box with Dynamic 5-Min Expiry */}
-                  <div className={`batch-join-code-section ${timerInfo.expired ? "batch-join-code-section--expired" : ""}`}>
-                    <div className="batch-join-code-header">
-                      <span className="batch-join-code-label">
-                        <Key size={13} /> Join Batch Code
-                      </span>
-                      <div className="batch-code-header-right">
-                        <span className={`batch-code-expiry-badge ${timerInfo.expired ? "batch-code-expiry-badge--expired" : ""}`}>
-                          {timerInfo.expired ? (
-                            <>
-                              <AlertTriangle size={11} /> Expired
-                            </>
-                          ) : (
-                            <>
-                              <Clock size={11} /> {timerInfo.text}
-                            </>
-                          )}
+                  {/* Join Code Box with Dynamic 5-Min Expiry (Active Batches Only) */}
+                  {!isInactive && (
+                    <div className={`batch-join-code-section ${timerInfo.expired ? "batch-join-code-section--expired" : ""}`}>
+                      <div className="batch-join-code-header">
+                        <span className="batch-join-code-label">
+                          <Key size={13} /> Join Batch Code
                         </span>
-                        <button
-                          type="button"
-                          className="batch-code-refresh-btn"
-                          onClick={() => handleRegenerateCode(b.id, b.name)}
-                          title="Generate new 5-min code"
-                        >
-                          <RefreshCw size={12} />
-                        </button>
+                        <div className="batch-code-header-right">
+                          <span className={`batch-code-expiry-badge ${timerInfo.expired ? "batch-code-expiry-badge--expired" : ""}`}>
+                            {timerInfo.expired ? (
+                              <>
+                                <AlertTriangle size={11} /> Expired
+                              </>
+                            ) : (
+                              <>
+                                <Clock size={11} /> {timerInfo.text}
+                              </>
+                            )}
+                          </span>
+                          <button
+                            type="button"
+                            className="batch-code-refresh-btn"
+                            onClick={() => handleRegenerateCode(b.id, b.name)}
+                            title="Generate new 5-min code"
+                          >
+                            <RefreshCw size={12} />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <div className="batch-join-code-display">
-                      <span className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}>
-                        {b.joinCode || "NO-CODE"}
-                      </span>
-                      {timerInfo.expired ? (
-                        <button
-                          type="button"
-                          className="batch-renew-code-btn"
-                          onClick={() => handleRegenerateCode(b.id, b.name)}
-                          title="Generate a new active 5-minute code"
-                        >
-                          <RefreshCw size={12} /> Renew Code
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
-                          onClick={() => handleCopyCode(b.id, b.joinCode, timerInfo.expired)}
-                          title="Copy Code to Clipboard"
-                        >
-                          {copiedId === b.id ? (
-                            <>
-                              <Check size={13} /> Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={13} /> Copy Code
-                            </>
-                          )}
-                        </button>
+                      <div className="batch-join-code-display">
+                        <span className={`batch-join-code-val ${timerInfo.expired ? "batch-join-code-val--expired" : ""}`}>
+                          {b.joinCode || "NO-CODE"}
+                        </span>
+                        {timerInfo.expired ? (
+                          <button
+                            type="button"
+                            className="batch-renew-code-btn"
+                            onClick={() => handleRegenerateCode(b.id, b.name)}
+                            title="Generate a new active 5-minute code"
+                          >
+                            <RefreshCw size={12} /> Renew Code
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`batch-copy-code-btn ${copiedId === b.id ? "batch-copy-code-btn--copied" : ""}`}
+                            onClick={() => handleCopyCode(b.id, b.joinCode, timerInfo.expired)}
+                            title="Copy Code to Clipboard"
+                          >
+                            {copiedId === b.id ? (
+                              <>
+                                <Check size={13} /> Copied!
+                              </>
+                            ) : (
+                              <>
+                                <Copy size={13} /> Copy Code
+                              </>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                      {timerInfo.expired && (
+                        <span className="batch-expired-hint">This code expired after 5 minutes. Click "Renew Code" to create a fresh access code.</span>
                       )}
                     </div>
-                    {timerInfo.expired && (
-                      <span className="batch-expired-hint">This code expired after 5 minutes. Click "Renew Code" to create a fresh access code.</span>
-                    )}
-                  </div>
+                  )}
 
                   <div className="batch-card-actions" style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                     <Button
@@ -1286,29 +1388,55 @@ export default function AdminBatches() {
                     >
                       Visit Batch <ArrowRight size={14} />
                     </Button>
-                    <button
-                      type="button"
-                      className="batch-delete-card-btn"
-                      onClick={() => handleDeleteBatch(b.id, b.name)}
-                      title="Delete Batch"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "6px",
-                        padding: "10px 14px",
-                        background: "#fff1f2",
-                        color: "#e11d48",
-                        border: "1px solid #fecdd3",
-                        borderRadius: "10px",
-                        fontWeight: 600,
-                        fontSize: "13px",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease"
-                      }}
-                    >
-                      <Trash2 size={16} /> Delete
-                    </button>
+                    
+                    {isInactive ? (
+                      <button
+                        type="button"
+                        onClick={() => handleReactivateBatch(b.id, b.name)}
+                        title="Reactivate Batch"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          padding: "10px 14px",
+                          background: "#ecfdf5",
+                          color: "#059669",
+                          border: "1px solid #a7f3d0",
+                          borderRadius: "10px",
+                          fontWeight: 600,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <RefreshCw size={14} /> Reactivate
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="batch-delete-card-btn"
+                        onClick={() => handleDeleteBatch(b.id, b.name)}
+                        title="Move to Inactive"
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "6px",
+                          padding: "10px 14px",
+                          background: "#fff1f2",
+                          color: "#e11d48",
+                          border: "1px solid #fecdd3",
+                          borderRadius: "10px",
+                          fontWeight: 600,
+                          fontSize: "13px",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                      >
+                        <Trash2 size={16} /> Delete
+                      </button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

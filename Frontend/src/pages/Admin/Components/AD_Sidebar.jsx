@@ -45,14 +45,14 @@ const primaryNavItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Manage Users", url: "/admin/users", icon: UserCog },
   { title: "Batches", url: "/admin/batches", icon: Code2 },
-  { title: "Assign Trainer", url: "/admin/assign-trainer", icon: UserPlus },
-  { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },
-  { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
   { title: "Coding Practice", url: "/admin/practice", icon: Terminal },
+  { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
   { title: "Student Progress", url: "/admin/progress", icon: LineChart },
+  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
+  { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck },
+  { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
   { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle },
-  // { title: "Mock Drives", url: "/admin/mock-drives", icon: Briefcase },
 ];
 
 const footerNavItems = [

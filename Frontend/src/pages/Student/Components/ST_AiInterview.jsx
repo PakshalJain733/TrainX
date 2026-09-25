@@ -14,6 +14,7 @@ import {
   Play,
 } from "lucide-react";
 import "../Styles/ST_AiInterview.css";
+import { apiFetch } from "../../../utils/api";
 
 const questionsList = [
   {
@@ -58,29 +59,6 @@ const questionsList = [
   },
 ];
 
-const pastInterviews = [
-  {
-    id: 1,
-    role: "Python Backend Intern",
-    date: "10 Aug 2026",
-    score: 72,
-    technical: 68,
-    problemSolving: 71,
-    communication: 76,
-    tags: ["Database indexing", "API versioning"],
-  },
-  {
-    id: 2,
-    role: "Software Trainee",
-    date: "27 Jul 2026",
-    score: 64,
-    technical: 58,
-    problemSolving: 63,
-    communication: 70,
-    tags: ["OOP depth", "Time complexity"],
-  },
-];
-
 export default function AIInterview() {
   const [hasStarted, setHasStarted] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -96,6 +74,20 @@ export default function AIInterview() {
   const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [isInterviewFinished, setIsInterviewFinished] = useState(false);
   const [overallScorecard, setOverallScorecard] = useState(null);
+  const [pastInterviewsList, setPastInterviewsList] = useState([]);
+
+  useEffect(() => {
+    // Fetch user past interview evaluations
+    apiFetch("/interviews/history")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setPastInterviewsList(res.data);
+        } else {
+          setPastInterviewsList([]);
+        }
+      })
+      .catch(() => setPastInterviewsList([]));
+  }, []);
 
   const currentQ = questionsList[currentIdx];
   const progressPercent = ((currentIdx + 1) / questionsList.length) * 100;
@@ -498,40 +490,48 @@ export default function AIInterview() {
         </p>
 
         <div className="past-interviews-grid">
-          {pastInterviews.map((item) => (
-            <div key={item.id} className="past-interview-item">
-              <div className="past-interview-top">
-                <div>
-                  <h4 className="past-interview-title">{item.role}</h4>
-                  <p className="past-interview-date">{item.date}</p>
-                </div>
-                <span className="past-interview-score-pill">{item.score}%</span>
-              </div>
-
-              <div className="past-interview-scores-row">
-                <div className="past-score-box">
-                  <div className="past-score-val">{item.technical}</div>
-                  <div className="past-score-label">Technical</div>
-                </div>
-                <div className="past-score-box">
-                  <div className="past-score-val">{item.problemSolving}</div>
-                  <div className="past-score-label">Problem solving</div>
-                </div>
-                <div className="past-score-box">
-                  <div className="past-score-val">{item.communication}</div>
-                  <div className="past-score-label">Communication</div>
-                </div>
-              </div>
-
-              <div className="past-interview-tags">
-                {item.tags.map((tag) => (
-                  <span key={tag} className="past-tag-pill">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+          {pastInterviewsList.length === 0 ? (
+            <div className="past-interviews-empty">
+              No past AI interview evaluations found.
             </div>
-          ))}
+          ) : (
+            pastInterviewsList.map((item, idx) => (
+              <div key={item.id || idx} className="past-interview-item">
+                <div className="past-interview-top">
+                  <div>
+                    <h4 className="past-interview-title">{item.role || item.title || "AI Mock Interview"}</h4>
+                    <p className="past-interview-date">{item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Recent")}</p>
+                  </div>
+                  <span className="past-interview-score-pill">{item.score || item.overallScore || 0}%</span>
+                </div>
+
+                <div className="past-interview-scores-row">
+                  <div className="past-score-box">
+                    <div className="past-score-val">{item.technical || item.technicalScore || 0}</div>
+                    <div className="past-score-label">Technical</div>
+                  </div>
+                  <div className="past-score-box">
+                    <div className="past-score-val">{item.problemSolving || item.problemSolvingScore || 0}</div>
+                    <div className="past-score-label">Problem solving</div>
+                  </div>
+                  <div className="past-score-box">
+                    <div className="past-score-val">{item.communication || item.communicationScore || 0}</div>
+                    <div className="past-score-label">Communication</div>
+                  </div>
+                </div>
+
+                {Array.isArray(item.tags) && item.tags.length > 0 && (
+                  <div className="past-interview-tags">
+                    {item.tags.map((tag) => (
+                      <span key={tag} className="past-tag-pill">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

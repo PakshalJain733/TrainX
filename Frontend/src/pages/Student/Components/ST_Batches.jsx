@@ -110,7 +110,11 @@ export default function Batches() {
       const res = await fetch(`${API_BASE}/batches/my-batches`, { headers: getAuthHeaders() });
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        const mapped = data.data.map(mapApiBatch);
+        const activeOnly = data.data.filter(b => {
+          const st = (b.status || "").toLowerCase();
+          return st !== "inactive" && st !== "deleted";
+        });
+        const mapped = activeOnly.map(mapApiBatch);
         setEnrolledBatches(mapped);
       } else {
         setEnrolledBatches([]);

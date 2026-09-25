@@ -5,7 +5,6 @@ import {
   Eye, HelpCircle, BookOpen, RefreshCw, Users, Trophy, BarChart2,
   FileCheck2, ChevronLeft, Zap, ChevronDown, Check,
 } from "lucide-react";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/MN_Quizzes.css";
 
@@ -382,12 +381,22 @@ export default function MentorQuizzes() {
 
   return (
     <div className="admin-quizzes-container">
-      <SectionHeader
-        icon={GraduationCap}
-        title="Quiz Management"
-        description="Create, manage, and track quiz assessments. View real-time student results."
-        action={<button onClick={() => setShowForm(!showForm)} className="add-quiz-btn"><Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}</button>}
-      />
+      <div className="ui-section-header-MN">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <GraduationCap size={22} className="ui-section-title-icon" />
+              <span>Quiz Management</span>
+            </h2>
+            <p className="ui-section-desc">
+              Create, manage, and track quiz assessments. View real-time student results.
+            </p>
+          </div>
+          <div className="ui-section-action">
+            <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn"><Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}</button>
+          </div>
+        </div>
+      </div>
 
       {/* Create Quiz Modal */}
       {showForm && createPortal(

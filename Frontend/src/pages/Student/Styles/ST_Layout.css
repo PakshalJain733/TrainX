@@ -13,6 +13,11 @@
   width: 100%;
 }
 
+.student-page-inner .ui-section-header-ST,
+.ui-section-header-ST {
+  margin-bottom: 0;
+}
+
 .student-page-inner .ui-section-desc {
   margin-top: 3px;
   line-height: 1.45;
@@ -2016,4 +2021,13 @@ button:active:not(:disabled),
     width: 100%;
     padding: 11px 16px;
   }
+}
+
+.ui-section-main-ST {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom:5px;
 }

@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, Bell, Trash2, Megaphone, CheckCircle2, ShieldAlert, Users, Calendar, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Broadcast.css";
@@ -196,11 +195,19 @@ export default function AdminBroadcast() {
 
   return (
     <div className="admin-broadcast-container">
-      <SectionHeader
-        icon={Megaphone}
-        title="Broadcast Announcement Center"
-        description="Issue real-time announcements, urgent test notices, and placement drive alerts to all student cohorts and mentors."
-      />
+      <div className="ui-section-header-AD">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <Megaphone size={22} className="ui-section-title-icon" />
+              <span>Broadcast Announcement Center</span>
+            </h2>
+            <p className="ui-section-desc">
+              Issue real-time announcements, urgent test notices, and placement drive alerts to all student cohorts and mentors.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {successMsg && (
         <div className="broadcast-alert-success">

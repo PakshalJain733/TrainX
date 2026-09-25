@@ -3,7 +3,7 @@ import "./ui.css";
 
 export function SectionHeader({ title, description, action, icon: Icon, className = "" }) {
   return (
-    <div className={`ui-section-header ${className}`}>
+    <div className={className}>
       <div className="ui-section-main">
         <div>
           <h2 className="ui-section-title">

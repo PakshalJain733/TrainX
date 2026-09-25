@@ -690,56 +690,78 @@ export default function AcademicQuiz() {
         </button>
       </div>
 
-      <div className="quiz-grid">
-        {displayedQuizzes.map((quiz) => (
-          <Card key={quiz.id} className={`quiz-card ${quiz.status === "Upcoming" ? "quiz-card-highlight" : ""}`}>
-            <CardContent className="quiz-card-content">
-              <div className="quiz-card-header">
-                <Badge variant={quiz.status === "Completed" ? "success" : "primary"}>
-                  {quiz.status}
-                </Badge>
-                {quiz.status === "Completed" && (
-                  <div className="quiz-score-badge">
-                    <Trophy size={15} style={{ color: '#854d0e', shrink: 0 }} />
-                    <span>{quiz.score && quiz.score.startsWith("Score:") ? quiz.score : `Score: ${quiz.score || "Completed"}`}</span>
-                  </div>
-                )}
-              </div>
+      {displayedQuizzes.length === 0 ? (
+        <div className="quiz-empty-card">
+          <div className="quiz-empty-icon-wrap">
+            <GraduationCap size={36} style={{ color: "#4f46e5" }} />
+          </div>
+          <h3 className="quiz-empty-title">
+            {activeTab === "Upcoming"
+              ? "No Upcoming Quizzes"
+              : activeTab === "Completed"
+              ? "No Completed Quizzes Yet"
+              : "No Academic or Practice Quizzes"}
+          </h3>
+          <p className="quiz-empty-desc">
+            {activeTab === "Upcoming"
+              ? "You're all caught up! No scheduled quizzes are pending for your batch."
+              : activeTab === "Completed"
+              ? "Quizzes you attempt and complete will appear here with detailed performance reviews."
+              : "No quizzes have been published for your cohort yet. Check back soon for new assessments."}
+          </p>
+        </div>
+      ) : (
+        <div className="quiz-grid">
+          {displayedQuizzes.map((quiz) => (
+            <Card key={quiz.id} className={`quiz-card ${quiz.status === "Upcoming" ? "quiz-card-highlight" : ""}`}>
+              <CardContent className="quiz-card-content">
+                <div className="quiz-card-header">
+                  <Badge variant={quiz.status === "Completed" ? "success" : "primary"}>
+                    {quiz.status}
+                  </Badge>
+                  {quiz.status === "Completed" && (
+                    <div className="quiz-score-badge">
+                      <Trophy size={15} style={{ color: '#854d0e' }} />
+                      <span>{quiz.score && quiz.score.startsWith("Score:") ? quiz.score : `Score: ${quiz.score || "Completed"}`}</span>
+                    </div>
+                  )}
+                </div>
 
-              <div className="quiz-main-info">
-                <h3 className="quiz-title">{quiz.title}</h3>
-                <p className="quiz-subject">{quiz.subject} • {quiz.topic}</p>
-              </div>
+                <div className="quiz-main-info">
+                  <h3 className="quiz-title">{quiz.title}</h3>
+                  <p className="quiz-subject">{quiz.subject} • {quiz.topic}</p>
+                </div>
 
-              <div className="quiz-meta-grid">
-                <div className="quiz-meta-item"><CalendarDays size={14} className="quiz-meta-icon" /><span>{quiz.date}</span></div>
-                <div className="quiz-meta-item"><Timer size={14} className="quiz-meta-icon" /><span>{quiz.duration}</span></div>
-                <div className="quiz-meta-item"><Target size={14} className="quiz-meta-icon" /><span>{quiz.marks}</span></div>
-                <div className="quiz-meta-item"><AlertCircle size={14} className="quiz-meta-icon" /><span>{quiz.questions} Qs</span></div>
-              </div>
+                <div className="quiz-meta-grid">
+                  <div className="quiz-meta-item"><CalendarDays size={14} className="quiz-meta-icon" /><span>{quiz.date}</span></div>
+                  <div className="quiz-meta-item"><Timer size={14} className="quiz-meta-icon" /><span>{quiz.duration}</span></div>
+                  <div className="quiz-meta-item"><Target size={14} className="quiz-meta-icon" /><span>{quiz.marks}</span></div>
+                  <div className="quiz-meta-item"><AlertCircle size={14} className="quiz-meta-icon" /><span>{quiz.questions} Qs</span></div>
+                </div>
 
-              <div className="quiz-card-footer">
-                {quiz.status === "Upcoming" ? (
-                  <Button
-                    className="w-full quiz-start-btn"
-                    onClick={() => { setActiveQuiz(quiz); setQuizMode("take"); }}
-                  >
-                    <PlayCircle size={16} /> Start Quiz
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full quiz-review-btn"
-                    onClick={() => { setActiveQuiz(quiz); setQuizMode("review"); }}
-                  >
-                    <CheckCircle2 size={16} /> Review Answers
-``                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <div className="quiz-card-footer">
+                  {quiz.status === "Upcoming" ? (
+                    <Button
+                      className="w-full quiz-start-btn"
+                      onClick={() => { setActiveQuiz(quiz); setQuizMode("take"); }}
+                    >
+                      <PlayCircle size={16} /> Start Quiz
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full quiz-review-btn"
+                      onClick={() => { setActiveQuiz(quiz); setQuizMode("review"); }}
+                    >
+                      <CheckCircle2 size={16} /> Review Answers
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

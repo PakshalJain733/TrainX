@@ -8,7 +8,23 @@ export const getApiBaseUrl = () => {
 
 export async function apiFetch(endpoint, options = {}) {
   try {
-    const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken");
+    let token =
+      sessionStorage.getItem("token") ||
+      sessionStorage.getItem("authToken") ||
+      sessionStorage.getItem("auth_token") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("auth_token");
+
+    if (!token) {
+      try {
+        const uSession = JSON.parse(
+          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        );
+        token = uSession.token || uSession.authToken || uSession.auth_token;
+      } catch (e) {}
+    }
+
     const headers = {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -35,3 +51,4 @@ export async function apiFetch(endpoint, options = {}) {
 }
 
 export default apiFetch;
+

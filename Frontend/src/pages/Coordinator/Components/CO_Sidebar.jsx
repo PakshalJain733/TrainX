@@ -18,6 +18,8 @@ import {
   AlertTriangle,
   Megaphone,
   Trophy,
+  Code2,
+  UserCog,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
@@ -45,15 +47,17 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/coordinator", icon: LayoutDashboard, exact: true },
   { title: "Students", url: "/coordinator/students", icon: Users },
+  { title: "Batches", url: "/coordinator/batches", icon: Code2 },
+  { title: "Mentors", url: "/coordinator/mentors", icon: UserCog },
   { title: "Performances", url: "/coordinator/performances", icon: LineChart },
   { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle },
   { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
   { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
   { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
-  { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone },
 ];
 
 const footerNavItems = [
+  { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone },
   { title: "Support Ticket", url: "/coordinator/help", icon: HelpCircle },
 ];
 

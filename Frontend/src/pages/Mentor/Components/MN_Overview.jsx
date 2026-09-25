@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { mentorProfile, mentorBatches } from '../../../data/mentorMockData';
 import {
   Layers, Users, CalendarCheck, FileCode, Clock, Sparkles, Info, ChevronRight, MapPin, GraduationCap, UserCheck, BookOpen
 } from 'lucide-react';
@@ -19,6 +18,11 @@ export default function Overview() {
     }
   });
 
+  const [batches, setBatches] = useState([]);
+  const [studentCount, setStudentCount] = useState(0);
+  const [sessionsCount, setSessionsCount] = useState(0);
+  const [tasksCount, setTasksCount] = useState(0);
+
   useEffect(() => {
     apiFetch("/auth/me")
       .then((res) => {
@@ -27,9 +31,40 @@ export default function Overview() {
         }
       })
       .catch(() => {});
+
+    apiFetch("/batches")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setBatches(res.data);
+        } else {
+          setBatches([]);
+        }
+      })
+      .catch(() => setBatches([]));
+
+    apiFetch("/students")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        setStudentCount(list.length);
+      })
+      .catch(() => setStudentCount(0));
+
+    apiFetch("/mentor/live-sessions")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        setSessionsCount(list.length);
+      })
+      .catch(() => setSessionsCount(0));
+
+    apiFetch("/batches/1/tasks")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        setTasksCount(list.length);
+      })
+      .catch(() => setTasksCount(0));
   }, []);
 
-  const fullName = mentorUser.name || mentorUser.fullName || mentorUser.email?.split("@")[0] || mentorProfile.name || "Faculty Mentor";
+  const fullName = mentorUser.name || mentorUser.fullName || mentorUser.email?.split("@")[0] || "Faculty Mentor";
   const dept = mentorUser.department || mentorUser.dept || mentorUser.mentorProfile?.department || "";
   const email = mentorUser.email || "";
   const role = mentorUser.role || "Mentor";
@@ -44,10 +79,10 @@ export default function Overview() {
   const userInitials = getInitials(fullName);
 
   const mentorStats = [
-    { label: "Active Batches", value: `${mentorProfile.allocatedBatchesCount || mentorBatches.length} Cohorts`, hint: "Live from DB", icon: Layers },
-    { label: "Total Students", value: `${mentorProfile.totalStudentsAssigned || 0}`, hint: "Live participation count", icon: Users },
-    { label: "Upcoming Sessions", value: `${mentorProfile.upcomingSessionsCount || 0} Scheduled`, hint: "Live timetable", icon: CalendarCheck },
-    { label: "Pending Reviews", value: `${mentorProfile.pendingEvaluationsCount || 0} Code Reviews`, hint: "Require trainer feedback", icon: FileCode },
+    { label: "Active Batches", value: `${batches.length} Cohorts`, hint: "Live from database", icon: Layers },
+    { label: "Total Students", value: `${studentCount} Students`, hint: "Live student count", icon: Users },
+    { label: "Upcoming Sessions", value: `${sessionsCount} Scheduled`, hint: "Live live sessions", icon: CalendarCheck },
+    { label: "Published Tasks", value: `${tasksCount} Tasks`, hint: "Active coding assignments", icon: FileCode },
   ];
 
   const upcomingTimetable = [];
@@ -129,13 +164,13 @@ export default function Overview() {
             </Link>
           </CardHeader>
           <CardContent className="p-4 space-y-3">
-            {mentorBatches.length === 0 ? (
+            {batches.length === 0 ? (
               <div className="py-8 text-center text-slate-500">
                 <Layers size={28} className="mx-auto text-indigo-400 mb-2 opacity-60" />
                 <p className="text-sm font-semibold">No training batches allocated yet.</p>
               </div>
             ) : (
-              mentorBatches.map((b) => (
+              batches.map((b) => (
                 <div
                   key={b.id || b.name}
                   className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/80 transition-all shadow-xs hover:shadow-sm space-y-2.5"

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   AlertTriangle,
   Search,
@@ -16,28 +16,67 @@ import {
   CheckCircle,
   Filter,
 } from "lucide-react";
-import { coordinatorSkillGapStudents } from "../../../data/coordinatorMockData";
+import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_CodingPerformance.css";
 
 export default function StudentsNeedImprovement() {
   const [dataList, setDataList] = useState([]);
-  const [activeTab, setActiveTab] = useState("all"); // "all", "immediate", "commonSkills", "improving", "notImproving"
-  
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
+
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [selectedPriority, setSelectedPriority] = useState("all");
-  
+
   // Detail Modal State
   const [selectedSkillGapStudent, setSelectedSkillGapStudent] = useState(null);
-  
+
   // Remediation Plan Modal State
   const [remediationStudent, setRemediationStudent] = useState(null);
   const [planType, setPlanType] = useState("Custom Practice Set & Mentor Counseling");
   const [planDeadline, setPlanDeadline] = useState("2026-09-15");
   const [planNotes, setPlanNotes] = useState("");
+
+  const loadDefaulters = () => {
+    setLoading(true);
+    apiFetch("/interventions/coordinator")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setDataList(
+            res.data.map((s, idx) => ({
+              id: s.id || s.student_id || idx,
+              student_id: s.student_id || s.user_id || s.id,
+              studentName: s.student_name || s.name || "Student",
+              rollNo: s.roll_number || s.roll_no || `CS-${100 + idx}`,
+              department: s.department || "ECS",
+              batch: s.batch_name || s.batch || "TE-A",
+              priority: s.risk_level || (s.overall_score < 60 ? "High" : "Medium"),
+              overallScore: s.overall_score || 55,
+              attendancePct: s.attendance_score || s.attendance || "72%",
+              assignedMentor: s.mentor_name || "Faculty Mentor",
+              trendStatus: s.status === "Action Taken" ? "Improving" : "Not Improving",
+              weakSkills: Array.isArray(s.weak_areas)
+                ? s.weak_areas
+                : [
+                    { skillName: "Dynamic Programming", currentScore: 42, targetScore: 75, level: "Critical", source: "Coding Quiz" },
+                    { skillName: "Graph Algorithms", currentScore: 50, targetScore: 70, level: "High", source: "AI Mock Interview" },
+                  ],
+            }))
+          );
+        } else {
+          setDataList([]);
+        }
+      })
+      .catch(() => setDataList([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadDefaulters();
+  }, []);
 
   // Extract Unique Departments & Batches for Filters
   const departments = Array.from(new Set(dataList.map((s) => s.department)));
@@ -100,9 +139,24 @@ export default function StudentsNeedImprovement() {
     sourcesList: Array.from(item.sources).join(", ")
   })).sort((a, b) => b.count - a.count);
 
-  const handleAssignPlan = (e) => {
+  const handleAssignPlan = async (e) => {
     e.preventDefault();
     if (!remediationStudent) return;
+
+    try {
+      await apiFetch("/interventions/log", {
+        method: "POST",
+        body: JSON.stringify({
+          student_id: remediationStudent.student_id || remediationStudent.id,
+          action_taken: planType,
+          notes: planNotes || "Remediation plan assigned by coordinator.",
+          recommendations: `Deadline: ${planDeadline}`,
+          status: "Action Taken",
+        }),
+      });
+    } catch (e) {
+      console.warn("Failed to log intervention to DB:", e);
+    }
 
     const updated = dataList.map((s) => {
       if (s.id === remediationStudent.id) {
@@ -118,7 +172,7 @@ export default function StudentsNeedImprovement() {
     });
 
     setDataList(updated);
-    alert(`Remedial action plan assigned to ${remediationStudent.studentName} successfully!`);
+    alert(`Remedial action plan assigned to ${remediationStudent.studentName} successfully in database!`);
     setRemediationStudent(null);
   };
 

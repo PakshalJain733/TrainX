@@ -9,6 +9,8 @@ import {
   getBatchSummary,
   getDashboardSummary,
   markSelfAttendanceByCode,
+  getLeaveRequests,
+  updateLeaveRequestStatus,
 } from '../controllers/attendance.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -21,6 +23,10 @@ router.use(authenticateToken);
 
 // 0. Student mark self attendance present via QR scan or code
 router.post('/mark', markSelfAttendanceByCode);
+
+// Leave Requests Routes
+router.get('/leave-requests', getLeaveRequests);
+router.put('/leave-requests/:id/status', updateLeaveRequestStatus);
 
 // 1. Logged in student personal summary & history
 router.get('/summary', getMyAttendanceSummary);

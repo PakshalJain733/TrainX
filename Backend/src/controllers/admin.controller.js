@@ -1,4 +1,5 @@
 import { sendSuccess, sendError } from '../utils/response.js';
+import { query } from '../config/db.js';
 import {
   getAllUsersModel,
   createUser,
@@ -426,3 +427,72 @@ export const getAdminPerformance = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Assign Faculty Mentor to Students - Database Persistence
+ */
+export const assignMentorToStudents = async (req, res, next) => {
+  try {
+    const { mentorName, mentorEmail, studentIds } = req.body;
+    if (!mentorName) {
+      return sendError(res, 'Faculty Mentor Name is required', 400);
+    }
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS mentor_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_name VARCHAR(100) NOT NULL,
+        mentor_email VARCHAR(150) NULL,
+        student_id VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_mentor_student (mentor_name, student_id)
+      )
+    `);
+
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      for (const sid of studentIds) {
+        await query(
+          `INSERT INTO mentor_assignments (mentor_name, mentor_email, student_id)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE mentor_name = VALUES(mentor_name), mentor_email = VALUES(mentor_email)`,
+          [mentorName, mentorEmail || null, String(sid)]
+        );
+        try {
+          await query(`UPDATE students SET mentor_name = ? WHERE user_id = ? OR id = ?`, [mentorName, sid, sid]);
+        } catch (e) {}
+      }
+    }
+
+    return sendSuccess(res, `Successfully mapped ${studentIds?.length || 0} mentees to mentor ${mentorName} in database`, {
+      mentorName,
+      assignedCount: studentIds?.length || 0
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getMentorAssignments = async (req, res, next) => {
+  try {
+    let assignments = [];
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS mentor_assignments (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          mentor_name VARCHAR(100) NOT NULL,
+          mentor_email VARCHAR(150) NULL,
+          student_id VARCHAR(100) NOT NULL,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_mentor_student (mentor_name, student_id)
+        )
+      `);
+      assignments = await query(`SELECT * FROM mentor_assignments ORDER BY id DESC`);
+    } catch (e) {
+      console.warn('[DB getMentorAssignments fallback]', e.message);
+    }
+    return sendSuccess(res, 'Mentor assignments retrieved from database', assignments || []);
+  } catch (error) {
+    next(error);
+  }
+};
+

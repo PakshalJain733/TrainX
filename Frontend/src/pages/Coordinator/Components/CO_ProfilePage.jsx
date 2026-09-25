@@ -19,7 +19,6 @@ import {
   Loader2,
   X
 } from "lucide-react";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -225,11 +224,18 @@ export default function CoordinatorProfilePage() {
 
   return (
     <div className="student-page-inner profile-container">
-      <SectionHeader
-        eyebrow="Department Operations"
-        title="Coordinator Profile & Settings"
-        description="Manage your coordinator dossier, assigned department scope, and notification preferences."
-      />
+      <div className="ui-section-header-CO">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <span>Coordinator Profile & Settings</span>
+            </h2>
+            <p className="ui-section-desc">
+              Manage your coordinator dossier, assigned department scope, and notification preferences.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {saved && (
         <div className="profile-alert-success">

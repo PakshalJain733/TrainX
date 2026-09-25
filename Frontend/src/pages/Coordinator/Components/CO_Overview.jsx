@@ -30,37 +30,9 @@ export default function CoordinatorOverview() {
   const [students, setStudents] = useState([]);
   const [studentCount, setStudentCount] = useState(0);
   const [mentorCount, setMentorCount] = useState(0);
-  const [liveSessions, setLiveSessions] = useState([
-    {
-      id: 1,
-      trainerName: "Anubhav Shukla",
-      topic: "Java Masterclass: Core to Advanced",
-      topicDetail: "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
-      batch: "CSE 2026 Cohort",
-      time: "10:00 AM - 05:00 PM",
-      status: "Live",
-    },
-    {
-      id: 2,
-      trainerName: "Priya Sharma",
-      topic: "React Intensive Bootcamp",
-      topicDetail: "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
-      batch: "Fullstack Specialization",
-      time: "09:30 AM - 04:30 PM",
-      status: "Live",
-    },
-    {
-      id: 3,
-      trainerName: "Rahul Verma",
-      topic: "DSA Marathon: Trees & Graphs",
-      topicDetail: "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
-      batch: "CSE 2025 Alpha",
-      time: "11:00 AM - 06:00 PM",
-      status: "Live",
-    }
-  ]);
+  const [liveSessions, setLiveSessions] = useState([]);
   const [highRiskStudents, setHighRiskStudents] = useState([]);
-  const [attendanceRate, setAttendanceRate] = useState("85%");
+  const [attendanceRate, setAttendanceRate] = useState("0%");
 
   useEffect(() => {
     // 1. Fetch Logged-in User Profile from MySQL DB
@@ -72,16 +44,32 @@ export default function CoordinatorOverview() {
       })
       .catch(() => {});
 
-    // 2. Fetch Active Batches from MySQL DB
+    // 2. Fetch Active Batches & Admin-Updated Topics from MySQL DB
     apiFetch("/batches")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setLiveBatches(res.data);
-        } else if (Array.isArray(res)) {
-          setLiveBatches(res);
+        const batchList = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(batchList)) {
+          setLiveBatches(batchList);
+
+          // Map active DB batches with topics & trainers updated by Admin
+          const activeBatches = batchList.filter((b) => String(b.status).toLowerCase() !== "inactive");
+          if (activeBatches.length > 0) {
+            const mappedSessions = activeBatches.map((b) => ({
+              id: b.id,
+              trainerName: b.trainer || b.mentorName || b.mentor_name || "Department Faculty",
+              topic: b.topic || `${b.name} - Core Module`,
+              topicDetail: b.description || "Active training session topic assigned and managed by Admin.",
+              batch: b.name || "CSE Batch",
+              time: b.schedule || "10:00 AM - 05:00 PM",
+              status: b.status === "Active" || !b.status ? "Live" : b.status,
+            }));
+            setLiveSessions(mappedSessions);
+          } else {
+            setLiveSessions([]);
+          }
         }
       })
-      .catch(() => {});
+      .catch(() => setLiveSessions([]));
 
     // 3. Fetch Enrolled Department Students from DB & compute defaulters / avg attendance
     apiFetch("/coordinator/students")
@@ -94,10 +82,12 @@ export default function CoordinatorOverview() {
           // Calculate department average attendance from DB records
           if (studentList.length > 0) {
             const totalAtt = studentList.reduce((sum, s) => {
-              const val = Number(s.attendance ?? s.attendance_rate ?? s.studentProfile?.attendance ?? 85);
-              return sum + (isNaN(val) ? 85 : val);
+              const val = Number(s.attendance ?? s.attendance_rate ?? s.studentProfile?.attendance ?? 0);
+              return sum + (isNaN(val) ? 0 : val);
             }, 0);
             setAttendanceRate(`${Math.round(totalAtt / studentList.length)}%`);
+          } else {
+            setAttendanceRate("0%");
           }
 
           // Filter high risk students from DB records (<75% attendance or high risk status)
@@ -109,7 +99,10 @@ export default function CoordinatorOverview() {
           setHighRiskStudents(flagged);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setStudentCount(0);
+        setAttendanceRate("0%");
+      });
 
     // 4. Fetch Department Assigned Mentors from MySQL DB
     apiFetch("/coordinator/mentors")
@@ -123,46 +116,18 @@ export default function CoordinatorOverview() {
             const list = res?.data || (Array.isArray(res) ? res : []);
             setMentorCount(list.length);
           })
-          .catch(() => {});
+          .catch(() => setMentorCount(0));
       });
-
-    // 5. Fetch Live Sessions from LocalStorage / MySQL DB
-    const stored = localStorage.getItem('coordinatorLiveSessions');
-    if (stored) {
-      try {
-        setLiveSessions(JSON.parse(stored));
-      } catch (e) {}
-    } else {
-      apiFetch("/mentor/live-sessions")
-        .then((res) => {
-          const sessionList = res?.data || (Array.isArray(res) ? res : []);
-          if (Array.isArray(sessionList) && sessionList.length > 0) {
-            const mapped = sessionList.map((s) => ({
-              id: s.id,
-              trainerName: s.mentorName || s.trainerName || s.mentor_name || "Department Trainer",
-              topic: s.topic || s.title || s.subject || "Live Training Class",
-              batch: s.batch || s.batch_name || "CSE Cohort",
-              time: s.time || "10:00 AM - 11:30 AM",
-              status: s.status || "Live",
-            }));
-            setLiveSessions(mapped);
-          }
-        })
-        .catch(() => {});
-    }
   }, []);
 
   useEffect(() => {
-    const fetchSessions = () => {
-      const stored = localStorage.getItem('coordinatorLiveSessions');
-      if (stored) {
-        try {
-          setLiveSessions(JSON.parse(stored));
-        } catch (e) {}
-      }
-    };
-    window.addEventListener('storage', fetchSessions);
-    return () => window.removeEventListener('storage', fetchSessions);
+    apiFetch("/live-sessions")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          setLiveSessions(res.data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
@@ -180,10 +145,10 @@ export default function CoordinatorOverview() {
   const userInitials = getInitials(fullName);
 
   const statsList = [
-    { label: "Enrolled Students", value: studentCount ? `${studentCount}` : "480", hint: `Active in ${dept}`, icon: GraduationCap },
-    { label: "Managed Batches", value: liveBatches.length ? `${liveBatches.length} Batches` : "6 Batches", hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: mentorCount ? `${mentorCount} Trainers` : "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
-    { label: "Attendance Rate", value: attendanceRate || "88%", hint: "Department average", icon: LineChart },
+    { label: "Enrolled Students", value: `${studentCount}`, hint: `Active in ${dept}`, icon: GraduationCap },
+    { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
+    { label: "Faculty & Mentors", value: `${mentorCount} Trainers`, hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Attendance Rate", value: attendanceRate || "0%", hint: "Department average", icon: LineChart },
   ];
 
   return (

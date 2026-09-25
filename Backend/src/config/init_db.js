@@ -503,18 +503,30 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS roadmap_items (
         id INT AUTO_INCREMENT PRIMARY KEY,
         roadmap_id INT NULL,
+        sequence_order INT DEFAULT 1,
         title VARCHAR(255) NOT NULL,
+        description TEXT NULL,
         status VARCHAR(50) DEFAULT 'locked',
-        progress INT DEFAULT 0
-      )
+        progress INT DEFAULT 0,
+        tags JSON NULL,
+        quizzes INT DEFAULT 0,
+        exercises INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (roadmap_id) REFERENCES roadmaps(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN sequence_order INT DEFAULT 1`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN description TEXT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN tags JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN quizzes INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN exercises INT DEFAULT 0`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN goal_name VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN student_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN target_role VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN career_track VARCHAR(255) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE roadmaps ADD COLUMN sequence_order INT DEFAULT 1`); } catch (_) { }
     try { await conn.query(`ALTER TABLE defaulters ADD COLUMN student_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE defaulters ADD COLUMN user_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE defaulters ADD COLUMN attendance_score VARCHAR(50) NULL`); } catch (_) { }
@@ -601,7 +613,182 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 18. Ensure Super Admin Account
+    // 26. Ensure Assessment Answers Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS assessment_answers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        attempt_id INT NOT NULL,
+        question_id INT NOT NULL,
+        selected_option VARCHAR(255) NULL,
+        is_correct TINYINT(1) DEFAULT 0,
+        marks_awarded DECIMAL(5,2) DEFAULT 0.00,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (attempt_id) REFERENCES assessment_attempts(id) ON DELETE CASCADE,
+        FOREIGN KEY (question_id) REFERENCES assessment_questions(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 27. Ensure Student Batches Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS student_batches (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_batch (user_id, batch_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 28. Ensure Batch Tasks Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS batch_tasks (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        batch_id INT NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        topic VARCHAR(100) DEFAULT 'General Assignment',
+        difficulty VARCHAR(50) DEFAULT 'Medium',
+        points INT DEFAULT 100,
+        deadline VARCHAR(100) NULL,
+        description TEXT NULL,
+        test_cases TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 29. Ensure Task Submissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS task_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        task_id INT NOT NULL,
+        user_id INT NOT NULL,
+        batch_id INT NULL,
+        code_submission TEXT NULL,
+        status VARCHAR(50) DEFAULT 'submitted',
+        marks_obtained INT DEFAULT 0,
+        feedback TEXT NULL,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (task_id) REFERENCES batch_tasks(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 30. Ensure Student Quiz Completions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS student_quiz_completions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        quiz_id INT NOT NULL DEFAULT 0,
+        quiz_title VARCHAR(255) DEFAULT '',
+        completed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_user_quiz (user_id, quiz_id),
+        INDEX idx_user_id (user_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 31. Ensure Mentor Assignments Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS mentor_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_name VARCHAR(100) NOT NULL,
+        mentor_email VARCHAR(150) NULL,
+        student_id VARCHAR(100) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_mentor_student (mentor_name, student_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 32. Ensure Interventions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS interventions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_id INT NOT NULL,
+        user_id INT NOT NULL,
+        mentor_id INT DEFAULT 1,
+        mentor_name VARCHAR(150) DEFAULT 'Assigned Mentor',
+        interaction_date DATE NULL,
+        notes TEXT NULL,
+        action_taken TEXT NULL,
+        recommendations TEXT NULL,
+        status VARCHAR(50) DEFAULT 'Action Taken',
+        next_followup DATE NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 33. Ensure Practice Problem Submissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS practice_problem_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        problem_id INT NOT NULL,
+        user_id INT NOT NULL,
+        code_submitted TEXT NULL,
+        language VARCHAR(50) DEFAULT 'javascript',
+        status VARCHAR(50) DEFAULT 'Solved',
+        points_earned INT DEFAULT 100,
+        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (problem_id) REFERENCES practice_problems(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 34. Ensure Interview Submissions Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS interview_submissions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        interview_type VARCHAR(100) DEFAULT 'Technical Mock',
+        overall_score DECIMAL(5,2) DEFAULT 0.00,
+        grade VARCHAR(50) DEFAULT 'Average',
+        feedback TEXT,
+        conducted_date DATE NULL,
+        status VARCHAR(50) DEFAULT 'Completed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 35. Ensure Interviews Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS interviews (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        interview_title VARCHAR(255) DEFAULT 'Mock Interview',
+        score DECIMAL(5,2) DEFAULT 0.00,
+        status VARCHAR(50) DEFAULT 'Completed',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 36. Ensure Milestones Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS milestones (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        roadmap_id INT NULL,
+        user_id INT NULL,
+        title VARCHAR(255) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 37. Ensure Trainings Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS trainings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'Technical',
+        status VARCHAR(50) DEFAULT 'Active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 38. Ensure Super Admin Account
     try {
       const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
       const superPass = process.env.SUPER_ADMIN_PASSWORD;

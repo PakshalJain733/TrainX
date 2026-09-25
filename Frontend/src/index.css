@@ -85,9 +85,16 @@ p {
 }
 
 /* Global Uniform Header Subtitle & Title Styling Across All Dashboards */
-.page-header-box,
-.ui-section-header {
+.page-header-box {
   margin-bottom: 16px;
+}
+
+.ui-section-header-AD,
+.ui-section-header-CO,
+.ui-section-header-ST,
+.ui-section-header-MN,
+.ui-section-header-SA {
+  margin-bottom: 0 !important;
 }
 
 .student-header-title,

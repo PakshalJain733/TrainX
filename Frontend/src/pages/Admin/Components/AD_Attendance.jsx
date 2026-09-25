@@ -10,7 +10,6 @@ import {
   ChevronDown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_Attendance.css";
 
@@ -698,11 +697,19 @@ export default function AdminAttendance() {
 
       {/* Page Header */}
       <div className="admin-attendance-header-wrapper">
-        <SectionHeader
-          icon={CalendarCheck}
-          title="Track Attendance"
-          description="Mark attendance for batch sessions by date or create a live QR code for instant check-in."
-        />
+        <div className="ui-section-header-AD">
+          <div className="ui-section-main">
+            <div>
+              <h2 className="ui-section-title">
+                <CalendarCheck size={22} className="ui-section-title-icon" />
+                <span>Track Attendance</span>
+              </h2>
+              <p className="ui-section-desc">
+                Mark attendance for batch sessions by date or create a live QR code for instant check-in.
+              </p>
+            </div>
+          </div>
+        </div>
         <div className="admin-attendance-top-actions">
           <div className="attendance-filters">
             <AdminAttSelect
@@ -772,11 +779,11 @@ export default function AdminAttendance() {
           <table className="att-table">
             <thead>
               <tr>
-                <th>Roll No</th>
-                <th>Student Name</th>
-                <th>Status</th>
-                <th>Verification Mode</th>
-                <th>Toggle Presence</th>
+                <th style={{ width: '15%' }}>Roll No</th>
+                <th style={{ width: '30%' }}>Student Name</th>
+                <th style={{ width: '15%' }}>Status</th>
+                <th style={{ width: '20%' }}>Verification Mode</th>
+                <th style={{ width: '20%' }}>Toggle Presence</th>
               </tr>
             </thead>
             <tbody>
@@ -805,18 +812,23 @@ export default function AdminAttendance() {
                     </td>
                     <td>
                       {qrScannedMap[s.id] ? (
-                        <span style={{ fontSize: "11px", fontWeight: "700", padding: "3px 10px", borderRadius: "12px", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                          <CheckCircle2 size={12} className="text-blue-600" /> Scanned via QR
+                        <span className="att-vmode-badge att-vmode-qr">
+                          <QrCode size={13} /> Scanned via QR
                         </span>
                       ) : (
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: "#94a3b8" }}>Manual</span>
+                        <span className="att-vmode-badge att-vmode-manual">
+                          <ShieldCheck size={13} /> Manual
+                        </span>
                       )}
                     </td>
                     <td>
-                      <button className="att-toggle-btn" onClick={() => toggle(s.id)}>
-                        {attendance[s.id]
-                          ? <CheckCircle2 size={22} className="att-icon-present" />
-                          : <XCircle size={22} className="att-icon-absent" />}
+                      <button
+                        className={`att-toggle-btn ${attendance[s.id] ? "att-toggle-btn--present" : "att-toggle-btn--absent"}`}
+                        onClick={() => toggle(s.id)}
+                        title={`Click to mark ${attendance[s.id] ? "Absent" : "Present"}`}
+                      >
+                        {attendance[s.id] ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                        <span>{attendance[s.id] ? "Present" : "Absent"}</span>
                       </button>
                     </td>
                   </tr>

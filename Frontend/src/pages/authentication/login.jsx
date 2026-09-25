@@ -229,6 +229,7 @@ function Login() {
     };
 
     sessionStorage.setItem("user", JSON.stringify(mergedUser));
+    localStorage.setItem("user", JSON.stringify(mergedUser));
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;
@@ -403,6 +404,7 @@ function Login() {
         const finalToken = data.data?.token || pendingUserData?.token;
         const finalUser = data.data?.user || pendingUserData?.user || {};
         sessionStorage.setItem("token", finalToken);
+        localStorage.setItem("token", finalToken);
         handlePostLoginRedirect(finalUser);
       } else {
         setErrorMsg(data.message || "Invalid Authenticator Code from Microsoft or Google Authenticator.");

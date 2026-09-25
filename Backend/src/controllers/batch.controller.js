@@ -63,6 +63,9 @@ async function ensureTables() {
     await safeAlter("ALTER TABLE batches ADD COLUMN schedule VARCHAR(100) DEFAULT 'Mon, Wed, Fri (10:00 AM - 12:00 PM)'");
     await safeAlter("ALTER TABLE batches ADD COLUMN students INT DEFAULT 0");
     await safeAlter("ALTER TABLE batches ADD COLUMN progress INT DEFAULT 0");
+    await safeAlter("ALTER TABLE batches ADD COLUMN topic VARCHAR(255) NULL");
+    await safeAlter("ALTER TABLE batches ADD COLUMN description TEXT NULL");
+    await safeAlter("ALTER TABLE batches ADD COLUMN date VARCHAR(100) NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN test_cases TEXT NULL");
 
     tablesInitialized = true;
@@ -144,6 +147,9 @@ export const getBatches = async (req, res, next) => {
         students: sCount,
         completionRate: `${pPct}%`,
         progressPct: pPct,
+        topic: b.topic || "DSA & System Architecture",
+        description: b.description || "Core concepts and masterclass",
+        date: b.date || new Date().toISOString().split("T")[0],
         status: b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : 'Active',
       };
     });
@@ -157,7 +163,7 @@ export const getBatches = async (req, res, next) => {
 export const createBatch = async (req, res, next) => {
   try {
     await ensureTables();
-    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, schedule } = req.body;
+    const { name, code, join_code, code_expires_at, collegeId, departmentId, trainer, mentor, schedule, topic, description, date } = req.body;
     if (!name || (!code && !join_code)) {
       return sendError(res, 'Batch Name and Join Code are required', 400);
     }
@@ -167,8 +173,8 @@ export const createBatch = async (req, res, next) => {
     const batchSchedule = (schedule || 'Mon, Wed, Fri (10:00 AM - 12:00 PM)').trim();
 
     const result = await query(
-      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, schedule, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, schedule, topic, description, date, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
         name.trim(),
         batchCode,
@@ -177,7 +183,10 @@ export const createBatch = async (req, res, next) => {
         collegeId || 1,
         departmentId || 1,
         batchTrainer,
-        batchSchedule
+        batchSchedule,
+        topic || null,
+        description || null,
+        date || new Date().toISOString().split("T")[0]
       ]
     );
 
@@ -218,7 +227,7 @@ export const updateBatch = async (req, res, next) => {
   try {
     await ensureTables();
     const { id } = req.params;
-    const { name, code, trainer, schedule, status } = req.body;
+    const { name, code, trainer, schedule, status, topic, description, date } = req.body;
 
     await query(
       `UPDATE batches 
@@ -227,17 +236,17 @@ export const updateBatch = async (req, res, next) => {
            join_code = COALESCE(?, join_code), 
            trainer = COALESCE(?, trainer), 
            schedule = COALESCE(?, schedule), 
-           status = COALESCE(?, status)
-       WHERE id = ?`,
-      [name, code, code, trainer, schedule, status, id]
+           status = COALESCE(?, status),
+           topic = COALESCE(?, topic),
+           description = COALESCE(?, description),
+           date = COALESCE(?, date)
+       WHERE id = ? OR code = ?`,
+      [name, code, code, trainer, schedule, status, topic, description, date, id, id]
     );
 
-    const [updatedBatch] = await query('SELECT * FROM batches WHERE id = ?', [id]);
-    if (!updatedBatch) {
-      return sendError(res, 'Batch not found', 404);
-    }
+    const [updatedBatch] = await query('SELECT * FROM batches WHERE id = ? OR code = ? LIMIT 1', [id, id]);
 
-    return sendSuccess(res, 'Batch updated successfully', updatedBatch);
+    return sendSuccess(res, 'Batch updated successfully in database', updatedBatch || { id, name, trainer, schedule, status, topic, description, date });
   } catch (error) {
     next(error);
   }
@@ -249,7 +258,8 @@ export const deleteBatch = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
     await query("UPDATE batches SET status = 'inactive' WHERE id = ? OR id = ? OR code = ? OR join_code = ?", [id, cleanId, id, id]);
-    return sendSuccess(res, 'Batch marked as inactive successfully');
+    await query("DELETE FROM student_batches WHERE batch_id = ? OR batch_id = ?", [id, cleanId]);
+    return sendSuccess(res, 'Batch marked as inactive and removed from student dashboards');
   } catch (error) {
     next(error);
   }
@@ -321,7 +331,7 @@ export const getMyBatches = async (req, res, next) => {
     const dbEnrolled = await query(
       `SELECT b.* FROM batches b
        JOIN student_batches sb ON b.id = sb.batch_id
-       WHERE sb.user_id = ?
+       WHERE sb.user_id = ? AND (b.status IS NULL OR (LOWER(b.status) != 'inactive' AND LOWER(b.status) != 'deleted'))
        ORDER BY b.id DESC`,
       [userId]
     );
@@ -330,8 +340,8 @@ export const getMyBatches = async (req, res, next) => {
       return sendSuccess(res, 'Enrolled batches retrieved successfully', dbEnrolled);
     }
 
-    // Fallback: if no enrollment record exists for this userId specifically, return all active batches in DB
-    const allDbBatches = await query('SELECT * FROM batches ORDER BY id DESC');
+    // Fallback: if no enrollment record exists for this userId specifically, return active batches in DB
+    const allDbBatches = await query("SELECT * FROM batches WHERE status IS NULL OR (LOWER(status) != 'inactive' AND LOWER(status) != 'deleted') ORDER BY id DESC");
     return sendSuccess(res, 'Batches retrieved successfully', allDbBatches || []);
   } catch (error) {
     next(error);

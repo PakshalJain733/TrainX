@@ -1,53 +1,23 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Target, Sparkles, Search } from "lucide-react";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_Roadmaps.css";
-
-const initialRoadmapTracks = [
-  {
-    id: 1,
-    studentName: "Aditi Sharma",
-    rollNo: "CSE26-042",
-    batch: "CSE 2026 Cohort",
-    name: "Java Developer",
-    modules: "12 Modules",
-    completion: "75%",
-    milestone: "Spring Boot Basics",
-  },
-  {
-    id: 2,
-    studentName: "Rahul Verma",
-    rollNo: "CSE25-112",
-    batch: "CSE 2025 Alpha",
-    name: "Fullstack React & Node",
-    modules: "15 Modules",
-    completion: "40%",
-    milestone: "React Context API",
-  },
-  {
-    id: 3,
-    studentName: "Priya Singh",
-    rollNo: "CSE26-089",
-    batch: "CSE 2026 Cohort",
-    name: "Data Science & AI/ML",
-    modules: "18 Modules",
-    completion: "25%",
-    milestone: "Pandas & Numpy",
-  },
-  {
-    id: 4,
-    studentName: "Karan Patel",
-    rollNo: "CSE25-034",
-    batch: "CSE 2025 Beta",
-    name: "Cloud Native & DevOps",
-    modules: "10 Modules",
-    completion: "90%",
-    milestone: "Kubernetes Orchestration",
-  }
-];
 
 export default function MentorRoadmaps() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [roadmapTracks] = useState(initialRoadmapTracks);
+  const [roadmapTracks, setRoadmapTracks] = useState([]);
+
+  useEffect(() => {
+    apiFetch("/roadmaps")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setRoadmapTracks(res.data);
+        } else {
+          setRoadmapTracks([]);
+        }
+      })
+      .catch(() => setRoadmapTracks([]));
+  }, []);
 
   const filteredTracks = roadmapTracks.filter((t) => {
     const q = searchTerm.toLowerCase();

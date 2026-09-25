@@ -20,7 +20,6 @@ import {
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/AD_LearningContent.css";
 
@@ -279,16 +278,24 @@ export default function AdminLearningContent() {
 
   return (
     <div className="learning-content-page">
-      <SectionHeader
-        icon={BookOpenCheck}
-        title="Manage Learning Content"
-        description="Upload and organize videos, documents, and learning resources."
-        action={
-          <button onClick={() => setShowForm(!showForm)} className="add-content-btn">
-            {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancel" : "Add Content"}
-          </button>
-        }
-      />
+      <div className="ui-section-header-AD">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <BookOpenCheck size={22} className="ui-section-title-icon" />
+              <span>Manage Learning Content</span>
+            </h2>
+            <p className="ui-section-desc">
+              Upload and organize videos, documents, and learning resources.
+            </p>
+          </div>
+          <div className="ui-section-action">
+            <button onClick={() => setShowForm(!showForm)} className="add-content-btn">
+              {showForm ? <X size={16} /> : <Plus size={16} />} {showForm ? "Cancel" : "Add Content"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* Add Content Modal / Flash Screen */}
       {showForm && createPortal(

@@ -145,33 +145,52 @@ export default function Overview() {
   const fetchOverviewData = async () => {
     setLoadingStats(true);
     try {
-      const [collegesRes, healthRes] = await Promise.all([
+      const [collegesRes, deptsRes, usersRes, healthRes] = await Promise.all([
         apiFetch('/colleges').catch(() => null),
+        apiFetch('/departments').catch(() => null),
+        apiFetch('/admin/users').catch(() => null),
         apiFetch('/system/health').catch(() => null),
       ]);
 
-      let collegesCount = 1;
+      let collegesCount = 0;
       let studentsCount = 0;
       let departmentsCount = 0;
 
       if (collegesRes && Array.isArray(collegesRes.data)) {
         setCollegesList(collegesRes.data);
-        collegesCount = collegesRes.data.length || 1;
-        studentsCount = collegesRes.data.reduce((sum, c) => sum + (c.studentsCount || c.student_count || 0), 0);
-        departmentsCount = collegesRes.data.reduce((sum, c) => sum + (c.departmentsCount || c.department_count || 0), 0);
+        collegesCount = collegesRes.data.length;
+        studentsCount = collegesRes.data.reduce(
+          (sum, c) => sum + (Number(c.student_count) || Number(c.studentsCount) || 0),
+          0
+        );
+        departmentsCount = collegesRes.data.reduce(
+          (sum, c) => sum + (Number(c.department_count) || Number(c.departmentsCount) || 0),
+          0
+        );
+      }
+
+      if (deptsRes && Array.isArray(deptsRes.data)) {
+        departmentsCount = Math.max(departmentsCount, deptsRes.data.length);
+      }
+
+      if (usersRes && Array.isArray(usersRes.data)) {
+        const studentUsers = usersRes.data.filter(
+          (u) => String(u.role).toLowerCase() === 'student'
+        );
+        studentsCount = Math.max(studentsCount, studentUsers.length);
       }
 
       if (healthRes && healthRes.data && healthRes.data.systemMetrics) {
         const sm = healthRes.data.systemMetrics;
-        if (sm.totalColleges) collegesCount = Math.max(collegesCount, Number(sm.totalColleges));
-        if (sm.totalStudents) studentsCount = Math.max(studentsCount, Number(sm.totalStudents));
-        if (sm.totalUsers && studentsCount === 0) studentsCount = Number(sm.totalUsers);
+        if (collegesCount === 0 && sm.totalColleges) collegesCount = Number(sm.totalColleges);
+        if (studentsCount === 0 && sm.totalStudents) studentsCount = Number(sm.totalStudents);
+        if (departmentsCount === 0 && sm.totalDepartments) departmentsCount = Number(sm.totalDepartments);
       }
 
       setLiveMetrics({
-        collegesCount: Math.max(collegesCount, 1),
-        studentsCount: Math.max(studentsCount, 1),
-        departmentsCount: Math.max(departmentsCount, 8),
+        collegesCount: collegesCount,
+        studentsCount: studentsCount,
+        departmentsCount: departmentsCount,
         securityStatus: "Protected"
       });
     } catch (err) {
@@ -185,7 +204,7 @@ export default function Overview() {
     {
       id: 1,
       label: "Total Partner Colleges",
-      value: liveMetrics.collegesCount.toString(),
+      value: loadingStats ? "..." : liveMetrics.collegesCount.toString(),
       change: `${liveMetrics.collegesCount} Registered Institutions`,
       trend: "up",
       icon: "Building2",
@@ -194,7 +213,7 @@ export default function Overview() {
     {
       id: 2,
       label: "Active Enrolled Students",
-      value: (liveMetrics.studentsCount || 1).toString(),
+      value: loadingStats ? "..." : liveMetrics.studentsCount.toString(),
       change: "Active Student Accounts",
       trend: "up",
       icon: "Users",
@@ -203,8 +222,8 @@ export default function Overview() {
     {
       id: 3,
       label: "Departments Covered",
-      value: (liveMetrics.departmentsCount || 8).toString(),
-      change: `${liveMetrics.departmentsCount || 8} Academic Tracks`,
+      value: loadingStats ? "..." : liveMetrics.departmentsCount.toString(),
+      change: `${liveMetrics.departmentsCount} Academic Tracks`,
       trend: "up",
       icon: "GraduationCap",
       theme: "purple"

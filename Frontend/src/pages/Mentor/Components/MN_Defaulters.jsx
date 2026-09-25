@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
-import { mentorDefaulters as initialMentorDefaulters } from '../../../data/mentorMockData';
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../../../utils/api';
 import { AlertCircle, Bell, Search, Filter, ShieldAlert, CheckCircle2, UserX } from 'lucide-react';
 import "../Styles/MN_Defaulters.css";
 
-const DEFAULT_DEFAULTERS = [];
-
 export default function Defaulters() {
-  const listToUse = (initialMentorDefaulters && initialMentorDefaulters.length > 0)
-    ? initialMentorDefaulters 
-    : DEFAULT_DEFAULTERS;
-
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRisk, setSelectedRisk] = useState('All');
-  const [defaultersList, setDefaultersList] = useState(listToUse);
+  const [defaultersList, setDefaultersList] = useState([]);
   const [notificationStatus, setNotificationStatus] = useState(null);
+
+  useEffect(() => {
+    apiFetch("/defaulters")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setDefaultersList(res.data);
+        } else {
+          setDefaultersList([]);
+        }
+      })
+      .catch(() => setDefaultersList([]));
+  }, []);
 
   const filteredDefaulters = defaultersList.filter((student) => {
     const matchesSearch = 

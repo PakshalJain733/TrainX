@@ -9,15 +9,88 @@ import {
   RefreshCw,
   Cpu,
   Target,
-  UserCheck,
   Award,
   Check,
   Search,
+  ChevronDown,
+  ChevronUp,
+  Zap,
+  BookMarked,
+  Code2,
+  ArrowRight,
+  X,
+  Compass,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import apiFetch from "../../../utils/api";
 import "../Styles/ST_AiRoadmap.css";
+
+const POPULAR_TARGETS = [
+  { role: "Java Fullstack Developer", icon: "☕", tag: "Hot Skill" },
+  { role: "Frontend (React & Next.js)", icon: "⚛️", tag: "High Demand" },
+  { role: "Python & Data Science", icon: "🐍", tag: "AI/ML" },
+  { role: "Cyber Security Analyst", icon: "🛡️", tag: "Security" },
+  { role: "DevOps & Cloud Engineer", icon: "☁️", tag: "Infrastructure" },
+  { role: "Flutter Mobile Developer", icon: "📱", tag: "Mobile" },
+];
+
+const PRESET_PATHWAYS = [
+  {
+    title: "Java Fullstack Developer",
+    subtitle: "Enterprise Backend + Modern Frontend",
+    desc: "Master Core Java, Spring Boot microservices, REST APIs, Hibernate, PostgreSQL & React integration.",
+    milestonesCount: 6,
+    icon: "☕",
+    badge: "Most Popular",
+    color: "#4f46e5",
+  },
+  {
+    title: "Frontend Web Engineer",
+    subtitle: "Modern Single-Page Application Mastery",
+    desc: "Deep dive into HTML5/CSS3, JavaScript ES6+, React, Redux Toolkit, Next.js & UI design systems.",
+    milestonesCount: 5,
+    icon: "⚛️",
+    badge: "Trending",
+    color: "#0891b2",
+  },
+  {
+    title: "Python & Data Analytics",
+    subtitle: "Data Science, Machine Learning & AI",
+    desc: "Learn Python programming, Pandas, NumPy, Data Visualization, Scikit-Learn & ML Algorithms.",
+    milestonesCount: 6,
+    icon: "🐍",
+    badge: "AI Powered",
+    color: "#059669",
+  },
+  {
+    title: "Cyber Security Analyst",
+    subtitle: "Defensive Security & Threat Analysis",
+    desc: "Network Protocols, Kali Linux tools, Penetration Testing concepts, SIEM tools & Compliance.",
+    milestonesCount: 5,
+    icon: "🛡️",
+    badge: "High Demand",
+    color: "#dc2626",
+  },
+  {
+    title: "DevOps & Cloud Engineer",
+    subtitle: "CI/CD Pipelines & Cloud Infrastructure",
+    desc: "Docker containerization, Kubernetes orchestration, AWS Cloud, Terraform & GitHub Actions.",
+    milestonesCount: 6,
+    icon: "☁️",
+    badge: "Cloud Track",
+    color: "#7c3aed",
+  },
+  {
+    title: "Flutter Cross-Platform Dev",
+    subtitle: "iOS & Android Unified Apps",
+    desc: "Dart language essentials, Flutter Widgets, Provider/Bloc state management & Firebase backend.",
+    milestonesCount: 5,
+    icon: "📱",
+    badge: "Mobile",
+    color: "#ea580c",
+  },
+];
 
 export default function AIRoadmap() {
   const [goalInput, setGoalInput] = useState("");
@@ -26,6 +99,7 @@ export default function AIRoadmap() {
   const [currentRoadmap, setCurrentRoadmap] = useState(null);
   const [aiSource, setAiSource] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
+  const [expandedMilestones, setExpandedMilestones] = useState({});
 
   // Fetch student profile & active roadmap
   useEffect(() => {
@@ -63,10 +137,19 @@ export default function AIRoadmap() {
     setIsLoading(false);
   };
 
+  const generateForRole = async (targetRole) => {
+    if (!targetRole || !targetRole.trim()) return;
+    setGoalInput(targetRole);
+    executeGeneration(targetRole.trim());
+  };
+
   const handleGenerate = async (e) => {
     if (e) e.preventDefault();
     if (!goalInput.trim()) return;
+    executeGeneration(goalInput.trim());
+  };
 
+  const executeGeneration = async (targetRole) => {
     setIsGenerating(true);
     try {
       const u = userProfile || JSON.parse(sessionStorage.getItem("user") || "{}");
@@ -77,7 +160,7 @@ export default function AIRoadmap() {
       const response = await apiFetch("/roadmaps/generate", {
         method: "POST",
         body: JSON.stringify({
-          targetRole: goalInput.trim(),
+          targetRole: targetRole,
           studentProfile: {
             department: sp.department || u.department || "",
             semester: sp.semester || u.semester || "",
@@ -127,26 +210,33 @@ export default function AIRoadmap() {
     });
   };
 
+  const toggleMilestoneExpand = (id) => {
+    setExpandedMilestones((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   const getStatusBadge = (status, onClick) => {
     switch (status) {
       case "completed":
         return (
           <Badge
             variant="success"
-            className="cursor-pointer hover:opacity-80 transition-opacity"
+            className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
             onClick={onClick}
           >
-            Completed ✓
+            <CheckCircle2 size={12} /> Completed ✓
           </Badge>
         );
       case "in-progress":
         return (
           <Badge
             variant="default"
-            className="cursor-pointer hover:opacity-80 transition-opacity"
+            className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
             onClick={onClick}
           >
-            In Progress
+            <Zap size={12} /> In Progress
           </Badge>
         );
       case "locked":
@@ -154,49 +244,39 @@ export default function AIRoadmap() {
         return (
           <Badge
             variant="outline"
-            className="cursor-pointer hover:opacity-80 transition-opacity"
+            className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-1"
             onClick={onClick}
           >
-            Locked
+            <Lock size={12} /> Locked
           </Badge>
         );
     }
   };
 
   const milestones = currentRoadmap?.milestones || [];
+  const completedCount = milestones.filter((m) => m.status === "completed").length;
+  const progressPercent = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0;
 
   return (
     <div className="roadmap-container stack-6">
-      <div className="student-header-box">
-        <h2 className="student-header-title">
-          <Sparkles size={22} style={{ color: "#4f46e5" }} />
-          <span>AI Adaptive Learning Roadmap</span>
-        </h2>
-        <p className="student-header-desc">
-          Tailored milestone progression, skill tracks, and adaptive learning pathways generated for your target career goal.
-        </p>
-      </div>
-
-      {/* Clean AI Roadmap Header & Custom Goal Input */}
-      <div className="roadmap-generator-card">
-        <div className="roadmap-generator-header">
-          <Sparkles size={22} className="roadmap-generator-icon text-indigo-500 animate-pulse mt-0.5 shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <h2 className="roadmap-generator-title">Personalized AI Career Roadmap Generator</h2>
-              {aiSource && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1 shrink-0">
-                  <Cpu size={12} /> {aiSource === "gemini-ai" ? "Gemini 2.5 AI Model" : "Adaptive AI Model"}
-                </span>
-              )}
-            </div>
-            <p className="roadmap-generator-subtitle">
-              Type any career goal or technology (e.g. <strong>Java Developer</strong>, <strong>Cyber Security</strong>, <strong>Flutter Developer</strong>), and the AI will generate your step-by-step learning roadmap.
+      {/* Section Header */}
+      <div className="ui-section-header-ST">
+        <div className="ui-section-main-ST">
+          <div>
+            <h2 className="ui-section-title">
+              <Sparkles size={22} className="ui-section-title-icon text-indigo-600 animate-pulse" />
+              <span>Personalized AI Career Roadmap Generator</span>
+            </h2>
+            <p className="ui-section-desc">
+              Type any career goal or technology, and the AI will generate your customized step-by-step learning path.
             </p>
           </div>
         </div>
+      </div>
 
-        {/* Custom Input Box & Generate Action */}
+      {/* AI Roadmap Generator Card */}
+      <div className="roadmap-generator-card">
+        {/* Input Box & Action */}
         <form onSubmit={handleGenerate} className="roadmap-form-wrap">
           <div className="roadmap-input-row">
             <div className="roadmap-input-field-wrap">
@@ -204,11 +284,21 @@ export default function AIRoadmap() {
               <input
                 type="text"
                 className="roadmap-select-input"
-                placeholder="Type your role (e.g. Java Developer, Cyber Security, Flutter Dev)..."
+                placeholder="Type your target role (e.g. Java Fullstack, React Developer, Data Scientist)..."
                 value={goalInput}
                 onChange={(e) => setGoalInput(e.target.value)}
                 required
               />
+              {goalInput && (
+                <button
+                  type="button"
+                  className="roadmap-input-clear-btn"
+                  onClick={() => setGoalInput("")}
+                  title="Clear input"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
 
             <button
@@ -219,7 +309,7 @@ export default function AIRoadmap() {
               {isGenerating ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
-                  <span>Generating...</span>
+                  <span>Generating AI Path...</span>
                 </>
               ) : (
                 <>
@@ -229,75 +319,228 @@ export default function AIRoadmap() {
               )}
             </button>
           </div>
+
+          {/* Popular Suggestions Row */}
+          <div className="roadmap-suggestions-row">
+            <span className="roadmap-suggestions-label">Popular Targets:</span>
+            <div className="roadmap-pills-wrap">
+              {POPULAR_TARGETS.map((item) => (
+                <button
+                  key={item.role}
+                  type="button"
+                  className={`roadmap-suggest-pill ${goalInput === item.role ? "active" : ""}`}
+                  onClick={() => generateForRole(item.role)}
+                >
+                  <span className="pill-emoji">{item.icon}</span>
+                  <span>{item.role}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </form>
 
-
         {userProfile?.skills && (
-          <div className="mt-3 text-xs text-slate-500 flex items-center gap-1.5">
-            <Check size={14} className="text-emerald-500" />
-            <span>Profile Skills Pruning Active: <strong>{typeof userProfile.skills === "string" ? userProfile.skills : userProfile.skills.join(", ")}</strong> will not be re-taught from scratch.</span>
+          <div className="roadmap-skills-adaptation-banner">
+            <Check size={14} className="text-emerald-600 shrink-0" />
+            <span>
+              <strong>Profile Skills Pruned:</strong> Experienced in{" "}
+              <strong>
+                {typeof userProfile.skills === "string" ? userProfile.skills : userProfile.skills.join(", ")}
+              </strong>
+              . AI will skip beginner topics you already know.
+            </span>
           </div>
         )}
       </div>
 
-      {/* Timeline Section */}
+      {/* Main Content Area: Loading / Empty Showcase / Timeline */}
       {isLoading ? (
-        <div className="py-16 text-center text-slate-500 flex flex-col items-center gap-3">
-          <RefreshCw size={28} className="animate-spin text-indigo-500" />
-          <p>Loading AI learning path...</p>
+        <div className="roadmap-loading-box">
+          <RefreshCw size={32} className="animate-spin text-indigo-600" />
+          <p className="roadmap-loading-text">Loading your custom learning pathway...</p>
         </div>
       ) : milestones.length === 0 ? (
-        <div className="py-12 text-center text-slate-500 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 bg-slate-50/50 dark:bg-slate-900/30">
-          <BookOpen size={36} className="mx-auto text-slate-400 mb-2" />
-          <p className="font-semibold text-slate-700 dark:text-slate-200">No roadmap generated yet.</p>
-          <p className="text-sm text-slate-500 mb-4">Type any role above (e.g. <strong>Java Developer</strong>, <strong>Cyber Security</strong>, <strong>Data Science</strong>) and click <strong>Generate Roadmap</strong> to create your AI path.</p>
+        <div className="roadmap-empty-state-card">
+          <div className="roadmap-empty-hero">
+            <div className="roadmap-empty-icon-halo">
+              <Compass size={36} className="text-indigo-600" />
+            </div>
+            <h3 className="roadmap-empty-title">Ready to Launch Your Career Roadmap?</h3>
+            <p className="roadmap-empty-desc">
+              Type your target role in the generator above, or select one of our curated high-demand pathways below to begin instantly.
+            </p>
+          </div>
+
+          <div className="roadmap-preset-section">
+            <div className="roadmap-preset-header">
+              <Sparkles size={16} className="text-indigo-600" />
+              <span>Explore High-Demand Career Tracks</span>
+            </div>
+
+            <div className="roadmap-preset-grid">
+              {PRESET_PATHWAYS.map((path) => (
+                <div
+                  key={path.title}
+                  className="roadmap-preset-card"
+                  onClick={() => generateForRole(path.title)}
+                >
+                  <div className="preset-card-top">
+                    <span className="preset-emoji-badge">{path.icon}</span>
+                    <span className="preset-tag-badge">{path.badge}</span>
+                  </div>
+                  <h4 className="preset-title">{path.title}</h4>
+                  <p className="preset-subtitle">{path.subtitle}</p>
+                  <p className="preset-desc">{path.desc}</p>
+
+                  <div className="preset-card-footer">
+                    <span className="preset-meta-info">{path.milestonesCount} Structured Milestones</span>
+                    <span className="preset-action-link">
+                      Generate <ArrowRight size={14} />
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
-        <div className="roadmap-timeline">
-          {milestones.map((m) => (
-            <div
-              key={m.id}
-              className={`roadmap-milestone-wrapper milestone-status-${m.status}`}
-            >
-              <div className="roadmap-milestone-indicator">
-                {m.status === "completed" && <CheckCircle2 size={20} className="text-emerald-500" />}
-                {m.status === "in-progress" && <CircleDot size={20} className="text-indigo-500" />}
-                {m.status === "locked" && <Lock size={18} className="text-slate-400" />}
+        <div className="roadmap-active-section">
+          {/* Active Roadmap Progress Header Bar */}
+          <div className="roadmap-summary-bar">
+            <div className="roadmap-summary-info">
+              <div className="roadmap-target-title-wrap">
+                <Target size={20} className="text-indigo-600" />
+                <h3>Target Path: {currentRoadmap.targetRole || goalInput}</h3>
               </div>
-
-              <div className="roadmap-milestone-card">
-                <div className="milestone-card-header">
-                  <h3 className="milestone-title">{m.title}</h3>
-                  {getStatusBadge(m.status, () => handleToggleStatus(m))}
-                </div>
-
-                <p className="milestone-desc">{m.desc}</p>
-
-                <div className="milestone-progress-bar-wrap">
-                  <div
-                    className="milestone-progress-bar-fill"
-                    style={{ width: `${m.progress}%` }}
-                  />
-                </div>
-
-                <div className="milestone-footer-row">
-                  <div className="milestone-tags-list">
-                    {(m.tags || []).map((tag) => (
-                      <span key={tag} className="milestone-tag-pill">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="milestone-stats-meta">
-                    {m.quizzes} quizzes · {m.exercises} coding exercises
-                  </div>
-                </div>
-              </div>
+              <p className="roadmap-summary-sub">
+                {completedCount} of {milestones.length} milestones completed ({progressPercent}%)
+              </p>
             </div>
-          ))}
+
+            <div className="roadmap-summary-stats">
+              <div className="roadmap-stat-pill">
+                <BookMarked size={14} />
+                <span>{milestones.length} Milestones</span>
+              </div>
+              <div className="roadmap-stat-pill">
+                <Code2 size={14} />
+                <span>
+                  {milestones.reduce((acc, m) => acc + (m.exercises || 0), 0)} Coding Labs
+                </span>
+              </div>
+              <button
+                type="button"
+                className="roadmap-reset-btn"
+                onClick={() => {
+                  setCurrentRoadmap(null);
+                  setGoalInput("");
+                }}
+              >
+                <RefreshCw size={13} />
+                <span>Change Target</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Progress Bar Header */}
+          <div className="roadmap-overall-progress-card">
+            <div className="overall-progress-row">
+              <span className="overall-progress-label">Overall Pathway Progress</span>
+              <span className="overall-progress-val">{progressPercent}%</span>
+            </div>
+            <div className="overall-progress-track">
+              <div
+                className="overall-progress-fill"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Timeline View */}
+          <div className="roadmap-timeline">
+            {milestones.map((m, index) => {
+              const isExpanded = !!expandedMilestones[m.id];
+              const stepNum = String(index + 1).padStart(2, "0");
+
+              return (
+                <div
+                  key={m.id || index}
+                  className={`roadmap-milestone-wrapper milestone-status-${m.status}`}
+                >
+                  <div className="roadmap-milestone-indicator">
+                    <span className="milestone-step-num">{stepNum}</span>
+                  </div>
+
+                  <div className="roadmap-milestone-card">
+                    <div className="milestone-card-header">
+                      <div className="milestone-header-main">
+                        <div className="milestone-title-row">
+                          <h3 className="milestone-title">{m.title}</h3>
+                          {getStatusBadge(m.status, () => handleToggleStatus(m))}
+                        </div>
+                        <p className="milestone-desc">{m.desc}</p>
+                      </div>
+                    </div>
+
+                    <div className="milestone-progress-bar-wrap">
+                      <div
+                        className="milestone-progress-bar-fill"
+                        style={{ width: `${m.progress || (m.status === 'completed' ? 100 : m.status === 'in-progress' ? 50 : 0)}%` }}
+                      />
+                    </div>
+
+                    <div className="milestone-footer-row">
+                      <div className="milestone-tags-list">
+                        {(m.tags || []).map((tag) => (
+                          <span key={tag} className="milestone-tag-pill">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="milestone-footer-right">
+                        <span className="milestone-stats-meta">
+                          {m.quizzes || 3} quizzes · {m.exercises || 4} practice labs
+                        </span>
+
+                        <button
+                          type="button"
+                          className="milestone-expand-btn"
+                          onClick={() => toggleMilestoneExpand(m.id)}
+                        >
+                          <span>{isExpanded ? "Hide Modules" : "View Modules"}</span>
+                          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expandable Module / Topics Details Drawer */}
+                    {isExpanded && (
+                      <div className="milestone-details-drawer">
+                        <h4 className="drawer-heading">Key Learning Topics & Objectives:</h4>
+                        <ul className="drawer-topics-list">
+                          {(m.topics || [
+                            `Fundamentals of ${m.title}`,
+                            `Core syntax & architectural patterns`,
+                            `Hands-on lab project implementation`,
+                            `Assessment quiz & code review`,
+                          ]).map((topic, i) => (
+                            <li key={i} className="drawer-topic-item">
+                              <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                              <span>{topic}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
   );
 }
+

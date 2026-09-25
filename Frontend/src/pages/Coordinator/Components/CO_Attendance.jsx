@@ -99,9 +99,6 @@ export default function CoordinatorAttendance({ hideHeader }) {
                 <CalendarCheck size={24} style={{ color: "#4f46e5", flexShrink: 0 }} />
                 <span>Attendance Governance & Analytics</span>
               </h1>
-              <span className="coord-perf-status-badge coord-perf-status--good">
-                Coordinator Workspace
-              </span>
             </div>
             <p className="coord-perf-sub">
               Track daily attendance across departments, monitor defaulters (&lt;{attendanceThreshold}%), and view complete student attendance history logs.

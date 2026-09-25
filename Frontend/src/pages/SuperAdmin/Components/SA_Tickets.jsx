@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { MessageSquare, HelpCircle, CheckCircle2, Clock, AlertCircle, Search, Filter, ShieldCheck, UserCheck, X, Check, Send } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/SA_Tickets.css";
 
 const initialTickets = [];
@@ -49,18 +48,26 @@ export default function SuperAdminTickets() {
 
   return (
     <div className="admin-help-container">
-      <SectionHeader
-        icon={HelpCircle}
-        title="Super Admin Issue Resolution Center"
-        description="Review, manage, and resolve tickets submitted by students, mentors, and department coordinators."
-        action={
-          <div className="help-stats">
-            <span className="help-stat-badge help-stat-open">{openCount} Open</span>
-            <span className="help-stat-badge help-stat-inprogress">{inProgressCount} In Progress</span>
-            <span className="help-stat-badge help-stat-resolved">{resolvedCount} Resolved</span>
+      <div className="ui-section-header-SA">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <HelpCircle size={22} className="ui-section-title-icon" />
+              <span>Super Admin Issue Resolution Center</span>
+            </h2>
+            <p className="ui-section-desc">
+              Review, manage, and resolve tickets submitted by students, mentors, and department coordinators.
+            </p>
           </div>
-        }
-      />
+          <div className="ui-section-action">
+            <div className="help-stats">
+              <span className="help-stat-badge help-stat-open">{openCount} Open</span>
+              <span className="help-stat-badge help-stat-inprogress">{inProgressCount} In Progress</span>
+              <span className="help-stat-badge help-stat-resolved">{resolvedCount} Resolved</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Filter & Search Bar */}
       <div className="admin-tickets-filter-bar">

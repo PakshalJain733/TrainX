@@ -8,10 +8,7 @@ import {
   Download,
   BarChart2,
 } from "lucide-react";
-import {
-  coordinatorAssessments,
-  coordinatorBatches,
-} from "../../../data/coordinatorMockData";
+import { apiFetch } from "../../../utils/api";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/CO_CodingPerformance.css";
@@ -19,29 +16,40 @@ import "../Styles/CO_CodingPerformance.css";
 export default function QuizPerformance() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBatch, setSelectedBatch] = useState("All");
-  const [batchesList, setBatchesList] = useState(coordinatorBatches);
+  const [batchesList, setBatchesList] = useState([]);
+  const [quizzesList, setQuizzesList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const fetchBatches = async () => {
+  const fetchBatchesAndQuizzes = async () => {
+    setLoading(true);
     try {
       const data = await batchAPI.getBatches();
       if (Array.isArray(data) && data.length > 0) {
         setBatchesList(data);
       }
-    } catch (err) {
-      console.warn("Using fallback batches in QuizPerformance.");
-    }
+    } catch (err) {}
+
+    try {
+      const res = await apiFetch("/assessments");
+      if (res && res.data && Array.isArray(res.data)) {
+        setQuizzesList(res.data);
+      } else if (res && Array.isArray(res)) {
+        setQuizzesList(res);
+      }
+    } catch (e) {}
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchBatches();
-    const handleBatchUpdate = () => fetchBatches();
+    fetchBatchesAndQuizzes();
+    const handleBatchUpdate = () => fetchBatchesAndQuizzes();
     window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
     return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
   }, []);
 
-  const filteredQuizzes = coordinatorAssessments.filter((q) => {
-    const matchesSearch = (q.title || "").toLowerCase().includes(searchTerm.toLowerCase()) || (q.batch || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesBatch = selectedBatch === "All" || q.batch === selectedBatch;
+  const filteredQuizzes = quizzesList.filter((q) => {
+    const matchesSearch = (q.title || "").toLowerCase().includes(searchTerm.toLowerCase()) || (q.batch || q.category || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesBatch = selectedBatch === "All" || q.batch === selectedBatch || q.batch_name === selectedBatch;
     return matchesSearch && matchesBatch;
   });
 

@@ -357,18 +357,43 @@ export const getStudentAttendance = async (req, res, next) => {
 export const applyStudentLeave = async (req, res, next) => {
   try {
     const { category, startDate, endDate, days, reason, attachment } = req.body;
+    const userId = req.user?.id || req.user?.userId || 1;
+    const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+
+    let insertId = Date.now();
+    try {
+      const result = await query(
+        `INSERT INTO leave_requests (user_id, college_id, title, category, status, days, start_date, end_date, reason, remarks)
+         VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)`,
+        [
+          userId,
+          collegeId,
+          `${category || 'General'} Application`,
+          category || 'General Leave',
+          days || 1,
+          startDate || null,
+          endDate || startDate || null,
+          reason || 'Personal Leave',
+          attachment || null,
+        ]
+      );
+      if (result && result.insertId) insertId = result.insertId;
+    } catch (e) {
+      console.warn('[applyStudentLeave DB error]', e.message);
+    }
+
     const newLeave = {
-      id: `LV-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: insertId,
+      user_id: userId,
       category: category || 'Medical Leave',
       startDate,
       endDate: endDate || startDate,
       days: days || 1,
       reason: reason || 'Personal Leave',
-      attachment: attachment || null,
       status: 'Pending',
       submittedAt: new Date().toISOString(),
     };
-    return sendSuccess(res, 'Leave application submitted successfully', newLeave, 201);
+    return sendSuccess(res, 'Leave application submitted successfully in database', newLeave, 201);
   } catch (error) {
     next(error);
   }

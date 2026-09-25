@@ -20,7 +20,6 @@ import {
   Loader2,
   X
 } from "lucide-react";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
@@ -221,11 +220,18 @@ export default function AdminProfile() {
 
   return (
     <div className="student-page-inner profile-container">
-      <SectionHeader
-        eyebrow="College Administration"
-        title="My Profile & Settings"
-        description="Manage your account profile, institution credentials, and system settings."
-      />
+      <div className="ui-section-header-AD">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <span>My Profile & Settings</span>
+            </h2>
+            <p className="ui-section-desc">
+              Manage your account profile, institution credentials, and system settings.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {saved && (
         <div className="profile-alert-success">

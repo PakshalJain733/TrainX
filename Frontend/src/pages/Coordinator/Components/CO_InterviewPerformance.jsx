@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   CheckCircle2,
@@ -15,7 +15,7 @@ import {
   Calendar,
   Layers
 } from "lucide-react";
-import { coordinatorInterviewRecords, coordinatorBatches } from "../../../data/coordinatorMockData";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/CO_CodingPerformance.css";
 
 export default function InterviewPerformance() {
@@ -24,13 +24,44 @@ export default function InterviewPerformance() {
   const [selectedBatch, setSelectedBatch] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedInterview, setSelectedInterview] = useState(null);
+  const [interviewList, setInterviewList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/interviews")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setInterviewList(
+            res.data.map((i, idx) => ({
+              id: i.id || idx,
+              studentName: i.student_name || i.name || "Student",
+              rollNo: i.roll_number || `CS-${101 + idx}`,
+              department: i.department || "ECS",
+              batch: i.batch || "TE-A",
+              targetRole: i.interview_type || i.role || "Full Stack Engineer",
+              conductedDate: i.conducted_date ? new Date(i.conducted_date).toLocaleDateString() : "Recent",
+              duration: "30 mins",
+              overallScore: Math.round(Number(i.overall_score) || 75),
+              status: i.status || "Completed",
+              category: (Number(i.overall_score) || 75) >= 80 ? "Excellent" : "Good",
+              weakAreas: i.feedback ? [i.feedback] : ["System Architecture & OOP"],
+            }))
+          );
+        } else {
+          setInterviewList([]);
+        }
+      })
+      .catch(() => setInterviewList([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   // Filters
-  const filteredInterviews = coordinatorInterviewRecords.filter((rec) => {
+  const filteredInterviews = interviewList.filter((rec) => {
     const matchesSearch =
-      rec.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rec.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      rec.targetRole.toLowerCase().includes(searchTerm.toLowerCase());
+      (rec.studentName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (rec.rollNo || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (rec.targetRole || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesDept = selectedDept === "all" || rec.department === selectedDept;
     const matchesBatch = selectedBatch === "all" || rec.batch === selectedBatch;
     const matchesStatus = selectedStatus === "all" || rec.status === selectedStatus;

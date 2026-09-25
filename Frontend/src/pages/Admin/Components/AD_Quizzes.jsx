@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Quizzes.css";
 
@@ -359,16 +358,24 @@ export default function AdminQuizzes() {
 
   return (
     <div className="admin-quizzes-container">
-      <SectionHeader
-        icon={GraduationCap}
-        title="Manage Quizzes"
-        description="Create and track quiz assessments across batches using AI or manual entry."
-        action={
-          <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
-            <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
-          </button>
-        }
-      />
+      <div className="ui-section-header-AD">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <GraduationCap size={22} className="ui-section-title-icon" />
+              <span>Manage Quizzes</span>
+            </h2>
+            <p className="ui-section-desc">
+              Create and track quiz assessments across batches using AI or manual entry.
+            </p>
+          </div>
+          <div className="ui-section-action">
+            <button onClick={() => setShowForm(!showForm)} className="add-quiz-btn">
+              <Plus size={16} /> {showForm ? "Cancel" : "Create Quiz"}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {/* CREATE QUIZ MODAL / FLASH SCREEN OVERLAY */}
       {showForm && createPortal(

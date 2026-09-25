@@ -20,7 +20,6 @@ import {
   Loader2,
   X
 } from "lucide-react";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
@@ -229,11 +228,18 @@ export default function SuperAdminProfile() {
 
   return (
     <div className="student-page-inner profile-container">
-      <SectionHeader
-        eyebrow="Account Governance"
-        title="Super Admin Profile & Security"
-        description="Manage your account profile, contact credentials, and security settings."
-      />
+      <div className="ui-section-header-SA">
+        <div className="ui-section-main">
+          <div>
+            <h2 className="ui-section-title">
+              <span>Super Admin Profile & Security</span>
+            </h2>
+            <p className="ui-section-desc">
+              Manage your account profile, contact credentials, and security settings.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {profileSaved && (
         <div className="profile-alert-success">

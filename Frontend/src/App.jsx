@@ -37,7 +37,7 @@ import AdminLeaderboard from "./pages/Admin/Components/AD_Leaderboard";
 import AdminHelp from "./pages/Admin/Components/AD_Help";
 import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
-import AdminAssignTrainer from './pages/Admin/Components/AD_AssignTrainer';
+import AdminWeeklyReports from './pages/Admin/Components/AD_WeeklyReports';
 
 
 // Super Admin Workspace Imports
@@ -118,6 +118,7 @@ function App() {
             <Route path="learning" element={<MaintenanceGuard moduleKey="learningContent"><LearningContent /></MaintenanceGuard>} />
             <Route path="ai-interview" element={<MaintenanceGuard moduleKey="aiInterviews"><AIInterview /></MaintenanceGuard>} />
             <Route path="progress" element={<MaintenanceGuard moduleKey="skillGapAnalysis"><ProgressAnalytics /></MaintenanceGuard>} />
+            <Route path="leaderboard" element={<MaintenanceGuard moduleKey="leaderboard"><Leaderboard /></MaintenanceGuard>} />
             <Route path="quiz" element={<MaintenanceGuard moduleKey="academicQuizzes"><AcademicQuiz /></MaintenanceGuard>} />
             <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><Attendance /></MaintenanceGuard>} />
             <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="studentSkillGaps"><StudentSkillGaps /></MaintenanceGuard>} />

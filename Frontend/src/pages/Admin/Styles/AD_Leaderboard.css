@@ -162,6 +162,19 @@
   color: #f97316;
 }
 
+.lb-xp-clean-num {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 4px 12px;
+  white-space: nowrap;
+}
+
 /* Clean CSS classes replacing inline styles */
 .admin-refresh-btn {
   display: flex;
