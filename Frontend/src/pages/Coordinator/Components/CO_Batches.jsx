@@ -4,6 +4,7 @@ import { Plus, Search, Users, UserCheck, Calendar, CheckCircle, CheckSquare, Squ
 import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../../../data/coordinatorMockData";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_Batches.css";
 
 export default function CoordinatorBatches() {
@@ -180,12 +181,7 @@ export default function CoordinatorBatches() {
           </div>
 
         </div>
-        <button
-          className="coord-btn coord-btn--primary"
-          onClick={() => setShowCreateModal(true)}
-        >
-          <Plus size={16} /> Create New Batch
-        </button>
+        
       </div>
 
       <div className="coord-filter-bar" style={{ display: "flex", alignItems: "center", gap: "12px", justifyContent: "flex-start", flexWrap: "wrap" }}>
@@ -200,15 +196,15 @@ export default function CoordinatorBatches() {
             style={{ paddingLeft: "36px", width: "100%" }}
           />
         </div>
-        <select
-          className="coord-select"
+        <CustomSelect
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="All">All Statuses</option>
-          <option value="Active">Active</option>
-          <option value="Near Completion">Near Completion</option>
-        </select>
+          onChange={setStatusFilter}
+          options={[
+            { value: "All", label: "All Statuses" },
+            { value: "Active", label: "Active" },
+            { value: "Near Completion", label: "Near Completion" },
+          ]}
+        />
       </div>
 
       <div className="coord-table-card">
@@ -221,8 +217,7 @@ export default function CoordinatorBatches() {
               <th>Completion Progress</th>
               <th>Avg Attendance</th>
               <th>Status</th>
-              <th>Actions</th>
-            </tr>
+              </tr>
           </thead>
           <tbody>
             {filteredBatches.map((b) => (
@@ -284,14 +279,7 @@ export default function CoordinatorBatches() {
                     {b.status}
                   </span>
                 </td>
-                <td>
-                  <button
-                    className="coord-btn"
-                    style={{ padding: "6px 12px", fontSize: "12px", background: "#f1f5f9", color: "#334155" }}
-                  >
-                    Manage
-                  </button>
-                </td>
+                
               </tr>
             ))}
           </tbody>
@@ -342,23 +330,14 @@ export default function CoordinatorBatches() {
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assign Industry Mentor</label>
-                <select
+                <CustomSelect
                   value={newMentor}
-                  onChange={(e) => setNewMentor(e.target.value)}
-                  style={{
-                    width: "100%",
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #cbd5e1",
-                    marginTop: "4px",
-                  }}
-                >
-                  {coordinatorMentors.map((m) => (
-                    <option key={m.id} value={m.name}>
-                      {m.name} ({m.specialization})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setNewMentor}
+                  options={coordinatorMentors.map((m) => ({
+                    value: m.name,
+                    label: `${m.name} (${m.specialization})`,
+                  }))}
+                />
               </div>
 
               <div>

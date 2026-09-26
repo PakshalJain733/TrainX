@@ -10,7 +10,7 @@ import {
 } from '../models/user.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
 import { ROLES } from '../utils/constants.js';
-import { getOverallLeaderboard } from '../services/leaderboard.service.js';
+import { getOverallLeaderboard, formatStudentName } from '../services/leaderboard.service.js';
 
 export const getStudentData = async (req, res, next) => {
   try {
@@ -172,31 +172,37 @@ export const getStudentDashboard = async (req, res, next) => {
     try {
       const overallData = await getOverallLeaderboard({ college_id: collegeId });
       if (overallData && Array.isArray(overallData) && overallData.length > 0) {
-        realLeaderboard = overallData.map((s) => ({
-          rank: s.rank,
-          name: s.name,
-          batch: s.batch || s.department || 'All Batches',
-          department: s.department || '',
-          score: `${s.score ?? s.overall_score ?? 0} XP`,
-          initials: s.initials || (s.name ? s.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'ST'),
-          badge: s.rank === 1 ? '🥇 Rank 1' : s.rank === 2 ? '🥈 Rank 2' : s.rank === 3 ? '🥉 Rank 3' : `Rank #${s.rank}`,
-          you: Number(s.id) === Number(callerId) || Number(s.student_id) === Number(callerId) || Number(s.user_id) === Number(callerId),
-        }));
+        realLeaderboard = overallData.map((s) => {
+          const cleanName = formatStudentName(s.name, s.email);
+          return {
+            rank: s.rank,
+            name: cleanName,
+            batch: s.batch || s.department || 'All Batches',
+            department: s.department || '',
+            score: `${s.score ?? s.overall_score ?? 0} XP`,
+            initials: s.initials || (cleanName ? cleanName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'ST'),
+            badge: s.rank === 1 ? '🥇 Rank 1' : s.rank === 2 ? '🥈 Rank 2' : s.rank === 3 ? '🥉 Rank 3' : `Rank #${s.rank}`,
+            you: Number(s.id) === Number(callerId) || Number(s.student_id) === Number(callerId) || Number(s.user_id) === Number(callerId),
+          };
+        });
       }
     } catch (e) {
       console.warn('[getStudentDashboard leaderboard fetch warning]', e.message);
     }
 
     if (realLeaderboard.length === 0) {
-      realLeaderboard = students.map((s, idx) => ({
-        rank: idx + 1,
-        name: s.name,
-        batch: s.batch_name || 'All Batches',
-        score: `0 XP`,
-        initials: s.name ? s.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'ST',
-        badge: idx === 0 ? '🥇 Rank 1' : idx === 1 ? '🥈 Rank 2' : idx === 2 ? '🥉 Rank 3' : `Rank #${idx + 1}`,
-        you: Number(s.id) === Number(callerId),
-      }));
+      realLeaderboard = students.map((s, idx) => {
+        const cleanName = formatStudentName(s.name, s.email);
+        return {
+          rank: idx + 1,
+          name: cleanName,
+          batch: s.batch_name || 'All Batches',
+          score: `0 XP`,
+          initials: cleanName ? cleanName.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) : 'ST',
+          badge: idx === 0 ? '🥇 Rank 1' : idx === 1 ? '🥈 Rank 2' : idx === 2 ? '🥉 Rank 3' : `Rank #${idx + 1}`,
+          you: Number(s.id) === Number(callerId),
+        };
+      });
     }
 
     const currentStudentIdx = realLeaderboard.findIndex((s) => s.you);

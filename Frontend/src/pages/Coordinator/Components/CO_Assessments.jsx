@@ -1,3 +1,4 @@
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import {
@@ -296,18 +297,14 @@ export default function CoordinatorAssessments() {
               />
             </div>
 
-            <select
-              className="coord-select"
+            <CustomSelect
               value={batchFilter}
-              onChange={(e) => setBatchFilter(e.target.value)}
-            >
-              <option value="All">All Batches</option>
-              {batchesList.map((b) => (
-                <option key={b.id} value={b.name}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              onChange={setBatchFilter}
+              options={[
+                { value: "All", label: "All Batches" },
+                ...batchesList.map((b) => ({ value: b.name, label: b.name })),
+              ]}
+            />
           </div>
 
           {/* Quizzes List */}
@@ -649,29 +646,27 @@ export default function CoordinatorAssessments() {
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Target Batch</label>
-                <select
+                <CustomSelect
                   value={batch}
-                  onChange={(e) => setBatch(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                >
-                  <option value="All Batches">All Batches</option>
-                  {batchesList.map((b) => (
-                    <option key={b.id} value={b.name}>{b.name}</option>
-                  ))}
-                </select>
+                  onChange={setBatch}
+                  options={[
+                    { value: "All Batches", label: "All Batches" },
+                    ...batchesList.map((b) => ({ value: b.name, label: b.name })),
+                  ]}
+                />
               </div>
 
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 600, color: "#475569" }}>Assessment Format</label>
-                <select
+                <CustomSelect
                   value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", marginTop: "4px" }}
-                >
-                  <option value="MCQ Quiz">MCQ Quiz</option>
-                  <option value="Coding Assessment">Coding Assessment</option>
-                  <option value="Hands-on Project">Hands-on Project</option>
-                </select>
+                  onChange={setType}
+                  options={[
+                    { value: "MCQ Quiz", label: "MCQ Quiz" },
+                    { value: "Coding Assessment", label: "Coding Assessment" },
+                    { value: "Hands-on Project", label: "Hands-on Project" },
+                  ]}
+                />
               </div>
 
               <div>

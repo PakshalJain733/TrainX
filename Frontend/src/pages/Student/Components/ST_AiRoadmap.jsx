@@ -813,21 +813,6 @@ export default function AIRoadmap() {
 
   return (
     <div className="roadmap-container stack-6">
-      {/* Section Header */}
-      <div className="ui-section-header-ST">
-        <div className="ui-section-main-ST">
-          <div>
-            <h2 className="ui-section-title">
-              <Sparkles size={22} className="ui-section-title-icon text-indigo-600 animate-pulse" />
-              <span>Personalized AI Career Roadmap Generator</span>
-            </h2>
-            <p className="ui-section-desc">
-              Type any career goal or technology, and the AI will generate your customized step-by-step learning path.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Clean AI Roadmap Header & Custom Goal Input */}
       <div className="roadmap-generator-card">
         <div className="roadmap-generator-header">
@@ -847,10 +832,6 @@ export default function AIRoadmap() {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* AI Roadmap Generator Card */}
-      <div className="roadmap-generator-card">
         {/* Input Box & Action */}
         <form onSubmit={handleGenerate} className="roadmap-form-wrap">
           <div className="roadmap-input-row">

@@ -15,27 +15,6 @@ const getReports = (response) => {
   return [];
 };
 
-const textValue = (value) => {
-  if (value === undefined || value === null) return null;
-  const text = String(value).trim();
-  return text || null;
-};
-
-const firstValue = (source, keys) => {
-  if (!source || typeof source !== "object") return null;
-  for (const key of keys) {
-    const value = source[key];
-    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
-  }
-  return null;
-};
-
-const formatDate = (value) => {
-  if (!value) return "N/A";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
-};
-
 export default function WeeklyReports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +53,6 @@ export default function WeeklyReports() {
     loadReports();
   };
 
-
   return (
     <div className="mentor-weeklyreports-container">
       <div className="mentor-page-header-wr">
@@ -103,8 +81,12 @@ export default function WeeklyReports() {
           {loading ? (
             <div style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>Loading weekly reports...</div>
           ) : reports.length === 0 ? (
-            <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
-              No weekly reports found in database. Click "Generate Weekly Report" above to compile batch metrics.
+            <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
+              <FileCheck2 size={36} color="#94a3b8" />
+              <h4 style={{ margin: 0, color: "#1e293b", fontSize: "15px", fontWeight: 700 }}>No Weekly Reports Available Yet</h4>
+              <p style={{ margin: 0, fontSize: "13px" }}>
+                Click "Generate Weekly Report" above to compile batch performance metrics.
+              </p>
             </div>
           ) : (
             <table className="mentor-table">
@@ -138,47 +120,6 @@ export default function WeeklyReports() {
               </tbody>
             </table>
           )}
-
-          <table className="mentor-table">
-            <thead>
-              <tr>
-                <th>Report Title</th>
-                <th>Covered Batch</th>
-                <th>Submission Date</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={4}><div className="mentor-report-empty"><FileCheck2 size={28} /><p>Loading weekly reports...</p></div></td></tr>
-              ) : reports.length === 0 ? (
-                <tr>
-                  <td colSpan={4}>
-                    <div className="mentor-report-empty">
-                      <FileCheck2 size={28} />
-                      <p>No weekly reports available yet.</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                reports.map((report, index) => {
-                  const title = textValue(firstValue(report, ["title", "reportTitle", "weekLabel", "week"])) || "N/A";
-                  const batch = textValue(firstValue(report, ["batch", "batchName", "batch_name"])) || "N/A";
-                  const submittedAt = formatDate(firstValue(report, ["submittedAt", "submitted_at", "createdAt", "created_at", "date"]));
-                  const status = textValue(firstValue(report, ["status", "state"])) || "N/A";
-                  return (
-                    <tr key={textValue(firstValue(report, ["id", "reportId", "report_id"])) || index}>
-                      <td className="mentor-report-title">{title}</td>
-                      <td className="mentor-report-batch">{batch}</td>
-                      <td className="mentor-report-date">{submittedAt}</td>
-                      <td><span className="mentor-report-status">{status}</span></td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-
         </div>
       </div>
     </div>

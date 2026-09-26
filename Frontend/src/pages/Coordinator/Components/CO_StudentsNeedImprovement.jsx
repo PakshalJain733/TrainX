@@ -331,40 +331,6 @@ export default function StudentsNeedImprovement() {
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs */}
-      <div className="coord-perf-tabs-nav">
-        <button
-          onClick={() => setActiveTab("all")}
-          className={`coord-perf-tab-btn ${activeTab === "all" ? "coord-perf-tab-btn--active" : ""}`}
-        >
-          Students Needing Improvement ({dataList.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("immediate")}
-          className={`coord-perf-tab-btn ${activeTab === "immediate" ? "coord-perf-tab-btn--active" : ""}`}
-        >
-          <ShieldAlert size={14} /> Immediate Attention ({immediateAttentionStudents.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("commonSkills")}
-          className={`coord-perf-tab-btn ${activeTab === "commonSkills" ? "coord-perf-tab-btn--active" : ""}`}
-        >
-          <BarChart3 size={14} /> Most Common Weak Skills
-        </button>
-        <button
-          onClick={() => setActiveTab("improving")}
-          className={`coord-perf-tab-btn ${activeTab === "improving" ? "coord-perf-tab-btn--active" : ""}`}
-        >
-          <TrendingUp size={14} /> Improving ({improvingStudents.length})
-        </button>
-        <button
-          onClick={() => setActiveTab("notImproving")}
-          className={`coord-perf-tab-btn ${activeTab === "notImproving" ? "coord-perf-tab-btn--active" : ""}`}
-        >
-          <TrendingDown size={14} /> Not Improving ({notImprovingStudents.length})
-        </button>
-      </div>
-
       {/* View Content based on Tab */}
       {activeTab === "commonSkills" ? (
         /* Most Common Weak Skills Analysis Breakdown */
@@ -731,25 +697,16 @@ export default function StudentsNeedImprovement() {
             <form onSubmit={handleAssignPlan} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", fontSize: "12.5px" }}>
               <div>
                 <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Select Action Plan Type</label>
-                <select
+                <CustomSelect
                   value={planType}
-                  onChange={(e) => setPlanType(e.target.value)}
-                  className="coord-perf-select"
-                  style={{ width: "100%" }}
-                >
-                  <option value="Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling">
-                    Custom Practice Set & Mentor Counseling
-                  </option>
-                  <option value="Mandatory DSA & System Design Coding Bootcamp">
-                    Mandatory Coding Bootcamp
-                  </option>
-                  <option value="Official Skill Defaulter Warning + Catchup Labs">
-                    Academic Skill Warning Notice
-                  </option>
-                  <option value="Retake AI Mock Interview Round #2">
-                    Retake AI Mock Interview Round
-                  </option>
-                </select>
+                  onChange={setPlanType}
+                  options={[
+                    { value: "Custom DBMS & Data Structures Practice Set + 1-on-1 Mentor Counseling", label: "Custom Practice Set & Mentor Counseling" },
+                    { value: "Mandatory DSA & System Design Coding Bootcamp", label: "Mandatory Coding Bootcamp" },
+                    { value: "Official Skill Defaulter Warning + Catchup Labs", label: "Academic Skill Warning Notice" },
+                    { value: "Retake AI Mock Interview Round #2", label: "Retake AI Mock Interview Round" },
+                  ]}
+                />
               </div>
 
               <div>

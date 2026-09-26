@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import ReactDOM from "react-dom";
 import {
   SlidersHorizontal,
   Power,
@@ -22,6 +23,8 @@ import {
   Building2
 } from "lucide-react";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
+import CustomSelect from "../../../components/ui/CustomSelect";
+import { collegeAPI } from "../../../services/api";
 import "../Styles/SA_MaintenanceControls.css";
 
 /* ── Interactive Modal Component for Editing Notice ─────────────────── */
@@ -180,17 +183,9 @@ export default function MaintenanceControls() {
     toggleGlobalEmergencyMode,
     turnAllModulesOn,
   } = useSystemMaintenance();
-
-  const defaultColleges = [
+  const [collegesList, setCollegesList] = useState([
     { id: "all", name: "All Partner Colleges (Global System Default)" },
-    { id: "vjti", name: "VJTI Autonomous Institute of Technology" },
-    { id: "iitb", name: "IIT Bombay - Department of Engineering" },
-    { id: "coep", name: "COEP Technological University" },
-    { id: "mitwpu", name: "MIT World Peace University" },
-    { id: "pict", name: "Pune Institute of Computer Technology (PICT)" },
-  ];
-
-  const [collegesList, setCollegesList] = useState(defaultColleges);
+  ]);
   const [selectedCollege, setSelectedCollege] = useState("all");
 
   const [activeCategory, setActiveCategory] = useState("all");
@@ -198,22 +193,23 @@ export default function MaintenanceControls() {
   const [editingModule, setEditingModule] = useState(null);
   const [previewModule, setPreviewModule] = useState(null);
 
-  React.useEffect(() => {
-    const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
-    if (!token) return;
-    fetch('/api/v1/colleges', { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => res.json())
-      .then(data => {
-        const list = Array.isArray(data) ? data : (data.data || data.colleges || []);
-        if (list && list.length > 0) {
+  useEffect(() => {
+    collegeAPI.getColleges()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : (data?.data || []);
+        if (Array.isArray(list) && list.length > 0) {
           setCollegesList([
             { id: "all", name: "All Partner Colleges (Global System Default)" },
-            ...list.map(c => ({ id: String(c.id || c.code), name: c.name || c.college_name }))
+            ...list.map((c) => ({
+              id: String(c.id || c.code),
+              name: c.name || c.college_name || "Partner College",
+            })),
           ]);
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error("Error fetching colleges:", err));
   }, []);
+
 
   const selectedCollegeObj = collegesList.find(c => c.id === selectedCollege) || collegesList[0];
 
@@ -396,17 +392,16 @@ export default function MaintenanceControls() {
         <div className="mc-college-selector-wrap">
           <Building2 size={18} className="mc-college-icon" />
           <span className="mc-college-label">Institution Scope:</span>
-          <select
-            value={selectedCollege}
-            onChange={(e) => setSelectedCollege(e.target.value)}
-            className="mc-college-select"
-          >
-            {collegesList.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <div style={{ flex: 1, maxWidth: "340px" }}>
+            <CustomSelect
+              value={selectedCollege}
+              onChange={setSelectedCollege}
+              options={collegesList.map((c) => ({
+                value: c.id,
+                label: c.name,
+              }))}
+            />
+          </div>
         </div>
 
         <div className="sa-search-wrap dept-search-box mc-search-flex">

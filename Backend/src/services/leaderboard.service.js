@@ -17,6 +17,41 @@ const calculateOverallScore = (item) => {
   return Math.round((q * 0.3) + (c * 0.3) + (i * 0.25) + (a * 0.15));
 };
 
+export const formatStudentName = (name, email = '') => {
+  if (!name || typeof name !== 'string') {
+    if (email) {
+      name = email.split('@')[0];
+    } else {
+      return 'Student';
+    }
+  }
+
+  let cleanName = name.trim();
+
+  if (email && email.includes('@') && !cleanName.includes(' ')) {
+    const handle = email.split('@')[0].replace(/\d+$/g, '');
+    if (handle.includes('.') || handle.includes('_') || handle.includes('-')) {
+      cleanName = handle;
+    }
+  }
+
+  if (cleanName.includes('@')) {
+    cleanName = cleanName.split('@')[0];
+  }
+
+  cleanName = cleanName.replace(/\d+$/g, '').trim();
+  cleanName = cleanName.replace(/([a-z])([A-Z])/g, '$1 $2');
+  cleanName = cleanName.replace(/[._-]+/g, ' ');
+
+  const words = cleanName.split(/\s+/).filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
+  if (words.length > 0) {
+    return words.join(' ');
+  }
+
+  return name || 'Student';
+};
+
 /**
  * Helper to get student initials for frontend UI avatars
  */
@@ -106,7 +141,7 @@ export const getStudentsRawPerformance = async (filters = {}) => {
           WHERE r.student_id = u.id
         ) AS total_milestones
       FROM users u
-      JOIN students s ON u.id = s.user_id
+      LEFT JOIN students s ON u.id = s.user_id
       LEFT JOIN colleges c ON s.college_id = c.id
       LEFT JOIN departments d ON s.department_id = d.id
       LEFT JOIN batches b ON s.batch_id = b.id
@@ -150,7 +185,7 @@ export const getStudentsRawPerformance = async (filters = {}) => {
           student_id: r.student_id,
           user_id: r.user_id,
           user_created_at: r.user_created_at,
-          name: r.name,
+          name: formatStudentName(r.name, r.email),
           roll_number: r.roll_number || 'N/A',
           college_id: r.college_id,
           college_name: r.college_name || 'College',

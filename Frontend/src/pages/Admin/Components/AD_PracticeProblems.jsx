@@ -260,29 +260,10 @@ export default function AdminPracticeProblems() {
 
   return (
     <div className="admin-page-inner admin-users-container">
-      <div className="ui-section-header-AD">
-        <div className="ui-section-main">
-          <div>
-            <h2 className="ui-section-title">
-              <Terminal size={22} className="ui-section-title-icon" />
-              <span>Coding Practice Management</span>
-            </h2>
-            <p className="ui-section-desc">
-              Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts.
-            </p>
-          </div>
-          <div className="ui-section-action">
-            <button className="admin-btn-add" onClick={() => setShowAddModal(true)}>
-              <Plus size={16} /> Add Coding Problem
-            </button>
-          </div>
-        </div>
-      </div>
-
       <SectionHeader
         icon={Terminal}
         title="Coding Practice Management"
-        description="Build algorithmic question banks, configure test cases, and assign coding tasks to student batches."
+        description="Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts."
         action={
           <button className="admin-btn-add" onClick={() => setShowAddModal(true)}>
             <Plus size={16} /> Add Coding Problem

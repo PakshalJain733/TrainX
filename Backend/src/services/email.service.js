@@ -1,66 +1,77 @@
-import nodemailer from 'nodemailer';
+import { BrevoClient } from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 import path from 'path';
-import { config } from '../config/env.js';
 
-let transporter = null;
+// Ensure environment variables are loaded
+if (!process.env.BREVO_API_KEY) {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+  dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
+}
+
+let brevoClient = null;
 
 /**
- * Initialize and get the Nodemailer transporter
+ * Get or initialize Brevo Client instance
  */
-const getTransporter = () => {
-  if (!process.env.EMAIL_USER) {
-    dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-    dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
+const getBrevoClient = () => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.warn('[Brevo Warning] BREVO_API_KEY is not set in environment variables.');
+    return null;
   }
-
-  const emailUser = process.env.EMAIL_USER || config.email?.user || '';
-  const emailPass = process.env.EMAIL_PASS || config.email?.pass || '';
-
-  // If user and pass are provided in env, configure real SMTP transporter
-  if (emailUser && emailPass) {
-    if (!transporter || transporter.isMock) {
-      transporter = nodemailer.createTransport({
-        service: process.env.EMAIL_SERVICE || config.email?.service || 'gmail',
-        host: process.env.EMAIL_HOST || config.email?.host || 'smtp.gmail.com',
-        port: parseInt(process.env.EMAIL_PORT || config.email?.port || '587', 10),
-        secure: (process.env.EMAIL_SECURE || config.email?.secure) === 'true',
-        auth: {
-          user: emailUser,
-          pass: emailPass,
-        },
-        tls: {
-          rejectUnauthorized: false,
-        },
-      });
-
-      transporter.verify((error) => {
-        if (error) {
-          console.warn(`[Nodemailer Warning] SMTP verification failed: ${error.message}`);
-        } else {
-          console.log(`[Nodemailer] SMTP Transporter connected successfully (${emailUser})`);
-        }
-      });
-    }
-    return transporter;
+  if (!brevoClient) {
+    brevoClient = new BrevoClient({ apiKey });
   }
+  return brevoClient;
+};
 
-  // Development fallback mock transporter (logs to console)
-  console.log('[Nodemailer] Running in simulated mode (Add EMAIL_USER & EMAIL_PASS in .env for live email delivery)');
-  const mockTransporter = {
-    isMock: true,
-    sendMail: async (mailOptions) => {
-      console.log('\n================== [NODEMAILER SIMULATED EMAIL] ==================');
-      console.log(`To:      ${mailOptions.to}`);
-      console.log(`Subject: ${mailOptions.subject}`);
-      console.log(`From:    ${mailOptions.from || config.email?.from}`);
-      console.log('------------------------------------------------------------------');
-      console.log(mailOptions.text || '(HTML Email Content Sent)');
-      console.log('==================================================================\n');
+/**
+ * Centralized function to send emails via Brevo Transactional Email API
+ */
+export const sendEmail = async ({ to, toName = '', subject, htmlContent, textContent, templateId, params }) => {
+  try {
+    const client = getBrevoClient();
+    if (!client) {
+      console.warn('[Brevo] API Client not configured. Skipping live email dispatch.');
       return { messageId: `mock_${Date.now()}` };
-    },
-  };
-  return mockTransporter;
+    }
+
+    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'training.portal0987@gmail.com';
+    const senderName = process.env.BREVO_SENDER_NAME || 'Campus Training Portal';
+
+    const sendOptions = {
+      sender: {
+        email: senderEmail,
+        name: senderName,
+      },
+      to: [
+        {
+          email: to,
+          ...(toName ? { name: toName } : {}),
+        },
+      ],
+      subject,
+    };
+
+    if (templateId) {
+      sendOptions.templateId = parseInt(templateId, 10);
+      if (params && typeof params === 'object') {
+        sendOptions.params = params;
+      }
+    } else {
+      if (htmlContent) sendOptions.htmlContent = htmlContent;
+      if (textContent) sendOptions.textContent = textContent;
+    }
+
+    const response = await client.transactionalEmails.sendTransacEmail(sendOptions);
+    const messageId = response?.messageId || response?.body?.messageId || `brevo_${Date.now()}`;
+    console.log(`[Brevo] Transactional email sent to ${to} (Message ID: ${messageId})`);
+    return response;
+  } catch (error) {
+    const errorMsg = error?.response?.data?.message || error?.body?.message || error?.message || 'Unknown Brevo API error';
+    console.error(`[Brevo Error] Failed to send email to ${to}:`, errorMsg);
+    throw error;
+  }
 };
 
 /**
@@ -166,12 +177,10 @@ const renderBaseTemplate = ({ title, subtitle, contentHtml, footerNote = '' }) =
 };
 
 /**
- * Send an OTP Verification Email with enhanced HTML template
+ * Send an OTP Verification Email via Brevo
  */
 export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
   try {
-    const client = getTransporter();
-
     const contentHtml = `
       <div style="font-size: 16px; color: #1e293b; margin-bottom: 20px; font-weight: 600;">
         Hello ${name},
@@ -209,38 +218,30 @@ export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
       footerNote: 'This is an automated security email. Please do not reply directly.',
     });
 
-    const emailUser = process.env.EMAIL_USER || config.email?.user || '';
-    const senderHeader = `"Campus Training Portal" <${emailUser}>`;
+    const subject = `[Training Portal] ${otp} is your Login Verification Code`;
+    const textContent = `Hello ${name},\n\nYour Login Verification OTP is: ${otp}\n\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`;
 
-    const mailOptions = {
-      from: senderHeader,
+    return await sendEmail({
       to,
-      subject: `[Training Portal] ${otp} is your Login Verification Code`,
-      text: `Hello ${name},\n\nYour Login Verification OTP is: ${otp}\n\nThis code is valid for 10 minutes.\n\nIf you did not request this, please ignore this email.`,
-      html: htmlContent,
-    };
-
-    const info = await client.sendMail(mailOptions);
-    console.log(`[Nodemailer] OTP email sent to ${to} (Message ID: ${info.messageId})`);
-    return info;
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
   } catch (error) {
-    console.error(`[Nodemailer Error] Failed to send OTP email to ${to}:`, error.message);
+    console.error(`[Brevo Error] Failed to send OTP email to ${to}:`, error.message);
     throw error;
   }
 };
 
 /**
- * Send a Welcome Email upon account creation
+ * Send a Welcome Email upon account creation via Brevo
  */
 export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
   try {
-    const client = getTransporter();
-    const emailUser = process.env.EMAIL_USER || config.email?.user || '';
-    const senderHeader = `"Campus Training Portal" <${emailUser}>`;
-
     const roleUpper = role.toUpperCase();
     const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : '#3b82f6';
-    const regUrl = `http://localhost:5173/register?email=${encodeURIComponent(to)}`;
+    const regUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?email=${encodeURIComponent(to)}`;
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
@@ -291,32 +292,27 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
       footerNote: 'Need assistance? Reach out to your campus administrator or coordinator.',
     });
 
-    const mailOptions = {
-      from: senderHeader,
-      to,
-      subject: `Welcome ${name}! Complete your registration`,
-      text: `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nBest regards,\nCampus Training Portal Team`,
-      html: htmlContent,
-    };
+    const subject = `Welcome ${name}! Complete your registration`;
+    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nBest regards,\nCampus Training Portal Team`;
 
-    const info = await client.sendMail(mailOptions);
-    console.log(`[Nodemailer] Welcome email sent to ${to} (Message ID: ${info.messageId})`);
-    return info;
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
   } catch (error) {
-    console.error(`[Nodemailer Error] Welcome email dispatch failed for ${to}:`, error.message);
+    console.error(`[Brevo Error] Welcome email dispatch failed for ${to}:`, error.message);
     return null;
   }
 };
 
 /**
- * Send Generic Email wrapped in standard Portal Template
+ * Send Generic Email wrapped in standard Portal Template via Brevo
  */
 export const sendGenericEmail = async ({ to, subject, html, text }) => {
   try {
-    const client = getTransporter();
-    const emailUser = process.env.EMAIL_USER || config.email?.user || '';
-    const senderHeader = `"Campus Training Portal" <${emailUser}>`;
-
     const htmlContent = html
       ? renderBaseTemplate({
           title: subject || 'Training Portal Notification',
@@ -325,16 +321,14 @@ export const sendGenericEmail = async ({ to, subject, html, text }) => {
         })
       : null;
 
-    const mailOptions = {
-      from: senderHeader,
+    return await sendEmail({
       to,
       subject,
-      text,
-      html: htmlContent,
-    };
-    return await client.sendMail(mailOptions);
+      htmlContent,
+      textContent: text,
+    });
   } catch (error) {
-    console.error(`[Nodemailer Error] Failed to send generic email to ${to}:`, error.message);
+    console.error(`[Brevo Error] Failed to send generic email to ${to}:`, error.message);
     throw error;
   }
 };

@@ -196,24 +196,10 @@ export default function AdminBroadcast() {
 
   return (
     <div className="admin-broadcast-container">
-      <div className="ui-section-header-AD">
-        <div className="ui-section-main">
-          <div>
-            <h2 className="ui-section-title">
-              <Megaphone size={22} className="ui-section-title-icon" />
-              <span>Broadcast Announcement Center</span>
-            </h2>
-            <p className="ui-section-desc">
-              Issue real-time announcements, urgent test notices, and placement drive alerts to all student cohorts and mentors.
-            </p>
-          </div>
-        </div>
-      </div>
-
       <SectionHeader
         icon={Megaphone}
         title="Broadcast Announcement Center"
-        description="Issue real-time announcements, urgent test notices, and placement drive alerts to all student batches and mentors."
+        description="Issue real-time announcements, urgent test notices, and placement drive alerts to all student cohorts and mentors."
       />
 
 

@@ -51,40 +51,21 @@ const formatPercent = (value) => {
 
 export default function Students() {
   const [search, setSearch] = useState('');
-  const [studentsList, setStudentsList] = useState([]);
+  const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
     setLoading(true);
     apiFetch("/mentor/students/performance")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setStudentsList(res.data);
-        } else {
-          setStudentsList([]);
+        if (mounted) {
+          const list = res && res.data && Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+          setStudents(list);
         }
       })
-      .catch(() => setStudentsList([]))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const [students, setStudents] = useState([]);
-
-  const filteredStudents = (studentsList.length > 0 ? studentsList : students).filter((s) => {
-    const q = search.toLowerCase();
-    return (
-      (s.name && s.name.toLowerCase().includes(q)) ||
-      (s.rollNo && String(s.rollNo).toLowerCase().includes(q)) ||
-      (s.batch && String(s.batch).toLowerCase().includes(q))
-    );
-  });
-
-
-  useEffect(() => {
-    let mounted = true;
-    apiFetch("/mentor/students/performance")
-      .then((response) => {
-        if (mounted) setStudents(getStudents(response));
+      .catch(() => {
+        if (mounted) setStudents([]);
       })
       .finally(() => {
         if (mounted) setLoading(false);
@@ -94,10 +75,15 @@ export default function Students() {
     };
   }, []);
 
-  const query = search.trim().toLowerCase();
-  const filtered = students.filter((student) => {
-    const values = [student.name, student.rollNo, student.rollNumber, student.batch, student.department];
-    return values.some((value) => textValue(value)?.toLowerCase().includes(query));
+  const filteredStudents = students.filter((s) => {
+    const q = search.toLowerCase();
+    return (
+      (s.name && s.name.toLowerCase().includes(q)) ||
+      (s.rollNo && String(s.rollNo).toLowerCase().includes(q)) ||
+      (s.roll_number && String(s.roll_number).toLowerCase().includes(q)) ||
+      (s.batch && String(s.batch).toLowerCase().includes(q)) ||
+      (s.department && String(s.department).toLowerCase().includes(q))
+    );
   });
 
   return (
@@ -128,9 +114,9 @@ export default function Students() {
       <div className="mentor-table-card">
         {loading ? (
           <div style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>Loading students...</div>
-        ) : students.length === 0 ? (
+        ) : filteredStudents.length === 0 ? (
           <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
-            No students found in database.
+            No students found.
           </div>
         ) : (
           <div className="mentor-table-responsive">
@@ -184,74 +170,6 @@ export default function Students() {
             </table>
           </div>
         )}
-
-        <div className="mentor-table-responsive">
-          <table className="mentor-table">
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Roll No</th>
-                <th>Assigned Batch</th>
-                <th>Attendance</th>
-                <th>Avg Score</th>
-                <th>Risk Level</th>
-                <th className="mentor-actions-cell">Contact</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr><td colSpan={7}><div className="mentor-students-empty">Loading assigned students...</div></td></tr>
-              ) : filtered.length > 0 ? (
-                filtered.map((student, index) => {
-                  const name = textValue(student.name) || "N/A";
-                  const rollNo = textValue(student.rollNo || student.rollNumber) || "N/A";
-                  const department = textValue(student.department) || "N/A";
-                  const batch = textValue(student.batch || student.batchName) || "N/A";
-                  const status = textValue(student.status) || "N/A";
-                  const email = textValue(student.email);
-                  const score = student.overallScore ?? student.score;
-                  return (
-                    <tr key={textValue(student.id || student.userId) || index}>
-                      <td>
-                        <p className="mentor-student-name">{name}</p>
-                        <p className="mentor-student-college">{department}</p>
-                      </td>
-                      <td><span className="mentor-student-roll">{rollNo}</span></td>
-                      <td><span className="mentor-student-batch">{batch}</span></td>
-                      <td>
-                        <span className={`mentor-student-attendance ${getAttendanceClass(student.attendance)}`}>
-                          {formatPercent(student.attendance)}
-                        </span>
-                      </td>
-                      <td><span className="mentor-student-score">{formatPercent(score)}</span></td>
-                      <td>
-                        <span className={`mentor-risk-pill ${getRiskClass(status)}`}>{status}</span>
-                      </td>
-                      <td className="mentor-actions-cell">
-                        {email ? (
-                          <a className="mentor-action-btn" href={`mailto:${email}`} title={email}>
-                            <Mail size={13} />
-                            <span>Contact</span>
-                          </a>
-                        ) : (
-                          <span className="text-xs text-slate-400">N/A</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                  <td colSpan={7}>
-                    <div className="mentor-students-empty">
-                      <Users size={28} />
-                      <p>No records yet</p>
-                    </div>
-                  </td>
-              )}
-            </tbody>
-          </table>
-        </div>
-
       </div>
     </div>
   );

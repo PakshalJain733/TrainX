@@ -83,134 +83,132 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
   ]
 }`;
 
-  const modelsToTry = [
-    'gemini-3.5-flash',
-    'gemini-3.6-flash',
-    'gemini-3.5-flash-lite',
-    'gemini-3.7-flash',
-    'gemini-flash-latest',
-  ];
+  const groqApiKey = process.env.Groq_AI_API_KEY || (apiKey && apiKey.startsWith('gsk_') ? apiKey : '');
+  const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
 
-  if (apiKey && apiKey !== 'your_ai_api_key' && apiKey !== 'YOUR_GEMINI_API_KEY') {
-    for (const model of modelsToTry) {
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          console.log(`[Google Gemini AI] Requesting live curriculum generation for "${targetRole}" via ${model} (Attempt ${attempt})...`);
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 20000);
+  // 1. Try Groq AI Provider first if Groq API key is present
+  if (groqApiKey && groqApiKey.startsWith('gsk_')) {
+    for (const model of groqModels) {
+      try {
+        console.log(`[Groq AI] Requesting live curriculum generation for "${targetRole}" via ${model}...`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-          let response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-            {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'x-goog-api-key': apiKey,
-              },
-              signal: controller.signal,
-              body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }],
-                generationConfig: {
-                  temperature: 0.7,
-                  topK: 40,
-                  topP: 0.95,
-                },
-              }),
-            }
-          );
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${groqApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: 'system', content: 'You are a world-class AI Career & Curriculum Architect. Output valid JSON strictly matching the requested roadmap schema.' },
+              { role: 'user', content: prompt },
+            ],
+            response_format: { type: 'json_object' },
+            temperature: 0.7,
+          }),
+        });
 
-          if (response.status === 401) {
-            response = await fetch(
-              `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-              {
-                method: 'POST',
-                headers: { 
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${apiKey}`,
-                },
-                signal: controller.signal,
-                body: JSON.stringify({
-                  contents: [{ parts: [{ text: prompt }] }],
-                  generationConfig: {
-                    temperature: 0.7,
-                  },
-                }),
-              }
-            );
-          }
+        clearTimeout(timeoutId);
 
-          clearTimeout(timeoutId);
-
-          if (response.status === 503 || response.status === 429) {
-            console.warn(`[Google Gemini AI] Model ${model} rate-limited (${response.status}). Trying next available model...`);
-            break;
-          }
-
-          if (!response.ok) {
-            const errorBody = await response.text().catch(() => '');
-            console.warn(`[Google Gemini AI] Model ${model} returned status ${response.status}: ${errorBody.slice(0, 150)}`);
-            break;
-          }
-
+        if (response.ok) {
           const data = await response.json();
-          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          if (!rawText) break;
-
-          const cleanJsonText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-          let parsed;
-          try {
-            parsed = JSON.parse(cleanJsonText);
-          } catch (parseErr) {
-            const jsonMatch = cleanJsonText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
-            else break;
-          }
-
-          if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
-            const sanitizedMilestones = parsed.milestones.map((m, index) => {
-              const step = index + 1;
-              let milestoneTopics = Array.isArray(m.topics) ? m.topics.filter(Boolean) : [];
-              if (milestoneTopics.length === 0) {
-                milestoneTopics = generateRoleSpecificTopics(targetRole, m.title, step, currentSkills);
-              }
-
-              let milestoneSyllabus = Array.isArray(m.syllabus) ? m.syllabus.filter(Boolean) : [];
-              if (milestoneSyllabus.length === 0) {
-                milestoneSyllabus = generateRoleSpecificSyllabus(targetRole, m.title, step, currentSkills);
-              }
-
-              let milestoneResources = Array.isArray(m.resources) ? m.resources.filter(Boolean) : [];
-              if (milestoneResources.length === 0) {
-                milestoneResources = generateRoleSpecificResources(targetRole, m.title, step);
-              }
-
-              return {
-                id: step,
-                title: m.title || `Milestone ${step}: ${targetRole} Module`,
+          const rawText = data?.choices?.[0]?.message?.content;
+          if (rawText) {
+            const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanText);
+            if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
+              const sanitized = parsed.milestones.map((m, index) => ({
+                id: index + 1,
+                title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
                 desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
                 status: m.status || (index === 0 ? 'in-progress' : 'locked'),
                 progress: typeof m.progress === 'number' ? m.progress : (index === 0 ? 40 : 0),
                 tags: Array.isArray(m.tags) ? m.tags : [targetRole],
-                topics: milestoneTopics,
+                topics: Array.isArray(m.topics) && m.topics.length > 0 ? m.topics : generateRoleSpecificTopics(targetRole, m.title, index + 1, currentSkills),
+                quizzes: typeof m.quizzes === 'number' ? m.quizzes : 3,
+                exercises: typeof m.exercises === 'number' ? m.exercises : 8,
+              }));
+
+              console.log(`[Groq AI] Successfully generated ${sanitized.length} live AI milestones for "${targetRole}" via ${model}!`);
+              return {
+                source: 'groq-ai-live',
+                modelUsed: model,
+                milestones: sanitized,
+              };
+            }
+          }
+        } else {
+          const errText = await response.text().catch(() => '');
+          console.warn(`[Groq AI] Model ${model} status ${response.status}: ${errText.slice(0, 150)}`);
+        }
+      } catch (err) {
+        console.warn(`[Groq AI] Error with model ${model}: ${err.message}`);
+      }
+    }
+  }
+
+  // 2. Try Google Gemini AI Provider if Gemini API key is present
+  const geminiModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+  const geminiKey = apiKey && !apiKey.startsWith('gsk_') && apiKey !== 'your_ai_api_key' ? apiKey : '';
+
+  if (geminiKey) {
+    for (const model of geminiModels) {
+      try {
+        console.log(`[Google Gemini AI] Requesting live curriculum generation for "${targetRole}" via ${model}...`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: prompt }] }],
+              generationConfig: { temperature: 0.7, topK: 40, topP: 0.95 },
+            }),
+          }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (rawText) {
+            const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(cleanText);
+            if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
+              const sanitized = parsed.milestones.map((m, index) => ({
+                id: index + 1,
+                title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
+                desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
+                status: m.status || (index === 0 ? 'in-progress' : 'locked'),
+                progress: typeof m.progress === 'number' ? m.progress : (index === 0 ? 40 : 0),
+                tags: Array.isArray(m.tags) ? m.tags : [targetRole],
+                topics: Array.isArray(m.topics) && m.topics.length > 0 ? m.topics : generateRoleSpecificTopics(targetRole, m.title, index + 1, currentSkills),
                 syllabus: milestoneSyllabus,
                 resources: milestoneResources,
                 quizzes: typeof m.quizzes === 'number' ? m.quizzes : 3,
                 exercises: typeof m.exercises === 'number' ? m.exercises : 8,
-              };
-            });
+              }));
 
-            console.log(`[Google Gemini AI] Successfully generated ${sanitizedMilestones.length} live AI milestones for "${targetRole}" via ${model}!`);
-            return {
-              source: 'gemini-ai-live',
-              modelUsed: model,
-              milestones: sanitizedMilestones,
-            };
+              console.log(`[Google Gemini AI] Successfully generated ${sanitized.length} live AI milestones for "${targetRole}" via ${model}!`);
+              return {
+                source: 'gemini-ai-live',
+                modelUsed: model,
+                milestones: sanitized,
+              };
+            }
           }
-        } catch (err) {
-          console.warn(`[Google Gemini AI] Connection warning for model ${model}: ${err.message}`);
         }
+      } catch (err) {
+        console.warn(`[Google Gemini AI] Warning for model ${model}: ${err.message}`);
       }
     }
   }
@@ -220,8 +218,8 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
   const generatedMilestones = generateDynamicMilestones(targetRole, currentSkills);
 
   return {
-    source: 'gemini-ai-dynamic',
-    modelUsed: 'gemini-ai-fallback',
+    source: 'ai-dynamic-curriculum',
+    modelUsed: 'role-tailored-engine',
     milestones: generatedMilestones,
   };
 };

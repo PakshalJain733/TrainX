@@ -92,6 +92,7 @@ app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/milestones', milestoneRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
 app.use('/api/v1/roadmaps', roadmapRoutes);
+app.use('/api/v1/roadmap', roadmapRoutes);
 app.use('/api/v1/interviews', interviewRoutes);
 app.use('/api/v1/skill-gaps', skillGapRoutes);
 app.use('/api/v1/skill-gap', skillGapRoutes);

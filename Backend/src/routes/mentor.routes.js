@@ -19,6 +19,7 @@ import {
   createStudyMaterial,
   deleteStudyMaterial,
   getMentorNotifications,
+  getMentorMenteeInterviews,
 } from '../controllers/mentor.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -39,6 +40,7 @@ router.get('/leaderboard', mentorOnly, getMentorLeaderboard);
 router.get('/defaulters', mentorOnly, getMentorDefaulters);
 router.get('/students/performance', mentorOnly, getMentorStudentsPerformance);
 router.get('/weekly-reports', mentorOnly, getMentorWeeklyReports);
+router.get('/interviews', mentorOnly, getMentorMenteeInterviews);
 router.get('/profile', mentorOnly, getMentorProfile);
 
 router.get('/assignments', mentorOnly, getMentorAssignments);

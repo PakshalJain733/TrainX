@@ -263,7 +263,6 @@ export default function MentorPerformance() {
                       <th>Coding</th>
                       <th>Interview</th>
                       <th>Attendance</th>
-                      <th>Status</th>
                       <th>Trend</th>
                       <th>Action</th>
                     </tr>
@@ -271,13 +270,13 @@ export default function MentorPerformance() {
                   <tbody>
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="mentor-perf-table-empty">
+                        <td colSpan={8} className="mentor-perf-table-empty">
                           No students found matching the current filters.
                         </td>
                       </tr>
                     ) : (
                       filtered.map(s => {
-                        const { color: sc, bg: sb } = statusStyle(s.overallScore);
+                        const { color: sc } = statusStyle(s.overallScore);
                         return (
                           <tr key={s.id}>
                             <td>
@@ -298,11 +297,6 @@ export default function MentorPerformance() {
                             <td><MiniBar value={s.coding} target={70} /></td>
                             <td><MiniBar value={s.interview} target={65} /></td>
                             <td><MiniBar value={s.attendance} target={75} /></td>
-                            <td>
-                              <span className="mentor-perf-status-badge" style={{ background: sb, color: sc }}>
-                                {s.status}
-                              </span>
-                            </td>
                             <td>
                               <span className={`mentor-perf-trend-wrap ${s.trend === "up" ? "mentor-perf-trend--up" : s.trend === "down" ? "mentor-perf-trend--down" : "mentor-perf-trend--neutral"}`}>
                                 {s.trend === "up" ? <ArrowUpRight size={14} /> : s.trend === "down" ? <ArrowDownRight size={14} /> : "—"}
