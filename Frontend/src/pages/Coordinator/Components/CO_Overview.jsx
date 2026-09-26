@@ -61,6 +61,26 @@ export default function CoordinatorOverview() {
     { value: "ds", label: "Data Science & AI/ML 2025" },
   ];
 
+  const handleBroadcast = async (e) => {
+    e.preventDefault();
+    if (!broadcastMsg.trim()) return;
+    try {
+      await apiFetch("/coordinator/broadcasts", {
+        method: "POST",
+        body: JSON.stringify({
+          message: broadcastMsg,
+          category: noticeCategory,
+          targetAudience,
+        }),
+      }).catch(() => null);
+      setBroadcastSent(true);
+      setBroadcastMsg("");
+      setTimeout(() => setBroadcastSent(false), 3500);
+    } catch (err) {
+      console.error("Broadcast error:", err);
+    }
+  };
+
 
   const [coordUser, setCoordUser] = useState(() => {
     try {
