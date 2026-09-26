@@ -1436,3 +1436,47 @@ export const getMentorNotifications = async (req, res, next) => {
   }
 };
 
+export const getMentorMenteeInterviews = async (req, res, next) => {
+  try {
+    const rows = await query(
+      `SELECT 
+        iv.id,
+        iv.user_id,
+        iv.interview_type,
+        iv.overall_score,
+        iv.grade,
+        iv.feedback,
+        iv.conducted_date,
+        iv.status,
+        iv.created_at,
+        u.name AS student_name,
+        u.email AS student_email,
+        s.roll_number,
+        COALESCE(b.name, s.department, 'Batch A') AS batch_name
+       FROM interview_sessions iv
+       JOIN users u ON iv.user_id = u.id
+       LEFT JOIN students s ON u.id = s.user_id
+       LEFT JOIN batches b ON s.batch_id = b.id
+       ORDER BY iv.created_at DESC, iv.id DESC`
+    );
+
+    const formatted = (rows || []).map((r) => ({
+      id: r.id,
+      studentName: r.student_name || 'Student',
+      rollNo: r.roll_number || 'N/A',
+      batch: r.batch_name || 'Batch A',
+      targetRole: r.interview_type || 'Software Engineer',
+      topic: r.interview_type || 'General AI Mock',
+      score: r.overall_score || 0,
+      grade: r.grade || (r.overall_score >= 80 ? 'Excellent' : r.overall_score >= 60 ? 'Good' : 'Needs Work'),
+      status: r.status || 'Completed',
+      feedback: r.feedback || 'Completed AI Mock Interview session.',
+      date: r.conducted_date || (r.created_at ? new Date(r.created_at).toLocaleDateString() : 'Recent')
+    }));
+
+    return sendSuccess(res, 'Mentee interview progress retrieved successfully', formatted);
+  } catch (error) {
+    next(error);
+  }
+};
+

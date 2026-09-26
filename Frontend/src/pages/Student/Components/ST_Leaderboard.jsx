@@ -56,6 +56,14 @@ export default function Leaderboard() {
       .finally(() => setLoading(false));
   };
 
+  const formatStudentName = (name) => {
+    if (!name || typeof name !== "string") return "Student";
+    let cleanName = name.trim().replace(/@.*$/, "").replace(/\d+$/g, "");
+    cleanName = cleanName.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[._-]+/g, " ");
+    const words = cleanName.split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    return words.length > 0 ? words.join(" ") : name;
+  };
+
   const getRankClass = (r) => {
     if (r === 1) return "rank-1";
     if (r === 2) return "rank-2";
@@ -190,7 +198,8 @@ export default function Leaderboard() {
               </div>
             ) : (
               currentList.map((st, idx) => {
-                const displayName = st.name || st.username || st.student_name || st.batch_name || "Student";
+                const rawName = st.name || st.username || st.student_name || st.batch_name || "Student";
+                const displayName = activeTab === "batches" ? rawName : formatStudentName(rawName, st.email);
                 const displayInitials = st.initials || displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "ST";
                 const displayScore = st.score !== undefined ? st.score : (st.overall_score !== undefined ? st.overall_score : (st.xp || 0));
                 const displaySub = activeTab === "batches"

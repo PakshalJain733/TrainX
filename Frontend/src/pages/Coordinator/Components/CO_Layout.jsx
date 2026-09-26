@@ -345,15 +345,6 @@ export default function CoordinatorLayout() {
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    const latestUnread = notifications.find((n) => n.unread);
-    if (latestUnread) {
-      window.dispatchEvent(
-        new CustomEvent("new_broadcast_notification", { detail: latestUnread })
-      );
-    }
-  }, []);
-
   const headerRightRef = useRef(null);
 
   useEffect(() => {

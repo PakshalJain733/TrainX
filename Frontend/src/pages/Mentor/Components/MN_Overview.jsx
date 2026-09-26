@@ -149,16 +149,10 @@ export default function Overview() {
     : getNumber(mentor, ["upcomingSessions", "upcomingSessionsCount", "sessionCount", "upcoming_sessions"]) ?? 0;
 
   const mentorStats = [
-    { label: "Active Batches", value: `${batches.length} Cohorts`, hint: "Live from database", icon: Layers },
+    { label: "Active Batches", value: `${batches.length} Cohorts`, hint: "Live assigned cohorts", icon: Layers },
     { label: "Total Students", value: `${studentCount} Students`, hint: "Live student count", icon: Users },
-    { label: "Upcoming Sessions", value: `${sessionsCount} Scheduled`, hint: "Live live sessions", icon: CalendarCheck },
+    { label: "Upcoming Sessions", value: `${sessionsCount} Scheduled`, hint: "Scheduled live sessions", icon: CalendarCheck },
     { label: "Published Tasks", value: `${tasksCount} Tasks`, hint: "Active coding assignments", icon: FileCode },
-
-    { label: "Active Batches", value: `${assignedBatches} Batches`, hint: "From assigned batch records", icon: Layers },
-    { label: "Total Students", value: `${assignedStudents}`, hint: "Assigned student records", icon: Users },
-    { label: "Upcoming Sessions", value: `${upcomingSessions} Scheduled`, hint: "Returned session records", icon: CalendarCheck },
-    { label: "Pending Reviews", value: `${pendingReviews}`, hint: "Returned review count", icon: FileCode },
-
   ];
 
   return (
@@ -236,48 +230,42 @@ export default function Overview() {
               batches.map((batch, index) => {
                 const batchName = asText(firstValue(batch, ["name", "batchName", "batch_name"])) || "N/A";
                 const batchCode = asText(firstValue(batch, ["code", "batchCode", "batch_code", "programCode"])) || "N/A";
-                const batchCollege = asText(firstValue(batch, ["college", "collegeName", "college_name", "institution"])) || "N/A";
                 const studentCount = getNumber(batch, ["enrolledStudents", "studentCount", "studentsCount", "totalStudents", "assignedStudents"])
                   ?? (Array.isArray(batch.students) ? batch.students.length : 0);
                 const progress = getNumber(batch, ["progress", "completion", "completionPercentage", "overallProgress"]);
-                const status = asText(firstValue(batch, ["status", "state"]));
+                const status = asText(firstValue(batch, ["status", "state"])) || "Active";
+                const isInactive = status === "Inactive" || status === "inactive";
+
                 return (
                   <div
                     key={asText(firstValue(batch, ["id", "batchId", "batch_id"])) || index}
-                    className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/80 transition-all shadow-xs hover:shadow-sm space-y-2.5"
+                    className="p-3.5 rounded-xl border border-slate-200/80 bg-white hover:bg-slate-50/80 transition-all shadow-xs hover:shadow-sm space-y-2"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
                           <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-0.5 rounded-md uppercase tracking-wider">
                             {batchCode}
-
                           </span>
-                          <span className="text-[11px] font-semibold text-slate-500">• {studentCount} Students</span>
+                          <span className="text-[11.5px] font-semibold text-slate-500">
+                            • {studentCount} Enrolled Students
+                          </span>
                         </div>
-                        <h4 className="font-extrabold text-slate-900 text-sm tracking-tight truncate mt-1">{batchName}</h4>
-                        <p className="text-xs text-slate-500 font-medium truncate">{batchCollege}</p>
+                        <h4 className="font-extrabold text-slate-900 text-sm tracking-tight truncate">{batchName}</h4>
                       </div>
-                      <Badge variant={status ? "success" : "default"} className="text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider flex-shrink-0">
-                        {status || "N/A"}
+                      <Badge variant={isInactive ? "destructive" : "success"} className="text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider flex-shrink-0">
+                        {isInactive ? "Inactive" : "Active"}
                       </Badge>
                     </div>
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-slate-600">Enrolled Students</span>
-                        <span className="text-indigo-600">{studentCount}</span>
+
+                    {progress !== null && progress !== undefined && (
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden border border-slate-200/60 mt-1">
+                        <div
+                          className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
+                        />
                       </div>
-                      {progress === null ? (
-                        <div className="text-xs text-slate-400">Progress: N/A</div>
-                      ) : (
-                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden border border-slate-200/60">
-                          <div
-                            className="h-full rounded-full transition-all duration-300"
-                            style={{ width: `${Math.min(100, Math.max(0, progress))}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                 );
               })

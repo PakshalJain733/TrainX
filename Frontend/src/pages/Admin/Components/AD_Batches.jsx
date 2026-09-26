@@ -1132,29 +1132,10 @@ export default function AdminBatches() {
 
   return (
     <div className="admin-batches-container">
-      <div className="ui-section-header-AD">
-        <div className="ui-section-main">
-          <div>
-            <h2 className="ui-section-title">
-              <Code2 size={22} className="ui-section-title-icon" />
-              <span>Manage Batches</span>
-            </h2>
-            <p className="ui-section-desc">
-              Create cohorts, assign mentors, and generate unique batch join access codes.
-            </p>
-          </div>
-          <div className="ui-section-action">
-            <Button onClick={handleOpenForm} className="create-batch-btn">
-              <Plus size={16} /> {showAddForm ? "Cancel" : "Create New Batch"}
-            </Button>
-          </div>
-        </div>
-      </div>
-
       <SectionHeader
         icon={Code2}
         title="Manage Batches"
-        description="Create batches, assign mentors, and generate unique batch join access codes."
+        description="Create cohorts, assign mentors, and generate unique batch join access codes."
         action={
           <Button onClick={handleOpenForm} className="create-batch-btn">
             <Plus size={16} /> {showAddForm ? "Cancel" : "Create New Batch"}
@@ -1293,10 +1274,6 @@ export default function AdminBatches() {
                 ? 'Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.'
                 : 'Batches marked as inactive or deleted will appear here. You can reactivate them anytime.'}
             </p>
-
-            <p className="admin-empty-state-title">No batches created yet</p>
-            <p className="admin-empty-state-sub">Click "Create New Batch" to add batches, assign mentors, and create student join codes.</p>
-
           </div>
         ) : (
           visibleBatches.map((b) => {

@@ -42,19 +42,19 @@ export default function MentorRoadmaps() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="mentor-search-wrapper">
-        <Search size={16} className="mentor-search-icon" />
-        <input
-          type="text"
-          placeholder="Search student name, roll number, or roadmap..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="mentor-search-input"
-        />
-      </div>
-
+      {/* Main Single Unified Card for Search & Content */}
       <div className="mentor-roadmap-table-container">
+        <div className="mentor-search-wrapper" style={{ borderBottom: "1px solid #f1f5f9", borderRadius: "16px 16px 0 0" }}>
+          <Search size={16} className="mentor-search-icon" />
+          <input
+            type="text"
+            placeholder="Search student name, roll number, or roadmap..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="mentor-search-input"
+          />
+        </div>
+
         {filteredTracks.length === 0 ? (
           <div className="mentor-roadmaps-empty">
             No matching student roadmaps found.

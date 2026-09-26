@@ -43,6 +43,14 @@ const getStoredUserName = () => {
   } catch { return "Student"; }
 };
 
+const formatStudentName = (name) => {
+  if (!name || typeof name !== "string") return "Student";
+  let cleanName = name.trim().replace(/@.*$/, "").replace(/\d+$/g, "");
+  cleanName = cleanName.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[._-]+/g, " ");
+  const words = cleanName.split(/\s+/).filter(Boolean).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+  return words.length > 0 ? words.join(" ") : name;
+};
+
 const defaultDashboardData = {
   personalDetails: {
     name: "Student",
@@ -449,7 +457,7 @@ export default function Overview() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column' }}>
                         <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
-                          {item.name}
+                          {formatStudentName(item.name)}
                         </span>
                         <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: '500', marginTop: '3px' }}>
                           {item.batch ? `${item.batch} • ${item.badge || 'Overall Performer'}` : (item.badge || 'All Batches Performer')}
