@@ -20,6 +20,7 @@ import {
   ArrowRight,
   X,
   Compass,
+  AlertTriangle,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
@@ -92,6 +93,57 @@ const PRESET_PATHWAYS = [
   },
 ];
 
+function getTopicsForMilestone(m, targetRole) {
+  if (Array.isArray(m.topics) && m.topics.length > 0) {
+    return m.topics;
+  }
+
+  const roleLower = (targetRole || "").toLowerCase();
+  const titleLower = (m.title || "").toLowerCase();
+
+  // Craft dynamic topics from tags if available
+  if (Array.isArray(m.tags) && m.tags.length > 0) {
+    return [
+      `Core concepts & fundamentals of ${m.tags.slice(0, 2).join(" & ")}`,
+      `Practical hands-on implementation focusing on ${m.tags[2] || m.tags[0] || targetRole}`,
+      `Advanced workflow patterns, performance & code quality standards`,
+      `Real-world lab project build and competency assessment`,
+    ];
+  }
+
+  if (roleLower.includes("frontend") || roleLower.includes("react") || roleLower.includes("web")) {
+    if (titleLower.includes("fundamental") || titleLower.includes("milestone 1")) {
+      return [
+        "Semantic HTML5 elements & Modern CSS flexbox/grid responsive layouts",
+        "JavaScript ES6+ fundamentals: Promises, Async/Await, Arrow functions & DOM API",
+        "Git version control workflows & browser developer tools debugging",
+        "Building a responsive portfolio landing page project",
+      ];
+    }
+    if (titleLower.includes("react") || titleLower.includes("component") || titleLower.includes("milestone 2")) {
+      return [
+        "React Component Architecture: Functional components, Hooks (useState, useEffect, useContext)",
+        "Single-Page Application Routing with React Router v6 & Navigation Guards",
+        "Asynchronous REST API Integration using Axios with error boundary handling",
+        "Form validation with React Hook Form & Zod schema validation",
+      ];
+    }
+    return [
+      `Advanced UI Patterns & Component Architecture for ${targetRole || "Frontend"}`,
+      `State management, async API integration & performance optimization`,
+      `Automated testing, code quality checks & modern build tools`,
+      `End-to-end practical project build and code review`,
+    ];
+  }
+
+  return [
+    `Foundational concepts and principles of ${m.title || targetRole}`,
+    `Hands-on practical implementation & skill application`,
+    `Advanced techniques, optimization & quality control`,
+    `Real-world capstone project build and assessment`,
+  ];
+}
+
 export default function AIRoadmap() {
   const [goalInput, setGoalInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -100,6 +152,7 @@ export default function AIRoadmap() {
   const [aiSource, setAiSource] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [expandedMilestones, setExpandedMilestones] = useState({});
+  const [error, setError] = useState(null);
 
   // Fetch student profile & active roadmap
   useEffect(() => {
@@ -116,7 +169,9 @@ export default function AIRoadmap() {
       })
       .catch(() => {
         try {
-          const u = JSON.parse(sessionStorage.getItem("user") || "{}");
+          const u = JSON.parse(
+            sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+          );
           if (u) setUserProfile(u);
         } catch (e) {}
       });
@@ -151,8 +206,13 @@ export default function AIRoadmap() {
 
   const executeGeneration = async (targetRole) => {
     setIsGenerating(true);
+    setError(null);
     try {
-      const u = userProfile || JSON.parse(sessionStorage.getItem("user") || "{}");
+      const u =
+        userProfile ||
+        JSON.parse(
+          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        );
       const sp = u.studentProfile || {};
       const rawSkills = sp.skills || u.skills || "";
       const skillsArr = typeof rawSkills === "string" ? rawSkills.split(",") : (rawSkills || []);
@@ -175,9 +235,12 @@ export default function AIRoadmap() {
         if (response.data.aiSource) {
           setAiSource(response.data.aiSource);
         }
+      } else if (response && response.error) {
+        setError(response.error);
       }
     } catch (err) {
       console.error("Roadmap generation error:", err);
+      setError(err.message || "Failed to generate roadmap.");
     } finally {
       setIsGenerating(false);
     }
@@ -319,6 +382,23 @@ export default function AIRoadmap() {
               )}
             </button>
           </div>
+
+          {error && (
+            <div className="roadmap-error-alert flex items-center justify-between gap-3 p-3 mt-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-medium">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={18} className="text-red-500 shrink-0" />
+                <span>{error}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setError(null)}
+                className="text-red-400 hover:text-red-600 transition-colors"
+                title="Dismiss error"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
 
           {/* Popular Suggestions Row */}
           <div className="roadmap-suggestions-row">
@@ -519,12 +599,7 @@ export default function AIRoadmap() {
                       <div className="milestone-details-drawer">
                         <h4 className="drawer-heading">Key Learning Topics & Objectives:</h4>
                         <ul className="drawer-topics-list">
-                          {(m.topics || [
-                            `Fundamentals of ${m.title}`,
-                            `Core syntax & architectural patterns`,
-                            `Hands-on lab project implementation`,
-                            `Assessment quiz & code review`,
-                          ]).map((topic, i) => (
+                          {getTopicsForMilestone(m, currentRoadmap?.targetRole).map((topic, i) => (
                             <li key={i} className="drawer-topic-item">
                               <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                               <span>{topic}</span>

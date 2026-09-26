@@ -2,7 +2,23 @@ const API_BASE_URL = "/api/v1";
 
 async function request(endpoint, options = {}) {
   const url = endpoint.startsWith("/api/v1") ? endpoint : `${API_BASE_URL}${endpoint}`;
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("auth_token") || sessionStorage.getItem("authToken");
+  let token =
+    sessionStorage.getItem("token") ||
+    sessionStorage.getItem("auth_token") ||
+    sessionStorage.getItem("authToken") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("auth_token") ||
+    localStorage.getItem("authToken");
+
+  if (!token) {
+    try {
+      const u = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = u.token || u.authToken || u.auth_token || u.accessToken || u.jwt;
+    } catch (e) {}
+  }
+
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),

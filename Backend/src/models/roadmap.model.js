@@ -35,6 +35,7 @@ export const getRoadmapByStudentId = async (studentId) => {
           status: item.status, // 'completed' | 'in-progress' | 'locked'
           progress: item.progress || 0,
           tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
+          topics: typeof item.topics === 'string' ? JSON.parse(item.topics) : (item.topics || []),
           quizzes: item.quizzes || 0,
           exercises: item.exercises || 0,
         })),
@@ -76,10 +77,11 @@ export const saveRoadmap = async (studentId, targetRole, careerTrackName, milest
       for (let i = 0; i < milestones.length; i++) {
         const m = milestones[i];
         const tagsJson = JSON.stringify(m.tags || []);
+        const topicsJson = JSON.stringify(m.topics || []);
 
         const itemRes = await query(
-          'INSERT INTO roadmap_items (roadmap_id, sequence_order, title, description, status, progress, tags, quizzes, exercises) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-          [roadmapId, i + 1, m.title, m.desc, m.status, m.progress || 0, tagsJson, m.quizzes || 0, m.exercises || 0]
+          'INSERT INTO roadmap_items (roadmap_id, sequence_order, title, description, status, progress, tags, topics, quizzes, exercises) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+          [roadmapId, i + 1, m.title, m.desc, m.status, m.progress || 0, tagsJson, topicsJson, m.quizzes || 0, m.exercises || 0]
         );
 
         insertedItems.push({
@@ -110,6 +112,7 @@ export const saveRoadmap = async (studentId, targetRole, careerTrackName, milest
     status: m.status,
     progress: m.progress || 0,
     tags: m.tags || [],
+    topics: m.topics || [],
     quizzes: m.quizzes || 0,
     exercises: m.exercises || 0,
   }));

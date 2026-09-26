@@ -797,7 +797,6 @@
   border: 1px solid #f1f5f9;
 }
 
-/* Responsive tweaks */
 @media (max-width: 768px) {
   .roadmap-generator-card {
     padding: 18px;
@@ -819,3 +818,35 @@
     align-items: flex-start;
   }
 }
+
+.roadmap-error-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.roadmap-error-alert button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f87171;
+  transition: color 0.15s ease;
+}
+
+.roadmap-error-alert button:hover {
+  color: #dc2626;
+}
+

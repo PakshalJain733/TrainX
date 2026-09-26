@@ -11,12 +11,22 @@ export async function apiFetch(endpoint, options = {}) {
     let token =
       sessionStorage.getItem("token") ||
       sessionStorage.getItem("authToken") ||
-      sessionStorage.getItem("auth_token");
+      sessionStorage.getItem("auth_token") ||
+      localStorage.getItem("token") ||
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("auth_token");
 
     if (!token) {
       try {
-        const uSession = JSON.parse(sessionStorage.getItem("user") || "{}");
-        token = uSession.token || uSession.authToken || uSession.auth_token;
+        const uSession = JSON.parse(
+          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        );
+        token =
+          uSession.token ||
+          uSession.authToken ||
+          uSession.auth_token ||
+          uSession.accessToken ||
+          uSession.jwt;
       } catch (e) {}
     }
 
@@ -34,7 +44,9 @@ export async function apiFetch(endpoint, options = {}) {
 
     if (!res.ok) {
       const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.message || `Request failed with status ${res.status}`);
+      const message = errorData.message || `Request failed with status ${res.status}`;
+      console.warn(`[apiFetch] ${endpoint}: ${message}`);
+      return { data: null, error: message, status: res.status };
     }
 
     return await res.json();
