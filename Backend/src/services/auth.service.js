@@ -543,6 +543,7 @@ export const sendUserOtp = async (identifier) => {
     console.log(`[AUTH] OTP email successfully dispatched to ${recipientEmail} (Message ID: ${emailResult?.messageId || 'sent'})`);
   } catch (error) {
     console.error(`[AUTH Error] OTP email dispatch failed for ${recipientEmail}:`, error.message);
+    throw createAuthError(`Failed to send OTP email: ${error.message || 'Email service error'}`, 500);
   }
 
   return { identifier: cleanIdentifier };
