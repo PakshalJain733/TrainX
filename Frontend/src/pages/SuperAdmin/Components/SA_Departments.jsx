@@ -2,58 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { GraduationCap, Search, Plus, Building2, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from 'lucide-react';
 import { departmentAPI, collegeAPI } from '../../../services/api';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Departments.css";
 
-/* ── Inline dropdown for Departments (CSS: Departments.css .dept-select-*) ── */
-function DeptSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [dropUp, setDropUp] = React.useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (direction === 'up') {
-        setDropUp(true);
-      } else if (direction === 'down') {
-        setDropUp(false);
-      } else {
-        setDropUp(spaceBelow < 220);
-      }
-    }
-    setIsOpen(v => !v);
-  };
-
-  return (
-    <div className={`dept-select-wrap${isOpen ? ' dept-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={handleToggle} className={`dept-select-trigger${isOpen ? ' dept-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="dept-select-icon" />}
-        <span className="dept-select-text">{selected ? selected.label : <span className="dept-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`dept-select-arrow${isOpen ? ' dept-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className={`dept-select-dropdown${dropUp ? ' dept-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`dept-select-option${isSel ? ' dept-select-option--selected' : ''}`}>
-                <span className="dept-select-option-label">{opt.label}</span>
-                {isSel && <Check className="dept-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Departments ── */
+function DeptSelect(props) {
+  return <CustomSelect {...props} />;
 }
 function StatusBadge({ status }) {
   let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
@@ -430,7 +384,7 @@ export default function Departments() {
             <form onSubmit={handleAddDepartment}>
               <div className="modal-body">
                 <div className="form-group-admin">
-                  <label>Select College *</label>
+                  <label>College *</label>
                   <DeptSelect
                     value={deptForm.collegeId}
                     options={colleges.map((c) => ({

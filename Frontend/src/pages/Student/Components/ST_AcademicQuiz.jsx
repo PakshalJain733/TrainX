@@ -184,9 +184,17 @@ function normalizeAdminQuestion(q, idx) {
   };
 }
 
-const defaultQuizQuestions = [];
+const defaultQuizQuestions = [
+  {
+    id: "default-1",
+    question: "What is the primary purpose of Object-Oriented Programming (OOP)?",
+    options: ["Data encapsulation and modularity", "Compiling code faster", "Direct hardware manipulation", "Replacing all databases"],
+    correct: 0,
+    explanation: "OOP organizes code into reusable objects with data encapsulation and modularity."
+  }
+];
 
-function QuizPlatform({ quiz, mode, onExit }) {
+function QuizPlatform({ quiz = {}, mode, onExit }) {
   const [loadedQuestions, setLoadedQuestions] = useState(null);
   const [fetchingQs, setFetchingQs] = useState(false);
 
@@ -219,11 +227,11 @@ function QuizPlatform({ quiz, mode, onExit }) {
 
   // Normalize questions from admin DB, practice preset, or fallback
   const adminQs = loadedQuestions || (quiz.questionsList?.length ? quiz.questionsList.map(normalizeAdminQuestion) : null);
-  const builtinQs = (quizQuestions[quiz.id] && quizQuestions[quiz.id].length) ? quizQuestions[quiz.id] : null;
+  const builtinQs = (quiz.questions?.length ? quiz.questions.map(normalizeAdminQuestion) : null);
   const questions = adminQs || builtinQs || defaultQuizQuestions;
 
   const isReview = mode === "review";
-  const savedAnswers = isReview ? completedAnswers[quiz.id] || [] : [];
+  const savedAnswers = isReview ? (quiz.savedAnswers || []) : [];
 
   const [answers, setAnswers] = useState(isReview ? savedAnswers : Array(questions.length).fill(null));
   const [reviewMarks, setReviewMarks] = useState(Array(questions.length).fill(false));

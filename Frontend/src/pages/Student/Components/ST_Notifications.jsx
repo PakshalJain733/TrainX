@@ -49,6 +49,9 @@ export default function Notifications() {
             id: `broadcast-${b.id}`,
             title: `📢 [Notice] ${b.title}`,
             body: b.message,
+            target: b.target || 'All Batches',
+            priority: b.priority || 'General Announcement',
+            created_by_name: b.created_by_name || 'Admin',
             time: b.created_at ? new Date(b.created_at).toLocaleString() : "Recently",
             category: "Broadcast",
             icon: Bell,
@@ -192,6 +195,16 @@ export default function Notifications() {
                       <Badge variant="outline" className="notif-category-chip">
                         {item.category}
                       </Badge>
+                      {item.target && (
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#0369a1', background: '#e0f2fe', padding: '2px 8px', borderRadius: '6px' }}>
+                          🎯 For: {item.target}
+                        </span>
+                      )}
+                      {item.created_by_name && (
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: '#7e22ce', background: '#f3e8ff', padding: '2px 8px', borderRadius: '6px' }}>
+                          👤 By: {item.created_by_name}
+                        </span>
+                      )}
 
                       <div className="notif-item-actions-group">
                         {item.actionLabel && item.actionUrl && (

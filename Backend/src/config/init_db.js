@@ -288,7 +288,7 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 10. Ensure Broadcast Notifications Table
+    // 10. Ensure Broadcast Notifications & Broadcasts Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS broadcast_notifications (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -300,6 +300,26 @@ export async function initializeDatabase() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS broadcasts (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NULL DEFAULT 1,
+        title VARCHAR(255) NOT NULL,
+        message TEXT NOT NULL,
+        target VARCHAR(255) DEFAULT 'All Batches',
+        priority VARCHAR(100) DEFAULT 'General Announcement',
+        created_by INT NULL,
+        created_by_name VARCHAR(255) DEFAULT 'Admin',
+        sender_role VARCHAR(100) DEFAULT 'Admin',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN target VARCHAR(255) DEFAULT 'All Batches'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN priority VARCHAR(100) DEFAULT 'General Announcement'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN created_by_name VARCHAR(255) DEFAULT 'Admin'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE broadcasts ADD COLUMN sender_role VARCHAR(100) DEFAULT 'Admin'`); } catch (_) { }
 
     // 11. Ensure Live Sessions Table
     await conn.query(`

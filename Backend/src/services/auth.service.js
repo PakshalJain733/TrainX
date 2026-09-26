@@ -63,22 +63,86 @@ export const registerUser = async (data) => {
   const { name, email, mobile_number, password, role, secure_code, roll_number, department, year, division, semester } = data;
 
   // Check if user exists by email or mobile number
+  let existingUser = null;
   if (email) {
-    const existingUser = await findUserByEmailOrMobile(email);
-    if (existingUser) {
-      const error = new Error('User with this email already exists');
-      error.statusCode = 409;
-      throw error;
-    }
+    existingUser = await findUserByEmailOrMobile(email);
+  } else if (mobile_number) {
+    existingUser = await findUserByEmailOrMobile(mobile_number);
   }
 
-  if (mobile_number) {
-    const existingMobileUser = await findUserByEmailOrMobile(mobile_number);
-    if (existingMobileUser) {
-      const error = new Error('User with this mobile number already exists');
+  if (existingUser) {
+    // If password is already set, user has already completed registration
+    if (existingUser.password && existingUser.password.trim().length > 0) {
+      const error = new Error('User with this email already exists and has completed registration. Please log in.');
       error.statusCode = 409;
       throw error;
     }
+
+    // User was pre-added by Admin and is now completing registration!
+    let canonicalRole = existingUser.role || ROLES.STUDENT;
+
+    let derivedSemester = semester || '';
+    if (!derivedSemester && year) {
+      if (year === 'FE') derivedSemester = 'Semester 1';
+      else if (year === 'SE') derivedSemester = 'Semester 3';
+      else if (year === 'TE') derivedSemester = 'Semester 5';
+      else if (year === 'BE') derivedSemester = 'Semester 7';
+    }
+
+    await updateUserModel(existingUser.id, {
+      name: name || existingUser.name,
+      email: existingUser.email || email,
+      mobile_number: mobile_number || existingUser.mobile_number,
+      password: password || '',
+      password_hash: password || '',
+      role: canonicalRole,
+      department,
+      year,
+      division,
+      semester: derivedSemester,
+      roll_number,
+      is_profile_updated: 1,
+    });
+
+    const updatedUser = await findUserById(existingUser.id);
+    let studentProfile = await getStudentByUserId(updatedUser.id);
+
+    if (updatedUser.email && updatedUser.email.includes('@')) {
+      sendWelcomeEmail({ to: updatedUser.email, name: updatedUser.name, role: updatedUser.role }).catch((err) => {
+        console.warn(`[AUTH] Welcome email notification skipped: ${err.message}`);
+      });
+    }
+
+    const totpSetup = await generateTotpSetup(updatedUser.email || name);
+    await updateUserTwoFactorSecret(updatedUser.id, totpSetup.secret);
+
+    const token = generateToken({
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      mobile: updatedUser.mobile_number,
+      role: updatedUser.role,
+      collegeId: updatedUser.college_id || 1,
+    });
+
+    return {
+      token,
+      qrCode: totpSetup.qrCode,
+      secret: totpSetup.secret,
+      user: {
+        id: updatedUser.id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        mobile_number: updatedUser.mobile_number,
+        role: updatedUser.role,
+        two_factor_secret: totpSetup.secret,
+        department: studentProfile?.department || department || '',
+        year: studentProfile?.year || year || '',
+        division: studentProfile?.division || division || '',
+        semester: studentProfile?.semester || derivedSemester || '',
+        roll_number: studentProfile?.roll_number || roll_number || '',
+        studentProfile,
+      },
+    };
   }
 
   // Map role

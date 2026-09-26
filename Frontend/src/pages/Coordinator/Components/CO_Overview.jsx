@@ -11,11 +11,39 @@ import {
   Info,
   ChevronRight,
   Activity,
-  Clock
+  Clock,
+  User,
 } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/CO_Overview.css";
+
+const DEFAULT_TRAINING_SESSIONS = [
+  {
+    id: 1,
+    trainerName: "Anubhav Shukla",
+    topic: "Java Masterclass: Core to Advanced",
+    topicDetail:
+      "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
+    batch: "CSE 2026 Cohort",
+  },
+  {
+    id: 2,
+    trainerName: "Priya Sharma",
+    topic: "React Intensive Bootcamp",
+    topicDetail:
+      "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
+    batch: "Fullstack Specialization",
+  },
+  {
+    id: 3,
+    trainerName: "Rahul Verma",
+    topic: "DSA Marathon: Trees & Graphs",
+    topicDetail:
+      "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
+    batch: "CSE 2025 Alpha",
+  },
+];
 
 export default function CoordinatorOverview() {
   const [coordUser, setCoordUser] = useState(() => {
@@ -151,6 +179,25 @@ export default function CoordinatorOverview() {
     { label: "Attendance Rate", value: attendanceRate || "0%", hint: "Department average", icon: LineChart },
   ];
 
+  // Merge live database sessions with default training sessions so exactly 3 deduplicated cards are shown
+  const displaySessions = (() => {
+    const list = [];
+    // 1. Add unique live sessions first
+    for (const s of liveSessions) {
+      if (!list.some((existing) => existing.topic === s.topic && existing.trainerName === s.trainerName)) {
+        list.push(s);
+      }
+    }
+    // 2. Fill remaining slots up to 3 with default sessions
+    for (const defSession of DEFAULT_TRAINING_SESSIONS) {
+      if (list.length >= 3) break;
+      if (!list.some((s) => s.topic === defSession.topic || s.trainerName === defSession.trainerName)) {
+        list.push(defSession);
+      }
+    }
+    return list.slice(0, 3);
+  })();
+
   return (
     <div className="student-page-inner stack-6 overview-wrapper">
       {/* Radiant Welcome Hero Banner */}
@@ -196,133 +243,114 @@ export default function CoordinatorOverview() {
         ))}
       </div>
 
-      {/* 2-Column Main Arena */}
-      <div className="overview-split-grid">
-        {/* Left: Live Training Sessions */}
-        <div className="co-arena-card">
-          <div className="co-arena-card-header">
-            <div className="co-arena-header-left">
-              <div className="co-arena-icon-wrap co-arena-icon-wrap--emerald">
-                <Activity size={18} className="animate-pulse" />
-              </div>
-              <div>
-                <h3 className="co-arena-header-title">Live Training Sessions</h3>
-                <p className="co-arena-header-sub">Currently ongoing classes and active topics</p>
-              </div>
+      {/* Current Training Sessions Section */}
+      <div className="co-arena-card co-training-sessions-card">
+        <div className="co-arena-card-header">
+          <div className="co-arena-header-left">
+            <div className="co-arena-icon-wrap co-arena-icon-wrap--indigo">
+              <Activity size={18} />
             </div>
-            <span className="co-arena-badge-active">
-              <span className="co-live-dot"></span>
-              {liveSessions.length} Active Sessions
-            </span>
+            <div>
+              <h3 className="co-arena-header-title">Current Training Sessions</h3>
+              <p className="co-arena-header-sub">Currently ongoing classes and topics being taught</p>
+            </div>
           </div>
-
-          <div className="co-arena-card-body">
-            {liveSessions.length === 0 ? (
-              <div className="co-risk-empty-box">
-                <Activity size={32} style={{ color: "#10b981" }} />
-                <h4 className="co-risk-empty-title">No live training sessions scheduled right now.</h4>
-                <p className="co-risk-empty-sub">Sessions scheduled by mentors will automatically appear here.</p>
-              </div>
-            ) : (
-              liveSessions.map((session) => (
-                <div key={session.id} className="co-live-item-card">
-                  {/* Top Row: Status Badge & Time */}
-                  <div className="co-live-item-top">
-                    <div className="co-live-pill">
-                      <span className="co-live-dot"></span>
-                      {session.status}
-                    </div>
-
-                    <div className="co-live-time-tag">
-                      <Clock size={13} style={{ color: "#64748b" }} />
-                      <span>{session.time}</span>
-                    </div>
-                  </div>
-
-                  {/* Middle Row: Topic & Trainer */}
-                  <div>
-                    <h4 className="co-live-topic-title">{session.topic}</h4>
-                    <p className="co-live-trainer-text">
-                      <strong>{session.trainerName}</strong> (Trainer) is conducting this live module.
-                    </p>
-                  </div>
-
-                  {/* Bottom Row: Batch & Status */}
-                  <div className="co-live-item-bottom">
-                    <div className="co-live-batch-pill">
-                      <Users size={13} style={{ color: "#4f46e5" }} />
-                      <span>{session.batch}</span>
-                    </div>
-                    <span className="co-live-status-tag">Class in Progress</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+          <span className="co-sessions-count-pill">
+            {displaySessions.length} Active Sessions
+          </span>
         </div>
 
-        {/* Right: Flagged High Risk Students */}
-        <div className="co-arena-card">
-          <div className="co-arena-card-header">
-            <div className="co-arena-header-left">
-              <div className="co-arena-icon-wrap co-arena-icon-wrap--rose">
-                <AlertTriangle size={18} />
+        <div className="co-arena-card-body">
+          <div className="co-sessions-grid">
+            {displaySessions.map((session, index) => (
+              <div key={session.id || index} className="co-session-card">
+                {/* Trainer Box Header */}
+                <div className="co-session-trainer-box">
+                  <div className="co-session-trainer-badge">
+                    <User size={12} />
+                    <span>TRAINER</span>
+                  </div>
+                  <h4 className="co-session-trainer-name">{session.trainerName}</h4>
+                </div>
+
+                {/* Session Main Content */}
+                <div className="co-session-main">
+                  <h4 className="co-session-title">{session.topic}</h4>
+                  <p className="co-session-desc">{session.topicDetail || session.description || "Active training module."}</p>
+                </div>
+
+                {/* Session Footer */}
+                <div className="co-session-footer">
+                  <User size={13} className="co-session-user-icon" />
+                  <span>{session.batch}</span>
+                </div>
               </div>
-              <div>
-                <h3 className="co-arena-header-title">Defaulter & Risk Audit</h3>
-                <p className="co-arena-header-sub">Students requiring active intervention</p>
-              </div>
-            </div>
-            <Link to="/coordinator/students" className="co-arena-badge-link">
-              View All <ChevronRight size={14} />
-            </Link>
+            ))}
           </div>
+        </div>
+      </div>
 
-          <div className="co-arena-card-body">
-            {highRiskStudents.length === 0 ? (
-              <div className="co-risk-empty-box">
-                <CheckCircle size={32} style={{ color: "#10b981" }} />
-                <h4 className="co-risk-empty-title">No high risk students flagged.</h4>
-                <p className="co-risk-empty-sub">All department students are within attendance compliance.</p>
-              </div>
-            ) : (
-              highRiskStudents.map((s) => {
-                const initials = s.name
-                  ? s.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2)
-                  : "ST";
-                const attendanceVal = s.attendance ?? 72;
-                const perfVal = s.testAvg ?? s.avgScore ?? s.score ?? 58;
+      {/* Flagged High Risk Students Audit Arena */}
+      <div className="co-arena-card">
+        <div className="co-arena-card-header">
+          <div className="co-arena-header-left">
+            <div className="co-arena-icon-wrap co-arena-icon-wrap--rose">
+              <AlertTriangle size={18} />
+            </div>
+            <div>
+              <h3 className="co-arena-header-title">Defaulter & Risk Audit</h3>
+              <p className="co-arena-header-sub">Students requiring active intervention</p>
+            </div>
+          </div>
+          <Link to="/coordinator/students" className="co-arena-badge-link">
+            View All <ChevronRight size={14} />
+          </Link>
+        </div>
 
-                return (
-                  <div key={s.id} className="co-risk-item-card">
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
-                      <div className="co-risk-avatar">{initials}</div>
-                      <div style={{ minWidth: 0 }}>
-                        <h5 className="co-risk-info-name">{s.name}</h5>
-                        <p className="co-risk-info-sub">
-                          {s.rollNo || s.studentId || "CSE26-001"} · {s.batch || "CSE 2026 Cohort"}
-                        </p>
-                        <div className="co-risk-metrics-row">
-                          <span className="co-risk-metric-pill--danger">
-                            Attendance: {attendanceVal}%
-                          </span>
-                          <span className="co-risk-metric-pill--warning">
-                            Performance: {perfVal}%
-                          </span>
-                        </div>
+        <div className="co-arena-card-body">
+          {highRiskStudents.length === 0 ? (
+            <div className="co-risk-empty-box">
+              <CheckCircle size={32} style={{ color: "#10b981" }} />
+              <h4 className="co-risk-empty-title">No high risk students flagged.</h4>
+              <p className="co-risk-empty-sub">All department students are within attendance compliance.</p>
+            </div>
+          ) : (
+            highRiskStudents.map((s) => {
+              const initials = s.name
+                ? s.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .slice(0, 2)
+                : "ST";
+              const attendanceVal = s.attendance ?? 72;
+              const perfVal = s.testAvg ?? s.avgScore ?? s.score ?? 58;
+
+              return (
+                <div key={s.id} className="co-risk-item-card">
+                  <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+                    <div className="co-risk-avatar">{initials}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <h5 className="co-risk-info-name">{s.name}</h5>
+                      <p className="co-risk-info-sub">
+                        {s.rollNo || s.studentId || "CSE26-001"} · {s.batch || "CSE 2026 Cohort"}
+                      </p>
+                      <div className="co-risk-metrics-row">
+                        <span className="co-risk-metric-pill--danger">
+                          Attendance: {attendanceVal}%
+                        </span>
+                        <span className="co-risk-metric-pill--warning">
+                          Performance: {perfVal}%
+                        </span>
                       </div>
                     </div>
-                    <span className="co-risk-badge">High Risk</span>
                   </div>
-                );
-              })
-            )}
-          </div>
+                  <span className="co-risk-badge">High Risk</span>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

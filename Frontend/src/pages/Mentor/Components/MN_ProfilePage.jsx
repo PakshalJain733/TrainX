@@ -29,6 +29,22 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_ProfilePage.css";
 
+const deptOptions = [
+  { value: "Computer Engineering", label: "Computer Engineering" },
+  { value: "Information Technology", label: "Information Technology" },
+  { value: "Artificial Intelligence & Data Science", label: "Artificial Intelligence & Data Science" },
+  { value: "Electronics & Telecommunication", label: "Electronics & Telecommunication" },
+  { value: "Mechanical Engineering", label: "Mechanical Engineering" },
+];
+
+const specOptions = [
+  { value: "Full Stack Development", label: "Full Stack Development" },
+  { value: "Data Structures & Algorithms", label: "Data Structures & Algorithms" },
+  { value: "AI & Machine Learning", label: "AI & Machine Learning" },
+  { value: "Cloud & DevOps", label: "Cloud & DevOps" },
+  { value: "Cybersecurity", label: "Cybersecurity" },
+];
+
 export default function ProfilePage() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
@@ -50,8 +66,8 @@ export default function ProfilePage() {
   const resolveUser = () => {
     let localUser = {};
     try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
-    let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile.name || "Faculty Mentor";
-    let email = localUser.email || mentorProfile.email || "mentor@pvppcoe.ac.in";
+    let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile?.name || "Faculty Mentor";
+    let email = localUser.email || mentorProfile?.email || "mentor@pvppcoe.ac.in";
     return { name, email, ...localUser };
   };
 
@@ -60,16 +76,18 @@ export default function ProfilePage() {
   const [form, setForm] = useState({
     name: initialUser.name,
     email: initialUser.email,
-    phone: initialUser.mobile_number || mentorProfile.phone,
-    department: initialUser.department || mentorProfile.department,
+    phone: initialUser.mobile_number || mentorProfile?.phone || "",
+    department: initialUser.department || mentorProfile?.department || "Computer Engineering",
+    specialization: mentorProfile?.specialization || "Full Stack Development",
     role: "Faculty Mentor",
-    college: mentorProfile.college,
-    officeLocation: mentorProfile.officeLocation,
-    officeHours: mentorProfile.officeHours,
-    allocatedBatches: mentorProfile.allocatedBatches,
-    totalStudents: mentorProfile.totalStudents,
-    rating: mentorProfile.rating,
-    experience: mentorProfile.experience,
+    college: mentorProfile?.college || "P.V.P.P. College of Engineering",
+    officeLocation: mentorProfile?.officeLocation || "Room 304, Block A",
+    officeHours: mentorProfile?.officeHours || "Mon-Fri 10:00 AM - 5:00 PM",
+    allocatedBatches: mentorProfile?.allocatedBatches || 0,
+    totalStudents: mentorProfile?.totalStudents || 0,
+    rating: mentorProfile?.rating || 4.9,
+    experience: mentorProfile?.experience || "5+ Years",
+    empId: initialUser.empId || initialUser.emp_id || initialUser.employee_id || "EMP-MN-201",
   });
 
   useEffect(() => {

@@ -23,58 +23,12 @@ import {
   ChevronDown,
   Check
 } from 'lucide-react';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Colleges.css";
 
-/* ── Inline dropdown for Colleges (CSS: Colleges.css .college-select-*) ── */
-function CollegeSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [dropUp, setDropUp] = React.useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (direction === 'up') {
-        setDropUp(true);
-      } else if (direction === 'down') {
-        setDropUp(false);
-      } else {
-        setDropUp(spaceBelow < 220);
-      }
-    }
-    setIsOpen(v => !v);
-  };
-
-  return (
-    <div className={`college-select-wrap${isOpen ? ' college-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={handleToggle} className={`college-select-trigger${isOpen ? ' college-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="college-select-icon" />}
-        <span className="college-select-text">{selected ? selected.label : <span className="college-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`college-select-arrow${isOpen ? ' college-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className={`college-select-dropdown${dropUp ? ' college-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`college-select-option${isSel ? ' college-select-option--selected' : ''}`}>
-                <span className="college-select-option-label">{opt.label}</span>
-                {isSel && <Check className="college-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Colleges ── */
+function CollegeSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 function StatusBadge({ status }) {

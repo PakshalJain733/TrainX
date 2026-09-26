@@ -4,6 +4,7 @@ import { apiFetch } from "../../../utils/api";
 import { collegeAPI, departmentAPI } from "../../../services/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_Leaderboard.css";
 
 const getRankClass = (r) => r === 1 ? "admin-rank-1" : r === 2 ? "admin-rank-2" : r === 3 ? "admin-rank-3" : "";
@@ -136,38 +137,16 @@ export default function AdminLeaderboard() {
       {activeTab === 'department' && (
         <div className="admin-lb-filter-bar">
           <div className="admin-lb-filter-group">
-            <label><Filter size={13} /> Select College Institution</label>
-            <select
-              value={selectedCollege}
-              onChange={(e) => {
-                setSelectedCollege(e.target.value);
-                setSelectedDept("");
-              }}
-              className="admin-lb-select"
-            >
-              <option value="">All Colleges</option>
-              {colleges.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.code ? `(${c.code})` : ''}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="admin-lb-filter-group">
-            <label><BookOpen size={13} /> Select Department</label>
-            <select
+            <label><BookOpen size={13} /> Department</label>
+            <CustomSelect
               value={selectedDept}
-              onChange={(e) => setSelectedDept(e.target.value)}
-              className="admin-lb-select"
-            >
-              <option value="">All Departments</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {d.code ? `(${d.code})` : ''}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "", label: "All Departments" },
+                ...departments.map((d) => ({ value: d.id, label: `${d.name} ${d.code ? `(${d.code})` : ''}` }))
+              ]}
+              onChange={(val) => setSelectedDept(val)}
+              placeholder="All Departments"
+            />
           </div>
         </div>
       )}

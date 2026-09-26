@@ -185,7 +185,7 @@ function SkillGapAnalyticsSection({ onClose }) {
                   {(analysis?.weak_areas_count || 0) > 0
                     ? `Identified ${analysis.weak_areas_count} weak area${
                         analysis.weak_areas_count > 1 ? "s" : ""
-                      } needing targeted practice: ${analysis.weak_areas.join(", ")}`
+                      } needing targeted practice: ${Array.isArray(analysis?.weak_areas) ? analysis.weak_areas.join(", ") : ""}`
                     : "No major weak skills detected! Performance across all technical domains is strong."}
                 </p>
               </div>

@@ -214,8 +214,8 @@ export default function CodingPractice() {
       outputFormat: p.outputFormat || "",
       sampleInput: p.sampleInput || "",
       sampleOutput: p.sampleOutput || "",
-      tags: p.tags ? p.tags.join(", ") : "",
-      companies: p.companies ? p.companies.join(", ") : "",
+      tags: Array.isArray(p.tags) ? p.tags.join(", ") : (p.tags || ""),
+      companies: Array.isArray(p.companies) ? p.companies.join(", ") : (p.companies || ""),
     });
     setIsProblemModalOpen(true);
   };

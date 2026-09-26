@@ -22,40 +22,12 @@ import {
   Filter
 } from 'lucide-react';
 import { collegeAPI } from '../../../services/api';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Performance.css";
 
-/* ── Inline dropdown for Performance (CSS: Performance.css .perf-select-*) ── */
-function PerfSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  React.useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`perf-select-wrap${isOpen ? ' perf-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`perf-select-trigger${isOpen ? ' perf-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="perf-select-icon" />}
-        <span className="perf-select-text">{selected ? selected.label : <span className="perf-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`perf-select-arrow${isOpen ? ' perf-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="perf-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`perf-select-option${isSel ? ' perf-select-option--selected' : ''}`}>
-                <span className="perf-select-option-label">{opt.label}</span>
-                {isSel && <Check className="perf-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Performance ── */
+function PerfSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 // Comprehensive College-Wise Performance Database

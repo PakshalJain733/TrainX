@@ -26,6 +26,14 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/CO_ProfilePage.css";
 
+const deptOptions = [
+  { value: "Computer Engineering", label: "Computer Engineering" },
+  { value: "Information Technology", label: "Information Technology" },
+  { value: "Artificial Intelligence & Data Science", label: "Artificial Intelligence & Data Science" },
+  { value: "Electronics & Telecommunication", label: "Electronics & Telecommunication" },
+  { value: "Mechanical Engineering", label: "Mechanical Engineering" },
+];
+
 export default function CoordinatorProfilePage() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
@@ -47,8 +55,8 @@ export default function CoordinatorProfilePage() {
   const resolveUser = () => {
     let localUser = {};
     try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
-    let name = localUser.name || localUser.fullName || localUser.full_name || coordinatorProfile.name || "Department Coordinator";
-    let email = localUser.email || coordinatorProfile.email || "coordinator@pvppcoe.ac.in";
+    let name = localUser.name || localUser.fullName || localUser.full_name || coordinatorProfile?.name || "Department Coordinator";
+    let email = localUser.email || coordinatorProfile?.email || "coordinator@pvppcoe.ac.in";
     return { name, email, ...localUser };
   };
 
@@ -57,19 +65,20 @@ export default function CoordinatorProfilePage() {
   const [form, setForm] = useState({
     name: initialUser.name,
     email: initialUser.email,
-    phone: initialUser.mobile_number || coordinatorProfile.phone,
-    department: initialUser.department || coordinatorProfile.department,
+    phone: initialUser.mobile_number || coordinatorProfile?.phone || "",
+    department: initialUser.department || coordinatorProfile?.department || "Computer Engineering",
     role: "Department Coordinator",
-    college: coordinatorProfile.college,
-    officeLocation: coordinatorProfile.officeLocation,
-    officeHours: coordinatorProfile.officeHours,
-    managedBatches: coordinatorProfile.managedBatches,
-    totalStudents: coordinatorProfile.totalStudents,
-    skills: coordinatorProfile.skills.join(", "),
-    bio: coordinatorProfile.bio,
-    notifBatchAlerts: coordinatorProfile.notifications.notifBatchAlerts,
-    notifWeeklyReport: coordinatorProfile.notifications.notifWeeklyReport,
-    notifNewStudents: coordinatorProfile.notifications.notifNewStudents,
+    college: coordinatorProfile?.college || "P.V.P.P. College of Engineering",
+    officeLocation: coordinatorProfile?.officeLocation || "Room 402, Block B",
+    officeHours: coordinatorProfile?.officeHours || "Mon-Fri 10:00 AM - 5:00 PM",
+    managedBatches: coordinatorProfile?.managedBatches || 0,
+    totalStudents: coordinatorProfile?.totalStudents || 0,
+    skills: Array.isArray(coordinatorProfile?.skills) ? coordinatorProfile.skills.join(", ") : (coordinatorProfile?.skills || ""),
+    bio: coordinatorProfile?.bio || "",
+    empId: initialUser.empId || initialUser.emp_id || initialUser.employee_id || "EMP-CO-101",
+    notifBatchAlerts: coordinatorProfile?.notifications?.notifBatchAlerts ?? true,
+    notifWeeklyReport: coordinatorProfile?.notifications?.notifWeeklyReport ?? true,
+    notifNewStudents: coordinatorProfile?.notifications?.notifNewStudents ?? true,
   });
 
   useEffect(() => {
@@ -337,7 +346,7 @@ export default function CoordinatorProfilePage() {
             </div>
 
             {/* Change Password & 2FA Buttons */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex flex-col gap-2.5" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="profile-actions-wrapper">
               <button
                 type="button"
                 onClick={() => setShowChangePassModal(true)}
@@ -349,25 +358,8 @@ export default function CoordinatorProfilePage() {
 
               <button
                 type="button"
-                className="profile-2fa-setup-btn"
+                className={`profile-2fa-setup-btn ${is2FAEnabled ? "profile-2fa-setup-btn--active" : "profile-2fa-setup-btn--inactive"}`}
                 onClick={handleOpen2FASetup}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  background: is2FAEnabled ? "#ecfdf5" : "#4f46e5",
-                  color: is2FAEnabled ? "#047857" : "#ffffff",
-                  border: is2FAEnabled ? "1.5px solid #a7f3d0" : "none",
-                  fontWeight: "600",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 6px rgba(79, 70, 229, 0.15)",
-                  transition: "all 0.2s ease"
-                }}
               >
                 <QrCode size={16} />
                 {is2FAEnabled ? "Reconfigure Google 2FA QR Code" : "Setup Google Authenticator 2FA"}

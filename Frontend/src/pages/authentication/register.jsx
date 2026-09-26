@@ -1,6 +1,6 @@
 
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 import TrainXIcon from "../../assets/TrainX.png";
 import { getApiBaseUrl } from "../../utils/api";
@@ -159,6 +159,7 @@ function FieldLabel({ icon, children }) {
 
 function Register() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [role, setRole] = useState("Student");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -177,6 +178,14 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  useEffect(() => {
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setFormData((prev) => ({ ...prev, email: emailParam }));
+      setSuccessMsg("Pre-registered email detected. Complete your profile details and set a password.");
+    }
+  }, [searchParams]);
 
   // TOTP Authenticator Setup State
   const [totpSetupData, setTotpSetupData] = useState(null);

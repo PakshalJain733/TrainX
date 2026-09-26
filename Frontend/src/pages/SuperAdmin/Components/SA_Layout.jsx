@@ -1,26 +1,96 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key } from 'lucide-react';
+import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock } from 'lucide-react';
 import SuperAdminSidebar from "./SA_Sidebar";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
 import { apiFetch } from "../../../utils/api";
 
-function NotificationDropdown({ onClose, onUnreadChange }) {
-  const [notifications, setNotifications] = useState([]);
+const defaultNotificationsList = [
+  {
+    id: 1,
+    title: "Meeting Regarding Quasar 5.0 Problem Statements",
+    desc: "A mandatory meeting for all Quasar 5.0 participants is scheduled for today at 3:00 PM in Seminar Hall 2.",
+    time: "9/26/2026, 1:37:42 PM",
+    unread: true,
+    type: "broadcast",
+    target: "All CSE & IT Batches",
+    priority: "Urgent Notice",
+    created_by_name: "Coordinator Shinde"
+  },
+  {
+    id: 2,
+    title: "Holiday Announcement",
+    desc: "The campus will remain closed on Friday for the upcoming holiday. Online learning resources remain available.",
+    time: "9/26/2026, 1:30:00 PM",
+    unread: true,
+    type: "broadcast",
+    target: "All Students & Faculty",
+    priority: "General Announcement",
+    created_by_name: "Admin Office"
+  },
+  {
+    id: 3,
+    title: "IA-2 Quiz Rescheduled to Friday 10:00 AM",
+    desc: "The Internal Assessment 2 quiz has been rescheduled to Friday 10:00 AM. Please review your module roadmaps.",
+    time: "9/25/2026, 8:56:20 PM",
+    unread: true,
+    type: "quiz",
+    target: "TE Computer Batches",
+    priority: "Academic Notice",
+    created_by_name: "Prof. Verma"
+  },
+  {
+    id: 4,
+    title: "Goldman Sachs Placement Drive Registration Live",
+    desc: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through placement tab.",
+    time: "9/25/2026, 6:15:00 PM",
+    unread: false,
+    type: "calendar",
+    target: "BE All Branches",
+    priority: "Placement Alert",
+    created_by_name: "Placement Cell"
+  }
+];
+
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll }) {
+  const [notifications, setNotifications] = useState(defaultNotificationsList);
+  const [activeTab, setActiveTab] = useState("all");
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     apiFetch("/admin/broadcast")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setNotifications(res.data);
-        } else {
-          setNotifications([]);
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const serverItems = res.data.map((b) => ({
+            id: b.id || `notif-${Math.random()}`,
+            title: b.title || "Announcement",
+            desc: b.message || b.desc || b.description || "",
+            message: b.message || b.desc || "",
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
+            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+            target: b.target || "All Batches",
+            priority: b.priority || "General Notice",
+            created_by_name: b.created_by_name || "Admin",
+          }));
+
+          setNotifications((prev) => {
+            const combined = [...serverItems, ...defaultNotificationsList];
+            const unique = [];
+            const seenTitles = new Set();
+            for (const item of combined) {
+              const key = item.title.trim().toLowerCase();
+              if (!seenTitles.has(key)) {
+                seenTitles.add(key);
+                unique.push(item);
+              }
+            }
+            return unique;
+          });
         }
       })
-      .catch(() => {
-        setNotifications([]);
-      });
+      .catch(() => {});
   }, []);
 
   const autoCloseTimerRef = useRef(null);
@@ -32,23 +102,14 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
     }, 5000);
   };
 
-  useEffect(() => {
-    startAutoCloseTimer();
-    return () => {
-      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-    };
-  }, []);
-
-  const handleMouseEnter = () => {
+  const clearAutoCloseTimer = () => {
     if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
   };
 
-  const handleMouseLeave = () => {
+  useEffect(() => {
     startAutoCloseTimer();
-  };
-
-  const [activeTab, setActiveTab] = useState("all");
-  const [expandedId, setExpandedId] = useState(null);
+    return () => clearAutoCloseTimer();
+  }, []);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
   const totalCount = notifications.length;
@@ -74,7 +135,7 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
 
   const toggleSingleRead = (id) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, unread: !n.unread } : n))
+      prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
     );
   };
 
@@ -83,38 +144,83 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
     return true;
   });
 
-  const getIcon = (type) => {
-    switch (type) {
-      case "calendar": return <Calendar size={16} className="notif-icon-calendar" />;
-      case "alert": return <AlertTriangle size={16} className="notif-icon-alert" />;
-      case "success": return <CheckCircle2 size={16} className="notif-icon-success" />;
-      case "document": return <FileText size={16} className="notif-icon-document" />;
-      default: return <Bell size={16} />;
+  const getIcon = (n) => {
+    const type = (n.type || "").toLowerCase();
+    const titleLower = (n.title || "").toLowerCase();
+
+    if (titleLower.includes("placement") || titleLower.includes("drive") || titleLower.includes("goldman") || type === "calendar") {
+      return (
+        <div className="notif-colorful-icon-box notif-icon-rose">
+          <Calendar size={18} />
+        </div>
+      );
     }
+    if (titleLower.includes("quiz") || titleLower.includes("test") || titleLower.includes("ia-") || type === "quiz" || type === "document") {
+      return (
+        <div className="notif-colorful-icon-box notif-icon-blue">
+          <FileText size={18} />
+        </div>
+      );
+    }
+    if (type === "success" || titleLower.includes("success") || titleLower.includes("completed")) {
+      return (
+        <div className="notif-colorful-icon-box notif-icon-emerald">
+          <CheckCircle2 size={18} />
+        </div>
+      );
+    }
+    return (
+      <div className="notif-colorful-icon-box notif-icon-amber">
+        <AlertTriangle size={18} />
+      </div>
+    );
+  };
+
+  const renderTitle = (n) => {
+    const title = n.title || "";
+    const titleLower = title.toLowerCase();
+    const isBroadcast = titleLower.includes("broadcast") || n.type === "broadcast";
+
+    if (isBroadcast) {
+      let cleanTitle = title
+        .replace(/📢/g, "")
+        .replace(/\[Broadcast\]/gi, "")
+        .replace(/\[Notice\]/gi, "")
+        .trim();
+
+      return (
+        <div className="notif-card-title-text">
+          <span className="notif-broadcast-badge">
+            📢 [Broadcast]
+          </span>{" "}
+          <span className="notif-title-main">{cleanTitle}</span>
+        </div>
+      );
+    }
+    return <div className="notif-card-title-text">{title}</div>;
   };
 
   return (
     <div 
       className="notif-dropdown-box"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={clearAutoCloseTimer}
+      onMouseLeave={startAutoCloseTimer}
     >
       {/* Header */}
       <div className="notif-header">
         <div className="notif-header-left">
           <div className="notif-header-icon-wrap">
-            <Bell size={18} className="notif-header-icon" />
+            <Bell size={20} className="notif-header-bell" />
             {unreadCount > 0 && <span className="notif-header-dot"></span>}
           </div>
           <div className="notif-header-text">
             <div className="notif-header-title">Notifications</div>
             <div className="notif-header-subtitle">
-              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
+              {unreadCount > 0 ? `${unreadCount} unread alert${unreadCount > 1 ? "s" : ""}` : "No unread alerts"}
             </div>
           </div>
         </div>
         <div className="notif-header-actions-right">
-
           <button
             className="notif-mark-read-btn"
             onClick={handleMarkAllRead}
@@ -126,16 +232,16 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="notif-tabs">
+      {/* Pill Tabs */}
+      <div className="notif-tabs-pills">
         <button
-          className={`notif-tab ${activeTab === "all" ? "active" : ""}`}
+          className={`notif-tab-pill ${activeTab === "all" ? "active" : ""}`}
           onClick={() => setActiveTab("all")}
         >
           All ({totalCount})
         </button>
         <button
-          className={`notif-tab ${activeTab === "unread" ? "active" : ""}`}
+          className={`notif-tab-pill ${activeTab === "unread" ? "active" : ""}`}
           onClick={() => setActiveTab("unread")}
         >
           Unread ({unreadCount})
@@ -145,66 +251,56 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
       {/* List */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
-          <div className="notif-empty-state">
+          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
             No notifications to display
           </div>
         ) : (
-          visibleNotifications.map((n) => {
+          visibleNotifications.slice(0, 5).map((n) => {
             const isExpanded = expandedId === n.id;
             return (
               <div
                 key={n.id}
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
-                style={{ cursor: "default", flexDirection: "column", gap: isExpanded ? "8px" : 0 }}
+                onClick={() => {
+                  if (n.unread) toggleSingleRead(n.id);
+                  setExpandedId(isExpanded ? null : n.id);
+                }}
               >
-                <div style={{ display: 'flex', gap: '12px', width: '100%', alignItems: 'flex-start' }}>
-                  <div className={`notif-icon-box type-${n.type}`}>{getIcon(n.type)}</div>
-                  <div className="notif-content" style={{ flex: 1 }}>
-                    <div className="notif-content-top">
-                      <div 
-                        className="notif-card-title"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (n.unread) {
-                            toggleSingleRead(n.id);
-                          }
-                          setExpandedId(isExpanded ? null : n.id);
-                        }}
-                        style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
-                        title="Click to view details"
-                      >
-                        {n.title}
-                        {n.unread && (
-                          <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#3b82f6", flexShrink: 0 }} />
-                        )}
-                      </div>
-                      <div className="notif-card-time">{n.time}</div>
-                      <button
-                        className="notif-delete-btn"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteItem(e, n.id); }}
-                        title="Delete notification"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                {getIcon(n)}
+
+                <div className="notif-card-main-content">
+                  <div className="notif-card-title-row">
+                    {renderTitle(n)}
                   </div>
+
+                  <div className="notif-card-time-row">
+                    <Clock size={11} className="notif-time-icon" />
+                    <span>{n.time}</span>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="notif-expanded-desc">
+                      {(n.target || n.created_by_name || n.priority) && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px', fontSize: '11px', fontWeight: '700' }}>
+                          {n.target && <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px' }}>🎯 For: {n.target}</span>}
+                          {n.created_by_name && <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '2px 8px', borderRadius: '6px' }}>👤 By: {n.created_by_name}</span>}
+                          {n.priority && <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px' }}>⚡ {n.priority}</span>}
+                        </div>
+                      )}
+                      <div>
+                        {n.message || n.desc || "No additional details available."}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {isExpanded && (
-                  <div style={{
-                    marginTop: "6px",
-                    padding: "10px 12px",
-                    background: "#f8fafc",
-                    borderRadius: "8px",
-                    border: "1px solid #e2e8f0",
-                    fontSize: "12px",
-                    color: "#334155",
-                    lineHeight: "1.5",
-                    whiteSpace: "pre-wrap"
-                  }}>
-                    {n.desc || "No additional details available for this notification."}
-                  </div>
-                )}
+                <button
+                  className="notif-delete-top-right"
+                  onClick={(e) => { e.stopPropagation(); handleDeleteItem(e, n.id); }}
+                  title="Delete notification"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             );
           })
@@ -213,6 +309,15 @@ function NotificationDropdown({ onClose, onUnreadChange }) {
 
       {/* Footer */}
       <div className="notif-footer-wrap">
+        <button
+          className="notif-view-all-btn"
+          onClick={() => {
+            if (onClose) onClose();
+            if (onOpenViewAll) onOpenViewAll();
+          }}
+        >
+          View all
+        </button>
         <button
           className="notif-clear-all-btn"
           onClick={handleClearAll}

@@ -12,96 +12,11 @@ const generateJoinCode = (batchName = "") => {
   return `${prefix}-${randomPart}`;
 };
 
-/* ── Inline dropdown for Batches (CSS: Batches.css .batch-select-*) ── */
-function BatchSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, disabled = false, direction }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
-  const triggerRef = useRef(null);
-  const dropdownRef = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+import CustomSelect from '../../../components/ui/CustomSelect';
 
-  const updateCoords = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      const isUp = direction === 'up' || (direction !== 'down' && spaceBelow < 220);
-      setCoords({
-        top: isUp ? rect.top - 4 : rect.bottom + 4,
-        left: rect.left,
-        width: rect.width,
-        dropUp: isUp,
-      });
-    }
-  };
-
-  const handleToggle = () => {
-    if (!disabled) {
-      if (!isOpen) updateCoords();
-      setIsOpen(v => !v);
-    }
-  };
-
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (
-        triggerRef.current && !triggerRef.current.contains(e.target) &&
-        dropdownRef.current && !dropdownRef.current.contains(e.target)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    function handleScrollOrResize() {
-      if (isOpen) updateCoords();
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    window.addEventListener('scroll', handleScrollOrResize, true);
-    window.addEventListener('resize', handleScrollOrResize);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      window.removeEventListener('scroll', handleScrollOrResize, true);
-      window.removeEventListener('resize', handleScrollOrResize);
-    };
-  }, [isOpen]);
-
-  return (
-    <div className={`batch-select-wrap${isOpen ? ' batch-select-wrap--open' : ''}${disabled ? ' batch-select-wrap--disabled' : ''}`} ref={triggerRef}>
-      <button type="button" disabled={disabled} onClick={handleToggle} className={`batch-select-trigger${isOpen ? ' batch-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="batch-select-icon" />}
-        <span className="batch-select-text">{selected ? selected.label : <span className="batch-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`batch-select-arrow${isOpen ? ' batch-select-arrow--rotate' : ''}`} />
-      </button>
-
-      {isOpen && !disabled && createPortal(
-        <div
-          ref={dropdownRef}
-          className="batch-select-dropdown"
-          style={{
-            position: 'fixed',
-            top: coords.dropUp ? 'auto' : `${coords.top}px`,
-            bottom: coords.dropUp ? `${window.innerHeight - coords.top}px` : 'auto',
-            left: `${coords.left}px`,
-            width: `${coords.width}px`,
-            maxHeight: '220px',
-            overflowY: 'auto',
-            zIndex: 99999,
-          }}
-        >
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`batch-select-option${isSel ? ' batch-select-option--selected' : ''}`}>
-                <span className="batch-select-option-label">{opt.label}</span>
-                {isSel && <Check className="batch-select-check" />}
-              </div>
-            );
-          })}
-        </div>,
-        document.body
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Batches ── */
+function BatchSelect(props) {
+  return <CustomSelect {...props} />;
 }
 function StatusBadge({ status }) {
   let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
@@ -412,13 +327,6 @@ export default function Batches() {
 
         <div className="batches-actions-wrap">
           <button
-            onClick={loadData}
-            className="dept-btn-icon"
-            title="Refresh Data"
-          >
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          </button>
-          <button
             onClick={() => setIsModalOpen(true)}
             className="sa-btn-primary"
           >
@@ -567,7 +475,7 @@ export default function Batches() {
               <div className="modal-body">
                 {/* College Selection */}
                 <div className="form-group-admin">
-                  <label>Select College Institution *</label>
+                  <label>College Institution *</label>
                   <BatchSelect
                     value={modalCollegeId}
                     options={colleges.map((c) => ({
@@ -629,7 +537,7 @@ export default function Batches() {
                         }}
                         title="Auto-generate or regenerate batch code"
                         style={{
-                          display: 'inline-flex',
+                          display: 'none',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '42px',
@@ -838,7 +746,7 @@ export default function Batches() {
                         }}
                         title="Auto-generate or regenerate batch code"
                         style={{
-                          display: 'inline-flex',
+                          display: 'none',
                           alignItems: 'center',
                           justifyContent: 'center',
                           width: '42px',

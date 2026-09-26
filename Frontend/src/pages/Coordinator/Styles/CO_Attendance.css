@@ -313,3 +313,48 @@
     justify-content: center;
   }
 }
+
+/* Configured Threshold Control Bar */
+.coord-threshold-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #ffffff;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  font-size: 12px;
+  font-weight: 600;
+  color: #334155;
+  flex-shrink: 0;
+}
+
+.coord-threshold-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.coord-threshold-icon {
+  color: #4f46e5;
+}
+
+.coord-threshold-label {
+  white-space: nowrap;
+}
+
+.coord-threshold-select {
+  height: 34px;
+  padding: 0 28px 0 10px !important;
+  border-radius: 8px !important;
+  border: 1px solid #94a3b8 !important;
+  background-color: #f8fafc !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  color: #1e293b !important;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}

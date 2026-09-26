@@ -95,6 +95,8 @@ import MentorBroadcast from './pages/Mentor/Components/MN_Broadcast';
 import CoordinatorBroadcast from './pages/Coordinator/Components/CO_Broadcast';
 import CoordinatorLeaderboard from './pages/Coordinator/Components/CO_Leaderboard';
 
+import ProtectedRoute from './components/Common/ProtectedRoute';
+
 function App() {
   return (
     <SystemMaintenanceProvider>
@@ -108,9 +110,11 @@ function App() {
           <Route
             path="/student"
             element={
-              <MaintenanceGuard moduleKey="studentDashboard">
-                <StudentLayout />
-              </MaintenanceGuard>
+              <ProtectedRoute allowedRoles={["student"]}>
+                <MaintenanceGuard moduleKey="studentDashboard">
+                  <StudentLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
             }
           >
             <Route index element={<Overview />} />
@@ -135,7 +139,16 @@ function App() {
           </Route>
 
           {/* Admin Dashboard Routes */}
-          <Route path="/admin" element={<MaintenanceGuard moduleKey="adminDashboard"><AdminLayout /></MaintenanceGuard>}>
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRoles={["admin"]}>
+                <MaintenanceGuard moduleKey="adminDashboard">
+                  <AdminLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<AdminOverview />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="batches" element={<AdminBatches />} />
@@ -158,9 +171,11 @@ function App() {
           <Route
             path="/mentor"
             element={
-              <MaintenanceGuard moduleKey="mentorDashboard">
-                <MentorLayout />
-              </MaintenanceGuard>
+              <ProtectedRoute allowedRoles={["mentor"]}>
+                <MaintenanceGuard moduleKey="mentorDashboard">
+                  <MentorLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
             }
           >
             <Route index element={<MentorOverview />} />
@@ -191,9 +206,11 @@ function App() {
           <Route
             path="/coordinator"
             element={
-              <MaintenanceGuard moduleKey="coordinatorDashboard">
-                <CoordinatorLayout />
-              </MaintenanceGuard>
+              <ProtectedRoute allowedRoles={["coordinator"]}>
+                <MaintenanceGuard moduleKey="coordinatorDashboard">
+                  <CoordinatorLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
             }
           >
             <Route index element={<CoordinatorOverview />} />
@@ -220,7 +237,16 @@ function App() {
           </Route>
 
           {/* Super Admin Workspace Routes */}
-          <Route path="/super-admin" element={<MaintenanceGuard moduleKey="superAdminDashboard"><SuperAdminLayout /></MaintenanceGuard>}>
+          <Route
+            path="/super-admin"
+            element={
+              <ProtectedRoute allowedRoles={["superadmin"]}>
+                <MaintenanceGuard moduleKey="superAdminDashboard">
+                  <SuperAdminLayout />
+                </MaintenanceGuard>
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<SuperAdminOverview />} />
             <Route path="colleges" element={<MaintenanceGuard moduleKey="collegesPage"><CollegesPage /></MaintenanceGuard>} />
             <Route path="colleges/:collegeId" element={<MaintenanceGuard moduleKey="collegesPage"><CollegesPage /></MaintenanceGuard>} />
@@ -236,7 +262,6 @@ function App() {
             <Route path="maintenance" element={<MaintenanceGuard moduleKey="featureSwitches"><SuperAdminMaintenanceControls /></MaintenanceGuard>} />
             <Route path="performance" element={<MaintenanceGuard moduleKey="systemHealth"><SuperAdminPerformancePage /></MaintenanceGuard>} />
             <Route path="health" element={<MaintenanceGuard moduleKey="systemHealth"><SuperAdminSystemHealth /></MaintenanceGuard>} />
-            <Route path="profile" element={<SuperAdminProfilePage />} />
           </Route>
           <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
           <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />

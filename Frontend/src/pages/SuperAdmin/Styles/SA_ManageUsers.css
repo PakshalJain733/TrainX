@@ -640,7 +640,7 @@
   max-height: 190px; overflow-y: auto; background: #ffffff !important;
   border: 1px solid #e2e8f0; border-radius: 10px;
   box-shadow: 0 12px 30px -4px rgba(15,23,42,.2), 0 4px 12px -2px rgba(15,23,42,.12);
-  z-index: 999999 !important; padding: 4px; box-sizing: border-box;
+  z-index: 2147483647 !important; padding: 4px; box-sizing: border-box;
   animation: muSelectFadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
 }
 .mu-select-dropdown--up {
@@ -753,7 +753,7 @@
 }
 
 .mu-select-dropdown {
-  z-index: 999999 !important;
+  z-index: 2147483647 !important;
 }
 
 /* ── Full-Screen Portal Overlay & Dialog (Plain White Header Theme) ── */

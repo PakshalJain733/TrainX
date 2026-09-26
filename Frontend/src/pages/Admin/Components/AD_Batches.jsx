@@ -1331,14 +1331,6 @@ export default function AdminBatches() {
                               </>
                             )}
                           </span>
-                          <button
-                            type="button"
-                            className="batch-code-refresh-btn"
-                            onClick={() => handleRegenerateCode(b.id, b.name)}
-                            title="Generate new 5-min code"
-                          >
-                            <RefreshCw size={12} />
-                          </button>
                         </div>
                       </div>
                       <div className="batch-join-code-display">

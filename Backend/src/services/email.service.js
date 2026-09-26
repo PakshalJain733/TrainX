@@ -240,63 +240,62 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
 
     const roleUpper = role.toUpperCase();
     const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : '#3b82f6';
+    const regUrl = `http://localhost:5173/register?email=${encodeURIComponent(to)}`;
 
     const contentHtml = `
-      <div style="font-size: 18px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
-        Welcome aboard, ${name}! 🎉
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome ${name}! 🎉
       </div>
       <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
-        Your account on the <strong>Campus Training & Placement Portal</strong> has been configured successfully.
+        Your account on the <strong>Campus Training & Placement Portal</strong> has been created by your Administrator. Please complete your registration to get started.
       </p>
 
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
         <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-          Account Profile Summary
+          Registration Account Details
         </div>
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;">
-          <strong style="width: 100px;">User Name:</strong> ${name}
+          <strong style="width: 140px;">Full Name:</strong> ${name}
         </div>
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;">
-          <strong style="width: 100px;">Email:</strong> ${to}
+          <strong style="width: 140px;">Registered Email:</strong> <span style="font-weight:700; color:#4f46e5;">${to}</span>
         </div>
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155;">
-          <strong style="width: 100px;">Assigned Role:</strong> 
+          <strong style="width: 140px;">Assigned Role:</strong> 
           <span style="background-color: ${badgeBg}; color: #ffffff; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">
             ${roleUpper}
           </span>
         </div>
       </div>
 
-      <div style="margin: 24px 0;">
-        <div style="font-weight: 700; color: #1e293b; font-size: 15px; margin-bottom: 10px;">
-          🚀 What you can do next:
+      <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 16px; border-radius: 6px; margin: 20px 0;">
+        <div style="font-weight: 700; color: #1e40af; font-size: 14px; margin-bottom: 4px;">
+          ⚠️ Important Registration Requirement:
         </div>
-        <ul style="margin: 0; padding-left: 20px; color: #475569; font-size: 14px; line-height: 1.8;">
-          <li>Explore upcoming skill development training sessions</li>
-          <li>Track your assessment progress and certifications</li>
-          <li>Stay informed with real-time campus drive announcements</li>
-        </ul>
+        <div style="color: #1e3a8a; font-size: 13.5px; line-height: 1.5;">
+          Make sure to use this exact email address (<strong>${to}</strong>) when completing your registration so your admin profile preferences are linked correctly.
+        </div>
       </div>
 
       <div style="text-align: center; margin-top: 32px;">
-        <a href="http://localhost:5173/login" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
-          Log In to Your Dashboard &rarr;
+        <a href="${regUrl}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          Complete Your Registration &rarr;
         </a>
       </div>
     `;
 
     const htmlContent = renderBaseTemplate({
-      title: 'Welcome to Training Portal',
-      subtitle: 'Your Account is Ready',
+      title: 'Welcome to Campus Training Portal',
+      subtitle: 'Complete Your Registration',
       contentHtml,
-      footerNote: 'Need assistance? Reach out to your campus coordinator.',
+      footerNote: 'Need assistance? Reach out to your campus administrator or coordinator.',
     });
 
     const mailOptions = {
       from: senderHeader,
       to,
-      subject: `Welcome to Campus Training Portal, ${name}!`,
-      text: `Hello ${name},\n\nWelcome to Campus Training Portal! Your account with role ${roleUpper} has been created successfully.\n\nYou can log in anytime with your registered email.\n\nBest regards,\nCampus Training Portal Team`,
+      subject: `Welcome ${name}! Complete your registration`,
+      text: `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nBest regards,\nCampus Training Portal Team`,
       html: htmlContent,
     };
 
@@ -304,7 +303,8 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
     console.log(`[Nodemailer] Welcome email sent to ${to} (Message ID: ${info.messageId})`);
     return info;
   } catch (error) {
-    console.warn(`[Nodemailer] Welcome email dispatch skipped: ${error.message}`);
+    console.error(`[Nodemailer Error] Welcome email dispatch failed for ${to}:`, error.message);
+    return null;
   }
 };
 

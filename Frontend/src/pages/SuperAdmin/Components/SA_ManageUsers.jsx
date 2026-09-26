@@ -31,65 +31,14 @@ import {
   User
 } from 'lucide-react';
 import EmptyState from '../../../components/ui/EmptyState';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import { apiFetch } from '../../../utils/api';
 import { collegeAPI, departmentAPI } from '../../../services/api';
 import "../Styles/SA_ManageUsers.css";
 
-/* ── Inline dropdown for ManageUsers (CSS: ManageUsers.css .mu-select-*) ── */
-function MuSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction, disabled }) {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const ref = React.useRef(null);
-  const selected = options.find((o) => String(o.value) === String(value));
-
-  React.useEffect(() => {
-    const handleOutsideClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
-  }, []);
-
-  return (
-    <div className={`mu-select-wrap${isOpen ? ' mu-select-wrap--open' : ''}${disabled ? ' opacity-60 pointer-events-none' : ''}`} ref={ref}>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => !disabled && setIsOpen((v) => !v)}
-        className={`mu-select-trigger${isOpen ? ' mu-select-trigger--open' : ''}`}
-      >
-        {Icon && <Icon className="mu-select-icon" />}
-        <span className="mu-select-text">
-          {selected ? selected.label : <span className="mu-select-placeholder">{placeholder}</span>}
-        </span>
-        <ChevronDown className={`mu-select-arrow${isOpen ? ' mu-select-arrow--rotate' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className={`mu-select-dropdown${direction === 'up' ? ' mu-select-dropdown--up' : ''}`}>
-          {options.map((opt) => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`mu-select-option${isSel ? ' mu-select-option--selected' : ''}`}
-              >
-                <span className="mu-select-option-label">{opt.label}</span>
-                {isSel && <Check className="mu-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for ManageUsers ── */
+function MuSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 /* ── Inline StatusBadge Helper ──────────────────────── */

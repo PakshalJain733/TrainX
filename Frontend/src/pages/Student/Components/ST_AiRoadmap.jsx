@@ -425,7 +425,9 @@ export default function AIRoadmap() {
             <span>
               <strong>Profile Skills Pruned:</strong> Experienced in{" "}
               <strong>
-                {typeof userProfile.skills === "string" ? userProfile.skills : userProfile.skills.join(", ")}
+                {Array.isArray(userProfile?.skills)
+                  ? userProfile.skills.join(", ")
+                  : (typeof userProfile?.skills === "string" ? userProfile.skills : "")}
               </strong>
               . AI will skip beginner topics you already know.
             </span>

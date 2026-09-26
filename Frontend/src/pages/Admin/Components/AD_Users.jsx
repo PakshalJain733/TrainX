@@ -28,50 +28,12 @@ import {
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_Users.css";
 
-/* ── Inline dropdown for Admin Users (CSS: AdminUsers.css .admin-user-select-*) ── */
-function AdminUserSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      setDropUp(direction === 'up');
-    }
-    setIsOpen(v => !v);
-  };
-
-  return (
-    <div className={`admin-user-select-wrap${isOpen ? ' admin-user-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={handleToggle} className={`admin-user-select-trigger${isOpen ? ' admin-user-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="admin-user-select-icon" />}
-        <span className="admin-user-select-text">{selected ? selected.label : <span className="admin-user-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`admin-user-select-arrow${isOpen ? ' admin-user-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className={`admin-user-select-dropdown${dropUp ? ' admin-user-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-user-select-option${isSel ? ' admin-user-select-option--selected' : ''}`}>
-                <span className="admin-user-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-user-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Admin Users ── */
+function AdminUserSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 /* ── Assign Trainer Modal Component ── */

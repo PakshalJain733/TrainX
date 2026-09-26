@@ -13,6 +13,7 @@ import {
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
+import { sendWelcomeEmail } from '../services/email.service.js';
 
 /**
  * Helper to determine college isolation filter based on caller role
@@ -172,6 +173,16 @@ export const createUserAdmin = async (req, res, next) => {
         semester: semester || 'Semester 6',
         cgpa: cgpa || '8.5',
         skills: skills || '',
+      });
+    }
+
+    if (newUser.email && newUser.email.includes('@')) {
+      sendWelcomeEmail({
+        to: newUser.email,
+        name: newUser.name,
+        role: canonicalRole,
+      }).catch((err) => {
+        console.warn(`[Admin User Creation Email Notice] ${err.message}`);
       });
     }
 
@@ -345,13 +356,18 @@ export const createAdminBroadcast = async (req, res, next) => {
       return sendError(res, 'Title and message text are required', 400);
     }
     const collegeId = getCallerCollegeFilter(req) || 1;
+    const senderName = req.user ? (req.user.name || req.user.username || 'Admin') : 'Admin';
+    const senderRole = req.user ? (req.user.role || 'Admin') : 'Admin';
+
     const created = await createBroadcastModel({
       college_id: collegeId,
       title: title.trim(),
       message: message.trim(),
-      target,
-      priority,
+      target: target || 'All Batches',
+      priority: priority || 'General Announcement',
       created_by: req.user ? req.user.id : 1,
+      created_by_name: senderName,
+      sender_role: senderRole,
     });
     return sendSuccess(res, 'Broadcast sent successfully to all targets', created, 201);
   } catch (error) {
