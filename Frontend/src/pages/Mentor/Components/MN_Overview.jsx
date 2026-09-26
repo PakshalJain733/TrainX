@@ -109,7 +109,7 @@ export default function Overview() {
     : getNumber(mentor, ["upcomingSessions", "upcomingSessionsCount", "sessionCount", "upcoming_sessions"]) ?? 0;
 
   const mentorStats = [
-    { label: "Active Batches", value: `${assignedBatches} Cohorts`, hint: "From assigned batch records", icon: Layers },
+    { label: "Active Batches", value: `${assignedBatches} Batches`, hint: "From assigned batch records", icon: Layers },
     { label: "Total Students", value: `${assignedStudents}`, hint: "Assigned student records", icon: Users },
     { label: "Upcoming Sessions", value: `${upcomingSessions} Scheduled`, hint: "Returned session records", icon: CalendarCheck },
     { label: "Pending Reviews", value: `${pendingReviews}`, hint: "Returned review count", icon: FileCode },
@@ -153,7 +153,7 @@ export default function Overview() {
                   <stat.icon size={16} />
                 </div>
                 <span className="overview-stat-label">{stat.label}</span>
-                <Info size={15} className="overview-info-icon" />
+                
               </div>
               <p className="overview-stat-value">{stat.value}</p>
               <div className="overview-stat-hint-row">
@@ -173,7 +173,7 @@ export default function Overview() {
               </div>
               <div>
                 <CardTitle className="overview-card-title">Allocated Training Batches</CardTitle>
-                <CardDescription className="overview-card-desc">Assigned cohort records returned by the mentor service</CardDescription>
+                <CardDescription className="overview-card-desc">Assigned batch records returned by the mentor service</CardDescription>
               </div>
             </div>
             <Link to="/mentor/batches" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">

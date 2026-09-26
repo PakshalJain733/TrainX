@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   AlertCircle,
   Briefcase,
+  Award
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";

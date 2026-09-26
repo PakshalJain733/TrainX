@@ -142,7 +142,7 @@ export default function MentorNotifications() {
             Mentor Notifications
           </h2>
           <p className="mn-notif-header-subtitle">
-            Stay updated with cohort progress, evaluation requests, student submissions, and institutional announcements.
+            Stay updated with batch progress, evaluation requests, student submissions, and institutional announcements.
           </p>
         </div>
 

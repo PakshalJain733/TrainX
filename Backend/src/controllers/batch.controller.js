@@ -222,7 +222,7 @@ export const joinBatch = async (req, res, next) => {
       const insertRes = await query(
         `INSERT INTO batches (name, code, join_code, trainer, schedule, status, students)
          VALUES (?, ?, ?, 'Faculty Instructor', 'Mon, Wed, Fri (10:00 AM - 12:00 PM)', 'Active', 1)`,
-        [`${codeName} Training Cohort`, inputCode, inputCode]
+        [`${codeName} Training Batch`, inputCode, inputCode]
       );
       const [created] = await query('SELECT * FROM batches WHERE id = ?', [insertRes.insertId]);
       foundBatch = created;

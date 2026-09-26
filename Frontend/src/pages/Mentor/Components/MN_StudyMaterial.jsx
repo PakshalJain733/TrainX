@@ -15,7 +15,7 @@ export default function StudyMaterial() {
   // Form states
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Document");
-  const [batch, setBatch] = useState("CSE 2026 Alpha Cohort");
+  const [batch, setBatch] = useState("CSE 2026 Alpha Batch");
   const [fileName, setFileName] = useState("");
 
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function StudyMaterial() {
                     Upload Learning Content
                   </h3>
                   <p className="mentor-modal-subtext">
-                    Publish videos, documents, web links, or study notes for student cohorts.
+                    Publish videos, documents, web links, or study notes for student batches.
                   </p>
                 </div>
               </div>
@@ -148,7 +148,7 @@ export default function StudyMaterial() {
                 <div className="mentor-success-wrap">
                   <CheckCircle2 size={48} color="#10b981" className="mentor-success-icon" />
                   <h4 className="mentor-success-title">Content Added Successfully!</h4>
-                  <p className="mentor-success-subtext">The resource is now available to selected student cohorts.</p>
+                  <p className="mentor-success-subtext">The resource is now available to selected student batches.</p>
                 </div>
               ) : (
                 <form onSubmit={handleUploadSubmit} className="mentor-form-flex">
@@ -179,7 +179,7 @@ export default function StudyMaterial() {
                     />
                   </div>
 
-                  {/* Resource Type & Target Cohort Row */}
+                  {/* Resource Type & Target Batch Row */}
                   <div className="mentor-grid-2">
                     <div>
                       <label className="mentor-form-label">
@@ -201,13 +201,13 @@ export default function StudyMaterial() {
 
                     <div>
                       <label className="mentor-form-label">
-                        Target Cohort / Batch
+                        Target Batch / Batch
                       </label>
                       <CustomSelect
                         value={batch}
                         options={[
                           { value: "All Batches", label: "All Batches" },
-                          { value: "CSE 2026 Alpha Cohort", label: "CSE 2026 Alpha Cohort" },
+                          { value: "CSE 2026 Alpha Batch", label: "CSE 2026 Alpha Batch" },
                           { value: "Fullstack React & Node Track", label: "Fullstack React & Node Track" },
                           { value: "Data Science & AI/ML 2025", label: "Data Science & AI/ML 2025" },
                         ]}

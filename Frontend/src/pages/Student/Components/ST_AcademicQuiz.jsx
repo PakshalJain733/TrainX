@@ -649,7 +649,6 @@ export default function AcademicQuiz() {
     <div className="academic-quiz-page stack-6">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <GraduationCap size={22} style={{ color: "#4f46e5" }} />
           <span>Academic & Practice Quizzes</span>
         </h2>
         <p className="student-header-desc">

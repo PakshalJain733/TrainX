@@ -613,7 +613,6 @@ export default function AIInterview() {
     <div className="ai-interview-page stack-6">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <Bot size={22} style={{ color: "#4f46e5" }} />
           <span>Live AI Interview Simulation</span>
         </h2>
         <p className="student-header-desc">

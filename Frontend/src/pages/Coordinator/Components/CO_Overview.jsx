@@ -39,7 +39,7 @@ export default function CoordinatorOverview() {
 
   const targetAudienceOptions = [
     { value: "all", label: "All CSE Batches & Enrolled Students" },
-    { value: "cse26", label: "CSE 2026 Alpha Cohort" },
+    { value: "cse26", label: "CSE 2026 Alpha Batch" },
     { value: "fs", label: "Fullstack React & Node Specialization" },
     { value: "ds", label: "Data Science & AI/ML 2025" },
   ];
@@ -92,9 +92,9 @@ export default function CoordinatorOverview() {
 
   const statsList = [
     { label: "Enrolled Students", value: "480", hint: `Active in ${dept}`, icon: GraduationCap },
-    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Users },
+    { label: "Managed Batches", value: "6 Batches", hint: "Current active batches", icon: Layers },
     { label: "Faculty & Mentors", value: "12 Trainers", hint: "Assigned department mentors", icon: UserCheck },
-    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: LineChart },
+    { label: "Attendance Rate", value: "88%", hint: "Department average", icon: Activity },
   ];
 
   const liveSessions = [
@@ -102,7 +102,7 @@ export default function CoordinatorOverview() {
       id: 1,
       trainerName: "Anubhav Shukla",
       topic: "Java OOPS",
-      batch: "CSE 2026 Cohort",
+      batch: "CSE 2026 Batch",
       time: "10:00 AM - 11:30 AM",
       status: "Live",
     },
@@ -156,7 +156,7 @@ export default function CoordinatorOverview() {
                   <s.icon size={16} />
                 </div>
                 <span className="overview-stat-label">{s.label}</span>
-                <Info size={15} className="overview-info-icon" />
+                
               </div>
 
               <p className="overview-stat-value">{s.value}</p>
@@ -180,7 +180,7 @@ export default function CoordinatorOverview() {
               </div>
               <div>
                 <CardTitle className="overview-card-title">Broadcast Department Notice</CardTitle>
-                <CardDescription className="overview-card-desc">Send instant announcements to students & cohorts</CardDescription>
+                <CardDescription className="overview-card-desc">Send instant announcements to students & batches</CardDescription>
               </div>
             </div>
             <Badge variant="outline" className="px-2.5 py-1 text-xs font-semibold">CSE Dept</Badge>
@@ -307,7 +307,7 @@ export default function CoordinatorOverview() {
                           {s.name}
                         </h5>
                         <p className="text-[11px] text-slate-500 font-medium truncate mt-0.5">
-                          {s.rollNo || s.studentId || "CSE26-001"} · {s.batch || "CSE 2026 Cohort"}
+                          {s.rollNo || s.studentId || "CSE26-001"} · {s.batch || "CSE 2026 Batch"}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                           <span className="inline-flex items-center text-[11px] text-rose-700 font-bold bg-rose-100/80 px-2 py-0.5 rounded-md">

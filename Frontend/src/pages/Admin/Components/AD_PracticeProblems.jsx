@@ -260,7 +260,7 @@ export default function AdminPracticeProblems() {
       <SectionHeader
         icon={Terminal}
         title="Coding Practice Management"
-        description="Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts."
+        description="Build algorithmic question banks, configure test cases, and assign coding tasks to student batches."
         action={
           <button className="admin-btn-add" onClick={() => setShowAddModal(true)}>
             <Plus size={16} /> Add Coding Problem
@@ -280,7 +280,7 @@ export default function AdminPracticeProblems() {
           className={`admin-filter-pill ${activeTab === "assign" ? "admin-filter-pill--active" : ""}`}
           onClick={() => setActiveTab("assign")}
         >
-          <Send size={15} /> Assign to Cohort ({assignments.length})
+          <Send size={15} /> Assign to Batch ({assignments.length})
         </button>
         <button
           className={`admin-filter-pill ${activeTab === "submissions" ? "admin-filter-pill--active" : ""}`}
@@ -395,7 +395,7 @@ export default function AdminPracticeProblems() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "20px" }}>
           <div className="admin-users-table-card" style={{ padding: "20px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "14px" }}>
-              Publish Task to Cohort
+              Publish Task to Batch
             </h3>
             <form onSubmit={handleAssignSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div className="form-group-admin">
@@ -411,7 +411,7 @@ export default function AdminPracticeProblems() {
               </div>
 
               <div className="form-group-admin">
-                <label>Target Cohort / Batch</label>
+                <label>Target Batch / Batch</label>
                 <AdminPpSelect
                   value={assignForm.batch}
                   onChange={(val) => setAssignForm({ ...assignForm, batch: val })}
@@ -524,7 +524,7 @@ export default function AdminPracticeProblems() {
                 </div>
                 <div>
                   <h2 className="modal-title">Add New Coding Problem</h2>
-                  <p className="modal-subtitle">Create algorithmic practice challenges for student cohorts.</p>
+                  <p className="modal-subtitle">Create algorithmic practice challenges for student batches.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowAddModal(false)} title="Close Modal">

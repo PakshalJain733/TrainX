@@ -35,7 +35,7 @@ export default function PracticeProblems() {
             solved: p.solve_status === "Solved",
             companies: ["TCS", "Infosys"],
             solutionAvailable: true,
-            description: p.description || "No problem description provided.",
+            description: p.description || "No problem description provided.", dueDate: p.due_date || p.dueDate || "N/A",
           }));
         }
         const shared = await getSharedCodingTasks([]);
@@ -49,7 +49,7 @@ export default function PracticeProblems() {
           solved: false,
           companies: ["Core Tech"],
           solutionAvailable: true,
-          description: s.data?.description || s.description || "No problem description provided.",
+          description: s.data?.description || s.description || "No problem description provided.", dueDate: s.data?.due_date || s.due_date || s.dueDate || "N/A",
         }));
         const existingIds = new Set(apiItems.map((i) => i.id));
         const uniqueShared = mappedShared.filter((s) => !existingIds.has(s.id));
@@ -68,6 +68,7 @@ export default function PracticeProblems() {
               solved: false,
               companies: ["Core Tech"],
               solutionAvailable: true,
+              dueDate: s.data?.due_date || s.due_date || s.dueDate || "N/A"
             }))
           );
         }
@@ -128,7 +129,6 @@ export default function PracticeProblems() {
       <div className="student-header-box">
         <span className="student-header-eyebrow">C2C TRAINING PROGRAM</span>
         <h2 className="student-header-title">
-          <Terminal size={22} style={{ color: "#4f46e5" }} />
           <span>Coding Practice Problems</span>
         </h2>
         <p className="student-header-desc">Master Data Structures & Algorithms with pattern-based coding problems designed for campus placements.</p>
@@ -136,83 +136,83 @@ export default function PracticeProblems() {
 
       {/* Proper Stats Cards Row */}
       <div className="practice-metrics-grid">
-        <div className="stat-card-modern card-blue">
+        <div className="stat-card-modern">
           <div className="stat-card-top">
-            <div className="stat-icon-wrap bg-blue-soft">
+            <div className="stat-icon-wrap">
               <Code2 size={22} />
             </div>
-            <span className="stat-badge badge-blue">{completionRate}% Completed</span>
+            <span className="stat-badge">{completionRate}% Completed</span>
           </div>
           <div className="stat-card-body">
             <div className="stat-number">{solvedCount} <span className="stat-total">/ {totalProblemsCount}</span></div>
             <div className="stat-title">Problems Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-blue-bar" style={{ width: `${completionRate}%` }} />
+            <div className="stat-progress-bar" style={{ width: `${completionRate}%` }} />
           </div>
         </div>
 
-        <div className="stat-card-modern card-emerald">
+        <div className="stat-card-modern">
           <div className="stat-card-top">
-            <div className="stat-icon-wrap bg-emerald-soft">
+            <div className="stat-icon-wrap">
               <CheckCircle2 size={22} />
             </div>
-            <span className="stat-badge badge-emerald">{easySolved} Solved</span>
+            <span className="stat-badge">{easySolved} Solved</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-emerald">{easySolved}</div>
+            <div className="stat-number">{easySolved}</div>
             <div className="stat-title">Easy Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-emerald-bar" style={{ width: `${easyPct}%` }} />
+            <div className="stat-progress-bar" style={{ width: `${easyPct}%` }} />
           </div>
         </div>
 
-        <div className="stat-card-modern card-amber">
+        <div className="stat-card-modern">
           <div className="stat-card-top">
-            <div className="stat-icon-wrap bg-amber-soft">
+            <div className="stat-icon-wrap">
               <Flame size={22} />
             </div>
-            <span className="stat-badge badge-amber">{mediumSolved} Solved</span>
+            <span className="stat-badge">{mediumSolved} Solved</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-amber">{mediumSolved}</div>
+            <div className="stat-number">{mediumSolved}</div>
             <div className="stat-title">Medium Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-amber-bar" style={{ width: `${mediumPct}%` }} />
+            <div className="stat-progress-bar" style={{ width: `${mediumPct}%` }} />
           </div>
         </div>
 
-        <div className="stat-card-modern card-red">
+        <div className="stat-card-modern">
           <div className="stat-card-top">
-            <div className="stat-icon-wrap bg-red-soft">
+            <div className="stat-icon-wrap">
               <Flame size={22} />
             </div>
-            <span className="stat-badge badge-red">{hardSolved} Solved</span>
+            <span className="stat-badge">{hardSolved} Solved</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-red">{hardSolved}</div>
+            <div className="stat-number">{hardSolved}</div>
             <div className="stat-title">Hard Solved</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-red-bar" style={{ width: `${hardPct}%` }} />
+            <div className="stat-progress-bar" style={{ width: `${hardPct}%` }} />
           </div>
         </div>
 
-        <div className="stat-card-modern card-purple">
+        <div className="stat-card-modern">
           <div className="stat-card-top">
-            <div className="stat-icon-wrap bg-purple-soft">
+            <div className="stat-icon-wrap">
               <Trophy size={22} />
             </div>
-            <span className="stat-badge badge-purple">High Score</span>
+            <span className="stat-badge">High Score</span>
           </div>
           <div className="stat-card-body">
-            <div className="stat-number text-purple">{accuracyRate}%</div>
+            <div className="stat-number">{accuracyRate}%</div>
             <div className="stat-title">Accuracy Rate</div>
           </div>
           <div className="stat-progress-bg">
-            <div className="stat-progress-bar bg-purple-bar" style={{ width: `${accuracyRate}%` }} />
+            <div className="stat-progress-bar" style={{ width: `${accuracyRate}%` }} />
           </div>
         </div>
       </div>
@@ -266,22 +266,6 @@ export default function PracticeProblems() {
             </div>
           </div>
         </div>
-
-        {/* Topic Pills */}
-        <div className="topic-pills-row">
-          <span className="filter-label">Topics:</span>
-          <div className="topic-scroll">
-            {topics.map((t) => (
-              <button
-                key={t}
-                className={`topic-pill ${selectedTopic === t ? "active" : ""}`}
-                onClick={() => setSelectedTopic(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Problems List Table */}
@@ -295,10 +279,10 @@ export default function PracticeProblems() {
           <table className="problems-table">
             <thead>
               <tr>
-                <th className="pp-th-status">Status</th>
                 <th>Title</th>
                 <th>Topic</th>
                 <th>Difficulty</th>
+                <th>Due Date</th>
                 <th>Acceptance</th>
                 <th className="pp-th-action">Action</th>
               </tr>
@@ -306,28 +290,13 @@ export default function PracticeProblems() {
             <tbody>
               {filteredProblems.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="pp-empty-cell">
+                  <td colSpan={5} className="pp-empty-cell">
                     No practice problems found matching your filters.
                   </td>
                 </tr>
               ) : (
                 filteredProblems.map((prob) => (
                   <tr key={prob.id} className="problem-row">
-                    <td>
-                      <button
-                        type="button"
-                        className="status-toggle-btn"
-                        onClick={() => handleToggleSolved(prob.id)}
-                        title={prob.solved ? "Mark as Unsolved" : "Mark as Solved"}
-                        aria-label={prob.solved ? "Mark as Unsolved" : "Mark as Solved"}
-                      >
-                        {prob.solved ? (
-                          <CheckCircle2 size={18} className="solved-icon" />
-                        ) : (
-                          <Circle size={18} className="unsolved-icon" />
-                        )}
-                      </button>
-                    </td>
                     <td>
                       <div className="prob-title-box">
                         <Link
@@ -346,6 +315,11 @@ export default function PracticeProblems() {
                     <td>
                       <span className={`diff-badge diff-${prob.difficulty.toLowerCase()}`}>
                         {prob.difficulty}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ color: prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
+                        {prob.dueDate}
                       </span>
                     </td>
                     <td className="acceptance-cell">{prob.acceptance}</td>

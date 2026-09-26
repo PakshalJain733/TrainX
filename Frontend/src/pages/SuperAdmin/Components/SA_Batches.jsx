@@ -345,8 +345,7 @@ export default function Batches() {
       <div className="batches-header-wrap">
         <div>
           <h2 className="batches-header-title">
-            <Layers className="batches-header-icon" />
-            <span>Training Batches & Cohorts</span>
+          <span>Training Batches & Batches</span>
           </h2>
           <p className="batches-header-subtitle">Monitor batch timelines, completion progress, and assigned mentors</p>
         </div>
@@ -364,7 +363,7 @@ export default function Batches() {
             className="sa-btn-primary"
           >
             <Plus size={16} />
-            <span>Create New Cohort</span>
+            <span>Create New Batch</span>
           </button>
         </div>
       </div>
@@ -375,7 +374,7 @@ export default function Batches() {
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder="Search cohort name, code, or college..."
+            placeholder="Search batch name, code, or college..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sa-search-input"
@@ -418,7 +417,7 @@ export default function Batches() {
           <table className="batches-table">
             <thead>
               <tr className="batches-thead-row">
-                <th className="batches-th">Batch Cohort</th>
+                <th className="batches-th">Batch Batch</th>
                 <th className="batches-th">Institution & Stream</th>
                 <th className="batches-th">Assigned Lead Mentor</th>
                 <th className="batches-th">Enrolled Students</th>
@@ -432,8 +431,8 @@ export default function Batches() {
               {filteredBatches.map((b) => (
                 <tr key={b.id} className="batches-tr">
                   <td className="batches-td">
-                    <div className="batches-cohort-title">{b.name}</div>
-                    <div className="batches-cohort-sub">{b.code || `BTC-${b.id}`}</div>
+                    <div className="batches-batch-title">{b.name}</div>
+                    <div className="batches-batch-sub">{b.code || `BTC-${b.id}`}</div>
                   </td>
                   <td className="batches-td">
                     <div className="batches-institution">{b.collegeName || b.college || "Apex Tech"}</div>
@@ -495,7 +494,7 @@ export default function Batches() {
                   <Layers size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Create Training Cohort</h2>
+                  <h2 className="modal-title">Create Training Batch</h2>
                   <p className="modal-subtitle">Setup a new batch scoped by college & department.</p>
                 </div>
               </div>
@@ -540,7 +539,7 @@ export default function Batches() {
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Cohort Name *</label>
+                    <label>Batch Name *</label>
                     <input
                       type="text"
                       required
@@ -592,7 +591,7 @@ export default function Batches() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  Create Cohort
+                  Create Batch
                 </button>
               </div>
             </form>
@@ -708,7 +707,7 @@ export default function Batches() {
                 </div>
                 <div>
                   <h2 className="modal-title">Edit Batch Record</h2>
-                  <p className="modal-subtitle">Update cohort parameters and mentor assignment</p>
+                  <p className="modal-subtitle">Update batch parameters and mentor assignment</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setEditBatch(null)}>
@@ -724,7 +723,7 @@ export default function Batches() {
               <div className="modal-body">
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Batch / Cohort Name *</label>
+                    <label>Batch / Batch Name *</label>
                     <input
                       type="text"
                       required
@@ -805,7 +804,7 @@ export default function Batches() {
                   <Trash2 size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Remove Cohort</h2>
+                  <h2 className="modal-title">Remove Batch</h2>
                   <p className="modal-subtitle">Confirm batch deletion</p>
                 </div>
               </div>

@@ -94,7 +94,7 @@ export default function CoordinatorBatches() {
         <div>
           <h1 className="coord-page-title">Batches Governance</h1>
           <p className="coord-page-sub">
-            Manage training cohorts, allocate industry mentors, and track syllabus completion.
+            Manage training batches, allocate industry mentors, and track syllabus completion.
           </p>
         </div>
         <button
@@ -226,7 +226,7 @@ export default function CoordinatorBatches() {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. CSE 2026 Beta Cohort"
+                  placeholder="e.g. CSE 2026 Beta Batch"
                   value={newBatchName}
                   onChange={(e) => setNewBatchName(e.target.value)}
                   style={{

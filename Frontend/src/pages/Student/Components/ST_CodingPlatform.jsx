@@ -50,35 +50,87 @@ function getAuthHeaders() {
   };
 }
 
+function getDynamicProblemDescription(title = "Coding Problem", topic = "Algorithms", originalDesc = "") {
+  if (originalDesc && originalDesc.trim() && !originalDesc.includes("No problem description provided")) {
+    return originalDesc;
+  }
+
+  const cleanTitle = (title || "").trim();
+  const lower = cleanTitle.toLowerCase();
+  
+  if (lower.includes("return first element")) {
+    return `Given an array of integers, write a program or function that returns the very first element of the array.\n\nInput Format:\n- Line 1: An integer N representing the size of the array.\n- Line 2: N space-separated integers.\n\nOutput Format:\n- Print a single integer representing the first element of the input array.\n\nConstraints:\n- 1 <= N <= 10^5\n- -10^9 <= Array[i] <= 10^9`;
+  }
+  
+  if (lower.includes("multiply two numbers")) {
+    return `Write a program that takes two integers as input and prints their product.\n\nInput Format:\n- A single line containing two space-separated integers A and B.\n\nOutput Format:\n- Print the product of A and B as a single integer.\n\nConstraints:\n- -10^6 <= A, B <= 10^6`;
+  }
+
+  if (lower.includes("even") || lower.includes("odd")) {
+    return `Write a program to determine whether a given integer N is Even or Odd.\n\nInput Format:\n- A single integer N.\n\nOutput Format:\n- Print 'Even' if N is divisible by 2, otherwise print 'Odd'.\n\nConstraints:\n- -10^9 <= N <= 10^9`;
+  }
+
+  return `Write an optimal solution for '${cleanTitle}' in the domain of ${topic}.\n\nProblem Statement:\nImplement a program to process standard input according to the problem requirements for '${cleanTitle}' and print the evaluated output.\n\nInput Format:\n- Standard input formatted as required for ${cleanTitle}.\n\nOutput Format:\n- Output the calculated answer.`;
+}
+
+function getDynamicSampleTestCases(title = "", existingCases = []) {
+  if (existingCases && existingCases.length > 0) {
+    return existingCases;
+  }
+  
+  const lower = (title || "").toLowerCase();
+
+  if (lower.includes("return first element")) {
+    return [
+      { input: "3\n5 1 2", expected_output: "5", is_hidden: false },
+      { input: "4\n42 10 9 3", expected_output: "42", is_hidden: false }
+    ];
+  }
+  if (lower.includes("multiply two numbers")) {
+    return [
+      { input: "4 5", expected_output: "20", is_hidden: false },
+      { input: "-3 7", expected_output: "-21", is_hidden: false }
+    ];
+  }
+  if (lower.includes("even") || lower.includes("odd")) {
+    return [
+      { input: "4", expected_output: "Even", is_hidden: false },
+      { input: "7", expected_output: "Odd", is_hidden: false }
+    ];
+  }
+
+  return [];
+}
+
 export default function CodingPlatform() {
   const { taskId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [taskData, setTaskData] = useState(location.state?.task || null);
-  const [loading, setLoading] = useState(!location.state?.task);
+  const initialTask = location.state?.task ? {
+    ...location.state.task,
+    description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic, location.state.task.description),
+    testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || [])
+  } : null;
+
+  const [taskData, setTaskData] = useState(initialTask);
+  const [loading, setLoading] = useState(!initialTask);
   const [notFound, setNotFound] = useState(false);
   const [code, setCode] = useState("");
   const [consoleOutput, setConsoleOutput] = useState("");
-  const [consoleStatus, setConsoleStatus] = useState(""); // ""|"running"|"success"|"error"|"tle"|"ce"
-  const [consoleTab, setConsoleTab] = useState("output"); // "output"|"input"
+  const [consoleStatus, setConsoleStatus] = useState("");
+  const [consoleTab, setConsoleTab] = useState("output");
   const [customInput, setCustomInput] = useState("");
   const [useCustomInput, setUseCustomInput] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedLang, setSelectedLang] = useState("python");
-  const [activeTab, setActiveTab] = useState("description"); // description, submissions
-  const [mobileView, setMobileView] = useState("problem"); // problem, code
+  const [activeTab, setActiveTab] = useState("description");
+  const [mobileView, setMobileView] = useState("problem");
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
 
   useEffect(() => {
-    if (location.state?.task) {
-      setTaskData(location.state.task);
-      setLoading(false);
-      return;
-    }
-
     const fetchTaskDetails = async () => {
       setLoading(true);
       setNotFound(false);
@@ -93,9 +145,9 @@ export default function CodingPlatform() {
           const idMatch =
             (batchId && (batchId === requested || batchId === numeric)) ||
             (numeric && parseInt(batchId, 10) === parseInt(numeric, 10));
-          const nonNumericRequest = !/^\d+$/.test(requested.replace(/\D/g, '') ? requested : '') || false;
           const slugLike = requested && !/^[^A-Za-z]*$/.test(requested) && !idMatch;
           if (idMatch || slugLike) {
+            const rawCases = t.testCases || t.test_cases || [];
             setTaskData({
               id: t.id,
               title: t.title,
@@ -103,8 +155,8 @@ export default function CodingPlatform() {
               difficulty: t.difficulty || "Medium",
               points: t.points || 100,
               deadline: t.deadline || "",
-              description: t.description || t.desc || "No problem description provided.",
-              testCases: t.testCases || t.test_cases || [],
+              description: getDynamicProblemDescription(t.title, t.topic, t.description || t.desc),
+              testCases: getDynamicSampleTestCases(t.title, rawCases),
             });
             return;
           }
@@ -114,6 +166,7 @@ export default function CodingPlatform() {
         const probData = await probRes.json();
         if (probRes.ok && probData.success && probData.data) {
           const p = probData.data;
+          const rawCases = p.testCases || p.cases || p.test_cases || [];
           setTaskData({
             id: p.id,
             title: p.title,
@@ -121,16 +174,25 @@ export default function CodingPlatform() {
             difficulty: p.difficulty || "Medium",
             points: p.points || 100,
             deadline: "",
-            description: p.description || "No problem description provided.",
-            testCases: [],
+            description: getDynamicProblemDescription(p.title, p.category, p.description),
+            testCases: getDynamicSampleTestCases(p.title, rawCases),
           });
+          return;
+        }
+
+        if (initialTask) {
+          setTaskData(initialTask);
           return;
         }
 
         setNotFound(true);
       } catch (err) {
         console.error("Failed to fetch task details:", err);
-        setNotFound(true);
+        if (initialTask) {
+          setTaskData(initialTask);
+        } else {
+          setNotFound(true);
+        }
       } finally {
         setLoading(false);
       }
@@ -139,7 +201,7 @@ export default function CodingPlatform() {
     if (taskId) {
       fetchTaskDetails();
     }
-  }, [taskId, location.state]);
+  }, [taskId]);
 
   // Line numbers array
   const lineCount = code.split('\n').length;

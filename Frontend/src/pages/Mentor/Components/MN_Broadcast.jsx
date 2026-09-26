@@ -162,7 +162,7 @@ export default function MentorBroadcast() {
 
         setTitle("");
         setMessage("");
-        setSuccessMsg("Broadcast announcement published successfully to your allocated cohorts!");
+        setSuccessMsg("Broadcast announcement published successfully to your allocated batches!");
         setTimeout(() => setSuccessMsg(""), 4000);
         fetchBroadcasts();
       }
@@ -234,13 +234,13 @@ export default function MentorBroadcast() {
 
             <div className="mentor-broadcast-form-row">
               <div className="mentor-broadcast-form-group">
-                <label>Target Cohort</label>
+                <label>Target Batch</label>
                 <MentorBcastSelect
                   value={target}
                   onChange={setTarget}
                   options={[
                     { value: "All Allocated Batches", label: "All Allocated Batches" },
-                    ...batches.map((b) => ({ value: b.name, label: `Cohort: ${b.name}` })),
+                    ...batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })),
                   ]}
                 />
               </div>

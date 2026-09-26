@@ -47,10 +47,19 @@ export const getPracticeProblemByIdModel = async (id) => {
     const rows = await query('SELECT * FROM practice_problems WHERE id = ?', [numId]);
     if (rows && rows.length > 0) {
       const r = rows[0];
+      const testCases = await query('SELECT input, expected_output, is_hidden FROM coding_test_cases WHERE problem_id = ?', [numId]);
+      
+      let desc = r.description;
+      if (!desc || desc === 'No problem description provided.') {
+        desc = `Write a program to solve '${r.title}'. Read input from standard input and output the evaluated result.\n\nInput: Input data corresponding to ${r.category || 'DSA'} constraints.\nOutput: Computed solution for the problem statement.`;
+      }
+
       return {
         ...r,
+        description: desc,
         tags: r.tags ? r.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         batch: r.batch_name || 'All Batches',
+        testCases: testCases || [],
       };
     }
   } catch (error) {

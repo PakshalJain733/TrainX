@@ -73,8 +73,7 @@ export default function WeeklyReports() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div className="student-header-box">
           <h2 className="student-header-title">
-            <FileCheck2 size={22} style={{ color: "#4f46e5" }} />
-            <span>Weekly Performance Reports</span>
+          <span>Weekly Performance Reports</span>
           </h2>
           <p className="student-header-desc">Review weekly mentor scorecards, attendance logs, technical evaluation notes, and recommended action steps.</p>
         </div>

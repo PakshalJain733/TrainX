@@ -199,7 +199,6 @@ export default function Help() {
     <div className="help-page-wrapper">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <HelpCircle size={22} style={{ color: "#4f46e5" }} />
           <span>Help & Support</span>
         </h2>
         <p className="student-header-desc">

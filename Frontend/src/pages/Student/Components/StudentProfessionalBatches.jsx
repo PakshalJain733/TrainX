@@ -201,7 +201,7 @@ export default function StudentProfessionalBatches() {
                 </span>
                 <div>
                   <h2 className="pp-heading">Coursework &amp; Tasks</h2>
-                  <div className="pp-subheading">Assignments and deadlines for this cohort</div>
+                  <div className="pp-subheading">Assignments and deadlines for this batch</div>
                 </div>
               </div>
             </div>
@@ -224,8 +224,8 @@ export default function StudentProfessionalBatches() {
                   <Trophy size={17} />
                 </span>
                 <div>
-                  <h2 className="pp-heading">Cohort Leaderboard</h2>
-                  <div className="pp-subheading">Top performers in your college cohort</div>
+                  <h2 className="pp-heading">Batch Leaderboard</h2>
+                  <div className="pp-subheading">Top performers in your college batch</div>
                 </div>
               </div>
             </div>
@@ -270,7 +270,7 @@ export default function StudentProfessionalBatches() {
       <div className="ppb-stack">
         <div className="ppb-head">
           <span className="ppb-eyebrow">
-            <i /> Training Cohorts
+            <i /> Training Batches
           </span>
           <h1 className="ppb-title">Enrolled Training Batches</h1>
         </div>
@@ -289,7 +289,7 @@ export default function StudentProfessionalBatches() {
       <div className="ppb-stack">
         <div className="ppb-head">
           <span className="ppb-eyebrow">
-            <i /> Training Cohorts
+            <i /> Training Batches
           </span>
           <h1 className="ppb-title">Enrolled Training Batches</h1>
         </div>
@@ -313,10 +313,10 @@ export default function StudentProfessionalBatches() {
       <div className="ppb-stack">
         <div className="ppb-head">
           <span className="ppb-eyebrow">
-            <i /> Training Cohorts
+            <i /> Training Batches
           </span>
           <h1 className="ppb-title">Enrolled Training Batches</h1>
-          <p className="ppb-desc">Your assigned training cohorts, curriculum progress and learning resources.</p>
+          <p className="ppb-desc">Your assigned training batches, curriculum progress and learning resources.</p>
         </div>
         <div className="pp-card ppb-center-card">
           <span className="ppb-center-icon">
@@ -324,7 +324,7 @@ export default function StudentProfessionalBatches() {
           </span>
           <div className="ppb-center-title">No batches assigned yet</div>
           <div className="ppb-center-sub">
-            Once your college assigns you to a training cohort, your batch details and coursework will appear here.
+            Once your college assigns you to a training batch, your batch details and coursework will appear here.
           </div>
         </div>
       </div>
@@ -335,8 +335,8 @@ export default function StudentProfessionalBatches() {
   const activeCount = batches.filter((b) => b.status === "Active").length;
 
   const batchesStats = [
-    { label: "Enrolled Batches", value: String(batches.length), hint: "Assigned training cohorts", icon: Users },
-    { label: "Active Now", value: String(activeCount), hint: "Currently running cohorts", icon: CheckCircle2 },
+    { label: "Enrolled Batches", value: String(batches.length), hint: "Assigned training batches", icon: Users },
+    { label: "Active Now", value: String(activeCount), hint: "Currently running batches", icon: CheckCircle2 },
     { label: "Academic Year", value: batches[0].academic_year || "—", word: true, hint: "Current training cycle", icon: CalendarDays },
     { label: "Semester", value: profile && profile.semester ? profile.semester : "—", word: true, hint: "Your current semester", icon: GraduationCap },
   ];
@@ -345,10 +345,10 @@ export default function StudentProfessionalBatches() {
     <div className="ppb-stack">
       <div className="ppb-head">
         <span className="ppb-eyebrow">
-          <i /> Training Cohorts
+          <i /> Training Batches
         </span>
         <h1 className="ppb-title">Enrolled Training Batches</h1>
-        <p className="ppb-desc">Your assigned training cohorts, curriculum progress and learning resources.</p>
+        <p className="ppb-desc">Your assigned training batches, curriculum progress and learning resources.</p>
       </div>
 
       <div className="pp-kpi-grid">

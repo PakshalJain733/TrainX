@@ -123,7 +123,7 @@ export default function Help() {
     },
     {
       id: "TICK-7990",
-      subject: "Request for student cohort list update",
+      subject: "Request for student batch list update",
       category: "Account & Security",
       priority: "Normal",
       created: "2026-09-08",

@@ -434,8 +434,7 @@ export default function Attendance() {
       <div className="attendance-header-row">
         <div className="student-header-box">
           <h2 className="student-header-title">
-            <CalendarCheck size={22} style={{ color: "#4f46e5" }} />
-            <span>My Attendance & Reports</span>
+          <span>My Attendance & Reports</span>
           </h2>
           <p className="student-header-desc">
             Track your daily class attendance history, overall eligibility percentage, and submit absence leave requests.

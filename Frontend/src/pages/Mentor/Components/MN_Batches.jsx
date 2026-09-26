@@ -68,7 +68,7 @@ export default function Batches() {
             <Layers size={20} color="#4f46e5" />
             <span>My Allocated Batches</span>
           </h2>
-          <p className="mentor-page-subtitle">Assigned course records, schedules, and cohort details</p>
+          <p className="mentor-page-subtitle">Assigned course records, schedules, and batch details</p>
         </div>
       </div>
 

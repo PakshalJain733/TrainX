@@ -1034,7 +1034,7 @@ export default function AdminBatches() {
       <SectionHeader
         icon={Code2}
         title="Manage Batches"
-        description="Create cohorts, assign mentors, and generate unique batch join access codes."
+        description="Create batches, assign mentors, and generate unique batch join access codes."
         action={
           <Button onClick={handleOpenForm} className="create-batch-btn">
             <Plus size={16} /> {showAddForm ? "Cancel" : "Create New Batch"}
@@ -1051,7 +1051,7 @@ export default function AdminBatches() {
                   <Users size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Create Cohort</h2>
+                  <h2 className="modal-title">Create Batch</h2>
                   <p className="modal-subtitle">Create a new batch, assign mentor, and generate join code.</p>
                 </div>
               </div>
@@ -1073,7 +1073,7 @@ export default function AdminBatches() {
                         setJoinCode(generateJoinCode(e.target.value));
                       }
                     }}
-                    placeholder="e.g. Node.js Backend - Cohort A"
+                    placeholder="e.g. Node.js Backend - Batch A"
                     required
                     autoFocus
                   />
@@ -1138,7 +1138,7 @@ export default function AdminBatches() {
           <div className="admin-empty-state-card">
             <Users size={36} className="admin-empty-state-icon" />
             <p className="admin-empty-state-title">No batches created yet</p>
-            <p className="admin-empty-state-sub">Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.</p>
+            <p className="admin-empty-state-sub">Click "Create New Batch" to add batches, assign mentors, and create student join codes.</p>
           </div>
         ) : (
           batches.map((b) => {

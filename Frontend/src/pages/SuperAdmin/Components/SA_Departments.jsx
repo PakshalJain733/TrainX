@@ -312,8 +312,7 @@ export default function Departments() {
       <div className="departments-header-wrap">
         <div>
           <h2 className="departments-header-title">
-            <GraduationCap className="departments-header-icon" />
-            <span>Academic Departments</span>
+          <span>Academic Departments</span>
           </h2>
           <p className="departments-header-subtitle">Manage academic streams and HOD allocations across partner institutions</p>
         </div>
@@ -558,7 +557,7 @@ export default function Departments() {
                     <Layers size={13} className="text-indigo-500" />
                     <span>Active Batches</span>
                   </span>
-                  <span className="sa-modal-detail-value">{viewDept.batchesCount || 4} Cohorts</span>
+                  <span className="sa-modal-detail-value">{viewDept.batchesCount || 4} Batches</span>
                 </div>
 
                 <div className="sa-modal-detail-item">
@@ -707,7 +706,7 @@ export default function Departments() {
 
             <div className="modal-body">
               <p className="text-sm text-slate-600 m-0">
-                Are you sure you want to remove <strong className="text-slate-900">{deleteDept.name}</strong>? Associated cohorts and students will be unlinked.
+                Are you sure you want to remove <strong className="text-slate-900">{deleteDept.name}</strong>? Associated batches and students will be unlinked.
               </p>
             </div>
 

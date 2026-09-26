@@ -199,7 +199,7 @@ export default function AdminBroadcast() {
       <SectionHeader
         icon={Megaphone}
         title="Broadcast Announcement Center"
-        description="Issue real-time announcements, urgent test notices, and placement drive alerts to all student cohorts and mentors."
+        description="Issue real-time announcements, urgent test notices, and placement drive alerts to all student batches and mentors."
       />
 
       {successMsg && (
@@ -239,7 +239,7 @@ export default function AdminBroadcast() {
                     { value: "All Batches & Enrolled Users", label: "All Batches & Enrolled Users" },
                     { value: "Students Only", label: "Students Only" },
                     { value: "Mentors & Coordinators Only", label: "Mentors & Coordinators Only" },
-                    ...batches.map((b) => ({ value: b.name, label: `Cohort: ${b.name}` })),
+                    ...batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })),
                   ]}
                 />
               </div>

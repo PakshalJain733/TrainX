@@ -220,7 +220,7 @@ export default function AdminOverview() {
                   <BookOpen size={18} color="#059669" />
                   <div>
                     <span className="admin-quick-action-title">Batch Rosters</span>
-                    <span className="admin-quick-action-sub">Manage cohorts & training streams</span>
+                    <span className="admin-quick-action-sub">Manage batches & training streams</span>
                   </div>
                 </div>
                 <span className="admin-quick-action-arrow admin-quick-action-arrow--green">Open &rarr;</span>

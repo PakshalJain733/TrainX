@@ -249,7 +249,7 @@ export default function CoordinatorBroadcast() {
                   options={[
                     { value: "Entire Department & Students", label: "Entire Department & Students" },
                     { value: "Department Mentors Only", label: "Department Mentors Only" },
-                    ...batches.map((b) => ({ value: b.name, label: `Cohort: ${b.name}` })),
+                    ...batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })),
                   ]}
                 />
               </div>

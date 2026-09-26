@@ -294,7 +294,6 @@ export default function ProfilePage() {
     <div className="student-page-inner profile-container">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <UserCheck size={22} style={{ color: "#4f46e5" }} />
           <span>My Academic Profile & Onboarding Settings</span>
         </h2>
         <p className="student-header-desc">Update your semester, aggregate CGPA, technical skills, and target career goal.</p>

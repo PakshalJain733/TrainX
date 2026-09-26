@@ -80,7 +80,7 @@ export default function Leaderboard() {
               <tr>
                 <th>Rank</th>
                 <th>Student Name</th>
-                <th>Cohort</th>
+                <th>Batch</th>
                 <th>Coding Points</th>
                 <th>Solved Problems</th>
                 <th>Active Streak</th>
@@ -94,7 +94,7 @@ export default function Leaderboard() {
                 entries.map((entry, index) => {
                   const rank = getNumber(entry, ["rank", "position"]) ?? index + 1;
                   const name = textValue(firstValue(entry, ["name", "studentName", "student_name"])) || "N/A";
-                  const batch = textValue(firstValue(entry, ["batch", "batchName", "batch_name", "cohort"])) || "N/A";
+                  const batch = textValue(firstValue(entry, ["batch", "batchName", "batch_name", "batch"])) || "N/A";
                   const points = getNumber(entry, ["points", "xp", "codingPoints", "coding_points", "totalPoints"]);
                   const solved = getNumber(entry, ["solved", "solvedProblems", "solved_problems", "problemsSolved"]);
                   const streak = getNumber(entry, ["streak", "activeStreak", "active_streak"]);

@@ -471,8 +471,7 @@ export default function ManageUsers() {
       <div className="sa-page-header">
         <div>
           <div className="manageusers-header-title">
-            <Users className="manageusers-header-icon" />
-            <span>Manage Users &amp; Registration Codes</span>
+          <span>Manage Users &amp; Registration Codes</span>
           </div>
           <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>
         </div>

@@ -52,7 +52,6 @@ export default function Settings() {
     <div className="student-page-inner profile-container">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <SettingsIcon size={22} style={{ color: "#4f46e5" }} />
           <span>Preferences & Alerts</span>
         </h2>
         <p className="student-header-desc">Manage your notification preferences, automated reports, and alert configurations.</p>

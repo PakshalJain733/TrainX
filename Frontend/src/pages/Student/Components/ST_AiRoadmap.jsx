@@ -169,7 +169,6 @@ export default function AIRoadmap() {
     <div className="roadmap-container stack-6">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <Sparkles size={22} style={{ color: "#4f46e5" }} />
           <span>AI Adaptive Learning Roadmap</span>
         </h2>
         <p className="student-header-desc">

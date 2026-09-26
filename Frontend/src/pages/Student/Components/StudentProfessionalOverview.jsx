@@ -13,6 +13,9 @@ import {
   UserCheck,
   ArrowRight,
   ChevronRight,
+  Activity,
+  Layers,
+  Zap,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 
@@ -124,11 +127,11 @@ export default function StudentProfessionalOverview() {
       label: "Attendance Rate",
       value: `${Math.round(dashboard.attendanceSummary.percentage)}%`,
       hint: "Active semester attendance",
-      icon: CalendarCheck,
+      icon: Activity,
     },
-    { label: "Active Batches", value: "Enrolled", word: true, hint: "Assigned training batch", icon: Users },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
-    { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Flame },
+    { label: "Active Batches", value: "Enrolled", word: true, hint: "Assigned training batch", icon: Layers },
+    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current batch rank", icon: Trophy },
+    { label: "Earned Points", value: "1,875 XP", hint: "Coding & quiz points", icon: Zap },
   ];
 
   return (

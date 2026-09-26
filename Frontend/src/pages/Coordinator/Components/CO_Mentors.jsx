@@ -12,7 +12,7 @@ export default function CoordinatorMentors() {
         <div>
           <h1 className="coord-page-title">Industry Trainers & Mentors</h1>
           <p className="coord-page-sub">
-            Assigned specialized industry trainers for CSE & AI-DS cohorts, ratings, and batch allocations.
+            Assigned specialized industry trainers for CSE & AI-DS batches, ratings, and batch allocations.
           </p>
         </div>
       </div>

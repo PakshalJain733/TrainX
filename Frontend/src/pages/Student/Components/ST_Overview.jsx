@@ -4,7 +4,8 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
   Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
-  Plus, X, KeyRound, Loader2, UserCog, GraduationCap, Award, BadgeCheck
+  Plus, X, KeyRound, Loader2, UserCog, GraduationCap, Award, BadgeCheck,
+  Activity, Layers, Zap
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -238,10 +239,10 @@ export default function Overview() {
   const leaderboardList = dashboard.leaderboard || [];
 
   const studentStats = [
-    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: CalendarCheck },
-    { label: "Active Batches", value: `${myBatchesCount} Active`, hint: "Assigned training batches", icon: Users },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current cohort rank", icon: TrendingUp },
-    { label: "Earned Points", value: "0 XP", hint: "Coding & quiz points", icon: Flame },
+    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: Activity },
+    { label: "Active Batches", value: `${myBatchesCount} Active`, hint: "Assigned training batches", icon: Layers },
+    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current batch rank", icon: Trophy },
+    { label: "Earned Points", value: "0 XP", hint: "Coding & quiz points", icon: Zap },
   ];
 
   return (
@@ -296,7 +297,7 @@ export default function Overview() {
                   <s.icon size={16} />
                 </div>
                 <span className="overview-stat-label">{s.label}</span>
-                <Info size={15} className="overview-info-icon" />
+                
               </div>
 
               <p className="overview-stat-value">{s.value}</p>
@@ -469,7 +470,7 @@ export default function Overview() {
                 </div>
                 <div>
                   <h2 className="modal-title">Join a Training Batch</h2>
-                  <p className="modal-subtitle">Enter secret join access code assigned to your cohort.</p>
+                  <p className="modal-subtitle">Enter secret join access code assigned to your batch.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowJoinModal(false)} title="Close Modal">

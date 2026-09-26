@@ -149,7 +149,7 @@ export default function AdminQuizzes() {
         setAvailableBatches(data.data);
       } else {
         setAvailableBatches([
-          { id: 1, name: "CSE 2026 Alpha Cohort" },
+          { id: 1, name: "CSE 2026 Alpha Batch" },
           { id: 2, name: "Fullstack React & Node Specialization" },
           { id: 3, name: "BE-CS-2026-A" },
           { id: 4, name: "TE-IT-2026-B" },
@@ -158,7 +158,7 @@ export default function AdminQuizzes() {
       }
     } catch (err) {
       setAvailableBatches([
-        { id: 1, name: "CSE 2026 Alpha Cohort" },
+        { id: 1, name: "CSE 2026 Alpha Batch" },
         { id: 2, name: "Fullstack React & Node Specialization" },
         { id: 3, name: "BE-CS-2026-A" },
         { id: 4, name: "TE-IT-2026-B" },

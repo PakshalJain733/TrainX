@@ -52,7 +52,7 @@ export default function MentorSkillGaps() {
             <AlertCircle size={20} color="#e11d48" />
             <span>AI Skill Gap Diagnostics & Weak Spot Mapping</span>
           </h2>
-          <p className="mentor-page-subtitle">Identify weak concepts across student cohorts and trigger targeted AI remedial assignments</p>
+          <p className="mentor-page-subtitle">Identify weak concepts across student batches and trigger targeted AI remedial assignments</p>
         </div>
         <button className="mentor-btn-primary" onClick={() => setIsModalOpen(true)}>
           <Sparkles size={16} />

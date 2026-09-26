@@ -240,8 +240,7 @@ export default function MaintenanceControls() {
       <div className="maintenancecontrols-header-wrap">
         <div>
           <h2 className="maintenancecontrols-header-title">
-            <SlidersHorizontal className="maintenancecontrols-header-icon" />
-            <span>Feature Switches &amp; Module Controls</span>
+          <span>Feature Switches &amp; Module Controls</span>
           </h2>
           <p className="maintenancecontrols-header-subtitle">
             Manage live accessibility for all 18 platform modules across Student, Coordinator, Mentor, and Admin roles

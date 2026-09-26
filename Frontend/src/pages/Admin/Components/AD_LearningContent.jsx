@@ -261,7 +261,7 @@ export default function AdminLearningContent() {
                 </div>
                 <div>
                   <h2 className="modal-title">Upload Learning Content</h2>
-                  <p className="modal-subtitle">Publish videos, documents, web links, or study notes for student cohorts.</p>
+                  <p className="modal-subtitle">Publish videos, documents, web links, or study notes for student batches.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
@@ -309,7 +309,7 @@ export default function AdminLearningContent() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>Target Cohort / Batch</label>
+                    <label>Target Batch / Batch</label>
                     <AdminLcSelect
                       value={newBatch}
                       onChange={setNewBatch}

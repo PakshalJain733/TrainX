@@ -248,7 +248,7 @@ export default function MentorQuizzes() {
           { id: 1, name: "BE-CS-2026-A" },
           { id: 2, name: "TE-IT-2026-B" },
           { id: 3, name: "BE-EXTC-2026-C" },
-          { id: 4, name: "CSE 2026 Alpha Cohort" },
+          { id: 4, name: "CSE 2026 Alpha Batch" },
           { id: 5, name: "Fullstack React & Node Specialization" }
         ]);
       }
@@ -257,7 +257,7 @@ export default function MentorQuizzes() {
         { id: 1, name: "BE-CS-2026-A" },
         { id: 2, name: "TE-IT-2026-B" },
         { id: 3, name: "BE-EXTC-2026-C" },
-        { id: 4, name: "CSE 2026 Alpha Cohort" },
+        { id: 4, name: "CSE 2026 Alpha Batch" },
         { id: 5, name: "Fullstack React & Node Specialization" }
       ]);
     }

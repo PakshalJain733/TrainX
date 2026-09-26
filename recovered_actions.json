@@ -1,0 +1,84 @@
+[
+  {
+    "name": "write_to_file",
+    "args": {
+      "CodeContent": "\"import React, { useState, useEffect, useContext } from 'react';\\nimport { Award, Download, FileText, Loader2, Calendar } from 'lucide-react';\\nimport { AuthContext } from '../../../context/AuthContext';\\n\\nexport default function ST_Certificates() {\\n  const { user } = useContext(AuthContext);\\n  const [certificates, setCertificates] = useState([]);\\n  const [loading, setLoading] = useState(true);\\n\\n  useEffect(() => {\\n    fetchCertificates();\\n  }, [user]);\\n\\n  const fetchCertificates = async () => {\\n    try {\\n      setLoading(true);\\n      const res = await fetch(`/api/v1/certificates/${user?.id || user?.userId}`, {\\n        headers: {\\n          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`\\n        }\\n      });\\n      const data = await res.json();\\n      if (data.success) {\\n        setCertificates(data.data);\\n      }\\n    } catch (error) {\\n      console.error('Failed to fetch certificates:', error);\\n    } finally {\\n      setLoading(false);\\n    }\\n  };\\n\\n  return (\\n    <div className=\\\"certificates-page\\\" style={{ padding: '2rem' }}>\\n      <div className=\\\"student-header-box\\\" style={{ marginBottom: '2rem' }}>\\n        <h2 className=\\\"student-header-title\\\">\\n          <span>My Certificates</span>\\n        </h2>\\n        <p className=\\\"student-header-desc\\\">\\n          View and download your earned training completion certificates.\\n        </p>\\n      </div>\\n\\n      {loading ? (\\n        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>\\n          <Loader2 className=\\\"spinner\\\" size={32} />\\n        </div>\\n      ) : certificates.length === 0 ? (\\n        <div style={{ textAlign: 'center', padding: '4rem', background: '#f8fafc', borderRadius: '12px' }}>\\n          <Award size={48} color=\\\"#94a3b8\\\" style={{ marginBottom: '1rem' }} />\\n          <h3 style={{ fontSize: '1.25rem', color: '#334155' }}>No Certificates Yet</h3>\\n          <p style={{ color: '#64748b' }}>Complete your training programs to earn certificates.</\n<truncated 2419 bytes>",
+      "Description": "\"Create student certificates component\"",
+      "Overwrite": "false",
+      "TargetFile": "\"c:\\\\Users\\\\paksh\\\\Desktop\\\\Training Portal\\\\Frontend\\\\src\\\\pages\\\\Student\\\\Components\\\\ST_Certificates.jsx\"",
+      "toolAction": "\"Creating ST_Certificates.jsx\"",
+      "toolSummary": "\"Create frontend component\""
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": "false",
+      "Description": "\"Add certificates to ST_Sidebar.jsx\"",
+      "EndLine": "16",
+      "Instruction": "\"Add Award to lucide-react imports\"",
+      "ReplacementContent": "\"  Briefcase,\\n  Award\\n} from \\\"lucide-react\\\";\"",
+      "StartLine": "14",
+      "TargetContent": "\"  Briefcase,\\n} from \\\"lucide-react\\\";\"",
+      "TargetFile": "\"c:\\\\Users\\\\paksh\\\\Desktop\\\\Training Portal\\\\Frontend\\\\src\\\\pages\\\\Student\\\\Components\\\\ST_Sidebar.jsx\"",
+      "toolAction": "\"Updating ST_Sidebar.jsx\"",
+      "toolSummary": "\"Update sidebar imports\""
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": "false",
+      "Description": "\"Add certificates to ST_Sidebar.jsx navItems\"",
+      "EndLine": "64",
+      "Instruction": "\"Add Certificates to primaryNavItems\"",
+      "ReplacementContent": "\"  { title: \\\"Weekly Reports\\\", url: \\\"/student/weekly-reports\\\", icon: FileCheck2 },\\n  { title: \\\"Mock Drives\\\", url: \\\"/student/mock-drives\\\", icon: Briefcase },\\n  { title: \\\"Certificates\\\", url: \\\"/student/certificates\\\", icon: Award },\\n];\"",
+      "StartLine": "61",
+      "TargetContent": "\"  { title: \\\"Weekly Reports\\\", url: \\\"/student/weekly-reports\\\", icon: FileCheck2 },\\n  { title: \\\"Mock Drives\\\", url: \\\"/student/mock-drives\\\", icon: Briefcase },\\n];\"",
+      "TargetFile": "\"c:\\\\Users\\\\paksh\\\\Desktop\\\\Training Portal\\\\Frontend\\\\src\\\\pages\\\\Student\\\\Components\\\\ST_Sidebar.jsx\"",
+      "toolAction": "\"Updating ST_Sidebar.jsx\"",
+      "toolSummary": "\"Update sidebar items\""
+    }
+  },
+  {
+    "name": "write_to_file",
+    "args": {
+      "CodeContent": "\"import React, { useState, useEffect, useContext } from 'react';\\nimport { Upload, FileText, Loader2, Search, CheckCircle2 } from 'lucide-react';\\nimport { AuthContext } from '../../../context/AuthContext';\\n\\nexport default function AD_Certificates() {\\n  const { user } = useContext(AuthContext);\\n  const [students, setStudents] = useState([]);\\n  const [search, setSearch] = useState('');\\n  const [selectedStudent, setSelectedStudent] = useState(null);\\n  const [title, setTitle] = useState('');\\n  const [file, setFile] = useState(null);\\n  const [loading, setLoading] = useState(false);\\n  const [status, setStatus] = useState(null);\\n\\n  useEffect(() => {\\n    fetchStudents();\\n  }, []);\\n\\n  const fetchStudents = async () => {\\n    try {\\n      const res = await fetch('/api/v1/students', {\\n        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }\\n      });\\n      const data = await res.json();\\n      if (data.success) {\\n        setStudents(data.data || []);\\n      }\\n    } catch (err) {\\n      console.error(err);\\n    }\\n  };\\n\\n  const handleUpload = async (e) => {\\n    e.preventDefault();\\n    if (!selectedStudent || !title || !file) return;\\n\\n    try {\\n      setLoading(true);\\n      setStatus(null);\\n      const formData = new FormData();\\n      formData.append('studentId', selectedStudent.id);\\n      formData.append('title', title);\\n      formData.append('file', file);\\n\\n      const res = await fetch('/api/v1/certificates/upload', {\\n        method: 'POST',\\n        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },\\n        body: formData\\n      });\\n      const data = await res.json();\\n      \\n      if (data.success) {\\n        setStatus({ type: 'success', message: 'Certificate uploaded successfully!' });\\n        setTitle('');\\n        setFile(null);\\n        setSelectedStudent(null);\\n      } else {\\n        setStatus({ type: 'error', message: data.message || 'Upload failed.' });\\n      }\\n    } catch (err) {\\n      setStatus({ type: 'error', messag\n<truncated 6391 bytes>",
+      "Description": "\"Create admin certificates upload interface\"",
+      "Overwrite": "false",
+      "TargetFile": "\"c:\\\\Users\\\\paksh\\\\Desktop\\\\Training Portal\\\\Frontend\\\\src\\\\pages\\\\Admin\\\\Components\\\\AD_Certificates.jsx\"",
+      "toolAction": "\"Creating AD_Certificates.jsx\"",
+      "toolSummary": "\"Create AD_Certificates\""
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": "false",
+      "Description": "\"Add AD_Certificates import to App.jsx\"",
+      "EndLine": "48",
+      "Instruction": "\"Add AD_Certificates import\"",
+      "ReplacementContent": "\"import AD_Overview from \\\"./pages/Admin/Components/AD_Overview\\\";\\nimport AD_Certificates from \\\"./pages/Admin/Components/AD_Certificates\\\";\"",
+      "StartLine": "47",
+      "TargetContent": "\"import AD_Overview from \\\"./pages/Admin/Components/AD_Overview\\\";\"",
+      "TargetFile": "\"c:\\\\Users\\\\paksh\\\\Desktop\\\\Training Portal\\\\Frontend\\\\src\\\\App.jsx\"",
+      "toolAction": "\"Updating App.jsx for AD_Certificates\"",
+      "toolSummary": "\"Update App.jsx\""
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": "false",
+      "Description": "\"Add AD_Certificates route to App.jsx\"",
+      "EndLine": "141",
+      "Instruction": "\"Add certificates route for admin\"",
+      "ReplacementContent": "\"          <Route path=\\\"users\\\" element={<AD_Users />} />\\n          <Route path=\\\"certificates\\\" element={<AD_Certificates />} />\"",
+      "StartLine": "140",
+      "TargetContent": "\"          <Route path=\\\"users\\\" element={<AD_Users />} />\"",
+      "TargetFile": "\"c:\\\\Users\\\\paksh\\\\Desktop\\\\Training Portal\\\\Frontend\\\\src\\\\App.jsx\"",
+      "toolAction": "\"Updating App.jsx routes for AD_Certificates\"",
+      "toolSummary": "\"Update App.jsx\""
+    }
+  }
+]
