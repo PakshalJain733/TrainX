@@ -16,7 +16,26 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { apiFetch } from '../../../utils/api';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import '../Styles/MN_AIInterviews.css';
+
+const ROLE_OPTIONS = [
+  { value: 'ALL', label: 'All Roles / Topics' },
+  { value: 'Software Engineer', label: 'Software Engineer' },
+  { value: 'Full Stack', label: 'Full Stack Developer' },
+  { value: 'Backend', label: 'Backend Developer' },
+  { value: 'Frontend', label: 'Frontend Developer' },
+  { value: 'Data Structures', label: 'DSA & Algorithms' },
+  { value: 'SQL', label: 'SQL & Databases' },
+  { value: 'DevOps', label: 'DevOps & Cloud' },
+];
+
+const GRADE_OPTIONS = [
+  { value: 'ALL', label: 'All Grades' },
+  { value: 'EXCELLENT', label: 'Excellent (≥80%)' },
+  { value: 'GOOD', label: 'Good (60%-79%)' },
+  { value: 'NEEDS_WORK', label: 'Needs Work (<60%)' },
+];
 
 const unwrap = (response) => {
   if (!response || response.error) return null;
@@ -251,28 +270,22 @@ export default function MN_AIInterviews() {
           )}
         </div>
 
-        <div className="mn-ai-filters-right">
-          <div className="mn-ai-filter-item">
-            <Filter size={14} color="#64748b" />
-            <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
-              <option value="ALL">All Roles / Topics</option>
-              <option value="Software Engineer">Software Engineer</option>
-              <option value="Full Stack">Full Stack Developer</option>
-              <option value="Backend">Backend Developer</option>
-              <option value="Frontend">Frontend Developer</option>
-              <option value="Data Structures">DSA & Algorithms</option>
-              <option value="SQL">SQL & Databases</option>
-              <option value="DevOps">DevOps & Cloud</option>
-            </select>
+        <div className="mn-ai-filters-right" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ minWidth: '190px' }}>
+            <CustomSelect
+              value={roleFilter}
+              options={ROLE_OPTIONS}
+              onChange={(val) => setRoleFilter(val)}
+              icon={Filter}
+            />
           </div>
 
-          <div className="mn-ai-filter-item">
-            <select value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)}>
-              <option value="ALL">All Grades</option>
-              <option value="EXCELLENT">Excellent (≥80%)</option>
-              <option value="GOOD">Good (60%-79%)</option>
-              <option value="NEEDS_WORK">Needs Work (&lt;60%)</option>
-            </select>
+          <div style={{ minWidth: '160px' }}>
+            <CustomSelect
+              value={gradeFilter}
+              options={GRADE_OPTIONS}
+              onChange={(val) => setGradeFilter(val)}
+            />
           </div>
 
           <button className="mn-ai-refresh-btn" onClick={fetchInterviews} title="Refresh Mentee Interviews">

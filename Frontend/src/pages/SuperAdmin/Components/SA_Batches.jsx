@@ -304,12 +304,13 @@ export default function Batches() {
   };
 
   const handleDelete = async (id) => {
+    setBatches((prev) => prev.filter((b) => String(b.id) !== String(id)));
     try {
       await batchAPI.deleteBatch(id);
     } catch (err) {
       console.error('Failed to mark batch as inactive:', err);
     }
-    fetchBatches();
+    loadData();
     window.dispatchEvent(new Event(EVENTS.BATCH_UPDATED));
   };
 

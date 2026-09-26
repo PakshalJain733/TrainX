@@ -76,6 +76,7 @@ export default function Overview() {
   const [profileCompleted, setProfileCompleted] = useState(true);
   const [myBatchesCount, setMyBatchesCount] = useState(0);
   const [showFirstLoginAlert, setShowFirstLoginAlert] = useState(false);
+  const [noticeDismissed, setNoticeDismissed] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {

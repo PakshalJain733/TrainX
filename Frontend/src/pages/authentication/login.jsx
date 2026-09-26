@@ -479,9 +479,9 @@ function Login() {
           setPreAuthToken(null);
           setErrorMsg("Two-factor verification could not be started. Please try again.");
         }
-      } else if (data.success && (data.data?.token || pendingUserData?.token)) {
-        const finalToken = data.data?.token || pendingUserData?.token;
-        const finalUser = data.data?.user || pendingUserData?.user || {};
+      } else if (data.success && data.data?.token) {
+        const finalToken = data.data.token;
+        const finalUser = data.data.user || {};
         setPreAuthToken(null);
         storeAuthToken(finalToken, rememberMeRef.current || rememberMe);
         handlePostLoginRedirect(finalUser);

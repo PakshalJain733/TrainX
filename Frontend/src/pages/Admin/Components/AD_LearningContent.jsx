@@ -87,6 +87,7 @@ export default function AdminLearningContent() {
   const [newBatch, setNewBatch] = useState("All Batches");
   const [selectedFile, setSelectedFile] = useState(null);
   const [resourceLink, setResourceLink] = useState("");
+  const [viewingDocument, setViewingDocument] = useState(null);
 
   const [batchesList, setBatchesList] = useState([]);
 
@@ -261,6 +262,28 @@ export default function AdminLearningContent() {
     } catch (err) {
       console.warn("Backend delete warning:", err);
     }
+  };
+
+  
+  const handleDownloadDocument = (item) => {
+    let targetUrl = item.file_url || item.link || "";
+    if (!targetUrl || targetUrl === "#") {
+      alert("No downloadable document file attached to this resource.");
+      return;
+    }
+    if (!targetUrl.startsWith("http") && !targetUrl.startsWith("blob:") && !targetUrl.startsWith("data:")) {
+      const normalizedPath = targetUrl.startsWith("/") ? targetUrl : `/${targetUrl}`;
+      targetUrl = `http://localhost:5000${normalizedPath}`;
+    }
+
+    const a = document.createElement("a");
+    a.href = targetUrl;
+    const filename = (item.title || "document").replace(/[^a-zA-Z0-9_\-]/g, "_");
+    a.setAttribute("download", filename);
+    a.target = "_blank";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const filteredResources = useMemo(() => {
@@ -495,32 +518,13 @@ export default function AdminLearningContent() {
                 </div>
 
                 <div className="learning-card-footer">
-                  {item.link ? (
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="resource-download-btn"
-                    >
-                      <Eye size={14} /> View Link
-                    </a>
-                  ) : item.file_url ? (
-                    <button
+                  <button
                       type="button"
                       className="resource-download-btn"
-                      onClick={() => {
-                        let targetUrl = item.file_url;
-                        if (!targetUrl.startsWith("http") && !targetUrl.startsWith("blob:")) {
-                          targetUrl = targetUrl.startsWith("/") ? targetUrl : `/${targetUrl}`;
-                        }
-                        window.open(targetUrl, "_blank");
-                      }}
+                      onClick={() => handleDownloadDocument(item)}
                     >
-                      <Eye size={14} /> View Document
+                      <Download size={14} /> Download Document
                     </button>
-                  ) : (
-                    <span className="resource-no-link">No Attachment</span>
-                  )}
                   <Badge variant="success" className="learning-status-pill">
                     {item.status}
                   </Badge>

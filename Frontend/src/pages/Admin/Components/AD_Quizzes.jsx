@@ -141,16 +141,11 @@ export default function AdminQuizzes() {
 
   const [availableBatches, setAvailableBatches] = useState([]);
 
-  // ── Fetch quizzes & batches from DB on mount ───────────────────
+  // ── Fetch quizzes & batches from DB on mount ──
   const fetchBatches = async () => {
     try {
       const res = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const data = await res.json();
-      setAvailableBatches(data.success && Array.isArray(data.data) ? data.data : []);
-    } catch (err) {
-      console.warn("Failed to fetch batches from DB:", err);
-      setAvailableBatches([]);
-
       if (data.success && Array.isArray(data.data) && data.data.length > 0) {
         setAvailableBatches(data.data);
       } else {
@@ -162,6 +157,8 @@ export default function AdminQuizzes() {
           { id: 5, name: "BE-EXTC-2026-C" }
         ]);
       }
+    } catch (err) {
+      console.warn("Failed to fetch batches from DB:", err);
       setAvailableBatches([
         { id: 1, name: "CSE 2026 Alpha Batch" },
         { id: 2, name: "Fullstack React & Node Specialization" },
@@ -169,7 +166,6 @@ export default function AdminQuizzes() {
         { id: 4, name: "TE-IT-2026-B" },
         { id: 5, name: "BE-EXTC-2026-C" }
       ]);
-
     }
   };
 

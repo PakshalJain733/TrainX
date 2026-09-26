@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_CodingPerformance.css";
 
 export default function CodingPerformance() {
@@ -206,45 +207,44 @@ export default function CodingPerformance() {
             </div>
 
             {/* Batch Filter */}
-            <select
+            <CustomSelect
               value={selectedBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Batches</option>
-              {batches.map((b) => (
-                <option key={b.id || b.name} value={b.name}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+              options={[
+                { value: "all", label: "All Batches" },
+                ...batches.map((b) => ({ value: b.name, label: b.name })),
+              ]}
+              onChange={(val) => setSelectedBatch(val)}
+              placeholder="All Batches"
+            />
 
             {/* Language Filter */}
-            <select
+            <CustomSelect
               value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Languages</option>
-              <option value="C++">C++</option>
-              <option value="Python">Python</option>
-              <option value="JavaScript">JavaScript</option>
-              <option value="Java">Java</option>
-              <option value="Go">Go</option>
-            </select>
+              options={[
+                { value: "all", label: "All Languages" },
+                { value: "C++", label: "C++" },
+                { value: "Python", label: "Python" },
+                { value: "JavaScript", label: "JavaScript" },
+                { value: "Java", label: "Java" },
+                { value: "Go", label: "Go" },
+              ]}
+              onChange={(val) => setSelectedLanguage(val)}
+              placeholder="All Languages"
+            />
 
             {/* Status Filter */}
-            <select
+            <CustomSelect
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="coord-perf-select"
-            >
-              <option value="all">All Statuses</option>
-              <option value="Top Performer">Top Performer</option>
-              <option value="Good">Good</option>
-              <option value="Average">Average</option>
-              <option value="Struggling">Struggling</option>
-            </select>
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "Top Performer", label: "Top Performer" },
+                { value: "Good", label: "Good" },
+                { value: "Average", label: "Average" },
+                { value: "Struggling", label: "Struggling" },
+              ]}
+              onChange={(val) => setSelectedStatus(val)}
+              placeholder="All Statuses"
+            />
 
             {(searchTerm || selectedBatch !== "all" || selectedLanguage !== "all" || selectedStatus !== "all") && (
               <button

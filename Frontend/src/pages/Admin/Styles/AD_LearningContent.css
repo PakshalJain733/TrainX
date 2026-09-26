@@ -2,7 +2,7 @@
 .learning-content-page {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 24px;
 }
 
 .admin-learning-container {

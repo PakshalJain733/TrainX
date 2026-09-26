@@ -214,6 +214,7 @@ function QuestionsModal({ quiz, onClose }) {
 /* ─── Main MentorQuizzes Page ────────────────────────────────── */
 export default function MentorQuizzes() {
   const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [mode, setMode] = useState("ai");
   const [viewResultsFor, setViewResultsFor] = useState(null);
@@ -241,10 +242,6 @@ export default function MentorQuizzes() {
     try {
       const r = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const d = await r.json();
-      setAvailableBatches(d.success && Array.isArray(d.data) ? d.data : []);
-    } catch {
-      setAvailableBatches([]);
-
       if (d.success && Array.isArray(d.data) && d.data.length > 0) {
         setAvailableBatches(d.data);
       } else {
@@ -256,6 +253,7 @@ export default function MentorQuizzes() {
           { id: 5, name: "Fullstack React & Node Specialization" }
         ]);
       }
+    } catch {
       setAvailableBatches([
         { id: 1, name: "BE-CS-2026-A" },
         { id: 2, name: "TE-IT-2026-B" },
@@ -263,7 +261,6 @@ export default function MentorQuizzes() {
         { id: 4, name: "CSE 2026 Alpha Batch" },
         { id: 5, name: "Fullstack React & Node Specialization" }
       ]);
-
     }
   };
 

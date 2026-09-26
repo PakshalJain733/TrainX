@@ -538,9 +538,12 @@ export const sendUserOtp = async (identifier) => {
   }
 
   await saveOtpRecord(cleanIdentifier, otp);
-  sendOtpEmail({ to: recipientEmail, otp, name: user.name }).catch((error) => {
-    console.warn(`[AUTH] OTP email dispatch skipped: ${error.message}`);
-  });
+  try {
+    const emailResult = await sendOtpEmail({ to: recipientEmail, otp, name: user.name });
+    console.log(`[AUTH] OTP email successfully dispatched to ${recipientEmail} (Message ID: ${emailResult?.messageId || 'sent'})`);
+  } catch (error) {
+    console.error(`[AUTH Error] OTP email dispatch failed for ${recipientEmail}:`, error.message);
+  }
 
   return { identifier: cleanIdentifier };
 };
