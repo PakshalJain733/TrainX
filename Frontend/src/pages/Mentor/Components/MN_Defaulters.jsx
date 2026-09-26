@@ -1,37 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { AlertCircle, Bell, Search, Filter, ShieldAlert, CheckCircle2, UserX } from 'lucide-react';
+import { AlertCircle, Search, Filter, ShieldAlert, UserX } from 'lucide-react';
 import "../Styles/MN_Defaulters.css";
-
-export default function Defaulters() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRisk, setSelectedRisk] = useState('All');
-  const [defaultersList, setDefaultersList] = useState([]);
-  const [notificationStatus, setNotificationStatus] = useState(null);
-
-  useEffect(() => {
-    apiFetch("/defaulters")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setDefaultersList(res.data);
-        } else {
-          setDefaultersList([]);
-        }
-      })
-      .catch(() => setDefaultersList([]));
-  }, []);
-
-  const filteredDefaulters = defaultersList.filter((student) => {
-    const matchesSearch = 
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.rollNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.batch?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.reason?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesRisk = selectedRisk === 'All' || (student.riskLevel || '').includes(selectedRisk);
-
-import { AlertCircle, Search, Filter, ShieldAlert, UserX } from "lucide-react";
-import { apiFetch } from "../../../utils/api";
 
 const unwrap = (response) => {
   if (!response || response.error) return null;
@@ -81,11 +51,15 @@ const riskClass = (risk) => {
     : "mentor-defaulter-risk-badge--medium";
 };
 
+export default function Defaulters() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRisk, setSelectedRisk] = useState('All');
   const [defaulters, setDefaulters] = useState([]);
   const [hasAttendanceData, setHasAttendanceData] = useState(null);
   const [attendanceThreshold, setAttendanceThreshold] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
     let mounted = true;
     apiFetch("/mentor/defaulters")
       .then((response) => {
@@ -101,12 +75,12 @@ const riskClass = (risk) => {
     return () => {
       mounted = false;
     };
+  }, []);
 
   const riskLevels = useMemo(
     () => ["All", ...new Set(defaulters.map((student) => textValue(firstValue(student, ["riskLevel", "risk_level", "risk", "status"]))).filter(Boolean))],
     [defaulters],
   );
-
 
   const filteredDefaulters = defaulters.filter((student) => {
     const values = [
@@ -128,7 +102,7 @@ const riskClass = (risk) => {
       <div className="mentor-page-header">
         <div>
           <h2 className="mentor-page-title mentor-defaulter-header-title">
-          <span>Defaulters & Performance Risk Queue</span>
+          <span>Defaulters &amp; Performance Risk Queue</span>
           </h2>
           <p className="mentor-page-subtitle mentor-defaulter-header-sub">
             Students currently flagged by the mentor service

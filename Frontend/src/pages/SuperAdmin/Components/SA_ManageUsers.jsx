@@ -451,7 +451,6 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
   const [studentSearch, setStudentSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
   const [selectedStudentIds, setSelectedStudentIds] = useState(["st-101", "st-102"]);
-  const [successMsg, setSuccessMsg] = useState("");
 
   if (!isOpen) return null;
 

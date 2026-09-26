@@ -68,7 +68,6 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
 }
 
 function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add skill...' }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef(null);
 
