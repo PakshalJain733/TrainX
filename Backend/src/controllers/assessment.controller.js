@@ -1,6 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
-import { generateQuizQuestionsAI } from '../ai/quiz.ai.js';
+import { generateQuizQuestionsAI, verifyQuizQuestions } from '../ai/quiz.ai.js';
 
 let mockAssessments = [];
 
@@ -282,6 +282,23 @@ export const generateAIQuestions = async (req, res, next) => {
     }));
 
     return sendSuccess(res, 'AI questions generated successfully', formatted);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /assessments/verify-ai-questions
+ * Runs Gemini verification pass over an array of questions and returns annotated results.
+ */
+export const verifyAIQuestions = async (req, res, next) => {
+  try {
+    const { questions, topic } = req.body;
+    if (!Array.isArray(questions) || questions.length === 0) {
+      return sendError(res, 'questions array is required', 400);
+    }
+    const verified = await verifyQuizQuestions(questions, topic || 'General');
+    return sendSuccess(res, 'Questions verified successfully', verified);
   } catch (error) {
     next(error);
   }

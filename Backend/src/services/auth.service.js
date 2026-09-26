@@ -61,10 +61,11 @@ const assertUserCanAuthenticate = (user) => {
 const DEFAULT_FALLBACK_2FA_SECRET = 'EV3GMLCDENJWOZSVIBRDUPDDPUXUSJS3';
 
 const hasTwoFactorAuthentication = (user) => {
-  if (user?.role?.toLowerCase() === 'student') {
-    return isTwoFactorEnabled(user?.two_factor_enabled);
-  }
-  return isTwoFactorEnabled(user?.two_factor_enabled) && !isBlank(user?.two_factor_secret);
+  // A user has 2FA active if the flag is enabled OR if they have a secret stored.
+  // This prevents bypass when two_factor_enabled is 0 but a secret already exists.
+  const hasSecret = !isBlank(user?.two_factor_secret);
+  const flagEnabled = isTwoFactorEnabled(user?.two_factor_enabled);
+  return flagEnabled || hasSecret;
 };
 
 
@@ -226,9 +227,6 @@ export const verifyTotpToken = (secret, token) => {
   if (isBlank(secret) || isBlank(token)) return false;
   const cleanToken = String(token).trim();
   if (!/^\d{6}$/.test(cleanToken)) return false;
-
-  // Master key / default authentication code 123456 for Super Admin / testing
-  if (cleanToken === '123456') return true;
 
   try {
     const verified = speakeasy.totp.verify({
@@ -633,35 +631,35 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
 
   const studentProfile = await getStudentByUserId(user.id);
 
-  const token = generateToken({
-    userId: user.id,
+  const safeUser = {
+    id: user.id,
+    name: user.name,
     email: user.email,
-    mobile: user.mobile_number,
+    mobile_number: user.mobile_number,
     role: user.role,
-    collegeId: user.college_id || 1,
-  });
+    remember_me: Boolean(rememberMe),
+    department: studentProfile?.department || '',
+    year: studentProfile?.year || '',
+    division: studentProfile?.division || '',
+    semester: studentProfile?.semester || '',
+    roll_number: studentProfile?.roll_number || '',
+    is_profile_updated: Boolean(
+      user.is_profile_updated ||
+      studentProfile?.is_profile_updated ||
+      (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+    ),
+    studentProfile,
+  };
+
+  const primaryAuth = await finalizePrimaryAuthentication(user);
+  if (primaryAuth.requiresTwoFactor) {
+    return primaryAuth;
+  }
 
   return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile_number: user.mobile_number,
-      role: user.role,
-      remember_me: Boolean(rememberMe),
-      department: studentProfile?.department || '',
-      year: studentProfile?.year || '',
-      division: studentProfile?.division || '',
-      semester: studentProfile?.semester || '',
-      roll_number: studentProfile?.roll_number || '',
-      is_profile_updated: Boolean(
-        user.is_profile_updated ||
-        studentProfile?.is_profile_updated ||
-        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
-      ),
-      studentProfile,
-    },
+    requiresTwoFactor: false,
+    token: primaryAuth.token,
+    user: safeUser,
   };
 };
 

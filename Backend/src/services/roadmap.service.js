@@ -1,6 +1,7 @@
 import { processroadmapAI } from '../ai/roadmap.ai.js';
 import {
   getRoadmapByStudentId,
+  getRoadmapByStudentAndRole,
   saveRoadmap,
   updateMilestoneItemStatus,
 } from '../models/roadmap.model.js';
@@ -12,6 +13,14 @@ import { query } from '../config/db.js';
  */
 export const fetchStudentRoadmap = async (studentId) => {
   const roadmap = await getRoadmapByStudentId(studentId);
+  return roadmap || null;
+};
+
+/**
+ * Service: Fetch a student's roadmap for a specific role (returns saved progress, no regeneration)
+ */
+export const fetchStudentRoadmapByRole = async (studentId, targetRole) => {
+  const roadmap = await getRoadmapByStudentAndRole(studentId, targetRole);
   return roadmap || null;
 };
 
@@ -87,6 +96,15 @@ export const collectRealStudentSignals = async (studentId) => {
  */
 export const generateNewRoadmap = async (studentId, targetRole = '', signalData = {}) => {
   const numericId = Number(studentId);
+
+  // If the student already has a roadmap for this role, restore it with saved progress
+  if (targetRole && String(targetRole).trim()) {
+    const existing = await getRoadmapByStudentAndRole(numericId, targetRole.trim());
+    if (existing && existing.milestones && existing.milestones.length > 0) {
+      console.log(`[Roadmap Service] Restoring saved roadmap for student #${numericId}, role: "${targetRole}"`);
+      return { ...existing, restored: true };
+    }
+  }
 
   // Merge in REAL signals from the database so client-supplied data cannot spoof personalization.
   const realSignals = await collectRealStudentSignals(numericId);

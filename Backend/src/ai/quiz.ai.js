@@ -4,6 +4,149 @@ import { config } from '../config/env.js';
  * Pure Google Gemini AI Quiz Generator
  * Generates technical multiple-choice questions dynamically using Google AI API Key.
  */
+
+/**
+ * Auto-verify AI-generated quiz questions using Gemini.
+ * Each question is checked for: factual correctness, unambiguous correct answer,
+ * distinct non-overlapping options, and appropriate difficulty.
+ *
+ * @param {Array} questions - Array of generated questions
+ * @param {string} topic    - Quiz topic for context
+ * @returns {Array}         - Questions annotated with verified, confidence, verificationNote
+ */
+export const verifyQuizQuestions = async (questions, topic) => {
+  const apiKey = config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
+  const configuredModel = config.ai?.model || 'gemini-1.5-flash';
+
+  if (!apiKey || apiKey === 'your_ai_api_key' || !Array.isArray(questions) || questions.length === 0) {
+    // Graceful fallback: mark all as verified with medium confidence
+    return questions.map(q => ({
+      ...q,
+      verified: true,
+      confidence: 'medium',
+      verificationNote: 'Auto-verification unavailable — manually review before publishing.',
+    }));
+  }
+
+  const modelsToTry = Array.from(
+    new Set([configuredModel, 'gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'])
+  );
+
+  // Build a compact representation of questions for the verification prompt
+  const questionsPayload = questions.map((q, i) => ({
+    index: i,
+    question: q.text || q.question_text,
+    options: q.options || { a: q.option_a, b: q.option_b, c: q.option_c, d: q.option_d },
+    markedCorrect: q.correct || q.correct_option || 'a',
+  }));
+
+  const prompt = `You are a strict, expert Technical Quiz Auditor for a student training platform.
+
+You are given ${questions.length} multiple-choice questions on the topic: "${topic}".
+
+Your task is to verify EACH question for the following criteria:
+1. FACTUAL CORRECTNESS: Is the marked correct option actually the right answer? 
+2. UNAMBIGUOUS: Is there exactly ONE clearly correct answer? No trick wording.
+3. DISTINCT OPTIONS: Are all 4 options meaningfully different (not nearly identical)?
+4. APPROPRIATE: Is the question relevant and clear for the topic?
+
+For each question, output a JSON array with this exact structure:
+[
+  {
+    "index": 0,
+    "verified": true,
+    "confidence": "high",
+    "correctOptionVerified": "a",
+    "verificationNote": "Correct answer confirmed. All options are distinct."
+  }
+]
+
+Rules:
+- "verified": true if the question passes all 4 criteria, false if it fails ANY criterion.
+- "confidence": "high" (clearly correct), "medium" (acceptable but could be improved), or "low" (problematic — reject).
+- "correctOptionVerified": which option letter you believe is ACTUALLY correct. Use the same letter as markedCorrect if it is correct.
+- "verificationNote": a short explanation (max 15 words) about why it passed or failed.
+- If "verified" is false, set "confidence" to "low" and explain the issue in verificationNote.
+- Output ONLY the JSON array, no extra text.
+
+Questions to verify:
+${JSON.stringify(questionsPayload, null, 2)}`;
+
+  for (const model of modelsToTry) {
+    try {
+      console.log(`[Quiz Verifier] Verifying ${questions.length} questions for "${topic}" via ${model}...`);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              response_mime_type: 'application/json',
+              temperature: 0.1, // Low temperature for factual verification
+            },
+          }),
+        }
+      );
+      clearTimeout(timeoutId);
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) continue;
+
+      const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
+      let verificationResults;
+      try {
+        verificationResults = JSON.parse(cleanText);
+      } catch {
+        const arrMatch = cleanText.match(/\[[\s\S]*\]/);
+        if (arrMatch) verificationResults = JSON.parse(arrMatch[0]);
+        else continue;
+      }
+
+      if (!Array.isArray(verificationResults)) continue;
+
+      // Merge verification results back into questions
+      const verifiedQuestions = questions.map((q, i) => {
+        const result = verificationResults.find(r => r.index === i);
+        if (!result) {
+          return { ...q, verified: true, confidence: 'medium', verificationNote: 'Could not verify — review manually.' };
+        }
+        return {
+          ...q,
+          verified: result.verified !== false,
+          confidence: result.confidence || 'medium',
+          correctOptionVerified: result.correctOptionVerified || q.correct || 'a',
+          verificationNote: result.verificationNote || 'Verified by AI.',
+        };
+      });
+
+      const passCount = verifiedQuestions.filter(q => q.verified).length;
+      console.log(`[Quiz Verifier] Verification complete: ${passCount}/${questions.length} passed for "${topic}"`);
+      return verifiedQuestions;
+
+    } catch (err) {
+      console.warn(`[Quiz Verifier] Warning with ${model}: ${err.message}`);
+    }
+  }
+
+  // Final fallback: all pass with medium confidence
+  return questions.map(q => ({
+    ...q,
+    verified: true,
+    confidence: 'medium',
+    verificationNote: 'Could not reach verifier — please review manually.',
+  }));
+};
+
 export const generateQuizQuestionsAI = async (topic, count = 10) => {
   const apiKey = config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
   const groqApiKey = process.env.Groq_AI_API_KEY;

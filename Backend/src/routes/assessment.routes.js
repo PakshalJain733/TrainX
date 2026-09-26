@@ -7,6 +7,7 @@ import {
   createAssessment,
   deleteAssessment,
   generateAIQuestions,
+  verifyAIQuestions,
   addAssessmentQuestion,
   getAssessmentResults,
   submitAssessment,
@@ -26,6 +27,7 @@ router.get('/my-attempts', getMyAttempts);
 // Static POST routes
 router.post('/', createAssessment);
 router.post('/generate-ai-questions', generateAIQuestions);
+router.post('/verify-ai-questions', verifyAIQuestions);
 router.post('/mark-completed', markQuizCompleted);
 
 // Parameter /:id routes LAST
