@@ -179,12 +179,6 @@ export default function CoordinatorBatches() {
             </p>
           </div>
 
-        <div>
-          <h1 className="coord-page-title">Batches Governance</h1>
-          <p className="coord-page-sub">
-            Manage training batches, allocate industry mentors, and track syllabus completion.
-          </p>
-
         </div>
         <button
           className="coord-btn coord-btn--primary"
