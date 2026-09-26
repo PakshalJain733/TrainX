@@ -4,6 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Logo from "../../assets/Logo.png";
 import TrainXIcon from "../../assets/TrainX.png";
 import { getApiBaseUrl } from "../../utils/api";
+import { Card, CardContent } from "../../components/ui/Card";
 import "./register.css";
 
 /* ── Inline dropdown for Register page (CSS: register.css .reg-select-*) ── */

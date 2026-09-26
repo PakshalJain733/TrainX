@@ -406,7 +406,7 @@ export default function AIInterviews() {
       auth: { token },
       autoConnect: false,
       reconnection: false,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
     });
     socketRef.current = socket;
 

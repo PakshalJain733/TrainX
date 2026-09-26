@@ -514,7 +514,7 @@ function getToken() {
 
     const socket = io(`${base}/interviews`, {
       auth: { token },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnection: false, // we handle reconnection manually
     });
     socketRef.current = socket;

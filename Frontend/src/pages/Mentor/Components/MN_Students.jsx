@@ -56,7 +56,7 @@ export default function Students() {
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/users?role=student")
+    apiFetch("/mentor/students/performance")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
           setStudentsList(res.data);

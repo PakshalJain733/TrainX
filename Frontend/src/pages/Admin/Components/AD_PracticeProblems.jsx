@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, addSharedCodingTask, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_PracticeProblems.css";

@@ -311,7 +311,7 @@ export default function MentorLayout() {
   const [notifications, setNotifications] = useState(defaultNotificationsList);
 
   useEffect(() => {
-    apiFetch("/admin/broadcast")
+    apiFetch("/mentor/notifications")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
           const serverItems = res.data.map((b) => ({

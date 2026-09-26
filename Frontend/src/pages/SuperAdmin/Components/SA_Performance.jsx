@@ -476,10 +476,6 @@ export default function Performance() {
             Cross-feature student engagement, completion rates, and institutional benchmarks
           </p>
         </div>
-        <button className="sa-btn-primary ml-auto">
-          <Award size={16} />
-          <span>Export Analytics Summary</span>
-        </button>
       </div>
 
       {/* KPI Stats Grid */}

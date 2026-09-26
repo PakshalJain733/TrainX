@@ -5,6 +5,7 @@ import { DEFAULTER_THRESHOLDS } from '../services/intervention.service.js';
 import { uploadFileToS3 } from '../utils/s3Upload.js';
 import { ROLES } from '../utils/constants.js';
 import { createSharedContent, deleteSharedContent } from '../models/sharedContent.model.js';
+import { getBroadcastsModel } from '../models/broadcast.model.js';
 
 const ATTENDANCE_THRESHOLD = DEFAULTER_THRESHOLDS.ATTENDANCE_THRESHOLD;
 const PERFORMANCE_THRESHOLD = DEFAULTER_THRESHOLDS.PERFORMANCE_THRESHOLD;
@@ -1424,3 +1425,14 @@ export const deleteStudyMaterial = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getMentorNotifications = async (req, res, next) => {
+  try {
+    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const broadcasts = await getBroadcastsModel(collegeId);
+    return sendSuccess(res, 'Notifications retrieved successfully', broadcasts);
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -46,7 +46,7 @@ router.post('/practice-problems', createAdminPracticeProblem);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 
 // Broadcast Notifications Center
-router.get('/broadcast', getAdminBroadcasts);
+router.get('/broadcast', authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN, ROLES.COORDINATOR, ROLES.MENTOR), getAdminBroadcasts);
 router.post('/broadcast', createAdminBroadcast);
 router.delete('/broadcast/:id', deleteAdminBroadcast);
 

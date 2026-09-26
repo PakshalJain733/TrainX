@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Send, Bell, Trash2, Megaphone, CheckCircle2, ShieldAlert, Users, Calendar, AlertCircle, ChevronDown, Check } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Broadcast.css";

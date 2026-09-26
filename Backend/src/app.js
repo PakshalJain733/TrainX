@@ -80,6 +80,7 @@ app.get('/api/v1/health', (req, res) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
+app.use('/api/v1/users', studentRoutes);
 app.use('/api/v1/coordinator/students', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/colleges', collegeRoutes);
@@ -96,6 +97,7 @@ app.use('/api/v1/skill-gaps', skillGapRoutes);
 app.use('/api/v1/skill-gap', skillGapRoutes);
 app.use('/api/v1/interventions', interventionRoutes);
 app.use('/api/v1/drives', driveRoutes);
+app.use('/api/v1/mock-drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
 app.use('/api/v1/secure-codes', secureCodeRoutes);

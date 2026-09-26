@@ -18,6 +18,7 @@ import {
   getStudyMaterials,
   createStudyMaterial,
   deleteStudyMaterial,
+  getMentorNotifications,
 } from '../controllers/mentor.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -63,5 +64,7 @@ router.post('/materials', materialsWrite, upload.single('file'), createStudyMate
 router.post('/study-materials', materialsWrite, upload.single('file'), createStudyMaterial);
 router.delete('/materials/:id', materialsWrite, deleteStudyMaterial);
 router.delete('/study-materials/:id', materialsWrite, deleteStudyMaterial);
+
+router.get('/notifications', mentorOnly, getMentorNotifications);
 
 export default router;

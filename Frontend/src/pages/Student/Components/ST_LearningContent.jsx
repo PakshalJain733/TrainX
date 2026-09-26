@@ -12,6 +12,7 @@ import {
   Eye,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import { Badge } from "../../../components/ui/Badge";
 import { EVENTS, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/ST_LearningContent.css";
 

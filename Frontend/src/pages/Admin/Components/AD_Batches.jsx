@@ -4,6 +4,7 @@ import { Plus, Users, Code2, Calendar, ArrowRight, Key, Copy, Check, RefreshCw, 
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
+import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Batches.css";
 
