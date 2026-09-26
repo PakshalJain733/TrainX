@@ -44,8 +44,13 @@ const DEFAULT_TRAINING_SESSIONS = [
     topic: "DSA Marathon: Trees & Graphs",
     topicDetail:
       "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
-    batch: "CSE 2025 Alpha",
   },
+];
+
+const categories = [
+  { id: "general", label: "General Notice", icon: Info },
+  { id: "urgent", label: "Urgent Alert", icon: AlertTriangle },
+  { id: "academic", label: "Schedule Change", icon: Clock },
 ];
 
 export default function CoordinatorOverview() {
