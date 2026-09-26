@@ -339,6 +339,22 @@ Evaluate the answer and respond ONLY with valid JSON:
  * Falls back to a computed scorecard if Gemini is unavailable.
  */
 export const generateScorecard = async ({ role, topic, evaluationHistory }) => {
+  if (!evaluationHistory || evaluationHistory.length === 0) {
+    return {
+      source: 'computed',
+      overallScore: 0,
+      technical: 0,
+      problemSolving: 0,
+      communication: 0,
+      grade: 'Needs Improvement',
+      feedback: 'You did not answer any questions. Please participate to receive an evaluation.',
+      strengths: ['None'],
+      improvementAreas: ['Attempt all questions in the interview'],
+      recommendedTopics: [topic],
+      readiness: 'Not ready'
+    };
+  }
+
   const transcript = evaluationHistory
     .map((e, i) => `Q${i + 1} [${e.topic}]: ${e.question}\nA: ${e.answer}\nScore: ${e.score}/10\nFeedback: ${e.feedback}`)
     .join('\n\n');
@@ -370,9 +386,7 @@ Compute the final scorecard and respond ONLY with valid JSON:
   }
 
   // Fallback computed scorecard
-  const avg = evaluationHistory.length
-    ? evaluationHistory.reduce((a, e) => a + (e.score || 0), 0) / evaluationHistory.length
-    : 0;
+  const avg = evaluationHistory.reduce((a, e) => a + (e.score || 0), 0) / evaluationHistory.length;
   const overallScore = Math.round(avg * 10);
   const grade = avg >= 8 ? 'Excellent' : avg >= 6 ? 'Good' : avg >= 4 ? 'Average' : 'Needs Improvement';
 
@@ -380,8 +394,8 @@ Compute the final scorecard and respond ONLY with valid JSON:
     source: 'fallback',
     overallScore,
     technical: overallScore,
-    communication: Math.min(100, overallScore + 5),
-    problemSolving: Math.max(0, overallScore - 5),
+    communication: overallScore === 0 ? 0 : Math.min(100, overallScore + 5),
+    problemSolving: overallScore === 0 ? 0 : Math.max(0, overallScore - 5),
     grade,
     feedback: `You answered ${evaluationHistory.length} question${evaluationHistory.length !== 1 ? 's' : ''} with an average score of ${avg.toFixed(1)}/10. ${grade === 'Excellent' ? 'Outstanding performance!' : grade === 'Good' ? 'Good performance overall.' : 'Keep practising to improve your technical depth.'}`,
     strengths: avg >= 5 ? ['Attempted all questions', 'Shows foundational understanding'] : ['Participated in the full interview'],

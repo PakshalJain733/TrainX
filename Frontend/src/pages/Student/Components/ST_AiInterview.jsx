@@ -342,6 +342,11 @@ export default function AIInterview() {
         evaluationHistory: evaluationHistory || [],
       });
       setPhase("result");
+      
+      // Exit full screen when interview finishes
+      if (typeof document !== "undefined" && document.fullscreenElement) {
+        document.exitFullscreen().catch((err) => console.log(err));
+      }
     },
     [stopTimer, stopRecognition, stopCamera, stopSpeaking]
   );
@@ -521,6 +526,12 @@ export default function AIInterview() {
     setResult(null);
     setRemaining(INTERVIEW_SECONDS);
     setPhase("live");
+    
+    // Request full screen when starting
+    if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch((err) => console.log(err));
+    }
+    
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
   }, [role, stopTimer, connectAndStart]);
@@ -551,6 +562,11 @@ export default function AIInterview() {
     setRemaining(INTERVIEW_SECONDS);
     setWarningShown(false);
     setPhase("setup");
+    
+    // Exit full screen if resetting
+    if (typeof document !== "undefined" && document.fullscreenElement) {
+      document.exitFullscreen().catch((err) => console.log(err));
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopTimer, stopRecognition, stopCamera, stopSpeaking]);
 
@@ -611,11 +627,7 @@ export default function AIInterview() {
           <div className="ai-welcome-content">
             <div className="ai-bot-graphic">
               <div className="ai-bot-circle">
-                <img
-                  src={aiInterviewerRef}
-                  alt="AI Interviewer"
-                  style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover" }}
-                />
+                <Bot size={44} className="ai-bot-icon" />
               </div>
               <div className="ai-bot-pulse" />
             </div>
@@ -684,15 +696,6 @@ export default function AIInterview() {
             )}
 
             <div className="ai-setup-buttons">
-              <button
-                type="button"
-                className={`ai-mic-btn ai-camera-btn ${cameraState === "on" ? "recording" : ""}`}
-                onClick={toggleCamera}
-              >
-                {cameraState === "on" ? <Camera size={16} /> : <CameraOff size={16} />}
-                {cameraState === "on" ? "Camera On" : "Enable Camera"}
-              </button>
-
               <button
                 type="button"
                 className="ai-start-interview-btn"
@@ -824,7 +827,19 @@ export default function AIInterview() {
                   </div>
                 )}
 
-                <div className="interview-action-row" style={{ justifyContent: "flex-end" }}>
+                <div className="interview-action-row" style={{ justifyContent: "flex-end", gap: "12px" }}>
+                  {SpeechRecognitionCtor && (
+                    <button
+                      type="button"
+                      className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
+                      onClick={toggleRecording}
+                      disabled={!question || isEvaluating}
+                      title={isRecording ? "Stop Listening" : "Start Voice Typing"}
+                    >
+                      {isRecording ? <Mic size={15} /> : <MicOff size={15} />}
+                      <span>{isRecording ? "Listening..." : "Voice Input"}</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     id="submit-answer-btn"
@@ -847,12 +862,8 @@ export default function AIInterview() {
             {/* ── RIGHT COLUMN: AI Interviewer ── */}
             <div className="interview-practice-card ai-interviewer-card">
               <div className="ai-interviewer-head">
-                <div className="ai-interviewer-avatar" style={{ background: "none", padding: 0 }}>
-                  <img
-                    src={aiInterviewerRef}
-                    alt="AI Interviewer"
-                    style={{ width: 44, height: 44, borderRadius: "50%", objectFit: "cover" }}
-                  />
+                <div className="ai-interviewer-avatar">
+                  <Bot size={24} color="#ffffff" />
                   {isAiSpeaking && <span className="ai-avatar-speaking" />}
                 </div>
                 <div>
