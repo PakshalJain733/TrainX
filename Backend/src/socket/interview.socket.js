@@ -143,12 +143,19 @@ export function initInterviewSocket(httpServer) {
     cors: {
       origin: (origin, cb) => {
         if (!origin) return cb(null, true);
+        const cleanOrigin = origin.replace(/\/$/, '');
         const allowed = new Set([
           (config.frontendUrl || '').replace(/\/$/, ''),
           'http://localhost:5173',
           'http://127.0.0.1:5173',
+          'http://localhost:5174',
+          'http://127.0.0.1:5174',
+          'http://localhost:3000',
         ]);
-        if (allowed.has(origin.replace(/\/$/, ''))) return cb(null, true);
+        if (allowed.has(cleanOrigin)) return cb(null, true);
+        if (config.nodeEnv !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(cleanOrigin)) {
+          return cb(null, true);
+        }
         return cb(new Error('Origin not allowed by CORS'));
       },
       methods: ['GET', 'POST'],

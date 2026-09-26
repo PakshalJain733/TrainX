@@ -40,6 +40,8 @@ const allowedOrigins = new Set(
     process.env.FRONTEND_URL,
     'http://localhost:5173',
     'http://127.0.0.1:5173',
+    'http://localhost:5174',
+    'http://127.0.0.1:5174',
     'http://localhost:3000',
     config.nodeEnv === 'production' ? '' : 'http://localhost:5500',
   ]
@@ -53,7 +55,11 @@ app.use(
     origin(origin, cb) {
       // Allow non-browser / same-origin requests
       if (!origin) return cb(null, true);
-      if (allowedOrigins.has(origin.replace(/\/$/, ''))) return cb(null, true);
+      const cleanOrigin = origin.replace(/\/$/, '');
+      if (allowedOrigins.has(cleanOrigin)) return cb(null, true);
+      if (config.nodeEnv !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(cleanOrigin)) {
+        return cb(null, true);
+      }
       return cb(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -64,10 +70,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
-  // Global handler: mirror the CORS allowlist. Do NOT override for origins
-  // the allowlist rejected (otherwise the allowlist is bypassed).
+  // Global handler: mirror the CORS allowlist.
   const origin = req.headers.origin;
-  if (!origin || allowedOrigins.has(String(origin).replace(/\/$/, ''))) {
+  const cleanOrigin = origin ? String(origin).replace(/\/$/, '') : '';
+  const isAllowed = !origin || allowedOrigins.has(cleanOrigin) || (config.nodeEnv !== 'production' && /^http:\/\/(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(cleanOrigin));
+  if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
