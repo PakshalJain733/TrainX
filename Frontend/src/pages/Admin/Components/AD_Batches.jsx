@@ -1150,6 +1150,18 @@ export default function AdminBatches() {
         </div>
       </div>
 
+      <SectionHeader
+        icon={Code2}
+        title="Manage Batches"
+        description="Create batches, assign mentors, and generate unique batch join access codes."
+        action={
+          <Button onClick={handleOpenForm} className="create-batch-btn">
+            <Plus size={16} /> {showAddForm ? "Cancel" : "Create New Batch"}
+          </Button>
+        }
+      />
+
+
       {showAddForm && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false); }}>
           <div className="modal-dialog">
@@ -1159,7 +1171,7 @@ export default function AdminBatches() {
                   <Users size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Create Cohort</h2>
+                  <h2 className="modal-title">Create Batch</h2>
                   <p className="modal-subtitle">Create a new batch, assign mentor, and generate join code.</p>
                 </div>
               </div>
@@ -1181,7 +1193,7 @@ export default function AdminBatches() {
                         setJoinCode(generateJoinCode(e.target.value));
                       }
                     }}
-                    placeholder="e.g. Node.js Backend - Cohort A"
+                    placeholder="e.g. Node.js Backend - Batch A"
                     required
                     autoFocus
                   />
@@ -1280,6 +1292,10 @@ export default function AdminBatches() {
                 ? 'Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.'
                 : 'Batches marked as inactive or deleted will appear here. You can reactivate them anytime.'}
             </p>
+
+            <p className="admin-empty-state-title">No batches created yet</p>
+            <p className="admin-empty-state-sub">Click "Create New Batch" to add batches, assign mentors, and create student join codes.</p>
+
           </div>
         ) : (
           visibleBatches.map((b) => {

@@ -25,6 +25,7 @@ const startServer = () => {
 const stopServer = () => {
   return new Promise((resolve) => {
     if (server) {
+      server.closeAllConnections?.();
       server.close(() => resolve());
     } else {
       resolve();

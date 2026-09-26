@@ -39,6 +39,17 @@ function AdminProgSelect({ value, options = [], onChange, placeholder = 'Select.
   );
 }
 
+const API_BASE = "/api/v1";
+
+function getAuthHeaders() {
+  const token = (sessionStorage.getItem("token") || (sessionStorage.getItem("token") || localStorage.getItem("token"))) || "";
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+}
+
+
 export default function AdminProgress() {
   const [students, setStudents] = useState([]);
   const [batches, setBatches] = useState([]);

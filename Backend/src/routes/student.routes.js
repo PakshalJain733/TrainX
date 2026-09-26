@@ -5,11 +5,13 @@ import {
   updateStudentProfile,
   getStudentDashboard,
   getStudentPracticeProblems,
+  getStudentPracticeProblemById,
   getStudentAttendance,
   applyStudentLeave,
   getStudentNotifications,
   getStudentMaterials,
   getStudentPerformance,
+  getStudentTrainingEnrollment,
   getSupportTickets,
   createSupportTicket,
 } from '../controllers/student.controller.js';
@@ -30,12 +32,14 @@ router.get('/dashboard', getStudentDashboard);
 
 // Practice Problems, Materials & Attendance
 router.get('/practice-problems', getStudentPracticeProblems);
+router.get('/practice-problems/:id', getStudentPracticeProblemById);
 router.get('/materials', getStudentMaterials);
 router.get('/attendance', getStudentAttendance);
 
 router.post('/attendance/leave', applyStudentLeave);
 router.get('/notifications', getStudentNotifications);
 router.get('/performance', getStudentPerformance);
+router.get('/training-enrollment', getStudentTrainingEnrollment);
 router.get('/support/tickets', getSupportTickets);
 router.post('/support/tickets', createSupportTicket);
 

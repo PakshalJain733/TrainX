@@ -107,6 +107,7 @@ export default function AdminPracticeProblems() {
     timeLimit: "1.0s",
     memoryLimit: "128 MB",
     description: "",
+    dueDate: "",
   });
 
   const [newTestCase, setNewTestCase] = useState({ input: "", output: "", isHidden: false });
@@ -182,6 +183,7 @@ export default function AdminPracticeProblems() {
       timeLimit: newProb.timeLimit,
       memoryLimit: newProb.memoryLimit,
       description: newProb.description,
+      due_date: newProb.dueDate,
       testCases: [],
     };
 
@@ -198,6 +200,7 @@ export default function AdminPracticeProblems() {
       timeLimit: "1.0s",
       memoryLimit: "128 MB",
       description: "",
+      dueDate: "",
     });
   };
 
@@ -275,6 +278,18 @@ export default function AdminPracticeProblems() {
         </div>
       </div>
 
+      <SectionHeader
+        icon={Terminal}
+        title="Coding Practice Management"
+        description="Build algorithmic question banks, configure test cases, and assign coding tasks to student batches."
+        action={
+          <button className="admin-btn-add" onClick={() => setShowAddModal(true)}>
+            <Plus size={16} /> Add Coding Problem
+          </button>
+        }
+      />
+
+
       {/* Workspace Tabs */}
       <div className="admin-users-filters">
         <button
@@ -287,7 +302,7 @@ export default function AdminPracticeProblems() {
           className={`admin-filter-pill ${activeTab === "assign" ? "admin-filter-pill--active" : ""}`}
           onClick={() => setActiveTab("assign")}
         >
-          <Send size={15} /> Assign to Cohort ({assignments.length})
+          <Send size={15} /> Assign to Batch ({assignments.length})
         </button>
         <button
           className={`admin-filter-pill ${activeTab === "submissions" ? "admin-filter-pill--active" : ""}`}
@@ -402,7 +417,7 @@ export default function AdminPracticeProblems() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "20px" }}>
           <div className="admin-users-table-card" style={{ padding: "20px" }}>
             <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "14px" }}>
-              Publish Task to Cohort
+              Publish Task to Batch
             </h3>
             <form onSubmit={handleAssignSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div className="form-group-admin">
@@ -418,7 +433,7 @@ export default function AdminPracticeProblems() {
               </div>
 
               <div className="form-group-admin">
-                <label>Target Cohort / Batch</label>
+                <label>Target Batch / Batch</label>
                 <AdminPpSelect
                   value={assignForm.batch}
                   onChange={(val) => setAssignForm({ ...assignForm, batch: val })}
@@ -531,7 +546,7 @@ export default function AdminPracticeProblems() {
                 </div>
                 <div>
                   <h2 className="modal-title">Add New Coding Problem</h2>
-                  <p className="modal-subtitle">Create algorithmic practice challenges for student cohorts.</p>
+                  <p className="modal-subtitle">Create algorithmic practice challenges for student batches.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowAddModal(false)} title="Close Modal">
@@ -579,6 +594,14 @@ export default function AdminPracticeProblems() {
                 </div>
 
                 <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Due Date</label>
+                    <input type="date" value={newProb.dueDate} onChange={(e) => setNewProb({...newProb, dueDate: e.target.value})} className="form-input-admin" />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Due Date</label>
+                    <input type="date" value={newProb.dueDate} onChange={(e) => setNewProb({...newProb, dueDate: e.target.value})} className="form-input-admin" />
+                  </div>
                   <div className="form-group-admin">
                     <label>XP Points</label>
                     <input

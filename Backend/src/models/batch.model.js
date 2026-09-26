@@ -137,6 +137,23 @@ export const deleteBatch = async (id) => {
 
 // ─── Student Batch Join ───────────────────────────────────────────
 
+// Helper to ensure student_batches table exists for multi-batch membership
+const ensureStudentBatchesTable = async () => {
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS student_batches (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_batch (user_id, batch_id)
+      )
+    `);
+  } catch (err) {
+    console.warn(`[Batch Model] ensureStudentBatchesTable warning: ${err.message}`);
+  }
+};
+
 // Find batch by join_code
 export const findBatchByCode = async (code) => {
   try {
@@ -153,19 +170,25 @@ export const findBatchByCode = async (code) => {
   }
 };
 
-// Join student to a batch (updates students.batch_id)
+// Join student to a batch (supports multi-batch membership)
 export const joinStudentBatch = async (userId, batchId) => {
   try {
     const uId = parseInt(userId, 10);
     const bId = parseInt(batchId, 10);
 
-    // Check if student row exists for user
+    await ensureStudentBatchesTable();
+
+    // 1. Insert into student_batches junction table so student stays enrolled in all joined batches
+    await query(
+      'INSERT IGNORE INTO student_batches (user_id, batch_id) VALUES (?, ?)',
+      [uId, bId]
+    );
+
+    // 2. Also update/create student record for backwards compatibility
     const rows = await query('SELECT id FROM students WHERE user_id = ? LIMIT 1', [uId]);
     if (rows && rows.length > 0) {
-      // Update existing student record's batch_id
       await query('UPDATE students SET batch_id = ? WHERE user_id = ?', [bId, uId]);
     } else {
-      // Create new student record with batch_id
       await query(
         `INSERT INTO students (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills)
          VALUES (?, 1, NULL, ?, '', '', '', '', '', '8.0', '')`,
@@ -173,10 +196,10 @@ export const joinStudentBatch = async (userId, batchId) => {
       );
     }
 
-    // Also bump batch student count
+    // 3. Update batch student count dynamically
     await query(
-      'UPDATE batches SET students = COALESCE(students, 0) + 1 WHERE id = ?',
-      [bId]
+      'UPDATE batches SET students = (SELECT COUNT(DISTINCT user_id) FROM student_batches WHERE batch_id = ?) WHERE id = ?',
+      [bId, bId]
     );
     return true;
   } catch (error) {
@@ -185,19 +208,23 @@ export const joinStudentBatch = async (userId, batchId) => {
   }
 };
 
-// Get all batches the student is enrolled in
+// Get all batches the student is enrolled in (multi-batch supported)
 export const getStudentBatchesModel = async (userId) => {
   try {
+    await ensureStudentBatchesTable();
+    const uId = parseInt(userId, 10);
     const rows = await query(
       `SELECT b.*, c.name AS college_name, d.name AS department_name
        FROM batches b
        LEFT JOIN colleges c ON b.college_id = c.id
        LEFT JOIN departments d ON b.department_id = d.id
        WHERE b.id IN (
+         SELECT batch_id FROM student_batches WHERE user_id = ?
+         UNION
          SELECT batch_id FROM students WHERE user_id = ? AND batch_id IS NOT NULL
        )
        ORDER BY b.id DESC`,
-      [parseInt(userId, 10)]
+      [uId, uId]
     );
     return rows || [];
   } catch (error) {

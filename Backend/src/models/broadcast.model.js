@@ -122,11 +122,6 @@ export const createBroadcastModel = async ({
 };
 
 export const deleteBroadcastModel = async (id) => {
-  try {
-    await query(`DELETE FROM broadcasts WHERE id = ?`, [parseInt(id, 10)]);
-  } catch (error) {
-    const idx = mockBroadcasts.findIndex((b) => b.id === Number(id));
-    if (idx !== -1) mockBroadcasts.splice(idx, 1);
-  }
+  await query(`DELETE FROM broadcasts WHERE id = ?`, [parseInt(id, 10)]);
   return true;
 };

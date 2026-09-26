@@ -52,9 +52,14 @@ export const addSharedContent = async (req, res, next) => {
       status: status || 'Active',
       college_id: collegeId,
       created_by,
+      batch_id: req.body?.batch_id ?? null,
       batch_name: batch_name || 'All Batches',
       target: target || 'All',
     });
+
+    if (!item) {
+      return sendError(res, 'Shared content could not be persisted', 500);
+    }
 
     return sendSuccess(res, 'Shared content created', item, 201);
   } catch (err) {

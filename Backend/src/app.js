@@ -19,29 +19,59 @@ import departmentRoutes from './routes/department.routes.js';
 import batchRoutes from './routes/batch.routes.js';
 import sharedContentRoutes from './routes/sharedContent.routes.js';
 import secureCodeRoutes from './routes/secureCode.routes.js';
+import codingRoutes from './routes/coding.routes.js';
+import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
+import mentorRoutes from './routes/mentor.routes.js';
+import coordinatorRoutes from './routes/coordinator.routes.js';
+import superadminRoutes from './routes/superadmin.routes.js';
 import mentorRoutes from './routes/mentor.routes.js';
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
+import { config } from './config/env.js';
+import { pool } from './config/db.js';
 
 import path from 'path';
 
 const app = express();
 
-// Global Middlewares
-app.use(cors());
+// Production-safe CORS: allow the configured frontend origin(s) plus local dev
+const allowedOrigins = new Set(
+  [
+    config.frontendUrl,
+    process.env.FRONTEND_URL,
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    config.nodeEnv === 'production' ? '' : 'http://localhost:5500',
+  ]
+    .filter(Boolean)
+    .filter((o) => typeof o === 'string')
+    .map((o) => o.replace(/\/$/, ''))
+);
+
+app.use(
+  cors({
+    origin(origin, cb) {
+      // Allow non-browser / same-origin requests
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.has(origin.replace(/\/$/, ''))) return cb(null, true);
+      return cb(null, false);
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token'],
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-import systemHealthRoutes from './routes/systemHealth.routes.js';
 
 // Serve uploaded files statically
 app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 
-// Health Check & Infrastructure Metrics Endpoints
-app.use('/api/v1/system/health', systemHealthRoutes);
+// Health Check Endpoint (Section 28)
 app.get('/api/v1/health', (req, res) => {
   return sendSuccess(res, 'Training Portal API is running', {
     status: 'healthy',
+    database: dbStatus,
     timestamp: new Date().toISOString(),
   });
 });
@@ -69,7 +99,6 @@ app.use('/api/v1/drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
 app.use('/api/v1/secure-codes', secureCodeRoutes);
-app.use('/api/v1/mentor', mentorRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

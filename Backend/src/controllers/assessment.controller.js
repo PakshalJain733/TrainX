@@ -105,10 +105,12 @@ export const createAssessment = async (req, res, next) => {
 
     let insertId = Date.now();
     try {
+      const collegeId = req.user?.collegeId ?? req.user?.college_id ?? 1;
+      const userId = req.user?.userId || req.user?.id || null;
       const result = await query(
-        `INSERT INTO assessments (title, batch_id, category, description, status, is_published, total_marks, pass_marks, duration_minutes)
+        `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [title, batch_id || null, category || 'Technical Quiz', description || '', status || 'published', is_published ? 1 : 0, total_marks || 100, pass_marks || 60, duration_minutes || 30]
+        [title, description || '', collegeId, batch_id || null, userId, duration_minutes || 30, total_marks || 100, pass_marks || 60, status || 'published']
       );
       if (result && result.insertId) insertId = result.insertId;
     } catch (e) {

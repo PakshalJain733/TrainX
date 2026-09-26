@@ -23,18 +23,22 @@ export const initSharedContentTable = async () => {
         status      VARCHAR(50)  DEFAULT 'Active',
         college_id  INT          DEFAULT 1,
         created_by  INT          DEFAULT NULL,
+        batch_id    INT          DEFAULT NULL,
         batch_name  VARCHAR(255) DEFAULT 'All Batches',
         target      VARCHAR(255) DEFAULT 'All',
         created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_type   (type),
-        INDEX idx_college (college_id)
+        INDEX idx_college (college_id),
+        INDEX idx_batch  (batch_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
     try {
       await query(`ALTER TABLE shared_content MODIFY COLUMN type VARCHAR(100) NOT NULL`);
       await query(`ALTER TABLE shared_content MODIFY COLUMN data_json LONGTEXT`);
     } catch (_) {}
+    try { await query(`ALTER TABLE shared_content ADD COLUMN batch_id INT DEFAULT NULL`); } catch (_) {}
+    try { await query(`ALTER TABLE shared_content ADD INDEX idx_batch (batch_id)`); } catch (_) {}
     console.log('[SharedContent] Table ready.');
   } catch (err) {
     console.warn('[SharedContent] Table init skipped:', err.message);
@@ -42,14 +46,18 @@ export const initSharedContentTable = async () => {
 };
 
 // ── GET all items of a given type ─────────────────────────────────────────────
-export const getSharedContentByType = async (type, collegeId = 1) => {
+export const getSharedContentByType = async (type, collegeId = 1, { batchId = null } = {}) => {
   try {
-    const rows = await query(
-      `SELECT * FROM shared_content
-       WHERE type = ? AND (college_id = ? OR college_id IS NULL)
-       ORDER BY id DESC`,
-      [type, collegeId]
-    );
+    const params = [type, collegeId];
+    let sql = `SELECT * FROM shared_content
+       WHERE type = ? AND (college_id = ? OR college_id IS NULL)`;
+    if (batchId) {
+      sql += ` AND (batch_id = ? OR batch_id IS NULL)`;
+      params.push(batchId);
+    }
+    sql += ` ORDER BY id DESC`;
+
+    const rows = await query(sql, params);
     return (rows || []).map(r => ({
       ...r,
       data: (() => {
@@ -92,6 +100,7 @@ export const createSharedContent = async ({
   status = 'Active',
   college_id = 1,
   created_by = null,
+  batch_id = null,
   batch_name = 'All Batches',
   target = 'All',
 }) => {
@@ -109,9 +118,9 @@ export const createSharedContent = async ({
   try {
     const result = await query(
       `INSERT INTO shared_content
-         (type, title, description, data_json, status, college_id, created_by, batch_name, target)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [type, title.trim(), description || '', dataJson, status, college_id || 1, validCreatedBy, batch_name, target]
+         (type, title, description, data_json, status, college_id, created_by, batch_id, batch_name, target)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [type, title.trim(), description || '', dataJson, status, college_id || 1, validCreatedBy, batch_id, batch_name, target]
     );
 
     if (result && result.insertId) {
@@ -126,19 +135,6 @@ export const createSharedContent = async ({
     }
   } catch (err) {
     console.warn('[SharedContent] Insert failed:', err.message);
-    // Return a partial object so the caller still gets something
-    return {
-      id: Date.now(),
-      type,
-      title,
-      description,
-      data,
-      status,
-      college_id,
-      batch_name,
-      target,
-      created_at: new Date().toISOString(),
-    };
   }
   return null;
 };

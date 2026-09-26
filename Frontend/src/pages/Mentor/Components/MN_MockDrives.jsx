@@ -35,15 +35,9 @@ export default function MockDrives() {
             <ClipboardCheck size={20} color="#4f46e5" />
             <span>Placement Mock Drives & Code Tests</span>
           </h2>
-          <p className="mentor-page-subtitle">Industry partner placement drives, target cutoffs, and student enrollment</p>
+          <p className="mentor-page-subtitle">Placement drive management is not configured for this workspace</p>
         </div>
-
-        <button className="mentor-btn-primary">
-          <Plus size={16} />
-          <span>Nominate Students for Drive</span>
-        </button>
       </div>
-
       <div className="mentor-mockdrives-grid">
         {loading ? (
           <div style={{ padding: "32px", textAlign: "center", color: "#64748b", gridColumn: "1 / -1" }}>Loading mock drives...</div>
@@ -76,6 +70,13 @@ export default function MockDrives() {
             </div>
           ))
         )}
+
+        <div className="mentor-mockdrive-empty">
+          <ClipboardCheck size={36} />
+          <h3>Coming Soon</h3>
+          <p>Not configured</p>
+        </div>
+
       </div>
     </div>
   );

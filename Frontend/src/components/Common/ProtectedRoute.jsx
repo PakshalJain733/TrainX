@@ -25,27 +25,28 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  const role = String(user.role).toLowerCase();
+  const userRole = String(user.role).toLowerCase();
 
   // Determine user role flags
-  const isSuperAdmin = role.includes("superadmin") || role.includes("super admin") || role.includes("super_admin");
-  const isAdmin = role.includes("admin") && !isSuperAdmin;
-  const isCoordinator = role.includes("coordinator");
-  const isMentor = role.includes("mentor") || role.includes("faculty");
-  const isStudent = role.includes("student") || role === "user";
+  const isSuperAdmin = userRole.includes("superadmin") || userRole.includes("super admin") || userRole.includes("super_admin") || userRole.includes("super");
+  const isAdmin = (userRole.includes("admin") || userRole.includes("college_admin") || userRole.includes("hod")) && !isSuperAdmin;
+  const isCoordinator = userRole.includes("coordinator");
+  const isMentor = userRole.includes("mentor") || userRole.includes("faculty");
+  const isStudent = userRole.includes("student") || userRole === "user";
 
   // Check if role is authorized
   let isAllowed = false;
-  if (allowedRoles.length === 0) {
+  if (!allowedRoles || allowedRoles.length === 0) {
     isAllowed = true;
   } else {
     for (const reqRole of allowedRoles) {
-      const lowerReq = reqRole.toLowerCase();
-      if (lowerReq === "superadmin" && isSuperAdmin) isAllowed = true;
-      if (lowerReq === "admin" && (isAdmin || isSuperAdmin)) isAllowed = true;
-      if (lowerReq === "coordinator" && (isCoordinator || isSuperAdmin)) isAllowed = true;
-      if (lowerReq === "mentor" && (isMentor || isSuperAdmin)) isAllowed = true;
-      if (lowerReq === "student" && (isStudent || isSuperAdmin)) isAllowed = true;
+      const canonical = String(reqRole).toLowerCase();
+      if ((canonical === "superadmin" || canonical === "super_admin") && isSuperAdmin) isAllowed = true;
+      if ((canonical === "admin" || canonical === "college_admin" || canonical === "hod") && (isAdmin || isSuperAdmin)) isAllowed = true;
+      if (canonical === "coordinator" && (isCoordinator || isSuperAdmin)) isAllowed = true;
+      if ((canonical === "mentor" || canonical === "faculty") && (isMentor || isSuperAdmin)) isAllowed = true;
+      if (canonical === "student" && (isStudent || isSuperAdmin)) isAllowed = true;
+      if (userRole === canonical) isAllowed = true;
     }
   }
 

@@ -2,6 +2,8 @@ import app from './src/app.js';
 import { config } from './src/config/env.js';
 import { checkDatabaseConnection } from './src/config/db.js';
 import { initializeDatabase } from './src/config/init_db.js';
+import { initInterviewSocket } from './src/socket/interview.socket.js';
+import http from 'node:http';
 
 const startServer = async () => {
   try {
@@ -11,11 +13,16 @@ const startServer = async () => {
 
 
     const PORT = config.port;
-    const server = app.listen(PORT, () => {
+    const server = http.createServer(app);
+
+    initInterviewSocket(server);
+
+    server.listen(PORT, () => {
       console.log(`==================================================`);
       console.log(`🚀 Training Portal Backend Server running on port ${PORT}`);
       console.log(`📡 Environment: ${config.nodeEnv}`);
       console.log(`🔗 Health Check: http://localhost:${PORT}/api/v1/health`);
+      console.log(`🔌 Socket.IO interview namespace: /interviews`);
       console.log(`==================================================`);
     });
 

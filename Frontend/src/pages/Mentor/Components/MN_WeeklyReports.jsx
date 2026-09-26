@@ -1,51 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { FileCheck2, Plus, Download, RefreshCw } from 'lucide-react';
 import "../Styles/MN_WeeklyReports.css";
+
+const unwrap = (response) => {
+  if (!response || response.error) return null;
+  return response.data !== undefined ? response.data : response;
+};
+
+const getReports = (response) => {
+  const payload = unwrap(response);
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.reports)) return payload.reports;
+  return [];
+};
+
+const textValue = (value) => {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text || null;
+};
+
+const firstValue = (source, keys) => {
+  if (!source || typeof source !== "object") return null;
+  for (const key of keys) {
+    const value = source[key];
+    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+  }
+  return null;
+};
+
+const formatDate = (value) => {
+  if (!value) return "N/A";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+};
 
 export default function WeeklyReports() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
 
-  const loadReports = () => {
+  const loadReports = useCallback(async () => {
     setLoading(true);
-    apiFetch("/reports/mentor/batch-reports")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
-          setReports(res.data);
-        } else if (res && Array.isArray(res)) {
-          setReports(res);
-        } else {
-          setReports([]);
-        }
-      })
-      .catch(() => setReports([]))
-      .finally(() => setLoading(false));
-  };
+    try {
+      const res = await apiFetch("/mentor/weekly-reports");
+      const list = getReports(res);
+      setReports(list);
+    } catch (e) {
+      setReports([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadReports();
-  }, []);
+  }, [loadReports]);
 
   const handleGenerateReport = async () => {
     setGenerating(true);
     try {
-      await apiFetch("/reports/weekly/generate", {
-        method: "POST",
-        body: JSON.stringify({ batch_id: 1, weekLabel: `Week ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` }),
-      });
+      await apiFetch("/mentor/weekly-reports", { method: "POST" });
       loadReports();
     } catch (e) {
-      console.warn("Failed to generate report in DB:", e);
+      console.error(e);
     } finally {
       setGenerating(false);
     }
   };
 
+  const handleRefresh = () => {
+    loadReports();
+  };
+
+
   return (
     <div className="mentor-weeklyreports-container">
-      {/* Header */}
       <div className="mentor-page-header-wr">
         <div>
           <h2 className="mentor-page-title">
@@ -55,13 +86,18 @@ export default function WeeklyReports() {
           <p className="mentor-page-subtitle">Submit and review weekly batch audit reports saved in database</p>
         </div>
 
-        <button className="mentor-btn-primary" onClick={handleGenerateReport} disabled={generating}>
-          {generating ? <RefreshCw size={16} className="spin" /> : <Plus size={16} />}
-          <span>{generating ? "Generating..." : "Generate Weekly Report"}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="mentor-btn-primary" onClick={handleGenerateReport} disabled={generating}>
+            {generating ? <RefreshCw size={16} className="spin" /> : <Plus size={16} />}
+            <span>{generating ? "Generating..." : "Generate Weekly Report"}</span>
+          </button>
+          <button type="button" className="mentor-btn-secondary" onClick={handleRefresh} disabled={loading}>
+            <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
-      {/* Reports Table */}
       <div className="mentor-table-card">
         <div className="mentor-table-responsive">
           {loading ? (
@@ -102,6 +138,47 @@ export default function WeeklyReports() {
               </tbody>
             </table>
           )}
+
+          <table className="mentor-table">
+            <thead>
+              <tr>
+                <th>Report Title</th>
+                <th>Covered Batch</th>
+                <th>Submission Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={4}><div className="mentor-report-empty"><FileCheck2 size={28} /><p>Loading weekly reports...</p></div></td></tr>
+              ) : reports.length === 0 ? (
+                <tr>
+                  <td colSpan={4}>
+                    <div className="mentor-report-empty">
+                      <FileCheck2 size={28} />
+                      <p>No weekly reports available yet.</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                reports.map((report, index) => {
+                  const title = textValue(firstValue(report, ["title", "reportTitle", "weekLabel", "week"])) || "N/A";
+                  const batch = textValue(firstValue(report, ["batch", "batchName", "batch_name"])) || "N/A";
+                  const submittedAt = formatDate(firstValue(report, ["submittedAt", "submitted_at", "createdAt", "created_at", "date"]));
+                  const status = textValue(firstValue(report, ["status", "state"])) || "N/A";
+                  return (
+                    <tr key={textValue(firstValue(report, ["id", "reportId", "report_id"])) || index}>
+                      <td className="mentor-report-title">{title}</td>
+                      <td className="mentor-report-batch">{batch}</td>
+                      <td className="mentor-report-date">{submittedAt}</td>
+                      <td><span className="mentor-report-status">{status}</span></td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+
         </div>
       </div>
     </div>

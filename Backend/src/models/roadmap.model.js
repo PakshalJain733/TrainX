@@ -1,10 +1,10 @@
 import { query } from '../config/db.js';
 
-// In-memory store fallback for development/testing when MySQL tables are missing
 const mockRoadmaps = new Map();
 
 /**
  * Fetch a student's active roadmap with all milestone items
+ * Returns null when the student has no roadmap. DB errors propagate to the caller.
  */
 export const getRoadmapByStudentId = async (studentId) => {
   const sId = Number(studentId);
@@ -157,8 +157,6 @@ export const updateMilestoneItemStatus = async (studentId, itemId, status, progr
       item.status = status;
       if (progress !== undefined) item.progress = progress;
     }
-    mockData.updatedAt = new Date();
-    mockRoadmaps.set(sId, mockData);
     return mockData;
   }
 

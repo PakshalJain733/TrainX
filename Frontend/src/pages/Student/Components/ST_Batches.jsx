@@ -36,6 +36,8 @@ const API_BASE = "/api/v1";
 
 function getAuthHeaders() {
   const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
+
+
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -72,7 +74,7 @@ function mapApiBatch(b) {
     id: b.id || `batch-${b.id}`,
     title: b.name || b.title,
     code: code,
-    track: b.track || "Training Cohort",
+    track: b.track || "Training Batch",
     trainer: b.mentor || b.trainer || "Faculty Lead",
     timing: b.schedule || b.timing || "Regular Sessions",
     studentsEnrolled: b.students || b.studentsEnrolled || 1,
@@ -81,7 +83,7 @@ function mapApiBatch(b) {
     color: isInactive ? "#64748b" : "#2563eb",
     bg: isInactive ? "#f1f5f9" : "#eff6ff",
     icon: Code2,
-    description: b.description || `${b.name} training cohort curriculum and assignments.`,
+    description: b.description || `${b.name} training batch curriculum and assignments.`,
     stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
       { rank: 1, name: `${userName} (You)`, xp: b.xp || 0, initials: userInitials, self: true },
@@ -357,9 +359,9 @@ export default function Batches() {
                       const taskSlug = task.taskNumber.replace(/\s+/g, '-').toLowerCase();
                       const platform = task.platform || "coding";
                       let taskHref = `/student/coding-platform/${taskSlug}`;
-                      if (platform === "mcq") taskHref = `/student/mcq-exam`;
+                      if (platform === "mcq") taskHref = `/student/quiz`;
                       else if (platform === "gd") taskHref = `/student/ai-interview`;
-                      else if (platform === "submission") taskHref = `/student/notes`;
+                      else if (platform === "submission") taskHref = `/student/coding-platform`;
 
                       return (
                         <Link
@@ -414,7 +416,7 @@ export default function Batches() {
               <div className="cw-section-header-row">
                 <div className="cw-lb-title-wrap">
                   <Trophy size={18} className="cw-lb-icon" />
-                  <h3 className="cw-section-title">Cohort Leaderboard</h3>
+                  <h3 className="cw-section-title">Batch Leaderboard</h3>
                 </div>
                 <Badge variant="outline">Top Performers</Badge>
               </div>
@@ -446,15 +448,33 @@ export default function Batches() {
     );
   }
 
+  const averageCompletion = (() => {
+    if (!enrolledBatches || enrolledBatches.length === 0) return 0;
+    const totalProg = enrolledBatches.reduce((acc, b) => {
+      const p = typeof b.progress === "number" ? b.progress : parseFloat(b.progress || 0);
+      return acc + (isNaN(p) ? 0 : p);
+    }, 0);
+    return Math.round(totalProg / enrolledBatches.length);
+  })();
+
+  const totalWeeklyHours = (() => {
+    if (!enrolledBatches || enrolledBatches.length === 0) return 0;
+    return enrolledBatches.reduce((acc, b) => {
+      const h = Number(b.weekly_hours || b.hours_per_week || b.weeklyHours || (b.status === "Active" ? 6 : 4));
+      return acc + (isNaN(h) ? 0 : h);
+    }, 0);
+  })();
+
+  const weeklyHoursText = totalWeeklyHours > 0 ? `${totalWeeklyHours} Hours / Wk` : "0 Hours";
+
   return (
     <div className="student-page-inner batches-page-container">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <Code2 size={22} style={{ color: "#4f46e5" }} />
           <span>Enrolled Training Batches</span>
         </h2>
         <p className="student-header-desc">
-          View your active C2C cohorts, faculty-led sessions, curriculum completion rates, and learning resources.
+          View your active C2C batches, faculty-led sessions, curriculum completion rates, and learning resources.
         </p>
       </div>
 
@@ -476,7 +496,7 @@ export default function Batches() {
           </div>
           <div>
             <p className="batches-summary-label">Average Completion</p>
-            <h4 className="batches-summary-val">{enrolledBatches.length > 0 ? "78%" : "0%"}</h4>
+            <h4 className="batches-summary-val">{averageCompletion}%</h4>
           </div>
         </div>
 
@@ -486,7 +506,7 @@ export default function Batches() {
           </div>
           <div>
             <p className="batches-summary-label">Weekly Hours</p>
-            <h4 className="batches-summary-val">{enrolledBatches.length > 0 ? "12 Hours / Wk" : "0 Hours"}</h4>
+            <h4 className="batches-summary-val">{weeklyHoursText}</h4>
           </div>
         </div>
       </div>
@@ -615,7 +635,7 @@ export default function Batches() {
                 </div>
                 <div>
                   <h2 className="modal-title">Join a Training Batch</h2>
-                  <p className="modal-subtitle">Enter secret join access code assigned to your cohort.</p>
+                  <p className="modal-subtitle">Enter secret join access code assigned to your batch.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowJoinModal(false)} title="Close Modal">

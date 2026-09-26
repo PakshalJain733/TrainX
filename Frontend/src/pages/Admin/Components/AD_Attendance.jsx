@@ -164,7 +164,7 @@ export default function AdminAttendance() {
         if (fetchedList.length > 0) {
           const mapped = fetchedList.map(b => ({
             id: b.id,
-            name: b.name || b.title || "Training Cohort",
+            name: b.name || b.title || "Training Batch",
             code: b.join_code || b.code || `BATCH-${b.id}`
           }));
           setBatches(mapped);

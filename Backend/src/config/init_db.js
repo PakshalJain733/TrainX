@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import bcrypt from 'bcryptjs';
 import { config } from './env.js';
 
 export async function initializeDatabase() {
@@ -9,6 +10,8 @@ export async function initializeDatabase() {
       user: config.db.user,
       password: config.db.password,
       database: config.db.database,
+      ...(config.db.ssl ? { ssl: config.db.ssl } : {}),
+      connectTimeout: config.db.connectTimeout,
     });
 
     console.log('[DB Init] Connected to MySQL database:', config.db.database);
@@ -89,9 +92,10 @@ export async function initializeDatabase() {
       CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) NULL UNIQUE,
         mobile_number VARCHAR(20),
         password VARCHAR(255) NULL,
+        password_hash VARCHAR(255) NULL,
         role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
         college_id INT DEFAULT 1,
         gender VARCHAR(50) NULL,
@@ -100,7 +104,7 @@ export async function initializeDatabase() {
         linkedin_url VARCHAR(255) NULL,
         target_track VARCHAR(150) NULL,
         two_factor_secret VARCHAR(255) NULL,
-        two_factor_enabled BOOLEAN DEFAULT TRUE,
+        two_factor_enabled BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -108,10 +112,13 @@ export async function initializeDatabase() {
       )
     `);
 
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL UNIQUE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT TRUE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users MODIFY COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
@@ -288,6 +295,35 @@ export async function initializeDatabase() {
       )
     `);
 
+    // 9d. Ensure Mentor Assignment Tables (mentor -> batch and mentor -> student)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS mentor_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_id INT NOT NULL,
+        batch_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_mentor_batch (mentor_id, batch_id),
+        INDEX idx_mentor_assignments_mentor (mentor_id),
+        FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE CASCADE
+      )
+    `);
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS mentor_student_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_id INT NOT NULL,
+        student_id INT NOT NULL,
+        batch_id INT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_mentor_student (student_id),
+        INDEX idx_mentor_student_assignments_mentor (mentor_id),
+        INDEX idx_mentor_student_assignments_batch (batch_id),
+        FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+
     // 10. Ensure Broadcast Notifications & Broadcasts Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS broadcast_notifications (
@@ -425,14 +461,19 @@ export async function initializeDatabase() {
         status      VARCHAR(50)  DEFAULT 'Active',
         college_id  INT          DEFAULT 1,
         created_by  INT          DEFAULT NULL,
+        batch_id    INT          DEFAULT NULL,
         batch_name  VARCHAR(255) DEFAULT 'All Batches',
         target      VARCHAR(255) DEFAULT 'All',
         created_at  DATETIME     DEFAULT CURRENT_TIMESTAMP,
         updated_at  DATETIME     DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_type    (type),
-        INDEX idx_college (college_id)
+        INDEX idx_college (college_id),
+        INDEX idx_batch   (batch_id)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    try { await conn.query(`ALTER TABLE shared_content ADD COLUMN batch_id INT DEFAULT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE shared_content ADD INDEX idx_batch (batch_id)`); } catch (_) { }
 
     // 17. Ensure Secure Codes Table
     await conn.query(`
@@ -576,6 +617,9 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN score_delta VARCHAR(50) DEFAULT '+0%'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN details JSON NULL`); } catch (_) { }
+
     // 23. Ensure Practice Problems Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS practice_problems (
@@ -814,19 +858,18 @@ export async function initializeDatabase() {
     try {
       const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
       const superPass = process.env.SUPER_ADMIN_PASSWORD;
+      const superPasswordHash = superPass ? await bcrypt.hash(superPass, 12) : null;
       const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
       if (!superUsers || superUsers.length === 0) {
         await conn.query(
           `INSERT INTO users (name, email, mobile_number, password, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, ?, 'super_admin', NULL, 1)`,
-          [superEmail, superPass, superPass]
+          [superEmail, superPasswordHash, superPasswordHash]
         );
         console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
+      } else if (superPasswordHash) {
+        await conn.query(`UPDATE users SET role = 'super_admin', password = ?, password_hash = ? WHERE email = ?`, [superPasswordHash, superPasswordHash, superEmail]);
       } else {
-        if (superPass) {
-          await conn.query(`UPDATE users SET role = 'super_admin', password = ?, password_hash = ? WHERE email = ?`, [superPass, superPass, superEmail]);
-        } else {
-          await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
-        }
+        await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
       }
     } catch (e) {
       console.warn('[DB Init] Super Admin seed notice:', e.message);

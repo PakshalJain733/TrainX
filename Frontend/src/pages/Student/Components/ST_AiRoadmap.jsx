@@ -337,6 +337,27 @@ export default function AIRoadmap() {
         </div>
       </div>
 
+      {/* Clean AI Roadmap Header & Custom Goal Input */}
+      <div className="roadmap-generator-card">
+        <div className="roadmap-generator-header">
+          <Sparkles size={22} className="roadmap-generator-icon text-indigo-500 animate-pulse mt-0.5 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <h2 className="roadmap-generator-title">Personalized AI Career Roadmap Generator</h2>
+              {aiSource && (
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 font-bold flex items-center gap-1 shrink-0">
+                  <Cpu size={12} /> {aiSource === "gemini-ai" ? "Gemini 2.5 AI Model" : "Adaptive AI Model"}
+                </span>
+              )}
+            </div>
+            <p className="roadmap-generator-subtitle">
+              Type any career goal or technology (e.g. <strong>Java Developer</strong>, <strong>Cyber Security</strong>, <strong>Flutter Developer</strong>), and the AI will generate your step-by-step learning roadmap.
+
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* AI Roadmap Generator Card */}
       <div className="roadmap-generator-card">
         {/* Input Box & Action */}

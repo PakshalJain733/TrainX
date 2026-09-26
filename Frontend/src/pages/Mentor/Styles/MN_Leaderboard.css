@@ -47,3 +47,17 @@
   border: 1px solid #bfdbfe;
   display: inline-block;
 }
+
+.mentor-lb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 40px;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.mentor-lb-empty p {
+  margin: 0;
+}

@@ -476,7 +476,6 @@ export default function Colleges() {
       <div className="sa-page-header">
         <div>
           <div className="colleges-header-title-wrap">
-            <Building2 className="colleges-header-icon" />
             <span className="colleges-header-title">Colleges Directory</span>
           </div>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>

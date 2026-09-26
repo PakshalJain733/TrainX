@@ -1,0 +1,1 @@
+[attendance_summary upsert error] Cannot add or update a child row: a foreign key constraint fails (`training_portal_db`.`attendance_summary`, CONSTRAINT `attendance_summary_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE)

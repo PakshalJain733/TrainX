@@ -96,7 +96,7 @@ export const findAssessmentById = async (id) => {
   return rows[0] || (await getAssessmentByIdModel(id));
 };
 
-export const createAssessment = async ({ title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status }) => {
+export const createAssessment = async ({ title, description, category, college_id, batch_id, department_id, created_by, duration_minutes, total_marks, pass_marks, status }) => {
   const isPub = (status === 'published') ? 1 : 0;
   let creatorId = null;
   if (created_by) {
@@ -106,20 +106,45 @@ export const createAssessment = async ({ title, description, college_id, batch_i
     }
   }
   const result = await query(
-    `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status, is_published)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [title, description || null, college_id || null, batch_id || null, creatorId, duration_minutes || null, total_marks || 0, pass_marks || 0, status || 'published', isPub]
+    `INSERT INTO assessments (title, description, category, college_id, batch_id, department_id, created_by, duration_minutes, total_marks, pass_marks, status, is_published)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [title, description || null, category || 'Technical Quiz', college_id || null, batch_id || null, department_id || null, creatorId, duration_minutes || null, total_marks || 0, pass_marks || 0, status || 'published', isPub]
   );
   return findAssessmentById(result.insertId);
 };
 
-export const updateAssessment = async (id, { title, description, college_id, batch_id, duration_minutes, total_marks, pass_marks, status }) => {
-  const isPub = (status === 'published') ? 1 : 0;
-  await query(
-    `UPDATE assessments SET title=?, description=?, college_id=?, batch_id=?, duration_minutes=?, total_marks=?, pass_marks=?, status=?, is_published=?
-     WHERE id = ?`,
-    [title, description || null, college_id || null, batch_id || null, duration_minutes || null, total_marks, pass_marks, status, isPub, id]
-  );
+export const updateAssessment = async (id, data = {}) => {
+  const updates = [];
+  const params = [];
+
+  const fields = {
+    title: data.title,
+    description: data.description,
+    category: data.category,
+    college_id: data.college_id,
+    batch_id: data.batch_id,
+    department_id: data.department_id,
+    duration_minutes: data.duration_minutes,
+    total_marks: data.total_marks,
+    pass_marks: data.pass_marks,
+  };
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = ?`);
+      params.push(value);
+    }
+  }
+  if (data.status !== undefined) {
+    updates.push('status = ?');
+    params.push(data.status);
+    updates.push('is_published = ?');
+    params.push(data.status === 'published' ? 1 : 0);
+  }
+
+  if (updates.length > 0) {
+    params.push(id);
+    await query(`UPDATE assessments SET ${updates.join(', ')} WHERE id = ?`, params);
+  }
   return findAssessmentById(id);
 };
 
@@ -128,9 +153,31 @@ export const deleteAssessment = async (id) => {
   return await query('DELETE FROM assessments WHERE id = ?', [id]);
 };
 
-export const publishAssessment = async (id) => {
-  await query("UPDATE assessments SET status = 'published', is_published = TRUE WHERE id = ?", [id]);
+export const publishAssessment = async (id, is_published = true) => {
+  const pub = is_published ? 1 : 0;
+  const status = is_published ? 'published' : 'draft';
+  await query('UPDATE assessments SET status = ?, is_published = ? WHERE id = ?', [status, pub, id]);
   return findAssessmentById(id);
+};
+
+export const getAssessmentAttemptsModel = async (assessmentId, collegeId = null) => {
+  let sql = `
+    SELECT aa.id, aa.user_id, u.name as student_name, s.roll_number, b.name as batch_name,
+           aa.score, aa.marks_obtained, aa.total_marks, aa.percentage, aa.correct_count,
+           aa.incorrect_count, aa.unattempted_count, aa.status, aa.submitted_at
+    FROM assessment_attempts aa
+    JOIN users u ON aa.user_id = u.id
+    LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN batches b ON s.batch_id = b.id
+    WHERE aa.assessment_id = ?
+  `;
+  const params = [assessmentId];
+  if (collegeId) {
+    sql += ' AND aa.college_id = ?';
+    params.push(collegeId);
+  }
+  sql += ' ORDER BY aa.percentage DESC, aa.marks_obtained DESC';
+  return await query(sql, params);
 };
 
 // ─── Questions ──────────────────────────────────────────────────────────────
@@ -174,21 +221,39 @@ export const findQuestionById = async (id) => {
   return rows[0];
 };
 
-export const createQuestion = async ({ assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order }) => {
+export const createQuestion = async ({ assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order, explanation }) => {
   const result = await query(
-    `INSERT INTO assessment_questions (assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks || 1, question_order || 0]
+    `INSERT INTO assessment_questions (assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order, explanation)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks || 1, question_order || 0, explanation || null]
   );
   return findQuestionById(result.insertId);
 };
 
-export const updateQuestion = async (id, { question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order }) => {
-  await query(
-    `UPDATE assessment_questions SET question_text=?, option_a=?, option_b=?, option_c=?, option_d=?, correct_option=?, marks=?, question_order=?
-     WHERE id = ?`,
-    [question_text, option_a, option_b, option_c, option_d, correct_option, marks, question_order, id]
-  );
+export const updateQuestion = async (id, data = {}) => {
+  const updates = [];
+  const params = [];
+  const fields = {
+    question_text: data.question_text,
+    option_a: data.option_a,
+    option_b: data.option_b,
+    option_c: data.option_c,
+    option_d: data.option_d,
+    correct_option: data.correct_option,
+    marks: data.marks,
+    question_order: data.question_order,
+    explanation: data.explanation,
+  };
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) {
+      updates.push(`${key} = ?`);
+      params.push(value);
+    }
+  }
+  if (updates.length > 0) {
+    params.push(id);
+    await query(`UPDATE assessment_questions SET ${updates.join(', ')} WHERE id = ?`, params);
+  }
   return findQuestionById(id);
 };
 

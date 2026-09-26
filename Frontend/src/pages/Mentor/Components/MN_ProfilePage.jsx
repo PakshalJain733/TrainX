@@ -45,7 +45,7 @@ const specOptions = [
   { value: "Cybersecurity", label: "Cybersecurity" },
 ];
 
-export default function ProfilePage() {
+function ProfilePage() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -523,3 +523,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+export default MN_ProfilePage;

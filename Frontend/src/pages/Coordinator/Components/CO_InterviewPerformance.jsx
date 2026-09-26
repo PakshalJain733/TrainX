@@ -325,6 +325,10 @@ export default function InterviewPerformance() {
             <span className="coord-perf-kpi-label">Average Score</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--amber">{averageScore}</span>
             <span className="coord-perf-kpi-sub">Overall cohort mean</span>
+
+            <span className="coord-perf-kpi-value">{averageScore}</span>
+            <span className="coord-perf-kpi-sub">Overall batch mean</span>
+
           </div>
         </div>
       </div>

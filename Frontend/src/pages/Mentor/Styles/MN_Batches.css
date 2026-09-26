@@ -2,19 +2,44 @@
 .mentor-batches-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+}
+
+/* Empty state */
+.mentor-batch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 56px 24px;
+  text-align: center;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+}
+
+.mentor-batch-empty svg {
+  color: #94a3b8;
+}
+
+.mentor-batch-empty-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin: 8px 0 0 0;
+}
+
+.mentor-batch-empty-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
 }
 
 .mentor-batches-grid {
   display: grid;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 24px;
-}
-
-@media (min-width: 768px) {
-  .mentor-batches-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 20px;
 }
 
 .mentor-batch-card-main {
@@ -37,14 +62,16 @@
 
 .mentor-batch-top-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
 }
 
 .mentor-batch-details-block {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .mentor-batch-main-title {
@@ -52,6 +79,7 @@
   color: #0f172a;
   font-size: 16px;
   margin: 0;
+  line-height: 1.3;
 }
 
 .mentor-batch-college-sub {
@@ -70,8 +98,8 @@
 .mentor-batch-stats-stack {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 8px;
+  gap: 10px;
+  padding-top: 14px;
   border-top: 1px solid #f1f5f9;
   font-size: 12px;
 }
@@ -79,16 +107,72 @@
 .mentor-batch-stat-line {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 12px;
   color: #475569;
+}
+
+.mentor-batch-stat-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+.mentor-batch-stat-icon svg {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.mentor-batch-stat-icon span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mentor-batch-stat-strong {
   font-weight: 700;
   color: #0f172a;
+  flex-shrink: 0;
 }
 
 .mentor-batch-schedule-text {
   font-weight: 500;
   color: #1e293b;
   font-size: 11px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Inactive/other status tone */
+.mentor-status-tag--slate {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+/* Progress bar tones (base .mentor-progress-fill lives in Overview.css) */
+.mentor-progress-fill--indigo {
+  background: linear-gradient(90deg, #6366f1, #4f46e5);
+}
+
+.mentor-progress-fill--emerald {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.mentor-progress-fill--amber {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.mentor-progress-val--indigo {
+  color: #4f46e5;
+}
+
+.mentor-progress-val--emerald {
+  color: #059669;
+}
+
+.mentor-progress-val--amber {
+  color: #d97706;
 }

@@ -76,21 +76,42 @@ function FieldLabel({ icon, children, htmlFor }) {
   );
 }
 
+// ── Auth token storage helper ────────────────────────────
+// rememberMe=true  → localStorage  (persists across browser restarts)
+// rememberMe=false → sessionStorage (cleared when tab/browser closes)
+function storeAuthToken(token, remember) {
+  // Always clear the other storage to avoid stale tokens
+  if (remember) {
+    sessionStorage.removeItem("token");
+    localStorage.setItem("token", token);
+  } else {
+    localStorage.removeItem("token");
+    sessionStorage.setItem("token", token);
+  }
+}
+
 function Login() {
   const navigate = useNavigate();
-  const [authMode, setAuthMode] = useState("password"); // "password" | "otp"
-  const [step, setStep] = useState("email"); // "email" | "otp"
-  const [email, setEmail] = useState("");
+  const [authMode, setAuthMode] = useState("password"); // "password" | "otp" | "forgot"
+  const [step, setStep] = useState("email"); // "email" | "otp" | "new_password" | "authenticator"
+  const [email, setEmail] = useState(() => {
+    if (localStorage.getItem("tx_remember_me") !== "true") return "";
+    return localStorage.getItem("tx_remembered_identifier") || localStorage.getItem("tx_remembered_email") || "";
+  });
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(
+    () => localStorage.getItem("tx_remember_me") === "true"
+  );
+  // Preserve rememberMe across the 2FA / authenticator step
+  const rememberMeRef = useRef(rememberMe);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [pendingUserData, setPendingUserData] = useState(null);
+  const [preAuthToken, setPreAuthToken] = useState(null);
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
@@ -109,10 +130,35 @@ function Login() {
         if (storedUser.email) setEmail(storedUser.email);
       }
     } catch (_) {}
+
+    localStorage.removeItem("tx_remembered_password");
+
   }, []);
 
   const handleRememberMeChange = (checked) => {
     setRememberMe(checked);
+    rememberMeRef.current = checked;
+    if (!checked) {
+      localStorage.removeItem("tx_remember_me");
+      localStorage.removeItem("tx_remembered_identifier");
+      localStorage.removeItem("tx_remembered_email");
+      localStorage.removeItem("tx_remembered_password");
+    }
+  };
+
+  const persistRememberedIdentifier = () => {
+    if (rememberMe) {
+      localStorage.setItem("tx_remember_me", "true");
+      localStorage.setItem("tx_remembered_identifier", email.trim());
+      localStorage.removeItem("tx_remembered_email");
+      localStorage.removeItem("tx_remembered_password");
+    } else {
+      localStorage.removeItem("tx_remember_me");
+      localStorage.removeItem("tx_remembered_identifier");
+      localStorage.removeItem("tx_remembered_email");
+      localStorage.removeItem("tx_remembered_password");
+    }
+
   };
 
   useEffect(() => {
@@ -133,39 +179,23 @@ function Login() {
     setOtp(["", "", "", "", "", ""]);
     setNewPassword("");
     setConfirmPassword("");
-    setPendingUserData(null);
+    setPreAuthToken(null);
   };
 
-  const handleVerifyForgotOtp = async (e) => {
+  // Forgot-password OTP verify: do NOT call /verify-otp (login endpoint).
+  // Simply move to new_password step; the final reset step re-validates OTP.
+  const handleVerifyForgotOtp = (e) => {
     e.preventDefault();
     const enteredOtp = otp.join("");
     if (enteredOtp.length < 6) {
       setErrorMsg("Please enter the complete 6-digit OTP code.");
       return;
     }
-    setLoading(true);
+    // OTP digits are already in state; move straight to the new_password step.
+    // The /reset-password-otp endpoint will validate the OTP server-side.
     setErrorMsg("");
-    setSuccessMsg("");
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp: enteredOtp }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setStep("new_password");
-        setSuccessMsg("OTP verified successfully! Please enter your new password below.");
-      } else {
-        setErrorMsg(data.message || "Invalid or expired OTP code. Please check and try again.");
-      }
-    } catch (err) {
-      console.error("Verify OTP error:", err);
-      setErrorMsg("Unable to connect to server. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setSuccessMsg("OTP accepted. Please set your new password below.");
+    setStep("new_password");
   };
 
   const handleResetPasswordSubmit = async (e) => {
@@ -217,6 +247,13 @@ function Login() {
     let existingUser = {};
     try { existingUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
 
+    try {
+      existingUser = JSON.parse(localStorage.getItem("user")) || {};
+    } catch {
+      localStorage.removeItem("user");
+    }
+
+
     let finalName = serverUser.name || existingUser.name || serverUser.email?.split("@")[0] || "Student";
 
     const mergedUser = {
@@ -259,10 +296,30 @@ function Login() {
     }
   };
 
+  const beginAuthenticatorStep = (data) => {
+    const temporaryToken = data?.preAuthToken || data?.temporaryToken || data?.preauthToken;
+    if (!temporaryToken) return false;
+
+    // Snapshot rememberMe into a ref so it survives the step change
+    rememberMeRef.current = rememberMe;
+    setPreAuthToken(temporaryToken);
+    setStep("authenticator");
+    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Google Authenticator.");
+    setOtp(["", "", "", "", "", ""]);
+    setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 100);
+    return true;
+  };
+
   // ── Password Login Handler ─────────────────────────
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) return;
+
+    persistRememberedIdentifier();
+    rememberMeRef.current = rememberMe;
+
 
     setLoading(true);
     setErrorMsg("");
@@ -275,16 +332,18 @@ function Login() {
         body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await response.json();
-      if (data.success && data.data?.token) {
-        setPendingUserData(data.data);
-        setStep("authenticator");
-        setSuccessMsg("Password verified! Open Microsoft or Google Authenticator on your phone for your 6-digit code.");
-        setOtp(["", "", "", "", "", ""]);
-        setTimeout(() => {
-          inputRefs.current[0]?.focus();
-        }, 100);
+      if (data.success && data.data?.requiresTwoFactor) {
+        // 2FA required — store pre-auth token only, NOT the final JWT
+        if (!beginAuthenticatorStep(data.data)) {
+          setPreAuthToken(null);
+          setErrorMsg("Two-factor verification could not be started. Please try again.");
+        }
+      } else if (data.success && data.data?.token) {
+        setPreAuthToken(null);
+        storeAuthToken(data.data.token, rememberMeRef.current);
+        handlePostLoginRedirect(data.data.user || {});
       } else {
-        setErrorMsg(data.message || "Invalid credentials. Please check your email and password.");
+        setErrorMsg(data.message || "Invalid credentials. Please check your identifier and password.");
       }
     } catch (err) {
       console.error("Password login error:", err);
@@ -298,6 +357,9 @@ function Login() {
   const handleSendOtp = async (e) => {
     e.preventDefault();
     if (!email) return;
+    persistRememberedIdentifier();
+    rememberMeRef.current = rememberMe;
+    setPreAuthToken(null);
     setLoading(true);
     setErrorMsg("");
     setSuccessMsg("");
@@ -354,6 +416,7 @@ function Login() {
 
   const handleEditEmail = () => {
     setStep("email");
+    setPreAuthToken(null);
     setOtp(["", "", "", "", "", ""]);
     setErrorMsg("");
     setSuccessMsg("");
@@ -381,7 +444,7 @@ function Login() {
     e.preventDefault();
     const enteredOtp = otp.join("");
     if (enteredOtp.length < 6) {
-      setErrorMsg("Please enter complete 6-digit Authenticator code.");
+      setErrorMsg("Please enter the complete 6-digit code.");
       return;
     }
     setLoading(true);
@@ -389,23 +452,46 @@ function Login() {
     setSuccessMsg("");
 
     try {
-      const endpoint = step === "authenticator" ? `${API_BASE_URL}/verify-totp` : `${API_BASE_URL}/verify-otp`;
+      const isAuthenticatorStep = step === "authenticator";
+      if (isAuthenticatorStep && !preAuthToken) {
+        setErrorMsg("Your temporary authentication session expired. Please sign in again.");
+        setLoading(false);
+        return;
+      }
+
+      // Authenticator step → TOTP verify (final JWT issued here)
+      // OTP login step   → verify-otp (may return requiresTwoFactor instead of token)
+      const endpoint = isAuthenticatorStep
+        ? `${API_BASE_URL}/verify-totp`
+        : `${API_BASE_URL}/verify-otp`;
+      const requestBody = isAuthenticatorStep
+        ? { preAuthToken, code: enteredOtp }
+        : { identifier: email, otp: enteredOtp };
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code: enteredOtp, otp: enteredOtp, rememberMe }),
+        body: JSON.stringify({ ...requestBody, rememberMe }),
       });
       const data = await response.json();
-      if (data.success && (data.data?.token || pendingUserData?.token)) {
+      if (data.success && data.data?.requiresTwoFactor && !isAuthenticatorStep) {
+        if (!beginAuthenticatorStep(data.data)) {
+          setPreAuthToken(null);
+          setErrorMsg("Two-factor verification could not be started. Please try again.");
+        }
+      } else if (data.success && (data.data?.token || pendingUserData?.token)) {
         const finalToken = data.data?.token || pendingUserData?.token;
         const finalUser = data.data?.user || pendingUserData?.user || {};
-        sessionStorage.setItem("token", finalToken);
+        setPreAuthToken(null);
+        storeAuthToken(finalToken, rememberMeRef.current || rememberMe);
         handlePostLoginRedirect(finalUser);
       } else {
-        setErrorMsg(data.message || "Invalid Authenticator Code from Microsoft or Google Authenticator.");
+        setErrorMsg(data.message || (isAuthenticatorStep
+          ? "Invalid code from Google Authenticator. Please try again."
+          : "Invalid or expired OTP code."));
       }
     } catch (err) {
-      console.error("Login verification error:", err);
+console.error("Login verification error:", err);
       setErrorMsg("Unable to connect to server. Please check your connection.");
     } finally {
       setLoading(false);
@@ -444,24 +530,10 @@ function Login() {
 
           {/* Center Stage — Minimal Premium Logo Creation Animation */}
           <div className="tx-logo-reveal-stage">
-            {/* Step 2 Energy Light Point */}
-            <div className="tx-energy-point"></div>
-
-            {/* Backing Ambient Glow Pulse */}
             <div className="tx-logo-glow-pulse"></div>
-
-            {/* Main Logo Reveal Canvas using Logo.png */}
-            <div className="tx-logo-canvas">
-              {/* Light Tracing Beam */}
-              <div className="tx-light-trace-beam"></div>
-
-              {/* Masked Reveal Container for Logo.png */}
-              <div className="tx-logo-mask-layer">
-                <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
-              </div>
-
-              {/* Shine Sweep Overlay */}
-              <div className="tx-logo-shine-sweep"></div>
+            
+            <div className="tx-logo-premium-canvas">
+              <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
             </div>
 
             {/* Typography Below Logo */}
@@ -517,12 +589,13 @@ function Login() {
               {step === "email" && (
                 <form onSubmit={handlePasswordLogin}>
                   <div className="login-input-group">
-                    <FieldLabel htmlFor="email" icon={Icons.email}>Email Address</FieldLabel>
+                    <FieldLabel htmlFor="email" icon={Icons.email}>Email or Mobile Number</FieldLabel>
                     <input
                       id="email"
-                      type="email"
+                      type="text"
                       required
-                      placeholder="user@pvppcoe.ac.in"
+                      autoComplete="username"
+                      placeholder="user@pvppcoe.ac.in or 10-digit mobile"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -580,65 +653,65 @@ function Login() {
                 </form>
               )}
 
-              {step === "authenticator" && (
-                <form onSubmit={handleVerifyAndLogin}>
-                  <div className="login-input-group">
-                    <div className="login-email-header-row">
-                      <FieldLabel icon={Icons.shield}>Microsoft / Google Authenticator</FieldLabel>
-                      <button
-                        type="button"
-                        onClick={handleEditEmail}
-                        className="login-edit-email-btn"
-                      >
-                        {Icons.edit} Edit
-                      </button>
-                    </div>
-
-                    <div className="login-email-display-card">
-                      <span className="login-email-display-text">{email || "user@pvppcoe.ac.in"}</span>
-                    </div>
-                  </div>
-
-                  {/* Authenticator Code Input Boxes */}
-                  <div className="login-input-group">
-                    <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-                    <div className="login-otp-input-row">
-                      {otp.map((digit, idx) => (
-                        <input
-                          key={idx}
-                          ref={(el) => (inputRefs.current[idx] = el)}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                          onChange={(e) => handleOtpChange(e, idx)}
-                          onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
-                    {Icons.shield} {loading ? "Verifying..." : "Verify Authenticator & Login"}
-                  </button>
-
-                  <div className="login-links">
-                    <p>
-                      Wrong account?{" "}
-                      <button
-                        type="button"
-                        onClick={handleEditEmail}
-                        className="login-registeration-link"
-                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                      >
-                        Back to Login
-                      </button>
-                    </p>
-                  </div>
-                </form>
-              )}
             </>
+          )}
+
+          {step === "authenticator" && (
+            <form onSubmit={handleVerifyAndLogin}>
+              <div className="login-input-group">
+                <div className="login-email-header-row">
+                  <FieldLabel icon={Icons.shield}>Microsoft / Google Authenticator</FieldLabel>
+                  <button
+                    type="button"
+                    onClick={handleEditEmail}
+                    className="login-edit-email-btn"
+                  >
+                    {Icons.edit} Edit
+                  </button>
+                </div>
+
+                <div className="login-email-display-card">
+                  <span className="login-email-display-text">{email || "your account"}</span>
+                </div>
+              </div>
+
+              <div className="login-input-group">
+                <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
+                <div className="login-otp-input-row">
+                  {otp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => (inputRefs.current[idx] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                      onChange={(e) => handleOtpChange(e, idx)}
+                      onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
+                {Icons.shield} {loading ? "Verifying..." : "Verify Authenticator & Login"}
+              </button>
+
+              <div className="login-links">
+                <p>
+                  Wrong account?{" "}
+                  <button
+                    type="button"
+                    onClick={handleEditEmail}
+                    className="login-registeration-link"
+                    style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                  >
+                    Back to Login
+                  </button>
+                </p>
+              </div>
+            </form>
           )}
 
           {/* ═════════════════════════════════════════════════ */}
@@ -649,18 +722,19 @@ function Login() {
               {step === "email" && (
                 <form onSubmit={handleSendOtp}>
                   <div className="login-input-group">
-                    <FieldLabel htmlFor="otp-email" icon={Icons.email}>Email Address</FieldLabel>
+                    <FieldLabel htmlFor="otp-email" icon={Icons.email}>Email or Mobile Number</FieldLabel>
                     <input
                       id="otp-email"
-                      type="email"
+                      type="text"
                       required
-                      placeholder="user@pvppcoe.ac.in"
+                      autoComplete="username"
+                      placeholder="user@pvppcoe.ac.in or 10-digit mobile"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
 
-                  <div className="login-options">
+                  <div className="login-options-row">
                     <label htmlFor="otp-remember-me" className="login-remember-label">
                       <input
                         type="checkbox"
@@ -691,7 +765,7 @@ function Login() {
                 <form onSubmit={handleVerifyAndLogin}>
                   <div className="login-input-group">
                     <div className="login-email-header-row">
-                      <FieldLabel icon={Icons.email}>Sent to Email</FieldLabel>
+                      <FieldLabel icon={Icons.email}>Code Sent To</FieldLabel>
                       <button
                         type="button"
                         onClick={handleEditEmail}
@@ -702,7 +776,7 @@ function Login() {
                     </div>
 
                     <div className="login-email-display-card">
-                      <span className="login-email-display-text">{email || "user@pvppcoe.ac.in"}</span>
+                      <span className="login-email-display-text">{email || "your account"}</span>
                     </div>
                   </div>
 
@@ -765,19 +839,20 @@ function Login() {
               {step === "email" && (
                 <form onSubmit={handleSendOtp}>
                   <div className="login-input-group">
-                    <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Account Email Address</FieldLabel>
+                    <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Registered Email or Mobile Number</FieldLabel>
                     <input
                       id="forgot-email"
-                      type="email"
+                      type="text"
                       required
-                      placeholder="user@pvppcoe.ac.in"
+                      autoComplete="username"
+                      placeholder="user@pvppcoe.ac.in or 10-digit mobile"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
 
                   <p style={{ fontSize: "12px", color: "#64748b", margin: "10px 0 16px", lineHeight: "1.4" }}>
-                    🔒 Enter your registered email address. We will send a 6-digit OTP to reset your password.
+                    🔒 Enter your registered email address or mobile number. We will send a 6-digit OTP to reset your password.
                   </p>
 
                   <button type="submit" className="login-send-otp-btn" disabled={loading}>

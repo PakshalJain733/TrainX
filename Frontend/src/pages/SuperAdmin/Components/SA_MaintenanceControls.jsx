@@ -275,8 +275,7 @@ export default function MaintenanceControls() {
       <div className="maintenancecontrols-header-wrap">
         <div>
           <h2 className="maintenancecontrols-header-title">
-            <SlidersHorizontal className="maintenancecontrols-header-icon" />
-            <span>Feature Switches &amp; Module Controls</span>
+          <span>Feature Switches &amp; Module Controls</span>
           </h2>
           <p className="maintenancecontrols-header-subtitle">
             Manage deep granular accessibility controls across all platform sub-features for Student, Coordinator, Mentor, and Admin roles

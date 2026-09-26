@@ -12,15 +12,18 @@ dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
 export const config = {
   port: process.env.PORT || 5000,
   nodeEnv: process.env.NODE_ENV || 'development',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   db: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306', 10),
     user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD !== undefined ? process.env.DB_PASSWORD : 'Ganeshvs@2006',
+    password: process.env.DB_PASSWORD || 'Ganeshvs@2006',
     database: process.env.DB_NAME || 'training_portal_db',
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+    connectTimeout: parseInt(process.env.DB_CONNECT_TIMEOUT || '15000', 10),
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'fallback_secret',
+    secret: process.env.JWT_SECRET,
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   email: {
@@ -28,9 +31,9 @@ export const config = {
     host: process.env.EMAIL_HOST || 'smtp.gmail.com',
     port: parseInt(process.env.EMAIL_PORT || '587', 10),
     secure: process.env.EMAIL_SECURE === 'true',
-    user: process.env.EMAIL_USER || 'training.portal0987@gmail.com',
-    pass: process.env.EMAIL_PASS || 'ocbaioexvynljtnz',
-    from: process.env.EMAIL_FROM || '"Campus Training Portal" <noreply@pvppcoe.ac.in>',
+    user: process.env.EMAIL_USER || '',
+    pass: process.env.EMAIL_PASS || '',
+    from: process.env.EMAIL_FROM || '',
   },
   ai: {
     apiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '',
@@ -41,4 +44,36 @@ export const config = {
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '',
     bucketName: process.env.SUPABASE_STORAGE_BUCKET || 'learning-materials',
   },
+  compiler: {
+    image: process.env.CODE_RUNNER_IMAGE || 'trainx-code-runner',
+    memoryMb: parseInt(process.env.CODE_RUNNER_MEMORY_MB || '256', 10),
+    cpus: process.env.CODE_RUNNER_CPUS || '0.5',
+    pids: parseInt(process.env.CODE_RUNNER_PIDS || '64', 10),
+    timeoutSeconds: parseInt(process.env.CODE_RUNNER_TIMEOUT_S || '5', 10),
+    maxTimeoutSeconds: parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10),
+    maxConcurrent: parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10),
+  },
 };
+
+// Validate critical env vars — error in production, warn in development
+const required = [
+  ['JWT_SECRET', config.jwt.secret],
+  ['DB_PASSWORD', config.db.password],
+];
+
+const missing = required.filter(([, val]) => !val).map(([key]) => key);
+
+if (missing.length > 0) {
+  const msg = `[Config] Missing required environment variables: ${missing.join(', ')}`;
+
+  if (missing.includes('JWT_SECRET')) {
+    throw new Error(`${msg}. JWT_SECRET must come from an environment variable (Backend/.env). Refusing to start with insecure defaults.`);
+  }
+
+  if (config.nodeEnv === 'production') {
+    throw new Error(msg);
+  } else {
+    console.warn(msg + ' — using insecure defaults (development only)');
+    if (!config.db.password) config.db.password = '';
+  }
+}

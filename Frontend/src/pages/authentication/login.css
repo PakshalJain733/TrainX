@@ -371,33 +371,39 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
   z-index: 3;
-  animation: txLogoGlowPulse 10s ease-in-out infinite;
+  animation: txLogoGlowPulse 1.5s ease-out forwards;
 }
 
 @keyframes txLogoGlowPulse {
-
-  0%,
-  8% {
+  0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.6);
+    transform: translate(-50%, -50%) scale(0.8);
   }
-
-  22%,
-  35% {
-    opacity: 0.95;
-    transform: translate(-50%, -50%) scale(1.35);
-  }
-
-  42%,
-  90% {
-    opacity: 0.55;
-    transform: translate(-50%, -50%) scale(1.1);
-  }
-
-  98%,
   100% {
-    opacity: 0.8;
-    transform: translate(-50%, -50%) scale(1.25);
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+}
+
+.tx-logo-premium-canvas {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+  animation: txLogoPremiumReveal 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes txLogoPremiumReveal {
+  0% {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
@@ -1695,6 +1701,83 @@
   text-decoration: underline;
 }
 
+/* DEV-ONLY password login (rendered only when VITE_ENABLE_DEV_LOGIN=true) */
+.dev-login-box {
+  margin-top: 8px;
+  border: 1.5px dashed #f59e0b;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #fffbeb;
+}
+
+.dev-login-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #92400e;
+}
+
+.dev-login-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #ffffff;
+  background: #f59e0b;
+  border-radius: 4px;
+  padding: 3px 8px;
+  letter-spacing: 0.04em;
+}
+
+.dev-login-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.dev-login-box input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.dev-login-box input:focus {
+  outline: none;
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+
+.dev-login-btn {
+  width: 100%;
+  padding: 11px 18px;
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.dev-login-btn:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.dev-login-box .auth-error-msg {
+  margin: 10px 0 0 0;
+}
+
 /* OTP Specifics */
 .login-email-header-row {
   display: flex;
@@ -1827,6 +1910,105 @@
   background: #1d4ed8;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.login-wrapper {
+  min-height: 520px;
+}
+
+.lp2-panel {
+  min-height: 520px;
+  padding: 30px 24px 20px;
+}
+
+.tx-ambient-radial-glow {
+  animation: none;
+  opacity: 0.85;
+}
+
+.tx-micro-particle,
+.tx-energy-point,
+.tx-light-trace-beam,
+.tx-logo-shine-sweep {
+  display: none;
+}
+
+.tx-top-sparkle,
+.tx-brand-text-block,
+.tx-footer-tag {
+  animation: none;
+}
+
+.tx-logo-reveal-stage {
+  gap: 12px;
+  animation: txLogoEntrance 650ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.tx-logo-glow-pulse {
+  width: 240px;
+  height: 240px;
+  opacity: 0.9;
+  animation: none;
+}
+
+.tx-logo-canvas {
+  width: 190px;
+  height: 190px;
+  animation: none;
+}
+
+.tx-logo-mask-layer {
+  width: 190px;
+  height: 190px;
+  clip-path: none;
+  opacity: 1;
+  transform: scale(1);
+  filter: none;
+  animation: none;
+}
+
+.tx-logo-main-img {
+  width: 190px;
+  height: 190px;
+  max-width: 190px;
+  max-height: 190px;
+  filter: drop-shadow(0 0 14px rgba(56, 189, 248, 0.8)) drop-shadow(0 0 32px rgba(6, 182, 212, 0.35));
+}
+
+.tx-brand-text-block {
+  margin-top: 12px;
+}
+
+.tx-bottom-footer-bar {
+  padding-top: 10px;
+}
+
+.login-logo {
+  width: 190px;
+}
+
+.login-card .login-options {
+  display: none;
+}
+
+@keyframes txLogoEntrance {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tx-logo-reveal-stage {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
 
 /* Responsive */

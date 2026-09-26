@@ -470,8 +470,7 @@ export default function Performance() {
       <div className="performance-header-wrap">
         <div>
           <h2 className="performance-header-title">
-            <TrendingUp className="performance-header-icon" />
-            <span>Platform Performance &amp; Analytics</span>
+          <span>Platform Performance &amp; Analytics</span>
           </h2>
           <p className="performance-header-subtitle">
             Cross-feature student engagement, completion rates, and institutional benchmarks
@@ -721,8 +720,8 @@ export default function Performance() {
                             <Icon size={18} />
                           </div>
                           <div>
-                            <div className="batches-cohort-title">{feat.name}</div>
-                            <div className="batches-cohort-sub">{feat.description}</div>
+                            <div className="batches-batch-title">{feat.name}</div>
+                            <div className="batches-batch-sub">{feat.description}</div>
                           </div>
                         </div>
                       </td>

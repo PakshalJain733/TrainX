@@ -37,18 +37,19 @@ function getAuthHeaders() {
   };
 }
 
+/* ─── Fetch quizzes from Database via central API client ──────── */
+import apiFetch from "../../../utils/api";
+
+
 async function fetchApiQuizzes() {
   try {
-    const [availRes, attemptsRes] = await Promise.all([
-      fetch(`${API_BASE}/assessments/available`, { headers: getAuthHeaders() }),
-      fetch(`${API_BASE}/assessments/my-attempts`, { headers: getAuthHeaders() }).catch(() => ({ json: () => ({ success: false }) }))
+    const [availData, attemptsData] = await Promise.all([
+      apiFetch("/assessments/available"),
+      apiFetch("/assessments/my-attempts"),
     ]);
 
-    const availData = await availRes.json();
-    const attemptsData = await attemptsRes.json ? await attemptsRes.json() : { success: false };
-
-    const list = availData.success && Array.isArray(availData.data) ? availData.data : [];
-    const userAttempts = attemptsData.success && Array.isArray(attemptsData.data) ? attemptsData.data : [];
+    const list = availData && availData.success && Array.isArray(availData.data) ? availData.data : [];
+    const userAttempts = attemptsData && attemptsData.success && Array.isArray(attemptsData.data) ? attemptsData.data : [];
 
     // Create a map of completed attempt results by assessment_id
     const attemptMap = {};
@@ -259,11 +260,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
   // Initialize or start assessment attempt with API
   useEffect(() => {
     if (quiz.source === "admin" && !isReview && quiz.id) {
-      fetch(`${API_BASE}/assessments/${quiz.id}/start`, {
-        method: "POST",
-        headers: getAuthHeaders(),
-      })
-        .then((res) => res.json())
+      apiFetch(`/assessments/${quiz.id}/start`, { method: "POST" })
         .then((data) => {
           console.log("[Quiz Start Response]", data);
           // Success path: attempt just created
@@ -332,34 +329,30 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       let resultData = null;
 
       if (submitAttemptId) {
-        const res = await fetch(
-          `${API_BASE}/assessments/attempts/${submitAttemptId}/submit`,
+        const data = await apiFetch(
+          `/assessments/attempts/${submitAttemptId}/submit`,
           {
             method: "POST",
-            headers: getAuthHeaders(),
             body: JSON.stringify({ answers: formattedAnswers }),
           }
         );
-        const data = await res.json();
         console.log("[Quiz Submit Response]", data);
-        if (data.success && data.data) {
+        if (data && data.success && data.data) {
           resultData = data.data;
         } else {
-          console.warn("[Quiz Submit] Backend error:", data.message);
+          console.warn("[Quiz Submit] Backend error:", data && data.message);
         }
       } else {
         console.warn("[Quiz Submit] No attemptId — using legacy submit endpoint");
-        const res = await fetch(
-          `${API_BASE}/assessments/${quiz.id}/submit`,
+        const data = await apiFetch(
+          `/assessments/${quiz.id}/submit`,
           {
             method: "POST",
-            headers: getAuthHeaders(),
             body: JSON.stringify({ answers: formattedAnswers }),
           }
         );
-        const data = await res.json();
         console.log("[Quiz Submit Fallback Response]", data);
-        if (data.success && data.data) {
+        if (data && data.success && data.data) {
           resultData = data.data;
           submitAttemptId = data.data.attemptId;
         }
@@ -368,12 +361,10 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       // Fetch full result with per-question breakdown
       if (submitAttemptId) {
         try {
-          const resultRes = await fetch(
-            `${API_BASE}/assessments/attempts/${submitAttemptId}/result`,
-            { headers: getAuthHeaders() }
+          const resultJson = await apiFetch(
+            `/assessments/attempts/${submitAttemptId}/result`
           );
-          const resultJson = await resultRes.json();
-          if (resultJson.success && resultJson.data) {
+          if (resultJson && resultJson.success && resultJson.data) {
             setApiResult(resultJson.data);
           } else if (resultData) {
             setApiResult(resultData);
@@ -678,7 +669,6 @@ export default function AcademicQuiz() {
     <div className="academic-quiz-page stack-6">
       <div className="student-header-box">
         <h2 className="student-header-title">
-          <GraduationCap size={22} style={{ color: "#4f46e5" }} />
           <span>Academic & Practice Quizzes</span>
         </h2>
         <p className="student-header-desc">

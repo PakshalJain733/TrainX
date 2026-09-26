@@ -84,6 +84,9 @@ export default function CodingPractice() {
     problemId: "",
     department: "Computer Science",
     batch: "All Batches",
+
+    batch: "CSE 2026 Alpha Batch",
+
     dueDate: "",
     scoreWeightage: 100,
     instructions: "",
@@ -295,6 +298,9 @@ export default function CodingPractice() {
       problemId: "",
       department: "Computer Science",
       batch: "All Batches",
+
+      batch: "CSE 2026 Alpha Batch",
+
       dueDate: "",
       scoreWeightage: 100,
       instructions: "",

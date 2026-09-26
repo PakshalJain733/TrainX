@@ -1,12 +1,44 @@
+import bcrypt from 'bcryptjs';
 import { query } from '../config/db.js';
 import { ROLES } from '../utils/constants.js';
 
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
+
+const hashPasswordValue = async (value) => {
+  if (typeof value !== 'string' || value.length === 0) return null;
+  if (BCRYPT_HASH_PATTERN.test(value)) return value;
+  return bcrypt.hash(value, 12);
+};
+
 export const findUserByEmailOrMobile = async (identifier) => {
-  if (!identifier) return null;
-  const cleanId = identifier.trim().toLowerCase();
+  if (identifier === undefined || identifier === null) return null;
+  const cleanIdentifier = String(identifier).trim();
+  if (!cleanIdentifier) return null;
+
+  const emailIdentifier = cleanIdentifier.toLowerCase();
+  const looksLikeEmail = cleanIdentifier.includes('@');
+  const mobileIdentifiers = looksLikeEmail
+    ? []
+    : [...new Set([
+      cleanIdentifier,
+      cleanIdentifier.replace(/[^0-9]/g, ''),
+    ].filter(Boolean))];
+
+  const conditions = ['(email IS NOT NULL AND LOWER(email) = ?)'];
+  const params = [emailIdentifier];
+
+  if (mobileIdentifiers.length > 0) {
+    conditions.push(`mobile_number IN (${mobileIdentifiers.map(() => '?').join(', ')})`);
+    params.push(...mobileIdentifiers);
+  }
 
   try {
-    const results = await query('SELECT * FROM users WHERE LOWER(email) = ? OR mobile_number = ?', [cleanId, cleanId]);
+    const results = await query(
+      `SELECT * FROM users
+       WHERE ${conditions.join(' OR ')}
+       LIMIT 1`,
+      params
+    );
     if (results && results.length > 0) {
       return results[0];
     }
@@ -30,6 +62,36 @@ export const findUserById = async (id) => {
     throw error;
   }
   return null;
+};
+
+// `findUserById` runs `SELECT *`, so every response that forwards a user row
+// must go through this whitelist instead of spreading the raw record.
+const SAFE_USER_FIELDS = [
+  'id',
+  'name',
+  'email',
+  'mobile_number',
+  'role',
+  'college_id',
+  'gender',
+  'city',
+  'emergency_contact',
+  'linkedin_url',
+  'target_track',
+  'two_factor_enabled',
+  'is_active',
+  'is_profile_updated',
+  'created_at',
+  'updated_at',
+];
+
+export const toSafeUser = (user) => {
+  if (!user) return {};
+  const safe = {};
+  for (const field of SAFE_USER_FIELDS) {
+    if (user[field] !== undefined) safe[field] = user[field];
+  }
+  return safe;
 };
 
 export const findUserByEmail = findUserByEmailOrMobile;
@@ -78,15 +140,39 @@ export const findCollegeByAdminEmail = async (email) => {
   return null;
 };
 
-export const createUser = async ({ name, email = '', mobile_number = '', role = ROLES.STUDENT, college_id = 1, password = '', password_hash = '', two_factor_secret = null }) => {
-  const pwd = password || password_hash || '';
+export const createUser = async ({
+  name,
+  email = null,
+  mobile_number = null,
+  role = ROLES.STUDENT,
+  college_id = 1,
+  password = '',
+  password_hash = '',
+  two_factor_secret = null,
+  is_active = true,
+}) => {
+  const normalizedEmail = typeof email === 'string' && email.trim() ? email.trim() : null;
+  const normalizedMobile = typeof mobile_number === 'string' && mobile_number.trim() ? mobile_number.trim() : null;
+  const normalizedSecret = typeof two_factor_secret === 'string' && two_factor_secret.trim() ? two_factor_secret.trim() : null;
+  const passwordValue = password || password_hash || '';
+  const hashedPassword = passwordValue ? await hashPasswordValue(passwordValue) : '';
   const validCollegeId = await getValidCollegeId(college_id);
+  const activeValue = is_active === false || is_active === 0 || String(is_active).toLowerCase() === 'false' ? 0 : 1;
   const res = await query(
-    'INSERT INTO users (name, email, mobile_number, role, college_id, password, password_hash, two_factor_secret) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-    [name, email, mobile_number, role, validCollegeId, pwd, pwd, two_factor_secret]
+    'INSERT INTO users (name, email, mobile_number, role, college_id, password, password_hash, two_factor_secret, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    [name, normalizedEmail, normalizedMobile, role, validCollegeId, hashedPassword, hashedPassword, normalizedSecret, activeValue]
   );
   if (res && res.insertId) {
-    return { id: res.insertId, name, email, mobile_number, role, college_id: validCollegeId, password: pwd, two_factor_secret };
+    return {
+      id: res.insertId,
+      name,
+      email: normalizedEmail,
+      mobile_number: normalizedMobile,
+      role,
+      college_id: validCollegeId,
+      is_active: activeValue,
+      two_factor_secret: normalizedSecret,
+    };
   }
   throw new Error('Failed to create user in MySQL database');
 };
@@ -96,11 +182,17 @@ export const updateUser = async (userId, updateData) => {
   const fields = [];
   const values = [];
   if (updateData.name !== undefined) { fields.push('name = ?'); values.push(updateData.name); }
-  if (updateData.email !== undefined) { fields.push('email = ?'); values.push(updateData.email); }
-  if (updateData.mobile_number !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.mobile_number); }
-  if (updateData.phone !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.phone); }
-  if (updateData.password !== undefined) { fields.push('password = ?'); values.push(updateData.password); fields.push('password_hash = ?'); values.push(updateData.password); }
-  if (updateData.password_hash !== undefined) { fields.push('password_hash = ?'); values.push(updateData.password_hash); }
+  if (updateData.email !== undefined) { fields.push('email = ?'); values.push(updateData.email || null); }
+  if (updateData.mobile_number !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.mobile_number || null); }
+  if (updateData.phone !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.phone || null); }
+  if (updateData.password !== undefined || updateData.password_hash !== undefined) {
+    const passwordValue = updateData.password !== undefined ? updateData.password : updateData.password_hash;
+    const hashedPassword = await hashPasswordValue(passwordValue);
+    fields.push('password = ?');
+    values.push(hashedPassword);
+    fields.push('password_hash = ?');
+    values.push(hashedPassword);
+  }
 
   if (fields.length > 0) {
     values.push(numId);
@@ -110,7 +202,12 @@ export const updateUser = async (userId, updateData) => {
 
 export const updateUserTwoFactorSecret = async (userId, secret) => {
   const numId = parseInt(userId, 10);
-  await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = TRUE WHERE id = ?', [secret, numId]);
+  await query('UPDATE users SET two_factor_secret = ? WHERE id = ?', [secret, numId]);
+};
+
+export const enableTwoFactorForUser = async (userId) => {
+  const numId = parseInt(userId, 10);
+  await query('UPDATE users SET two_factor_enabled = TRUE WHERE id = ?', [numId]);
 };
 
 export const updateUserRememberMe = async (userId, rememberMe) => {
@@ -167,7 +264,7 @@ export const getStudentByUserId = async (userId) => {
 };
 
 export const saveOtpRecord = async (identifier, otp) => {
-  const cleanId = identifier.trim().toLowerCase();
+  const cleanId = String(identifier).trim().toLowerCase();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
   try {
     await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
@@ -190,22 +287,29 @@ export const saveOtpRecord = async (identifier, otp) => {
 };
 
 export const verifyOtpRecord = async (identifier, inputOtp) => {
-  // Master demo OTP '123456' for ease of testing
-  if (inputOtp === '123456') return true;
+  if (identifier === undefined || identifier === null || inputOtp === undefined || inputOtp === null) return false;
 
-  const cleanId = identifier.trim().toLowerCase();
+  const cleanId = String(identifier).trim();
+  const cleanOtp = String(inputOtp).trim();
+  if (!cleanId || !cleanOtp) return false;
+
+  const identifierCandidates = [...new Set([
+    cleanId,
+    cleanId.toLowerCase(),
+    cleanId.replace(/[^0-9]/g, ''),
+  ].filter(Boolean))];
+  const placeholders = identifierCandidates.map(() => '?').join(', ');
   try {
     const results = await query(
-      'SELECT * FROM otps WHERE (email = ? OR email = ?) AND otp = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
-      [cleanId, identifier, inputOtp]
+      `SELECT id FROM otps
+       WHERE email IN (${placeholders}) AND otp = ? AND expires_at > NOW()
+       ORDER BY id DESC LIMIT 1`,
+      [...identifierCandidates, cleanOtp]
     );
-    if (results && results.length > 0) {
-      return true;
-    }
+    return Boolean(results && results.length > 0);
   } catch (_) {
     return false;
   }
-  return false;
 };
 
 /**
@@ -283,7 +387,10 @@ export const updateUserModel = async (id, data) => {
 
   const rollVal = roll_number || rollNo || roll_no || null;
   const phoneVal = mobile_number || phone || null;
-  const passVal = password || password_hash || null;
+  const hasPasswordUpdate = password !== undefined || password_hash !== undefined;
+  const passVal = hasPasswordUpdate
+    ? await hashPasswordValue(password !== undefined ? password : password_hash)
+    : null;
   const genderVal = gender !== undefined ? gender : null;
   const cityVal = city !== undefined ? city : null;
   const emergencyVal = emergency_contact !== undefined ? emergency_contact : (guardianContact !== undefined ? guardianContact : null);
@@ -298,8 +405,8 @@ export const updateUserModel = async (id, data) => {
   const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : 1;
 
   await query(
-    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
-    [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, isProfileUpdatedVal, numId]
+    'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password = COALESCE(?, password), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
+    [nameVal, emailVal, phoneVal, passVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, isProfileUpdatedVal, numId]
   );
 
   if (

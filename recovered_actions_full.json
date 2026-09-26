@@ -1,0 +1,84 @@
+[
+  {
+    "name": "write_to_file",
+    "args": {
+      "CodeContent": "import React, { useState, useEffect, useContext } from 'react';\nimport { Award, Download, FileText, Loader2, Calendar } from 'lucide-react';\nimport { AuthContext } from '../../../context/AuthContext';\n\nexport default function ST_Certificates() {\n  const { user } = useContext(AuthContext);\n  const [certificates, setCertificates] = useState([]);\n  const [loading, setLoading] = useState(true);\n\n  useEffect(() => {\n    fetchCertificates();\n  }, [user]);\n\n  const fetchCertificates = async () => {\n    try {\n      setLoading(true);\n      const res = await fetch(`/api/v1/certificates/${user?.id || user?.userId}`, {\n        headers: {\n          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`\n        }\n      });\n      const data = await res.json();\n      if (data.success) {\n        setCertificates(data.data);\n      }\n    } catch (error) {\n      console.error('Failed to fetch certificates:', error);\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    <div className=\"certificates-page\" style={{ padding: '2rem' }}>\n      <div className=\"student-header-box\" style={{ marginBottom: '2rem' }}>\n        <h2 className=\"student-header-title\">\n          <span>My Certificates</span>\n        </h2>\n        <p className=\"student-header-desc\">\n          View and download your earned training completion certificates.\n        </p>\n      </div>\n\n      {loading ? (\n        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>\n          <Loader2 className=\"spinner\" size={32} />\n        </div>\n      ) : certificates.length === 0 ? (\n        <div style={{ textAlign: 'center', padding: '4rem', background: '#f8fafc', borderRadius: '12px' }}>\n          <Award size={48} color=\"#94a3b8\" style={{ marginBottom: '1rem' }} />\n          <h3 style={{ fontSize: '1.25rem', color: '#334155' }}>No Certificates Yet</h3>\n          <p style={{ color: '#64748b' }}>Complete your training programs to earn certificates.</p>\n        </div>\n      ) : (\n        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>\n          {certificates.map(cert => (\n            <div key={cert.id} style={{ \n              background: '#fff', \n              border: '1px solid #e2e8f0', \n              borderRadius: '12px',\n              padding: '1.5rem',\n              boxShadow: '0 1px 3px rgba(0,0,0,0.05)',\n              display: 'flex',\n              flexDirection: 'column'\n            }}>\n              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '1rem' }}>\n                <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '8px', color: '#3b82f6' }}>\n                  <FileText size={24} />\n                </div>\n                <div>\n                  <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#0f172a', margin: '0 0 4px 0' }}>{cert.title}</h3>\n                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748b', fontSize: '0.875rem' }}>\n                    <Calendar size={14} />\n                    <span>Issued: {new Date(cert.issued_date).toLocaleDateString()}</span>\n                  </div>\n                </div>\n              </div>\n              \n              <a \n                href={cert.file_url} \n                target=\"_blank\" \n                rel=\"noreferrer\"\n                style={{\n                  marginTop: 'auto',\n                  display: 'flex',\n                  alignItems: 'center',\n                  justifyContent: 'center',\n                  gap: '8px',\n                  background: '#f1f5f9',\n                  color: '#334155',\n                  padding: '10px',\n                  borderRadius: '6px',\n                  textDecoration: 'none',\n                  fontWeight: '500',\n                  transition: 'all 0.2s'\n                }}\n                onMouseOver={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#0f172a'; }}\n                onMouseOut={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#334155'; }}\n              >\n                <Download size={18} />\n                Download Certificate\n              </a>\n            </div>\n          ))}\n        </div>\n      )}\n    </div>\n  );\n}\n",
+      "Description": "Create student certificates component",
+      "Overwrite": false,
+      "TargetFile": "c:\\Users\\paksh\\Desktop\\Training Portal\\Frontend\\src\\pages\\Student\\Components\\ST_Certificates.jsx",
+      "toolAction": "Creating ST_Certificates.jsx",
+      "toolSummary": "Create frontend component"
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": false,
+      "Description": "Add certificates to ST_Sidebar.jsx",
+      "EndLine": 16,
+      "Instruction": "Add Award to lucide-react imports",
+      "ReplacementContent": "  Briefcase,\n  Award\n} from \"lucide-react\";",
+      "StartLine": 14,
+      "TargetContent": "  Briefcase,\n} from \"lucide-react\";",
+      "TargetFile": "c:\\Users\\paksh\\Desktop\\Training Portal\\Frontend\\src\\pages\\Student\\Components\\ST_Sidebar.jsx",
+      "toolAction": "Updating ST_Sidebar.jsx",
+      "toolSummary": "Update sidebar imports"
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": false,
+      "Description": "Add certificates to ST_Sidebar.jsx navItems",
+      "EndLine": 64,
+      "Instruction": "Add Certificates to primaryNavItems",
+      "ReplacementContent": "  { title: \"Weekly Reports\", url: \"/student/weekly-reports\", icon: FileCheck2 },\n  { title: \"Mock Drives\", url: \"/student/mock-drives\", icon: Briefcase },\n  { title: \"Certificates\", url: \"/student/certificates\", icon: Award },\n];",
+      "StartLine": 61,
+      "TargetContent": "  { title: \"Weekly Reports\", url: \"/student/weekly-reports\", icon: FileCheck2 },\n  { title: \"Mock Drives\", url: \"/student/mock-drives\", icon: Briefcase },\n];",
+      "TargetFile": "c:\\Users\\paksh\\Desktop\\Training Portal\\Frontend\\src\\pages\\Student\\Components\\ST_Sidebar.jsx",
+      "toolAction": "Updating ST_Sidebar.jsx",
+      "toolSummary": "Update sidebar items"
+    }
+  },
+  {
+    "name": "write_to_file",
+    "args": {
+      "CodeContent": "import React, { useState, useEffect, useContext } from 'react';\nimport { Upload, FileText, Loader2, Search, CheckCircle2 } from 'lucide-react';\nimport { AuthContext } from '../../../context/AuthContext';\n\nexport default function AD_Certificates() {\n  const { user } = useContext(AuthContext);\n  const [students, setStudents] = useState([]);\n  const [search, setSearch] = useState('');\n  const [selectedStudent, setSelectedStudent] = useState(null);\n  const [title, setTitle] = useState('');\n  const [file, setFile] = useState(null);\n  const [loading, setLoading] = useState(false);\n  const [status, setStatus] = useState(null);\n\n  useEffect(() => {\n    fetchStudents();\n  }, []);\n\n  const fetchStudents = async () => {\n    try {\n      const res = await fetch('/api/v1/students', {\n        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }\n      });\n      const data = await res.json();\n      if (data.success) {\n        setStudents(data.data || []);\n      }\n    } catch (err) {\n      console.error(err);\n    }\n  };\n\n  const handleUpload = async (e) => {\n    e.preventDefault();\n    if (!selectedStudent || !title || !file) return;\n\n    try {\n      setLoading(true);\n      setStatus(null);\n      const formData = new FormData();\n      formData.append('studentId', selectedStudent.id);\n      formData.append('title', title);\n      formData.append('file', file);\n\n      const res = await fetch('/api/v1/certificates/upload', {\n        method: 'POST',\n        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },\n        body: formData\n      });\n      const data = await res.json();\n      \n      if (data.success) {\n        setStatus({ type: 'success', message: 'Certificate uploaded successfully!' });\n        setTitle('');\n        setFile(null);\n        setSelectedStudent(null);\n      } else {\n        setStatus({ type: 'error', message: data.message || 'Upload failed.' });\n      }\n    } catch (err) {\n      setStatus({ type: 'error', message: 'An error occurred during upload.' });\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  const filteredStudents = students.filter(s => \n    s.name?.toLowerCase().includes(search.toLowerCase()) || \n    s.email?.toLowerCase().includes(search.toLowerCase())\n  );\n\n  return (\n    <div className=\"admin-certificates\" style={{ padding: '2rem' }}>\n      <div className=\"page-header\" style={{ marginBottom: '2rem' }}>\n        <h2 className=\"page-title\">Manage Certificates</h2>\n        <p className=\"page-subtitle\">Upload training completion certificates for students.</p>\n      </div>\n\n      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>\n        {/* Left Col - Select Student */}\n        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>\n          <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>1. Select Student</h3>\n          \n          <div style={{ position: 'relative', marginBottom: '1rem' }}>\n            <Search size={18} style={{ position: 'absolute', left: '12px', top: '10px', color: '#94a3b8' }} />\n            <input \n              type=\"text\" \n              placeholder=\"Search by name or email...\" \n              value={search}\n              onChange={e => setSearch(e.target.value)}\n              style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: '6px', border: '1px solid #cbd5e1' }}\n            />\n          </div>\n\n          <div style={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px' }}>\n            {filteredStudents.length === 0 ? (\n              <div style={{ padding: '1rem', textAlign: 'center', color: '#64748b' }}>No students found.</div>\n            ) : (\n              filteredStudents.map(student => (\n                <div \n                  key={student.id} \n                  onClick={() => setSelectedStudent(student)}\n                  style={{ \n                    padding: '12px', \n                    borderBottom: '1px solid #e2e8f0', \n                    cursor: 'pointer',\n                    background: selectedStudent?.id === student.id ? '#eff6ff' : 'transparent',\n                    display: 'flex',\n                    justifyContent: 'space-between',\n                    alignItems: 'center'\n                  }}\n                >\n                  <div>\n                    <div style={{ fontWeight: '500', color: '#0f172a' }}>{student.name}</div>\n                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{student.email}</div>\n                  </div>\n                  {selectedStudent?.id === student.id && <CheckCircle2 size={18} color=\"#3b82f6\" />}\n                </div>\n              ))\n            )}\n          </div>\n        </div>\n\n        {/* Right Col - Upload Form */}\n        <div style={{ background: '#fff', padding: '1.5rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>\n          <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>2. Upload Details</h3>\n          \n          {!selectedStudent ? (\n            <div style={{ textAlign: 'center', padding: '3rem', color: '#94a3b8' }}>\n              <FileText size={48} style={{ margin: '0 auto 1rem', opacity: 0.5 }} />\n              <p>Please select a student from the list first.</p>\n            </div>\n          ) : (\n            <form onSubmit={handleUpload}>\n              <div style={{ marginBottom: '1rem' }}>\n                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Selected Student</label>\n                <div style={{ padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>\n                  {selectedStudent.name} ({selectedStudent.email})\n                </div>\n              </div>\n\n              <div style={{ marginBottom: '1rem' }}>\n                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Certificate Title</label>\n                <input \n                  type=\"text\" \n                  value={title}\n                  onChange={e => setTitle(e.target.value)}\n                  placeholder=\"e.g., C2C Java Masterclass\"\n                  required\n                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}\n                />\n              </div>\n\n              <div style={{ marginBottom: '1.5rem' }}>\n                <label style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Certificate File (PDF/Image)</label>\n                <input \n                  type=\"file\" \n                  onChange={e => setFile(e.target.files[0])}\n                  required\n                  accept=\".pdf,image/*\"\n                  style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px dashed #cbd5e1', background: '#f8fafc' }}\n                />\n              </div>\n\n              {status && (\n                <div style={{ \n                  padding: '10px', \n                  marginBottom: '1rem', \n                  borderRadius: '6px',\n                  background: status.type === 'success' ? '#dcfce7' : '#fee2e2',\n                  color: status.type === 'success' ? '#166534' : '#991b1b'\n                }}>\n                  {status.message}\n                </div>\n              )}\n\n              <button \n                type=\"submit\"\n                disabled={loading || !file || !title}\n                style={{\n                  width: '100%',\n                  padding: '12px',\n                  background: loading || !file || !title ? '#94a3b8' : '#3b82f6',\n                  color: '#fff',\n                  border: 'none',\n                  borderRadius: '6px',\n                  fontWeight: '600',\n                  cursor: loading || !file || !title ? 'not-allowed' : 'pointer',\n                  display: 'flex',\n                  justifyContent: 'center',\n                  alignItems: 'center',\n                  gap: '8px'\n                }}\n              >\n                {loading ? <Loader2 className=\"spinner\" size={18} /> : <Upload size={18} />}\n                Upload Certificate\n              </button>\n            </form>\n          )}\n        </div>\n      </div>\n    </div>\n  );\n}\n",
+      "Description": "Create admin certificates upload interface",
+      "Overwrite": false,
+      "TargetFile": "c:\\Users\\paksh\\Desktop\\Training Portal\\Frontend\\src\\pages\\Admin\\Components\\AD_Certificates.jsx",
+      "toolAction": "Creating AD_Certificates.jsx",
+      "toolSummary": "Create AD_Certificates"
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": false,
+      "Description": "Add AD_Certificates import to App.jsx",
+      "EndLine": 48,
+      "Instruction": "Add AD_Certificates import",
+      "ReplacementContent": "import AD_Overview from \"./pages/Admin/Components/AD_Overview\";\nimport AD_Certificates from \"./pages/Admin/Components/AD_Certificates\";",
+      "StartLine": 47,
+      "TargetContent": "import AD_Overview from \"./pages/Admin/Components/AD_Overview\";",
+      "TargetFile": "c:\\Users\\paksh\\Desktop\\Training Portal\\Frontend\\src\\App.jsx",
+      "toolAction": "Updating App.jsx for AD_Certificates",
+      "toolSummary": "Update App.jsx"
+    }
+  },
+  {
+    "name": "replace_file_content",
+    "args": {
+      "AllowMultiple": false,
+      "Description": "Add AD_Certificates route to App.jsx",
+      "EndLine": 141,
+      "Instruction": "Add certificates route for admin",
+      "ReplacementContent": "          <Route path=\"users\" element={<AD_Users />} />\n          <Route path=\"certificates\" element={<AD_Certificates />} />",
+      "StartLine": 140,
+      "TargetContent": "          <Route path=\"users\" element={<AD_Users />} />",
+      "TargetFile": "c:\\Users\\paksh\\Desktop\\Training Portal\\Frontend\\src\\App.jsx",
+      "toolAction": "Updating App.jsx routes for AD_Certificates",
+      "toolSummary": "Update App.jsx"
+    }
+  }
+]

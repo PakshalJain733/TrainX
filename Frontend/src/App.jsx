@@ -38,6 +38,7 @@ import AdminHelp from "./pages/Admin/Components/AD_Help";
 import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
 import AdminWeeklyReports from './pages/Admin/Components/AD_WeeklyReports';
+import AdminC2CEnrollments from './pages/Admin/Components/AD_C2CEnrollments';
 
 
 // Super Admin Workspace Imports
@@ -152,12 +153,14 @@ function App() {
             <Route index element={<AdminOverview />} />
             <Route path="users" element={<AdminUsers />} />
             <Route path="batches" element={<AdminBatches />} />
+            <Route path="c2c" element={<AdminC2CEnrollments />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="learning" element={<AdminLearningContent />} />
             <Route path="quiz" element={<AdminQuizzes />} />
             <Route path="practice" element={<AdminPracticeProblems />} />
             <Route path="coding-practice" element={<AdminPracticeProblems />} />
             <Route path="broadcast" element={<AdminBroadcast />} />
+            <Route path="notifications" element={<AdminBroadcast />} />
             <Route path="progress" element={<AdminProgress />} />
             <Route path="leaderboard" element={<AdminLeaderboard />} />
             <Route path="weekly-reports" element={<AdminWeeklyReports />} />
@@ -226,6 +229,7 @@ function App() {
             <Route path="attendance" element={<CoordinatorAttendance />} />
             <Route path="mentors" element={<CoordinatorMentors />} />
             <Route path="requests" element={<CoordinatorRequests />} />
+            <Route path="placement" element={<CoordinatorPlacement />} />
             <Route path="notifications" element={<CoordinatorNotifications />} />
             <Route path="broadcast" element={<CoordinatorBroadcast />} />
             <Route path="support" element={<CoordinatorHelp />} />
@@ -261,7 +265,16 @@ function App() {
             <Route path="support" element={<MaintenanceGuard moduleKey="superAdminTickets"><SuperAdminTickets /></MaintenanceGuard>} />
             <Route path="maintenance" element={<MaintenanceGuard moduleKey="featureSwitches"><SuperAdminMaintenanceControls /></MaintenanceGuard>} />
             <Route path="performance" element={<MaintenanceGuard moduleKey="systemHealth"><SuperAdminPerformancePage /></MaintenanceGuard>} />
+            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="attendance" element={<SuperAdminPerformancePage />} />
+            <Route path="coding-practice" element={<SuperAdminPerformancePage />} />
+            <Route path="ai-roadmaps" element={<SuperAdminPerformancePage />} />
+            <Route path="ai-interviews" element={<SuperAdminPerformancePage />} />
+            <Route path="mock-drives" element={<SuperAdminPerformancePage />} />
             <Route path="health" element={<MaintenanceGuard moduleKey="systemHealth"><SuperAdminSystemHealth /></MaintenanceGuard>} />
+            <Route path="notifications" element={<AdminBroadcast />} />
+            <Route path="weekly-reports" element={<AdminWeeklyReports />} />
+            <Route path="profile" element={<SuperAdminProfilePage />} />
           </Route>
           <Route path="/superadmin/*" element={<Navigate to="/super-admin" replace />} />
           <Route path="/superadmin" element={<Navigate to="/super-admin" replace />} />
