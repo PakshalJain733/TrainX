@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 
 import { io } from "socket.io-client";
 
@@ -41,13 +41,9 @@ const ROLE_OPTIONS = [
 ];
 
 export default function AIInterview() {
-  const [hasStarted, setHasStarted] = useState(false);
-  const [currentIdx, setCurrentIdx] = useState(0);
   const [answer, setAnswer] = useState("");
-  const [submittedAnswers, setSubmittedAnswers] = useState({});
   const [isEvaluating, setIsEvaluating] = useState(false);
   const recognitionRef = useRef(null);
-  const startAnswerRef = useRef("");
   
   // Speech & Interview State
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
@@ -176,11 +172,6 @@ function getToken() {
   // Errors
   const [errorMsg, setErrorMsg] = useState("");
 
-  // Past interviews
-  const [pastInterviews, setPastInterviews] = useState([]);
-  const [pastLoading, setPastLoading] = useState(true);
-  const [pastError, setPastError] = useState("");
-
   const studentName =
     typeof window !== "undefined"
       ? (() => {
@@ -207,59 +198,6 @@ function getToken() {
       window.dispatchEvent(new Event("interviewEnded"));
     }
   }, [phase]);
-
-  const handleNext = async () => {
-    if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
-      setIsRecording(false);
-    }
-    const currentQ = questionsList[currentIdx] || {};
-    const userAns = answer.trim() || "Candidate provided verbal answer.";
-
-    setIsEvaluating(true);
-
-    let evalResult = {
-      score: 78,
-      feedback: "Structured explanation demonstrating solid understanding of concepts.",
-      strengths: ["Clear terminology", "Direct answer to prompt"],
-      improvements: ["Include more specific real-world implementation details"],
-    };
-
-    try {
-      const res = await apiFetch("/ai-interview/evaluate", {
-        method: "POST",
-        body: JSON.stringify({
-          question: currentQ?.question || "",
-          answer: userAns,
-          jobRole: selectedRole || "Software Engineer",
-        }),
-      });
-      if (res && (res.data || res.evaluation)) {
-        evalResult = res.data || res.evaluation;
-      }
-    } catch (e) {
-      console.warn("AI evaluation fallback:", e.message);
-    }
-
-    const updatedAnswers = [
-      ...answers,
-      {
-        questionId: currentQ?.id || currentIdx,
-        question: currentQ?.question || "",
-        userAnswer: userAns,
-        evaluation: evalResult,
-      },
-    ];
-    setAnswers(updatedAnswers);
-    setAnswer("");
-    setIsEvaluating(false);
-
-    if (currentIdx + 1 < questionsList.length) {
-      setCurrentIdx((prev) => prev + 1);
-    } else {
-      setPhase("completed");
-    }
-  };
 
   // ─── TTS helpers ────────────────────────────────────────────────────────────
   const stopSpeaking = useCallback(() => {
@@ -749,21 +687,6 @@ function getToken() {
     conversationEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [conversation]);
 
-  // ─── Load past interviews ─────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-    setPastLoading(true);
-    apiFetch("/interviews").then((res) => {
-      if (cancelled) return;
-      setPastLoading(false);
-      if (res && Array.isArray(res.data)) setPastInterviews(res.data);
-      else if (res?.error) setPastError(res.error);
-    });
-    return () => { cancelled = true; };
-  }, [phase]);
-
-  const hasTTS = typeof window !== "undefined" && "speechSynthesis" in window;
-
   // ─────────────────────────────────────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1019,39 +942,7 @@ function getToken() {
                 )}
               </div>
 
-              {/* Response Area */}
-              <textarea
-                className="interview-textarea"
-                placeholder="Speak using the mic button below or type your answer..."
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-              />
 
-              {/* Action Bar: Mic Button + Next/Submit Button */}
-              <div className="interview-action-row">
-                <button
-                  type="button"
-                  className={`ai-mic-btn ${isRecording ? "recording" : ""}`}
-                  onClick={toggleRecording}
-                >
-                  {isRecording ? <Mic size={16} /> : <MicOff size={16} />}
-                  {isRecording ? "Listening... (Click to Stop)" : "Start Voice Answer"}
-                </button>
-
-                <button
-                  className="interview-next-btn"
-                  onClick={handleNext}
-                  disabled={isEvaluating}
-                >
-                  {isEvaluating ? (
-                    "Evaluating..."
-                  ) : currentIdx === questionsList.length - 1 ? (
-                    <>Submit & View Scorecard <Award size={16} /></>
-                  ) : (
-                    <>Next Question <ChevronRight size={16} /></>
-                  )}
-                </button>
-              </div>
 
               {/* Inline answer input at the bottom */}
               <div className="ai-answer-input-container">
@@ -1156,7 +1047,7 @@ function getToken() {
       {/* ─── RESULT PHASE ──────────────────────────────────────────────────────────────────────── */}
       {phase === "result" && (() => {
         const overallScore = result?.scorecard?.overallScore ?? 0;
-        const overallScoreColor = overallScore >= 70 ? "#10b981" : overallScore >= 40 ? "#f59e0b" : "#ef4444";
+        const scoreTier = overallScore >= 70 ? "pass" : overallScore >= 40 ? "warn" : "fail";
         return (
           <div className="ai-result-wrapper">
 
@@ -1173,13 +1064,11 @@ function getToken() {
               {/* Score ring */}
               <div className="ai-score-ring-wrap">
                 <div
-                  className="ai-score-ring-outer"
-                  style={{
-                    background: `conic-gradient(${overallScoreColor} ${overallScore * 3.6}deg, rgba(255,255,255,0.1) 0deg)`
-                  }}
+                  className={`ai-score-ring-outer score-tier-${scoreTier}`}
+                  style={{ "--score-deg": `${overallScore * 3.6}deg` }}
                 >
                   <div className="ai-score-ring-inner">
-                    <span className="ai-score-percent-val" style={{ color: overallScoreColor }}>
+                    <span className={`ai-score-percent-val score-tier-${scoreTier}`}>
                       {overallScore}%
                     </span>
                   </div>
@@ -1192,15 +1081,15 @@ function getToken() {
               {/* 3-metric breakdown */}
               <div className="ai-metrics-grid">
                 {[
-                  { label: "Technical", value: result?.scorecard?.technical ?? 0, color: "#3b82f6" },
-                  { label: "Communication", value: result?.scorecard?.communication ?? 0, color: "#10b981" },
-                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, color: "#a855f7" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="ai-metric-card">
-                    <div className="ai-metric-val" style={{ color }}>{value}%</div>
+                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech" },
+                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm" },
+                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob" },
+                ].map(({ label, value, type }) => (
+                  <div key={label} className={`ai-metric-card ai-metric-${type}`}>
+                    <div className="ai-metric-val">{value}%</div>
                     <div className="ai-metric-label">{label}</div>
                     <div className="ai-metric-track">
-                      <div className="ai-metric-fill" style={{ width: `${value}%`, background: color }} />
+                      <div className="ai-metric-fill" style={{ width: `${value}%` }} />
                     </div>
                   </div>
                 ))}
@@ -1222,9 +1111,7 @@ function getToken() {
                 <div className="ai-q-breakdown-list">
                   {result.evaluationHistory.map((item, idx) => {
                     const score = item.score ?? 0;
-                    const scoreColor = score >= 7 ? "#10b981" : score >= 4 ? "#f59e0b" : "#ef4444";
-                    const scoreBg = score >= 7 ? "#ecfdf5" : score >= 4 ? "#fffbeb" : "#fef2f2";
-                    const scoreBorder = score >= 7 ? "#a7f3d0" : score >= 4 ? "#fde68a" : "#fecaca";
+                    const itemTier = score >= 7 ? "pass" : score >= 4 ? "warn" : "fail";
                     return (
                       <div key={idx} className="ai-q-item">
                         {/* Question header */}
@@ -1233,9 +1120,9 @@ function getToken() {
                             <span className="ai-q-badge">Q{idx + 1}</span>
                             <span className="ai-q-text">{item.question || item.q}</span>
                           </div>
-                          <div className="ai-q-score-box" style={{ background: scoreBg, border: `1.5px solid ${scoreBorder}` }}>
-                            <span className="ai-q-score-num" style={{ color: scoreColor }}>{score}</span>
-                            <span className="ai-q-score-total" style={{ color: scoreColor }}>/10</span>
+                          <div className={`ai-q-score-box score-tier-${itemTier}`}>
+                            <span className="ai-q-score-num">{score}</span>
+                            <span className="ai-q-score-total">/10</span>
                           </div>
                         </div>
 
@@ -1249,8 +1136,8 @@ function getToken() {
                           </div>
 
                           {/* AI Feedback */}
-                          <div className="ai-q-feedback-box" style={{ borderLeft: `4px solid ${scoreColor}` }}>
-                            <div className="ai-q-sub-lbl" style={{ color: scoreColor }}>
+                          <div className={`ai-q-feedback-box score-tier-${itemTier}`}>
+                            <div className="ai-q-sub-lbl">
                               {score >= 7 ? "✅ AI Feedback" : score >= 4 ? "⚠️ AI Feedback" : "❌ Where You Went Wrong"}
                             </div>
                             <div className="ai-q-feedback-text">{item.feedback || item.f || "No feedback available."}</div>
@@ -1315,53 +1202,6 @@ function getToken() {
           </div>
         );
       })()}
-
-      {/* Past Interviews */}
-      {phase !== "live" && (
-      <div className="past-interviews-card">
-        <h3 className="past-interviews-header">Past Interviews</h3>
-        <p className="past-interviews-subtitle">Your saved AI evaluation history</p>
-
-        {pastLoading ? (
-          <div className="ai-conv-empty">Loading interview history...</div>
-        ) : pastError ? (
-          <div className="ai-conv-empty">Could not load history ({pastError})</div>
-        ) : pastInterviews.length === 0 ? (
-          <div className="ai-conv-empty">
-            No interviews yet. Complete your first AI interview to see results here.
-          </div>
-        ) : (
-          <div className="past-interviews-grid">
-            {pastInterviews.map((item) => (
-              <div key={item.id} className="past-interview-item">
-                <div className="past-interview-header">
-                  <h4 className="past-interview-title">{item.interview_type}</h4>
-                  <p className="past-interview-date">
-                    {item.conducted_date ? new Date(item.conducted_date).toLocaleDateString() : "—"}
-                  </p>
-                </div>
-                <span className="past-interview-score-pill">{item.overall_score ?? 0}%</span>
-                <div className="past-interview-details">
-                  <div className="past-score-box">
-                    <div className="past-score-val">{item.overall_score ?? "—"}</div>
-                    <div className="past-score-label">Overall</div>
-                  </div>
-                  <div className="past-score-box">
-                    <div className="past-score-val">{item.grade || "—"}</div>
-                    <div className="past-score-label">Grade</div>
-                  </div>
-                  <div className="past-score-box">
-                    <div className="past-score-val">{item.status || "—"}</div>
-                    <div className="past-score-label">Status</div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-      </div>
-      )}
     </div>
   );
 }

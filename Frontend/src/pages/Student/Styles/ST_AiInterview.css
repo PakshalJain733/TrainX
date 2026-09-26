@@ -1948,3 +1948,49 @@
   font-weight: 600;
   color: #0f172a;
 }
+
+/* Score Ring & Tier Classes */
+.score-tier-pass { --score-color: #10b981; }
+.score-tier-warn { --score-color: #f59e0b; }
+.score-tier-fail { --score-color: #ef4444; }
+
+.ai-score-ring-outer {
+  background: conic-gradient(var(--score-color, #10b981) var(--score-deg, 0deg), rgba(255, 255, 255, 0.1) 0deg);
+}
+
+.ai-score-percent-val.score-tier-pass { color: #10b981; }
+.ai-score-percent-val.score-tier-warn { color: #f59e0b; }
+.ai-score-percent-val.score-tier-fail { color: #ef4444; }
+
+/* Metrics Types */
+.ai-metric-tech .ai-metric-val { color: #3b82f6; }
+.ai-metric-tech .ai-metric-fill { background: #3b82f6; }
+
+.ai-metric-comm .ai-metric-val { color: #10b981; }
+.ai-metric-comm .ai-metric-fill { background: #10b981; }
+
+.ai-metric-prob .ai-metric-val { color: #a855f7; }
+.ai-metric-prob .ai-metric-fill { background: #a855f7; }
+
+/* Question Breakdown Score Boxes */
+.ai-q-score-box.score-tier-pass { background: #ecfdf5; border: 1.5px solid #a7f3d0; }
+.ai-q-score-box.score-tier-pass .ai-q-score-num,
+.ai-q-score-box.score-tier-pass .ai-q-score-total { color: #10b981; }
+
+.ai-q-score-box.score-tier-warn { background: #fffbeb; border: 1.5px solid #fde68a; }
+.ai-q-score-box.score-tier-warn .ai-q-score-num,
+.ai-q-score-box.score-tier-warn .ai-q-score-total { color: #f59e0b; }
+
+.ai-q-score-box.score-tier-fail { background: #fef2f2; border: 1.5px solid #fecaca; }
+.ai-q-score-box.score-tier-fail .ai-q-score-num,
+.ai-q-score-box.score-tier-fail .ai-q-score-total { color: #ef4444; }
+
+.ai-q-feedback-box.score-tier-pass { border-left: 4px solid #10b981; }
+.ai-q-feedback-box.score-tier-pass .ai-q-sub-lbl { color: #10b981; }
+
+.ai-q-feedback-box.score-tier-warn { border-left: 4px solid #f59e0b; }
+.ai-q-feedback-box.score-tier-warn .ai-q-sub-lbl { color: #f59e0b; }
+
+.ai-q-feedback-box.score-tier-fail { border-left: 4px solid #ef4444; }
+.ai-q-feedback-box.score-tier-fail .ai-q-sub-lbl { color: #ef4444; }
+
