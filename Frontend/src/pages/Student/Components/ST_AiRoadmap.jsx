@@ -1219,6 +1219,10 @@ export default function AIRoadmap() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
       {/* Interactive Practice Compiler Modal Overlay */}
       {isCompilerOpen && (
         <div className="roadmap-compiler-overlay" onClick={() => setIsCompilerOpen(false)}>
@@ -1384,10 +1388,9 @@ export default function AIRoadmap() {
                 </div>
               </div>
             </div>
-          </div>
         </div>
+      </div>
       )}
     </div>
   );
 }
-

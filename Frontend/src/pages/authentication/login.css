@@ -2102,12 +2102,14 @@
 }
 
 /* Password Input Field with Toggle Eye */
-.password-input-wrapper {
+.password-input-wrapper,
+.login-password-input-wrap {
   position: relative;
   width: 100%;
 }
 
-.password-input-wrapper input {
+.password-input-wrapper input,
+.login-password-input-wrap input {
   width: 100%;
   padding-right: 42px !important;
 }

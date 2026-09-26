@@ -630,35 +630,35 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
 
   const studentProfile = await getStudentByUserId(user.id);
 
-  const token = generateToken({
-    userId: user.id,
+  const safeUser = {
+    id: user.id,
+    name: user.name,
     email: user.email,
-    mobile: user.mobile_number,
+    mobile_number: user.mobile_number,
     role: user.role,
-    collegeId: user.college_id || 1,
-  });
+    remember_me: Boolean(rememberMe),
+    department: studentProfile?.department || '',
+    year: studentProfile?.year || '',
+    division: studentProfile?.division || '',
+    semester: studentProfile?.semester || '',
+    roll_number: studentProfile?.roll_number || '',
+    is_profile_updated: Boolean(
+      user.is_profile_updated ||
+      studentProfile?.is_profile_updated ||
+      (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+    ),
+    studentProfile,
+  };
+
+  const primaryAuth = await finalizePrimaryAuthentication(user);
+  if (primaryAuth.requiresTwoFactor) {
+    return primaryAuth;
+  }
 
   return {
-    token,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      mobile_number: user.mobile_number,
-      role: user.role,
-      remember_me: Boolean(rememberMe),
-      department: studentProfile?.department || '',
-      year: studentProfile?.year || '',
-      division: studentProfile?.division || '',
-      semester: studentProfile?.semester || '',
-      roll_number: studentProfile?.roll_number || '',
-      is_profile_updated: Boolean(
-        user.is_profile_updated ||
-        studentProfile?.is_profile_updated ||
-        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
-      ),
-      studentProfile,
-    },
+    requiresTwoFactor: false,
+    token: primaryAuth.token,
+    user: safeUser,
   };
 };
 
