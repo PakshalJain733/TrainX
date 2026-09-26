@@ -51,8 +51,17 @@ export const getInterviewSessionByIdModel = async (id) => {
 
 export const findInterviewSessionsByUserModel = async (userId, limit = 50) => {
   const rows = await query(
-    'SELECT id, interview_type, overall_score, grade, feedback, conducted_date, status, created_at FROM interview_sessions WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
+    'SELECT id, interview_type, overall_score, grade, feedback, conducted_date, status, details, created_at FROM interview_sessions WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
     [userId, Number(limit) || 50]
   );
-  return rows || [];
+  return (rows || []).map((session) => {
+    if (typeof session.details === 'string') {
+      try {
+        session.details = JSON.parse(session.details);
+      } catch {
+        session.details = null;
+      }
+    }
+    return session;
+  });
 };

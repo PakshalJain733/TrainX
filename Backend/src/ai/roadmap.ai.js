@@ -42,6 +42,8 @@ CRITICAL REQUIREMENTS FOR DYNAMIC, SKILL-TAILORED ROADMAP:
    - "progress": number (0 to 100)
    - "tags": array of 3-5 technology/skill strings
    - "topics": array of 4 to 6 specific learning topics/objectives
+   - "syllabus": array of 2-3 detailed syllabus modules, each with { "moduleTitle": string, "duration": string, "concepts": string[], "practicalOutcome": string }
+   - "resources": array of 3-4 reference links/learning resources, each with { "title": string, "url": string, "type": "Documentation" | "Tutorial" | "Practice Portal" | "Guide", "provider": string }
    - "quizzes": number (2 to 5)
    - "exercises": number (5 to 15)
 
@@ -57,9 +59,23 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
       "tags": ["Tag1", "Tag2"],
       "topics": [
         "Specific Topic 1 for ${targetRole}",
-        "Specific Topic 2 with tool/framework",
-        "Specific Topic 3 practical project task",
-        "Specific Topic 4 domain objective"
+        "Specific Topic 2 with tool/framework"
+      ],
+      "syllabus": [
+        {
+          "moduleTitle": "Unit 1: Foundations & Environment Setup",
+          "duration": "10 Hours",
+          "concepts": ["Syntax & Architecture", "Tooling & Best Practices"],
+          "practicalOutcome": "Build foundation lab project"
+        }
+      ],
+      "resources": [
+        {
+          "title": "Official MDN / Technical Documentation",
+          "url": "https://developer.mozilla.org",
+          "type": "Documentation",
+          "provider": "MDN Web Docs"
+        }
       ],
       "quizzes": 3,
       "exercises": 8
@@ -154,19 +170,32 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
 
           if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
             const sanitizedMilestones = parsed.milestones.map((m, index) => {
+              const step = index + 1;
               let milestoneTopics = Array.isArray(m.topics) ? m.topics.filter(Boolean) : [];
               if (milestoneTopics.length === 0) {
-                milestoneTopics = generateRoleSpecificTopics(targetRole, m.title, index + 1, currentSkills);
+                milestoneTopics = generateRoleSpecificTopics(targetRole, m.title, step, currentSkills);
+              }
+
+              let milestoneSyllabus = Array.isArray(m.syllabus) ? m.syllabus.filter(Boolean) : [];
+              if (milestoneSyllabus.length === 0) {
+                milestoneSyllabus = generateRoleSpecificSyllabus(targetRole, m.title, step, currentSkills);
+              }
+
+              let milestoneResources = Array.isArray(m.resources) ? m.resources.filter(Boolean) : [];
+              if (milestoneResources.length === 0) {
+                milestoneResources = generateRoleSpecificResources(targetRole, m.title, step);
               }
 
               return {
-                id: index + 1,
-                title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
+                id: step,
+                title: m.title || `Milestone ${step}: ${targetRole} Module`,
                 desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
                 status: m.status || (index === 0 ? 'in-progress' : 'locked'),
                 progress: typeof m.progress === 'number' ? m.progress : (index === 0 ? 40 : 0),
                 tags: Array.isArray(m.tags) ? m.tags : [targetRole],
                 topics: milestoneTopics,
+                syllabus: milestoneSyllabus,
+                resources: milestoneResources,
                 quizzes: typeof m.quizzes === 'number' ? m.quizzes : 3,
                 exercises: typeof m.exercises === 'number' ? m.exercises : 8,
               };
@@ -366,67 +395,321 @@ export function generateRoleSpecificTopics(targetRole, title, step, currentSkill
 }
 
 /**
+ * Generates detailed syllabus modules for a given role and step
+ */
+export function generateRoleSpecificSyllabus(targetRole, title, step, currentSkills = []) {
+  const cleanRole = targetRole || 'Specialized Role';
+  const roleLower = cleanRole.toLowerCase();
+
+  if (roleLower.includes('frontend') || roleLower.includes('react') || roleLower.includes('web')) {
+    if (step === 1) return [
+      {
+        moduleTitle: "Unit 1.1: Web Fundamentals & Semantic HTML5",
+        duration: "Week 1 · 10 Hours",
+        concepts: ["HTML5 Semantic Elements (nav, section, article, header, footer)", "DOM Hierarchy & ARIA Accessibility attributes", "Form Controls & Input Type Validation"],
+        practicalOutcome: "Build a responsive accessible multi-page personal portfolio landing page"
+      },
+      {
+        moduleTitle: "Unit 1.2: Modern Responsive Layouts & CSS Grid/Flexbox",
+        duration: "Week 2 · 12 Hours",
+        concepts: ["CSS Box Model, Positioning & Stacking Context", "Flexbox Alignment, Distribution & Container Properties", "CSS Grid Layout Systems & Dynamic Auto-Fit/Fill Templates"],
+        practicalOutcome: "Develop a responsive product pricing dashboard with dark mode support"
+      }
+    ];
+    if (step === 2) return [
+      {
+        moduleTitle: "Unit 2.1: React Component Lifecycle & Hooks Deep Dive",
+        duration: "Week 3 · 14 Hours",
+        concepts: ["JSX Compilation & Virtual DOM Reconciliation", "State vs Props & Immutability Rules", "useState, useEffect, useRef & Custom Hooks Design"],
+        practicalOutcome: "Build a real-time interactive search and filtering portal"
+      },
+      {
+        moduleTitle: "Unit 2.2: SPA Routing & Form Handling",
+        duration: "Week 4 · 12 Hours",
+        concepts: ["React Router v6 Nested Routes & Dynamic Parameters", "Protected Route Guards & Auth Redirects", "Controlled Forms with React Hook Form & Zod Validation"],
+        practicalOutcome: "Build a multi-step user registration & profile management workflow"
+      }
+    ];
+  }
+
+  if (roleLower.includes('java') || roleLower.includes('backend') || roleLower.includes('spring')) {
+    if (step === 1) return [
+      {
+        moduleTitle: "Unit 1.1: Core Java 17+ OOP & Data Structures",
+        duration: "Week 1 · 14 Hours",
+        concepts: ["Encapsulation, Inheritance, Interfaces & Abstract Classes", "Java Collections Framework (ArrayList, HashMap, HashSet performance)", "Exception Handling Architecture & Custom Exception Design"],
+        practicalOutcome: "Build an object-oriented CLI inventory management application"
+      },
+      {
+        moduleTitle: "Unit 1.2: Java Streams API & PostgreSQL Queries",
+        duration: "Week 2 · 14 Hours",
+        concepts: ["Functional Interfaces, Lambda Expressions & Stream API Pipelines", "Database Normalization & Indexing Strategies", "Complex SQL Joins, Subqueries & Aggregations"],
+        practicalOutcome: "Construct a JDBC/PostgreSQL database connector and data processing engine"
+      }
+    ];
+    if (step === 2) return [
+      {
+        moduleTitle: "Unit 2.1: Spring Boot Dependency Injection & REST Controller",
+        duration: "Week 3 · 16 Hours",
+        concepts: ["Spring IoC Container, Bean Scopes & @Autowired", "Building RESTful APIs with @RestController, @PathVariable, @RequestBody", "DTO Pattern & Spring Validation Annotations"],
+        practicalOutcome: "Build a REST API service for an e-commerce catalog"
+      },
+      {
+        moduleTitle: "Unit 2.2: Object-Relational Mapping with Spring Data JPA",
+        duration: "Week 4 · 14 Hours",
+        concepts: ["Hibernate Entities, Relationships (@OneToMany, @ManyToMany)", "Spring Data JPA Repository Interfaces & Derived Queries", "Transaction Management (@Transactional) & Lazy Loading"],
+        practicalOutcome: "Implement full persistence layer for orders and customer entities"
+      }
+    ];
+  }
+
+  if (roleLower.includes('python') || roleLower.includes('data') || roleLower.includes('ai') || roleLower.includes('machine learning')) {
+    if (step === 1) return [
+      {
+        moduleTitle: "Unit 1.1: Advanced Python Syntax & Data Analysis",
+        duration: "Week 1 · 12 Hours",
+        concepts: ["Python Data Structures, Dict Comprehensions & Generators", "NumPy N-Dimensional Array Operations & Vectorization", "Pandas DataFrames, Merging, GroupBy & Time-Series Data"],
+        practicalOutcome: "Conduct EDA on a financial transaction dataset with Seaborn visualizations"
+      },
+      {
+        moduleTitle: "Unit 1.2: Statistical Analysis & Feature Engineering",
+        duration: "Week 2 · 14 Hours",
+        concepts: ["Probability Distributions, Hypothesis Testing & Correlation", "Handling Missing Data, Outliers & One-Hot Encoding", "Feature Scaling (StandardScaler, MinMaxScaler)"],
+        practicalOutcome: "Prepare a clean ML-ready dataset pipeline"
+      }
+    ];
+  }
+
+  // Universal Fallback Syllabus
+  return [
+    {
+      moduleTitle: `Unit ${step}.1: Foundational Framework & Core Principles of ${cleanRole}`,
+      duration: `Week 1-2 · 12 Hours`,
+      concepts: [
+        `Core theoretical framework and architectural setup for ${cleanRole}`,
+        `Essential tooling, environment configuration, and syntax standards`,
+        `Industry best practices and standard operating procedures`
+      ],
+      practicalOutcome: `Set up dev environment and build initial foundational module for ${cleanRole}`
+    },
+    {
+      moduleTitle: `Unit ${step}.2: Practical Execution & Applied Skills`,
+      duration: `Week 3-4 · 16 Hours`,
+      concepts: [
+        `Real-world implementation scenarios and hands-on lab exercises`,
+        `Diagnostic workflows, testing strategies, and performance tuning`,
+        `System integration, security standards, and code quality checks`
+      ],
+      practicalOutcome: `Deliver a fully verified capstone module for ${cleanRole}`
+    }
+  ];
+}
+
+/**
+ * Generates curated reference links for a given role and step
+ */
+export function generateRoleSpecificResources(targetRole, title, step) {
+  const cleanRole = targetRole || 'Specialized Role';
+  const roleLower = cleanRole.toLowerCase();
+
+  if (roleLower.includes('frontend') || roleLower.includes('react') || roleLower.includes('web')) {
+    return [
+      {
+        title: "MDN Web Docs - JavaScript & Web APIs",
+        url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
+        type: "Documentation",
+        provider: "MDN Web Docs"
+      },
+      {
+        title: "React Official Interactive Learning Guide",
+        url: "https://react.dev/learn",
+        type: "Documentation",
+        provider: "React Official"
+      },
+      {
+        title: "freeCodeCamp Responsive Web Design & React",
+        url: "https://www.freecodecamp.org/learn/",
+        type: "Practice Portal",
+        provider: "freeCodeCamp"
+      },
+      {
+        title: "GeeksforGeeks React JS Developer Tutorials",
+        url: "https://www.geeksforgeeks.org/react-js-tutorials/",
+        type: "Tutorial",
+        provider: "GeeksforGeeks"
+      }
+    ];
+  }
+
+  if (roleLower.includes('java') || roleLower.includes('backend') || roleLower.includes('spring')) {
+    return [
+      {
+        title: "Oracle Java SE 17 Official Documentation",
+        url: "https://docs.oracle.com/en/java/",
+        type: "Documentation",
+        provider: "Oracle"
+      },
+      {
+        title: "Baeldung Spring Boot & Microservices Tutorials",
+        url: "https://www.baeldung.com/spring-boot",
+        type: "Tutorial",
+        provider: "Baeldung"
+      },
+      {
+        title: "Spring.io Official Getting Started Guides",
+        url: "https://spring.io/guides",
+        type: "Documentation",
+        provider: "Spring Framework"
+      },
+      {
+        title: "GeeksforGeeks Java Programming Hub",
+        url: "https://www.geeksforgeeks.org/java/",
+        type: "Guide",
+        provider: "GeeksforGeeks"
+      }
+    ];
+  }
+
+  if (roleLower.includes('python') || roleLower.includes('data') || roleLower.includes('ai') || roleLower.includes('machine learning')) {
+    return [
+      {
+        title: "Python 3 Official Language Tutorial",
+        url: "https://docs.python.org/3/tutorial/",
+        type: "Documentation",
+        provider: "Python Docs"
+      },
+      {
+        title: "Scikit-Learn Machine Learning User Guide",
+        url: "https://scikit-learn.org/stable/user_guide.html",
+        type: "Documentation",
+        provider: "Scikit-Learn"
+      },
+      {
+        title: "Kaggle Learn - Interactive Data Science Courses",
+        url: "https://www.kaggle.com/learn",
+        type: "Practice Portal",
+        provider: "Kaggle"
+      },
+      {
+        title: "PyTorch Deep Learning Official Tutorials",
+        url: "https://pytorch.org/tutorials/",
+        type: "Tutorial",
+        provider: "PyTorch"
+      }
+    ];
+  }
+
+  if (roleLower.includes('security') || roleLower.includes('cyber') || roleLower.includes('ethical')) {
+    return [
+      {
+        title: "OWASP Top 10 Web Application Security Risks",
+        url: "https://owasp.org/www-project-top-ten/",
+        type: "Documentation",
+        provider: "OWASP Foundation"
+      },
+      {
+        title: "PortSwigger Web Security Academy",
+        url: "https://portswigger.net/web-security",
+        type: "Practice Portal",
+        provider: "PortSwigger"
+      },
+      {
+        title: "Cybrary Free Cyber Security & Ethical Hacking",
+        url: "https://www.cybrary.it/",
+        type: "Tutorial",
+        provider: "Cybrary"
+      }
+    ];
+  }
+
+  if (roleLower.includes('devops') || roleLower.includes('cloud')) {
+    return [
+      {
+        title: "Docker Official Getting Started Guide",
+        url: "https://docs.docker.com/get-started/",
+        type: "Documentation",
+        provider: "Docker Docs"
+      },
+      {
+        title: "Kubernetes Tutorials & Architecture Concepts",
+        url: "https://kubernetes.io/docs/tutorials/",
+        type: "Practice Portal",
+        provider: "Kubernetes"
+      },
+      {
+        title: "AWS Cloud Architecture & Hands-on Labs",
+        url: "https://aws.amazon.com/getting-started/",
+        type: "Guide",
+        provider: "AWS"
+      }
+    ];
+  }
+
+  // Universal Fallback Resources
+  return [
+    {
+      title: `GeeksforGeeks Technical Guides for ${cleanRole}`,
+      url: "https://www.geeksforgeeks.org/",
+      type: "Tutorial",
+      provider: "GeeksforGeeks"
+    },
+    {
+      title: "freeCodeCamp Open Curriculum & Labs",
+      url: "https://www.freecodecamp.org/",
+      type: "Practice Portal",
+      provider: "freeCodeCamp"
+    },
+    {
+      title: "W3Schools Reference Documentation",
+      url: "https://www.w3schools.com/",
+      type: "Guide",
+      provider: "W3Schools"
+    },
+    {
+      title: "Roadmap.sh - Developer Roadmaps",
+      url: "https://roadmap.sh/",
+      type: "Documentation",
+      provider: "Roadmap.sh"
+    }
+  ];
+}
+
+/**
  * Generates a complete 5-milestone dynamic roadmap structure
  */
 
 function generateDynamicMilestones(targetRole, currentSkills = []) {
   const cleanRole = targetRole || 'Specialized Role';
 
-  return [
-    {
-      id: 1,
-      title: `Milestone 1: Fundamentals & Core Tools of ${cleanRole}`,
-      desc: `Master basic principles, foundational concepts, essential tools, and core practices required for ${cleanRole}.`,
-      status: 'in-progress',
-      progress: 40,
-      tags: [`${cleanRole} Basics`, 'Foundations', 'Core Tools', 'Best Practices'],
-      topics: generateRoleSpecificTopics(cleanRole, 'Fundamentals', 1, currentSkills),
-      quizzes: 4,
-      exercises: 10,
-    },
-    {
-      id: 2,
-      title: `Milestone 2: Intermediate Architecture & Practical Execution`,
-      desc: `Develop hands-on technical proficiency, structural patterns, and execution skills specific to ${cleanRole}.`,
-      status: 'locked',
-      progress: 0,
-      tags: ['Practical Execution', 'Architecture Patterns', 'Skill Development'],
-      topics: generateRoleSpecificTopics(cleanRole, 'Intermediate', 2, currentSkills),
-      quizzes: 4,
-      exercises: 12,
-    },
-    {
-      id: 3,
-      title: `Milestone 3: Advanced Optimization & Industry Standards`,
-      desc: `Master intricate techniques, advanced workflows, quality assurance, and high-performance practices for ${cleanRole}.`,
-      status: 'locked',
-      progress: 0,
-      tags: ['Advanced Workflows', 'Performance', 'Quality Assurance'],
-      topics: generateRoleSpecificTopics(cleanRole, 'Advanced', 3, currentSkills),
-      quizzes: 3,
-      exercises: 10,
-    },
-    {
-      id: 4,
-      title: `Milestone 4: Automation, Testing & System Integration`,
-      desc: `Learn integration standards, automated testing methods, durability testing, and industry compliance.`,
-      status: 'locked',
-      progress: 0,
-      tags: ['Integration', 'Automated Testing', 'Compliance'],
-      topics: generateRoleSpecificTopics(cleanRole, 'Automation', 4, currentSkills),
-      quizzes: 3,
-      exercises: 8,
-    },
-    {
-      id: 5,
-      title: `Milestone 5: Production Capstone Project & Portfolio Mastery`,
-      desc: `Create an end-to-end master masterpiece project, building a professional portfolio and presentation for ${cleanRole}.`,
-      status: 'locked',
-      progress: 0,
-      tags: [`${cleanRole} Capstone`, 'Portfolio Project', 'Production Deployment'],
-      topics: generateRoleSpecificTopics(cleanRole, 'Capstone', 5, currentSkills),
-      quizzes: 3,
-      exercises: 9,
-    },
-  ];
+  return [1, 2, 3, 4, 5].map((step) => {
+    const titles = [
+      `Milestone 1: Fundamentals & Core Tools of ${cleanRole}`,
+      `Milestone 2: Intermediate Architecture & Practical Execution`,
+      `Milestone 3: Advanced Optimization & Industry Standards`,
+      `Milestone 4: Automation, Testing & System Integration`,
+      `Milestone 5: Production Capstone Project & Portfolio Mastery`
+    ];
+
+    const descs = [
+      `Master basic principles, foundational concepts, essential tools, and core practices required for ${cleanRole}.`,
+      `Develop hands-on technical proficiency, structural patterns, and execution skills specific to ${cleanRole}.`,
+      `Master intricate techniques, advanced workflows, quality assurance, and high-performance practices for ${cleanRole}.`,
+      `Learn integration standards, automated testing methods, durability testing, and industry compliance.`,
+      `Create an end-to-end master masterpiece project, building a professional portfolio and presentation for ${cleanRole}.`
+    ];
+
+    return {
+      id: step,
+      title: titles[step - 1],
+      desc: descs[step - 1],
+      status: step === 1 ? 'in-progress' : 'locked',
+      progress: step === 1 ? 40 : 0,
+      tags: [`${cleanRole} Step ${step}`, 'Foundations', 'Practical Labs'],
+      topics: generateRoleSpecificTopics(cleanRole, titles[step - 1], step, currentSkills),
+      syllabus: generateRoleSpecificSyllabus(cleanRole, titles[step - 1], step, currentSkills),
+      resources: generateRoleSpecificResources(cleanRole, titles[step - 1], step),
+      quizzes: 3 + (step % 2),
+      exercises: 6 + step * 2,
+    };
+  });
 }

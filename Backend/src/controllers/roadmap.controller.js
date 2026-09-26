@@ -1,6 +1,7 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import {
   fetchStudentRoadmap,
+  fetchStudentRoadmapByRole,
   generateNewRoadmap,
   updateMilestoneProgress,
 } from '../services/roadmap.service.js';
@@ -14,8 +15,15 @@ export const getRoadmapData = async (req, res, next) => {
     if (req.user && req.user.role === 'student') {
       studentId = req.user.id || req.user.userId;
     }
-    const roadmap = await fetchStudentRoadmap(studentId);
 
+    // If a specific role is requested, look up that role's saved roadmap
+    const { role } = req.query;
+    if (role && String(role).trim()) {
+      const roadmap = await fetchStudentRoadmapByRole(studentId, String(role).trim());
+      return sendSuccess(res, roadmap ? 'Roadmap found' : 'No roadmap for this role', roadmap);
+    }
+
+    const roadmap = await fetchStudentRoadmap(studentId);
     return sendSuccess(res, 'Roadmap retrieved successfully', roadmap);
   } catch (error) {
     next(error);

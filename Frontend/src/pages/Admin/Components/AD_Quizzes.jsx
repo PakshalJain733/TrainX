@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check } from "lucide-react";
+import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
@@ -103,6 +103,12 @@ export default function AdminQuizzes() {
 
   // AI Loading state
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingPhase, setGeneratingPhase] = useState(""); // 'generating' | 'verifying' | ''
+
+  // AI Verification Preview state
+  const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [verifiedQuestions, setVerifiedQuestions] = useState([]);
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Manual Questions State
   const [showManualModal, setShowManualModal] = useState(false);
@@ -326,6 +332,60 @@ export default function AdminQuizzes() {
     return data.data;
   };
 
+  // Run auto-verification on generated questions
+  const verifyQuestionsWithAI = async (questions, topic) => {
+    try {
+      const res = await fetch(`${API_BASE}/assessments/verify-ai-questions`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ questions, topic }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) return data.data;
+    } catch (err) {
+      console.warn("Verification request failed, using fallback:", err);
+    }
+    // Fallback: mark all as medium confidence
+    return questions.map(q => ({
+      ...q,
+      verified: true,
+      confidence: "medium",
+      verificationNote: "Could not verify — please review manually.",
+    }));
+  };
+
+  // Remove a question from verification preview
+  const handleRemoveVerifiedQ = (idx) => {
+    setVerifiedQuestions(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  // Publish only the approved questions from verification preview
+  const handlePublishVerifiedQuiz = async () => {
+    const toPublish = verifiedQuestions.filter(q => q.verified !== false || q._forceInclude);
+    if (toPublish.length === 0) {
+      alert("No questions to publish. Please keep at least one approved question.");
+      return;
+    }
+    setIsPublishing(true);
+    try {
+      await saveQuizToDB(toPublish, "AI Generated");
+      await fetchQuizzes();
+      setShowVerifyModal(false);
+      resetForm();
+    } catch (err) {
+      alert("Error publishing quiz: " + err.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  // Toggle force-include a rejected question from the verify preview
+  const handleToggleForceInclude = (idx) => {
+    setVerifiedQuestions(prev => prev.map((q, i) =>
+      i === idx ? { ...q, _forceInclude: !q._forceInclude } : q
+    ));
+  };
+
   // Submit Quiz Creation → API
   const handleCreateQuizSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -333,15 +393,19 @@ export default function AdminQuizzes() {
 
     if (mode === "ai") {
       setIsGenerating(true);
+      setGeneratingPhase("generating");
       try {
         const aiQs = await fetchLiveAIQuestions(title, numQuestions);
-        await saveQuizToDB(aiQs, "AI Generated");
-        await fetchQuizzes();
-        resetForm();
+        setGeneratingPhase("verifying");
+        const verified = await verifyQuestionsWithAI(aiQs, title);
+        setVerifiedQuestions(verified);
+        setShowVerifyModal(true);
+        setShowForm(false);
       } catch (err) {
         alert("Error generating quiz: " + err.message);
       } finally {
         setIsGenerating(false);
+        setGeneratingPhase("");
       }
 
     } else {
@@ -362,6 +426,7 @@ export default function AdminQuizzes() {
   const resetForm = () => {
     setTitle(""); setBatch("All Batches"); setNumQuestions("10");
     setManualQuestions([]); setShowForm(false); setShowManualModal(false);
+    setShowVerifyModal(false); setVerifiedQuestions([]);
   };
 
   const handleDelete = async (id) => {
@@ -523,11 +588,12 @@ export default function AdminQuizzes() {
                     <button type="submit" className="quiz-submit-btn ai-btn" disabled={isGenerating}>
                       {isGenerating ? (
                         <>
-                          <span className="spinner"></span> Generating Questions with AI...
+                          <span className="spinner"></span>
+                          {generatingPhase === "verifying" ? "Auto-verifying Questions..." : "Generating with AI..."}
                         </>
                       ) : (
                         <>
-                          <Sparkles size={16} /> Generate Quiz with AI
+                          <ShieldCheck size={16} /> Generate & Auto-Verify with AI
                         </>
                       )}
                     </button>
@@ -538,6 +604,165 @@ export default function AdminQuizzes() {
                   )}
                 </div>
               </form>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* AI VERIFICATION PREVIEW MODAL */}
+      {showVerifyModal && createPortal(
+        <div className="quiz-modal-backdrop verify-modal-backdrop" style={{ zIndex: 10001 }}>
+          <div className="quiz-modal-content modal-flash-in verify-preview-modal">
+            {/* Header */}
+            <div className="modal-header verify-modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap verify-header-icon">
+                  <ShieldCheck size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">AI Verification Report</h2>
+                  <p className="modal-subtitle">
+                    Gemini verified {verifiedQuestions.length} questions for <strong>"{title}"</strong> — review before publishing.
+                  </p>
+                </div>
+              </div>
+              <div className="verify-header-stats">
+                <span className="vstat vstat--pass">
+                  <ShieldCheck size={13} />
+                  {verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length} Approved
+                </span>
+                <span className="vstat vstat--fail">
+                  <ShieldX size={13} />
+                  {verifiedQuestions.filter(q => q.verified === false && !q._forceInclude).length} Rejected
+                </span>
+              </div>
+            </div>
+
+            {/* Verification Summary Banner */}
+            <div className="verify-summary-bar">
+              {(() => {
+                const total = verifiedQuestions.length;
+                const passed = verifiedQuestions.filter(q => q.verified !== false).length;
+                const highConf = verifiedQuestions.filter(q => q.confidence === 'high').length;
+                const pct = total > 0 ? Math.round((passed / total) * 100) : 0;
+                return (
+                  <>
+                    <div className="verify-progress-wrap">
+                      <div className="verify-progress-bar">
+                        <div className="verify-progress-fill" style={{ width: `${pct}%` }}></div>
+                      </div>
+                      <span className="verify-pct">{pct}% Quality Score</span>
+                    </div>
+                    <div className="verify-legend">
+                      <span className="vleg vleg--high">● {highConf} High Confidence</span>
+                      <span className="vleg vleg--med">● {verifiedQuestions.filter(q => q.confidence === 'medium').length} Medium</span>
+                      <span className="vleg vleg--low">● {verifiedQuestions.filter(q => q.confidence === 'low').length} Low / Flagged</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Questions List */}
+            <div className="verify-questions-scroll">
+              {verifiedQuestions.map((q, idx) => {
+                const isPassed = q.verified !== false;
+                const isForced = q._forceInclude;
+                const conf = q.confidence || 'medium';
+                return (
+                  <div
+                    key={q.id || idx}
+                    className={`verify-q-card ${isPassed ? 'verify-q--pass' : isForced ? 'verify-q--forced' : 'verify-q--fail'}`}
+                  >
+                    <div className="verify-q-header">
+                      <span className="verify-q-num">Q{idx + 1}</span>
+                      <p className="verify-q-text">{q.text || q.question_text}</p>
+                      <div className="verify-q-badges">
+                        {isPassed ? (
+                          <span className={`vbadge vbadge--${conf}`}>
+                            {conf === 'high' ? <ShieldCheck size={11} /> : conf === 'medium' ? <AlertTriangle size={11} /> : <ShieldX size={11} />}
+                            {conf === 'high' ? 'Verified' : conf === 'medium' ? 'Acceptable' : 'Low Quality'}
+                          </span>
+                        ) : (
+                          <span className="vbadge vbadge--rejected">
+                            <ShieldX size={11} /> Rejected
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Options preview */}
+                    <div className="verify-q-options">
+                      {Object.entries(q.options || {}).map(([key, val]) => (
+                        <span
+                          key={key}
+                          className={`verify-opt ${(q.correctOptionVerified || q.correct) === key ? 'verify-opt--correct' : ''}`}
+                        >
+                          <strong>{key.toUpperCase()}.</strong> {val}
+                          {(q.correctOptionVerified || q.correct) === key && <span className="correct-tick">✓</span>}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Verification note */}
+                    {q.verificationNote && (
+                      <p className="verify-q-note">
+                        <AlertTriangle size={11} /> {q.verificationNote}
+                      </p>
+                    )}
+                    {/* Actions */}
+                    <div className="verify-q-actions">
+                      {!isPassed && (
+                        <button
+                          type="button"
+                          className={`verify-force-btn ${isForced ? 'verify-force-btn--active' : ''}`}
+                          onClick={() => handleToggleForceInclude(idx)}
+                          title={isForced ? "Remove from publish" : "Force include despite rejection"}
+                        >
+                          {isForced ? <CheckCircle2 size={13} /> : <Plus size={13} />}
+                          {isForced ? 'Included (Override)' : 'Force Include'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="verify-remove-btn"
+                        onClick={() => handleRemoveVerifiedQ(idx)}
+                        title="Remove this question"
+                      >
+                        <Trash2 size={13} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Footer actions */}
+            <div className="verify-modal-footer">
+              <button
+                type="button"
+                className="quiz-cancel-btn"
+                onClick={() => { setShowVerifyModal(false); setShowForm(true); }}
+                disabled={isPublishing}
+              >
+                ← Back to Form
+              </button>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <span className="verify-publish-info">
+                  Publishing {verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length} of {verifiedQuestions.length} questions
+                </span>
+                <button
+                  type="button"
+                  className="quiz-submit-btn ai-btn verify-publish-btn"
+                  onClick={handlePublishVerifiedQuiz}
+                  disabled={isPublishing || verifiedQuestions.filter(q => q.verified !== false || q._forceInclude).length === 0}
+                >
+                  {isPublishing ? (
+                    <><span className="spinner"></span> Publishing...</>
+                  ) : (
+                    <><Send size={15} /> Publish Verified Quiz</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>,

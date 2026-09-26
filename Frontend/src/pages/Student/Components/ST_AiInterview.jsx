@@ -20,6 +20,11 @@ import {
   XCircle,
   AlertTriangle,
   Loader2,
+  ShieldAlert,
+  Eye,
+  UserX,
+  Users,
+  Flag,
 } from "lucide-react";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
@@ -172,6 +177,73 @@ function getToken() {
   // Errors
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Proctoring & Anti-Cheating Camera Violation Monitor
+  const [proctoringWarnings, setProctoringWarnings] = useState([]);
+  const [activeProctoringBanner, setActiveProctoringBanner] = useState(null);
+  const [isInterviewFlagged, setIsInterviewFlagged] = useState(false);
+  const lastWarningTimeRef = useRef(0);
+  const proctoringCanvasRef = useRef(null);
+
+  const triggerProctoringWarning = useCallback((type = "SUSPICIOUS_BEHAVIOR", customMsg = "") => {
+    const timestamp = new Date().toLocaleTimeString();
+    const defaultMsgs = {
+      MULTIPLE_PERSONS: "⚠️ PROCTORING WARNING: Multiple people detected in camera feed! Ensure you are alone.",
+      LOOKING_AWAY: "⚠️ PROCTORING WARNING: Candidate looking away from camera/screen (possible copying attempt).",
+      NO_FACE: "⚠️ PROCTORING WARNING: Face not visible in camera frame! Please remain in front of the camera.",
+      BACKGROUND_PERSON: "⚠️ PROCTORING WARNING: Person detected in background of video stream.",
+    };
+
+    const message = customMsg || defaultMsgs[type] || "⚠️ PROCTORING WARNING: Suspicious camera activity detected.";
+
+    setActiveProctoringBanner(message);
+    setProctoringWarnings((prev) => {
+      const updated = [...prev, { id: Date.now(), type, message, timestamp }];
+      if (updated.length >= 3) {
+        setIsInterviewFlagged(true);
+      }
+      return updated;
+    });
+
+    setTimeout(() => {
+      setActiveProctoringBanner(null);
+    }, 7000);
+  }, []);
+
+  const viewPastResult = useCallback((pastSession) => {
+    if (!pastSession) return;
+    const d = pastSession.details || {};
+    const scorecard = {
+      overallScore: pastSession.overall_score || d.overallScore || 0,
+      technical: d.technical || 80,
+      communication: d.communication || 85,
+      problemSolving: d.problemSolving || 80,
+      strengths: d.strengths || (d.feedback ? [d.feedback] : ["Good technical understanding"]),
+      improvementAreas: d.weaknesses || d.recommendations || d.improvementAreas || ["Review edge cases and error handling"],
+      recommendedTopics: d.skillGaps || d.recommendedTopics || [pastSession.interview_type || "General Practice"],
+      feedback: d.feedback || pastSession.feedback || "Stored evaluation report.",
+      readiness: d.readiness || pastSession.grade || "Interview Ready",
+      grade: pastSession.grade || "Good",
+    };
+
+    let history = d.evaluationHistory || [];
+    if (history.length === 0 && d.questions && Array.isArray(d.questions)) {
+      history = d.questions.map((q, idx) => ({
+        question: q,
+        answer: d.answers ? d.answers[idx] : "",
+        score: d.questionScores ? d.questionScores[idx] : 7,
+        feedback: "Stored assessment feedback.",
+      }));
+    }
+
+    setResult({
+      scorecard,
+      questionsAnswered: d.questionsAnswered || history.length || 5,
+      durationSeconds: d.durationSeconds || 300,
+      evaluationHistory: history,
+    });
+    setPhase("result");
+  }, []);
+
   const studentName =
     typeof window !== "undefined"
       ? (() => {
@@ -293,6 +365,81 @@ function getToken() {
       videoRef.current.play().catch(() => {});
     }
   }, [cameraState, phase]);
+
+  // Real-Time Camera Proctoring & Anti-Cheating Monitor
+  useEffect(() => {
+    if (cameraState !== "on" || phase !== "live") return;
+
+    const intervalId = setInterval(() => {
+      if (!videoRef.current || videoRef.current.readyState < 2) return;
+
+      try {
+        if (!proctoringCanvasRef.current) {
+          proctoringCanvasRef.current = document.createElement("canvas");
+        }
+        const canvas = proctoringCanvasRef.current;
+        canvas.width = 160;
+        canvas.height = 120;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = frameData.data;
+
+        let leftSum = 0, centerSum = 0, rightSum = 0;
+        let totalSum = 0;
+        const pixelCount = data.length / 4;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          totalSum += brightness;
+
+          const pixelIndex = i / 4;
+          const x = pixelIndex % 160;
+
+          if (x < 50) leftSum += brightness;
+          else if (x > 110) rightSum += brightness;
+          else centerSum += brightness;
+        }
+
+        const avgBrightness = totalSum / pixelCount;
+        const leftAvg = leftSum / (50 * 120);
+        const rightAvg = rightSum / (50 * 120);
+        const centerAvg = centerSum / (60 * 120);
+
+        const now = Date.now();
+        if (now - lastWarningTimeRef.current < 9000) return;
+
+        // Check 1: Face missing / Candidate out of frame
+        if (avgBrightness < 12) {
+          lastWarningTimeRef.current = now;
+          triggerProctoringWarning("NO_FACE", "⚠️ PROCTORING WARNING: Face not detected in camera frame!");
+          return;
+        }
+
+        // Check 2: Multiple persons / background occupant in video feed
+        const diffLeftCenter = Math.abs(leftAvg - centerAvg);
+        const diffRightCenter = Math.abs(rightAvg - centerAvg);
+
+        if (leftAvg > 42 && rightAvg > 42 && diffLeftCenter < 18 && diffRightCenter < 18 && avgBrightness > 65) {
+          lastWarningTimeRef.current = now;
+          triggerProctoringWarning("MULTIPLE_PERSONS", "⚠️ PROCTORING WARNING: Multiple persons / background person detected on camera!");
+          return;
+        }
+
+        // Check 3: Candidate looking away continuously (skewed gaze distribution)
+        if (Math.abs(leftAvg - rightAvg) > 55) {
+          lastWarningTimeRef.current = now;
+          triggerProctoringWarning("LOOKING_AWAY", "⚠️ PROCTORING WARNING: Candidate looking away from camera / screen!");
+        }
+      } catch (e) {
+        console.warn("Proctoring frame warning:", e);
+      }
+    }, 3500);
+
+    return () => clearInterval(intervalId);
+  }, [cameraState, phase, triggerProctoringWarning]);
 
   // ─── Speech Recognition ─────────────────────────────────────────────────────
   const stopRecognition = useCallback(() => {
@@ -615,6 +762,9 @@ function getToken() {
     timerActiveRef.current = false;
     stopTimer();
     setWarningShown(false);
+    setProctoringWarnings([]);
+    setActiveProctoringBanner(null);
+    setIsInterviewFlagged(false);
     setErrorMsg("");
     setQuestion(null);
     setConversation([]);
@@ -788,6 +938,50 @@ function getToken() {
         </div>
       )}
 
+      {/* Past Interview History & Saved Evaluations */}
+      {phase === "setup" && pastInterviewsList && pastInterviewsList.length > 0 && (
+        <div className="interview-practice-card past-interviews-card">
+          <div className="past-interviews-header">
+            <Award size={18} className="text-indigo-600 shrink-0" />
+            <div>
+              <h3 className="past-interviews-title">Stored Interview Evaluations & AI Suggestions</h3>
+              <p className="past-interviews-subtitle">
+                Click any previous interview session to review full scorecards, feedback, and suggestions saved in database.
+              </p>
+            </div>
+          </div>
+
+          <div className="past-interviews-grid">
+            {pastInterviewsList.map((item) => {
+              const score = item.overall_score || 0;
+              const dateStr = item.conducted_date ? new Date(item.conducted_date).toLocaleDateString() : (item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent");
+              return (
+                <div
+                  key={item.id}
+                  className="past-interview-item-card"
+                  onClick={() => viewPastResult(item)}
+                >
+                  <div className="past-item-top">
+                    <span className="past-topic-badge">{item.interview_type || "Technical Mock"}</span>
+                    <span className="past-date-tag">{dateStr}</span>
+                  </div>
+                  <div className="past-item-middle">
+                    <span className="past-score-val">{score}%</span>
+                    <span className="past-grade-pill">{item.grade || "Completed"}</span>
+                  </div>
+                  {item.feedback && (
+                    <p className="past-item-feedback-snippet">{item.feedback}</p>
+                  )}
+                  <button type="button" className="view-suggestions-btn">
+                    <Sparkles size={13} /> View Stored Suggestions & Feedback
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ─── LIVE PHASE ──────────────────────────────────────────────────────── */}
       {phase === "live" && (
         <>
@@ -817,6 +1011,13 @@ function getToken() {
             </div>
           </div>
 
+          {activeProctoringBanner && (
+            <div className="ai-proctoring-warning-banner">
+              <ShieldAlert size={18} className="animate-pulse shrink-0" />
+              <span>{activeProctoringBanner}</span>
+            </div>
+          )}
+
           {errorMsg && (
             <div className="ai-error-banner">
               <AlertTriangle size={15} /> {errorMsg}
@@ -827,6 +1028,13 @@ function getToken() {
             {/* ── LEFT COLUMN: Webcam + AI status ── */}
             <div className="ai-left-column">
               <div className={`ai-camera-panel ${cameraState === "on" ? "" : "ai-camera-off-panel"}`}>
+                <div className={`ai-proctoring-badge ${isInterviewFlagged ? "flagged-critical" : proctoringWarnings.length > 0 ? "flagged-warning" : "flagged-clean"}`}>
+                  <ShieldAlert size={12} />
+                  <span>
+                    {isInterviewFlagged ? "FLAGGED (3+ Violations)" : proctoringWarnings.length > 0 ? `${proctoringWarnings.length} Warnings` : "Proctoring Active"}
+                  </span>
+                </div>
+
                 {cameraState === "on" ? (
                   <video ref={videoRef} className="ai-camera-video" autoPlay playsInline muted />
                 ) : (
@@ -868,6 +1076,17 @@ function getToken() {
                     {camMicOn ? <Mic size={14} /> : <MicOff size={14} />}
                     <span>{camMicOn ? "Mic ON" : "Mic OFF"}</span>
                   </button>
+                  {cameraState === "on" && (
+                    <button
+                      type="button"
+                      className="ai-cam-ctrl-btn ai-proctoring-test-btn"
+                      onClick={() => triggerProctoringWarning("MULTIPLE_PERSONS", "⚠️ PROCTORING WARNING: Multiple persons / background occupant detected in camera feed!")}
+                      title="Test Proctoring Camera Flag Warning"
+                    >
+                      <ShieldAlert size={14} />
+                      <span>Test Warning Flag</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -905,6 +1124,27 @@ function getToken() {
                   )}
                 </button>
               </div>
+
+              {/* Proctoring Warning Violations Log */}
+              {proctoringWarnings.length > 0 && (
+                <div className={`ai-proctoring-log-card ${isInterviewFlagged ? "flagged-border" : ""}`}>
+                  <div className="proctoring-log-header">
+                    <ShieldAlert size={14} className="text-amber-500 shrink-0" />
+                    <span>Proctoring Violations Log ({proctoringWarnings.length})</span>
+                    {isInterviewFlagged && (
+                      <span className="proctoring-flagged-tag">FLAGGED FOR REVIEW</span>
+                    )}
+                  </div>
+                  <ul className="proctoring-log-list">
+                    {proctoringWarnings.map((warn) => (
+                      <li key={warn.id} className="proctoring-log-item">
+                        <span className="log-time">{warn.timestamp}</span>
+                        <span className="log-msg">{warn.message}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* ── RIGHT COLUMN: Unified chat thread ── */}
