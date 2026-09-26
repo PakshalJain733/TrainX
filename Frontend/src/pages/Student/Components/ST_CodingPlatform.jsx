@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Play, CheckCircle2, Terminal, Code2, 
@@ -389,6 +389,38 @@ export default function CodingPlatform() {
     if (activeTab === "submissions" && taskData?.id) loadSubmissions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, taskData?.id]);
+
+  
+  const submitRef = useRef(null);
+  useEffect(() => {
+    submitRef.current = handleSubmit;
+  });
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden && taskData) {
+        if (submitRef.current && !isSubmitting) submitRef.current();
+      }
+    };
+    const preventCopy = (e) => {
+      e.preventDefault();
+      alert("Copying and pasting is disabled in the coding platform.");
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    document.addEventListener("copy", preventCopy);
+    document.addEventListener("cut", preventCopy);
+    document.addEventListener("paste", preventCopy);
+    document.addEventListener("contextmenu", preventCopy);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      document.removeEventListener("copy", preventCopy);
+      document.removeEventListener("cut", preventCopy);
+      document.removeEventListener("paste", preventCopy);
+      document.removeEventListener("contextmenu", preventCopy);
+    };
+  }, [taskData, isSubmitting]);
 
   const testCasesList = taskData?.testCases || taskData?.test_cases || [];
 

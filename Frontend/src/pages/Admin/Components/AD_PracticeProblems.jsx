@@ -108,6 +108,7 @@ export default function AdminPracticeProblems() {
     timeLimit: "1.0s",
     memoryLimit: "128 MB",
     description: "",
+    dueDate: "",
   });
 
   const [newTestCase, setNewTestCase] = useState({ input: "", output: "", isHidden: false });
@@ -183,6 +184,7 @@ export default function AdminPracticeProblems() {
       timeLimit: newProb.timeLimit,
       memoryLimit: newProb.memoryLimit,
       description: newProb.description,
+      due_date: newProb.dueDate,
       testCases: [],
     };
 
@@ -199,6 +201,7 @@ export default function AdminPracticeProblems() {
       timeLimit: "1.0s",
       memoryLimit: "128 MB",
       description: "",
+      dueDate: "",
     });
   };
 
@@ -572,6 +575,14 @@ export default function AdminPracticeProblems() {
                 </div>
 
                 <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Due Date</label>
+                    <input type="date" value={newProb.dueDate} onChange={(e) => setNewProb({...newProb, dueDate: e.target.value})} className="form-input-admin" />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Due Date</label>
+                    <input type="date" value={newProb.dueDate} onChange={(e) => setNewProb({...newProb, dueDate: e.target.value})} className="form-input-admin" />
+                  </div>
                   <div className="form-group-admin">
                     <label>XP Points</label>
                     <input

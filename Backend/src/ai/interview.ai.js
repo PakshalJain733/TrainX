@@ -299,12 +299,19 @@ ${answer || '(Candidate did not provide an answer)'}
 Reference knowledge to compare correctness (if provided):
 ${knowledge || 'No reference knowledge provided.'}
 
-Evaluate the answer and respond ONLY with valid JSON:
+Evaluate the answer STRICTLY. Be a tough but fair interviewer.
+- If the answer is completely wrong, irrelevant, gibberish, or too brief to be meaningful: score 0-2.
+- If the answer is partially correct but missing key concepts: score 3-5.
+- If the answer is mostly correct with some gaps: score 6-7.
+- If the answer is comprehensive and accurate: score 8-10.
+- A random/wrong answer should NEVER receive more than 2/10.
+
+Respond ONLY with valid JSON:
 {
   "score": <number 0-10>,
   "technical": <number 0-10>,
   "communication": <number 0-10>,
-  "feedback": "2-3 sentence constructive feedback",
+  "feedback": "2-3 sentence constructive feedback pointing out exactly what was wrong or missing",
   "modelAnswer": "a concise gold-standard answer the candidate should have conveyed",
   "isCorrectDirection": true|false
 }`;
@@ -316,21 +323,34 @@ Evaluate the answer and respond ONLY with valid JSON:
     return { source: 'gemini-ai', ...parsed };
   }
 
-  // Fallback: rough heuristic based on answer length
+  // Fallback: rough heuristic based on answer length and content
   const words = (answer || '').trim().split(/\s+/).filter(Boolean).length;
-  const baseScore = Math.min(10, Math.max(2, Math.round(words / 15)));
+  // Detect nonsense: very short or random character strings
+  const hasRealWords = (answer || '').match(/[a-zA-Z]{3,}/g)?.length > 0;
+  const isTooShort = words < 5;
+  const isMeaningless = !hasRealWords || words < 3;
+
+  let baseScore;
+  if (isMeaningless || isTooShort) {
+    baseScore = 0; // no score for empty/gibberish
+  } else {
+    baseScore = Math.min(6, Math.max(1, Math.round(words / 25))); // max 6 without AI
+  }
+
   return {
     source: 'fallback',
     score: baseScore,
     technical: baseScore,
-    communication: Math.min(10, baseScore + 1),
-    feedback: words < 10
-      ? 'Your answer was very brief. Try to elaborate with specific examples and technical depth.'
+    communication: isMeaningless ? 0 : Math.min(6, baseScore + 1),
+    feedback: isMeaningless
+      ? 'No meaningful answer was provided. Please attempt the question properly.'
+      : words < 10
+      ? 'Your answer was too brief to evaluate correctly. Provide a detailed, structured response.'
       : words < 30
-      ? 'Good attempt. Consider adding more technical detail and concrete examples to strengthen your answer.'
-      : 'Solid response. Keep building on your technical vocabulary and structured explanations.',
+      ? 'Some attempt was made but lacked technical depth. Add specifics and examples.'
+      : 'Response noted. AI evaluation unavailable — a human reviewer will assess accuracy.',
     modelAnswer: 'AI evaluation unavailable. Review the topic independently.',
-    isCorrectDirection: words >= 10,
+    isCorrectDirection: words >= 15 && hasRealWords,
   };
 };
 
@@ -359,10 +379,16 @@ export const generateScorecard = async ({ role, topic, evaluationHistory }) => {
     .map((e, i) => `Q${i + 1} [${e.topic}]: ${e.question}\nA: ${e.answer}\nScore: ${e.score}/10\nFeedback: ${e.feedback}`)
     .join('\n\n');
 
-  const prompt = `You are an interview panel lead producing the final report for a mock interview for role "${role}" (scope "${topic}").
+  const prompt = `You are a strict interview panel lead producing the final report for a mock interview for role "${role}" (scope "${topic}").
 
 PER-QUESTION EVALUATIONS:
 ${transcript}
+
+IMPORTANT RULES:
+- Be accurate and strict. Do NOT inflate scores.
+- If a candidate gave wrong, nonsense, or very brief answers (score 0-2), the overall must reflect that.
+- overallScore must be a weighted average of individual question scores × 10. Do NOT round up generously.
+- grade must match the actual performance: scores below 40% MUST be "Needs Improvement".
 
 Compute the final scorecard and respond ONLY with valid JSON:
 {
@@ -371,7 +397,7 @@ Compute the final scorecard and respond ONLY with valid JSON:
   "problemSolving": <number 0-100>,
   "communication": <number 0-100>,
   "grade": "Excellent|Good|Average|Needs Improvement",
-  "feedback": "overall 3-4 sentence evaluation",
+  "feedback": "overall 3-4 sentence evaluation, be specific about what went wrong",
   "strengths": ["...", "..."],
   "improvementAreas": ["...", "..."],
   "recommendedTopics": ["...", "..."],

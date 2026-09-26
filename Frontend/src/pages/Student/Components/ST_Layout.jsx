@@ -243,6 +243,7 @@ export default function StudentLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [interviewLive, setInterviewLive] = useState(false);
   const headerRightRef = useRef(null);
 
   useEffect(() => {
@@ -254,6 +255,18 @@ export default function StudentLayout() {
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Hide sidebar & header when AI Interview goes live
+  useEffect(() => {
+    const onLive = () => setInterviewLive(true);
+    const onEnd  = () => setInterviewLive(false);
+    window.addEventListener('interviewLive', onLive);
+    window.addEventListener('interviewEnded', onEnd);
+    return () => {
+      window.removeEventListener('interviewLive', onLive);
+      window.removeEventListener('interviewEnded', onEnd);
+    };
   }, []);
 
   const resolveUser = (rawUser) => {
@@ -396,18 +409,23 @@ export default function StudentLayout() {
       {mobileOpen && (
         <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />
       )}
-      <StudentSidebar
-        collapsed={collapsed}
-        mobileOpen={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-      />
 
-      <div className="student-content">
+      {/* Sidebar — hidden during live interview */}
+      {!interviewLive && (
+        <StudentSidebar
+          collapsed={collapsed}
+          mobileOpen={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+        />
+      )}
+
+      <div className="student-content" style={interviewLive ? { marginLeft: 0, width: '100%', maxWidth: '100%' } : {}}>
         <main className="student-main">
           {/* ONE BIG ROUNDED CORNER CARD CONTAINING HEADER & CONTENT */}
-          <div className="student-page-card">
+          <div className="student-page-card" style={interviewLive ? { borderRadius: 0, padding: 0, boxShadow: 'none', height: '100vh', overflow: 'auto' } : {}}>
 
-            {/* Integrated Header Bar Inside the Card */}
+            {/* Header — hidden during live interview */}
+            {!interviewLive && (
             <header className="student-header">
               <div className="student-header__left">
                 <button
@@ -519,9 +537,10 @@ export default function StudentLayout() {
                 </div>
               </div>
             </header>
+            )}
 
             {/* Page Content Body */}
-            <div className="student-card-body">
+            <div className="student-card-body" style={interviewLive ? { padding: '20px 24px' } : {}}>
               <Outlet />
             </div>
 

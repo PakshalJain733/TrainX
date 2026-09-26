@@ -389,6 +389,25 @@ export default function Batches() {
     );
   }
 
+  const averageCompletion = (() => {
+    if (!enrolledBatches || enrolledBatches.length === 0) return 0;
+    const totalProg = enrolledBatches.reduce((acc, b) => {
+      const p = typeof b.progress === "number" ? b.progress : parseFloat(b.progress || 0);
+      return acc + (isNaN(p) ? 0 : p);
+    }, 0);
+    return Math.round(totalProg / enrolledBatches.length);
+  })();
+
+  const totalWeeklyHours = (() => {
+    if (!enrolledBatches || enrolledBatches.length === 0) return 0;
+    return enrolledBatches.reduce((acc, b) => {
+      const h = Number(b.weekly_hours || b.hours_per_week || b.weeklyHours || (b.status === "Active" ? 6 : 4));
+      return acc + (isNaN(h) ? 0 : h);
+    }, 0);
+  })();
+
+  const weeklyHoursText = totalWeeklyHours > 0 ? `${totalWeeklyHours} Hours / Wk` : "0 Hours";
+
   return (
     <div className="student-page-inner batches-page-container">
       <div className="student-header-box">
@@ -418,7 +437,7 @@ export default function Batches() {
           </div>
           <div>
             <p className="batches-summary-label">Average Completion</p>
-            <h4 className="batches-summary-val">{enrolledBatches.length > 0 ? "78%" : "0%"}</h4>
+            <h4 className="batches-summary-val">{averageCompletion}%</h4>
           </div>
         </div>
 
@@ -428,7 +447,7 @@ export default function Batches() {
           </div>
           <div>
             <p className="batches-summary-label">Weekly Hours</p>
-            <h4 className="batches-summary-val">{enrolledBatches.length > 0 ? "12 Hours / Wk" : "0 Hours"}</h4>
+            <h4 className="batches-summary-val">{weeklyHoursText}</h4>
           </div>
         </div>
       </div>

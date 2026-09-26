@@ -169,6 +169,12 @@ export default function AIInterview() {
   }, [voiceEnabled]);
   useEffect(() => {
     phaseRef.current = phase;
+    // Signal layout to enter/exit fullscreen interview mode
+    if (phase === "live") {
+      window.dispatchEvent(new Event("interviewLive"));
+    } else {
+      window.dispatchEvent(new Event("interviewEnded"));
+    }
   }, [phase]);
 
   // ─── TTS helpers ────────────────────────────────────────────────────────────
@@ -189,7 +195,9 @@ export default function AIInterview() {
     if (question?.question) speakQuestion(question.question);
   }, [question, speakQuestion]);
 
-  // ─── Camera ─────────────────────────────────────────────────────────────────
+    // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
+  const [camMicOn, setCamMicOn] = useState(false);
+
   const stopCamera = useCallback(() => {
     if (videoRef.current) videoRef.current.srcObject = null;
     if (cameraStreamRef.current) {
@@ -197,6 +205,7 @@ export default function AIInterview() {
       cameraStreamRef.current = null;
     }
     setCameraState("idle");
+    setCamMicOn(false);
   }, []);
 
   const enableCamera = useCallback(async () => {
@@ -225,6 +234,34 @@ export default function AIInterview() {
     if (cameraState === "on") stopCamera();
     else enableCamera();
   }, [cameraState, enableCamera, stopCamera]);
+
+  const toggleCamMic = useCallback(async () => {
+    if (camMicOn) {
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getAudioTracks().forEach((track) => {
+          track.enabled = false;
+          track.stop();
+          cameraStreamRef.current.removeTrack(track);
+        });
+      }
+      setCamMicOn(false);
+    } else {
+      try {
+        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const audioTrack = audioStream.getAudioTracks()[0];
+        if (audioTrack) {
+          if (cameraStreamRef.current) {
+            cameraStreamRef.current.addTrack(audioTrack);
+          } else {
+            cameraStreamRef.current = audioStream;
+          }
+        }
+        setCamMicOn(true);
+      } catch {
+        setErrorMsg("Webcam microphone access denied.");
+      }
+    }
+  }, [camMicOn]);
 
   // Attach stream when videoRef mounts
   useEffect(() => {
@@ -375,6 +412,42 @@ export default function AIInterview() {
   useEffect(() => {
     endInterviewRef.current = endInterview;
   }, [endInterview]);
+
+  // ─── Anti-Cheat: Tab switch auto-submit + copy-paste block ──────────────────
+  useEffect(() => {
+    const handleVisibility = () => {
+      // Only trigger during a live interview that hasn't already ended
+      if (document.hidden && phaseRef.current === "live" && !endRequestedRef.current) {
+        // endInterview emits interview:end to the socket server.
+        // The server will compute the final scorecard and emit back,
+        // which triggers finishInterview() with the full report.
+        if (endInterviewRef.current) endInterviewRef.current();
+      }
+    };
+
+    const preventCopy = (e) => {
+      if (phaseRef.current === "live") {
+        e.preventDefault();
+        alert("Copying and pasting is disabled during the AI interview.");
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    document.addEventListener("copy", preventCopy);
+    document.addEventListener("cut", preventCopy);
+    document.addEventListener("paste", preventCopy);
+    document.addEventListener("contextmenu", (e) => {
+      if (phaseRef.current === "live") e.preventDefault();
+    });
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      document.removeEventListener("copy", preventCopy);
+      document.removeEventListener("cut", preventCopy);
+      document.removeEventListener("paste", preventCopy);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── Send Answer ─────────────────────────────────────────────────────────────
   const sendAnswer = useCallback(() => {
@@ -743,9 +816,8 @@ export default function AIInterview() {
           )}
 
           <div className="ai-live-grid">
-            {/* ── LEFT COLUMN: Webcam + Answer Box ── */}
+            {/* ── LEFT COLUMN: Webcam + AI status ── */}
             <div className="ai-left-column">
-              {/* Webcam panel with controls INSIDE at bottom */}
               <div className={`ai-camera-panel ${cameraState === "on" ? "" : "ai-camera-off-panel"}`}>
                 {cameraState === "on" ? (
                   <video ref={videoRef} className="ai-camera-video" autoPlay playsInline muted />
@@ -769,8 +841,6 @@ export default function AIInterview() {
                     )}
                   </div>
                 )}
-
-                {/* Controls INSIDE / at bottom of webcam panel */}
                 <div className="ai-camera-controls-bar">
                   <button
                     type="button"
@@ -781,31 +851,96 @@ export default function AIInterview() {
                     {cameraState === "on" ? <Camera size={14} /> : <CameraOff size={14} />}
                     <span>{cameraState === "on" ? "Camera ON" : "Camera OFF"}</span>
                   </button>
-
-                  {SpeechRecognitionCtor && (
-                    <button
-                      type="button"
-                      className={`ai-cam-ctrl-btn ${isRecording ? "active recording" : ""}`}
-                      onClick={toggleRecording}
-                      disabled={!question || isEvaluating}
-                      title={isRecording ? "Stop Microphone" : "Start Microphone"}
-                    >
-                      {isRecording ? <Mic size={14} /> : <MicOff size={14} />}
-                      <span>{isRecording ? "Mic ON" : "Mic OFF"}</span>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    className={`ai-cam-ctrl-btn ${camMicOn ? "active recording" : ""}`}
+                    onClick={toggleCamMic}
+                    title={camMicOn ? "Mute Webcam Mic" : "Unmute Webcam Mic"}
+                  >
+                    {camMicOn ? <Mic size={14} /> : <MicOff size={14} />}
+                    <span>{camMicOn ? "Mic ON" : "Mic OFF"}</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Answer Box */}
-              <div className="ai-answer-card">
-                <div className="ai-answer-header">
-                  <span className="ai-answer-title">
-                    {question ? `Answer – Q${question.index}` : "Your Answer"}
-                  </span>
-                  {question && <span className="interview-topic-badge">{question.topic}</span>}
+              {/* AI status strip under camera */}
+              <div className="ai-status-strip">
+                <div className="ai-interviewer-avatar ai-status-avatar">
+                  <Bot size={16} color="#ffffff" />
+                  {isAiSpeaking && <span className="ai-avatar-speaking" />}
                 </div>
+                <div className="ai-status-info">
+                  <div className="ai-status-name">AI Interviewer</div>
+                  <div className="ai-status-state">
+                    {isEvaluating ? <span className="ai-state-thinking"><Loader2 size={10} className="ai-spin" /> Thinking...</span>
+                    : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
+                    : question ? <span className="ai-state-listening">Listening for answer</span>
+                    : <span>Starting interview...</span>}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className={`ai-speaker-play-btn ${!voiceEnabled ? "voice-disabled" : ""}`}
+                  onClick={() => {
+                    const next = !voiceEnabled;
+                    setVoiceEnabled(next);
+                    voiceEnabledRef.current = next;
+                    if (!next) stopSpeaking();
+                    else if (question?.question) speakQuestion(question.question);
+                  }}
+                  title={voiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}
+                >
+                  {voiceEnabled ? (
+                    <Volume2 size={16} className={`ai-speak-icon ${isAiSpeaking ? "speaking-pulse" : ""}`} />
+                  ) : (
+                    <VolumeX size={16} className="muted-icon" />
+                  )}
+                </button>
+              </div>
+            </div>
 
+            {/* ── RIGHT COLUMN: Unified chat thread ── */}
+            <div className="interview-practice-card ai-interviewer-card">
+              {/* Scrollable chat history */}
+              <div className="ai-conversation">
+                <div className="ai-conv-title">Conversation</div>
+                {conversation.length === 0 ? (
+                  <div className="ai-conv-empty">
+                    <Loader2 size={20} className="ai-spin ai-conv-spin-icon" />
+                    Waiting for the first question...
+                  </div>
+                ) : (
+                  <div className="ai-conv-list">
+                    {conversation.map((c, idx) => {
+                      if (c.type === "q") {
+                        return (
+                          <div className="ai-bubble ai-bubble-ai" key={idx}>
+                            <span className="ai-bubble-tag">Q{c.index}</span>
+                            <span>{c.text}</span>
+                          </div>
+                        );
+                      }
+                      if (c.type === "a") {
+                        return (
+                          <div className="ai-bubble ai-bubble-user" key={idx}>
+                            {c.text}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                    <div ref={conversationEndRef} />
+                  </div>
+                )}
+              </div>
+
+              {/* Inline answer input at the bottom */}
+              <div className="ai-answer-input-container">
+                {isRecording && (
+                  <div className="ai-listening-indicator">
+                    <span className="ai-listening-dot" /> Listening — speak now...
+                  </div>
+                )}
                 <textarea
                   className="interview-textarea ai-answer-textarea"
                   placeholder={
@@ -819,14 +954,7 @@ export default function AIInterview() {
                   onChange={(e) => setAnswer(e.target.value)}
                   disabled={!question || isEvaluating}
                 />
-
-                {isRecording && (
-                  <div className="ai-listening-indicator">
-                    <span className="ai-listening-dot" /> Listening — speak now...
-                  </div>
-                )}
-
-                <div className="interview-action-row" style={{ justifyContent: "flex-end", gap: "12px" }}>
+                <div className="interview-action-row ai-action-row">
                   {SpeechRecognitionCtor && (
                     <button
                       type="button"
@@ -847,9 +975,7 @@ export default function AIInterview() {
                     disabled={!answer.trim() || isEvaluating || !socketConnected || !question}
                   >
                     {isEvaluating ? (
-                      <>
-                        <Loader2 size={15} className="ai-spin" /> Evaluating...
-                      </>
+                      <><Loader2 size={15} className="ai-spin" /> Evaluating...</>
                     ) : (
                       <>Submit Answer <Send size={15} /></>
                     )}
@@ -857,242 +983,176 @@ export default function AIInterview() {
                 </div>
               </div>
             </div>
-
-            {/* ── RIGHT COLUMN: AI Interviewer ── */}
-            <div className="interview-practice-card ai-interviewer-card">
-              <div className="ai-interviewer-head">
-                <div className="ai-interviewer-avatar">
-                  <Bot size={24} color="#ffffff" />
-                  {isAiSpeaking && <span className="ai-avatar-speaking" />}
-                </div>
-                <div>
-                  <div className="ai-interviewer-name">AI Interviewer</div>
-                  <div className="ai-interviewer-sub">
-                    {isEvaluating ? (
-                      <span className="ai-speaking-lbl">
-                        <Loader2 size={12} className="ai-spin" /> Thinking...
-                      </span>
-                    ) : isAiSpeaking ? (
-                      <span className="ai-speaking-lbl">Speaking...</span>
-                    ) : question ? (
-                      <span className="ai-waves-lbl">Listening for your answer</span>
-                    ) : (
-                      <span className="ai-waves-lbl">Starting interview...</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Single TTS toggle — right side of header */}
-                <button
-                  type="button"
-                  className={`ai-speaker-play-btn ${!voiceEnabled ? "voice-disabled" : ""}`}
-                  onClick={() => {
-                    const next = !voiceEnabled;
-                    setVoiceEnabled(next);
-                    voiceEnabledRef.current = next;
-                    if (!next) stopSpeaking();
-                    else if (question?.question) speakQuestion(question.question);
-                  }}
-                  title={voiceEnabled ? "Mute AI Voice" : "Enable AI Voice"}
-                >
-                  {voiceEnabled ? (
-                    <Volume2 size={18} className={`ai-speak-icon ${isAiSpeaking ? "speaking-pulse" : ""}`} />
-                  ) : (
-                    <VolumeX size={18} className="muted-icon" />
-                  )}
-                </button>
-              </div>
-
-              {!hasTTS && (
-                <div className="ai-unsupported-note">
-                  Text-to-speech is not supported in this browser. Questions will be shown as text only.
-                </div>
-              )}
-
-              {isAiSpeaking && (
-                <div className="ai-voice-waves ai-waves-inline">
-                  <span className="ai-wave-bar" />
-                  <span className="ai-wave-bar" />
-                  <span className="ai-wave-bar" />
-                  <span className="ai-wave-bar" />
-                  <span className="ai-wave-bar" />
-                </div>
-              )}
-
-              {/* Current question */}
-              <div className="ai-current-question">
-                {question ? (
-                  <>
-                    <div className="ai-q-meta">
-                      Question {question.index}
-                      {question.total && <> / {question.total}</>}
-                      {question.topic && <span className="ai-q-topic"> {question.topic}</span>}
-                    </div>
-                    <p className="ai-q-text">{question.question}</p>
-                    {question.hint && <p className="ai-q-hint">💡 Hint: {question.hint}</p>}
-                    <button
-                      type="button"
-                      className="ai-replay-btn"
-                      onClick={replayQuestion}
-                      title="Replay question aloud"
-                    >
-                      <Volume2 size={14} /> Replay
-                    </button>
-                  </>
-                ) : (
-                  <div className="ai-q-empty">
-                    <Loader2 size={20} className="ai-spin" />
-                    Waiting for the first question...
-                  </div>
-                )}
-              </div>
-
-              {/* Conversation history */}
-              <div className="ai-conversation">
-                <div className="ai-conv-title">Conversation</div>
-                {conversation.length === 0 ? (
-                  <div className="ai-conv-empty">The interviewer will ask your first question shortly.</div>
-                ) : (
-                  <div className="ai-conv-list">
-                    {conversation.map((c, idx) => {
-                      if (c.type === "q") {
-                        return (
-                          <div className="ai-bubble ai-bubble-ai" key={idx}>
-                            <span className="ai-bubble-tag">Q{c.index}</span>
-                            <span>{c.text}</span>
-                          </div>
-                        );
-                      }
-                      if (c.type === "a") {
-                        return (
-                          <div className="ai-bubble ai-bubble-user" key={idx}>
-                            {c.text}
-                          </div>
-                        );
-                      }
-                      return (
-                        <div className="ai-feedback-row" key={idx}>
-                          <Sparkles size={14} />
-                          <span>Score {c.score}/10 — {c.text}</span>
-                        </div>
-                      );
-                    })}
-                    <div ref={conversationEndRef} />
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
         </>
       )}
 
-      {/* ─── RESULT PHASE ────────────────────────────────────────────────────── */}
-      {phase === "result" && (
-        <div className="interview-practice-card ai-result-card">
-          {result?.scorecard ? (
-            <>
-              <div className="ai-scorecard-hero">
-                <Award size={44} className="ai-award-icon" />
-                <h2 className="ai-scorecard-title">AI Interview Completed</h2>
-                <p className="ai-scorecard-subtitle">
-                  {result.durationSeconds
-                    ? `Duration: ${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s`
-                    : ""}
-                  {result.questionsAnswered
-                    ? `  •  Questions Answered: ${result.questionsAnswered}`
-                    : ""}
-                </p>
-                <div className="ai-score-big">{result.scorecard.overallScore}%</div>
-                <div className="ai-grade-pill">{result.scorecard.grade}</div>
 
-                <div className="ai-score-breakdown-grid">
-                  <div className="ai-score-mini-card">
-                    <div className="ai-mini-score-val-blue">{result.scorecard.technical ?? "—"}%</div>
-                    <div className="ai-mini-score-label">Technical</div>
-                  </div>
-                  <div className="ai-score-mini-card">
-                    <div className="ai-mini-score-val-green">{result.scorecard.communication ?? "—"}%</div>
-                    <div className="ai-mini-score-label">Communication</div>
-                  </div>
-                  <div className="ai-score-mini-card">
-                    <div className="ai-mini-score-val-purple">{result.scorecard.problemSolving ?? "—"}%</div>
-                    <div className="ai-mini-score-label">Problem Solving</div>
+      {/* ─── RESULT PHASE ──────────────────────────────────────────────────────────────────────── */}
+      {phase === "result" && (() => {
+        const overallScore = result?.scorecard?.overallScore ?? 0;
+        const overallScoreColor = overallScore >= 70 ? "#10b981" : overallScore >= 40 ? "#f59e0b" : "#ef4444";
+        return (
+          <div className="ai-result-wrapper">
+
+            {/* ── HERO SCORECARD ── */}
+            <div className="ai-report-hero">
+              <div className="ai-report-hero-bg" />
+              <div className="ai-report-label">Interview Report</div>
+              <h2 className="ai-report-title">AI Interview Completed</h2>
+              <p className="ai-report-meta">
+                {result?.durationSeconds ? `${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s` : ""}
+                {result?.questionsAnswered ? `  •  ${result.questionsAnswered} Question${result.questionsAnswered !== 1 ? "s" : ""} Answered` : ""}
+              </p>
+
+              {/* Score ring */}
+              <div className="ai-score-ring-wrap">
+                <div
+                  className="ai-score-ring-outer"
+                  style={{
+                    background: `conic-gradient(${overallScoreColor} ${overallScore * 3.6}deg, rgba(255,255,255,0.1) 0deg)`
+                  }}
+                >
+                  <div className="ai-score-ring-inner">
+                    <span className="ai-score-percent-val" style={{ color: overallScoreColor }}>
+                      {overallScore}%
+                    </span>
                   </div>
                 </div>
+                <span className="ai-score-grade-pill">
+                  {result?.scorecard?.grade ?? "N/A"}
+                </span>
               </div>
 
-              <div className="ai-result-grid">
-                <div className="ai-diagnostic-box">
-                  <h4 className="ai-diagnostic-title">AI Feedback</h4>
-                  <p className="ai-diagnostic-text">{result.scorecard.feedback}</p>
-                </div>
-
-                {Array.isArray(result.scorecard.strengths) && result.scorecard.strengths.length > 0 && (
-                  <div className="ai-diagnostic-box">
-                    <h4 className="ai-diagnostic-title">Strengths</h4>
-                    <ul className="ai-list">
-                      {result.scorecard.strengths.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
+              {/* 3-metric breakdown */}
+              <div className="ai-metrics-grid">
+                {[
+                  { label: "Technical", value: result?.scorecard?.technical ?? 0, color: "#3b82f6" },
+                  { label: "Communication", value: result?.scorecard?.communication ?? 0, color: "#10b981" },
+                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, color: "#a855f7" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="ai-metric-card">
+                    <div className="ai-metric-val" style={{ color }}>{value}%</div>
+                    <div className="ai-metric-label">{label}</div>
+                    <div className="ai-metric-track">
+                      <div className="ai-metric-fill" style={{ width: `${value}%`, background: color }} />
+                    </div>
                   </div>
-                )}
-
-                {Array.isArray(result.scorecard.improvementAreas) && result.scorecard.improvementAreas.length > 0 && (
-                  <div className="ai-diagnostic-box">
-                    <h4 className="ai-diagnostic-title">Areas to Improve</h4>
-                    <ul className="ai-list">
-                      {result.scorecard.improvementAreas.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                )}
-
-                {Array.isArray(result.scorecard.recommendedTopics) && result.scorecard.recommendedTopics.length > 0 && (
-                  <div className="ai-diagnostic-box">
-                    <h4 className="ai-diagnostic-title">Recommended Topics</h4>
-                    <ul className="ai-list">
-                      {result.scorecard.recommendedTopics.map((s, i) => <li key={i}>{s}</li>)}
-                    </ul>
-                  </div>
-                )}
+                ))}
               </div>
+            </div>
 
-              <div className="ai-action-row">
-                <button type="button" className="ai-mic-btn ai-retake-btn" onClick={resetInterview}>
-                  <RotateCcw size={16} /> Take Another Interview
-                </button>
+            {/* ── OVERALL FEEDBACK ── */}
+            {result?.scorecard?.feedback && (
+              <div className="ai-overall-feedback-card">
+                <div className="ai-overall-feedback-title">Overall Feedback</div>
+                <p className="ai-overall-feedback-text">{result.scorecard.feedback}</p>
               </div>
-            </>
-          ) : (
-            <>
-              <div className="ai-scorecard-hero">
-                <Award size={44} className="ai-award-icon" />
-                <h2 className="ai-scorecard-title">Interview Session Ended</h2>
-                <p className="ai-scorecard-subtitle">
-                  {result?.questionsAnswered
-                    ? `You answered ${result.questionsAnswered} question${result.questionsAnswered !== 1 ? "s" : ""}.`
-                    : "Your session has been saved."}
-                </p>
-              </div>
-              <div className="ai-result-stats">
-                <div className="past-score-box">
-                  <div className="past-score-val">{result?.questionsAnswered ?? 0}</div>
-                  <div className="past-score-label">Questions Answered</div>
+            )}
+
+            {/* ── PER-QUESTION BREAKDOWN ── */}
+            {result?.evaluationHistory && result.evaluationHistory.length > 0 && (
+              <div className="ai-q-breakdown-card">
+                <div className="ai-q-breakdown-title">Question-by-Question Breakdown</div>
+                <div className="ai-q-breakdown-list">
+                  {result.evaluationHistory.map((item, idx) => {
+                    const score = item.score ?? 0;
+                    const scoreColor = score >= 7 ? "#10b981" : score >= 4 ? "#f59e0b" : "#ef4444";
+                    const scoreBg = score >= 7 ? "#ecfdf5" : score >= 4 ? "#fffbeb" : "#fef2f2";
+                    const scoreBorder = score >= 7 ? "#a7f3d0" : score >= 4 ? "#fde68a" : "#fecaca";
+                    return (
+                      <div key={idx} className="ai-q-item">
+                        {/* Question header */}
+                        <div className="ai-q-item-header">
+                          <div className="ai-q-item-header-left">
+                            <span className="ai-q-badge">Q{idx + 1}</span>
+                            <span className="ai-q-text">{item.question || item.q}</span>
+                          </div>
+                          <div className="ai-q-score-box" style={{ background: scoreBg, border: `1.5px solid ${scoreBorder}` }}>
+                            <span className="ai-q-score-num" style={{ color: scoreColor }}>{score}</span>
+                            <span className="ai-q-score-total" style={{ color: scoreColor }}>/10</span>
+                          </div>
+                        </div>
+
+                        <div className="ai-q-item-body">
+                          {/* Student answer */}
+                          <div>
+                            <div className="ai-q-sub-lbl muted">Your Answer</div>
+                            <div className="ai-q-user-ans-box">
+                              {item.answer || item.a || <em className="ai-q-user-ans-empty">No answer provided</em>}
+                            </div>
+                          </div>
+
+                          {/* AI Feedback */}
+                          <div className="ai-q-feedback-box" style={{ borderLeft: `4px solid ${scoreColor}` }}>
+                            <div className="ai-q-sub-lbl" style={{ color: scoreColor }}>
+                              {score >= 7 ? "✅ AI Feedback" : score >= 4 ? "⚠️ AI Feedback" : "❌ Where You Went Wrong"}
+                            </div>
+                            <div className="ai-q-feedback-text">{item.feedback || item.f || "No feedback available."}</div>
+                          </div>
+
+                          {/* Model answer */}
+                          {item.modelAnswer && item.modelAnswer !== "AI evaluation unavailable. Review the topic independently." && (
+                            <div className="ai-q-model-ans-box">
+                              <div className="ai-q-model-ans-lbl">💡 Model Answer</div>
+                              <div className="ai-q-model-ans-text">{item.modelAnswer}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="past-score-box">
-                  <div className="past-score-val">{fmtTime(result?.durationSeconds ?? 0)}</div>
-                  <div className="past-score-label">Duration</div>
+              </div>
+            )}
+
+            {/* ── STRENGTHS + IMPROVE + TOPICS ── */}
+            <div className="ai-summary-3grid">
+              {result?.scorecard?.strengths?.length > 0 && (
+                <div className="ai-summary-card ai-card-strengths">
+                  <div className="ai-summary-card-title">✅ Strengths</div>
+                  <ul className="ai-summary-card-list">
+                    {result.scorecard.strengths.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
                 </div>
-              </div>
-              <div className="ai-action-row">
-                <button type="button" className="ai-mic-btn ai-retake-btn" onClick={resetInterview}>
-                  <RotateCcw size={16} /> Start Over
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
+              )}
+              {result?.scorecard?.improvementAreas?.length > 0 && (
+                <div className="ai-summary-card ai-card-improve">
+                  <div className="ai-summary-card-title">❌ Areas to Improve</div>
+                  <ul className="ai-summary-card-list">
+                    {result.scorecard.improvementAreas.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+              {result?.scorecard?.recommendedTopics?.length > 0 && (
+                <div className="ai-summary-card ai-card-topics">
+                  <div className="ai-summary-card-title">📚 Study These Topics</div>
+                  <ul className="ai-summary-card-list">
+                    {result.scorecard.recommendedTopics.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* ── READINESS + RETAKE ── */}
+            <div className="ai-readiness-bar">
+              {result?.scorecard?.readiness ? (
+                <div>
+                  <div className="ai-readiness-lbl">Interview Readiness</div>
+                  <div className="ai-readiness-val">{result.scorecard.readiness}</div>
+                </div>
+              ) : <div />}
+              <button type="button" className="ai-mic-btn ai-retake-btn" onClick={resetInterview}>
+                <RotateCcw size={16} /> Take Another Interview
+              </button>
+            </div>
+
+          </div>
+        );
+      })()}
 
       {/* Past Interviews */}
+      {phase !== "live" && (
       <div className="past-interviews-card">
         <h3 className="past-interviews-header">Past Interviews</h3>
         <p className="past-interviews-subtitle">Your saved AI evaluation history</p>
@@ -1137,6 +1197,7 @@ export default function AIInterview() {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
