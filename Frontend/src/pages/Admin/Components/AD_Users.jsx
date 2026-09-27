@@ -38,21 +38,47 @@ function AdminUserSelect(props) {
 
 /* ── Assign Trainer Modal Component ── */
 function AssignTrainerModal({ isOpen, onClose, users = [] }) {
-  const [batches, setBatches] = useState([
-    { id: "batch-1", name: "BE-CS-2026-A", label: "BE-CS-2026-A (Computer Science)", trainer: "Rahul Verma", topic: "DSA Marathon: Trees & Graphs", description: "BST insertion, Graph traversals (BFS/DFS), shortest paths", date: new Date().toISOString().split("T")[0], status: "Completed" },
-    { id: "batch-2", name: "TE-IT-2025-B", label: "TE-IT-2025-B (Information Tech)", trainer: "Dr. Priya Sharma", topic: "React Architecture & Custom Hooks", description: "State management, Context API, Redux Toolkit & performance", date: new Date().toISOString().split("T")[0], status: "In Progress" },
-    { id: "batch-3", name: "SE-ECS-2027-C", label: "SE-ECS-2027-C (Electronics & CS)", trainer: "Prof. Anish Deshmukh", topic: "Embedded Systems & Microcontrollers", description: "8051 Architecture, Timers, Interrupts & Assembly language", date: new Date().toISOString().split("T")[0], status: "Scheduled" },
-    { id: "batch-4", name: "BE-AI-2026-X", label: "BE-AI-2026-X (AI & Data Science)", trainer: "Er. Amit Kulkarni", topic: "Machine Learning: Supervised Algorithms", description: "Linear Regression, Logistic Regression, Decision Trees", date: new Date().toISOString().split("T")[0], status: "Scheduled" },
-  ]);
-
-  const [selectedBatchId, setSelectedBatchId] = useState("batch-1");
-  const [currentTrainer, setCurrentTrainer] = useState("Rahul Verma");
+  const [batches, setBatches] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [currentTrainer, setCurrentTrainer] = useState("");
   const [isEditingTrainer, setIsEditingTrainer] = useState(false);
-  const [topicTitle, setTopicTitle] = useState("DSA Marathon: Trees & Graphs");
-  const [topicDesc, setTopicDesc] = useState("BST insertion, Graph traversals (BFS/DFS), shortest paths");
+  const [topicTitle, setTopicTitle] = useState("");
+  const [topicDesc, setTopicDesc] = useState("");
   const [topicDate, setTopicDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [topicStatus, setTopicStatus] = useState("Completed");
+  const [topicStatus, setTopicStatus] = useState("Scheduled");
   const [successMsg, setSuccessMsg] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    apiFetch("/batches")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list.map((b) => ({
+            id: b.id || b.batch_id,
+            name: b.name || b.batch_name || b.code,
+            label: `${b.name || b.batch_name || b.code}`,
+            trainer: b.trainer || b.mentor_name || "Unassigned",
+            topic: b.topic || "Daily Training Session",
+            description: b.description || "Curriculum topic",
+            date: b.date || new Date().toISOString().split("T")[0],
+            status: b.status || "Scheduled",
+          }));
+          setBatches(formatted);
+          if (formatted.length > 0) {
+            setSelectedBatchId(formatted[0].id);
+            setCurrentTrainer(formatted[0].trainer);
+            setTopicTitle(formatted[0].topic);
+            setTopicDesc(formatted[0].description);
+            setTopicDate(formatted[0].date);
+            setTopicStatus(formatted[0].status);
+          }
+        } else {
+          setBatches([]);
+        }
+      })
+      .catch(() => setBatches([]));
+  }, [isOpen]);
 
   // Auto-fill trainer and today's topic when selected batch changes
   useEffect(() => {
@@ -65,7 +91,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       setTopicStatus(selected.status || "Scheduled");
       setIsEditingTrainer(false);
     }
-  }, [selectedBatchId]);
+  }, [selectedBatchId, batches]);
 
   if (!isOpen) return null;
 
@@ -95,7 +121,6 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     const today = new Date().toISOString().split("T")[0];
     let updatedStatus = topicStatus;
     
-    // When editing topic for today's date, automatically set status to In Progress if currently Scheduled
     if (topicDate === today && topicStatus === "Scheduled") {
       updatedStatus = "In Progress";
     } else if (!topicStatus) {
@@ -120,7 +145,6 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       })
     );
 
-    // Save to Database via API
     try {
       await apiFetch(`/batches/${selectedBatchId}`, {
         method: "PUT",
@@ -368,49 +392,25 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
 /* ── Assign Mentor Modal Component ── */
 function AssignMentorModal({ isOpen, onClose, users = [] }) {
-  const DEFAULT_MENTORS = [
-    { id: "m-1", name: "Prof. Anish Deshmukh", department: "Computer Science", email: "anish.d@college.edu", title: "Associate Professor" },
-    { id: "m-2", name: "Dr. Priya Sharma", department: "Information Tech", email: "priya.s@college.edu", title: "HOD & Professor" },
-    { id: "m-3", name: "Prof. Rajesh Kulkarni", department: "AI & Data Science", email: "rajesh.k@college.edu", title: "Assistant Professor" },
-    { id: "m-4", name: "Dr. Sunita Patil", department: "Electronics & CS", email: "sunita.p@college.edu", title: "Senior Faculty" },
-  ];
-
-  const DEFAULT_STUDENTS = [
-    { id: "st-101", name: "Aarav Mehta", roll_number: "2026-CS-001", department: "Computer Science", email: "aarav.m@college.edu", year: "FE", status: "Active" },
-    { id: "st-102", name: "Ananya Roy", roll_number: "2026-CS-042", department: "Computer Science", email: "ananya.r@college.edu", year: "SE", status: "Active" },
-    { id: "st-103", name: "Rohan Gupta", roll_number: "2025-IT-015", department: "Information Tech", email: "rohan.g@college.edu", year: "TE", status: "Active" },
-    { id: "st-104", name: "Siddharth Verma", roll_number: "2026-AI-088", department: "AI & Data Science", email: "siddharth.v@college.edu", year: "FE", status: "Active" },
-    { id: "st-105", name: "Priya Nair", roll_number: "2027-EC-023", department: "Electronics & CS", email: "priya.n@college.edu", year: "BE", status: "Active" },
-    { id: "st-106", name: "Ketan Kulkarni", roll_number: "2026-CS-112", department: "Computer Science", email: "ketan.k@college.edu", year: "TE", status: "Active" },
-    { id: "st-107", name: "Neha Deshmukh", roll_number: "2025-IT-074", department: "Information Tech", email: "neha.d@college.edu", year: "BE", status: "Active" },
-    { id: "st-108", name: "Vikram Singh", roll_number: "2026-AI-031", department: "AI & Data Science", email: "vikram.s@college.edu", year: "SE", status: "Active" },
-  ];
-
-  const [selectedMentor, setSelectedMentor] = useState("Prof. Anish Deshmukh");
+  const [selectedMentor, setSelectedMentor] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
-  const [selectedStudentIds, setSelectedStudentIds] = useState(["st-101", "st-102"]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
 
   if (!isOpen) return null;
 
-  // Filter or fall back to mentors
-  const rawMentors = users.filter(u => {
+  // Real DB mentors
+  const mentors = users.filter(u => {
     const r = (u.role || "").toLowerCase();
     return r.includes("mentor") || r.includes("faculty") || r.includes("prof");
   });
-  const mentors = rawMentors.length > 0
-    ? [...rawMentors, ...DEFAULT_MENTORS.filter(d => !rawMentors.some(u => u.email === d.email || u.id === d.id))]
-    : DEFAULT_MENTORS;
 
-  // Merge real DB students with DEFAULT_STUDENTS so roster is ALWAYS complete and fallback ready
-  const rawStudents = users.filter(u => {
+  // Real DB students
+  const allStudents = users.filter(u => {
     const r = (u.role || "").toLowerCase();
     return r.includes("student") || r === "user" || (!r && u.name);
   });
-  const allStudents = rawStudents.length > 0
-    ? [...rawStudents, ...DEFAULT_STUDENTS.filter(d => !rawStudents.some(u => u.email === d.email || u.id === d.id))]
-    : DEFAULT_STUDENTS;
 
   // Filter students based on department pills and search input
   const filteredStudents = allStudents.filter(s => {

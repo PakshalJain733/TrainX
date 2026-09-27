@@ -69,15 +69,29 @@ export const createCollege = async (req, res, next) => {
     if (!name || !code) {
       return sendError(res, 'College Name and Code are required', 400);
     }
-    const finalEmail = (contactEmail || adminEmail || `admin@${code.toLowerCase()}.edu.in`).trim();
+
+    const trimmedCode = code.trim();
+    const trimmedName = name.trim();
+
+    // Check if college code already exists
+    const existingCode = await query('SELECT id, name FROM colleges WHERE LOWER(code) = LOWER(?) LIMIT 1', [trimmedCode]);
+    if (existingCode && existingCode.length > 0) {
+      return sendError(
+        res,
+        `College code '${trimmedCode}' is already registered to "${existingCode[0].name}". Please enter a unique college code.`,
+        400
+      );
+    }
+
+    const finalEmail = (contactEmail || adminEmail || `admin@${trimmedCode.toLowerCase()}.edu.in`).trim();
     const finalAdminName = (adminName || '').trim();
 
     const result = await query(
       `INSERT INTO colleges (name, code, location, city, type, contact_email, contact_phone, admin_name, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
-        name.trim(),
-        code.trim(),
+        trimmedName,
+        trimmedCode,
         location || 'Main Campus',
         city || 'Metropolis',
         type || 'Autonomous',
@@ -97,6 +111,9 @@ export const createCollege = async (req, res, next) => {
 
     return sendSuccess(res, 'College created successfully', formattedCollege, 201);
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062 || (error.message && error.message.includes('Duplicate entry'))) {
+      return sendError(res, `College code is already in use. Please enter a unique college code.`, 400);
+    }
     next(error);
   }
 };
@@ -106,6 +123,13 @@ export const updateCollege = async (req, res, next) => {
     await ensureCollegeTable();
     const { id } = req.params;
     const { name, code, location, city, type, status, contactEmail, contactPhone } = req.body;
+
+    if (code) {
+      const existingCode = await query('SELECT id FROM colleges WHERE LOWER(code) = LOWER(?) AND id != ? LIMIT 1', [code.trim(), id]);
+      if (existingCode && existingCode.length > 0) {
+        return sendError(res, `College code '${code.trim()}' is already in use by another college.`, 400);
+      }
+    }
 
     await query(
       `UPDATE colleges 
@@ -128,6 +152,9 @@ export const updateCollege = async (req, res, next) => {
 
     return sendSuccess(res, 'College updated successfully', updated);
   } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062 || (error.message && error.message.includes('Duplicate entry'))) {
+      return sendError(res, `College code is already in use. Please enter a unique college code.`, 400);
+    }
     next(error);
   }
 };

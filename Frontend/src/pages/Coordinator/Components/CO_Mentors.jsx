@@ -18,60 +18,7 @@ import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_Mentors.css";
 
-const DEFAULT_MENTORS = [
-  {
-    id: 1,
-    name: "Anubhav Shukla",
-    experience: "8+ Yrs",
-    rating: "4.9",
-    specialization: "Java Architecture & Microservices",
-    assignedBatch: "CSE 2026 Alpha Cohort",
-    studentsCount: 42,
-    email: "anubhav.shukla@trainx.edu",
-    phone: "+91 98201 44512",
-    department: "Computer Engineering",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Priya Sharma",
-    experience: "6+ Yrs",
-    rating: "4.8",
-    specialization: "Fullstack React & Node.js System Architecture",
-    assignedBatch: "Fullstack Specialization B",
-    studentsCount: 38,
-    email: "priya.sharma@trainx.edu",
-    phone: "+91 98112 33490",
-    department: "Information Technology",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Rahul Verma",
-    experience: "7+ Yrs",
-    rating: "4.9",
-    specialization: "Advanced DSA & Graph Theory",
-    assignedBatch: "DSA Fast-Track 2025",
-    studentsCount: 50,
-    email: "rahul.verma@trainx.edu",
-    phone: "+91 99304 88123",
-    department: "Computer Engineering",
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "Dr. Amit Deshmukh",
-    experience: "10+ Yrs",
-    rating: "4.7",
-    specialization: "AI/ML & Python Data Engineering",
-    assignedBatch: "Data Science & AI Cohort",
-    studentsCount: 35,
-    email: "amit.deshmukh@trainx.edu",
-    phone: "+91 98700 12345",
-    department: "AI & Data Science",
-    status: "Active",
-  },
-];
+const DEFAULT_MENTORS = [];
 
 export default function CoordinatorMentors() {
   const [mentors, setMentors] = useState([]);
@@ -96,23 +43,15 @@ export default function CoordinatorMentors() {
     apiFetch("/coordinator/mentors")
       .then((res) => {
         const list = res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(list) && list.length > 0) {
-          setMentors(list);
-        } else {
-          setMentors(DEFAULT_MENTORS);
-        }
+        setMentors(Array.isArray(list) ? list : []);
       })
       .catch(() => {
         apiFetch("/mentors")
           .then((res) => {
             const list = res?.data || (Array.isArray(res) ? res : []);
-            if (Array.isArray(list) && list.length > 0) {
-              setMentors(list);
-            } else {
-              setMentors(DEFAULT_MENTORS);
-            }
+            setMentors(Array.isArray(list) ? list : []);
           })
-          .catch(() => setMentors(DEFAULT_MENTORS));
+          .catch(() => setMentors([]));
       })
       .finally(() => setLoading(false));
   };
@@ -268,7 +207,11 @@ export default function CoordinatorMentors() {
           </div>
           <div>
             <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Avg Faculty Rating</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#d97706", marginTop: "2px" }}>4.85 / 5.0</div>
+            <div style={{ fontSize: "20px", fontWeight: 800, color: "#d97706", marginTop: "2px" }}>
+              {mentors.length > 0
+                ? (mentors.reduce((acc, m) => acc + parseFloat(m.rating || 5.0), 0) / mentors.length).toFixed(2)
+                : "0.0"} / 5.0
+            </div>
           </div>
         </div>
 

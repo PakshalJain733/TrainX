@@ -49,7 +49,7 @@ export default function SuperAdminProfile() {
       const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
       return {
         name: stored.name || "Super Admin",
-        email: stored.email || "training.portal0987@gmail.com",
+        email: stored.email || "ganeshvshinde2006@gmail.com",
         phone: stored.mobile_number || stored.phone || "+91 12345 67890",
         role: "Super Administrator",
         region: "Mumbai, Maharashtra",
@@ -61,7 +61,7 @@ export default function SuperAdminProfile() {
     } catch (e) {
       return {
         name: "Super Admin",
-        email: "training.portal0987@gmail.com",
+        email: "ganeshvshinde2006@gmail.com",
         phone: "+91 98765 43210",
         role: "Super Administrator",
         region: "Mumbai, Maharashtra",

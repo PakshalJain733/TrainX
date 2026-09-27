@@ -19,33 +19,10 @@ import { apiFetch } from "../../../utils/api";
 import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/CO_Notifications.css";
 
-const defaultNotifications = [
-  {
-    id: "notif-1",
-    title: "📢 [Notice] IA-2 Quiz Rescheduled to Friday 10:00 AM",
-    body: "The Internal Assessment 2 test for TE Computer batches has been shifted to Friday 10:00 AM. Please revise your modules.",
-    time: new Date().toLocaleString(),
-    category: "Broadcast",
-    icon: Bell,
-    iconColor: "#7c3aed",
-    iconBg: "#f5f3ff",
-    unread: true,
-  },
-  {
-    id: "notif-2",
-    title: "📢 [Notice] Goldman Sachs Placement Drive Registration Live",
-    body: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through the placement tab.",
-    time: new Date().toLocaleString(),
-    category: "Broadcast",
-    icon: Bell,
-    iconColor: "#7c3aed",
-    iconBg: "#f5f3ff",
-    unread: true,
-  }
-];
+const defaultNotifications = [];
 
 export default function CoordinatorNotifications() {
-  const [notifications, setNotifications] = useState(defaultNotifications);
+  const [notifications, setNotifications] = useState([]);
   const [filter, setFilter] = useState("All");
 
   useEffect(() => {

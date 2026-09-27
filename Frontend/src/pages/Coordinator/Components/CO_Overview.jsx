@@ -21,31 +21,7 @@ import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/CO_Overview.css";
 
-const DEFAULT_TRAINING_SESSIONS = [
-  {
-    id: 1,
-    trainerName: "Anubhav Shukla",
-    topic: "Java Masterclass: Core to Advanced",
-    topicDetail:
-      "Deep dive into JVM architecture, Classes, Interfaces, Exception Handling, Collections Framework, and Multithreading.",
-    batch: "CSE 2026 Cohort",
-  },
-  {
-    id: 2,
-    trainerName: "Priya Sharma",
-    topic: "React Intensive Bootcamp",
-    topicDetail:
-      "Complete guide from JSX, Hooks & Context API to building scalable single-page applications and global state management.",
-    batch: "Fullstack Specialization",
-  },
-  {
-    id: 3,
-    trainerName: "Rahul Verma",
-    topic: "DSA Marathon: Trees & Graphs",
-    topicDetail:
-      "Intensive problem-solving session covering BSTs, Tries, Graph traversals, shortest paths, and DP on trees.",
-  },
-];
+const DEFAULT_TRAINING_SESSIONS = [];
 
 const categories = [
   { id: "general", label: "General Notice", icon: Info },
@@ -220,25 +196,7 @@ export default function CoordinatorOverview() {
     { label: "Attendance Rate", value: attendanceRate || "0%", hint: "Department average", icon: LineChart },
   ];
 
-  // Merge live database sessions with default training sessions so exactly 3 deduplicated cards are shown
-  const displaySessions = (() => {
-    const list = [];
-    // 1. Add unique live sessions first
-    for (const s of liveSessions) {
-      if (!list.some((existing) => existing.topic === s.topic && existing.trainerName === s.trainerName)) {
-        list.push(s);
-      }
-
-    }
-    // 2. Fill remaining slots up to 3 with default sessions
-    for (const defSession of DEFAULT_TRAINING_SESSIONS) {
-      if (list.length >= 3) break;
-      if (!list.some((s) => s.topic === defSession.topic || s.trainerName === defSession.trainerName)) {
-        list.push(defSession);
-      }
-    }
-    return list.slice(0, 3);
-  })();
+  const displaySessions = liveSessions;
 
   return (
     <div className="student-page-inner stack-6 overview-wrapper">

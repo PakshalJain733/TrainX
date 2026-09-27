@@ -42,78 +42,7 @@ const unwrap = (response) => {
   return response.data !== undefined ? response.data : response;
 };
 
-const MOCK_MENTEE_INTERVIEWS = [
-  {
-    id: 101,
-    studentName: 'Harshad Nandurkar',
-    rollNo: 'CS2024001',
-    batch: 'CS-2024 Alpha',
-    targetRole: 'Full Stack Developer',
-    topic: 'React & Node.js',
-    score: 88,
-    grade: 'Excellent',
-    status: 'Completed',
-    feedback:
-      'Demonstrated excellent command over React hooks, asynchronous state flow, and Express REST API architecture. Answered architectural questions with clear, well-structured reasoning. Weakness: Minor pause on database indexing best practices.',
-    date: '2026-09-24',
-  },
-  {
-    id: 102,
-    studentName: 'Aditya Patil',
-    rollNo: 'CS2024014',
-    batch: 'CS-2024 Alpha',
-    targetRole: 'Software Engineer',
-    topic: 'Data Structures & Algorithms',
-    score: 76,
-    grade: 'Good',
-    status: 'Completed',
-    feedback:
-      'Understands recursive binary tree traversal and hash map lookups. Offered optimal time complexity solution for 2-Sum problem. Suggested optimization: Practice minimizing auxiliary space complexity on graph BFS solutions.',
-    date: '2026-09-22',
-  },
-  {
-    id: 103,
-    studentName: 'Sneha Deshmukh',
-    rollNo: 'IT2024008',
-    batch: 'IT-2024 Beta',
-    targetRole: 'Backend Developer',
-    topic: 'SQL / Databases',
-    score: 62,
-    grade: 'Good',
-    status: 'Completed',
-    feedback:
-      'Solid handle on basic SQL joins and table normalization concepts. Struggled slightly with complex window functions and ACID transaction isolation levels. Recommended: Additional practice on DB indexing strategies.',
-    date: '2026-09-21',
-  },
-  {
-    id: 104,
-    studentName: 'Rohan Kulkarni',
-    rollNo: 'CS2024032',
-    batch: 'CS-2024 Alpha',
-    targetRole: 'DevOps Engineer',
-    topic: 'Docker & CI/CD',
-    score: 54,
-    grade: 'Needs Work',
-    status: 'Completed',
-    feedback:
-      'Understands container concepts at a basic level, but needs improvement in writing multi-stage Dockerfiles and configuring GitHub Actions deployment pipelines. Mentorship recommendation: Assign foundational hands-on lab.',
-    date: '2026-09-19',
-  },
-  {
-    id: 105,
-    studentName: 'Priya Sharma',
-    rollNo: 'CS2024045',
-    batch: 'CS-2024 Beta',
-    targetRole: 'Frontend Developer',
-    topic: 'JavaScript & CSS Architecture',
-    score: 92,
-    grade: 'Excellent',
-    status: 'Completed',
-    feedback:
-      'Outstanding candidate performance! Answered deep questions on JavaScript event loops, closures, and microtask queues with high accuracy. Articulated modern CSS Grid and custom property design tokens cleanly.',
-    date: '2026-09-18',
-  },
-];
+const MOCK_MENTEE_INTERVIEWS = [];
 
 export default function MN_AIInterviews() {
   const [interviews, setInterviews] = useState([]);
@@ -128,14 +57,10 @@ export default function MN_AIInterviews() {
     try {
       const response = await apiFetch('/mentor/interviews');
       const payload = unwrap(response);
-      if (Array.isArray(payload) && payload.length > 0) {
-        setInterviews(payload);
-      } else {
-        setInterviews(MOCK_MENTEE_INTERVIEWS);
-      }
+      setInterviews(Array.isArray(payload) ? payload : []);
     } catch (err) {
-      console.warn('[MN_AIInterviews] Error loading interviews, using fallback:', err);
-      setInterviews(MOCK_MENTEE_INTERVIEWS);
+      console.warn('[MN_AIInterviews] Error loading interviews:', err);
+      setInterviews([]);
     } finally {
       setLoading(false);
     }

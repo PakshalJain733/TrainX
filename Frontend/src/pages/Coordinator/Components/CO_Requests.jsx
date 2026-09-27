@@ -13,57 +13,13 @@ import {
   User,
   ShieldCheck,
   Building2,
+  Trash2,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_Requests.css";
 
-const DEFAULT_REQUESTS = [
-  {
-    id: 1,
-    studentName: "Rohan Mehta",
-    rollNo: "CSE26-042",
-    batch: "CSE 2026 Alpha",
-    requestType: "Medical Leave Application",
-    category: "Medical Leave",
-    reason: "Hospitalization due to Dengue Fever (Medical Certificate attached). Requesting 4 days leave.",
-    date: "2026-09-24",
-    status: "Pending",
-  },
-  {
-    id: 2,
-    studentName: "Sneha Patil",
-    rollNo: "IT25-018",
-    batch: "IT 2025 Cohort",
-    requestType: "Batch Shift Request",
-    category: "Batch Transfer",
-    reason: "Schedule clash with department lab exam. Requesting shift from Morning to Evening Batch.",
-    date: "2026-09-25",
-    status: "Approved",
-  },
-  {
-    id: 3,
-    studentName: "Aditya Joshi",
-    rollNo: "AIDS26-009",
-    batch: "AI & DS 2026",
-    requestType: "Re-assessment Permission",
-    category: "Re-assessment",
-    reason: "Missed Coding Assessment #3 due to representing college in National Hackathon.",
-    date: "2026-09-26",
-    status: "Pending",
-  },
-  {
-    id: 4,
-    studentName: "Kavya Nair",
-    rollNo: "CSE26-088",
-    batch: "CSE 2026 Beta",
-    requestType: "Emergency Travel Leave",
-    category: "Emergency Leave",
-    reason: "Family emergency travel to hometown required urgent departure.",
-    date: "2026-09-22",
-    status: "Rejected",
-  },
-];
+const DEFAULT_REQUESTS = [];
 
 export default function CoordinatorRequests() {
   const [requests, setRequests] = useState([]);
@@ -72,49 +28,75 @@ export default function CoordinatorRequests() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
+
+  const [dbStudents, setDbStudents] = useState([]);
+  const [dbBatches, setDbBatches] = useState([]);
 
   const [createForm, setCreateForm] = useState({
     studentName: "",
     rollNo: "",
-    batch: "CSE 2026 Alpha",
-    category: "Medical Leave",
+    batch: "All Batches",
+    category: "Medical Leave Application",
     reason: "",
   });
+
+  const triggerToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(""), 4000);
+  };
 
   const loadRequests = () => {
     setLoading(true);
     apiFetch("/attendance/leave-requests")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (res && res.data && Array.isArray(res.data)) {
           setRequests(
             res.data.map((r) => ({
               id: r.id,
               studentName: r.student_name || r.name || "Student",
-              rollNo: r.roll_number || r.rollNo || "CS-101",
-              batch: r.batch || "CSE 2026 Cohort",
+              rollNo: r.roll_number || r.rollNo || "N/A",
+              batch: r.batch || "All Batches",
               requestType: r.category || r.title || "Leave Request",
               category: r.category || "General Leave",
               reason: r.reason || "Personal Leave Application",
-              date: r.created_at ? r.created_at.split("T")[0] : "2026-09-26",
+              date: r.created_at ? r.created_at.split("T")[0] : new Date().toISOString().split("T")[0],
               status: r.status || "Pending",
             }))
           );
         } else {
-          setRequests(DEFAULT_REQUESTS);
+          setRequests([]);
         }
       })
-      .catch(() => setRequests(DEFAULT_REQUESTS))
+      .catch(() => setRequests([]))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     loadRequests();
+
+    // Fetch dynamic students & batches for create modal dropdowns
+    apiFetch("/students")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        setDbStudents(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setDbStudents([]));
+
+    apiFetch("/batches")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        setDbBatches(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setDbBatches([]));
   }, []);
 
   const handleAction = async (id, newStatus) => {
     setRequests((prev) =>
       prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
     );
+
+    triggerToast(`Request status updated to "${newStatus}"!`);
 
     try {
       await apiFetch(`/attendance/leave-requests/${id}/status`, {
@@ -126,6 +108,18 @@ export default function CoordinatorRequests() {
     }
   };
 
+  const handleDeleteRequest = async (id) => {
+    setRequests((prev) => prev.filter((r) => r.id !== id));
+    triggerToast("Application request removed successfully!");
+    try {
+      await apiFetch(`/attendance/leave-requests/${id}`, {
+        method: "DELETE",
+      });
+    } catch (e) {
+      console.warn("Failed to delete leave request in DB:", e);
+    }
+  };
+
   const handleCreateRequest = (e) => {
     e.preventDefault();
     if (!createForm.studentName.trim() || !createForm.reason.trim()) return;
@@ -133,8 +127,8 @@ export default function CoordinatorRequests() {
     const newReq = {
       id: Date.now(),
       studentName: createForm.studentName,
-      rollNo: createForm.rollNo || "CSE26-100",
-      batch: createForm.batch,
+      rollNo: createForm.rollNo || "N/A",
+      batch: createForm.batch || "All Batches",
       requestType: createForm.category,
       category: createForm.category,
       reason: createForm.reason,
@@ -144,11 +138,13 @@ export default function CoordinatorRequests() {
 
     setRequests([newReq, ...requests]);
     setShowCreateModal(false);
+    triggerToast(`New approval request logged for ${createForm.studentName}!`);
+
     setCreateForm({
       studentName: "",
       rollNo: "",
-      batch: "CSE 2026 Alpha",
-      category: "Medical Leave",
+      batch: "All Batches",
+      category: "Medical Leave Application",
       reason: "",
     });
 
@@ -182,6 +178,28 @@ export default function CoordinatorRequests() {
 
   return (
     <div className="coord-requests-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      {toastMessage && (
+        <div style={{
+          position: "fixed",
+          top: "20px",
+          right: "24px",
+          background: "#0f172a",
+          color: "#ffffff",
+          padding: "12px 20px",
+          borderRadius: "12px",
+          boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          zIndex: 99999,
+          fontSize: "13.5px",
+          fontWeight: 600,
+        }}>
+          <CheckCircle size={18} color="#10b981" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* Header Page Banner */}
       <div className="coord-requests-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
@@ -331,7 +349,7 @@ export default function CoordinatorRequests() {
       </div>
 
       {/* Requests List Cards */}
-      <div className="coord-requests-list">
+      <div className="coord-requests-list" style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
         {loading ? (
           <div style={{ padding: "48px", textAlign: "center", color: "#64748b", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
             Loading student applications & leave requests...
@@ -353,7 +371,7 @@ export default function CoordinatorRequests() {
                   <div>
                     <span className="coord-req-name" style={{ fontWeight: 800, fontSize: "15px", color: "#0f172a" }}>{r.studentName}</span>
                     <span className="coord-req-roll" style={{ marginLeft: "8px", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
-                      Roll No: {r.rollNo} · {r.batch || "CSE Batch"}
+                      Roll No: {r.rollNo} · {r.batch || "All Batches"}
                     </span>
                   </div>
                   <span
@@ -387,52 +405,76 @@ export default function CoordinatorRequests() {
                 </div>
               </div>
 
-              {r.status === "Pending" ? (
-                <div className="coord-req-actions" style={{ display: "flex", gap: "10px" }}>
-                  <button
-                    className="coord-btn coord-btn--approve"
-                    onClick={() => handleAction(r.id, "Approved")}
-                    style={{
-                      background: "#ecfdf5",
-                      color: "#047857",
-                      border: "1px solid #a7f3d0",
-                      padding: "8px 16px",
-                      borderRadius: "10px",
-                      fontWeight: 700,
-                      fontSize: "12.5px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    <CheckCircle size={15} /> Approve
-                  </button>
-                  <button
-                    className="coord-btn coord-btn--reject"
-                    onClick={() => handleAction(r.id, "Rejected")}
-                    style={{
-                      background: "#fff1f2",
-                      color: "#be123c",
-                      border: "1px solid #fecdd3",
-                      padding: "8px 16px",
-                      borderRadius: "10px",
-                      fontWeight: 700,
-                      fontSize: "12.5px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px"
-                    }}
-                  >
-                    <XCircle size={15} /> Reject
-                  </button>
-                </div>
-              ) : (
-                <div className="coord-req-actioned" style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", background: "#f1f5f9", padding: "6px 12px", borderRadius: "8px" }}>
-                  Actioned ({r.status})
-                </div>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {r.status === "Pending" ? (
+                  <div className="coord-req-actions" style={{ display: "flex", gap: "10px" }}>
+                    <button
+                      className="coord-btn coord-btn--approve"
+                      onClick={() => handleAction(r.id, "Approved")}
+                      style={{
+                        background: "#ecfdf5",
+                        color: "#047857",
+                        border: "1px solid #a7f3d0",
+                        padding: "8px 16px",
+                        borderRadius: "10px",
+                        fontWeight: 700,
+                        fontSize: "12.5px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      <CheckCircle size={15} /> Approve
+                    </button>
+                    <button
+                      className="coord-btn coord-btn--reject"
+                      onClick={() => handleAction(r.id, "Rejected")}
+                      style={{
+                        background: "#fff1f2",
+                        color: "#be123c",
+                        border: "1px solid #fecdd3",
+                        padding: "8px 16px",
+                        borderRadius: "10px",
+                        fontWeight: 700,
+                        fontSize: "12.5px",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px"
+                      }}
+                    >
+                      <XCircle size={15} /> Reject
+                    </button>
+                  </div>
+                ) : (
+                  <div className="coord-req-actioned" style={{ fontSize: "12px", fontWeight: 700, color: "#64748b", background: "#f1f5f9", padding: "6px 12px", borderRadius: "8px" }}>
+                    Actioned ({r.status})
+                  </div>
+                )}
+
+                <button
+                  title="Delete Request"
+                  onClick={() => handleDeleteRequest(r.id)}
+                  style={{
+                    background: "#f8fafc",
+                    border: "1px solid #e2e8f0",
+                    color: "#94a3b8",
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = "#ef4444"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "#94a3b8"}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -452,14 +494,37 @@ export default function CoordinatorRequests() {
             <form onSubmit={handleCreateRequest} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
               <div>
                 <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Student Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Aarav Sharma"
-                  value={createForm.studentName}
-                  onChange={(e) => setCreateForm({ ...createForm, studentName: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                />
+                {dbStudents.length > 0 ? (
+                  <CustomSelect
+                    value={createForm.studentName}
+                    onChange={(val) => {
+                      const selectedSt = dbStudents.find(s => (s.name || s.student_name) === val);
+                      setCreateForm({
+                        ...createForm,
+                        studentName: val,
+                        rollNo: selectedSt ? (selectedSt.roll_number || selectedSt.roll_no || selectedSt.rollNo || "") : createForm.rollNo,
+                        batch: selectedSt ? (selectedSt.batch_name || selectedSt.batch || createForm.batch) : createForm.batch
+                      });
+                    }}
+                    options={[
+                      { value: "", label: "Select Student..." },
+                      ...dbStudents.map(s => ({
+                        value: s.name || s.student_name,
+                        label: `${s.name || s.student_name} (${s.roll_number || s.roll_no || s.email || 'Student'})`
+                      }))
+                    ]}
+                    placeholder="Select registered student..."
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Aarav Sharma"
+                    value={createForm.studentName}
+                    onChange={(e) => setCreateForm({ ...createForm, studentName: e.target.value })}
+                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                  />
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
@@ -476,13 +541,27 @@ export default function CoordinatorRequests() {
 
                 <div>
                   <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Batch Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CSE 2026 Alpha"
-                    value={createForm.batch}
-                    onChange={(e) => setCreateForm({ ...createForm, batch: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
-                  />
+                  {dbBatches.length > 0 ? (
+                    <CustomSelect
+                      value={createForm.batch}
+                      onChange={(val) => setCreateForm({ ...createForm, batch: val })}
+                      options={[
+                        { value: "All Batches", label: "All Batches" },
+                        ...dbBatches.map(b => ({
+                          value: b.name || b.batch_name || b.code,
+                          label: b.name || b.batch_name || b.code
+                        }))
+                      ]}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="e.g. CSE 2026 Alpha"
+                      value={createForm.batch}
+                      onChange={(e) => setCreateForm({ ...createForm, batch: e.target.value })}
+                      style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                    />
+                  )}
                 </div>
               </div>
 

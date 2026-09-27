@@ -263,7 +263,8 @@ export default function Batches() {
       filterDeptId === 'all' ||
       String(b.departmentId) === String(filterDeptId);
 
-    return matchesSearch && matchesCollege && matchesDept;
+    const isNotInactive = b.status !== "Inactive" && b.status !== "inactive";
+    return isNotInactive && matchesSearch && matchesCollege && matchesDept;
   });
 
   const handleCreateBatch = async (e) => {

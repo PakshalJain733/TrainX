@@ -32,8 +32,9 @@ export const config = {
     senderName: process.env.BREVO_SENDER_NAME || 'Training Portal',
   },
   ai: {
-    apiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '',
-    model: process.env.AI_MODEL || 'gemini-3.6-flash',
+    apiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || '',
+    groqApiKey: process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || process.env.GROQ_API_KEY || '',
+    model: process.env.AI_MODEL || 'qwen/qwen3.8-27b',
   },
   supabase: {
     url: process.env.SUPABASE_URL || '',

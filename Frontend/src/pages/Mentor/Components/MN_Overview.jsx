@@ -68,11 +68,7 @@ const getInitials = (name) => {
   return name.slice(0, 2).toUpperCase();
 };
 
-const DEFAULT_MENTOR_BATCHES = [
-  { id: 1, name: "DSA Training Cohort", code: "BE-CS-2026-A", studentCount: 42, status: "Active", progress: 78 },
-  { id: 2, name: "Fullstack React & Node Specialization", code: "TE-IT-2026-B", studentCount: 38, status: "Active", progress: 65 },
-  { id: 3, name: "SQL & Relational Database Architecture", code: "BE-EXTC-2026-C", studentCount: 31, status: "Active", progress: 85 },
-];
+const DEFAULT_MENTOR_BATCHES = [];
 
 export default function Overview() {
   const [mentorUser, setMentorUser] = useState(() => {
@@ -109,13 +105,13 @@ export default function Overview() {
 
     apiFetch("/batches")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setBatches(res.data);
+        if (res && res.data && Array.isArray(res.data)) {
+          setBatches(res.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
         } else {
-          setBatches(DEFAULT_MENTOR_BATCHES);
+          setBatches([]);
         }
       })
-      .catch(() => setBatches(DEFAULT_MENTOR_BATCHES));
+      .catch(() => setBatches([]));
 
     apiFetch("/students")
       .then((res) => {
