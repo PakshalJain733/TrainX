@@ -32,15 +32,18 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
   try {
     const client = getBrevoClient();
     if (!client) {
-      console.warn('[Brevo] API Client not configured. Skipping live email dispatch.');
-      return { messageId: `mock_${Date.now()}` };
-    }
+    throw new Error('Brevo API client is not configured');
+}
 
     const senderEmail = process.env.BREVO_SENDER_EMAIL || 'training.portal0987@gmail.com';
     const senderName = process.env.BREVO_SENDER_NAME || 'Campus Training Portal';
 
     const sendOptions = {
       sender: {
+        email: senderEmail,
+        name: senderName,
+      },
+      replyTo: {
         email: senderEmail,
         name: senderName,
       },

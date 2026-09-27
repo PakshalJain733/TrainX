@@ -266,9 +266,8 @@ export const getStudentByUserId = async (userId) => {
 export const saveOtpRecord = async (identifier, otp, purpose = 'login') => {
   const cleanId = String(identifier).trim().toLowerCase();
   const cleanPurpose = String(purpose || 'login').trim().toLowerCase();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
   try {
-    await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, ?)', [cleanId, otp, expiresAt, cleanPurpose]);
+    await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))', [cleanId, otp, cleanPurpose]);
   } catch (err) {
     if (err.message && err.message.includes("otps' doesn't exist")) {
       await query(`
@@ -283,7 +282,7 @@ export const saveOtpRecord = async (identifier, otp, purpose = 'login') => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, ?)', [cleanId, otp, expiresAt, cleanPurpose]);
+      await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))', [cleanId, otp, cleanPurpose]);
     } else {
       throw err;
     }
@@ -310,7 +309,12 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
        ORDER BY id DESC LIMIT 1`,
       [...identifierCandidates, cleanOtp]
     );
-    return Boolean(results && results.length > 0);
+    if (results && results.length > 0) {
+      const matchedId = results[0].id;
+      await query('DELETE FROM otps WHERE id = ?', [matchedId]).catch(() => {});
+      return true;
+    }
+    return false;
   } catch (_) {
     return false;
   }
