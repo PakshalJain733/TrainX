@@ -261,13 +261,13 @@ export default function Colleges() {
         setColleges(Array.isArray(data) ? data : colleges);
       }
       window.dispatchEvent(new CustomEvent(EVENTS.COLLEGE_UPDATED));
+      setIsAddCollegeModalOpen(false);
+      setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0 });
     } catch (err) {
       console.error("Failed to save college to backend:", err);
-      // Re-fetch from API to be consistent
+      alert(err.message || "Failed to save college. The college code might already exist. Please enter a unique college code.");
       collegeAPI.getColleges().then(data => setColleges(Array.isArray(data) ? data : colleges)).catch(() => {});
     }
-    setIsAddCollegeModalOpen(false);
-    setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0 });
   };
 
   const handleAddDepartment = async (e) => {
