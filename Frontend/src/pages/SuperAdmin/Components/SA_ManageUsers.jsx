@@ -1046,7 +1046,8 @@ export default function ManageUsers() {
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
   const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
-  const [codeExpiry, setCodeExpiry] = useState('7 Days');
+  const [codeAdminName, setCodeAdminName] = useState('');
+  const [codeExpiry, setCodeExpiry] = useState('24 Hours');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
   const [generatedCodesList, setGeneratedCodesList] = useState([]);
@@ -1565,16 +1566,9 @@ export default function ManageUsers() {
             <div className="modal-body modal-body-overflow-visible">
               <div className="form-group-admin">
                 <label>Assign Target Role *</label>
-                <MuSelect
-                  value={codeRole}
-                  wrapperClass="mu-select"
-                  options={[
-                    { value: "mentors", label: "Mentor" },
-                    { value: "coordinators", label: "Coordinator" },
-                    { value: "admins", label: "Admin" },
-                  ]}
-                  onChange={(val) => setCodeRole(val)}
-                />
+                <div className="form-input-admin" style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', color: '#64748b', cursor: 'not-allowed', height: '42px', padding: '0 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                  Institutional Admin
+                </div>
               </div>
 
               <div className="form-group-admin">
@@ -1612,7 +1606,7 @@ export default function ManageUsers() {
                     direction="up"
                     wrapperClass="mu-select"
                     options={[
-                      { value: "24 Hours", label: "24 Hours" },
+                      { value: "24 Hours", label: "1 Day" },
                       { value: "3 Days", label: "3 Days" },
                       { value: "7 Days", label: "7 Days" },
                       { value: "30 Days", label: "30 Days" },
