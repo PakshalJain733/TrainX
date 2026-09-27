@@ -1,27 +1,53 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment and Secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Build Outputs
+dist/
+dist-ssr/
+build/
+out/
+.cache/
+.vite/
+coverage/
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-**/node_modules
-dist
-dist-ssr
-*.local
-.env
-*.env
+# Operating System & Temp Files
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.bak
+*.old
+*.zip
+*.tar.gz
 
-# Editor directories and files
+# IDE and Editor Files
 .vscode/*
 !.vscode/extensions.json
-.idea
-.DS_Store
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# Uploaded Media & Temp Runtime Data
+Backend/uploads/*
+!Backend/uploads/.gitkeep
+Backend/scratch/
