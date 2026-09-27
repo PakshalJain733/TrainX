@@ -19,6 +19,7 @@ import {
   updateUserTwoFactorSecret,
   updateUserRememberMe,
   findCollegeByAdminEmail,
+  findCollegeByEmailDomain,
   enableTwoFactorForUser,
 } from '../models/user.model.js';
 import { generateToken } from '../utils/generateToken.js';
@@ -268,6 +269,12 @@ export const sendRegistrationOtp = async (data = {}) => {
     throw createAuthError('Please enter a valid college email address.', 400);
   }
 
+  const matchingCollege = await findCollegeByEmailDomain(email);
+  if (!matchingCollege) {
+    const domain = email.includes('@') ? email.split('@')[1] : email;
+    throw createAuthError(`Registration denied: College does not exist or your email domain (@${domain}) is not authorized. You cannot register.`, 400);
+  }
+
   const existingUser = await findUserByEmailOrMobile(email);
   if (existingUser && existingUser.password && existingUser.password.trim().length > 0) {
     throw createAuthError('An account already exists for this email. Please log in instead.', 409);
@@ -436,7 +443,7 @@ export const registerUser = async (data) => {
     }
   }
 
-  // Strict College Admin verification: email and name MUST match the college created by Super Admin
+  // College assignment and domain check
   let assignedCollegeId = 1;
   if (canonicalRole === ROLES.COLLEGE_ADMIN) {
     const cleanEmail = String(email || '').trim().toLowerCase();
@@ -459,6 +466,13 @@ export const registerUser = async (data) => {
       }
     }
 
+    assignedCollegeId = matchingCollege.id;
+  } else if (email) {
+    const matchingCollege = await findCollegeByEmailDomain(email);
+    if (!matchingCollege) {
+      const domain = email.includes('@') ? email.split('@')[1] : email;
+      throw createAuthError(`Registration denied: College does not exist or your email domain (@${domain}) is not authorized. You cannot register.`, 400);
+    }
     assignedCollegeId = matchingCollege.id;
   }
 

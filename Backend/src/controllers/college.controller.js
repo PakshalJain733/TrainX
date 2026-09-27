@@ -28,6 +28,7 @@ async function ensureCollegeTable() {
       "contact_email VARCHAR(255) NULL",
       "contact_phone VARCHAR(50) NULL",
       "admin_name VARCHAR(255) NULL",
+      "domain VARCHAR(255) NULL",
     ];
     for (const c of cols) {
       try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) {}
@@ -65,7 +66,7 @@ export const getColleges = async (req, res, next) => {
 export const createCollege = async (req, res, next) => {
   try {
     await ensureCollegeTable();
-    const { name, code, location, city, type, contactEmail, contactPhone, adminName, adminEmail } = req.body;
+    const { name, code, location, city, type, contactEmail, contactPhone, adminName, adminEmail, domain } = req.body;
     if (!name || !code) {
       return sendError(res, 'College Name and Code are required', 400);
     }
@@ -86,9 +87,14 @@ export const createCollege = async (req, res, next) => {
     const finalEmail = (contactEmail || adminEmail || `admin@${trimmedCode.toLowerCase()}.edu.in`).trim();
     const finalAdminName = (adminName || '').trim();
 
+    let derivedDomain = (domain || '').trim().toLowerCase();
+    if (!derivedDomain && finalEmail.includes('@')) {
+      derivedDomain = finalEmail.split('@')[1].trim().toLowerCase();
+    }
+
     const result = await query(
-      `INSERT INTO colleges (name, code, location, city, type, contact_email, contact_phone, admin_name, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
+      `INSERT INTO colleges (name, code, location, city, type, contact_email, contact_phone, admin_name, domain, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active')`,
       [
         trimmedName,
         trimmedCode,
@@ -98,6 +104,7 @@ export const createCollege = async (req, res, next) => {
         finalEmail,
         contactPhone || '+91 90000 00000',
         finalAdminName,
+        derivedDomain,
       ]
     );
 
@@ -122,13 +129,18 @@ export const updateCollege = async (req, res, next) => {
   try {
     await ensureCollegeTable();
     const { id } = req.params;
-    const { name, code, location, city, type, status, contactEmail, contactPhone } = req.body;
+    const { name, code, location, city, type, status, contactEmail, contactPhone, adminName, domain } = req.body;
 
     if (code) {
       const existingCode = await query('SELECT id FROM colleges WHERE LOWER(code) = LOWER(?) AND id != ? LIMIT 1', [code.trim(), id]);
       if (existingCode && existingCode.length > 0) {
         return sendError(res, `College code '${code.trim()}' is already in use by another college.`, 400);
       }
+    }
+
+    let derivedDomain = domain !== undefined ? (domain ? domain.trim().toLowerCase() : '') : null;
+    if (derivedDomain === null && contactEmail && contactEmail.includes('@')) {
+      derivedDomain = contactEmail.split('@')[1].trim().toLowerCase();
     }
 
     await query(
@@ -140,9 +152,11 @@ export const updateCollege = async (req, res, next) => {
            type = COALESCE(?, type),
            status = COALESCE(?, status),
            contact_email = COALESCE(?, contact_email),
-           contact_phone = COALESCE(?, contact_phone)
+           contact_phone = COALESCE(?, contact_phone),
+           admin_name = COALESCE(?, admin_name),
+           domain = COALESCE(?, domain)
        WHERE id = ?`,
-      [name, code, location, city, type, status, contactEmail, contactPhone, id]
+      [name, code, location, city, type, status, contactEmail, contactPhone, adminName || null, derivedDomain, id]
     );
 
     const [updated] = await query('SELECT * FROM colleges WHERE id = ?', [id]);

@@ -140,6 +140,40 @@ export const findCollegeByAdminEmail = async (email) => {
   return null;
 };
 
+export const findCollegeByEmailDomain = async (email) => {
+  if (!email || typeof email !== 'string' || !email.includes('@')) return null;
+  const cleanEmail = email.trim().toLowerCase();
+  const parts = cleanEmail.split('@');
+  if (parts.length < 2) return null;
+  const domain = parts[1].trim();
+  if (!domain) return null;
+
+  try {
+    const rows = await query(
+      `SELECT id, name, code, contact_email, admin_name, domain FROM colleges 
+       WHERE (LOWER(status) = 'active' OR status IS NULL) AND (
+         LOWER(domain) = ? OR 
+         LOWER(contact_email) LIKE ? OR 
+         LOWER(code) = ?
+       )
+       ORDER BY id ASC LIMIT 1`,
+      [domain, `%@${domain}`, domain.split('.')[0]]
+    );
+    if (rows && rows.length > 0) {
+      return rows[0];
+    }
+
+    const allColleges = await query(`SELECT id, name, code, contact_email, admin_name, domain FROM colleges ORDER BY id ASC LIMIT 2`);
+    if (allColleges && allColleges.length === 1) {
+      return allColleges[0];
+    }
+  } catch (err) {
+    console.warn(`[User Model Warning] findCollegeByEmailDomain error: ${err.message}`);
+  }
+
+  return null;
+};
+
 export const createUser = async ({
   name,
   email = null,

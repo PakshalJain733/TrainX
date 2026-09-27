@@ -213,7 +213,7 @@ export default function Colleges() {
 
   // Form states
   const [collegeForm, setCollegeForm] = useState({
-    name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0,
+    name: '', code: '', location: '', adminName: '', adminEmail: '', domain: '', departmentsCount: 0, studentsCount: 0,
   });
   const [deptForm, setDeptForm] = useState({
     name: '', code: '', hodName: '', hodEmail: '',
@@ -226,6 +226,7 @@ export default function Colleges() {
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
       c.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.domain && c.domain.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (c.adminName && c.adminName.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus =
@@ -253,6 +254,7 @@ export default function Colleges() {
         contactEmail: collegeForm.adminEmail,
         adminName: collegeForm.adminName,
         adminEmail: collegeForm.adminEmail,
+        domain: collegeForm.domain,
       });
       if (created) {
         setColleges([created, ...colleges.filter(c => c.id !== created.id)]);
@@ -262,7 +264,7 @@ export default function Colleges() {
       }
       window.dispatchEvent(new CustomEvent(EVENTS.COLLEGE_UPDATED));
       setIsAddCollegeModalOpen(false);
-      setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', departmentsCount: 0, studentsCount: 0 });
+      setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', domain: '', departmentsCount: 0, studentsCount: 0 });
     } catch (err) {
       console.error("Failed to save college to backend:", err);
       alert(err.message || "Failed to save college. The college code might already exist. Please enter a unique college code.");
@@ -634,16 +636,28 @@ export default function Colleges() {
                   </div>
                 </div>
 
-                <div className="form-group-admin">
-                  <label>City &amp; Location *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    placeholder="Sion, Mumbai"
-                    value={collegeForm.location}
-                    onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
-                  />
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>City &amp; Location *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="Sion, Mumbai"
+                      value={collegeForm.location}
+                      onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Email Domain</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="pvppcoe.ac.in"
+                      value={collegeForm.domain}
+                      onChange={(e) => setCollegeForm({ ...collegeForm, domain: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="form-row-2">
@@ -703,9 +717,26 @@ export default function Colleges() {
               </button>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
-              setColleges(colleges.map(c => c.id === editCollege.id ? editCollege : c));
+              try {
+                const updated = await collegeAPI.updateCollege(editCollege.id, {
+                  name: editCollege.name,
+                  code: editCollege.code,
+                  location: editCollege.location,
+                  city: editCollege.location,
+                  status: editCollege.status,
+                  contactEmail: editCollege.adminEmail,
+                  adminName: editCollege.adminName,
+                  domain: editCollege.domain,
+                });
+                if (updated) {
+                  setColleges(colleges.map(c => c.id === editCollege.id ? { ...c, ...updated, adminEmail: updated.contact_email || editCollege.adminEmail, domain: updated.domain || editCollege.domain } : c));
+                }
+              } catch (err) {
+                console.error("Failed to update college:", err);
+                alert(err.message || "Failed to update college details.");
+              }
               setEditCollege(null);
             }}>
               <div className="modal-body">
@@ -732,15 +763,27 @@ export default function Colleges() {
                   </div>
                 </div>
 
-                <div className="form-group-admin">
-                  <label>City &amp; Location *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    value={editCollege.location || ''}
-                    onChange={(e) => setEditCollege({ ...editCollege, location: e.target.value })}
-                  />
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>City &amp; Location *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editCollege.location || ''}
+                      onChange={(e) => setEditCollege({ ...editCollege, location: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Email Domain</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="pvppcoe.ac.in"
+                      value={editCollege.domain || ''}
+                      onChange={(e) => setEditCollege({ ...editCollege, domain: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="form-row-2">

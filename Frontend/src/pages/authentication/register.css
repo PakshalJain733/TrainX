@@ -2,14 +2,14 @@
 
 .register-page {
     position: relative;
-    height: 100vh;
+    min-height: 100vh;
     width: 100vw;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 16px;
     background: #dbe5ee;
-    overflow: hidden;
+    overflow-y: hidden;
 }
 
 .register-page * {
@@ -20,10 +20,12 @@
 
 .register-card {
     width: 100%;
-    max-width: 450px;
+    max-width: 480px;
     height: auto;
+    max-height: 96vh;
+    overflow-y: auto;
     background: #fff;
-    padding: 24px 28px;
+    padding: 20px 24px;
     border-radius: 20px;
     box-shadow: 0 12px 36px rgba(0, 50, 150, 0.09);
     position: relative;
@@ -1833,28 +1835,73 @@
 .login-otp-digit-input-compact {
   flex: 1;
   min-width: 0;
-  height: 42px;
+  height: 40px;
   padding: 0;
-  border: 1.5px solid #cbd5e1;
+  border: 1.5px solid #94a3b8;
   border-radius: 8px;
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
   font-family: inherit;
   text-align: center;
-  color: #0f172a;
+  color: #1e293b;
   background: #f8fafc;
   outline: none;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .login-otp-digit-input-compact:focus {
   border-color: #2563eb;
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  color: #1e40af;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
 }
 
 .login-otp-digit-input-compact.filled {
   border-color: #2563eb;
-  background: #eff6ff;
+  background: #f0f6ff;
   color: #1d4ed8;
+}
+
+/* ── Label with Small Resend Symbol Button ── */
+.label-with-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.label-with-resend-row .label-with-icon {
+  margin-bottom: 0;
+}
+
+.reg-resend-symbol-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  line-height: 1;
+}
+
+.reg-resend-symbol-btn:hover:not(:disabled) {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.reg-resend-symbol-btn:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.reg-resend-symbol-btn svg {
+  width: 12px;
+  height: 12px;
 }

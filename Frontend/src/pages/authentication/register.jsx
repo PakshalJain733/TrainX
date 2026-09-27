@@ -146,6 +146,12 @@ const Icons = {
       <polyline points="12 19 5 12 12 5" />
     </svg>
   ),
+  refresh: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="23 4 23 10 17 10" />
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+    </svg>
+  ),
 };
 
 /* ── Label with inline icon ─────────────────────────── */
@@ -670,6 +676,7 @@ function Register() {
                     <input
                       type="text"
                       name="roll_number"
+                      autoComplete="off"
                       required
                       placeholder="College ID"
                       value={formData.roll_number}
@@ -678,40 +685,37 @@ function Register() {
                   </div>
                 </div>
 
-                {/* Row 2: College Email & Inline 6-Digit OTP Code (Side-by-Side) */}
+                {/* Row 2: College Email & Inline 6-Digit OTP Code */}
                 <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                    <div className="reg-email-input-bar-wrap">
-                      <input
-                        type="email"
-                        name="email"
-                        required
-                        placeholder="user@pvppcoe.ac.in"
-                        value={formData.email}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        className={`reg-inline-otp-btn ${emailOtpSent ? "sent" : ""}`}
-                        onClick={requestEmailOtp}
-                        disabled={loading || resendIn > 0}
-                      >
-                        {loading
-                          ? "Sending..."
-                          : resendIn > 0
-                          ? `${resendIn}s`
-                          : emailOtpSent
-                          ? "Resend"
-                          : "Get OTP"}
-                      </button>
-                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      required
+                      placeholder="user@pvppcoe.ac.in"
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
                   </div>
 
-                  {/* Right Column: 6-Digit OTP Code beside Email Bar */}
+                  {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
                   {emailOtpSent && (
                     <div className="input-group" style={{ marginBottom: 0 }}>
-                      <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                      <div className="label-with-resend-row">
+                        <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                        <button
+                          type="button"
+                          className="reg-resend-symbol-btn"
+                          disabled={resendIn > 0 || loading}
+                          onClick={requestEmailOtp}
+                          title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
+                        >
+                          {Icons.refresh}
+                          <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
+                        </button>
+                      </div>
                       <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
                         {emailOtp.map((digit, i) => (
                           <input
@@ -853,40 +857,36 @@ function Register() {
                     />
                   </div>
 
-                {/* Email & Inline 6-Digit OTP Code (Side-by-Side) for Non-Student */}
+                {/* Email & Inline 6-Digit OTP Code for Non-Student */}
                 <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <FieldLabel icon={Icons.email}>Email</FieldLabel>
-                    <div className="reg-email-input-bar-wrap">
-                      <input
-                        type="email"
-                        name="email"
-                        required
-                        placeholder="user@pvppcoe.ac.in"
-                        value={formData.email}
-                        onChange={handleChange}
-                      />
-                      <button
-                        type="button"
-                        className={`reg-inline-otp-btn ${emailOtpSent ? "sent" : ""}`}
-                        onClick={requestEmailOtp}
-                        disabled={loading || resendIn > 0}
-                      >
-                        {loading
-                          ? "Sending..."
-                          : resendIn > 0
-                          ? `${resendIn}s`
-                          : emailOtpSent
-                          ? "Resend"
-                          : "Get OTP"}
-                      </button>
-                    </div>
+                    <input
+                      type="email"
+                      name="email"
+                      required
+                      placeholder="user@pvppcoe.ac.in"
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
                   </div>
 
-                  {/* Right Column: 6-Digit OTP Code beside Email Bar */}
+                  {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
                   {emailOtpSent && (
                     <div className="input-group" style={{ marginBottom: 0 }}>
-                      <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                      <div className="label-with-resend-row">
+                        <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                        <button
+                          type="button"
+                          className="reg-resend-symbol-btn"
+                          disabled={resendIn > 0 || loading}
+                          onClick={requestEmailOtp}
+                          title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
+                        >
+                          {Icons.refresh}
+                          <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
+                        </button>
+                      </div>
                       <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
                         {emailOtp.map((digit, i) => (
                           <input
