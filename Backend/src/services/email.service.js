@@ -29,14 +29,14 @@ const getBrevoClient = () => {
  * Centralized function to send emails via Brevo Transactional Email API (HTTPS REST)
  */
 export const sendEmail = async ({ to, toName = '', subject, htmlContent, textContent, templateId, params }) => {
-  const apiKey = process.env.BREVO_API_KEY;
+  const apiKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) {
     console.error('[Brevo Error] BREVO_API_KEY is not configured in environment variables.');
     throw new Error('Brevo API key is missing');
   }
 
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'ganeshvshinde2006@gmail.com';
-  const senderName = process.env.BREVO_SENDER_NAME || 'Campus Training Portal';
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'ganeshvshinde2006@gmail.com').trim().replace(/^["']|["']$/g, '');
+  const senderName = (process.env.BREVO_SENDER_NAME || 'Campus Training Portal').trim().replace(/^["']|["']$/g, '');
 
   const sendOptions = {
     sender: {
@@ -87,7 +87,8 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
 
     // If HTTP error returned from Brevo API
     const errorMsg = data?.message || data?.code || `HTTP ${res.status}`;
-    console.warn(`[Brevo HTTPS API Warning] Direct API returned ${res.status}: ${errorMsg}. Trying SDK fallback...`);
+    const maskedKey = apiKey ? (apiKey.slice(0, 12) + '...' + apiKey.slice(-6)) : 'EMPTY';
+    console.warn(`[Brevo HTTPS API Warning] Direct API returned ${res.status}: ${errorMsg}. (Key loaded: ${maskedKey}, Length: ${apiKey.length})`);
   } catch (httpError) {
     console.warn(`[Brevo HTTPS API Warning] Direct HTTPS fetch failed (${httpError.message}). Trying SDK fallback...`);
   }
