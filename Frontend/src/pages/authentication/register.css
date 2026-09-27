@@ -1736,3 +1736,88 @@
   cursor: not-allowed;
   text-decoration: none;
 }
+
+/* ── Inline Get OTP Button beside Email Bar ── */
+.reg-email-input-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  width: 100%;
+}
+
+.reg-email-input-bar-wrap input {
+  flex: 1;
+  min-width: 0;
+}
+
+.reg-inline-otp-btn {
+  height: 42px;
+  padding: 0 16px;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reg-inline-otp-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.35);
+}
+
+.reg-inline-otp-btn:disabled {
+  background: #e2e8f0;
+  color: #64748b;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.reg-inline-otp-btn.sent {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.25);
+}
+
+.reg-email-otp-inline-box {
+  background: #f8fafc;
+  border: 1.5px dashed #6366f1;
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-top: 8px;
+  animation: cardEntrance 0.3s ease-out;
+}
+
+.reg-otp-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.reg-otp-box-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.reg-otp-sent-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #15803d;
+  background: #dcfce7;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
