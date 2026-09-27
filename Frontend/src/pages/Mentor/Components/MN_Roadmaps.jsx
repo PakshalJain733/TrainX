@@ -3,68 +3,7 @@ import { Target, Sparkles, Search, BookOpen, Layers, CheckCircle2 } from "lucide
 import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_Roadmaps.css";
 
-const DEFAULT_ROADMAPS = [
-  {
-    id: "rm-101",
-    studentName: "Aarav Sharma",
-    rollNo: "2026-CS-001",
-    batch: "BE-CS-2026-A",
-    name: "Full Stack MERN & Microservices Track",
-    completion: "78%",
-    milestone: "Node.js & Express Architecture",
-    status: "Active"
-  },
-  {
-    id: "rm-102",
-    studentName: "Ananya Roy",
-    rollNo: "2026-CS-042",
-    batch: "BE-CS-2026-A",
-    name: "Advanced Data Structures & Algorithms",
-    completion: "92%",
-    milestone: "Graph Algorithms & Dynamic Programming",
-    status: "Active"
-  },
-  {
-    id: "rm-103",
-    studentName: "Rohan Gupta",
-    rollNo: "2025-IT-015",
-    batch: "TE-IT-2026-B",
-    name: "AI & Machine Learning Foundations",
-    completion: "64%",
-    milestone: "Neural Networks with PyTorch",
-    status: "Active"
-  },
-  {
-    id: "rm-104",
-    studentName: "Siddharth Verma",
-    rollNo: "2026-AI-088",
-    batch: "BE-EXTC-2026-C",
-    name: "Cloud Computing & DevOps Pipelines",
-    completion: "45%",
-    milestone: "Docker & Kubernetes Deployment",
-    status: "Active"
-  },
-  {
-    id: "rm-105",
-    studentName: "Priya Nair",
-    rollNo: "2027-EC-023",
-    batch: "CSE 2026 Alpha Batch",
-    name: "System Design & Scalable Architectures",
-    completion: "85%",
-    milestone: "Redis Caching & Message Queues",
-    status: "Active"
-  },
-  {
-    id: "rm-106",
-    studentName: "Ketan Kulkarni",
-    rollNo: "2026-CS-112",
-    batch: "Fullstack React & Node Specialization",
-    name: "Cybersecurity & Ethical Hacking",
-    completion: "58%",
-    milestone: "Penetration Testing & Web Security",
-    status: "Active"
-  }
-];
+const DEFAULT_ROADMAPS = [];
 
 export default function MentorRoadmaps() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -74,13 +13,13 @@ export default function MentorRoadmaps() {
   useEffect(() => {
     apiFetch("/roadmaps")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (res && res.data && Array.isArray(res.data)) {
           setRoadmapTracks(res.data);
         } else {
-          setRoadmapTracks(DEFAULT_ROADMAPS);
+          setRoadmapTracks([]);
         }
       })
-      .catch(() => setRoadmapTracks(DEFAULT_ROADMAPS));
+      .catch(() => setRoadmapTracks([]));
   }, []);
 
   const batchesList = Array.from(

@@ -242,25 +242,13 @@ export default function MentorQuizzes() {
     try {
       const r = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const d = await r.json();
-      if (d.success && Array.isArray(d.data) && d.data.length > 0) {
+      if (d.success && Array.isArray(d.data)) {
         setAvailableBatches(d.data);
       } else {
-        setAvailableBatches([
-          { id: 1, name: "BE-CS-2026-A" },
-          { id: 2, name: "TE-IT-2026-B" },
-          { id: 3, name: "BE-EXTC-2026-C" },
-          { id: 4, name: "CSE 2026 Alpha Batch" },
-          { id: 5, name: "Fullstack React & Node Specialization" }
-        ]);
+        setAvailableBatches([]);
       }
     } catch {
-      setAvailableBatches([
-        { id: 1, name: "BE-CS-2026-A" },
-        { id: 2, name: "TE-IT-2026-B" },
-        { id: 3, name: "BE-EXTC-2026-C" },
-        { id: 4, name: "CSE 2026 Alpha Batch" },
-        { id: 5, name: "Fullstack React & Node Specialization" }
-      ]);
+      setAvailableBatches([]);
     }
   };
 

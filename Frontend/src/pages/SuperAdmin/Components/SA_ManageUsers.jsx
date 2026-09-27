@@ -73,160 +73,10 @@ const mockMentors = [];
 // Mock Data for Students Risk
 const mockStudentsRisk = [];
 
-const DEFAULT_ADMINS = [
-  {
-    id: 101,
-    name: "Dr. Sandeep Meshram",
-    adminName: "Dr. Sandeep Meshram",
-    email: "sandeep.meshram@pvppcoe.ac.in",
-    phone: "+91 98201 11223",
-    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
-    designation: "Institutional Admin",
-    date: "2026-09-20",
-    status: "Verified",
-  },
-  {
-    id: 102,
-    name: "Prof. Sunita Rawat",
-    adminName: "Prof. Sunita Rawat",
-    email: "sunita.rawat@apex.edu.in",
-    phone: "+91 98112 44556",
-    college: "Apex Institute of Technology",
-    designation: "Head of Academic Affairs",
-    date: "2026-09-22",
-    status: "Verified",
-  },
-];
-
-const DEFAULT_COORDINATORS = [
-  {
-    id: 201,
-    name: "Dr. Rajesh Kumar",
-    email: "rajesh.kumar@pvppcoe.ac.in",
-    phone: "+91 98200 99887",
-    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
-    department: "Computer Engineering",
-    status: "Active",
-  },
-  {
-    id: 202,
-    name: "Prof. Archana Patil",
-    email: "archana.patil@apex.edu.in",
-    phone: "+91 98334 11223",
-    college: "Apex Institute of Technology",
-    department: "Information Technology",
-    status: "Active",
-  },
-  {
-    id: 203,
-    name: "Er. Vikram Singh",
-    email: "vikram.singh@pvppcoe.ac.in",
-    phone: "+91 99102 33445",
-    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
-    department: "AI & Data Science",
-    status: "Active",
-  },
-];
-
-const DEFAULT_MENTORS = [
-  {
-    id: 301,
-    name: "Anubhav Shukla",
-    email: "anubhav.shukla@trainx.edu",
-    phone: "+91 98201 44512",
-    college: "Apex Institute of Technology",
-    track: "Java Architecture & Microservices",
-    studentsAssigned: 42,
-    rating: "4.9",
-    status: "Active",
-  },
-  {
-    id: 302,
-    name: "Priya Sharma",
-    email: "priya.sharma@trainx.edu",
-    phone: "+91 98112 33490",
-    college: "PVPP College of Engineering",
-    track: "Fullstack React & Node.js System Architecture",
-    studentsAssigned: 38,
-    rating: "4.8",
-    status: "Active",
-  },
-  {
-    id: 303,
-    name: "Rahul Verma",
-    email: "rahul.verma@trainx.edu",
-    phone: "+91 99304 88123",
-    college: "Apex Institute of Technology",
-    track: "Advanced DSA & Dynamic Programming",
-    studentsAssigned: 50,
-    rating: "4.9",
-    status: "Active",
-  },
-  {
-    id: 304,
-    name: "Dr. Amit Deshmukh",
-    email: "amit.deshmukh@trainx.edu",
-    phone: "+91 98700 12345",
-    college: "PVPP College of Engineering",
-    track: "AI/ML & Python Data Engineering",
-    studentsAssigned: 35,
-    rating: "4.7",
-    status: "Active",
-  },
-];
-
-const DEFAULT_STUDENTS = [
-  {
-    id: 401,
-    name: "Rohan Mehta",
-    rollNo: "CSE26-042",
-    college: "PVPP College of Engineering",
-    batch: "CSE 2026 Alpha Cohort",
-    attendance: "92%",
-    risk: "Low Risk",
-    status: "Active",
-  },
-  {
-    id: 402,
-    name: "Sneha Patil",
-    rollNo: "IT25-018",
-    college: "Apex Institute of Technology",
-    batch: "Fullstack Specialization B",
-    attendance: "88%",
-    risk: "Low Risk",
-    status: "Active",
-  },
-  {
-    id: 403,
-    name: "Aditya Joshi",
-    rollNo: "AIDS26-009",
-    college: "PVPP College of Engineering",
-    batch: "Data Science & AI Cohort",
-    attendance: "71%",
-    risk: "High Risk",
-    status: "Active",
-  },
-  {
-    id: 404,
-    name: "Kavya Nair",
-    rollNo: "CSE26-088",
-    college: "Apex Institute of Technology",
-    batch: "DSA Fast-Track 2025",
-    attendance: "64%",
-    risk: "High Risk",
-    status: "Active",
-  },
-  {
-    id: 405,
-    name: "Yash Sharma",
-    rollNo: "CSE26-102",
-    college: "PVPP College of Engineering",
-    batch: "CSE 2026 Alpha Cohort",
-    attendance: "96%",
-    risk: "Low Risk",
-    status: "Active",
-  },
-];
+const DEFAULT_ADMINS = [];
+const DEFAULT_COORDINATORS = [];
+const DEFAULT_MENTORS = [];
+const DEFAULT_STUDENTS = [];
 
 
 function RiskBadge({ risk }) {
@@ -247,21 +97,47 @@ function RiskBadge({ risk }) {
 
 /* ── Assign Trainer Modal Component ── */
 function AssignTrainerModal({ isOpen, onClose, users = [] }) {
-  const [batches, setBatches] = useState([
-    { id: "batch-1", name: "BE-CS-2026-A", label: "BE-CS-2026-A (Computer Science)", trainer: "Rahul Verma", topic: "DSA Marathon: Trees & Graphs", description: "BST insertion, Graph traversals (BFS/DFS), shortest paths", date: new Date().toISOString().split("T")[0], status: "Completed" },
-    { id: "batch-2", name: "TE-IT-2025-B", label: "TE-IT-2025-B (Information Tech)", trainer: "Dr. Priya Sharma", topic: "React Architecture & Custom Hooks", description: "State management, Context API, Redux Toolkit & performance", date: new Date().toISOString().split("T")[0], status: "In Progress" },
-    { id: "batch-3", name: "SE-ECS-2027-C", label: "SE-ECS-2027-C (Electronics & CS)", trainer: "Prof. Anish Deshmukh", topic: "Embedded Systems & Microcontrollers", description: "8051 Architecture, Timers, Interrupts & Assembly language", date: new Date().toISOString().split("T")[0], status: "Scheduled" },
-    { id: "batch-4", name: "BE-AI-2026-X", label: "BE-AI-2026-X (AI & Data Science)", trainer: "Er. Amit Kulkarni", topic: "Machine Learning: Supervised Algorithms", description: "Linear Regression, Logistic Regression, Decision Trees", date: new Date().toISOString().split("T")[0], status: "Scheduled" },
-  ]);
-
-  const [selectedBatchId, setSelectedBatchId] = useState("batch-1");
-  const [currentTrainer, setCurrentTrainer] = useState("Rahul Verma");
+  const [batches, setBatches] = useState([]);
+  const [selectedBatchId, setSelectedBatchId] = useState("");
+  const [currentTrainer, setCurrentTrainer] = useState("");
   const [isEditingTrainer, setIsEditingTrainer] = useState(false);
-  const [topicTitle, setTopicTitle] = useState("DSA Marathon: Trees & Graphs");
-  const [topicDesc, setTopicDesc] = useState("BST insertion, Graph traversals (BFS/DFS), shortest paths");
+  const [topicTitle, setTopicTitle] = useState("");
+  const [topicDesc, setTopicDesc] = useState("");
   const [topicDate, setTopicDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [topicStatus, setTopicStatus] = useState("Completed");
+  const [topicStatus, setTopicStatus] = useState("Scheduled");
   const [successMsg, setSuccessMsg] = useState("");
+
+  useEffect(() => {
+    if (!isOpen) return;
+    apiFetch("/batches")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list.map((b) => ({
+            id: b.id || b.batch_id,
+            name: b.name || b.batch_name || b.code,
+            label: `${b.name || b.batch_name || b.code}`,
+            trainer: b.trainer || b.mentor_name || "Unassigned",
+            topic: b.topic || "Daily Training Session",
+            description: b.description || "Curriculum topic",
+            date: b.date || new Date().toISOString().split("T")[0],
+            status: b.status || "Scheduled",
+          }));
+          setBatches(formatted);
+          if (formatted.length > 0) {
+            setSelectedBatchId(formatted[0].id);
+            setCurrentTrainer(formatted[0].trainer);
+            setTopicTitle(formatted[0].topic);
+            setTopicDesc(formatted[0].description);
+            setTopicDate(formatted[0].date);
+            setTopicStatus(formatted[0].status);
+          }
+        } else {
+          setBatches([]);
+        }
+      })
+      .catch(() => setBatches([]));
+  }, [isOpen]);
 
   // Auto-fill trainer and today's topic when selected batch changes
   useEffect(() => {
@@ -274,7 +150,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       setTopicStatus(selected.status || "Scheduled");
       setIsEditingTrainer(false);
     }
-  }, [selectedBatchId]);
+  }, [selectedBatchId, batches]);
 
   if (!isOpen) return null;
 
@@ -585,28 +461,10 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
 /* ── Assign Mentor Modal Component ── */
 function AssignMentorModal({ isOpen, onClose, users = [] }) {
-  const DEFAULT_MENTORS = [
-    { id: "m-1", name: "Prof. Anish Deshmukh", department: "Computer Science", email: "anish.d@college.edu", title: "Associate Professor" },
-    { id: "m-2", name: "Dr. Priya Sharma", department: "Information Tech", email: "priya.s@college.edu", title: "HOD & Professor" },
-    { id: "m-3", name: "Prof. Rajesh Kulkarni", department: "AI & Data Science", email: "rajesh.k@college.edu", title: "Assistant Professor" },
-    { id: "m-4", name: "Dr. Sunita Patil", department: "Electronics & CS", email: "sunita.p@college.edu", title: "Senior Faculty" },
-  ];
-
-  const DEFAULT_STUDENTS = [
-    { id: "st-101", name: "Aarav Mehta", roll_number: "2026-CS-001", department: "Computer Science", email: "aarav.m@college.edu", year: "FE", status: "Active" },
-    { id: "st-102", name: "Ananya Roy", roll_number: "2026-CS-042", department: "Computer Science", email: "ananya.r@college.edu", year: "SE", status: "Active" },
-    { id: "st-103", name: "Rohan Gupta", roll_number: "2025-IT-015", department: "Information Tech", email: "rohan.g@college.edu", year: "TE", status: "Active" },
-    { id: "st-104", name: "Siddharth Verma", roll_number: "2026-AI-088", department: "AI & Data Science", email: "siddharth.v@college.edu", year: "FE", status: "Active" },
-    { id: "st-105", name: "Priya Nair", roll_number: "2027-EC-023", department: "Electronics & CS", email: "priya.n@college.edu", year: "BE", status: "Active" },
-    { id: "st-106", name: "Ketan Kulkarni", roll_number: "2026-CS-112", department: "Computer Science", email: "ketan.k@college.edu", year: "TE", status: "Active" },
-    { id: "st-107", name: "Neha Deshmukh", roll_number: "2025-IT-074", department: "Information Tech", email: "neha.d@college.edu", year: "BE", status: "Active" },
-    { id: "st-108", name: "Vikram Singh", roll_number: "2026-AI-031", department: "AI & Data Science", email: "vikram.s@college.edu", year: "SE", status: "Active" },
-  ];
-
-  const [selectedMentor, setSelectedMentor] = useState("Prof. Anish Deshmukh");
+  const [selectedMentor, setSelectedMentor] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
-  const [selectedStudentIds, setSelectedStudentIds] = useState(["st-101", "st-102"]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
 
   if (!isOpen) return null;
@@ -616,18 +474,14 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
     const r = (u.role || "").toLowerCase();
     return r.includes("mentor") || r.includes("faculty") || r.includes("prof");
   });
-  const mentors = rawMentors.length > 0
-    ? [...rawMentors, ...DEFAULT_MENTORS.filter(d => !rawMentors.some(u => u.email === d.email || u.id === d.id))]
-    : DEFAULT_MENTORS;
+  const mentors = rawMentors;
 
-  // Merge real DB students with DEFAULT_STUDENTS so roster is ALWAYS complete and fallback ready
+  // Real DB students
   const rawStudents = users.filter(u => {
     const r = (u.role || "").toLowerCase();
     return r.includes("student") || r === "user" || (!r && u.name);
   });
-  const allStudents = rawStudents.length > 0
-    ? [...rawStudents, ...DEFAULT_STUDENTS.filter(d => !rawStudents.some(u => u.email === d.email || u.id === d.id))]
-    : DEFAULT_STUDENTS;
+  const allStudents = rawStudents;
 
   // Filter students based on department pills and search input
   const filteredStudents = allStudents.filter(s => {
@@ -1997,7 +1851,6 @@ export default function ManageUsers() {
                         <label>Department *</label>
                         <MuSelect
                           value={newUserForm.departmentId}
-                          direction="up"
                           placeholder={
                             !newUserForm.collegeId
                               ? "Select College First"
@@ -2026,7 +1879,6 @@ export default function ManageUsers() {
                         <label>Academic Year</label>
                         <MuSelect
                           value={newUserForm.year || 'FE'}
-                          direction="up"
                           wrapperClass="mu-select"
                           options={[
                             { value: "FE", label: "FE" },
@@ -2041,7 +1893,6 @@ export default function ManageUsers() {
                         <label>Division</label>
                         <MuSelect
                           value={newUserForm.division || 'A'}
-                          direction="up"
                           wrapperClass="mu-select"
                           options={[
                             { value: "A", label: "Division A" },
@@ -2061,7 +1912,6 @@ export default function ManageUsers() {
                     <label>Department *</label>
                     <MuSelect
                       value={newUserForm.departmentId}
-                      direction="up"
                       placeholder={
                         !newUserForm.collegeId
                           ? "Select College First"

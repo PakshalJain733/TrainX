@@ -34,20 +34,20 @@ export default function CustomSelect({
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
-    const estimatedHeight = Math.min(220, Math.max(48, normalizedOptions.length * 36 + 12));
+    const estimatedHeight = Math.min(240, Math.max(60, normalizedOptions.length * 36 + 12));
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
 
     let openUp = false;
     if (direction === "up") {
-      openUp = true;
+      openUp = spaceAbove >= 120 || spaceAbove > spaceBelow;
     } else if (direction === "down") {
       openUp = false;
     } else {
-      // Auto direction: open upward if space below is tighter than estimated height AND top space is larger
+      // Auto direction: prefer downward unless space below is tight AND space above has more room
       if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
         openUp = true;
-      } else if (spaceBelow < 180 && spaceAbove > spaceBelow) {
+      } else if (spaceBelow < 140 && spaceAbove > 140) {
         openUp = true;
       }
     }
@@ -55,14 +55,14 @@ export default function CustomSelect({
     setOpenUpState(openUp);
 
     const availableSpace = openUp ? spaceAbove - 16 : spaceBelow - 16;
-    const maxHeight = Math.max(80, Math.min(240, availableSpace));
-
-    const computedLeft = Math.max(8, Math.min(rect.left, viewportWidth - rect.width - 8));
+    const maxHeight = Math.max(100, Math.min(240, availableSpace));
+    const targetWidth = rect.width > 0 ? rect.width : 200;
+    const computedLeft = Math.max(8, Math.min(rect.left, viewportWidth - targetWidth - 8));
 
     const computedStyle = {
       position: "fixed",
       left: `${computedLeft}px`,
-      width: `${rect.width}px`,
+      width: `${targetWidth}px`,
       maxHeight: `${maxHeight}px`,
       overflowY: "auto",
       zIndex: 2147483647,
@@ -112,8 +112,15 @@ export default function CustomSelect({
     };
   }, [isOpen]);
 
-  const handleToggle = () => {
+  const handleToggle = (e) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
     if (disabled) return;
+    if (!isOpen) {
+      updatePosition();
+    }
     setIsOpen((prev) => !prev);
   };
 

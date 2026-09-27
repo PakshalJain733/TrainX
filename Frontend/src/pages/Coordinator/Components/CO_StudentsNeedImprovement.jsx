@@ -46,25 +46,28 @@ export default function StudentsNeedImprovement() {
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
           setDataList(
-            res.data.map((s, idx) => ({
-              id: s.id || s.student_id || idx,
-              student_id: s.student_id || s.user_id || s.id,
-              studentName: s.student_name || s.name || "Student",
-              rollNo: s.roll_number || s.roll_no || `CS-${100 + idx}`,
-              department: s.department || "ECS",
-              batch: s.batch_name || s.batch || "TE-A",
-              priority: s.risk_level || (s.overall_score < 60 ? "High" : "Medium"),
-              overallScore: s.overall_score || 55,
-              attendancePct: s.attendance_score || s.attendance || "72%",
-              assignedMentor: s.mentor_name || "Faculty Mentor",
-              trendStatus: s.status === "Action Taken" ? "Improving" : "Not Improving",
-              weakSkills: Array.isArray(s.weak_areas)
-                ? s.weak_areas
-                : [
-                    { skillName: "Dynamic Programming", currentScore: 42, targetScore: 75, level: "Critical", source: "Coding Quiz" },
-                    { skillName: "Graph Algorithms", currentScore: 50, targetScore: 70, level: "High", source: "AI Mock Interview" },
-                  ],
-            }))
+            res.data.map((s, idx) => {
+              const scoreVal = s.overall_score !== undefined && s.overall_score !== null
+                ? Number(s.overall_score)
+                : (s.overallPerformance !== undefined && s.overallPerformance !== null ? Number(s.overallPerformance) : 0);
+              return {
+                id: s.id || s.student_id || idx,
+                student_id: s.student_id || s.user_id || s.id,
+                studentName: s.student_name || s.name || "Student",
+                rollNo: s.roll_number || s.roll_no || s.rollNo || "N/A",
+                department: s.department || s.dept || "N/A",
+                batch: s.batch_name || s.batch || "N/A",
+                priority: s.risk_level || s.priority || (scoreVal < 60 ? "High" : "Medium"),
+                overallScore: scoreVal,
+                overallPerformance: scoreVal,
+                attendancePct: s.attendance_score || s.attendance || "0%",
+                assignedMentor: s.mentor_name || s.assigned_mentor || "Unassigned",
+                trendStatus: s.status === "Action Taken" ? "Improving" : "Not Improving",
+                weakSkills: Array.isArray(s.weak_areas)
+                  ? s.weak_areas
+                  : (Array.isArray(s.weakSkills) ? s.weakSkills : []),
+              };
+            })
           );
         } else {
           setDataList([]);
