@@ -431,15 +431,18 @@ function Register() {
     e.preventDefault();
 
     // Phase 1: send the code to the college email. No account is created yet.
-    if (!emailOtpSent) {
+    if (!emailOtpSent && role !== "Admin") {
       return requestEmailOtp();
     }
 
     // Phase 2: verify the code. The account is created only if it matches.
-    const otp = emailOtp.join("");
-    if (!/^\d{6}$/.test(otp)) {
-      setErrorMsg("Please enter the 6-digit verification code from your email.");
-      return;
+    let otp = "";
+    if (role !== "Admin") {
+      otp = emailOtp.join("");
+      if (!/^\d{6}$/.test(otp)) {
+        setErrorMsg("Please enter the 6-digit verification code from your email.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -463,14 +466,21 @@ function Register() {
         setShowTotpSetup(true);
         setSuccessMsg("");
       } else if (data.success) {
-        setSuccessMsg("Account created successfully! Redirecting to login...");
-        if (data.data?.token) {
-          sessionStorage.setItem("token", data.data.token);
-          sessionStorage.setItem("user", JSON.stringify(data.data.user));
+        if (role === "Admin") {
+          setSuccessMsg("Account created successfully!");
+          setTimeout(() => {
+            navigate("/");
+          }, 2500);
+        } else {
+          setSuccessMsg("Account created successfully! Redirecting to login...");
+          if (data.data?.token) {
+            sessionStorage.setItem("token", data.data.token);
+            sessionStorage.setItem("user", JSON.stringify(data.data.user));
+          }
+          setTimeout(() => {
+            navigate("/");
+          }, 1500);
         }
-        setTimeout(() => {
-          navigate("/");
-        }, 1500);
       } else {
         setErrorMsg(data.message || "Registration failed");
       }

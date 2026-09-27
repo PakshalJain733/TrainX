@@ -121,38 +121,7 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
             />
           </div>
 
-          <div className="full-notif-tabs">
-            <button 
-              className={`full-notif-tab ${activeTab === 'all' ? 'active' : ''}`}
-              onClick={() => setActiveTab('all')}
-            >
-              All ({totalCount})
-            </button>
-            <button 
-              className={`full-notif-tab ${activeTab === 'unread' ? 'active' : ''}`}
-              onClick={() => setActiveTab('unread')}
-            >
-              Unread ({unreadCount})
-            </button>
-            <button 
-              className={`full-notif-tab ${activeTab === 'alert' ? 'active' : ''}`}
-              onClick={() => setActiveTab('alert')}
-            >
-              Alerts
-            </button>
-            <button 
-              className={`full-notif-tab ${activeTab === 'calendar' ? 'active' : ''}`}
-              onClick={() => setActiveTab('calendar')}
-            >
-              Events
-            </button>
-            <button 
-              className={`full-notif-tab ${activeTab === 'document' ? 'active' : ''}`}
-              onClick={() => setActiveTab('document')}
-            >
-              Reports
-            </button>
-          </div>
+
         </div>
 
         {/* Notifications Body */}

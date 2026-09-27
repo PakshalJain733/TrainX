@@ -1278,30 +1278,7 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="manageusers-tabs-bar">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.id);
-                setSearchQuery('');
-              }}
-              className={`manageusers-tab-btn ${isActive ? 'manageusers-tab-btn--active' : ''}`}
-            >
-              <Icon size={15} />
-              <span>{tab.label}</span>
-              <span className="manageusers-tab-badge">
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+
 
       {/* Search Input */}
       <div className="sa-search-card">
@@ -1383,7 +1360,7 @@ export default function ManageUsers() {
                                 className="manageusers-btn-verify"
                               >
                                 <CheckCircle2 size={15} />
-                                <span>Verify Access</span>
+                                <span>Approve</span>
                               </button>
                               <button
                                 type="button"
