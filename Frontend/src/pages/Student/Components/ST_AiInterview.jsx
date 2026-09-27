@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 import { io } from "socket.io-client";
 
@@ -180,57 +181,95 @@ function getToken() {
 
   // Proctoring & Anti-Cheating Camera Violation Monitor
   const [proctoringWarnings, setProctoringWarnings] = useState([]);
-  const [activeProctoringBanner, setActiveProctoringBanner] = useState(null);
+  const [activeProctoringModal, setActiveProctoringModal] = useState(null);
   const [isInterviewFlagged, setIsInterviewFlagged] = useState(false);
   const lastWarningTimeRef = useRef(0);
   const proctoringCanvasRef = useRef(null);
+  const hasCameraBeenTurnedOnRef = useRef(false);
+  const consecutiveViolationsRef = useRef({ noFace: 0, device: 0, lookingAway: 0 });
+
+  useEffect(() => {
+    if (cameraState === "on") {
+      hasCameraBeenTurnedOnRef.current = true;
+    }
+  }, [cameraState]);
 
   const triggerProctoringWarning = useCallback((type = "SUSPICIOUS_BEHAVIOR", customMsg = "") => {
     const timestamp = new Date().toLocaleTimeString();
     const defaultMsgs = {
-      MULTIPLE_PERSONS: "Multiple persons / background occupant detected in camera feed!",
-      LOOKING_AWAY: "Candidate looking away from screen (copying attempt detected)!",
+      MULTIPLE_PERSONS: "Multiple persons / background occupants detected in camera feed!",
+      DEVICE_DETECTED: "Mobile phone or electronic copying device detected in camera view!",
+      LOOKING_AWAY: "Candidate looking away from screen (possible copying attempt)!",
       NO_FACE: "Face not detected in camera frame! Please remain in front of camera.",
-      BACKGROUND_PERSON: "Person detected in background of video stream!",
-      TAB_SWITCH: "Tab switching or window minimizing detected during live interview!",
-      COPY_PASTE: "Copy/paste attempt detected on interview screen!",
+      BACKGROUND_PERSON: "Background occupant or secondary person detected!",
+      TAB_SWITCH: "Tab switching or window focus lost during live interview!",
+      COPY_PASTE: "Copy or paste shortcut attempt detected on interview screen!",
       RIGHT_CLICK: "Right-click context menu opened during live interview!",
     };
 
-    const baseMsg = customMsg || defaultMsgs[type] || "Suspicious camera/proctoring activity detected.";
+    const baseMsg = customMsg || defaultMsgs[type] || "Suspicious proctoring violation detected.";
 
     setProctoringWarnings((prev) => {
       const warningCount = prev.length + 1;
       const updated = [...prev, { id: Date.now(), type, message: baseMsg, timestamp, warningCount }];
 
       if (warningCount === 1) {
-        // 1st warning: Show warning flag message banner
-        const flagBannerMsg = `⚠️ PROCTORING WARNING (1/1): ${baseMsg} — CAUTION: Re-offending will AUTO-SUBMIT your interview!`;
-        setActiveProctoringBanner(flagBannerMsg);
+        // Warning 1 of 3
+        setActiveProctoringModal({
+          level: 1,
+          warningCount: 1,
+          maxWarnings: 3,
+          title: "Proctoring Violation Warning (1/3)",
+          type,
+          message: baseMsg,
+          subtext: "Please remain alone in front of your camera and do not switch tabs or use external devices. You have 2 warnings remaining before auto-submission.",
+          timestamp,
+        });
         setIsInterviewFlagged(true);
-        speakNow("Warning. Suspicious activity detected on camera.");
-      } else if (warningCount >= 2) {
-        // 2nd Violation (after 1 warning): Auto submit interview immediately!
-        const terminationBannerMsg = `🚨 INTERVIEW TERMINATED & AUTO-SUBMITTED: Exceeded 1 warning limit due to camera/proctoring violation! (${baseMsg})`;
-        setActiveProctoringBanner(terminationBannerMsg);
+        speakNow("Warning 1 of 3. Suspicious activity detected on camera.");
+      } else if (warningCount === 2) {
+        // Warning 2 of 3
+        setActiveProctoringModal({
+          level: 2,
+          warningCount: 2,
+          maxWarnings: 3,
+          title: "Serious Proctoring Warning (2/3)",
+          type,
+          message: baseMsg,
+          subtext: "FINAL CAUTION: One more violation will automatically terminate and submit your interview evaluation!",
+          timestamp,
+        });
+        setIsInterviewFlagged(true);
+        speakNow("Warning 2 of 3. Final warning before interview termination.");
+      } else if (warningCount >= 3) {
+        // Warning 3 of 3 (Termination & Auto-submit!)
+        setActiveProctoringModal({
+          level: 3,
+          warningCount: 3,
+          maxWarnings: 3,
+          title: "Interview Terminated & Auto-Submitted (3/3)",
+          type,
+          message: `Exceeded 3 Warning Limit: ${baseMsg}`,
+          subtext: "Your interview has been automatically terminated and submitted due to repeated proctoring violations.",
+          timestamp,
+        });
         setIsInterviewFlagged(true);
         setIsInterviewFinished(true);
-        speakNow("Interview terminated and auto-submitted due to proctoring violation.");
+        speakNow("Maximum 3 warnings exceeded. Interview terminated and auto submitted.");
 
-        // Trigger end & auto-submit
         setTimeout(() => {
           if (endInterviewRef.current) {
             endInterviewRef.current();
           }
-        }, 800);
+        }, 1500);
       }
 
       return updated;
     });
+  }, []);
 
-    setTimeout(() => {
-      setActiveProctoringBanner(null);
-    }, 8000);
+  const dismissProctoringModal = useCallback(() => {
+    setActiveProctoringModal(null);
   }, []);
 
   const viewPastResult = useCallback((pastSession) => {
@@ -296,18 +335,46 @@ function getToken() {
   }, [phase]);
 
   // ─── TTS helpers ────────────────────────────────────────────────────────────
-  const stopSpeaking = useCallback(() => {
-    if (typeof window !== "undefined" && window.speechSynthesis) {
+  const autoMicTimeoutRef = useRef(null);
+  const startRecognitionRef = useRef(null);
 
+  const stopSpeaking = useCallback(() => {
+    if (autoMicTimeoutRef.current) {
+      clearTimeout(autoMicTimeoutRef.current);
+      autoMicTimeoutRef.current = null;
+    }
+    if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     setIsAiSpeaking(false);
   }, []);
 
   const speakQuestion = useCallback((text) => {
-    if (!voiceEnabledRef.current) return;
+    if (autoMicTimeoutRef.current) {
+      clearTimeout(autoMicTimeoutRef.current);
+      autoMicTimeoutRef.current = null;
+    }
+    if (!voiceEnabledRef.current) {
+      autoMicTimeoutRef.current = setTimeout(() => {
+        if (phaseRef.current === "live" && !endRequestedRef.current && startRecognitionRef.current) {
+          startRecognitionRef.current();
+        }
+      }, 2000);
+      return;
+    }
     setIsAiSpeaking(true);
-    speakNow(text, () => setIsAiSpeaking(false));
+    speakNow(text, () => {
+      setIsAiSpeaking(false);
+      // AI voice stopped -> auto start candidate mic after 2 seconds delay!
+      if (autoMicTimeoutRef.current) {
+        clearTimeout(autoMicTimeoutRef.current);
+      }
+      autoMicTimeoutRef.current = setTimeout(() => {
+        if (phaseRef.current === "live" && !endRequestedRef.current && startRecognitionRef.current) {
+          startRecognitionRef.current();
+        }
+      }, 2000);
+    });
   }, []);
 
   const replayQuestion = useCallback(() => {
@@ -350,9 +417,38 @@ function getToken() {
   }, []);
 
   const toggleCamera = useCallback(() => {
-    if (cameraState === "on") stopCamera();
-    else enableCamera();
-  }, [cameraState, enableCamera, stopCamera]);
+    if (cameraState === "on") {
+      stopCamera();
+      if (phaseRef.current === "live" && hasCameraBeenTurnedOnRef.current) {
+        const now = Date.now();
+        lastWarningTimeRef.current = now;
+        triggerProctoringWarning(
+          "CAMERA_OFF",
+          "Camera turned off or disabled during live interview!"
+        );
+      }
+    } else {
+      enableCamera();
+    }
+  }, [cameraState, enableCamera, stopCamera, triggerProctoringWarning]);
+
+  // Monitor camera off / disabled state during live interview (ONLY if candidate previously turned camera ON!)
+  useEffect(() => {
+    if (phase !== "live") return;
+    if (
+      hasCameraBeenTurnedOnRef.current &&
+      (cameraState === "idle" || cameraState === "denied" || cameraState === "unsupported")
+    ) {
+      const now = Date.now();
+      if (now - lastWarningTimeRef.current > 4000) {
+        lastWarningTimeRef.current = now;
+        triggerProctoringWarning(
+          "CAMERA_OFF",
+          "Camera turned off or disabled during live interview!"
+        );
+      }
+    }
+  }, [cameraState, phase, triggerProctoringWarning]);
 
   const toggleCamMic = useCallback(async () => {
     if (camMicOn) {
@@ -412,55 +508,82 @@ function getToken() {
         const data = frameData.data;
 
         let leftSum = 0, centerSum = 0, rightSum = 0;
+        let bottomSum = 0, topSum = 0;
         let totalSum = 0;
         const pixelCount = data.length / 4;
 
         for (let i = 0; i < data.length; i += 4) {
-          const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const brightness = (r + g + b) / 3;
+
           totalSum += brightness;
 
           const pixelIndex = i / 4;
           const x = pixelIndex % 160;
+          const y = Math.floor(pixelIndex / 160);
 
           if (x < 50) leftSum += brightness;
           else if (x > 110) rightSum += brightness;
           else centerSum += brightness;
+
+          if (y < 45) topSum += brightness;
+          else if (y > 75) bottomSum += brightness;
         }
 
         const avgBrightness = totalSum / pixelCount;
         const leftAvg = leftSum / (50 * 120);
         const rightAvg = rightSum / (50 * 120);
-        const centerAvg = centerSum / (60 * 120);
+        const bottomAvg = bottomSum / (160 * 45);
 
         const now = Date.now();
-        if (now - lastWarningTimeRef.current < 9000) return;
 
-        // Check 1: Face missing / Candidate out of frame
-        if (avgBrightness < 12) {
-          lastWarningTimeRef.current = now;
-          triggerProctoringWarning("NO_FACE", "⚠️ PROCTORING WARNING: Face not detected in camera frame!");
-          return;
+        // 1. Camera covered or dark check (pitch dark / covered lens: avgBrightness < 6 for 4 consecutive checks)
+        if (avgBrightness < 6) {
+          consecutiveViolationsRef.current.noFace += 1;
+          if (consecutiveViolationsRef.current.noFace >= 4) {
+            if (now - lastWarningTimeRef.current > 12000) {
+              lastWarningTimeRef.current = now;
+              consecutiveViolationsRef.current.noFace = 0;
+              triggerProctoringWarning("NO_FACE", "Face not detected in camera view! Please stay visible in front of camera.");
+            }
+          }
+        } else {
+          consecutiveViolationsRef.current.noFace = 0;
         }
 
-        // Check 2: Multiple persons / background occupant in video feed
-        const diffLeftCenter = Math.abs(leftAvg - centerAvg);
-        const diffRightCenter = Math.abs(rightAvg - centerAvg);
-
-        if (leftAvg > 42 && rightAvg > 42 && diffLeftCenter < 18 && diffRightCenter < 18 && avgBrightness > 65) {
-          lastWarningTimeRef.current = now;
-          triggerProctoringWarning("MULTIPLE_PERSONS", "⚠️ PROCTORING WARNING: Multiple persons / background person detected on camera!");
-          return;
+        // 2. Mobile Phone / Flash specular reflection check (avgBrightness > 215 & bottomAvg > 240 for 4 consecutive checks)
+        if (avgBrightness > 215 && bottomAvg > 240) {
+          consecutiveViolationsRef.current.device += 1;
+          if (consecutiveViolationsRef.current.device >= 4) {
+            if (now - lastWarningTimeRef.current > 12000) {
+              lastWarningTimeRef.current = now;
+              consecutiveViolationsRef.current.device = 0;
+              triggerProctoringWarning("DEVICE_DETECTED", "Mobile phone or copying device glare detected in camera frame!");
+            }
+          }
+        } else {
+          consecutiveViolationsRef.current.device = 0;
         }
 
-        // Check 3: Candidate looking away continuously (skewed gaze distribution)
-        if (Math.abs(leftAvg - rightAvg) > 55) {
-          lastWarningTimeRef.current = now;
-          triggerProctoringWarning("LOOKING_AWAY", "⚠️ PROCTORING WARNING: Candidate looking away from camera / screen!");
+        // 3. Looking away check (extreme head turn sustained for 5 consecutive checks)
+        if (Math.abs(leftAvg - rightAvg) > 75) {
+          consecutiveViolationsRef.current.lookingAway += 1;
+          if (consecutiveViolationsRef.current.lookingAway >= 5) {
+            if (now - lastWarningTimeRef.current > 12000) {
+              lastWarningTimeRef.current = now;
+              consecutiveViolationsRef.current.lookingAway = 0;
+              triggerProctoringWarning("LOOKING_AWAY", "Candidate looking away from screen for prolonged duration!");
+            }
+          }
+        } else {
+          consecutiveViolationsRef.current.lookingAway = 0;
         }
       } catch (e) {
         console.warn("Proctoring frame warning:", e);
       }
-    }, 3500);
+    }, 2000);
 
     return () => clearInterval(intervalId);
   }, [cameraState, phase, triggerProctoringWarning]);
@@ -513,6 +636,10 @@ function getToken() {
     if (isRecording) stopRecognition();
     else startRecognition();
   }, [isRecording, stopRecognition, startRecognition]);
+
+  useEffect(() => {
+    startRecognitionRef.current = startRecognition;
+  }, [startRecognition]);
 
   // ─── Timer ───────────────────────────────────────────────────────────────────
   const stopTimer = useCallback(() => {
@@ -782,10 +909,11 @@ function getToken() {
     endRequestedRef.current = false;
     firstQuestionRef.current = false;
     timerActiveRef.current = false;
+    hasCameraBeenTurnedOnRef.current = false;
     stopTimer();
     setWarningShown(false);
     setProctoringWarnings([]);
-    setActiveProctoringBanner(null);
+    setActiveProctoringModal(null);
     setIsInterviewFlagged(false);
     setErrorMsg("");
     setQuestion(null);
@@ -820,6 +948,7 @@ function getToken() {
     endRequestedRef.current = false;
     firstQuestionRef.current = false;
     timerActiveRef.current = false;
+    hasCameraBeenTurnedOnRef.current = false;
     sessionIdRef.current = null;
     setSocketConnected(false);
     setQuestion(null);
@@ -998,7 +1127,7 @@ function getToken() {
                     <p className="past-item-feedback-snippet">{item.feedback}</p>
                   )}
                   <button type="button" className="view-suggestions-btn">
-                    <Sparkles size={13} /> View Stored Suggestions & Feedback
+                    <Sparkles size={13} /> View Feedback
                   </button>
                 </div>
               );
@@ -1036,12 +1165,62 @@ function getToken() {
             </div>
           </div>
 
-          {activeProctoringBanner && (
-            <div className="ai-proctoring-warning-banner">
-              <ShieldAlert size={18} className="animate-pulse shrink-0" />
-              <span>{activeProctoringBanner}</span>
-            </div>
-          )}
+          {/* ─── PROCTORING WARNING MODAL OVERLAY ──────────────────────────── */}
+          {activeProctoringModal &&
+            createPortal(
+              <div className="ai-proctoring-modal-overlay">
+                <div className={`ai-proctoring-modal-card level-${activeProctoringModal.level}`}>
+                  <div className={`ai-pmodal-badge level-${activeProctoringModal.level}`}>
+                    <ShieldAlert size={14} />
+                    <span>WARNING {activeProctoringModal.warningCount} OF {activeProctoringModal.maxWarnings}</span>
+                  </div>
+
+                  <div className={`ai-pmodal-icon-circle level-${activeProctoringModal.level}`}>
+                    <ShieldAlert size={36} className="ai-pmodal-icon" />
+                    <div className="ai-pmodal-icon-pulse" />
+                  </div>
+
+                  <h3 className="ai-pmodal-title">{activeProctoringModal.title}</h3>
+                  <div className={`ai-pmodal-reason-box level-${activeProctoringModal.level}`}>
+                    <AlertTriangle size={18} className="reason-icon" />
+                    <span className="reason-text">{activeProctoringModal.message}</span>
+                  </div>
+                  <p className="ai-pmodal-subtext">{activeProctoringModal.subtext}</p>
+
+                  <div className="ai-pmodal-tracker">
+                    <div className={`tracker-step ${activeProctoringModal.warningCount >= 1 ? "active level-1" : ""}`}>
+                      <span className="step-num">1</span>
+                      <span className="step-lbl">Warning 1</span>
+                    </div>
+                    <div className="tracker-line" />
+                    <div className={`tracker-step ${activeProctoringModal.warningCount >= 2 ? "active level-2" : ""}`}>
+                      <span className="step-num">2</span>
+                      <span className="step-lbl">Warning 2</span>
+                    </div>
+                    <div className="tracker-line" />
+                    <div className={`tracker-step ${activeProctoringModal.warningCount >= 3 ? "active level-3" : ""}`}>
+                      <span className="step-num">3</span>
+                      <span className="step-lbl">Auto-Submit</span>
+                    </div>
+                  </div>
+
+                  {activeProctoringModal.level < 3 ? (
+                    <button
+                      type="button"
+                      className={`ai-pmodal-action-btn level-${activeProctoringModal.level}`}
+                      onClick={dismissProctoringModal}
+                    >
+                      <span>I Understand & Resume Interview</span>
+                    </button>
+                  ) : (
+                    <div className="ai-pmodal-terminating-banner">
+                      <Loader2 size={16} className="ai-spin" /> Submitting interview evaluation...
+                    </div>
+                  )}
+                </div>
+              </div>,
+              document.body
+            )}
 
           {errorMsg && (
             <div className="ai-error-banner">
@@ -1053,16 +1232,6 @@ function getToken() {
             {/* ── LEFT COLUMN: Webcam + AI status ── */}
             <div className="ai-left-column">
               <div className={`ai-camera-panel ${cameraState === "on" ? "" : "ai-camera-off-panel"}`}>
-                <div className={`ai-proctoring-badge ${isInterviewFlagged ? "flagged-critical" : proctoringWarnings.length > 0 ? "flagged-warning" : "flagged-clean"}`}>
-                  <ShieldAlert size={12} />
-                  <span>
-                    {proctoringWarnings.length >= 2
-                      ? "TERMINATED & AUTO-SUBMITTED"
-                      : proctoringWarnings.length === 1
-                      ? "FLAGGED: 1 Warning (Final Notice)"
-                      : "Proctoring Active"}
-                  </span>
-                </div>
 
                 {cameraState === "on" ? (
                   <video ref={videoRef} className="ai-camera-video" autoPlay playsInline muted />
@@ -1096,26 +1265,6 @@ function getToken() {
                     {cameraState === "on" ? <Camera size={14} /> : <CameraOff size={14} />}
                     <span>{cameraState === "on" ? "Camera ON" : "Camera OFF"}</span>
                   </button>
-                  <button
-                    type="button"
-                    className={`ai-cam-ctrl-btn ${camMicOn ? "active recording" : ""}`}
-                    onClick={toggleCamMic}
-                    title={camMicOn ? "Mute Webcam Mic" : "Unmute Webcam Mic"}
-                  >
-                    {camMicOn ? <Mic size={14} /> : <MicOff size={14} />}
-                    <span>{camMicOn ? "Mic ON" : "Mic OFF"}</span>
-                  </button>
-                  {cameraState === "on" && (
-                    <button
-                      type="button"
-                      className="ai-cam-ctrl-btn ai-proctoring-test-btn"
-                      onClick={() => triggerProctoringWarning("MULTIPLE_PERSONS", "⚠️ PROCTORING WARNING: Multiple persons / background occupant detected in camera feed!")}
-                      title="Test Proctoring Camera Flag Warning"
-                    >
-                      <ShieldAlert size={14} />
-                      <span>Test Warning Flag</span>
-                    </button>
-                  )}
                 </div>
               </div>
 
@@ -1267,51 +1416,6 @@ function getToken() {
         </>
       )}
 
-
-        <div className="past-interviews-grid">
-          {pastInterviewsList.length === 0 ? (
-            <div className="past-interviews-empty">
-              No past AI interview evaluations found.
-            </div>
-          ) : (
-            pastInterviewsList.map((item, idx) => (
-              <div key={item.id || idx} className="past-interview-item">
-                <div className="past-interview-top">
-                  <div>
-                    <h4 className="past-interview-title">{item.role || item.title || "AI Mock Interview"}</h4>
-                    <p className="past-interview-date">{item.date || (item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "Recent")}</p>
-                  </div>
-                  <span className="past-interview-score-pill">{item.score || item.overallScore || 0}%</span>
-                </div>
-
-                <div className="past-interview-scores-row">
-                  <div className="past-score-box">
-                    <div className="past-score-val">{item.technical || item.technicalScore || 0}</div>
-                    <div className="past-score-label">Technical</div>
-                  </div>
-                  <div className="past-score-box">
-                    <div className="past-score-val">{item.problemSolving || item.problemSolvingScore || 0}</div>
-                    <div className="past-score-label">Problem solving</div>
-                  </div>
-                  <div className="past-score-box">
-                    <div className="past-score-val">{item.communication || item.communicationScore || 0}</div>
-                    <div className="past-score-label">Communication</div>
-                  </div>
-                </div>
-
-                {Array.isArray(item.tags) && item.tags.length > 0 && (
-                  <div className="past-interview-tags">
-                    {item.tags.map((tag) => (
-                      <span key={tag} className="past-tag-pill">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          )}
-        </div>
 
       {/* ─── RESULT PHASE ──────────────────────────────────────────────────────────────────────── */}
       {phase === "result" && (() => {
