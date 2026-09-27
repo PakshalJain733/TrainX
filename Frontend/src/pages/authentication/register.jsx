@@ -678,47 +678,46 @@ function Register() {
                   </div>
                 </div>
 
-                {/* Row 2: College Email with inline Get OTP button */}
-                <div className="input-group" style={{ marginBottom: "14px" }}>
-                  <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                  <div className="reg-email-input-bar-wrap">
-                    <input
-                      type="email"
-                      name="email"
-                      required
-                      placeholder="user@pvppcoe.ac.in"
-                      value={formData.email}
-                      onChange={handleChange}
-                    />
-                    <button
-                      type="button"
-                      className={`reg-inline-otp-btn ${emailOtpSent ? "sent" : ""}`}
-                      onClick={requestEmailOtp}
-                      disabled={loading || resendIn > 0}
-                    >
-                      {loading
-                        ? "Sending..."
-                        : resendIn > 0
-                        ? `${resendIn}s`
-                        : emailOtpSent
-                        ? "Resend OTP"
-                        : "Get OTP"}
-                    </button>
+                {/* Row 2: College Email & Inline 6-Digit OTP Code (Side-by-Side) */}
+                <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
+                    <FieldLabel icon={Icons.email}>College Email</FieldLabel>
+                    <div className="reg-email-input-bar-wrap">
+                      <input
+                        type="email"
+                        name="email"
+                        required
+                        placeholder="user@pvppcoe.ac.in"
+                        value={formData.email}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className={`reg-inline-otp-btn ${emailOtpSent ? "sent" : ""}`}
+                        onClick={requestEmailOtp}
+                        disabled={loading || resendIn > 0}
+                      >
+                        {loading
+                          ? "Sending..."
+                          : resendIn > 0
+                          ? `${resendIn}s`
+                          : emailOtpSent
+                          ? "Resend"
+                          : "Get OTP"}
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Inline 6-Digit OTP Box directly below email bar */}
+                  {/* Right Column: 6-Digit OTP Code beside Email Bar */}
                   {emailOtpSent && (
-                    <div className="reg-email-otp-inline-box">
-                      <div className="reg-otp-box-header">
-                        <span className="reg-otp-box-title">{Icons.shield} 6-Digit Passcode</span>
-                        <span className="reg-otp-sent-tag">✓ OTP sent to email</span>
-                      </div>
-                      <div className="login-otp-inputs" onPaste={handleEmailOtpPaste} style={{ marginTop: "4px", marginBottom: "4px" }}>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                      <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
                         {emailOtp.map((digit, i) => (
                           <input
                             key={i}
                             ref={(el) => (emailOtpRefs.current[i] = el)}
-                            className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                            className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
                             type="text"
                             inputMode="numeric"
                             autoComplete="one-time-code"
@@ -854,7 +853,9 @@ function Register() {
                     />
                   </div>
 
-                  <div className="input-group">
+                {/* Email & Inline 6-Digit OTP Code (Side-by-Side) for Non-Student */}
+                <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
+                  <div className="input-group" style={{ marginBottom: 0 }}>
                     <FieldLabel icon={Icons.email}>Email</FieldLabel>
                     <div className="reg-email-input-bar-wrap">
                       <input
@@ -876,38 +877,36 @@ function Register() {
                           : resendIn > 0
                           ? `${resendIn}s`
                           : emailOtpSent
-                          ? "Resend OTP"
+                          ? "Resend"
                           : "Get OTP"}
                       </button>
                     </div>
-
-                    {/* Inline 6-Digit OTP Box directly below email bar */}
-                    {emailOtpSent && (
-                      <div className="reg-email-otp-inline-box">
-                        <div className="reg-otp-box-header">
-                          <span className="reg-otp-box-title">{Icons.shield} 6-Digit Passcode</span>
-                          <span className="reg-otp-sent-tag">✓ OTP sent to email</span>
-                        </div>
-                        <div className="login-otp-inputs" onPaste={handleEmailOtpPaste} style={{ marginTop: "4px", marginBottom: "4px" }}>
-                          {emailOtp.map((digit, i) => (
-                            <input
-                              key={i}
-                              ref={(el) => (emailOtpRefs.current[i] = el)}
-                              className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                              type="text"
-                              inputMode="numeric"
-                              autoComplete="one-time-code"
-                              maxLength={1}
-                              aria-label={`Digit ${i + 1}`}
-                              value={digit}
-                              onChange={(e) => handleEmailOtpChange(i, e.target.value)}
-                              onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
+
+                  {/* Right Column: 6-Digit OTP Code beside Email Bar */}
+                  {emailOtpSent && (
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                      <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
+                        {emailOtp.map((digit, i) => (
+                          <input
+                            key={i}
+                            ref={(el) => (emailOtpRefs.current[i] = el)}
+                            className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            maxLength={1}
+                            aria-label={`Digit ${i + 1}`}
+                            value={digit}
+                            onChange={(e) => handleEmailOtpChange(i, e.target.value)}
+                            onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
                 </div>
 
                 {/* Row: Password | Confirm Password for Staff/Mentors */}

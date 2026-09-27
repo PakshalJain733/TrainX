@@ -1821,3 +1821,40 @@
   padding: 2px 8px;
   border-radius: 20px;
 }
+
+/* ── Side-by-Side Compact 6-Digit OTP Inputs ── */
+.login-otp-inputs-compact {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.login-otp-digit-input-compact {
+  flex: 1;
+  min-width: 0;
+  height: 42px;
+  padding: 0;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  font-family: inherit;
+  text-align: center;
+  color: #0f172a;
+  background: #f8fafc;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.login-otp-digit-input-compact:focus {
+  border-color: #2563eb;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.login-otp-digit-input-compact.filled {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
