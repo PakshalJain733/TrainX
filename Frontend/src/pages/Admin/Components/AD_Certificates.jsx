@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Upload, FileText, Loader2, Search, CheckCircle2 } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
+import { getApiBaseUrl } from '../../../utils/api';
 
 export default function AD_Certificates() {
   const { user } = useContext(AuthContext);
@@ -18,7 +19,7 @@ export default function AD_Certificates() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch('/api/v1/students', {
+      const res = await fetch(`${getApiBaseUrl()}/students`, {
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` }
       });
       const data = await res.json();
@@ -42,7 +43,7 @@ export default function AD_Certificates() {
       formData.append('title', title);
       formData.append('file', file);
 
-      const res = await fetch('/api/v1/certificates/upload', {
+      const res = await fetch(`${getApiBaseUrl()}/certificates/upload`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` },
         body: formData

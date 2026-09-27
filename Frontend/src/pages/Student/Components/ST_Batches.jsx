@@ -30,9 +30,9 @@ import {
   Loader2
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import "../Styles/ST_Batches.css";
+import { getApiBaseUrl } from "../../../utils/api.js";
 
-const API_BASE = "/api/v1";
+const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
   const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";

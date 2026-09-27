@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { getApiBaseUrl } from "../utils/api";
 
 const initialMaintenanceConfig = {
   globalEmergencyMode: false,
@@ -873,7 +874,7 @@ export function SystemMaintenanceProvider({ children }) {
     const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
     if (!token) return;
     // Fetch maintenance config directly from MySQL Database
-    fetch('/api/v1/shared-content?type=maintenance', {
+    fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => res.json())

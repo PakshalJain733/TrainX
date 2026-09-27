@@ -1725,22 +1725,23 @@ export default function ManageUsers() {
 
             <form onSubmit={handleAddUserSubmit}>
               <div className="modal-body">
-                {/* Row 1: College Selection & Role Assignment (Side by Side) */}
-                <div className="form-row-2 sa-form-row-2">
-                  <div className="form-group-admin">
-                    <label>Select College Institution *</label>
-                    <MuSelect
-                      value={newUserForm.collegeId}
-                      placeholder="Select College Institution"
-                      wrapperClass="mu-select"
-                      options={collegesList.map((c) => ({
-                        value: c.id,
-                        label: `${c.name} (${c.code || ''})`
-                      }))}
-                      onChange={(val) => handleCollegeChange(val)}
-                    />
-                  </div>
+                {/* Row 1: College Selection */}
+                <div className="form-group-admin sa-form-group-full">
+                  <label>Select College Institution *</label>
+                  <MuSelect
+                    value={newUserForm.collegeId}
+                    placeholder="Select College Institution"
+                    wrapperClass="mu-select"
+                    options={collegesList.map((c) => ({
+                      value: c.id,
+                      label: `${c.name} (${c.code || ''})`
+                    }))}
+                    onChange={(val) => handleCollegeChange(val)}
+                  />
+                </div>
 
+                {/* Row 2: Role Assignment & Full Name (Side by Side) */}
+                <div className="form-row-2 sa-form-row-2">
                   <div className="form-group-admin">
                     <label>Assign Role *</label>
                     <MuSelect
@@ -1755,19 +1756,18 @@ export default function ManageUsers() {
                       onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
                     />
                   </div>
-                </div>
 
-                {/* Full Name */}
-                <div className="form-group-admin sa-form-group-full">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    placeholder="e.g. Priya Sharma"
-                    value={newUserForm.name}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                  />
+                  <div className="form-group-admin">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Priya Sharma"
+                      value={newUserForm.name}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 {/* Email & Mobile Number (Mobile Number included for non-students) */}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Award, Download, FileText, Loader2, Calendar } from 'lucide-react';
 import { AuthContext } from '../../../context/AuthContext';
+import { getApiBaseUrl } from '../../../utils/api';
 
 export default function ST_Certificates() {
   const { user } = useContext(AuthContext);
@@ -14,7 +15,7 @@ export default function ST_Certificates() {
   const fetchCertificates = async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/v1/certificates/${user?.id || user?.userId}`, {
+      const res = await fetch(`${getApiBaseUrl()}/certificates/${user?.id || user?.userId}`, {
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token') || sessionStorage.getItem('token')}`
         }

@@ -26,8 +26,10 @@ import { Card, CardContent } from "../../../components/ui/Card";
 import "../Styles/ST_AcademicQuiz.css";
 import { getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 
+import { getApiBaseUrl } from "../../../utils/api.js";
+
 /* ─── Fetch quizzes from Database ─────────────────────────────── */
-const API_BASE = "/api/v1";
+const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
   const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";

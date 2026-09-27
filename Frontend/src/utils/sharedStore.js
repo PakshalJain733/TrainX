@@ -5,7 +5,9 @@
  * sessionStorage is NOT used anywhere in this file.
  */
 
-const BASE = '/api/v1/shared-content';
+import { getApiBaseUrl } from './api.js';
+
+const getBase = () => `${getApiBaseUrl()}/shared-content`;
 
 /** Resolve an auth token from session — honours existing JWT pattern */
 const getToken = () => {
@@ -41,7 +43,7 @@ const TYPE_EVENT_MAP = {
 // ─── Generic DB fetch ─────────────────────────────────────────────────────────
 const fetchFromDB = async (type) => {
   try {
-    const res = await fetch(`${BASE}?type=${type}`, { headers: authHeaders() });
+    const res = await fetch(`${getBase()}?type=${type}`, { headers: authHeaders() });
     if (!res.ok) return [];
     const json = await res.json();
     return Array.isArray(json.data) ? json.data : [];
@@ -54,7 +56,7 @@ const fetchFromDB = async (type) => {
 // ─── Generic DB create ────────────────────────────────────────────────────────
 const postToDB = async (type, payload) => {
   try {
-    const res = await fetch(BASE, {
+    const res = await fetch(getBase(), {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ type, ...payload }),
@@ -74,7 +76,7 @@ const postToDB = async (type, payload) => {
 // ─── Generic DB delete ────────────────────────────────────────────────────────
 export const deleteSharedItem = async (id) => {
   try {
-    await fetch(`${BASE}/${id}`, { method: 'DELETE', headers: authHeaders() });
+    await fetch(`${getBase()}/${id}`, { method: 'DELETE', headers: authHeaders() });
   } catch (err) {
     console.warn('[SharedStore] delete failed:', err.message);
   }

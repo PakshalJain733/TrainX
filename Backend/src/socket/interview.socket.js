@@ -143,12 +143,37 @@ export function initInterviewSocket(httpServer) {
     cors: {
       origin: (origin, cb) => {
         if (!origin) return cb(null, true);
+        const cleanOrigin = origin.replace(/\/$/, '');
         const allowed = new Set([
           (config.frontendUrl || '').replace(/\/$/, ''),
           'http://localhost:5173',
           'http://127.0.0.1:5173',
         ]);
-        if (allowed.has(origin.replace(/\/$/, ''))) return cb(null, true);
+        if (allowed.has(cleanOrigin)) return cb(null, true);
+
+        try {
+          const url = new URL(cleanOrigin);
+          const host = url.hostname;
+          const isLocalHost =
+            ['localhost', '127.0.0.1', '::1'].includes(host) ||
+            host.endsWith('.local') ||
+            /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+            /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+            /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
+
+          const isAllowedDeployment =
+            host.endsWith('.vercel.app') ||
+            host.endsWith('.netlify.app') ||
+            host.endsWith('.onrender.com') ||
+            host.endsWith('.github.io');
+
+          if (isLocalHost || isAllowedDeployment) return cb(null, true);
+        } catch (e) {}
+
+        if (!config.frontendUrl || config.nodeEnv !== 'production') {
+          return cb(null, true);
+        }
+
         return cb(new Error('Origin not allowed by CORS'));
       },
       methods: ['GET', 'POST'],

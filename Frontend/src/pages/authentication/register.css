@@ -1905,3 +1905,53 @@
   width: 12px;
   height: 12px;
 }
+
+/* ── Inline Get OTP Button beside College Email ── */
+.email-with-otp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.email-with-otp-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.get-otp-inline-btn {
+  white-space: nowrap;
+  padding: 0 14px;
+  height: 38px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 9px;
+  border: 1.5px solid #cbd5e1;
+  background: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.get-otp-inline-btn.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border-color: #2563eb;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+.get-otp-inline-btn.active:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.get-otp-inline-btn:disabled:not(.active) {
+  opacity: 0.7;
+}

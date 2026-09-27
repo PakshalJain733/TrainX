@@ -19,7 +19,7 @@ import {
   BookOpenCheck,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import "../Styles/AD_LearningContent.css";
 
@@ -208,7 +208,7 @@ export default function AdminLearningContent() {
         formData.append("link", resourceLink || "");
         formData.append("file", selectedFile);
 
-        const response = await fetch("/api/v1/mentor/materials", {
+        const response = await fetch(`${getApiBaseUrl()}/mentor/materials`, {
           method: "POST",
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),

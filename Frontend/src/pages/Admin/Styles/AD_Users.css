@@ -443,7 +443,7 @@
 }
 
 .modal-body {
-  padding: 22px 24px 50px 24px;
+  padding: 22px 24px 22px 24px;
   display: flex;
   flex-direction: column;
   gap: 15px;
@@ -1527,5 +1527,67 @@ textarea.form-input-admin:focus,
   background: #dbeafe;
   padding: 1px 6px;
   border-radius: 4px;
+}
+
+/* Token Generation Card & Hero Banner matching Super Admin */
+.manageusers-token-hero {
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 6px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.manageusers-token-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.manageusers-token-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #c7d2fe;
+  letter-spacing: 0.08em;
+}
+
+.manageusers-token-code {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  font-family: monospace;
+  letter-spacing: 0.1em;
+  margin-top: 2px;
+}
+
+.manageusers-hero-copy-btn {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: #ffffff;
+  border: none;
+  outline: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.manageusers-hero-copy-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.manageusers-hero-copy-btn--copied {
+  background: #10b981 !important;
 }
 

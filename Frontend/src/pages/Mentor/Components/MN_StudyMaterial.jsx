@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { BookOpen, Plus, Download, CheckCircle2, X } from "lucide-react";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { batchAPI } from "../../../services/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -94,7 +94,7 @@ export default function StudyMaterial() {
         formData.append("link", resourceLink || "");
         formData.append("file", selectedFile);
 
-        const res = await fetch("/api/v1/mentor/materials", {
+        const res = await fetch(`${getApiBaseUrl()}/mentor/materials`, {
           method: "POST",
           headers: token ? { Authorization: `Bearer ${token}` } : {},
           body: formData,

@@ -1,7 +1,11 @@
-const API_BASE_URL = "/api/v1";
+import { getApiBaseUrl } from "../utils/api.js";
 
 async function request(endpoint, options = {}) {
-  const url = endpoint.startsWith("/api/v1") ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const baseUrl = getApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith("/api/v1")
+    ? endpoint.slice(7)
+    : endpoint;
+  const url = `${baseUrl}${cleanEndpoint.startsWith("/") ? "" : "/"}${cleanEndpoint}`;
   let token =
     sessionStorage.getItem("token") ||
     sessionStorage.getItem("auth_token") ||

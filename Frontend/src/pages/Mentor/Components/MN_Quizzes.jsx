@@ -42,7 +42,9 @@ function MentorMqSelect({ value, options = [], onChange, placeholder = 'Select..
   );
 }
 
-const API_BASE = "/api/v1";
+import { getApiBaseUrl } from "../../../utils/api.js";
+
+const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
   const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";

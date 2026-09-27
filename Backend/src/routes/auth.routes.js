@@ -10,7 +10,7 @@ const router = Router();
 // The legacy unauthenticated POST /register is intentionally gone so the
 // email verification cannot be bypassed.
 router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOtp);
-router.post('/register/verify-otp', validateRequestBody(['email', 'otp']), verifyRegisterOtp);
+router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
 
 // OTP, TOTP & Password Login flows
 router.post('/send-otp', sendOtp);

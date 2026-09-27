@@ -54,7 +54,33 @@ app.use(
     origin(origin, cb) {
       // Allow non-browser / same-origin requests
       if (!origin) return cb(null, true);
-      if (allowedOrigins.has(origin.replace(/\/$/, ''))) return cb(null, true);
+      const cleanOrigin = origin.replace(/\/$/, '');
+      if (allowedOrigins.has(cleanOrigin)) return cb(null, true);
+
+      // Allow LAN / private IP origins and standard deployment platforms
+      try {
+        const url = new URL(cleanOrigin);
+        const host = url.hostname;
+        const isLocalHost =
+          ['localhost', '127.0.0.1', '::1'].includes(host) ||
+          host.endsWith('.local') ||
+          /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+          /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+          /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
+
+        const isAllowedDeployment =
+          host.endsWith('.vercel.app') ||
+          host.endsWith('.netlify.app') ||
+          host.endsWith('.onrender.com') ||
+          host.endsWith('.github.io');
+
+        if (isLocalHost || isAllowedDeployment) return cb(null, true);
+      } catch (e) {}
+
+      if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
+        return cb(null, true);
+      }
+
       return cb(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

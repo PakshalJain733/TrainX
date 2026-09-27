@@ -10,11 +10,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/ST_Overview.css";
 
-const API_BASE = "/api/v1";
+const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
   const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";

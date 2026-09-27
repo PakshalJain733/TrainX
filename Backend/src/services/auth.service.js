@@ -305,30 +305,36 @@ export const sendRegistrationOtp = async (data = {}) => {
  */
 export const verifyRegistrationOtpAndRegister = async (data = {}) => {
   const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
-  const otp = typeof data.otp === 'string' ? data.otp.trim() : '';
+  const role = typeof data.role === 'string' ? data.role.toLowerCase() : '';
+  const isStudent = !role || role.includes('student');
 
-  if (!email || !otp) {
-    throw createAuthError('Email and the verification code are required.', 400);
-  }
-  if (!/^\d{6}$/.test(otp)) {
-    throw createAuthError('Please enter the 6-digit verification code.', 400);
-  }
+  if (isStudent) {
+    const otp = typeof data.otp === 'string' ? data.otp.trim() : '';
+    if (!email || !otp) {
+      throw createAuthError('Email and the verification code are required.', 400);
+    }
+    if (!/^\d{6}$/.test(otp)) {
+      throw createAuthError('Please enter the 6-digit verification code.', 400);
+    }
 
-  const result = await consumeRegistrationOtp(email, otp);
-  if (!result.ok) {
-    if (result.reason === 'too_many_attempts') {
-      throw createAuthError('Too many incorrect attempts. Please request a new verification code.', 429);
+    const result = await consumeRegistrationOtp(email, otp);
+    if (!result.ok) {
+      if (result.reason === 'too_many_attempts') {
+        throw createAuthError('Too many incorrect attempts. Please request a new verification code.', 429);
+      }
+      if (result.reason === 'expired') {
+        throw createAuthError('This verification code has expired. Please request a new one.', 400);
+      }
+      throw createAuthError('Incorrect verification code.', 400);
     }
-    if (result.reason === 'expired') {
-      throw createAuthError('This verification code has expired. Please request a new one.', 400);
-    }
-    throw createAuthError('Incorrect verification code.', 400);
   }
 
   try {
     return await registerUser({ ...data, email, mobile_number: undefined });
   } catch (err) {
-    await invalidateRegistrationOtps(email);
+    if (isStudent) {
+      await invalidateRegistrationOtps(email);
+    }
     throw err;
   }
 };

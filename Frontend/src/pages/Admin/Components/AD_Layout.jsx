@@ -6,7 +6,7 @@ import "../Styles/AD_Layout.css";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
   const [activeTab, setActiveTab] = useState("all");
@@ -379,7 +379,7 @@ export default function AdminLayout() {
     try {
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       if (!token) return;
-      const res = await fetch('/api/v1/admin/profile', {
+      const res = await fetch(`${getApiBaseUrl()}/admin/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

@@ -368,6 +368,31 @@ function Register() {
     return true;
   };
 
+  const isFormFullyFilled = () => {
+    if (!role) return false;
+    const name = (formData.name || "").trim();
+    const email = (formData.email || "").trim();
+    const pass = formData.password || "";
+    const confirmPass = formData.confirm_password || "";
+
+    if (!name || !email) return false;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return false;
+    if (pass.length < 6 || pass !== confirmPass) return false;
+
+    if (role === "Student") {
+      const roll = (formData.roll_number || "").trim();
+      const dept = formData.department || "";
+      const yr = formData.year || "";
+      const div = formData.division || "";
+      if (!roll || !dept || !yr || !div) return false;
+    } else if (role !== "Admin") {
+      const secureCode = (formData.secure_code || "").trim();
+      if (!secureCode) return false;
+    }
+
+    return true;
+  };
+
   const requestEmailOtp = async () => {
     if (!validateDetails()) return;
 
@@ -430,14 +455,14 @@ function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Phase 1: send the code to the college email. No account is created yet.
-    if (!emailOtpSent && role !== "Admin") {
+    // Phase 1: send the code to the college email ONLY for Student role
+    if (role === "Student" && !emailOtpSent) {
       return requestEmailOtp();
     }
 
-    // Phase 2: verify the code. The account is created only if it matches.
+    // Phase 2: verify 6-digit OTP code ONLY for Student role
     let otp = "";
-    if (role !== "Admin") {
+    if (role === "Student") {
       otp = emailOtp.join("");
       if (!/^\d{6}$/.test(otp)) {
         setErrorMsg("Please enter the 6-digit verification code from your email.");
@@ -699,15 +724,25 @@ function Register() {
                 <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
                   <div className="input-group" style={{ marginBottom: 0 }}>
                     <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                    <input
-                      type="email"
-                      name="email"
-                      autoComplete="email"
-                      required
-                      placeholder="user@pvppcoe.ac.in"
-                      value={formData.email}
-                      onChange={handleChange}
-                    />
+                    <div className="email-with-otp-row">
+                      <input
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        required
+                        placeholder="user@pvppcoe.ac.in"
+                        value={formData.email}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        className={`get-otp-inline-btn ${isFormFullyFilled() && !emailOtpSent ? "active" : ""}`}
+                        disabled={!isFormFullyFilled() || loading || resendIn > 0}
+                        onClick={requestEmailOtp}
+                      >
+                        {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
+                      </button>
+                    </div>
                   </div>
 
                   {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
@@ -867,9 +902,7 @@ function Register() {
                     />
                   </div>
 
-                {/* Email & Inline 6-Digit OTP Code for Non-Student */}
-                <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
+                  <div className="input-group">
                     <FieldLabel icon={Icons.email}>Email</FieldLabel>
                     <input
                       type="email"
@@ -880,43 +913,6 @@ function Register() {
                       onChange={handleChange}
                     />
                   </div>
-
-                  {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
-                  {emailOtpSent && (
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <div className="label-with-resend-row">
-                        <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
-                        <button
-                          type="button"
-                          className="reg-resend-symbol-btn"
-                          disabled={resendIn > 0 || loading}
-                          onClick={requestEmailOtp}
-                          title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
-                        >
-                          {Icons.refresh}
-                          <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
-                        </button>
-                      </div>
-                      <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
-                        {emailOtp.map((digit, i) => (
-                          <input
-                            key={i}
-                            ref={(el) => (emailOtpRefs.current[i] = el)}
-                            className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            maxLength={1}
-                            aria-label={`Digit ${i + 1}`}
-                            value={digit}
-                            onChange={(e) => handleEmailOtpChange(i, e.target.value)}
-                            onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
                 </div>
 
                 {/* Row: Password | Confirm Password for Staff/Mentors */}

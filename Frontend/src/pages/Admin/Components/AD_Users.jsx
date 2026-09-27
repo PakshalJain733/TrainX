@@ -10,6 +10,7 @@ import {
   Zap,
   User,
   Trash2,
+  Copy,
   CheckCircle2,
   XCircle,
   Sparkles,
@@ -799,6 +800,44 @@ export default function AdminUsers() {
     is_active: 1,
   });
 
+  const [generatedCode, setGeneratedCode] = useState('');
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleGenerateSecureCode = async (targetRole) => {
+    setIsGeneratingCode(true);
+    setCopiedCode(false);
+    let roleParam = 'mentor';
+    if (targetRole === 'coordinator') roleParam = 'coordinator';
+    if (targetRole === 'college_admin') roleParam = 'college_admin';
+
+    const prefix = roleParam === 'coordinator' ? 'CO' : (roleParam === 'college_admin' ? 'ADM' : 'FAC');
+    const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const generatedFallback = `${prefix}-${randomHex}`;
+
+    try {
+      const res = await apiFetch('/secure-codes/generate', {
+        method: 'POST',
+        body: JSON.stringify({
+          role: roleParam,
+          max_uses: 1,
+          expiry_option: '7d',
+          description: `Generated for ${roleParam} registration`,
+        }),
+      });
+      if (res && res.data && res.data.code) {
+        setGeneratedCode(res.data.code);
+      } else {
+        setGeneratedCode(generatedFallback);
+      }
+    } catch (err) {
+      console.error("Failed to generate secure code:", err);
+      setGeneratedCode(generatedFallback);
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -849,6 +888,9 @@ export default function AdminUsers() {
       semester: "1",
       is_active: 1,
     });
+    setGeneratedCode('');
+    setIsGeneratingCode(false);
+    setCopiedCode(false);
     setFeedback({ type: "", message: "" });
     setIsAddModalOpen(true);
   };
@@ -1197,16 +1239,34 @@ export default function AdminUsers() {
                     {feedback.message}
                   </div>
                 )}
-                <div className="form-group-admin">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    placeholder="e.g. Priya Sharma"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Assign Role *</label>
+                    <AdminUserSelect
+                      value={formData.role}
+                      onChange={(val) => {
+                        setFormData({ ...formData, role: val });
+                        setGeneratedCode('');
+                      }}
+                      options={[
+                        { value: "student", label: "Student" },
+                        { value: "mentor", label: "Mentor / Faculty" },
+                        { value: "coordinator", label: "Coordinator" },
+                        { value: "college_admin", label: "College Admin" }
+                      ]}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Priya Sharma"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
                 </div>
 
                 <div className="form-row-2">
@@ -1233,19 +1293,58 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                <div className="form-group-admin">
-                  <label>Assign Role *</label>
-                  <AdminUserSelect
-                    value={formData.role}
-                    onChange={(val) => setFormData({ ...formData, role: val })}
-                    options={[
-                      { value: "student", label: "Student" },
-                      { value: "mentor", label: "Mentor / Faculty" },
-                      { value: "coordinator", label: "Coordinator" },
-                      { value: "college_admin", label: "College Admin" }
-                    ]}
-                  />
-                </div>
+                {formData.role !== 'student' && (
+                  <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="btn-modal-submit"
+                        style={{
+                          padding: '9px 22px',
+                          fontSize: '13.5px',
+                          fontWeight: '700',
+                          width: 'auto',
+                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderRadius: '10px',
+                          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                          cursor: 'pointer'
+                        }}
+                        disabled={isGeneratingCode}
+                        onClick={() => handleGenerateSecureCode(formData.role)}
+                      >
+                        <Sparkles size={16} />
+                        {isGeneratingCode ? "Generating..." : "Generate Token"}
+                      </button>
+                    </div>
+
+                    {generatedCode && (
+                      <div className="manageusers-token-hero" style={{ marginTop: '10px' }}>
+                        <div>
+                          <div className="manageusers-token-label">
+                            <Sparkles size={13} style={{ color: '#c7d2fe' }} />
+                            <span className="manageusers-token-tag">Newly Issued Token</span>
+                          </div>
+                          <div className="manageusers-token-code">{generatedCode}</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(generatedCode);
+                            setCopiedCode(true);
+                            setTimeout(() => setCopiedCode(false), 2000);
+                          }}
+                          className={`manageusers-hero-copy-btn ${copiedCode ? 'manageusers-hero-copy-btn--copied' : ''}`}
+                        >
+                          {copiedCode ? <Check size={15} /> : <Copy size={15} />}
+                          <span>{copiedCode ? 'Copied!' : 'Copy Token'}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {formData.role === "student" && (
                   <>
