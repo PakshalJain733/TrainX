@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock } from 'lucide-react';
 import SuperAdminSidebar from "./SA_Sidebar";
+import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
 import { apiFetch } from "../../../utils/api";
@@ -53,8 +54,7 @@ const defaultNotificationsList = [
   }
 ];
 
-function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll }) {
-  const [notifications, setNotifications] = useState(defaultNotificationsList);
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
   const [activeTab, setActiveTab] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
 
@@ -337,6 +337,43 @@ export default function SuperAdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [notifications, setNotifications] = useState(defaultNotificationsList);
+  const [fullNotifOpen, setFullNotifOpen] = useState(false);
+
+  useEffect(() => {
+    apiFetch("/admin/broadcast")
+      .then((res) => {
+        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+          const serverItems = res.data.map((b) => ({
+            id: b.id || `notif-${Math.random()}`,
+            title: b.title || "Announcement",
+            desc: b.message || b.desc || b.description || "",
+            message: b.message || b.desc || "",
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
+            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+            target: b.target || "All Batches",
+            priority: b.priority || "General Notice",
+            created_by_name: b.created_by_name || "Admin",
+          }));
+
+          setNotifications((prev) => {
+            const combined = [...serverItems, ...defaultNotificationsList];
+            const unique = [];
+            const seenTitles = new Set();
+            for (const item of combined) {
+              const key = item.title.trim().toLowerCase();
+              if (!seenTitles.has(key)) {
+                seenTitles.add(key);
+                unique.push(item);
+              }
+            }
+            return unique;
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
   const headerRightRef = useRef(null);
 
   const navigate = useNavigate();
@@ -506,6 +543,9 @@ export default function SuperAdminLayout() {
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
                       onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                      onOpenViewAll={() => setFullNotifOpen(true)}
+                      notifications={notifications}
+                      setNotifications={setNotifications}
                     />
                   )}
                 </div>
@@ -582,6 +622,12 @@ export default function SuperAdminLayout() {
           </div>
         </main>
       </div>
+      <FullNotificationModal
+        isOpen={fullNotifOpen}
+        onClose={() => setFullNotifOpen(false)}
+        notifications={notifications}
+        setNotifications={setNotifications}
+      />
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
