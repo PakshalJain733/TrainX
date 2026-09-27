@@ -1,3 +1,6 @@
+import dns from 'node:dns';
+dns.setDefaultResultOrder('ipv4first');
+
 import app from './src/app.js';
 import { config } from './src/config/env.js';
 import { checkDatabaseConnection } from './src/config/db.js';
