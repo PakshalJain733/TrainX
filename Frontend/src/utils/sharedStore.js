@@ -2,7 +2,7 @@
  * CENTRAL SHARED STORE — DATABASE BACKED
  * All cross-dashboard content (Quizzes, Coding, Drives, Learning, Broadcasts)
  * is persisted in the MySQL `shared_content` table via the backend API.
- * localStorage is NOT used anywhere in this file.
+ * sessionStorage is NOT used anywhere in this file.
  */
 
 const BASE = '/api/v1/shared-content';

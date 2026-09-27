@@ -456,7 +456,7 @@ export default function Overview() {
                       >
                         {item.initials}
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <div className="flex-col">
                         <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
                           {formatStudentName(item.name)}
                         </span>

@@ -202,7 +202,7 @@ export default function CodingPerformance() {
           {/* Filter Controls */}
           <div className="coord-perf-filters-group">
             <div className="coord-perf-filter-label">
-              <SlidersHorizontal size={14} style={{ color: "#4f46e5" }} />
+              <SlidersHorizontal size={14} color="#4f46e5" />
               <span>Filters:</span>
             </div>
 

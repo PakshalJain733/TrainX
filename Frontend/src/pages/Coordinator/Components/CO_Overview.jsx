@@ -353,7 +353,7 @@ export default function CoordinatorOverview() {
         <div className="co-arena-card-body">
           {highRiskStudents.length === 0 ? (
             <div className="co-risk-empty-box">
-              <CheckCircle size={32} style={{ color: "#10b981" }} />
+              <CheckCircle size={32} color="#10b981" />
               <h4 className="co-risk-empty-title">No high risk students flagged.</h4>
               <p className="co-risk-empty-sub">All department students are within attendance compliance.</p>
             </div>

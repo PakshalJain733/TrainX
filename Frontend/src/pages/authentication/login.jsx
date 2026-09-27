@@ -77,15 +77,15 @@ function FieldLabel({ icon, children, htmlFor }) {
 }
 
 // ── Auth token storage helper ────────────────────────────
-// rememberMe=true  → localStorage  (persists across browser restarts)
+// rememberMe=true  → sessionStorage  (persists across browser restarts)
 // rememberMe=false → sessionStorage (cleared when tab/browser closes)
 function storeAuthToken(token, remember) {
   // Always clear the other storage to avoid stale tokens
   if (remember) {
     sessionStorage.removeItem("token");
-    localStorage.setItem("token", token);
+    sessionStorage.setItem("token", token);
   } else {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     sessionStorage.setItem("token", token);
   }
 }
@@ -95,13 +95,13 @@ function Login() {
   const [authMode, setAuthMode] = useState("password"); // "password" | "otp" | "forgot"
   const [step, setStep] = useState("email"); // "email" | "otp" | "new_password" | "authenticator"
   const [email, setEmail] = useState(() => {
-    if (localStorage.getItem("tx_remember_me") !== "true") return "";
-    return localStorage.getItem("tx_remembered_identifier") || localStorage.getItem("tx_remembered_email") || "";
+    if (sessionStorage.getItem("tx_remember_me") !== "true") return "";
+    return sessionStorage.getItem("tx_remembered_identifier") || sessionStorage.getItem("tx_remembered_email") || "";
   });
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(
-    () => localStorage.getItem("tx_remember_me") === "true"
+    () => sessionStorage.getItem("tx_remember_me") === "true"
   );
   // Preserve rememberMe across the 2FA / authenticator step
   const rememberMeRef = useRef(rememberMe);
@@ -131,7 +131,7 @@ function Login() {
       }
     } catch (_) { }
 
-    localStorage.removeItem("tx_remembered_password");
+    sessionStorage.removeItem("tx_remembered_password");
 
   }, []);
 
@@ -139,24 +139,24 @@ function Login() {
     setRememberMe(checked);
     rememberMeRef.current = checked;
     if (!checked) {
-      localStorage.removeItem("tx_remember_me");
-      localStorage.removeItem("tx_remembered_identifier");
-      localStorage.removeItem("tx_remembered_email");
-      localStorage.removeItem("tx_remembered_password");
+      sessionStorage.removeItem("tx_remember_me");
+      sessionStorage.removeItem("tx_remembered_identifier");
+      sessionStorage.removeItem("tx_remembered_email");
+      sessionStorage.removeItem("tx_remembered_password");
     }
   };
 
   const persistRememberedIdentifier = () => {
     if (rememberMe) {
-      localStorage.setItem("tx_remember_me", "true");
-      localStorage.setItem("tx_remembered_identifier", email.trim());
-      localStorage.removeItem("tx_remembered_email");
-      localStorage.removeItem("tx_remembered_password");
+      sessionStorage.setItem("tx_remember_me", "true");
+      sessionStorage.setItem("tx_remembered_identifier", email.trim());
+      sessionStorage.removeItem("tx_remembered_email");
+      sessionStorage.removeItem("tx_remembered_password");
     } else {
-      localStorage.removeItem("tx_remember_me");
-      localStorage.removeItem("tx_remembered_identifier");
-      localStorage.removeItem("tx_remembered_email");
-      localStorage.removeItem("tx_remembered_password");
+      sessionStorage.removeItem("tx_remember_me");
+      sessionStorage.removeItem("tx_remembered_identifier");
+      sessionStorage.removeItem("tx_remembered_email");
+      sessionStorage.removeItem("tx_remembered_password");
     }
 
   };
@@ -248,9 +248,9 @@ function Login() {
     try { existingUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
 
     try {
-      existingUser = JSON.parse(localStorage.getItem("user")) || {};
+      existingUser = JSON.parse(sessionStorage.getItem("user")) || {};
     } catch {
-      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
     }
 
 

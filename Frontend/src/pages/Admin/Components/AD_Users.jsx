@@ -701,7 +701,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
             <div className="fs-portal-students-grid">
               {filteredStudents.length === 0 ? (
                 <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #cbd5e1', gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                  <Search size={32} style={{ color: '#94a3b8' }} />
+                  <Search size={32} color="#94a3b8" />
                   <div>
                     <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#334155' }}>No student profiles match your search</h4>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>

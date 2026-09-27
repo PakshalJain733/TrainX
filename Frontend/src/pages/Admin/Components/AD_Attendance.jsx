@@ -485,7 +485,7 @@ export default function AdminAttendance() {
                     padding: "16px",
                     textAlign: "center"
                   }}>
-                    <XCircle size={36} style={{ color: "#ef4444" }} />
+                    <XCircle size={36} color="#ef4444" />
                     <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>QR Code Expired</span>
                     <span style={{ fontSize: "12px", color: "#64748b" }}>10 second session window reached</span>
                     <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "4px", background: "#2563eb", color: "#ffffff", border: "none" }}>
@@ -535,7 +535,7 @@ export default function AdminAttendance() {
               {selectedHistoryDetail ? (
                 /* History Detail Roster View */
                 <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div className="flex-between">
                     <button
                       onClick={() => setSelectedHistoryDetail(null)}
                       style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600", color: "#2563eb", background: "none", border: "none", cursor: "pointer" }}
@@ -621,13 +621,13 @@ export default function AdminAttendance() {
                         historyRecords.map((rec) => (
                           <tr key={rec.id}>
                             <td>
-                              <div style={{ display: "flex", flexDirection: "column" }}>
+                              <div className="flex-col">
                                 <span style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>{rec.date}</span>
                                 <span style={{ fontSize: "11px", color: "#64748b" }}>{rec.savedAt}</span>
                               </div>
                             </td>
                             <td>
-                              <div style={{ display: "flex", flexDirection: "column" }}>
+                              <div className="flex-col">
                                 <span style={{ fontWeight: "600", fontSize: "13px" }}>{rec.batchName}</span>
                                 <span style={{ fontSize: "11px", color: "#64748b" }}>{rec.batchCode}</span>
                               </div>

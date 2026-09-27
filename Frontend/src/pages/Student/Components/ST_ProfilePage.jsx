@@ -586,7 +586,7 @@ export default function ProfilePage() {
             {/* Account Settings & Alert Preferences in Left Card */}
             <div style={{ marginTop: "18px", paddingTop: "16px", borderTop: "1.5px solid #f1f5f9" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <Bell size={16} style={{ color: "#4f46e5" }} />
+                <Bell size={16} color="#4f46e5" />
                 <h4 style={{ margin: 0, fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>Alert Preferences</h4>
               </div>
 
@@ -635,7 +635,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="profile-change-pw-wrap flex flex-col gap-2.5 mt-4" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="profile-change-pw-wrap flex flex-col gap-2.5 mt-4">
               <button
                 type="button"
                 className="profile-change-pw-btn"
@@ -993,7 +993,7 @@ export default function ProfilePage() {
                       alignItems: "center",
                       gap: "6px"
                     }}>
-                      <CheckCircle2 size={14} style={{ color: "#16a34a" }} />
+                      <CheckCircle2 size={14} color="#16a34a" />
                       <span>Active Skills on Profile ({currentSkillsList.length})</span>
                     </div>
 

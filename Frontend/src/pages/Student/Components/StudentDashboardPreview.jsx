@@ -37,7 +37,7 @@ const toNumber = (value, fallback = 0) => {
 
 const parseTokenUserId = () => {
   try {
-    const token = (sessionStorage.getItem("token") || localStorage.getItem("token"));
+    const token = (sessionStorage.getItem("token") || sessionStorage.getItem("token"));
     if (!token || token.indexOf(".") === -1) return null;
     const part = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
     const raw = part + "=".repeat((4 - (part.length % 4)) % 4);
@@ -50,7 +50,7 @@ const parseTokenUserId = () => {
 
 const getStoredStudentName = () => {
   try {
-    const u = JSON.parse(localStorage.getItem("user"));
+    const u = JSON.parse(sessionStorage.getItem("user"));
     if (!u) return "";
     const name = u.name || "";
     const isAutoName =

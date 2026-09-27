@@ -16,7 +16,7 @@ export default function ST_Certificates() {
       setLoading(true);
       const res = await fetch(`/api/v1/certificates/${user?.id || user?.userId}`, {
         headers: {
-          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || sessionStorage.getItem('token')}`
         }
       });
       const data = await res.json();

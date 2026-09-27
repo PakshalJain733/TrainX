@@ -517,7 +517,7 @@ export const getMyAttempts = async (req, res, next) => {
         );
         try {
           const completions = await query(
-            `SELECT quiz_id AS assessment_id, user_id, 'completed' AS status, completed_at AS submitted_at FROM student_quiz_completions WHERE user_id = ?`,
+            `SELECT quiz_id AS assessment_id, user_id, 'completed' AS status, score_text, completed_at AS submitted_at FROM student_quiz_completions WHERE user_id = ?`,
             [userId]
           );
           if (completions && completions.length > 0) {
@@ -568,19 +568,21 @@ export const startAssessment = async (req, res, next) => {
 export const markQuizCompleted = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
-    const { quiz_id, quiz_title } = req.body || {};
+    const { quiz_id, quiz_title, score, total, score_text } = req.body || {};
 
     if (!userId) return sendError(res, 'Unauthorized', 401);
 
+    const calculatedScoreText = score_text || (score !== undefined && total !== undefined ? `Score: ${score}/${total}` : 'Completed');
+
     try {
       await query(
-        `INSERT INTO student_quiz_completions (user_id, quiz_id, quiz_title, completed_at)
-         VALUES (?, ?, ?, NOW())
-         ON DUPLICATE KEY UPDATE completed_at = NOW()`,
-        [userId, quiz_id || 0, quiz_title || '', ]
+        `INSERT INTO student_quiz_completions (user_id, quiz_id, quiz_title, score_text, completed_at)
+         VALUES (?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE score_text = VALUES(score_text), completed_at = NOW()`,
+        [userId, quiz_id || 0, quiz_title || '', calculatedScoreText]
       );
     } catch (e) {
-      // Table may not exist yet — create it and retry
+      // Table may not exist or missing score_text column — create / alter table and retry
       try {
         await query(`
           CREATE TABLE IF NOT EXISTS student_quiz_completions (
@@ -588,23 +590,27 @@ export const markQuizCompleted = async (req, res, next) => {
             user_id INT NOT NULL,
             quiz_id INT NOT NULL DEFAULT 0,
             quiz_title VARCHAR(255) DEFAULT '',
+            score_text VARCHAR(100) DEFAULT 'Completed',
             completed_at DATETIME NOT NULL,
             UNIQUE KEY uq_user_quiz (user_id, quiz_id),
             INDEX idx_user_id (user_id)
           ) ENGINE=InnoDB
         `);
+        try {
+          await query(`ALTER TABLE student_quiz_completions ADD COLUMN score_text VARCHAR(100) DEFAULT 'Completed'`);
+        } catch (_) {}
         await query(
-          `INSERT INTO student_quiz_completions (user_id, quiz_id, quiz_title, completed_at)
-           VALUES (?, ?, ?, NOW())
-           ON DUPLICATE KEY UPDATE completed_at = NOW()`,
-          [userId, quiz_id || 0, quiz_title || '']
+          `INSERT INTO student_quiz_completions (user_id, quiz_id, quiz_title, score_text, completed_at)
+           VALUES (?, ?, ?, ?, NOW())
+           ON DUPLICATE KEY UPDATE score_text = VALUES(score_text), completed_at = NOW()`,
+          [userId, quiz_id || 0, quiz_title || '', calculatedScoreText]
         );
       } catch (e2) {
         console.warn('[markQuizCompleted fallback]', e2.message);
       }
     }
 
-    return sendSuccess(res, 'Quiz completion recorded', { user_id: userId, quiz_id, marked: true });
+    return sendSuccess(res, 'Quiz completion recorded', { user_id: userId, quiz_id, score_text: calculatedScoreText, marked: true });
   } catch (error) {
     next(error);
   }

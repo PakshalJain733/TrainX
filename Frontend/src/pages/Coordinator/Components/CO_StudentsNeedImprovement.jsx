@@ -337,7 +337,7 @@ export default function StudentsNeedImprovement() {
         <div className="coord-perf-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
           <div>
             <h2 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <BrainCircuit style={{ color: "#4f46e5" }} size={20} />
+              <BrainCircuit color="#4f46e5" size={20} />
               Most Common Weak Skills Analysis across Department
             </h2>
             <p className="coord-perf-card-sub">
@@ -348,7 +348,7 @@ export default function StudentsNeedImprovement() {
           <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
             {commonWeakSkills.map((skill, idx) => (
               <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className="flex-between">
                   <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{skill.skillName}</h3>
                   <span className="coord-perf-status-badge coord-perf-status--good">
                     {skill.count} Students Weak
@@ -580,7 +580,7 @@ export default function StudentsNeedImprovement() {
                 <X size={18} />
               </button>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="flex-between">
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>Student Skill-Gap Details</h3>
@@ -604,7 +604,7 @@ export default function StudentsNeedImprovement() {
             <div className="coord-perf-modal-body">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingBottom: "12px", borderBottom: "1px solid #f1f5f9" }}>
                 <h4 style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: "8px" }}>
-                  <ShieldAlert style={{ color: "#e11d48" }} size={18} />
+                  <ShieldAlert color="#e11d48" size={18} />
                   Identified Weak Skills ({selectedSkillGapStudent.weakSkills.length})
                 </h4>
                 <span style={{ fontSize: "12px", color: "#64748b" }}>
@@ -616,7 +616,7 @@ export default function StudentsNeedImprovement() {
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {selectedSkillGapStudent.weakSkills.map((skill, idx) => (
                   <div key={idx} style={{ padding: "16px", background: "#f8fafc", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div className="flex-between">
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                           <h5 style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", margin: 0 }}>{skill.skillName}</h5>
@@ -643,7 +643,7 @@ export default function StudentsNeedImprovement() {
 
                     <div style={{ padding: "10px 12px", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "10px", fontSize: "12px" }}>
                       <span style={{ fontWeight: 800, color: "#92400e", display: "flex", alignItems: "center", gap: "6px", marginBottom: "2px" }}>
-                        <Sparkles size={14} style={{ color: "#d97706" }} />
+                        <Sparkles size={14} color="#d97706" />
                         Suggested Actionable Improvement:
                       </span>
                       <p style={{ margin: 0, color: "#78350f", lineHeight: 1.5 }}>

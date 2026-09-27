@@ -404,7 +404,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
           {/* Left Column: Topic & Trainer Editor */}
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
-              <BookOpenCheck size={18} style={{ color: '#4f46e5' }} />
+              <BookOpenCheck size={18} color="#4f46e5" />
               Edit Today's Topic & Batch
             </h3>
 
@@ -918,7 +918,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
             <div className="fs-portal-students-grid">
               {filteredStudents.length === 0 ? (
                 <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #cbd5e1', gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                  <Search size={32} style={{ color: '#94a3b8' }} />
+                  <Search size={32} color="#94a3b8" />
                   <div>
                     <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#334155' }}>No student profiles match your search</h4>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
@@ -1605,7 +1605,7 @@ export default function ManageUsers() {
           </div>
           {filteredCoordinators.length === 0 && (
             <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0", marginTop: "12px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-              <Users size={36} style={{ color: "#94a3b8" }} />
+              <Users size={36} color="#94a3b8" />
               <div style={{ fontWeight: 700, color: "#334155" }}>No coordinators match your search or filter.</div>
               <p style={{ margin: 0, fontSize: "12px" }}>Try updating your search query or click "+ Add User" to provision a new coordinator.</p>
             </div>
@@ -1656,7 +1656,7 @@ export default function ManageUsers() {
           </div>
           {filteredMentors.length === 0 && (
             <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0", marginTop: "12px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-              <Users size={36} style={{ color: "#94a3b8" }} />
+              <Users size={36} color="#94a3b8" />
               <div style={{ fontWeight: 700, color: "#334155" }}>No mentors or faculty match your search.</div>
               <p style={{ margin: 0, fontSize: "12px" }}>Try updating your search query or click "+ Add User" to provision a new mentor.</p>
             </div>
@@ -1704,7 +1704,7 @@ export default function ManageUsers() {
 
           {filteredStudents.length === 0 && (
             <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0", marginTop: "12px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-              <Users size={36} style={{ color: "#94a3b8" }} />
+              <Users size={36} color="#94a3b8" />
               <div style={{ fontWeight: 700, color: "#334155" }}>No students match your search.</div>
               <p style={{ margin: 0, fontSize: "12px" }}>Try updating your search query or click "+ Add User" to provision a new student profile.</p>
             </div>

@@ -150,7 +150,7 @@ export default function StudentSkillGaps() {
       {/* Mentor Intervention & Action Plan Banner */}
       {interventionData && interventionData.statusInfo && interventionData.statusInfo.isDefaulter && (
         <div style={{ padding: "16px 20px", borderRadius: "14px", background: "#fff1f2", border: "1px solid #fecdd3", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "8px" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div className="flex-between">
             <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#e11d48", fontWeight: 800, fontSize: "15px" }}>
               <AlertTriangle size={20} />
               <span>Mentor Intervention Alert: Action Plan Assigned</span>

@@ -642,7 +642,7 @@ export default function AIRoadmap() {
       .catch(() => {
         try {
           const u = JSON.parse(
-            sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+            sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
           );
           if (u) setUserProfile(u);
         } catch (e) {}
@@ -696,7 +696,7 @@ export default function AIRoadmap() {
       const u =
         userProfile ||
         JSON.parse(
-          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+          sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
         );
       const sp = u.studentProfile || {};
       const rawSkills = sp.skills || u.skills || "";

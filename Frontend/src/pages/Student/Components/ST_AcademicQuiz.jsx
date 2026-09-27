@@ -40,7 +40,6 @@ function getAuthHeaders() {
 /* ─── Fetch quizzes from Database via central API client ──────── */
 import apiFetch from "../../../utils/api";
 
-
 async function fetchApiQuizzes() {
   try {
     const [availData, attemptsData] = await Promise.all([
@@ -67,11 +66,19 @@ async function fetchApiQuizzes() {
     // Map assessment DB shape -> student quiz shape
     const dbList = list.map((q) => {
       const pastAttempt = attemptMap[String(q.id)];
-      const isCompleted = Boolean(pastAttempt);
+      const isCompleted = Boolean(pastAttempt) ;
       const totalQs = pastAttempt?.total_questions || q.total_questions || (q.questions ? q.questions.length : 5);
       const correctCount = pastAttempt ? (pastAttempt.correct_count !== undefined && pastAttempt.correct_count !== null ? pastAttempt.correct_count : Math.round((pastAttempt.marks_obtained || 0) / 10)) : 0;
       const safeCorrect = Math.min(Math.max(correctCount, 0), totalQs);
-      const scoreStr = isCompleted ? `Score: ${safeCorrect}/${totalQs}` : null;
+      let scoreStr = null;
+      if (isCompleted) {
+        if (pastAttempt && pastAttempt.correct_count !== undefined) {
+          scoreStr = `Score: ${safeCorrect}/${totalQs}`;
+        
+        } else {
+          scoreStr = "Completed";
+        }
+      }
 
       return {
         id: q.id,
@@ -295,17 +302,29 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
 
   const [wasSubmitted, setWasSubmitted] = useState(false);
 
-  async function handleSubmit() {
+      async function handleSubmit() {
     if (submitted) return;
     setSubmitted(true);
-    setWasSubmitted(true); // Always mark as submitted locally
+    setWasSubmitted(true);
+
+    const calculatedScore = questions.reduce(
+      (acc, qItem, i) => acc + (answers[i] === qItem.correct ? 1 : 0),
+      0
+    );
+    const scoreText = `Score: ${calculatedScore}/${questions.length}`;
 
     try {
-      // Record quiz completion in the database (device-independent sync)
+      // Record quiz completion in MySQL DB (device-independent sync)
       await fetch(`${API_BASE}/assessments/mark-completed`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ quiz_id: quiz.id, quiz_title: quiz.title }),
+        body: JSON.stringify({
+          quiz_id: quiz.id,
+          quiz_title: quiz.title,
+          score: calculatedScore,
+          total: questions.length,
+          score_text: scoreText
+        }),
       }).catch(() => {});
       window.dispatchEvent(new Event('quizCompletedUpdated'));
     } catch (e) {}
@@ -586,9 +605,9 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
               </button>
             ) : submitted ? (
               <button
-                className="qp-nav-arrow qp-nav-arrow--submit"
+                className="qp-nav-arrow qp-nav-arrow--submit qp-nav-arrow--finish"
                 onClick={() => onExit(true)}
-                style={{ backgroundColor: "#10b981", borderColor: "#10b981" }}
+                
               >
                 <CheckCircle2 size={16} /> Finish & Return to Dashboard
               </button>
@@ -691,7 +710,7 @@ export default function AcademicQuiz() {
       {displayedQuizzes.length === 0 ? (
         <div className="quiz-empty-card">
           <div className="quiz-empty-icon-wrap">
-            <GraduationCap size={36} style={{ color: "#4f46e5" }} />
+            <GraduationCap size={36} color="#4f46e5" />
           </div>
           <h3 className="quiz-empty-title">
             {activeTab === "Upcoming"
@@ -719,7 +738,7 @@ export default function AcademicQuiz() {
                   </Badge>
                   {quiz.status === "Completed" && (
                     <div className="quiz-score-badge">
-                      <Trophy size={15} style={{ color: '#854d0e' }} />
+                      <Trophy size={15} color="#854d0e" />
                       <span>{quiz.score && quiz.score.startsWith("Score:") ? quiz.score : `Score: ${quiz.score || "Completed"}`}</span>
                     </div>
                   )}

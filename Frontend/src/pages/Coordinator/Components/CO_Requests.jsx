@@ -338,7 +338,7 @@ export default function CoordinatorRequests() {
           </div>
         ) : filteredRequests.length === 0 ? (
           <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", fontSize: "14px", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-            <Inbox size={36} style={{ color: "#94a3b8" }} />
+            <Inbox size={36} color="#94a3b8" />
             <div style={{ fontWeight: 700, color: "#334155" }}>No matching approval requests found.</div>
             <p style={{ margin: 0, fontSize: "12px" }}>All pending applications have been processed or no results match your current search.</p>
           </div>

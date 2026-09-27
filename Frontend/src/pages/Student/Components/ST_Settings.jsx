@@ -30,7 +30,7 @@ export default function Settings() {
   const handleSave = async (e) => {
     e.preventDefault();
 
-    // Save exclusively to MySQL DB — no localStorage
+    // Save exclusively to MySQL DB — no sessionStorage
     try {
       await apiFetch("/student/profile", {
         method: "PATCH",

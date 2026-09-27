@@ -112,7 +112,7 @@ export default function QuizPerformance() {
       {/* Batch Performance Breakdown */}
       <div className="coord-perf-card" style={{ padding: "20px" }}>
         <h3 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-          <BarChart2 size={18} style={{ color: "#4f46e5" }} /> Batch-wise Quiz Performance Governance
+          <BarChart2 size={18} color="#4f46e5" /> Batch-wise Quiz Performance Governance
         </h3>
         <div className="coord-perf-cat-grid">
           {batchesList.map((b) => (

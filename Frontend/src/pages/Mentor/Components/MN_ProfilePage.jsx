@@ -347,7 +347,7 @@ function MN_ProfilePage() {
             </div>
 
             {/* Change Password & 2FA Buttons */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex flex-col gap-2.5" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex flex-col gap-2.5">
               <button
                 type="button"
                 onClick={() => setShowChangePassModal(true)}

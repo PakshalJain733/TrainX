@@ -198,7 +198,7 @@ export default function InterviewPerformance() {
         {/* Breakdown Scores */}
         <div className="coord-perf-card" style={{ padding: "20px" }}>
           <h4 style={{ fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "16px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <BarChart2 size={16} style={{ color: "#4f46e5" }} />
+            <BarChart2 size={16} color="#4f46e5" />
             Competency Evaluation Breakdown
           </h4>
           <div className="coord-perf-cat-grid">
@@ -239,7 +239,7 @@ export default function InterviewPerformance() {
         {/* AI Feedback Section */}
         <div className="coord-perf-card" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
           <h4 style={{ fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#334155", display: "flex", alignItems: "center", gap: "8px" }}>
-            <Sparkles size={18} style={{ color: "#7c3aed" }} />
+            <Sparkles size={18} color="#7c3aed" />
             AI Generated Evaluation Feedback & Insights
           </h4>
 
@@ -247,7 +247,7 @@ export default function InterviewPerformance() {
             {/* Strengths */}
             <div style={{ padding: "16px", background: "#ecfdf5", borderRadius: "12px", border: "1px solid #a7f3d0" }}>
               <span style={{ fontWeight: 800, fontSize: "12px", color: "#065f46", display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                <CheckCircle2 size={16} style={{ color: "#059669" }} />
+                <CheckCircle2 size={16} color="#059669" />
                 Strengths:
               </span>
               <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "12px", color: "#064e3b", lineHeight: 1.6 }}>
@@ -260,7 +260,7 @@ export default function InterviewPerformance() {
             {/* Needs Improvement */}
             <div style={{ padding: "16px", background: "#fff1f2", borderRadius: "12px", border: "1px solid #fecdd3" }}>
               <span style={{ fontWeight: 800, fontSize: "12px", color: "#9f1239", display: "flex", alignItems: "center", gap: "6px", marginBottom: "10px" }}>
-                <AlertTriangle size={16} style={{ color: "#e11d48" }} />
+                <AlertTriangle size={16} color="#e11d48" />
                 Needs Improvement:
               </span>
               <ul style={{ margin: 0, paddingLeft: "16px", fontSize: "12px", color: "#881337", lineHeight: 1.6 }}>
@@ -338,7 +338,7 @@ export default function InterviewPerformance() {
       <div className="coord-perf-card" style={{ padding: "18px 20px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", marginBottom: "12px" }}>
           <h3 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <BarChart2 size={16} style={{ color: "#4f46e5" }} />
+            <BarChart2 size={16} color="#4f46e5" />
             Performance Categories Distribution
           </h3>
           <span style={{ fontSize: "12px", color: "#94a3b8", marginLeft: "auto" }}>{interviewList.length} Total Candidates</span>
@@ -391,7 +391,7 @@ export default function InterviewPerformance() {
 
           <div className="coord-perf-filters-group">
             <div className="coord-perf-filter-label">
-              <SlidersHorizontal size={14} style={{ color: "#7c3aed" }} />
+              <SlidersHorizontal size={14} color="#7c3aed" />
               <span>Filters:</span>
             </div>
 

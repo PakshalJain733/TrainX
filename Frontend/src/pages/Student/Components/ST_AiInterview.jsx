@@ -105,7 +105,7 @@ function speakNow(text, onEnd) {
 }
 
 function getToken() {
-  return sessionStorage.getItem("token") || localStorage.getItem("token") || "";
+  return sessionStorage.getItem("token") || sessionStorage.getItem("token") || "";
 }
 
   const [phase, setPhase] = useState("setup"); // setup | live | result
@@ -249,7 +249,7 @@ function getToken() {
       ? (() => {
           try {
             return JSON.parse(
-              localStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+              sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
             )?.name || "";
           } catch {
             return "";

@@ -283,7 +283,7 @@ export default function Overview() {
                               {batchCode}
                             </span>
                             <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
-                              <Users size={12} style={{ color: "#94a3b8" }} /> {studentCount} Enrolled Students
+                              <Users size={12} color="#94a3b8" /> {studentCount} Enrolled Students
                             </span>
                           </div>
                         </div>

@@ -127,7 +127,7 @@ export default function MaintenanceGuard({ moduleKey, children }) {
               letterSpacing: "0.2px",
             }}
           >
-            <Sparkles size={13} style={{ color: "#d97706" }} />
+            <Sparkles size={13} color="#d97706" />
             <span>Scheduled Maintenance Mode</span>
           </div>
         </div>

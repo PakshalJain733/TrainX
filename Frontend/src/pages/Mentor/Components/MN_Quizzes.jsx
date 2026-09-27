@@ -178,7 +178,7 @@ function QuestionsModal({ quiz, onClose }) {
         <div className="modal-header">
           <div className="modal-header-left">
             <div className="modal-header-icon-wrap" style={{ background: 'rgba(99,102,241,0.15)' }}>
-              <BookOpen size={20} style={{ color: '#818cf8' }} />
+              <BookOpen size={20} color="#818cf8" />
             </div>
             <div>
               <h2 className="modal-title">{quiz.title}</h2>
@@ -199,7 +199,7 @@ function QuestionsModal({ quiz, onClose }) {
                     {opt.toUpperCase()}
                   </span>
                   <span style={{ color: q.correct === opt ? '#059669' : '#475569', fontSize: '0.83rem', fontWeight: q.correct === opt ? 600 : 400 }}>{q.options[opt]}</span>
-                  {q.correct === opt && <CheckCircle2 size={13} style={{ color: '#10b981' }} />}
+                  {q.correct === opt && <CheckCircle2 size={13} color="#10b981" />}
                 </div>
               ))}
             </div>
@@ -515,7 +515,7 @@ export default function MentorQuizzes() {
           <div className="quiz-modal-content modal-flash-in" onClick={e => e.stopPropagation()} style={{ maxWidth: 540 }}>
             <div className="modal-header">
               <div className="modal-header-left">
-                <div className="modal-header-icon-wrap" style={{ background: 'rgba(16,185,129,0.15)' }}><ListPlus size={20} style={{ color: '#10b981' }} /></div>
+                <div className="modal-header-icon-wrap" style={{ background: 'rgba(16,185,129,0.15)' }}><ListPlus size={20} color="#10b981" /></div>
                 <div><h2 className="modal-title">Add Question</h2><p className="modal-subtitle">Fill in details below</p></div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowManualModal(false)}><X size={18} /></button>

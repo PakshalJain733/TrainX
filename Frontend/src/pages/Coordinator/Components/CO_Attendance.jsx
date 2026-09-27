@@ -225,7 +225,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
         <div className="coord-perf-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
           <div style={{ paddingBottom: "12px", borderBottom: "1px solid #f1f5f9" }}>
             <h2 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Building2 style={{ color: "#4f46e5" }} size={20} />
+              <Building2 color="#4f46e5" size={20} />
               Department-Wise Attendance Summary
             </h2>
             <p className="coord-perf-card-sub">
@@ -236,7 +236,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
           <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
             {deptSummaries.map((dept, idx) => (
               <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div className="flex-between">
                   <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{dept.department} Track</h3>
                   <span className="coord-perf-status-badge coord-perf-status--default">
                     {dept.totalStudents} Students
@@ -463,7 +463,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
                 <X size={18} />
               </button>
 
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div className="flex-between">
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudentForDetail.name}</h3>
@@ -516,7 +516,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
               {/* Monthly Breakdown */}
               <div>
                 <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <Calendar size={16} style={{ color: "#4f46e5" }} />
+                  <Calendar size={16} color="#4f46e5" />
                   Monthly Attendance History
                 </h4>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
@@ -537,7 +537,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
               {/* Subject Breakdown */}
               <div>
                 <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                  <FileSpreadsheet size={16} style={{ color: "#4f46e5" }} />
+                  <FileSpreadsheet size={16} color="#4f46e5" />
                   Subject / Session-Wise Attendance Breakdown
                 </h4>
                 <div className="coord-perf-card" style={{ border: "1px solid #e2e8f0" }}>

@@ -324,7 +324,7 @@ export default function AdminProfile() {
               </div>
             </div>
 
-            <div className="profile-change-pw-wrap flex flex-col gap-2.5 mt-4" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div className="profile-change-pw-wrap flex flex-col gap-2.5 mt-4">
               <button
                 type="button"
                 className="profile-change-pw-btn"

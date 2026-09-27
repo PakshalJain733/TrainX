@@ -6,14 +6,14 @@ async function request(endpoint, options = {}) {
     sessionStorage.getItem("token") ||
     sessionStorage.getItem("auth_token") ||
     sessionStorage.getItem("authToken") ||
-    localStorage.getItem("token") ||
-    localStorage.getItem("auth_token") ||
-    localStorage.getItem("authToken");
+    sessionStorage.getItem("token") ||
+    sessionStorage.getItem("auth_token") ||
+    sessionStorage.getItem("authToken");
 
   if (!token) {
     try {
       const u = JSON.parse(
-        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
       );
       token = u.token || u.authToken || u.auth_token || u.accessToken || u.jwt;
     } catch (e) {}

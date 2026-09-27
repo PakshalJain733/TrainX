@@ -667,7 +667,7 @@ export default function AdminBatches() {
                   <div className="form-row-2">
                     <div className="form-group-admin">
                       <label className="add-task-label">
-                        <FileText size={14} style={{ color: "#4f46e5" }} />
+                        <FileText size={14} color="#4f46e5" />
                         <span>Task Title *</span>
                       </label>
                       <input
@@ -681,7 +681,7 @@ export default function AdminBatches() {
                     </div>
                     <div className="form-group-admin">
                       <label className="add-task-label">
-                        <BookOpen size={14} style={{ color: "#4f46e5" }} />
+                        <BookOpen size={14} color="#4f46e5" />
                         <span>Target Topic / Module *</span>
                       </label>
                       <input
@@ -698,7 +698,7 @@ export default function AdminBatches() {
                   <div className="form-row-3">
                     <div className="form-group-admin">
                       <label className="add-task-label">
-                        <Award size={14} style={{ color: "#4f46e5" }} />
+                        <Award size={14} color="#4f46e5" />
                         <span>Difficulty Level</span>
                       </label>
                       <AdminBatchSelect
@@ -713,7 +713,7 @@ export default function AdminBatches() {
                     </div>
                     <div className="form-group-admin">
                       <label className="add-task-label">
-                        <Sparkles size={14} style={{ color: "#d97706" }} />
+                        <Sparkles size={14} color="#d97706" />
                         <span>XP Points Awarded</span>
                       </label>
                       <input
@@ -726,7 +726,7 @@ export default function AdminBatches() {
                     </div>
                     <div className="form-group-admin">
                       <label className="add-task-label">
-                        <Calendar size={14} style={{ color: "#4f46e5" }} />
+                        <Calendar size={14} color="#4f46e5" />
                         <span>Submission Deadline</span>
                       </label>
                       <input
@@ -740,7 +740,7 @@ export default function AdminBatches() {
 
                   <div className="form-group-admin">
                     <label className="add-task-label">
-                      <FileText size={14} style={{ color: "#64748b" }} />
+                      <FileText size={14} color="#64748b" />
                       <span>Task Instructions & Description</span>
                     </label>
                     <textarea

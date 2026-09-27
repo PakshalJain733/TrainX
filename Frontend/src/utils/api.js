@@ -11,9 +11,9 @@ export const getApiBaseUrl = () => {
 
 // Read the auth token from whichever storage was used at login:
 //   sessionStorage → Remember Me was OFF (cleared when browser closes)
-//   localStorage   → Remember Me was ON  (persists across restarts)
+//   sessionStorage   → Remember Me was ON  (persists across restarts)
 export function getAuthToken() {
-  return sessionStorage.getItem("token") || localStorage.getItem("token") || null;
+  return sessionStorage.getItem("token") || sessionStorage.getItem("token") || null;
 }
 
 export async function apiFetch(endpoint, options = {}) {
@@ -23,13 +23,13 @@ export async function apiFetch(endpoint, options = {}) {
       token =
         sessionStorage.getItem("authToken") ||
         sessionStorage.getItem("auth_token") ||
-        localStorage.getItem("authToken") ||
-        localStorage.getItem("auth_token");
+        sessionStorage.getItem("authToken") ||
+        sessionStorage.getItem("auth_token");
     }
     if (!token) {
       try {
         const uSession = JSON.parse(
-          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+          sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
         );
         token =
           uSession.token ||

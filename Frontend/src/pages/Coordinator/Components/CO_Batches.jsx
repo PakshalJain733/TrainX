@@ -410,9 +410,9 @@ export default function CoordinatorBatches() {
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                             {isSelected ? (
-                              <CheckSquare size={16} style={{ color: "#4f46e5" }} />
+                              <CheckSquare size={16} color="#4f46e5" />
                             ) : (
-                              <Square size={16} style={{ color: "#cbd5e1" }} />
+                              <Square size={16} color="#cbd5e1" />
                             )}
                             <div>
                               <div style={{ fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>{s.name}</div>

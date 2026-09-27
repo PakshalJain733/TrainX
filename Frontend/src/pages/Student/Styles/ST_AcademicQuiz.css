@@ -1037,3 +1037,9 @@
   line-height: 1.5;
 }
 
+
+.qp-nav-arrow--finish {
+  background-color: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
