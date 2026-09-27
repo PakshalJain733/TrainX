@@ -168,7 +168,6 @@ function Register() {
     name: "",
     email: "",
     roll_number: "",
-    mobile_number: "",
     department: "",
     year: "",
     division: "",
@@ -195,6 +194,21 @@ function Register() {
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
   const totpInputRefs = useRef([]);
+
+  // College Email OTP verification (must pass before an account is created)
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailOtp, setEmailOtp] = useState(["", "", "", "", "", ""]);
+  const [resendIn, setResendIn] = useState(0);
+  const emailOtpRefs = useRef([]);
+  const resendTimerRef = useRef(null);
+
+  useEffect(() => {
+    if (resendIn <= 0) return undefined;
+    resendTimerRef.current = setTimeout(() => setResendIn((n) => n - 1), 1000);
+    return () => clearTimeout(resendTimerRef.current);
+  }, [resendIn]);
+
+  useEffect(() => () => clearTimeout(resendTimerRef.current), []);
 
   // Request College Access Key / Demo State
   const [isRequestDemoOpen, setIsRequestDemoOpen] = useState(false);
@@ -323,18 +337,102 @@ function Register() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const validateDetails = () => {
     if (!role) {
       setErrorMsg("Please select your role.");
-      return;
+      return false;
+    }
+    const email = (formData.email || "").trim();
+    if (!email) {
+      setErrorMsg("Please enter your college email address.");
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrorMsg("Please enter a valid college email address.");
+      return false;
     }
     if (formData.password !== formData.confirm_password) {
       setErrorMsg("Passwords do not match. Please re-enter passwords.");
-      return;
+      return false;
     }
     if (formData.password.length < 6) {
       setErrorMsg("Password must be at least 6 characters long.");
+      return false;
+    }
+    return true;
+  };
+
+  const requestEmailOtp = async () => {
+    if (!validateDetails()) return;
+
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/auth/register/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email.trim(), name: formData.name, role }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEmailOtpSent(true);
+        setEmailOtp(["", "", "", "", "", ""]);
+        setResendIn(60);
+        setSuccessMsg(`Verification code sent to ${formData.email.trim()}. Enter it below to create your account.`);
+        setTimeout(() => emailOtpRefs.current[0]?.focus(), 100);
+      } else {
+        setErrorMsg(data.message || "Could not send the verification code.");
+      }
+    } catch (err) {
+      console.error("Registration OTP send error:", err);
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailOtpChange = (index, value) => {
+    if (value && !/^\d$/.test(value)) return;
+    setEmailOtp((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+    if (value && index < 5) {
+      emailOtpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleEmailOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace" && !emailOtp[index] && index > 0) {
+      emailOtpRefs.current[index - 1]?.focus();
+    }
+    if (e.key === "ArrowLeft" && index > 0) emailOtpRefs.current[index - 1]?.focus();
+    if (e.key === "ArrowRight" && index < 5) emailOtpRefs.current[index + 1]?.focus();
+  };
+
+  const handleEmailOtpPaste = (e) => {
+    const pasted = (e.clipboardData.getData("text") || "").replace(/\D/g, "").slice(0, 6);
+    if (pasted.length !== 6) return;
+    e.preventDefault();
+    setEmailOtp(pasted.split(""));
+    emailOtpRefs.current[5]?.focus();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    // Phase 1: send the code to the college email. No account is created yet.
+    if (!emailOtpSent) {
+      return requestEmailOtp();
+    }
+
+    // Phase 2: verify the code. The account is created only if it matches.
+    const otp = emailOtp.join("");
+    if (!/^\d{6}$/.test(otp)) {
+      setErrorMsg("Please enter the 6-digit verification code from your email.");
       return;
     }
 
@@ -343,12 +441,14 @@ function Register() {
     setSuccessMsg("");
 
     try {
-      const response = await fetch(`${getApiBaseUrl()}/auth/register`, {
+      const response = await fetch(`${getApiBaseUrl()}/auth/register/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...formData,
+          email: formData.email.trim(),
           role,
+          otp,
         }),
       });
       const data = await response.json();
@@ -551,20 +651,8 @@ function Register() {
             {/* ── STUDENT ROLE FIELDS ── */}
             {role === "Student" && (
               <div key="Student">
-                {/* Row 1: Full Name | College Email */}
+                {/* Row 1: College Email | Full Name */}
                 <div className="form-grid-2">
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
-                    <input
-                      type="text"
-                      name="name"
-                      required
-                      placeholder="Full name"
-                      value={formData.name}
-                      onChange={handleChange}
-                    />
-                  </div>
-
                   <div className="input-group">
                     <FieldLabel icon={Icons.email}>College Email</FieldLabel>
                     <input
@@ -576,9 +664,21 @@ function Register() {
                       onChange={handleChange}
                     />
                   </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      placeholder="Full name"
+                      value={formData.name}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
 
-                {/* Row 2: College ID | Mobile Number */}
+                {/* Row 2: College ID */}
                 <div className="form-grid-2">
                   <div className="input-group">
                     <FieldLabel icon={Icons.id}>College ID</FieldLabel>
@@ -588,18 +688,6 @@ function Register() {
                       required
                       placeholder="College ID"
                       value={formData.roll_number}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      required
-                      placeholder="Mobile number"
-                      value={formData.mobile_number}
                       onChange={handleChange}
                     />
                   </div>
@@ -798,8 +886,48 @@ function Register() {
               </div>
             )}
 
+            {emailOtpSent && (
+              <div className="input-group reg-email-otp-group">
+                <FieldLabel icon={Icons.shield}>Email Verification Code</FieldLabel>
+                <div className="login-otp-inputs" onPaste={handleEmailOtpPaste}>
+                  {emailOtp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => (emailOtpRefs.current[i] = el)}
+                      className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      maxLength={1}
+                      aria-label={`Digit ${i + 1}`}
+                      value={digit}
+                      onChange={(e) => handleEmailOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
+                    />
+                  ))}
+                </div>
+                <div className="reg-email-otp-meta">
+                  <span className="reg-email-otp-hint">Check your inbox (and spam) for the 6-digit code.</span>
+                  <button
+                    type="button"
+                    className="reg-email-otp-resend"
+                    disabled={resendIn > 0 || loading}
+                    onClick={requestEmailOtp}
+                  >
+                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend code"}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <button type="submit" disabled={loading}>
-              {loading ? "Registering..." : "Register"}
+              {loading
+                ? emailOtpSent
+                  ? "Verifying..."
+                  : "Sending code..."
+                : emailOtpSent
+                  ? "Verify & Create Account"
+                  : "Send Verification Code"}
             </button>
 
             <div className="links">

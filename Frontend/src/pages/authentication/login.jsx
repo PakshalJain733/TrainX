@@ -129,7 +129,7 @@ function Login() {
         setRememberMe(true);
         if (storedUser.email) setEmail(storedUser.email);
       }
-    } catch (_) {}
+    } catch (_) { }
 
     localStorage.removeItem("tx_remembered_password");
 
@@ -491,7 +491,7 @@ function Login() {
           : "Invalid or expired OTP code."));
       }
     } catch (err) {
-console.error("Login verification error:", err);
+      console.error("Login verification error:", err);
       setErrorMsg("Unable to connect to server. Please check your connection.");
     } finally {
       setLoading(false);
@@ -508,7 +508,8 @@ console.error("Login verification error:", err);
       <div className="login-bg-shape login-circle5"></div>
       <div className="login-bg-shape login-circle6"></div>
 
-      <div className="login-wrapper">
+      <div className="login-wrapper-outer">
+        <div className="login-wrapper">
         {/* Left Panel - Minimal Premium TrainX Logo Creation Animation */}
         <div className="lp2-panel">
           {/* Subtle Ambient Radial Glow */}
@@ -531,7 +532,7 @@ console.error("Login verification error:", err);
           {/* Center Stage — Minimal Premium Logo Creation Animation */}
           <div className="tx-logo-reveal-stage">
             <div className="tx-logo-glow-pulse"></div>
-            
+
             <div className="tx-logo-premium-canvas">
               <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
             </div>
@@ -1023,6 +1024,7 @@ console.error("Login verification error:", err);
         </div>
       </div>
     </div>
+  </div>
   );
 }
 

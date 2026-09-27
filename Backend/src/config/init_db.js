@@ -133,9 +133,17 @@ export async function initializeDatabase() {
         email VARCHAR(255) NOT NULL,
         otp VARCHAR(20) NOT NULL,
         expires_at DATETIME NOT NULL,
+        purpose VARCHAR(50) NOT NULL DEFAULT 'login',
+        attempts INT NOT NULL DEFAULT 0,
+        consumed_at DATETIME NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN purpose VARCHAR(50) NOT NULL DEFAULT 'login'`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN attempts INT NOT NULL DEFAULT 0`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN consumed_at DATETIME NULL`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE otps ADD INDEX idx_otps_lookup (email, purpose, expires_at)`); } catch (_) {}
 
     // 5. Ensure Students Table
     await conn.query(`

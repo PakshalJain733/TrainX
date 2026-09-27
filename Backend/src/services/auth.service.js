@@ -12,6 +12,10 @@ import {
   getStudentByUserId,
   saveOtpRecord,
   verifyOtpRecord,
+  getRegistrationOtpCooldown,
+  saveRegistrationOtp,
+  consumeRegistrationOtp,
+  invalidateRegistrationOtps,
   updateUserTwoFactorSecret,
   updateUserRememberMe,
   findCollegeByAdminEmail,
@@ -207,6 +211,10 @@ const consumePreauthToken = (decoded) => {
   pruneConsumedPreauthTokens();
 };
 
+const PREAUTH_TOKEN_SHAPE = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+
+const looksLikePreauthToken = (value) => !isBlank(value) && PREAUTH_TOKEN_SHAPE.test(String(value).trim());
+
 export const generateTotpSetup = async (accountLabel) => {
   const secret = speakeasy.generateSecret({
     length: 20,
@@ -239,6 +247,81 @@ export const verifyTotpToken = (secret, token) => {
   } catch (err) {
     console.warn(`[TOTP] Verification exception: ${err.message}`);
     return false;
+  }
+};
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Step 1 of college registration: prove ownership of the college email before
+ * any account row is created. Stores the OTP in `otps` with purpose
+ * 'registration' and applies a resend cooldown.
+ */
+export const sendRegistrationOtp = async (data = {}) => {
+  const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+
+  if (!email) {
+    throw createAuthError('A college email address is required.', 400);
+  }
+  if (!EMAIL_PATTERN.test(email)) {
+    throw createAuthError('Please enter a valid college email address.', 400);
+  }
+
+  const existingUser = await findUserByEmailOrMobile(email);
+  if (existingUser && existingUser.password && existingUser.password.trim().length > 0) {
+    throw createAuthError('An account already exists for this email. Please log in instead.', 409);
+  }
+
+  const cooldown = await getRegistrationOtpCooldown(email);
+  if (cooldown > 0) {
+    throw createAuthError(`Please wait ${cooldown} second${cooldown === 1 ? '' : 's'} before requesting a new code.`, 429);
+  }
+
+  const otp = generateOtp(6);
+  await saveRegistrationOtp(email, otp);
+
+  try {
+    const emailResult = await sendOtpEmail({ to: email, otp, name: data.name || '' });
+    console.log(`[AUTH] Registration OTP dispatched to ${email} (Message ID: ${emailResult?.messageId || 'sent'})`);
+  } catch (error) {
+    console.error(`[AUTH Error] Registration OTP dispatch failed for ${email}:`, error.message);
+  }
+
+  return { email, requiresEmailOtp: true };
+};
+
+/**
+ * Step 2 of college registration: consume the email OTP (single use) and only
+ * then create the account. A wrong, expired, replayed or over-attempted code
+ * never reaches registerUser, so no account is created.
+ */
+export const verifyRegistrationOtpAndRegister = async (data = {}) => {
+  const email = typeof data.email === 'string' ? data.email.trim().toLowerCase() : '';
+  const otp = typeof data.otp === 'string' ? data.otp.trim() : '';
+
+  if (!email || !otp) {
+    throw createAuthError('Email and the verification code are required.', 400);
+  }
+  if (!/^\d{6}$/.test(otp)) {
+    throw createAuthError('Please enter the 6-digit verification code.', 400);
+  }
+
+  const result = await consumeRegistrationOtp(email, otp);
+  if (!result.ok) {
+    if (result.reason === 'too_many_attempts') {
+      throw createAuthError('Too many incorrect attempts. Please request a new verification code.', 429);
+    }
+    if (result.reason === 'expired') {
+      throw createAuthError('This verification code has expired. Please request a new one.', 400);
+    }
+    throw createAuthError('Incorrect verification code.', 400);
+  }
+
+  try {
+    return await registerUser({ ...data, email, mobile_number: undefined });
+  } catch (err) {
+    await invalidateRegistrationOtps(email);
+    throw err;
   }
 };
 
@@ -443,7 +526,10 @@ export const registerUser = async (data) => {
 };
 
 export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = false) => {
-  const user = await findUserByEmailOrMobile(identifier);
+  const preauthPayload = looksLikePreauthToken(identifier) ? decodePreauthToken(identifier) : null;
+  const user = preauthPayload
+    ? await findUserById(preauthPayload.userId)
+    : await findUserByEmailOrMobile(identifier);
   if (!user) {
     const error = new Error('User not found');
     error.statusCode = 404;
@@ -452,6 +538,10 @@ export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = fals
 
   if (!hasTwoFactorAuthentication(user) || !verifyTotpToken(user.two_factor_secret, totpCode)) {
     throw createAuthError('Invalid Authenticator Code from Microsoft/Google Authenticator app.', 400);
+  }
+
+  if (preauthPayload) {
+    consumePreauthToken(preauthPayload);
   }
 
   await updateUserRememberMe(user.id, rememberMe);

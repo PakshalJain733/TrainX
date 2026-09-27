@@ -1,10 +1,19 @@
-import { registerUser, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
+import { sendRegistrationOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, getStudentByUserId, toSafeUser, updateUserModel } from '../models/user.model.js';
 
-export const register = async (req, res, next) => {
+export const sendRegisterOtp = async (req, res, next) => {
   try {
-    const result = await registerUser(req.body);
+    const result = await sendRegistrationOtp(req.body);
+    return sendSuccess(res, 'Verification code sent to your college email.', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyRegisterOtp = async (req, res, next) => {
+  try {
+    const result = await verifyRegistrationOtpAndRegister(req.body);
     return sendSuccess(res, 'User registered successfully', result, 201);
   } catch (error) {
     next(error);

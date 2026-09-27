@@ -263,11 +263,12 @@ export const getStudentByUserId = async (userId) => {
   return null;
 };
 
-export const saveOtpRecord = async (identifier, otp) => {
+export const saveOtpRecord = async (identifier, otp, purpose = 'login') => {
   const cleanId = String(identifier).trim().toLowerCase();
+  const cleanPurpose = String(purpose || 'login').trim().toLowerCase();
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 mins expiry
   try {
-    await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
+    await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, ?)', [cleanId, otp, expiresAt, cleanPurpose]);
   } catch (err) {
     if (err.message && err.message.includes("otps' doesn't exist")) {
       await query(`
@@ -276,10 +277,13 @@ export const saveOtpRecord = async (identifier, otp) => {
           email VARCHAR(255) NOT NULL,
           otp VARCHAR(20) NOT NULL,
           expires_at DATETIME NOT NULL,
+          purpose VARCHAR(50) NOT NULL DEFAULT 'login',
+          attempts INT NOT NULL DEFAULT 0,
+          consumed_at DATETIME NULL,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      await query('INSERT INTO otps (email, otp, expires_at) VALUES (?, ?, ?)', [cleanId, otp, expiresAt]);
+      await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, ?)', [cleanId, otp, expiresAt, cleanPurpose]);
     } else {
       throw err;
     }
@@ -288,7 +292,7 @@ export const saveOtpRecord = async (identifier, otp) => {
 
 export const verifyOtpRecord = async (identifier, inputOtp) => {
   if (identifier === undefined || identifier === null || inputOtp === undefined || inputOtp === null) return false;
-
+  
   const cleanId = String(identifier).trim();
   const cleanOtp = String(inputOtp).trim();
   if (!cleanId || !cleanOtp) return false;
@@ -311,6 +315,117 @@ export const verifyOtpRecord = async (identifier, inputOtp) => {
     return false;
   }
 };
+
+const REGISTRATION_OTP_PURPOSE = 'registration';
+const REGISTRATION_OTP_COOLDOWN_SECONDS = 60;
+const REGISTRATION_OTP_MAX_ATTEMPTS = 5;
+
+const normalizeOtpEmail = (identifier) => String(identifier).trim().toLowerCase();
+
+/**
+ * Seconds the caller must wait before another registration OTP may be sent.
+ * Returns 0 when a resend is allowed right now.
+ */
+export const getRegistrationOtpCooldown = async (identifier) => {
+  const cleanEmail = normalizeOtpEmail(identifier);
+  if (!cleanEmail) return REGISTRATION_OTP_COOLDOWN_SECONDS;
+
+  try {
+    const rows = await query(
+      `SELECT TIMESTAMPDIFF(SECOND, created_at, NOW()) AS seconds_since
+       FROM otps
+       WHERE email = ? AND purpose = ?
+       ORDER BY id DESC LIMIT 1`,
+      [cleanEmail, REGISTRATION_OTP_PURPOSE]
+    );
+    if (!rows || rows.length === 0) return 0;
+    const elapsed = Number(rows[0].seconds_since);
+    if (!Number.isFinite(elapsed)) return 0;
+    return Math.max(0, REGISTRATION_OTP_COOLDOWN_SECONDS - elapsed);
+  } catch (_) {
+    return 0;
+  }
+};
+
+export const saveRegistrationOtp = async (identifier, otp) => {
+  const cleanEmail = normalizeOtpEmail(identifier);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  await query(
+    `INSERT INTO otps (email, otp, expires_at, purpose, attempts, consumed_at)
+     VALUES (?, ?, ?, ?, 0, NULL)`,
+    [cleanEmail, otp, expiresAt, REGISTRATION_OTP_PURPOSE]
+  );
+  return { email: cleanEmail, expiresAt };
+};
+
+/**
+ * Atomically consume the newest unconsumed, unexpired registration OTP.
+ * Returns { ok: true } on success, or { ok: false, reason } where reason is
+ * one of: 'not_found' | 'expired' | 'too_many_attempts'.
+ */
+export const consumeRegistrationOtp = async (identifier, inputOtp) => {
+  const cleanEmail = normalizeOtpEmail(identifier);
+  const cleanOtp = String(inputOtp ?? '').trim();
+  if (!cleanEmail || !cleanOtp) return { ok: false, reason: 'not_found' };
+
+  try {
+    const rows = await query(
+      `SELECT id, otp, expires_at, attempts, (expires_at > NOW()) AS is_valid
+       FROM otps
+       WHERE email = ? AND purpose = ? AND consumed_at IS NULL
+       ORDER BY id DESC LIMIT 5`,
+      [cleanEmail, REGISTRATION_OTP_PURPOSE]
+    );
+
+    const live = (rows || []).filter((row) => Number(row.is_valid) === 1);
+    if (live.length === 0) {
+      const expired = (rows || []).some((row) => Number(row.is_valid) !== 1);
+      return { ok: false, reason: expired ? 'expired' : 'not_found' };
+    }
+
+    const target = live.find((row) => String(row.otp ?? '').trim() === cleanOtp);
+    if (!target) {
+      const newest = live[0];
+      if (Number(newest.attempts) >= REGISTRATION_OTP_MAX_ATTEMPTS) {
+        return { ok: false, reason: 'too_many_attempts' };
+      }
+      await query(
+        'UPDATE otps SET attempts = attempts + 1 WHERE id = ?',
+        [newest.id]
+      );
+      return { ok: false, reason: 'not_found' };
+    }
+
+    if (Number(target.attempts) >= REGISTRATION_OTP_MAX_ATTEMPTS) {
+      return { ok: false, reason: 'too_many_attempts' };
+    }
+
+    const result = await query(
+      'UPDATE otps SET consumed_at = NOW() WHERE id = ? AND consumed_at IS NULL',
+      [target.id]
+    );
+    if (!result || result.affectedRows !== 1) {
+      return { ok: false, reason: 'not_found' };
+    }
+
+    return { ok: true, otpId: target.id };
+  } catch (err) {
+    console.warn(`[AUTH] Registration OTP verification error: ${err.message}`);
+    return { ok: false, reason: 'not_found' };
+  }
+};
+
+export const invalidateRegistrationOtps = async (identifier) => {
+  const cleanEmail = normalizeOtpEmail(identifier);
+  if (!cleanEmail) return;
+  try {
+    await query(
+      'UPDATE otps SET consumed_at = NOW() WHERE email = ? AND purpose = ? AND consumed_at IS NULL',
+      [cleanEmail, REGISTRATION_OTP_PURPOSE]
+    );
+  } catch (_) {}
+};
+
 
 /**
  * Get all users from MySQL DB with College Isolation filtering support

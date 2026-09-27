@@ -126,6 +126,47 @@
   left: 200px;
 }
 
+/* Outer Container wrapping Card */
+.login-wrapper-outer {
+  position: relative;
+  max-width: 820px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+/* Background dots top-right — positioned BEHIND card box (z-index: 0) */
+.login-wrapper-outer::before {
+  content: '';
+  position: absolute;
+  top: -22px;
+  right: -22px;
+  width: 160px;
+  height: 160px;
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.18) 1.5px, transparent 1.5px);
+  background-size: 14px 14px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 24px;
+}
+
+/* Background dots bottom-left — positioned BEHIND card box (z-index: 0) */
+.login-wrapper-outer::after {
+  content: '';
+  position: absolute;
+  bottom: -22px;
+  left: -22px;
+  width: 140px;
+  height: 140px;
+  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.15) 1.5px, transparent 1.5px);
+  background-size: 14px 14px;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 24px;
+}
+
 /* Outer Wrapper Card */
 .login-wrapper {
   display: flex;
@@ -145,7 +186,7 @@
 /* Keep both halves the same width (balanced left / right panels).
    A percentage basis is used on purpose: with box-sizing:border-box a 0 basis
    resolves against the content box, so unequal side padding would skew the split. */
-.login-wrapper > * {
+.login-wrapper>* {
   flex: 1 1 50%;
   min-width: 0;
 }
@@ -390,6 +431,7 @@
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.8);
   }
+
   100% {
     opacity: 1;
     transform: translate(-50%, -50%) scale(1.2);
@@ -412,6 +454,7 @@
     opacity: 0;
     transform: scale(0.85);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);
@@ -645,11 +688,12 @@
 }
 
 .tx-footer-tag {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   color: #7dd3fc;
   opacity: 0.9;
   letter-spacing: 0.3px;
+  white-space: nowrap;
   animation: txFooterTagFade 10s ease-in-out infinite;
 }
 
@@ -1497,34 +1541,12 @@
   overflow: hidden;
 }
 
-/* Dotted corner — top right of login card */
-.login-card::before {
-  content: '';
-  position: absolute;
-  top: -10px;
-  right: -10px;
-  width: 130px;
-  height: 130px;
-  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.18) 1.5px, transparent 1.5px);
-  background-size: 14px 14px;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 0 0 0 50%;
-}
-
-/* Dotted corner — bottom left of login card */
+/* Dotted corner pseudo-elements disabled on inner card so white card covers background dots */
+.login-card::before,
 .login-card::after {
-  content: '';
-  position: absolute;
-  bottom: -10px;
-  left: -10px;
-  width: 110px;
-  height: 110px;
-  background-image: radial-gradient(circle, rgba(37, 99, 235, 0.12) 1.5px, transparent 1.5px);
-  background-size: 14px 14px;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 0 50% 0 0;
+  display: none !important;
+  content: none !important;
+  background: none !important;
 }
 
 .login-logo {
