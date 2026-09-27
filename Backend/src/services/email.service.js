@@ -26,49 +26,81 @@ const getBrevoClient = () => {
 };
 
 /**
- * Centralized function to send emails via Brevo Transactional Email API
+ * Centralized function to send emails via Brevo Transactional Email API (HTTPS REST)
  */
 export const sendEmail = async ({ to, toName = '', subject, htmlContent, textContent, templateId, params }) => {
+  const apiKey = process.env.BREVO_API_KEY;
+  if (!apiKey) {
+    console.error('[Brevo Error] BREVO_API_KEY is not configured in environment variables.');
+    throw new Error('Brevo API key is missing');
+  }
+
+  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'ganeshvshinde2006@gmail.com';
+  const senderName = process.env.BREVO_SENDER_NAME || 'Campus Training Portal';
+
+  const sendOptions = {
+    sender: {
+      email: senderEmail,
+      name: senderName,
+    },
+    replyTo: {
+      email: senderEmail,
+      name: senderName,
+    },
+    to: [
+      {
+        email: to,
+        ...(toName ? { name: toName } : {}),
+      },
+    ],
+    subject,
+  };
+
+  if (templateId) {
+    sendOptions.templateId = parseInt(templateId, 10);
+    if (params && typeof params === 'object') {
+      sendOptions.params = params;
+    }
+  } else {
+    if (htmlContent) sendOptions.htmlContent = htmlContent;
+    if (textContent) sendOptions.textContent = textContent;
+  }
+
+  // 1. Try Direct Native HTTPS REST API Call (Fastest & Most Reliable across all hosting environments)
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'api-key': apiKey,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(sendOptions),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      const messageId = data?.messageId || `brevo_${Date.now()}`;
+      console.log(`[Brevo HTTPS API] Transactional email sent to ${to} (Message ID: ${messageId})`);
+      return data;
+    }
+
+    // If HTTP error returned from Brevo API
+    const errorMsg = data?.message || data?.code || `HTTP ${res.status}`;
+    console.warn(`[Brevo HTTPS API Warning] Direct API returned ${res.status}: ${errorMsg}. Trying SDK fallback...`);
+  } catch (httpError) {
+    console.warn(`[Brevo HTTPS API Warning] Direct HTTPS fetch failed (${httpError.message}). Trying SDK fallback...`);
+  }
+
+  // 2. SDK Fallback
   try {
     const client = getBrevoClient();
     if (!client) {
-    throw new Error('Brevo API client is not configured');
-}
-
-    const senderEmail = process.env.BREVO_SENDER_EMAIL || 'ganeshvshinde2006@gmail.com';
-    const senderName = process.env.BREVO_SENDER_NAME || 'Campus Training Portal';
-
-    const sendOptions = {
-      sender: {
-        email: senderEmail,
-        name: senderName,
-      },
-      replyTo: {
-        email: senderEmail,
-        name: senderName,
-      },
-      to: [
-        {
-          email: to,
-          ...(toName ? { name: toName } : {}),
-        },
-      ],
-      subject,
-    };
-
-    if (templateId) {
-      sendOptions.templateId = parseInt(templateId, 10);
-      if (params && typeof params === 'object') {
-        sendOptions.params = params;
-      }
-    } else {
-      if (htmlContent) sendOptions.htmlContent = htmlContent;
-      if (textContent) sendOptions.textContent = textContent;
+      throw new Error('Brevo API client is not configured');
     }
-
     const response = await client.transactionalEmails.sendTransacEmail(sendOptions);
     const messageId = response?.messageId || response?.body?.messageId || `brevo_${Date.now()}`;
-    console.log(`[Brevo] Transactional email sent to ${to} (Message ID: ${messageId})`);
+    console.log(`[Brevo SDK] Transactional email sent to ${to} (Message ID: ${messageId})`);
     return response;
   } catch (error) {
     const errorMsg = error?.response?.data?.message || error?.body?.message || error?.message || 'Unknown Brevo API error';
