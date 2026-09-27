@@ -83,7 +83,7 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
   ]
 }`;
 
-  const groqApiKey = process.env.Groq_AI_API_KEY || (apiKey && apiKey.startsWith('gsk_') ? apiKey : '');
+  const groqApiKey = process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || process.env.GROQ_API_KEY || (apiKey && apiKey.startsWith('gsk_') ? apiKey : '');
   const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
 
   // 1. Try Groq AI Provider first if Groq API key is present
@@ -153,9 +153,9 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
     }
   }
 
-  // 2. Try Google Gemini AI Provider if Gemini API key is present
+  // 2. Try Google Gemini AI Provider if Gemini API key is present and valid
   const geminiModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-  const geminiKey = apiKey && !apiKey.startsWith('gsk_') && apiKey !== 'your_ai_api_key' ? apiKey : '';
+  const geminiKey = apiKey && apiKey.startsWith('AIza') ? apiKey : '';
 
   if (geminiKey) {
     for (const model of geminiModels) {
