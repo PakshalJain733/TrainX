@@ -304,7 +304,7 @@ export default function AdminLearningContent() {
   return (
     <div className="learning-content-page">
       <div className="ui-section-header-AD">
-        <div className="ui-section-main">
+        <div className="ui-section-main-AD">
           <div>
             <h2 className="ui-section-title">
               <BookOpenCheck size={22} className="ui-section-title-icon" />

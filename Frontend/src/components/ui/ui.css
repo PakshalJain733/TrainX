@@ -378,7 +378,22 @@
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom:20px;
+  margin-bottom:15px;
+}
+
+.coord-perf-filters-group {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.coord-perf-filters-group .custom-select-wrap {
+  width: auto !important;
+  min-width: 150px !important;
+  max-width: 220px !important;
+  flex: 0 1 auto !important;
 }
 
 .ui-section-title {

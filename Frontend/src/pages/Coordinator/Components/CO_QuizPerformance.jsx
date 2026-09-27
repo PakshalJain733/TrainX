@@ -148,14 +148,16 @@ export default function QuizPerformance() {
             />
           </div>
 
-          <CustomSelect
-            value={selectedBatch}
-            onChange={setSelectedBatch}
-            options={[
-              { value: "All", label: "All Batches" },
-              ...batchesList.map((b) => ({ value: b.name, label: b.name })),
-            ]}
-          />
+          <div className="coord-perf-filters-group" style={{ flex: "0 1 220px", minWidth: "160px" }}>
+            <CustomSelect
+              value={selectedBatch}
+              onChange={setSelectedBatch}
+              options={[
+                { value: "All", label: "All Batches" },
+                ...batchesList.map((b) => ({ value: b.name, label: b.name })),
+              ]}
+            />
+          </div>
 
           <button
             onClick={() => alert("Exporting Quiz Performance Report PDF...")}

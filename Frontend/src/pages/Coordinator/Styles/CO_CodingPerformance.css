@@ -386,10 +386,18 @@
 
 .coord-perf-filters-group {
   display: flex;
+  flex-direction: row;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex: 1 1 auto;
+}
+
+.coord-perf-filters-group .custom-select-wrap {
+  width: auto;
+  min-width: 150px;
+  max-width: 220px;
+  flex: 0 1 auto;
 }
 
 .coord-perf-filter-label {

@@ -96,7 +96,7 @@ export default function AdminLeaderboard() {
   return (
     <div className="admin-leaderboard-container page-fade-in">
       <div className="ui-section-header-AD">
-        <div className="ui-section-main">
+        <div className="ui-section-main-AD">
           <div>
             <h2 className="ui-section-title">
               <Trophy size={22} className="ui-section-title-icon" />

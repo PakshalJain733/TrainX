@@ -396,18 +396,6 @@ export default function InterviewPerformance() {
             </div>
 
             <CustomSelect
-              value={selectedDept}
-              onChange={setSelectedDept}
-              options={[
-                { value: "all", label: "All Departments" },
-                { value: "CSE", label: "CSE" },
-                { value: "IT", label: "IT" },
-                { value: "AI & DS", label: "AI & DS" },
-                { value: "ECS", label: "ECS" },
-              ]}
-            />
-
-            <CustomSelect
               value={selectedBatch}
               onChange={setSelectedBatch}
               options={[

@@ -221,7 +221,7 @@ export default function AdminProfile() {
   return (
     <div className="student-page-inner profile-container">
       <div className="ui-section-header-AD">
-        <div className="ui-section-main">
+        <div className="ui-section-main-AD">
           <div>
             <h2 className="ui-section-title">
               <span>My Profile & Settings</span>

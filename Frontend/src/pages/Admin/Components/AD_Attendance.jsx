@@ -708,7 +708,7 @@ export default function AdminAttendance() {
       {/* Page Header */}
       <div className="admin-attendance-header-wrapper">
         <div className="ui-section-header-AD">
-          <div className="ui-section-main">
+          <div className="ui-section-main-AD">
             <div>
               <h2 className="ui-section-title">
                 <CalendarCheck size={22} className="ui-section-title-icon" />

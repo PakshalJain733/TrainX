@@ -515,6 +515,15 @@ export const getMyAttempts = async (req, res, next) => {
           `SELECT * FROM assessment_attempts WHERE user_id = ? ORDER BY id DESC`,
           [userId]
         );
+        try {
+          const completions = await query(
+            `SELECT quiz_id AS assessment_id, user_id, 'completed' AS status, completed_at AS submitted_at FROM student_quiz_completions WHERE user_id = ?`,
+            [userId]
+          );
+          if (completions && completions.length > 0) {
+            attempts = [...attempts, ...completions];
+          }
+        } catch (ce) {}
       } else {
         attempts = await query(`SELECT * FROM assessment_attempts ORDER BY id DESC`);
       }

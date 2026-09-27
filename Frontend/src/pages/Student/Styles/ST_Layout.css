@@ -2097,5 +2097,5 @@ button:active:not(:disabled),
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom:5px;
+  margin-bottom:10px;
 }

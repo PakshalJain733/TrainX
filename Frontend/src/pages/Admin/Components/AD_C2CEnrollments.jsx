@@ -10,6 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_C2CEnrollments.css";
 
@@ -242,16 +243,26 @@ export default function AdminC2CEnrollments() {
           />
         </div>
         <div className="c2c-filters">
-          <select className="c2c-select" value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
-            <option value="all">All Branches</option>
-            {branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}
-          </select>
-          <select className="c2c-select" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">All Payments</option>
-            <option value="paid">Paid</option>
-            <option value="partial">Partial</option>
-            <option value="unpaid">Unpaid</option>
-          </select>
+          <CustomSelect
+            value={branchFilter}
+            onChange={(val) => setBranchFilter(val)}
+            options={[
+              { value: "all", label: "All Branches" },
+              ...branches.map((b) => ({ value: b, label: b })),
+            ]}
+            className="c2c-custom-select"
+          />
+          <CustomSelect
+            value={statusFilter}
+            onChange={(val) => setStatusFilter(val)}
+            options={[
+              { value: "all", label: "All Payments" },
+              { value: "paid", label: "Paid" },
+              { value: "partial", label: "Partial" },
+              { value: "unpaid", label: "Unpaid" },
+            ]}
+            className="c2c-custom-select"
+          />
         </div>
       </div>
 

@@ -297,6 +297,7 @@ export default function CoordinatorAssessments() {
               />
             </div>
 
+            <div className="coord-perf-filters-group" style={{ flex: "0 1 220px", minWidth: "160px" }}>
             <CustomSelect
               value={batchFilter}
               onChange={setBatchFilter}
@@ -305,6 +306,7 @@ export default function CoordinatorAssessments() {
                 ...batchesList.map((b) => ({ value: b.name, label: b.name })),
               ]}
             />
+          </div>
           </div>
 
           {/* Quizzes List */}

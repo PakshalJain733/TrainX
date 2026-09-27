@@ -152,7 +152,7 @@ export default function AdminProgress() {
   return (
     <div className="admin-progress-container">
       <div className="ui-section-header-AD">
-        <div className="ui-section-main">
+        <div className="ui-section-main-AD">
           <div>
             <h2 className="ui-section-title">
               <LineChart size={22} className="ui-section-title-icon" />

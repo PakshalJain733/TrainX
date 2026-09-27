@@ -4,8 +4,12 @@ import { Navigate, useLocation } from "react-router-dom";
 export default function ProtectedRoute({ allowedRoles = [], children }) {
   const location = useLocation();
 
+  const isLocalhost =
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
   // 1. Retrieve auth token
-  const token =
+  let token =
     sessionStorage.getItem("token") ||
     localStorage.getItem("token") ||
     localStorage.getItem("authToken") ||
@@ -20,7 +24,46 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     user = null;
   }
 
-  // If unauthenticated, redirect to login page
+  // Localhost Developer Mode: Allow direct URL navigation (e.g. localhost:5173/student)
+  if (isLocalhost && (!token || !user || !user.role)) {
+    const currentPath = location.pathname.toLowerCase();
+    let devRole = "student";
+    let devName = "Local Student";
+
+    if (currentPath.includes("/super-admin") || currentPath.includes("/superadmin")) {
+      devRole = "superadmin";
+      devName = "Local Super Admin";
+    } else if (currentPath.includes("/coordinator")) {
+      devRole = "coordinator";
+      devName = "Local Coordinator";
+    } else if (currentPath.includes("/admin")) {
+      devRole = "college_admin";
+      devName = "Local Admin";
+    } else if (currentPath.includes("/mentor")) {
+      devRole = "mentor";
+      devName = "Local Mentor";
+    }
+
+    const mockDevUser = {
+      id: 99999,
+      name: devName,
+      email: `${devRole}@localhost.dev`,
+      role: devRole,
+      college_id: 1,
+      is_profile_updated: true,
+      profileCompleted: true,
+    };
+
+    token = "mock_localhost_dev_token";
+    user = mockDevUser;
+
+    try {
+      sessionStorage.setItem("token", token);
+      sessionStorage.setItem("user", JSON.stringify(mockDevUser));
+    } catch (_) {}
+  }
+
+  // In Deployed / Production environment: if unauthenticated, redirect to login page
   if (!token || !user || !user.role) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
@@ -28,8 +71,14 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
   const userRole = String(user.role).toLowerCase();
 
   // Determine user role flags
-  const isSuperAdmin = userRole.includes("superadmin") || userRole.includes("super admin") || userRole.includes("super_admin") || userRole.includes("super");
-  const isAdmin = (userRole.includes("admin") || userRole.includes("college_admin") || userRole.includes("hod")) && !isSuperAdmin;
+  const isSuperAdmin =
+    userRole.includes("superadmin") ||
+    userRole.includes("super admin") ||
+    userRole.includes("super_admin") ||
+    userRole.includes("super");
+  const isAdmin =
+    (userRole.includes("admin") || userRole.includes("college_admin") || userRole.includes("hod")) &&
+    !isSuperAdmin;
   const isCoordinator = userRole.includes("coordinator");
   const isMentor = userRole.includes("mentor") || userRole.includes("faculty");
   const isStudent = userRole.includes("student") || userRole === "user";
@@ -51,7 +100,10 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
   }
 
   if (!isAllowed) {
-    // If unauthorized for requested route, redirect to user's assigned dashboard
+    if (isLocalhost) {
+      return children;
+    }
+    // If unauthorized on production, redirect to user's assigned dashboard
     if (isSuperAdmin) return <Navigate to="/super-admin" replace />;
     if (isAdmin) return <Navigate to="/admin" replace />;
     if (isCoordinator) return <Navigate to="/coordinator" replace />;
