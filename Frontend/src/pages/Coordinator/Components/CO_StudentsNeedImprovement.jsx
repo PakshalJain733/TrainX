@@ -19,6 +19,7 @@ import {
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_CodingPerformance.css";
+import "../Styles/CO_StudentsNeedImprovement.css";
 
 export default function StudentsNeedImprovement() {
   const [dataList, setDataList] = useState([]);
@@ -405,27 +406,14 @@ export default function StudentsNeedImprovement() {
                 />
               </div>
 
-              <div className="coord-perf-filters-group">
+              <div className="coord-perf-filters-group-CO">
                 <div className="coord-perf-filter-label">
                   <Filter size={14} />
                   <span>Filters:</span>
                 </div>
 
-                {/* Department Filter */}
-                <div style={{ minWidth: '160px', flex: '1 1 160px' }}>
-                  <CustomSelect
-                    value={selectedDept}
-                    options={[
-                      { value: "all", label: "All Departments" },
-                      ...departments.map((dept) => ({ value: dept, label: `${dept} Department` }))
-                    ]}
-                    onChange={(val) => setSelectedDept(val)}
-                    placeholder="Select department..."
-                  />
-                </div>
-
                 {/* Batch Filter */}
-                <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+                <div className="coord-sni-filter-select">
                   <CustomSelect
                     value={selectedBatch}
                     options={[
@@ -438,7 +426,7 @@ export default function StudentsNeedImprovement() {
                 </div>
 
                 {/* Priority Filter */}
-                <div style={{ minWidth: '150px', flex: '1 1 150px' }}>
+                <div className="coord-sni-filter-select">
                   <CustomSelect
                     value={selectedPriority}
                     options={[
@@ -463,7 +451,6 @@ export default function StudentsNeedImprovement() {
                   <tr>
                     <th>Student Name</th>
                     <th>Roll Number</th>
-                    <th>Department</th>
                     <th>Batch</th>
                     <th style={{ textAlign: "center" }}>Overall Performance</th>
                     <th style={{ textAlign: "center" }}>Weak Skills</th>
@@ -490,13 +477,6 @@ export default function StudentsNeedImprovement() {
                       {/* Roll Number */}
                       <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#334155" }}>
                         {student.rollNo}
-                      </td>
-
-                      {/* Department */}
-                      <td>
-                        <span className="coord-perf-status-badge coord-perf-status--default">
-                          {student.department}
-                        </span>
                       </td>
 
                       {/* Batch */}
@@ -558,7 +538,7 @@ export default function StudentsNeedImprovement() {
 
                   {filteredStudents.length === 0 && (
                     <tr>
-                      <td colSpan={8} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
+                      <td colSpan={7} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
                         No students found matching your selected filters.
                       </td>
                     </tr>

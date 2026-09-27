@@ -3,6 +3,7 @@
 .custom-select-wrap {
   position: relative;
   width: 100%;
+  min-width: 180px;
   box-sizing: border-box;
   font-family: inherit;
 }
@@ -13,6 +14,7 @@
 
 .custom-select-trigger {
   width: 100%;
+  min-width: 180px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -26,7 +28,7 @@
   font-weight: 500;
   cursor: pointer;
   outline: none;
-  transition: all 0.2s ease-in-out;
+  transition: none;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   box-sizing: border-box;
   text-align: left;
@@ -74,7 +76,7 @@
 .custom-select-arrow {
   color: #64748b;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  transition: none;
 }
 
 .custom-select-arrow--rotate {
@@ -89,40 +91,11 @@
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   border-radius: 12px;
-  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.2), 0 4px 12px -2px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.16), 0 4px 10px -2px rgba(15, 23, 42, 0.08);
   z-index: 2147483647 !important;
   padding: 6px;
-  animation: customSelectFadeIn 0.15s ease-out forwards;
-}
-
-.custom-select-dropdown--up {
-  top: auto !important;
-  bottom: calc(100% + 6px) !important;
-  animation: customSelectFadeInUp 0.15s ease-out forwards !important;
-}
-
-@keyframes customSelectFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes customSelectFadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  animation: none !important;
+  opacity: 1;
 }
 
 .custom-select-empty {
@@ -136,13 +109,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 9px 12px;
   border-radius: 8px;
   color: #334155;
   font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.12s ease;
+  white-space: nowrap;
+  transition: none;
 }
 
 .custom-select-option:hover {
@@ -165,6 +140,15 @@
   align-items: center;
   gap: 8px;
   overflow: hidden;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-select-option-left span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .custom-select-opt-icon {

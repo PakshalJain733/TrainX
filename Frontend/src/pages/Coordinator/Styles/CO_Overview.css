@@ -1113,4 +1113,15 @@
   color: #94a3b8;
 }
 
+.co-risk-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.co-risk-info-wrap {
+  min-width: 0;
+}
+
 

@@ -234,18 +234,31 @@ export const getCoordinatorMentors = async (req, res, next) => {
     const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId);
 
     let sql = `
-      SELECT u.id, u.name, u.email, u.mobile_number,
-              COUNT(DISTINCT ma.batch_id) as assigned_batches_count
-       FROM users u
-       LEFT JOIN mentor_assignments ma ON u.id = ma.mentor_id
-       WHERE u.college_id = ? AND u.role = 'mentor'`;
+      SELECT u.id, u.name, u.email, u.mobile_number, u.target_track as specialization,
+             d.name as department,
+             GROUP_CONCAT(DISTINCT b.name SEPARATOR ', ') as assignedBatch,
+             COALESCE((
+               SELECT COUNT(DISTINCT msa.student_id)
+               FROM mentor_student_assignments msa
+               WHERE msa.mentor_id = u.id
+             ), (
+               SELECT COUNT(DISTINCT s.id)
+               FROM students s
+               JOIN mentor_assignments ma ON s.batch_id = ma.batch_id
+               WHERE ma.mentor_id = u.id
+             ), 0) as studentsCount
+      FROM users u
+      LEFT JOIN mentor_assignments ma ON u.id = ma.mentor_id
+      LEFT JOIN batches b ON ma.batch_id = b.id
+      LEFT JOIN departments d ON b.department_id = d.id
+      WHERE u.college_id = ? AND u.role = 'mentor'`;
     const params = [scope.collegeId];
     if (scope.hasDept) {
-      sql += ` AND u.id IN (
+      sql += ` AND (b.department_id IN (${scope.deptList}) OR u.id IN (
                 SELECT DISTINCT ma2.mentor_id
                 FROM mentor_assignments ma2
                 JOIN batches b2 ON ma2.batch_id = b2.id
-                WHERE b2.college_id = ? AND b2.department_id IN (${scope.deptList}))`;
+                WHERE b2.college_id = ? AND b2.department_id IN (${scope.deptList})))`;
       params.push(scope.collegeId);
     }
     sql += ` GROUP BY u.id ORDER BY u.name ASC`;
@@ -253,6 +266,52 @@ export const getCoordinatorMentors = async (req, res, next) => {
     const mentors = await query(sql, params);
 
     return sendSuccess(res, 'Mentors retrieved successfully', { mentors });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/coordinator/mentors/:id/students
+ * Retrieve real allotted students for a given mentor from the database
+ */
+export const getCoordinatorMentorStudents = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Direct mentor_student_assignments
+    let sql = `
+      SELECT u.id, u.name, s.roll_number as rollNo, s.department as department,
+             u.is_active as status
+      FROM users u
+      JOIN students s ON u.id = s.user_id
+      JOIN mentor_student_assignments msa ON u.id = msa.student_id
+      WHERE msa.mentor_id = ?
+      ORDER BY u.name ASC`;
+    let students = await query(sql, [id]);
+
+    // 2. Batch assignments
+    if (!students || students.length === 0) {
+      sql = `
+        SELECT u.id, u.name, s.roll_number as rollNo, s.department as department,
+               u.is_active as status
+        FROM users u
+        JOIN students s ON u.id = s.user_id
+        JOIN mentor_assignments ma ON s.batch_id = ma.batch_id
+        WHERE ma.mentor_id = ?
+        ORDER BY u.name ASC`;
+      students = await query(sql, [id]);
+    }
+
+    const formattedStudents = (students || []).map((s) => ({
+      id: s.id,
+      name: s.name,
+      rollNo: s.rollNo || 'N/A',
+      department: s.department || 'N/A',
+      status: s.status !== false ? 'Active' : 'Inactive',
+    }));
+
+    return sendSuccess(res, 'Allotted students retrieved successfully', { students: formattedStudents });
   } catch (error) {
     next(error);
   }

@@ -65,27 +65,39 @@
 }
 
 /* Filter & Search Bar */
-.departments-filter-card {
+.departments-filter-card,
+.sa-search-card {
   background: #ffffff;
   padding: 14px 18px;
   border-radius: 14px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.departments-filter-card .dept-search-box {
+.departments-filter-card .dept-search-box,
+.sa-search-card .dept-search-box,
+.sa-search-wrap {
   position: relative;
-  flex: 1;
+  flex: 1 1 auto !important;
   width: auto !important;
+  min-width: 200px !important;
 }
 
-.departments-filter-card .dept-select-wrap {
-  width: 280px;
-  flex-shrink: 0;
+.departments-filter-card .dept-select-wrap,
+.departments-filter-card .custom-select-wrap,
+.sa-search-card .dept-select-wrap,
+.sa-search-card .custom-select-wrap,
+.sa-search-card .dept-select {
+  width: auto !important;
+  max-width: 260px !important;
+  min-width: 180px !important;
+  flex-shrink: 0 !important;
 }
 
 .dept-select-box {

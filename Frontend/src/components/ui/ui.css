@@ -387,8 +387,8 @@
   flex-wrap: wrap !important;
   align-items: center !important;
   gap: 10px !important;
+  justify-content: flex-end !important;
 }
-
 .coord-perf-filters-group .custom-select-wrap {
   width: auto !important;
   min-width: 150px !important;

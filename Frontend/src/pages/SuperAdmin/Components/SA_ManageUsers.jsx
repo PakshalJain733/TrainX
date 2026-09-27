@@ -852,6 +852,8 @@ export default function ManageUsers() {
   const [students, setStudents] = useState(DEFAULT_STUDENTS);
   const [collegesList, setCollegesList] = useState([]);
   const [allRawUsers, setAllRawUsers] = useState([]);
+  const [selectedCollege, setSelectedCollege] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   // Modal States
   const [isAssignTrainerOpen, setIsAssignTrainerOpen] = useState(false);
@@ -964,29 +966,51 @@ export default function ManageUsers() {
   };
 
   // Filtering
-  const filteredAdmins = adminRequests.filter(req =>
-    req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.college.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const matchesCollegeFilter = (userCollege) => {
+    if (selectedCollege === 'all') return true;
+    return (userCollege || '').toLowerCase().includes(selectedCollege.toLowerCase());
+  };
 
-  const filteredCoordinators = coordinators.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.department.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const matchesStatusFilter = (userStatus) => {
+    if (selectedStatus === 'all') return true;
+    const statusStr = (userStatus || '').toLowerCase();
+    if (selectedStatus === 'active') return statusStr.includes('active') || statusStr.includes('verified');
+    if (selectedStatus === 'verified') return statusStr.includes('verified');
+    if (selectedStatus === 'pending') return statusStr.includes('pending');
+    return statusStr.includes(selectedStatus.toLowerCase());
+  };
 
-  const filteredMentors = mentors.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.track.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredAdmins = adminRequests.filter((req) => {
+    const matchesSearch =
+      req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      req.college.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && matchesCollegeFilter(req.college) && matchesStatusFilter(req.status);
+  });
 
-  const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.college.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCoordinators = coordinators.filter((c) => {
+    const matchesSearch =
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.department.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && matchesCollegeFilter(c.college) && matchesStatusFilter(c.status);
+  });
+
+  const filteredMentors = mentors.filter((m) => {
+    const matchesSearch =
+      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      m.track.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && matchesCollegeFilter(m.college) && matchesStatusFilter(m.status || 'Active');
+  });
+
+  const filteredStudents = students.filter((s) => {
+    const matchesSearch =
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.college.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch && matchesCollegeFilter(s.college) && matchesStatusFilter(s.status || 'Active');
+  });
 
   const tabs = [
     { id: "admins", label: "Admin", icon: ShieldCheck, count: adminRequests.length },
@@ -1281,16 +1305,41 @@ export default function ManageUsers() {
 
 
 
-      {/* Search Input */}
-      <div className="sa-search-card">
-        <div className="sa-search-wrap mu-search-wrap-full">
+      {/* Search Input & Filters Bar */}
+      <div className="sa-search-card" style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", flexWrap: "wrap" }}>
+        <div className="sa-search-wrap" style={{ flex: "1 1 240px", minWidth: "200px" }}>
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()}...`}
+            placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()} by name, email, roll no, or college...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"
+          />
+        </div>
+
+        <div style={{ width: "220px", flexShrink: 0 }}>
+          <MuSelect
+            icon={Building2}
+            value={selectedCollege}
+            onChange={(val) => setSelectedCollege(val)}
+            options={[
+              { value: 'all', label: 'All Registered Colleges' },
+              ...collegesList.map((c) => ({ value: c.name, label: c.name }))
+            ]}
+          />
+        </div>
+
+        <div style={{ width: "180px", flexShrink: 0 }}>
+          <MuSelect
+            value={selectedStatus}
+            onChange={(val) => setSelectedStatus(val)}
+            options={[
+              { value: 'all', label: 'All Statuses' },
+              { value: 'active', label: 'Active Users' },
+              { value: 'verified', label: 'Verified Users' },
+              { value: 'pending', label: 'Pending Verification' },
+            ]}
           />
         </div>
       </div>

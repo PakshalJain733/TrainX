@@ -1154,7 +1154,7 @@ export default function AdminBatches() {
                 </div>
                 <div>
                   <h2 className="modal-title">Create Batch</h2>
-                  <p className="modal-subtitle">Create a new batch, assign mentor, and generate join code.</p>
+                  <p className="modal-subtitle">Create a new batch, assign trainer, and generate join code.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowAddForm(false)} title="Close Modal">
@@ -1193,7 +1193,7 @@ export default function AdminBatches() {
                     />
                   </div>
                   <div className="form-group-admin">
-                    <label>Assigned Mentor / Faculty *</label>
+                    <label>Assigned Trainer *</label>
                     <input
                       className="form-input-admin"
                       value={mentor}
@@ -1271,7 +1271,7 @@ export default function AdminBatches() {
             </p>
             <p className="admin-empty-state-sub">
               {activeStatusTab === "active"
-                ? 'Click "Create New Batch" to add cohorts, assign mentors, and create student join codes.'
+                ? 'Click "Create New Batch" to add cohorts, assign trainer, and create student join codes.'
                 : 'Batches marked as inactive or deleted will appear here. You can reactivate them anytime.'}
             </p>
           </div>

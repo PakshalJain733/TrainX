@@ -1071,13 +1071,34 @@ body {
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sa-search-wrap {
   position: relative;
-  width: 100%;
+  flex: 1 1 auto !important;
+  min-width: 200px !important;
+  width: auto !important;
   display: flex;
   align-items: center;
+}
+
+.sa-search-card .custom-select-wrap,
+.sa-search-card .college-select-wrap,
+.sa-search-card .dept-select-wrap,
+.sa-search-card .batch-select-wrap,
+.sa-search-card .college-select,
+.sa-search-card .dept-select,
+.sa-search-card .batch-select {
+  width: auto !important;
+  max-width: 260px !important;
+  min-width: 180px !important;
+  flex-shrink: 0 !important;
 }
 
 .sa-search-icon {

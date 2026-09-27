@@ -8,38 +8,11 @@ import {
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/MN_Quizzes.css";
 
-/* ── Inline dropdown for Mentor Quizzes (CSS: MentorQuizzes.css .mentor-mq-select-*) ── */
-function MentorMqSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`mentor-mq-select-wrap${isOpen ? ' mentor-mq-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-mq-select-trigger${isOpen ? ' mentor-mq-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="mentor-mq-select-icon" />}
-        <span className="mentor-mq-select-text">{selected ? selected.label : <span className="mentor-mq-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`mentor-mq-select-arrow${isOpen ? ' mentor-mq-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="mentor-mq-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-mq-select-option${isSel ? ' mentor-mq-select-option--selected' : ''}`}>
-                <span className="mentor-mq-select-option-label">{opt.label}</span>
-                {isSel && <Check className="mentor-mq-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+import CustomSelect from "../../../components/ui/CustomSelect";
+
+/* ── Dropdown for Mentor Quizzes ── */
+function MentorMqSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 import { getApiBaseUrl } from "../../../utils/api.js";

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { AlertCircle, Search, Filter, ShieldAlert, UserX } from 'lucide-react';
+import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/MN_Defaulters.css";
 
 const unwrap = (response) => {
@@ -130,16 +131,17 @@ export default function Defaulters() {
               className="mentor-defaulter-search-input"
             />
           </div>
-          <div className="mentor-defaulter-filter-wrap">
+          <div className="mentor-defaulter-filter-wrap" style={{ minWidth: "200px" }}>
             <Filter size={16} color="#64748b" />
-            <select
+            <CustomSelect
               value={selectedRisk}
-              onChange={(event) => setSelectedRisk(event.target.value)}
-              className="mentor-defaulter-select"
-              aria-label="Filter by risk level"
-            >
-              {riskLevels.map((risk) => <option key={risk} value={risk}>{risk === "All" ? "All Risk Levels" : risk}</option>)}
-            </select>
+              options={riskLevels.map((risk) => ({
+                value: risk,
+                label: risk === "All" ? "All Risk Levels" : risk
+              }))}
+              onChange={(val) => setSelectedRisk(val)}
+              placeholder="All Risk Levels"
+            />
           </div>
         </div>
 

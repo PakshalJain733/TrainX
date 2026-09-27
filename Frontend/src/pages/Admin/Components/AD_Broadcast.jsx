@@ -5,40 +5,12 @@ import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_Broadcast.css";
 
-/* ── Inline dropdown for Admin Broadcast (CSS: AdminBroadcast.css .admin-bcast-select-*) ── */
-function AdminBcastSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`admin-bcast-select-wrap${isOpen ? ' admin-bcast-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-bcast-select-trigger${isOpen ? ' admin-bcast-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="admin-bcast-select-icon" />}
-        <span className="admin-bcast-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`admin-bcast-select-arrow${isOpen ? ' admin-bcast-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="admin-bcast-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-bcast-select-option${isSel ? ' admin-bcast-select-option--selected' : ''}`}>
-                <span className="admin-bcast-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-bcast-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Admin Broadcast using body portal CustomSelect ── */
+function AdminBcastSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 export default function AdminBroadcast() {
@@ -253,8 +225,6 @@ export default function AdminBroadcast() {
                   options={[
                     { value: "General Announcement", label: "General Announcement" },
                     { value: "Urgent Notice", label: "Urgent Notice" },
-                    { value: "Exam & Quiz Schedule", label: "Exam & Quiz Schedule" },
-                    { value: "Placement Drive Alert", label: "Placement Drive Alert" },
                   ]}
                 />
               </div>

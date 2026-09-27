@@ -330,9 +330,9 @@ export default function CoordinatorOverview() {
 
               return (
                 <div key={s.id} className="co-risk-item-card">
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0 }}>
+                  <div className="co-risk-item-left">
                     <div className="co-risk-avatar">{initials}</div>
-                    <div style={{ minWidth: 0 }}>
+                    <div className="co-risk-info-wrap">
                       <h5 className="co-risk-info-name">{s.name}</h5>
                       <p className="co-risk-info-sub">
                         {s.rollNo || s.studentId || "CSE26-001"} · {s.batch || "CSE 2026 Cohort"}

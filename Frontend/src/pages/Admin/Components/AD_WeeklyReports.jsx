@@ -14,6 +14,7 @@ import {
   FileText
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_WeeklyReports.css";
 
 export default function AdminWeeklyReports() {
@@ -100,13 +101,6 @@ export default function AdminWeeklyReports() {
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} />
             <span>Refresh</span>
           </button>
-          <button
-            className="ad-wr-btn ad-wr-btn-primary"
-            onClick={() => alert("Weekly report auto-compiler triggered!")}
-          >
-            <Plus size={16} />
-            <span>Generate Governance Report</span>
-          </button>
         </div>
       </div>
 
@@ -169,17 +163,19 @@ export default function AdminWeeklyReports() {
           />
         </div>
 
-        <div className="ad-wr-filter-group">
+        <div className="ad-wr-filter-group" style={{ minWidth: "180px", alignItems: "center" }}>
           <label style={{ fontSize: "0.875rem", fontWeight: 600, color: "#475569" }}>Status:</label>
-          <select
-            className="ad-wr-select"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="All">All Statuses</option>
-            <option value="Approved">Approved</option>
-            <option value="Pending Review">Pending Review</option>
-          </select>
+          <div style={{ flex: 1 }}>
+            <CustomSelect
+              value={statusFilter}
+              options={[
+                { value: "All", label: "All Statuses" },
+                { value: "Approved", label: "Approved" },
+                { value: "Pending Review", label: "Pending Review" }
+              ]}
+              onChange={(val) => setStatusFilter(val)}
+            />
+          </div>
         </div>
       </div>
 

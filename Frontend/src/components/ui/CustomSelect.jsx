@@ -28,13 +28,13 @@ export default function CustomSelect({
     (opt) => String(opt.value) === String(value)
   );
 
-  const updatePosition = () => {
-    if (!dropdownRef.current) return;
+  const calculatePosition = () => {
+    if (!dropdownRef.current) return { style: {}, openUp: false };
     const rect = dropdownRef.current.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
-    const estimatedHeight = Math.min(240, Math.max(60, normalizedOptions.length * 36 + 12));
+    const estimatedHeight = Math.min(260, Math.max(60, normalizedOptions.length * 36 + 12));
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
 
@@ -44,7 +44,6 @@ export default function CustomSelect({
     } else if (direction === "down") {
       openUp = false;
     } else {
-      // Auto direction: prefer downward unless space below is tight AND space above has more room
       if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
         openUp = true;
       } else if (spaceBelow < 140 && spaceAbove > 140) {
@@ -52,17 +51,18 @@ export default function CustomSelect({
       }
     }
 
-    setOpenUpState(openUp);
-
     const availableSpace = openUp ? spaceAbove - 16 : spaceBelow - 16;
-    const maxHeight = Math.max(100, Math.min(240, availableSpace));
-    const targetWidth = rect.width > 0 ? rect.width : 200;
+    const maxHeight = Math.max(100, Math.min(260, availableSpace));
+    
+    const minWidth = 180;
+    const targetWidth = Math.max(rect.width > 0 ? rect.width : 200, minWidth);
     const computedLeft = Math.max(8, Math.min(rect.left, viewportWidth - targetWidth - 8));
 
     const computedStyle = {
       position: "fixed",
       left: `${computedLeft}px`,
       width: `${targetWidth}px`,
+      minWidth: `${minWidth}px`,
       maxHeight: `${maxHeight}px`,
       overflowY: "auto",
       zIndex: 2147483647,
@@ -76,7 +76,13 @@ export default function CustomSelect({
       computedStyle.bottom = "auto";
     }
 
-    setMenuStyle(computedStyle);
+    return { style: computedStyle, openUp };
+  };
+
+  const updatePosition = () => {
+    const { style, openUp } = calculatePosition();
+    setOpenUpState(openUp);
+    setMenuStyle(style);
   };
 
   useLayoutEffect(() => {
@@ -121,7 +127,9 @@ export default function CustomSelect({
     }
     if (disabled) return;
     if (!isOpen) {
-      updatePosition();
+      const { style, openUp } = calculatePosition();
+      setOpenUpState(openUp);
+      setMenuStyle(style);
     }
     setIsOpen((prev) => !prev);
   };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   UserCheck,
   Star,
@@ -6,59 +7,135 @@ import {
   Users,
   Mail,
   Phone,
-  Plus,
   Search,
   Award,
-  Briefcase,
   X,
-  CheckCircle,
   Building2,
+  Eye,
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_Mentors.css";
-
-const DEFAULT_MENTORS = [];
 
 export default function CoordinatorMentors() {
   const [mentors, setMentors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
+  const [selectedMentorStudentsModal, setSelectedMentorStudentsModal] = useState(null);
+  const [allottedStudents, setAllottedStudents] = useState([]);
+  const [loadingStudents, setLoadingStudents] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [reallocateMentor, setReallocateMentor] = useState(null);
   const [newBatchName, setNewBatchName] = useState("");
+  const [dbDepartments, setDbDepartments] = useState([]);
+
+  const handleViewStudents = (mentor) => {
+    setSelectedMentorStudentsModal(mentor);
+    setLoadingStudents(true);
+    apiFetch(`/coordinator/mentors/${mentor.id}/students`)
+      .then((res) => {
+        const list = res?.data?.students || res?.students || res?.data || [];
+        setAllottedStudents(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        setAllottedStudents([]);
+      })
+      .finally(() => {
+        setLoadingStudents(false);
+      });
+  };
 
   const [addForm, setAddForm] = useState({
     name: "",
     email: "",
     specialization: "",
-    assignedBatch: "CSE 2026 Alpha Cohort",
-    experience: "5+ Yrs",
+    assignedBatch: "",
+    experience: "",
     department: "Computer Engineering",
   });
+
+  const getCoordinatorDept = () => {
+    try {
+      const local = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+      return local.department || local.dept || local.departmentName || "";
+    } catch {
+      return "";
+    }
+  };
+  const coordDept = getCoordinatorDept();
 
   const fetchMentors = () => {
     setLoading(true);
     apiFetch("/coordinator/mentors")
       .then((res) => {
-        const list = res?.data || (Array.isArray(res) ? res : []);
-        setMentors(Array.isArray(list) ? list : []);
+        const rawList = res?.data?.mentors || res?.mentors || res?.data || (Array.isArray(res) ? res : []);
+        const list = Array.isArray(rawList) ? rawList : [];
+
+        const mapped = list.map((m, idx) => ({
+          id: m.id || idx + 1,
+          name: m.name || m.trainer || "Faculty Mentor",
+          rating: m.rating || "5.0",
+          specialization: m.specialization || m.target_track || m.track || "General Domain",
+          assignedBatch: m.assignedBatch || m.batch_name || "Unassigned",
+          studentsCount: m.studentsCount ?? m.students ?? 0,
+          email: m.email || "N/A",
+          phone: m.mobile_number || m.phone || "N/A",
+          department: m.department || m.department_name || coordDept || "Department",
+          status: m.status || (m.is_active !== false ? "Active" : "Inactive"),
+        }));
+
+        const deptMentors = mapped.filter(
+          (m) =>
+            !coordDept ||
+            !m.department ||
+            m.department.toLowerCase().includes(coordDept.toLowerCase()) ||
+            coordDept.toLowerCase().includes(m.department.toLowerCase())
+        );
+
+        setMentors(deptMentors.length > 0 ? deptMentors : mapped);
       })
-      .catch(() => {
-        apiFetch("/mentors")
-          .then((res) => {
-            const list = res?.data || (Array.isArray(res) ? res : []);
-            setMentors(Array.isArray(list) ? list : []);
-          })
-          .catch(() => setMentors([]));
-      })
+      .catch(() => setMentors([]))
       .finally(() => setLoading(false));
+  };
+
+  const fetchDepartments = () => {
+    apiFetch("/departments")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list)) {
+          setDbDepartments(list.map((d) => d.name || d.code).filter(Boolean));
+        }
+      })
+      .catch(() => null);
   };
 
   useEffect(() => {
     fetchMentors();
+    fetchDepartments();
   }, []);
+
+  const uniqueDeptNames = Array.from(
+    new Set([
+      ...dbDepartments,
+      ...mentors.map((m) => m.department).filter(Boolean),
+    ])
+  );
+
+  const deptSelectOptions = [
+    { value: "all", label: "All Departments" },
+    ...uniqueDeptNames.map((deptName) => ({
+      value: deptName.toLowerCase(),
+      label: deptName,
+    })),
+  ];
+
+  const addFormDeptOptions = uniqueDeptNames.length > 0
+    ? uniqueDeptNames.map((deptName) => ({
+        value: deptName,
+        label: deptName,
+      }))
+    : [{ value: "Computer Engineering", label: "Computer Engineering" }];
 
   const handleAddMentor = (e) => {
     e.preventDefault();
@@ -123,91 +200,58 @@ export default function CoordinatorMentors() {
   });
 
   const totalStudents = mentors.reduce(
-    (sum, m) => sum + (Number(m.studentsCount) || 35),
+    (sum, m) => sum + (Number(m.studentsCount) || 0),
     0
   );
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+    <div className="coord-mentors-container">
       {/* Header Banner */}
-      <div className="coord-page-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{
-            width: "44px",
-            height: "44px",
-            borderRadius: "12px",
-            background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-            color: "#ffffff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            boxShadow: "0 4px 12px rgba(79, 70, 229, 0.2)"
-          }}>
+      <div className="coord-page-header">
+        <div className="coord-header-left">
+          <div className="coord-header-icon-box">
             <Users size={22} />
           </div>
           <div>
-            <h1 className="coord-page-title" style={{ margin: 0, fontSize: "22px", fontWeight: "800", color: "#0f172a" }}>
+            <h1 className="coord-page-title">
               Industry Trainers & Faculty Governance
             </h1>
-            <p className="coord-page-sub" style={{ margin: "3px 0 0", fontSize: "13.5px", color: "#64748b" }}>
+            <p className="coord-page-sub">
               Assigned specialized industry trainers for CSE, IT & AI-DS cohorts, performance ratings, and batch allocations.
             </p>
           </div>
         </div>
-
-        <button
-          className="coord-btn coord-btn--primary"
-          style={{
-            background: "linear-gradient(135deg, #4f46e5, #6366f1)",
-            color: "#fff",
-            padding: "10px 18px",
-            borderRadius: "10px",
-            fontWeight: 700,
-            fontSize: "13px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            border: "none",
-            cursor: "pointer",
-            boxShadow: "0 4px 14px rgba(79, 70, 229, 0.25)",
-            transition: "all 0.2s ease"
-          }}
-          onClick={() => setShowAddModal(true)}
-        >
-          <Plus size={16} /> Assign Industry Mentor
-        </button>
       </div>
 
       {/* KPI Stats Bar */}
-      <div className="coord-perf-kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-        <div className="coord-perf-kpi-card" style={{ background: "#ffffff", padding: "18px", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#eff6ff", color: "#2563eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+      <div className="coord-perf-kpi-grid">
+        <div className="coord-perf-kpi-card">
+          <div className="coord-kpi-icon-box blue">
             <UserCheck size={20} />
           </div>
           <div>
-            <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Active Faculty & Mentors</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", marginTop: "2px" }}>{mentors.length} Trainers</div>
+            <div className="coord-kpi-label">Active Mentors</div>
+            <div className="coord-kpi-val">{mentors.length} Trainers</div>
           </div>
         </div>
 
-        <div className="coord-perf-kpi-card" style={{ background: "#ffffff", padding: "18px", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#f0fdf4", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-kpi-icon-box green">
             <BookOpen size={20} />
           </div>
           <div>
-            <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Batches Under Supervision</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#16a34a", marginTop: "2px" }}>{mentors.length} Active Batches</div>
+            <div className="coord-kpi-label">Batches Under Supervision</div>
+            <div className="coord-kpi-val green">{mentors.length} Active Batches</div>
           </div>
         </div>
 
-        <div className="coord-perf-kpi-card" style={{ background: "#ffffff", padding: "18px", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#fffbeb", color: "#d97706", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-kpi-icon-box amber">
             <Star size={20} fill="#f59e0b" color="#f59e0b" />
           </div>
           <div>
-            <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Avg Faculty Rating</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#d97706", marginTop: "2px" }}>
+            <div className="coord-kpi-label">Avg Faculty Rating</div>
+            <div className="coord-kpi-val amber">
               {mentors.length > 0
                 ? (mentors.reduce((acc, m) => acc + parseFloat(m.rating || 5.0), 0) / mentors.length).toFixed(2)
                 : "0.0"} / 5.0
@@ -215,51 +259,36 @@ export default function CoordinatorMentors() {
           </div>
         </div>
 
-        <div className="coord-perf-kpi-card" style={{ background: "#ffffff", padding: "18px", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ width: "42px", height: "42px", borderRadius: "10px", background: "#f5f3ff", color: "#7c3aed", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <div className="coord-perf-kpi-card">
+          <div className="coord-kpi-icon-box purple">
             <Award size={20} />
           </div>
           <div>
-            <div style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Students Mentored</div>
-            <div style={{ fontSize: "20px", fontWeight: 800, color: "#7c3aed", marginTop: "2px" }}>{totalStudents} Enrolled</div>
+            <div className="coord-kpi-label">Students Mentored</div>
+            <div className="coord-kpi-val purple">{totalStudents} Enrolled</div>
           </div>
         </div>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="coord-perf-filter-card" style={{ background: "#ffffff", padding: "14px 18px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
-        <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ position: "relative", minWidth: "280px", flex: 1 }}>
-            <Search size={16} style={{ position: "absolute", left: "12px", top: "11px", color: "#64748b" }} />
+      <div className="coord-perf-filter-card">
+        <div className="coord-filter-flex-row">
+          <div className="coord-search-wrap">
+            <Search size={16} className="coord-search-icon" />
             <input
               type="text"
               placeholder="Search mentor name, specialization, batch..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: "100%",
-                paddingLeft: "36px",
-                paddingRight: "12px",
-                paddingTop: "8px",
-                paddingBottom: "8px",
-                borderRadius: "10px",
-                border: "1px solid #cbd5e1",
-                fontSize: "13px",
-                outline: "none"
-              }}
+              className="coord-search-input"
             />
           </div>
 
-          <div style={{ width: "220px" }}>
+          <div className="coord-filter-select-wrap">
             <CustomSelect
               value={deptFilter}
               onChange={setDeptFilter}
-              options={[
-                { value: "all", label: "All Departments" },
-                { value: "computer engineering", label: "Computer Engineering" },
-                { value: "information technology", label: "Information Technology" },
-                { value: "ai & data science", label: "AI & Data Science" },
-              ]}
+              options={deptSelectOptions}
             />
           </div>
         </div>
@@ -268,14 +297,14 @@ export default function CoordinatorMentors() {
       {/* Mentors Cards Grid */}
       <div className="coord-mentor-grid">
         {loading ? (
-          <div style={{ padding: "48px", textAlign: "center", color: "#64748b", gridColumn: "1 / -1", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+          <div className="coord-grid-empty">
             Loading assigned faculty & mentors...
           </div>
         ) : filteredMentors.length === 0 ? (
-          <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", fontSize: "14px", gridColumn: "1 / -1", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+          <div className="coord-grid-empty">
             <Users size={36} color="#94a3b8" />
-            <div style={{ fontWeight: 700, color: "#334155" }}>No matching mentors or faculty found.</div>
-            <p style={{ margin: 0, fontSize: "12px" }}>Try updating your search query or department filter.</p>
+            <div className="coord-grid-empty-title">No matching mentors or faculty found.</div>
+            <p className="coord-grid-empty-sub">Try updating your search query or department filter.</p>
           </div>
         ) : (
           filteredMentors.map((m, idx) => (
@@ -287,54 +316,44 @@ export default function CoordinatorMentors() {
                   </div>
                   <div>
                     <div className="coord-mentor-name">{m.name}</div>
-                    <div className="coord-mentor-exp">{m.experience || "5+ Yrs"} Experience · {m.department || "CSE"}</div>
+                    <div className="coord-mentor-exp">{m.department || "Department"}</div>
                   </div>
                 </div>
 
                 <div className="coord-mentor-rating-pill">
                   <Star size={13} fill="#f59e0b" color="#f59e0b" />
-                  {m.rating || "4.8"}
+                  {m.rating || "5.0"}
                 </div>
-              </div>
-
-              <div className="coord-mentor-spec-box">
-                <div className="coord-mentor-spec-lbl">Specialization</div>
-                <div className="coord-mentor-spec-val">{m.specialization || m.department || "Full Stack & AI"}</div>
               </div>
 
               <div className="coord-mentor-details-list">
                 <div className="coord-mentor-detail-row">
-                  <BookOpen size={14} color="#64748b" />
-                  Assigned Batch: <strong style={{ color: "#4f46e5" }}>{m.assignedBatch || m.batch || "TBD"}</strong>
+                  <Building2 size={14} color="#64748b" />
+                  <span>Department: <strong>{m.department || "Department"}</strong></span>
                 </div>
                 <div className="coord-mentor-detail-row">
                   <Users size={14} color="#64748b" />
-                  Allocated Students: <strong>{m.studentsCount || 35} Students</strong>
+                  <span>Allotted Students: <strong>{m.studentsCount || 0} Students</strong></span>
                 </div>
-                <div className="coord-mentor-email-row">
-                  <Mail size={13} /> {m.email || "N/A"}
+                <div className="coord-mentor-detail-row">
+                  <BookOpen size={14} color="#64748b" />
+                  <span>Assigned Batch: <strong className="accent">{m.assignedBatch || "Unassigned"}</strong></span>
+                </div>
+                <div className="coord-mentor-detail-row">
+                  <Mail size={14} color="#64748b" />
+                  <span>Email: <strong>{m.email || "N/A"}</strong></span>
+                </div>
+                <div className="coord-mentor-detail-row">
+                  <Phone size={14} color="#64748b" />
+                  <span>Mobile Number: <strong>{m.phone || "N/A"}</strong></span>
                 </div>
               </div>
 
               <button
-                className="coord-btn coord-btn--primary coord-mentor-action-btn"
-                style={{
-                  background: "#eef2ff",
-                  color: "#4f46e5",
-                  border: "1px solid #c7d2fe",
-                  padding: "9px",
-                  borderRadius: "10px",
-                  fontWeight: 700,
-                  fontSize: "12.5px",
-                  cursor: "pointer",
-                  marginTop: "6px"
-                }}
-                onClick={() => {
-                  setReallocateMentor(m);
-                  setNewBatchName(m.assignedBatch || "");
-                }}
+                className="coord-mentor-view-btn"
+                onClick={() => handleViewStudents(m)}
               >
-                Re-allocate Batch
+                <Eye size={15} /> View Allotted Students ({m.studentsCount || 0})
               </button>
             </div>
           ))
@@ -343,82 +362,78 @@ export default function CoordinatorMentors() {
 
       {/* Add Mentor Modal */}
       {showAddModal && (
-        <div className="coord-perf-modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div className="coord-perf-modal-card" style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "500px", boxShadow: "0 20px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", borderBottom: "1px solid #f1f5f9", pb: "12px" }}>
-              <h3 style={{ fontSize: "18px", fontWeight: 800, margin: 0, color: "#0f172a" }}>Assign New Industry Mentor</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card add-modal">
+            <div className="coord-modal-header">
+              <h3 className="coord-modal-title">Assign New Industry Mentor</h3>
+              <button onClick={() => setShowAddModal(false)} className="coord-modal-close-btn">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleAddMentor} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Trainer Full Name *</label>
+            <form onSubmit={handleAddMentor} className="coord-modal-form">
+              <div className="coord-form-group">
+                <label className="coord-form-label">Trainer Full Name *</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Dr. Rajesh Kumar"
                   value={addForm.name}
                   onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                  className="coord-form-input"
                 />
               </div>
 
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Official Email Address *</label>
+              <div className="coord-form-group">
+                <label className="coord-form-label">Official Email Address *</label>
                 <input
                   type="email"
                   required
                   placeholder="e.g. rajesh.kumar@trainx.edu"
                   value={addForm.email}
                   onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                  className="coord-form-input"
                 />
               </div>
 
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Specialization & Domain Expertise</label>
+              <div className="coord-form-group">
+                <label className="coord-form-label">Specialization & Domain Expertise</label>
                 <input
                   type="text"
                   placeholder="e.g. Cloud Computing & AWS DevOps"
                   value={addForm.specialization}
                   onChange={(e) => setAddForm({ ...addForm, specialization: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                  className="coord-form-input"
                 />
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                <div>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Department</label>
+              <div className="coord-form-grid-2">
+                <div className="coord-form-group">
+                  <label className="coord-form-label">Department</label>
                   <CustomSelect
                     value={addForm.department}
                     onChange={(val) => setAddForm({ ...addForm, department: val })}
-                    options={[
-                      { value: "Computer Engineering", label: "Computer Engineering" },
-                      { value: "Information Technology", label: "Information Technology" },
-                      { value: "AI & Data Science", label: "AI & Data Science" },
-                    ]}
+                    options={addFormDeptOptions}
                   />
                 </div>
 
-                <div>
-                  <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>Target Assigned Batch</label>
+                <div className="coord-form-group">
+                  <label className="coord-form-label">Target Assigned Batch</label>
                   <input
                     type="text"
                     placeholder="e.g. CSE 2026 Alpha"
                     value={addForm.assignedBatch}
                     onChange={(e) => setAddForm({ ...addForm, assignedBatch: e.target.value })}
-                    style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                    className="coord-form-input"
                   />
                 </div>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "12px" }}>
-                <button type="button" onClick={() => setShowAddModal(false)} style={{ padding: "8px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#f8fafc", color: "#475569", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}>
+              <div className="coord-modal-footer">
+                <button type="button" onClick={() => setShowAddModal(false)} className="coord-btn-cancel">
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: "8px 20px", borderRadius: "8px", border: "none", background: "#4f46e5", color: "#fff", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}>
+                <button type="submit" className="coord-btn-primary">
                   Confirm Trainer Allocation
                 </button>
               </div>
@@ -429,39 +444,109 @@ export default function CoordinatorMentors() {
 
       {/* Reallocate Batch Modal */}
       {reallocateMentor && (
-        <div className="coord-perf-modal-backdrop" style={{ position: "fixed", inset: 0, background: "rgba(15, 23, 42, 0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div className="coord-perf-modal-card" style={{ background: "#fff", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "440px", boxShadow: "0 20px 40px rgba(0,0,0,0.15)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ fontSize: "17px", fontWeight: 800, margin: 0, color: "#0f172a" }}>Re-allocate Batch for {reallocateMentor.name}</h3>
-              <button onClick={() => setReallocateMentor(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card reallocate-modal">
+            <div className="coord-modal-header">
+              <h3 className="coord-modal-title">Re-allocate Batch for {reallocateMentor.name}</h3>
+              <button onClick={() => setReallocateMentor(null)} className="coord-modal-close-btn">
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleReallocate} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block", marginBottom: "4px" }}>New Batch Assignment</label>
+            <form onSubmit={handleReallocate} className="coord-modal-form">
+              <div className="coord-form-group">
+                <label className="coord-form-label">New Batch Assignment</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. CSE 2026 Beta Cohort"
                   value={newBatchName}
                   onChange={(e) => setNewBatchName(e.target.value)}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #cbd5e1", fontSize: "13px" }}
+                  className="coord-form-input"
                 />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
-                <button type="button" onClick={() => setReallocateMentor(null)} style={{ padding: "8px 14px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#f8fafc", color: "#475569", fontWeight: 600, fontSize: "13px", cursor: "pointer" }}>
+              <div className="coord-modal-footer">
+                <button type="button" onClick={() => setReallocateMentor(null)} className="coord-btn-cancel">
                   Cancel
                 </button>
-                <button type="submit" style={{ padding: "8px 18px", borderRadius: "8px", border: "none", background: "#4f46e5", color: "#fff", fontWeight: 700, fontSize: "13px", cursor: "pointer" }}>
+                <button type="submit" className="coord-btn-primary">
                   Save Allocation
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* View Allotted Students Modal */}
+      {selectedMentorStudentsModal && createPortal(
+        <div className="coord-perf-modal-backdrop">
+          <div className="coord-perf-modal-card students-modal">
+            <div className="coord-modal-header">
+              <div>
+                <h3 className="coord-modal-title">
+                  Allotted Students: {selectedMentorStudentsModal.name}
+                </h3>
+                <p className="coord-modal-sub">
+                  {selectedMentorStudentsModal.assignedBatch || "Unassigned"} · {selectedMentorStudentsModal.department || "Department"}
+                </p>
+              </div>
+              <button onClick={() => setSelectedMentorStudentsModal(null)} className="coord-modal-close-btn">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="coord-modal-table-wrap">
+              {loadingStudents ? (
+                <div className="coord-modal-message">
+                  Fetching allotted students from database...
+                </div>
+              ) : allottedStudents.length === 0 ? (
+                <div className="coord-modal-message">
+                  No allotted students found for this mentor.
+                </div>
+              ) : (
+                <table className="coord-modal-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Student Name</th>
+                      <th>Roll Number</th>
+                      <th>Department</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allottedStudents.map((student, index) => (
+                      <tr key={student.id || index}>
+                        <td className="num">{index + 1}</td>
+                        <td className="name">{student.name}</td>
+                        <td className="roll">{student.rollNo}</td>
+                        <td className="dept">{student.department}</td>
+                        <td>
+                          <span className="coord-status-badge">
+                            {student.status || "Active"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="coord-modal-footer">
+              <button
+                onClick={() => setSelectedMentorStudentsModal(null)}
+                className="coord-btn-primary"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -95,9 +95,9 @@ export default function CoordinatorAttendance({ hideHeader }) {
       {!hideHeader && (
         <div className="coord-perf-header-bar">
           <div className="coord-perf-header-left">
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <h1 className="coord-perf-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <CalendarCheck size={24} style={{ color: "#4f46e5", flexShrink: 0 }} />
+            <div className="coord-att-title-row">
+              <h1 className="coord-perf-title coord-att-title-row">
+                <CalendarCheck size={24} className="coord-att-icon-primary" />
                 <span>Attendance Governance & Analytics</span>
               </h1>
             </div>
@@ -108,8 +108,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
           <button
             onClick={() => alert("Downloading Department Attendance Audit CSV Report...")}
-            className="coord-perf-btn coord-perf-btn--indigo-light"
-            style={{ background: "#0f172a", color: "#ffffff", border: "none" }}
+            className="coord-perf-btn coord-att-reset-btn"
           >
             <Download size={15} /> Export Attendance Report
           </button>
@@ -126,7 +125,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Total Students</span>
             <span className="coord-perf-kpi-value">{totalStudentsCount}</span>
-            <span className="coord-perf-kpi-sub">Enrolled across 4 departments</span>
+            <span className="coord-perf-kpi-sub">Enrolled across departments</span>
           </div>
         </div>
 
@@ -138,7 +137,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Present Today</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{presentTodayCount}</span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#059669", fontWeight: 600 }}>89.6% Attendance Rate</span>
+            <span className="coord-perf-kpi-sub coord-att-kpi-sub-emerald">Attendance Rate Active</span>
           </div>
         </div>
 
@@ -150,7 +149,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Absent Today</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{absentTodayCount}</span>
-            <span className="coord-perf-kpi-sub">33 Absentees logged</span>
+            <span className="coord-perf-kpi-sub">Absentees logged today</span>
           </div>
         </div>
 
@@ -167,20 +166,20 @@ export default function CoordinatorAttendance({ hideHeader }) {
         </div>
 
         {/* Low Attendance Students */}
-        <div className="coord-perf-kpi-card" style={{ borderColor: "#fecdd3" }}>
+        <div className="coord-perf-kpi-card coord-att-card-flagged">
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
             <AlertTriangle size={20} />
           </div>
           <div className="coord-perf-kpi-info">
             <span className="coord-perf-kpi-label">Low Attendance (&lt;{attendanceThreshold}%)</span>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{lowAttendanceCount}</span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#e11d48", fontWeight: 700 }}>Requires intervention</span>
+            <span className="coord-perf-kpi-sub coord-att-kpi-sub-rose">Requires intervention</span>
           </div>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs & Threshold Control Bar */}
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+      <div className="coord-att-filter-bar">
         <div className="coord-perf-tabs-nav">
           <button
             onClick={() => setActiveTab("overview")}
@@ -222,9 +221,9 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
       {/* VIEW 1: Attendance Overview & Department Summary */}
       {activeTab === "overview" && (
-        <div className="coord-perf-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ paddingBottom: "12px", borderBottom: "1px solid #f1f5f9" }}>
-            <h2 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="coord-perf-card coord-att-card-padded">
+          <div className="coord-att-card-header">
+            <h2 className="coord-perf-card-title coord-att-title-row">
               <Building2 color="#4f46e5" size={20} />
               Department-Wise Attendance Summary
             </h2>
@@ -233,34 +232,34 @@ export default function CoordinatorAttendance({ hideHeader }) {
             </p>
           </div>
 
-          <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>
+          <div className="coord-perf-cat-grid coord-att-dept-grid">
             {deptSummaries.map((dept, idx) => (
-              <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <div key={idx} className="coord-att-dept-card">
                 <div className="flex-between">
-                  <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{dept.department} Track</h3>
+                  <h3 className="coord-att-dept-name">{dept.department} Track</h3>
                   <span className="coord-perf-status-badge coord-perf-status--default">
                     {dept.totalStudents} Students
                   </span>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px", fontSize: "12px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
+                <div className="coord-att-dept-list">
+                  <div className="coord-att-dept-row">
                     <span>Present Today:</span>
-                    <strong style={{ color: "#059669", fontWeight: 700 }}>{dept.presentToday} Students</strong>
+                    <strong className="coord-att-kpi-sub-emerald">{dept.presentToday} Students</strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569" }}>
+                  <div className="coord-att-dept-row">
                     <span>Absent Today:</span>
-                    <strong style={{ color: "#e11d48", fontWeight: 700 }}>{dept.absentToday} Students</strong>
+                    <strong className="coord-att-kpi-sub-rose">{dept.absentToday} Students</strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", color: "#475569", paddingTop: "4px", borderTop: "1px solid #e2e8f0" }}>
+                  <div className="coord-att-dept-row coord-att-dept-row--border">
                     <span>Avg Attendance:</span>
-                    <strong style={{ color: dept.avgAttendance >= 85 ? "#059669" : "#d97706", fontWeight: 800 }}>
+                    <strong className={dept.avgAttendance >= 85 ? "coord-att-kpi-sub-emerald" : "coord-sni-sub-amber"}>
                       {dept.avgAttendance}%
                     </strong>
                   </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", background: "#fff1f2", color: "#be123c", padding: "8px 10px", borderRadius: "10px", border: "1px solid #fecdd3", fontWeight: 600 }}>
+                  <div className="coord-att-flagged-box">
                     <span>Defaulters (&lt;75%):</span>
-                    <strong style={{ fontWeight: 800 }}>{dept.lowAttendanceCount} Flagged</strong>
+                    <strong>{dept.lowAttendanceCount} Flagged</strong>
                   </div>
                 </div>
               </div>
@@ -271,7 +270,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
       {/* VIEW 2 & 3: Student Attendance List & Defaulter View */}
       {(activeTab === "list" || activeTab === "defaulters") && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div className="coord-leave-list">
           {/* Filters Bar */}
           <div className="coord-perf-filter-card">
             <div className="coord-perf-filter-row">
@@ -326,7 +325,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
                 />
 
                 {/* Defaulter Toggle */}
-                <label style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", fontWeight: 700, background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", padding: "0 12px", height: "38px", borderRadius: "10px", cursor: "pointer" }}>
+                <label className="coord-att-defaulters-toggle">
                   <input
                     type="checkbox"
                     checked={lowAttendanceOnly || activeTab === "defaulters"}

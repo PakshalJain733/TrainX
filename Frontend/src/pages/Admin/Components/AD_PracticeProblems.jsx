@@ -63,7 +63,7 @@ function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...
     <div className={`admin-pp-select-wrap${isOpen ? ' admin-pp-select-wrap--open' : ''}`} ref={ref}>
       <button type="button" onClick={handleToggle} className={`admin-pp-select-trigger${isOpen ? ' admin-pp-select-trigger--open' : ''}`}>
         {Icon && <Icon className="admin-pp-select-icon" />}
-        <span className="admin-pp-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="admin-pp-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <ChevronDown className={`admin-pp-select-arrow${isOpen ? ' admin-pp-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && (
@@ -152,7 +152,7 @@ export default function AdminPracticeProblems() {
       if (res && res.data && Array.isArray(res.data)) {
         setBatches(res.data);
       }
-    } catch (err) {}
+    } catch (err) { }
   };
 
   useEffect(() => {
@@ -553,8 +553,9 @@ export default function AdminPracticeProblems() {
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Topic / Category</label>
+                    <label>Topic / Category *</label>
                     <input
+                      required
                       type="text"
                       value={newProb.topic}
                       onChange={(e) => setNewProb({ ...newProb, topic: e.target.value })}
@@ -577,17 +578,13 @@ export default function AdminPracticeProblems() {
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Due Date</label>
-                    <input type="date" value={newProb.dueDate} onChange={(e) => setNewProb({...newProb, dueDate: e.target.value})} className="form-input-admin" />
+                    <label>Due Date *</label>
+                    <input required type="date" value={newProb.dueDate} onChange={(e) => setNewProb({ ...newProb, dueDate: e.target.value })} className="form-input-admin" />
                   </div>
                   <div className="form-group-admin">
-                    <label>Due Date</label>
-                    <input type="date" value={newProb.dueDate} onChange={(e) => setNewProb({...newProb, dueDate: e.target.value})} className="form-input-admin" />
-                  </div>
-                  <div className="form-group-admin">
-                    <label>XP Points</label>
+                    <label>XP Points *</label>
                     <input
-                      type="number"
+                      required
                       value={newProb.xp}
                       onChange={(e) => setNewProb({ ...newProb, xp: e.target.value })}
                       className="form-input-admin"
@@ -599,7 +596,6 @@ export default function AdminPracticeProblems() {
                   <label>Problem Description</label>
                   <textarea
                     rows={4}
-                    required
                     placeholder="Explain problem statement..."
                     value={newProb.description}
                     onChange={(e) => setNewProb({ ...newProb, description: e.target.value })}

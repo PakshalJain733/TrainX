@@ -1250,9 +1250,8 @@ export default function AdminUsers() {
                       }}
                       options={[
                         { value: "student", label: "Student" },
-                        { value: "mentor", label: "Mentor / Faculty" },
+                        { value: "mentor", label: "Mentor" },
                         { value: "coordinator", label: "Coordinator" },
-                        { value: "college_admin", label: "College Admin" }
                       ]}
                     />
                   </div>

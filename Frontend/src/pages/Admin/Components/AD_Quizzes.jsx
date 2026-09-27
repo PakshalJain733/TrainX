@@ -6,38 +6,11 @@ import { Badge } from "../../../components/ui/Badge";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Quizzes.css";
 
-/* ── Inline dropdown for Admin Quizzes (CSS: AdminQuizzes.css .admin-quiz-select-*) ── */
-function AdminQuizSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`admin-quiz-select-wrap${isOpen ? ' admin-quiz-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-quiz-select-trigger${isOpen ? ' admin-quiz-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="admin-quiz-select-icon" />}
-        <span className="admin-quiz-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`admin-quiz-select-arrow${isOpen ? ' admin-quiz-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="admin-quiz-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-quiz-select-option${isSel ? ' admin-quiz-select-option--selected' : ''}`}>
-                <span className="admin-quiz-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-quiz-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+import CustomSelect from "../../../components/ui/CustomSelect";
+
+/* ── Dropdown for Admin Quizzes ── */
+function AdminQuizSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 import { getApiBaseUrl } from "../../../utils/api.js";
@@ -82,6 +55,8 @@ function mapAssessment(a) {
     id: a.id,
     title: a.title,
     batch: a.batch_name || "All Batches",
+    duration_minutes: a.duration_minutes || 15,
+    duration: `${a.duration_minutes || 15} mins`,
     questionsCount: a.total_questions || normalizedQs.length || 0,
     type: a.category === "AI Generated" ? "AI Generated" : "Manual",
     status: a.status === "published" ? "Active" : a.status === "draft" ? "Draft" : a.status,
@@ -102,6 +77,7 @@ export default function AdminQuizzes() {
   const [title, setTitle] = useState("");
   const [batch, setBatch] = useState("All Batches");
   const [numQuestions, setNumQuestions] = useState("10");
+  const [timeLimit, setTimeLimit] = useState("15");
 
   // AI Loading state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -154,26 +130,14 @@ export default function AdminQuizzes() {
     try {
       const res = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
       const data = await res.json();
-      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+      if (data.success && Array.isArray(data.data)) {
         setAvailableBatches(data.data);
       } else {
-        setAvailableBatches([
-          { id: 1, name: "CSE 2026 Alpha Batch" },
-          { id: 2, name: "Fullstack React & Node Specialization" },
-          { id: 3, name: "BE-CS-2026-A" },
-          { id: 4, name: "TE-IT-2026-B" },
-          { id: 5, name: "BE-EXTC-2026-C" }
-        ]);
+        setAvailableBatches([]);
       }
     } catch (err) {
       console.warn("Failed to fetch batches from DB:", err);
-      setAvailableBatches([
-        { id: 1, name: "CSE 2026 Alpha Batch" },
-        { id: 2, name: "Fullstack React & Node Specialization" },
-        { id: 3, name: "BE-CS-2026-A" },
-        { id: 4, name: "TE-IT-2026-B" },
-        { id: 5, name: "BE-EXTC-2026-C" }
-      ]);
+      setAvailableBatches([]);
     }
   };
 
@@ -248,6 +212,7 @@ export default function AdminQuizzes() {
       batch: batch,
       questionsCount: questionsList.length,
       questions: questionsList,
+      duration_minutes: parseInt(timeLimit, 10) || 15,
       description: `${quizType} quiz for ${batch}`,
     });
 
@@ -264,7 +229,7 @@ export default function AdminQuizzes() {
         status: "published",
         is_published: true,
         total_marks: questionsList.length * 10,
-        duration_minutes: Math.max(10, questionsList.length * 2),
+        duration_minutes: parseInt(timeLimit, 10) || Math.max(10, questionsList.length * 2),
       }),
     });
     const assessData = await assessRes.json();
@@ -510,19 +475,19 @@ export default function AdminQuizzes() {
               </div>
 
               <form onSubmit={handleCreateQuizSubmit} className="quiz-add-form">
-                <div className="form-group">
-                  <label>Quiz Title</label>
-                  <input
-                    value={title}
-                    onChange={e => setTitle(e.target.value)}
-                    placeholder="e.g. Python OOP Assessment & Data Structures"
-                    required
-                    autoFocus
-                  />
-                </div>
-
                 <div className="form-row">
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1.5 }}>
+                    <label>Quiz Title</label>
+                    <input
+                      value={title}
+                      onChange={e => setTitle(e.target.value)}
+                      placeholder="e.g. Python OOP Assessment & Data Structures"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div className="form-group" style={{ flex: 1 }}>
                     <label>Target Batch</label>
                     <AdminQuizSelect
                       value={batch}
@@ -536,7 +501,9 @@ export default function AdminQuizzes() {
                       ]}
                     />
                   </div>
+                </div>
 
+                <div className="form-row">
                   {mode === "ai" ? (
                     <div className="form-group">
                       <label>Number of Questions to Generate</label>
@@ -554,7 +521,7 @@ export default function AdminQuizzes() {
                     <div className="form-group">
                       <label>Manual Questions Status</label>
                       <div className="manual-status-box">
-                        <span className="q-count-badge">{manualQuestions.length} Questions Added</span>
+                        <span className="q-count-badge">{manualQuestions.length} Questions</span>
                         <button
                           type="button"
                           className="open-modal-btn"
@@ -566,11 +533,24 @@ export default function AdminQuizzes() {
                             setShowManualModal(true);
                           }}
                         >
-                          <ListPlus size={15} /> Add / Edit Questions Screen
+                          <ListPlus size={15} /> Add / Edit Questions
                         </button>
                       </div>
                     </div>
                   )}
+
+                  <div className="form-group">
+                    <label>Time (Mins)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="180"
+                      value={timeLimit}
+                      onChange={e => setTimeLimit(e.target.value)}
+                      placeholder="e.g. 15"
+                      required
+                    />
+                  </div>
                 </div>
 
                 <div className="form-actions">

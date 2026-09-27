@@ -13,45 +13,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_Attendance.css";
 
-/* ── Inline dropdown for Admin Attendance (CSS: AdminAttendance.css .admin-att-select-*) ── */
-function AdminAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`admin-att-select-wrap${isOpen ? ' admin-att-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`admin-att-select-trigger${isOpen ? ' admin-att-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="admin-att-select-icon" />}
-        <span className="admin-att-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`admin-att-select-arrow${isOpen ? ' admin-att-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="admin-att-select-dropdown">
-          {options.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-att-select-option${isSel ? ' admin-att-select-option--selected' : ''}`}>
-                <span className="admin-att-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-att-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+import CustomSelect from "../../../components/ui/CustomSelect";
 
-const defaultBatches = [
-  { id: 1, name: "Java Full Stack Training", code: "JAVA-QRVL" },
-  { id: 2, name: "Python Backend & Cloud Engineering", code: "PY-BE" },
-  { id: 3, name: "Advanced Data Structures & Algorithms", code: "DSA-ADV" }
-];
+/* ── Dropdown for Admin Attendance ── */
+function AdminAttSelect(props) {
+  return <CustomSelect {...props} />;
+}
 
 const defaultStudentsMap = {};
 const defaultHistoryRecords = [];
@@ -146,14 +113,16 @@ export default function AdminAttendance() {
       try {
         let fetchedList = [];
         const res = await apiFetch("/batches");
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          fetchedList = res.data;
+        const list1 = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+        if (list1.length > 0) {
+          fetchedList = list1;
         }
 
         const myRes = await apiFetch("/batches/my-batches");
-        if (myRes && myRes.data && Array.isArray(myRes.data) && myRes.data.length > 0) {
+        const list2 = Array.isArray(myRes) ? myRes : (myRes && Array.isArray(myRes.data) ? myRes.data : []);
+        if (list2.length > 0) {
           const combined = [...fetchedList];
-          myRes.data.forEach(mb => {
+          list2.forEach(mb => {
             if (!combined.some(b => b.id === mb.id || b.code === mb.code || b.join_code === mb.join_code)) {
               combined.push(mb);
             }
@@ -171,9 +140,12 @@ export default function AdminAttendance() {
           if (mapped[0]) {
             setSelectedBatchCode(mapped[0].code);
           }
+        } else {
+          setBatches([]);
         }
       } catch (err) {
         console.error("Failed to load batches:", err);
+        setBatches([]);
       }
     };
 

@@ -1,4 +1,10 @@
-/* Batches.css */
+/* CO_Batches.css */
+.coord-batches-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
 .coord-page-header {
   display: flex;
   justify-content: space-between;
@@ -6,43 +12,83 @@
   margin-bottom: 20px;
 }
 
+.coord-header-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.coord-header-text-group {
+  display: flex;
+  flex-direction: column;
+}
+
 .coord-page-title {
+  margin: 0;
   font-size: 20px;
   font-weight: 800;
   color: #0f172a;
 }
 
 .coord-page-sub {
+  margin: 3px 0 0;
   font-size: 13px;
   color: #64748b;
-  margin-top: 2px;
 }
 
 .coord-filter-bar {
-  display: flex;
-  gap: 12px;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
   margin-bottom: 20px;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.coord-filter-bar > div:first-child {
+  position: relative;
+  flex: 1 1 auto !important;
+  min-width: 200px !important;
+  width: auto !important;
+}
+
+.coord-search-icon-pos {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  color: #64748b;
+}
+
+.coord-batch-select-wrap,
+.coord-filter-bar .custom-select-wrap {
+  width: 200px !important;
+  min-width: 180px !important;
+  flex-shrink: 0 !important;
 }
 
 .coord-search-input {
-  width: 300px;
-  padding: 8px 14px;
+  width: 100% !important;
+  height: 40px;
+  padding: 0 14px 0 36px;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  font-size: 13px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #0f172a;
   outline: none;
+  box-sizing: border-box;
+  background: #ffffff;
 }
 
-.coord-select {
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  font-size: 13px;
-  outline: none;
-  background: #ffffff;
+.coord-search-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
 }
 
 .coord-table-card {
@@ -78,6 +124,86 @@
   background: #f8fafc;
 }
 
+.coord-batch-title-text {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.coord-batch-sub-text {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.coord-flex-cell-icon {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.coord-progress-box {
+  width: 140px;
+}
+
+.coord-progress-head-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.coord-progress-pct-label {
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.coord-progress-track-bg {
+  height: 6px;
+  width: 100%;
+  background: #e2e8f0;
+  border-radius: 999px;
+}
+
+.coord-progress-fill-bar {
+  height: 100%;
+  background: #4f46e5;
+  border-radius: 999px;
+}
+
+.coord-att-val--high {
+  font-weight: 700;
+  color: #059669;
+}
+
+.coord-att-val--medium {
+  font-weight: 700;
+  color: #d97706;
+}
+
+.coord-att-val--low {
+  font-weight: 700;
+  color: #dc2626;
+}
+
+.coord-status-badge--active {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.coord-status-badge--default {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+/* Modals */
 .coord-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -103,95 +229,7 @@
   gap: 16px;
 }
 
-.coord-search-wrap {
-  position: relative;
-  flex: 1;
-  max-width: 320px;
-}
-
-.coord-search-icon {
-  position: absolute;
-  left: 12px;
-  top: 10px;
-  color: #64748b;
-}
-
-.coord-search-input--with-icon {
-  padding-left: 36px;
-}
-
-.coord-cell-main {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.coord-cell-sub {
-  font-size: 11px;
-  color: #64748b;
-}
-
-.coord-cell-flex {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.coord-progress-wrap {
-  width: 140px;
-}
-
-.coord-progress-head {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  margin-bottom: 2px;
-}
-
-.coord-progress-text {
-  font-weight: 700;
-  color: #4f46e5;
-}
-
-.coord-progress-track {
-  height: 6px;
-  width: 100%;
-  background: #e2e8f0;
-  border-radius: 999px;
-}
-
-.coord-progress-bar {
-  height: 100%;
-  background: #4f46e5;
-  border-radius: 999px;
-}
-
-.coord-status-badge--active {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.coord-status-badge--default {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.coord-btn--manage {
-  padding: 6px 12px;
-  font-size: 12px;
-  background: #f1f5f9;
-  color: #334155;
-}
-
-.coord-modal-title {
+.coord-modal-header-title {
   font-size: 18px;
   font-weight: 800;
   color: #0f172a;
@@ -201,6 +239,12 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.coord-form-group-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .coord-form-label {
@@ -215,16 +259,140 @@
   border-radius: 8px;
   border: 1px solid #cbd5e1;
   margin-top: 4px;
+  font-size: 13px;
+  box-sizing: border-box;
 }
 
-.coord-modal-actions {
+.coord-student-select-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.coord-select-all-btn {
+  font-size: 11px;
+  font-weight: 700;
+  color: #4f46e5;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.coord-student-search-box {
+  position: relative;
+  margin-bottom: 6px;
+}
+
+.coord-student-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 8px;
+  color: #64748b;
+}
+
+.coord-student-search-input {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.coord-student-list-scroll {
+  max-height: 180px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coord-student-empty-text {
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 16px;
+}
+
+.coord-student-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.coord-student-item-row.selected {
+  background: #eef2ff;
+  border-color: #818cf8;
+}
+
+.coord-student-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-student-name-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.coord-student-sub-info {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.coord-student-tag-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.coord-student-tag-badge.selected {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+.coord-modal-actions-row {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
   margin-top: 12px;
 }
 
-.coord-btn--cancel {
+.coord-btn-action-cancel {
   background: #f1f5f9;
   color: #475569;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.coord-btn-action-submit {
+  background: #4f46e5;
+  color: #ffffff;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
 }
