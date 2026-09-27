@@ -343,7 +343,7 @@ function Login() {
         storeAuthToken(data.data.token, rememberMeRef.current);
         handlePostLoginRedirect(data.data.user || {});
       } else {
-        setErrorMsg(data.message || "Invalid credentials. Please check your identifier and password.");
+        setErrorMsg(data.message || "Invalid credentials. Please check your email and password.");
       }
     } catch (err) {
       console.error("Password login error:", err);
@@ -590,13 +590,13 @@ function Login() {
               {step === "email" && (
                 <form onSubmit={handlePasswordLogin}>
                   <div className="login-input-group">
-                    <FieldLabel htmlFor="email" icon={Icons.email}>Email or Mobile Number</FieldLabel>
+                    <FieldLabel htmlFor="email" icon={Icons.email}>Email Address</FieldLabel>
                     <input
                       id="email"
-                      type="text"
+                      type="email"
                       required
                       autoComplete="username"
-                      placeholder="user@pvppcoe.ac.in or 10-digit mobile"
+                      placeholder="user@pvppcoe.ac.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -723,13 +723,13 @@ function Login() {
               {step === "email" && (
                 <form onSubmit={handleSendOtp}>
                   <div className="login-input-group">
-                    <FieldLabel htmlFor="otp-email" icon={Icons.email}>Email or Mobile Number</FieldLabel>
+                    <FieldLabel htmlFor="otp-email" icon={Icons.email}>Email Address</FieldLabel>
                     <input
                       id="otp-email"
-                      type="text"
+                      type="email"
                       required
                       autoComplete="username"
-                      placeholder="user@pvppcoe.ac.in or 10-digit mobile"
+                      placeholder="user@pvppcoe.ac.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
@@ -840,20 +840,20 @@ function Login() {
               {step === "email" && (
                 <form onSubmit={handleSendOtp}>
                   <div className="login-input-group">
-                    <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Registered Email or Mobile Number</FieldLabel>
+                    <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Registered Email Address</FieldLabel>
                     <input
                       id="forgot-email"
-                      type="text"
+                      type="email"
                       required
                       autoComplete="username"
-                      placeholder="user@pvppcoe.ac.in or 10-digit mobile"
+                      placeholder="user@pvppcoe.ac.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                     />
                   </div>
 
                   <p style={{ fontSize: "12px", color: "#64748b", margin: "10px 0 16px", lineHeight: "1.4" }}>
-                    🔒 Enter your registered email address or mobile number. We will send a 6-digit OTP to reset your password.
+                    🔒 Enter your registered email address. We will send a 6-digit OTP to reset your password.
                   </p>
 
                   <button type="submit" className="login-send-otp-btn" disabled={loading}>

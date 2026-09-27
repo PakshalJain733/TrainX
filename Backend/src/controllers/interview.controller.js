@@ -18,6 +18,10 @@ export const getInterviewData = async (req, res, next) => {
 export const getInterviewById = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
+    if (req.params.id === 'history') {
+      const sessions = await findInterviewSessionsByUserModel(userId);
+      return sendSuccess(res, 'Interview sessions retrieved successfully', sessions);
+    }
     const session = await getInterviewSessionByIdModel(req.params.id);
     if (!session || session.user_id !== userId) {
       return sendError(res, 'Interview session not found', 404);

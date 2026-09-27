@@ -187,26 +187,49 @@ function getToken() {
   const triggerProctoringWarning = useCallback((type = "SUSPICIOUS_BEHAVIOR", customMsg = "") => {
     const timestamp = new Date().toLocaleTimeString();
     const defaultMsgs = {
-      MULTIPLE_PERSONS: "⚠️ PROCTORING WARNING: Multiple people detected in camera feed! Ensure you are alone.",
-      LOOKING_AWAY: "⚠️ PROCTORING WARNING: Candidate looking away from camera/screen (possible copying attempt).",
-      NO_FACE: "⚠️ PROCTORING WARNING: Face not visible in camera frame! Please remain in front of the camera.",
-      BACKGROUND_PERSON: "⚠️ PROCTORING WARNING: Person detected in background of video stream.",
+      MULTIPLE_PERSONS: "Multiple persons / background occupant detected in camera feed!",
+      LOOKING_AWAY: "Candidate looking away from screen (copying attempt detected)!",
+      NO_FACE: "Face not detected in camera frame! Please remain in front of camera.",
+      BACKGROUND_PERSON: "Person detected in background of video stream!",
+      TAB_SWITCH: "Tab switching or window minimizing detected during live interview!",
+      COPY_PASTE: "Copy/paste attempt detected on interview screen!",
+      RIGHT_CLICK: "Right-click context menu opened during live interview!",
     };
 
-    const message = customMsg || defaultMsgs[type] || "⚠️ PROCTORING WARNING: Suspicious camera activity detected.";
+    const baseMsg = customMsg || defaultMsgs[type] || "Suspicious camera/proctoring activity detected.";
 
-    setActiveProctoringBanner(message);
     setProctoringWarnings((prev) => {
-      const updated = [...prev, { id: Date.now(), type, message, timestamp }];
-      if (updated.length >= 3) {
+      const warningCount = prev.length + 1;
+      const updated = [...prev, { id: Date.now(), type, message: baseMsg, timestamp, warningCount }];
+
+      if (warningCount === 1) {
+        // 1st warning: Show warning flag message banner
+        const flagBannerMsg = `⚠️ PROCTORING WARNING (1/1): ${baseMsg} — CAUTION: Re-offending will AUTO-SUBMIT your interview!`;
+        setActiveProctoringBanner(flagBannerMsg);
         setIsInterviewFlagged(true);
+        speakNow("Warning. Suspicious activity detected on camera.");
+      } else if (warningCount >= 2) {
+        // 2nd Violation (after 1 warning): Auto submit interview immediately!
+        const terminationBannerMsg = `🚨 INTERVIEW TERMINATED & AUTO-SUBMITTED: Exceeded 1 warning limit due to camera/proctoring violation! (${baseMsg})`;
+        setActiveProctoringBanner(terminationBannerMsg);
+        setIsInterviewFlagged(true);
+        setIsInterviewFinished(true);
+        speakNow("Interview terminated and auto-submitted due to proctoring violation.");
+
+        // Trigger end & auto-submit
+        setTimeout(() => {
+          if (endInterviewRef.current) {
+            endInterviewRef.current();
+          }
+        }, 800);
       }
+
       return updated;
     });
 
     setTimeout(() => {
       setActiveProctoringBanner(null);
-    }, 7000);
+    }, 8000);
   }, []);
 
   const viewPastResult = useCallback((pastSession) => {
@@ -586,19 +609,15 @@ function getToken() {
   // ─── Anti-Cheat: Tab switch auto-submit + copy-paste block ──────────────────
   useEffect(() => {
     const handleVisibility = () => {
-      // Only trigger during a live interview that hasn't already ended
       if (document.hidden && phaseRef.current === "live" && !endRequestedRef.current) {
-        // endInterview emits interview:end to the socket server.
-        // The server will compute the final scorecard and emit back,
-        // which triggers finishInterview() with the full report.
-        if (endInterviewRef.current) endInterviewRef.current();
+        triggerProctoringWarning("TAB_SWITCH", "Tab switching or window minimizing detected during live interview!");
       }
     };
 
     const preventCopy = (e) => {
       if (phaseRef.current === "live") {
         e.preventDefault();
-        alert("Copying and pasting is disabled during the AI interview.");
+        triggerProctoringWarning("COPY_PASTE", "Copy/paste attempt detected on interview screen!");
       }
     };
 
@@ -607,7 +626,10 @@ function getToken() {
     document.addEventListener("cut", preventCopy);
     document.addEventListener("paste", preventCopy);
     document.addEventListener("contextmenu", (e) => {
-      if (phaseRef.current === "live") e.preventDefault();
+      if (phaseRef.current === "live") {
+        e.preventDefault();
+        triggerProctoringWarning("RIGHT_CLICK", "Right-click context menu opened during live interview!");
+      }
     });
 
     return () => {
@@ -616,8 +638,7 @@ function getToken() {
       document.removeEventListener("cut", preventCopy);
       document.removeEventListener("paste", preventCopy);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [triggerProctoringWarning]);
 
   // ─── Send Answer ─────────────────────────────────────────────────────────────
   const sendAnswer = useCallback(() => {
@@ -1031,7 +1052,11 @@ function getToken() {
                 <div className={`ai-proctoring-badge ${isInterviewFlagged ? "flagged-critical" : proctoringWarnings.length > 0 ? "flagged-warning" : "flagged-clean"}`}>
                   <ShieldAlert size={12} />
                   <span>
-                    {isInterviewFlagged ? "FLAGGED (3+ Violations)" : proctoringWarnings.length > 0 ? `${proctoringWarnings.length} Warnings` : "Proctoring Active"}
+                    {proctoringWarnings.length >= 2
+                      ? "TERMINATED & AUTO-SUBMITTED"
+                      : proctoringWarnings.length === 1
+                      ? "FLAGGED: 1 Warning (Final Notice)"
+                      : "Proctoring Active"}
                   </span>
                 </div>
 

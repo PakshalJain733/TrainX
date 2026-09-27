@@ -60,12 +60,21 @@ export const getRoadmapByStudentId = async (studentId) => {
 export const getRoadmapByStudentAndRole = async (studentId, targetRole) => {
   const sId = Number(studentId);
   const normalizedRole = String(targetRole || '').trim().toLowerCase();
+  if (!normalizedRole) return null;
 
   try {
-    const roadmaps = await query(
+    let roadmaps = await query(
       'SELECT * FROM roadmaps WHERE student_id = ? AND LOWER(target_role) = ? ORDER BY updated_at DESC LIMIT 1',
       [sId, normalizedRole]
     );
+
+    if (!roadmaps || roadmaps.length === 0) {
+      // Partial fallback match (e.g. "java" matching "java fullstack developer")
+      roadmaps = await query(
+        'SELECT * FROM roadmaps WHERE student_id = ? AND (LOWER(target_role) LIKE ? OR ? LIKE CONCAT("%", LOWER(target_role), "%")) ORDER BY updated_at DESC LIMIT 1',
+        [sId, `%${normalizedRole}%`, normalizedRole]
+      );
+    }
 
     if (roadmaps && roadmaps.length > 0) {
       const roadmap = roadmaps[0];
@@ -81,7 +90,19 @@ export const getRoadmapByStudentAndRole = async (studentId, targetRole) => {
 
   // Check in-memory mock store keyed by studentId+role
   const mockKey = `${sId}__${normalizedRole}`;
-  return mockRoadmaps.get(mockKey) || null;
+  if (mockRoadmaps.has(mockKey)) return mockRoadmaps.get(mockKey);
+
+  // Partial search in mock store
+  for (const [key, value] of mockRoadmaps.entries()) {
+    if (typeof key === 'string' && key.startsWith(`${sId}__`)) {
+      const storedRole = key.split('__')[1] || '';
+      if (storedRole.includes(normalizedRole) || normalizedRole.includes(storedRole)) {
+        return value;
+      }
+    }
+  }
+
+  return null;
 };
 
 /**

@@ -744,7 +744,7 @@ export default function AIRoadmap() {
       locked: "in-progress",
     };
     const newStatus = statusCycle[item.status] || "in-progress";
-    const newProgress = newStatus === "completed" ? 100 : newStatus === "in-progress" ? 50 : 0;
+    const newProgress = newStatus === "completed" ? 100 : 0;
 
     // Optimistic UI update
     if (currentRoadmap && currentRoadmap.milestones) {
@@ -755,6 +755,43 @@ export default function AIRoadmap() {
     }
 
     // Server status update
+    await apiFetch(`/roadmaps/items/${item.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: newStatus,
+        progress: newProgress,
+      }),
+    });
+  };
+
+  const handleToggleTopic = async (item, topicIndex) => {
+    const allTopics = getTopicsForMilestone(item, currentRoadmap?.targetRole);
+    const currentCompleted = Array.isArray(item.completedTopics) ? [...item.completedTopics] : [];
+
+    let newCompleted;
+    if (currentCompleted.includes(topicIndex)) {
+      newCompleted = currentCompleted.filter((idx) => idx !== topicIndex);
+    } else {
+      newCompleted = [...currentCompleted, topicIndex];
+    }
+
+    const newProgress = allTopics.length > 0 ? Math.round((newCompleted.length / allTopics.length) * 100) : 0;
+    const newStatus = newProgress === 100 ? "completed" : newProgress > 0 ? "in-progress" : (item.id === 1 ? "in-progress" : "locked");
+
+    const updatedMilestone = {
+      ...item,
+      completedTopics: newCompleted,
+      progress: newProgress,
+      status: newStatus,
+    };
+
+    if (currentRoadmap && currentRoadmap.milestones) {
+      const updatedMilestones = currentRoadmap.milestones.map((m) =>
+        m.id === item.id ? updatedMilestone : m
+      );
+      setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+    }
+
     await apiFetch(`/roadmaps/items/${item.id}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -809,7 +846,11 @@ export default function AIRoadmap() {
 
   const milestones = currentRoadmap?.milestones || [];
   const completedCount = milestones.filter((m) => m.status === "completed").length;
-  const progressPercent = milestones.length > 0 ? Math.round((completedCount / milestones.length) * 100) : 0;
+  const totalProgressSum = milestones.reduce(
+    (acc, m) => acc + (typeof m.progress === "number" ? m.progress : (m.status === "completed" ? 100 : 0)),
+    0
+  );
+  const progressPercent = milestones.length > 0 ? Math.round(totalProgressSum / milestones.length) : 0;
 
   return (
     <div className="roadmap-container stack-6">
@@ -893,39 +934,7 @@ export default function AIRoadmap() {
             </div>
           )}
 
-          {/* Popular Suggestions Row */}
-          <div className="roadmap-suggestions-row">
-            <span className="roadmap-suggestions-label">Popular Targets:</span>
-            <div className="roadmap-pills-wrap">
-              {POPULAR_TARGETS.map((item) => (
-                <button
-                  key={item.role}
-                  type="button"
-                  className={`roadmap-suggest-pill ${goalInput === item.role ? "active" : ""}`}
-                  onClick={() => generateForRole(item.role)}
-                >
-                  <span className="pill-emoji">{item.icon}</span>
-                  <span>{item.role}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </form>
-
-        {userProfile?.skills && (
-          <div className="roadmap-skills-adaptation-banner">
-            <Check size={14} className="text-emerald-600 shrink-0" />
-            <span>
-              <strong>Profile Skills Pruned:</strong> Experienced in{" "}
-              <strong>
-                {Array.isArray(userProfile?.skills)
-                  ? userProfile.skills.join(", ")
-                  : (typeof userProfile?.skills === "string" ? userProfile.skills : "")}
-              </strong>
-              . AI will skip beginner topics you already know.
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Main Content Area: Loading / Empty Showcase / Timeline */}
@@ -1086,7 +1095,15 @@ export default function AIRoadmap() {
                     <div className="milestone-progress-bar-wrap">
                       <div
                         className="milestone-progress-bar-fill"
-                        style={{ width: `${m.progress || (m.status === 'completed' ? 100 : m.status === 'in-progress' ? 50 : 0)}%` }}
+                        style={{
+                          width: `${
+                            typeof m.progress === "number"
+                              ? m.progress
+                              : m.status === "completed"
+                              ? 100
+                              : 0
+                          }%`,
+                        }}
                       />
                     </div>
 
@@ -1125,26 +1142,37 @@ export default function AIRoadmap() {
                             <span>Key Learning Topics & Core Objectives</span>
                           </h4>
                           <ul className="drawer-topics-list">
-                            {getTopicsForMilestone(m, currentRoadmap?.targetRole).map((topic, i) => (
-                              <li key={i} className="drawer-topic-item">
-                                <div className="topic-text-wrap">
-                                  <CheckCircle2 size={14} className="text-emerald-500 shrink-0 mt-0.5" />
-                                  <span>{topic}</span>
-                                </div>
-                                <button
-                                  type="button"
-                                  className="topic-practice-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    openCompilerForTopic(topic);
-                                  }}
-                                  title="Open code compiler for this topic"
-                                >
-                                  <Code2 size={12} />
-                                  <span>Practice</span>
-                                </button>
-                              </li>
-                            ))}
+                            {getTopicsForMilestone(m, currentRoadmap?.targetRole).map((topic, i) => {
+                              const isTopicDone = Array.isArray(m.completedTopics) && m.completedTopics.includes(i);
+                              return (
+                                <li key={i} className={`drawer-topic-item ${isTopicDone ? "topic-completed" : ""}`}>
+                                  <div
+                                    className="topic-text-wrap cursor-pointer hover:opacity-80 transition-opacity"
+                                    onClick={() => handleToggleTopic(m, i)}
+                                    title="Click to toggle topic completion progress"
+                                  >
+                                    {isTopicDone ? (
+                                      <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
+                                    ) : (
+                                      <CircleDot size={15} className="text-slate-400 shrink-0 mt-0.5" />
+                                    )}
+                                    <span className={isTopicDone ? "line-through text-slate-400 font-medium" : ""}>{topic}</span>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    className="topic-practice-btn"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openCompilerForTopic(topic);
+                                    }}
+                                    title="Open code compiler for this topic"
+                                  >
+                                    <Code2 size={12} />
+                                    <span>Practice</span>
+                                  </button>
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
 

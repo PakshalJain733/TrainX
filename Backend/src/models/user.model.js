@@ -202,12 +202,12 @@ export const updateUser = async (userId, updateData) => {
 
 export const updateUserTwoFactorSecret = async (userId, secret) => {
   const numId = parseInt(userId, 10);
-  await query('UPDATE users SET two_factor_secret = ? WHERE id = ?', [secret, numId]);
+  await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 1 WHERE id = ?', [secret, numId]);
 };
 
 export const enableTwoFactorForUser = async (userId) => {
   const numId = parseInt(userId, 10);
-  await query('UPDATE users SET two_factor_enabled = TRUE WHERE id = ?', [numId]);
+  await query('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [numId]);
 };
 
 export const updateUserRememberMe = async (userId, rememberMe) => {
@@ -267,7 +267,7 @@ export const saveOtpRecord = async (identifier, otp, purpose = 'login') => {
   const cleanId = String(identifier).trim().toLowerCase();
   const cleanPurpose = String(purpose || 'login').trim().toLowerCase();
   try {
-    await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))', [cleanId, otp, cleanPurpose]);
+    await query('INSERT INTO otps (email, otp, purpose, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))', [cleanId, otp, cleanPurpose]);
   } catch (err) {
     if (err.message && err.message.includes("otps' doesn't exist")) {
       await query(`
@@ -282,7 +282,7 @@ export const saveOtpRecord = async (identifier, otp, purpose = 'login') => {
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
       `);
-      await query('INSERT INTO otps (email, otp, expires_at, purpose) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))', [cleanId, otp, cleanPurpose]);
+      await query('INSERT INTO otps (email, otp, purpose, expires_at) VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))', [cleanId, otp, cleanPurpose]);
     } else {
       throw err;
     }

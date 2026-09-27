@@ -10,6 +10,7 @@ const router = Router();
 router.use(authenticateToken);
 router.post('/', saveInterviewSession);
 router.get('/', getInterviewData);
+router.get('/history', getInterviewData);
 router.get('/:id', getInterviewById);
 
 export default router;
