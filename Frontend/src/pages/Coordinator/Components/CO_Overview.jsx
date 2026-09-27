@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Sparkles,
+  LayoutDashboard,
   Info,
   ChevronRight,
   Activity,
@@ -208,7 +209,7 @@ export default function CoordinatorOverview() {
           </div>
           <div>
             <div className="overview-hero-eyebrow">
-              <Sparkles size={13} /> COORDINATOR WORKSPACE DASHBOARD
+              <LayoutDashboard size={14} /> COORDINATOR WORKSPACE DASHBOARD
             </div>
             <h1 className="overview-hero-title">
               Welcome back, {fullName}!

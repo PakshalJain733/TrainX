@@ -188,25 +188,16 @@ export default function CoordinatorRequests() {
       {/* Header Page Banner */}
       <div className="coord-requests-page-header">
         <div className="coord-requests-header-left">
-          <div className="coord-requests-header-icon">
-            <Inbox size={22} />
-          </div>
           <div>
-            <h1 className="coord-requests-page-title">
-              Requests & Approvals Governance Center
+            <h1 className="coord-requests-page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Inbox size={24} style={{ color: "#0284c7", flexShrink: 0 }} />
+              <span>Requests & Approvals Governance Center</span>
             </h1>
             <p className="coord-requests-page-subtitle">
               Review student leave applications, batch transfer requests, and re-assessment permissions stored in database.
             </p>
           </div>
         </div>
-
-        <button
-          className="coord-requests-create-btn"
-          onClick={() => setShowCreateModal(true)}
-        >
-          <Plus size={16} /> Create Approval Request
-        </button>
       </div>
 
       {/* KPI Stats Row */}

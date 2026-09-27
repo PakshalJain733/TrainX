@@ -27,8 +27,8 @@ import {
 import "../Styles/CO_Attendance.css";
 
 export default function CoordinatorAttendance({ hideHeader }) {
-  // Navigation Tabs: "overview", "list", "defaulters"
-  const [activeTab, setActiveTab] = useState("overview");
+  // Navigation Tabs: "list", "defaulters"
+  const [activeTab, setActiveTab] = useState("list");
 
   // State Data
   const [studentsList, setStudentsList] = useState([]);
@@ -178,15 +178,9 @@ export default function CoordinatorAttendance({ hideHeader }) {
         </div>
       </div>
 
-      {/* Navigation Sub-Tabs & Threshold Control Bar */}
+      {/* Navigation Sub-Tabs Bar */}
       <div className="coord-att-filter-bar">
         <div className="coord-perf-tabs-nav">
-          <button
-            onClick={() => setActiveTab("overview")}
-            className={`coord-perf-tab-btn ${activeTab === "overview" ? "coord-perf-tab-btn--active" : ""}`}
-          >
-            Attendance Overview & Dept Summary
-          </button>
           <button
             onClick={() => setActiveTab("list")}
             className={`coord-perf-tab-btn ${activeTab === "list" ? "coord-perf-tab-btn--active" : ""}`}
@@ -199,23 +193,6 @@ export default function CoordinatorAttendance({ hideHeader }) {
           >
             <AlertTriangle size={14} /> Defaulter View ({defaulterStudents.length})
           </button>
-        </div>
-
-        {/* Configurable Threshold Control */}
-        <div className="coord-threshold-bar">
-          <div className="coord-threshold-inner">
-            <Sliders size={14} className="coord-threshold-icon" />
-            <span className="coord-threshold-label">Configured Threshold:</span>
-          </div>
-          <CustomSelect
-            value={attendanceThreshold}
-            onChange={(val) => setAttendanceThreshold(Number(val))}
-            options={[
-              { value: 75, label: "75% (Standard Default)" },
-              { value: 70, label: "70% (Relaxed Threshold)" },
-              { value: 80, label: "80% (Strict Requirement)" },
-            ]}
-          />
         </div>
       </div>
 
@@ -337,6 +314,23 @@ export default function CoordinatorAttendance({ hideHeader }) {
                   />
                   <span>Defaulters Only (&lt;{attendanceThreshold}%)</span>
                 </label>
+
+                {/* Configurable Threshold Control */}
+                <div className="coord-threshold-bar">
+                  <div className="coord-threshold-inner">
+                    <Sliders size={14} className="coord-threshold-icon" />
+                    <span className="coord-threshold-label">Threshold:</span>
+                  </div>
+                  <CustomSelect
+                    value={attendanceThreshold}
+                    onChange={(val) => setAttendanceThreshold(Number(val))}
+                    options={[
+                      { value: 75, label: "75% (Standard Default)" },
+                      { value: 70, label: "70% (Relaxed Threshold)" },
+                      { value: 80, label: "80% (Strict Requirement)" },
+                    ]}
+                  />
+                </div>
               </div>
             </div>
           </div>

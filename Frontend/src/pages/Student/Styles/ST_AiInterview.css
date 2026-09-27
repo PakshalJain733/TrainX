@@ -305,19 +305,19 @@
 .ai-bot-circle {
   width: 90px;
   height: 90px;
-  background: #0f172a;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);
   transition: transform 0.25s ease;
 }
 
 .ai-bot-visual-card:hover .ai-bot-circle {
   transform: scale(1.08) rotate(4deg);
-  box-shadow: 0 12px 32px rgba(37, 99, 235, 0.45);
+  box-shadow: 0 12px 32px rgba(79, 70, 229, 0.5);
 }
 
 .ai-bot-icon {
@@ -331,7 +331,7 @@
   transform: translate(-50%, -50%);
   width: 90px;
   height: 90px;
-  background: rgba(15, 23, 42, 0.1);
+  background: rgba(99, 102, 241, 0.2);
   border-radius: 50%;
   z-index: 1;
   animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -579,26 +579,44 @@
 
 /* Landing Card Styles for Start AI Interview */
 .ai-welcome-landing-card {
+  position: relative;
+  overflow: hidden;
   padding: 40px 32px;
   text-align: center;
-  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px -2px rgba(79, 70, 229, 0.08);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ai-welcome-landing-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #4f46e5 0%, #6366f1 50%, #3b82f6 100%);
 }
 
 .ai-welcome-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  max-width: 680px;
+  gap: 22px;
+  width: 100%;
+  max-width: 850px;
   margin: 0 auto;
 }
 
 .ai-welcome-title {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .ai-welcome-desc {
@@ -606,6 +624,7 @@
   color: #475569;
   line-height: 1.6;
   margin: 0;
+  max-width: 720px;
 }
 
 .ai-welcome-meta-grid {
@@ -613,6 +632,7 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   width: 100%;
+  max-width: 800px;
   margin: 8px 0 12px 0;
 }
 
@@ -623,23 +643,30 @@
 }
 
 .ai-meta-item {
-  background: #ffffff;
+  background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px 12px;
+  border-radius: 14px;
+  padding: 16px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
   text-align: left;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.ai-meta-item:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.06);
 }
 
 .ai-meta-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: #f8fafc;
-  color: #0f172a;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #e0e7ff;
+  color: #4f46e5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -659,25 +686,25 @@
 }
 
 .ai-start-interview-btn {
-  background: #0f172a;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: #ffffff;
   border: none;
   border-radius: 12px;
-  padding: 14px 36px;
+  padding: 14px 42px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.2);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.35);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .ai-start-interview-btn:hover {
-  background: #1e293b;
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.3);
+  box-shadow: 0 10px 28px rgba(79, 70, 229, 0.45);
 }
 
 /* Controls inside modal */
@@ -911,8 +938,10 @@
 
 /* Setup */
 .ai-setup-card {
-  max-width: 720px;
-  margin: 0 auto;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
 }
 .ai-meta-warn .ai-meta-icon {
   background: #fef2f2;
@@ -921,9 +950,10 @@
 .ai-setup-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
   width: 100%;
-  max-width: 560px;
+  max-width: 580px;
+  margin: 0 auto;
 }
 @media (max-width: 640px) {
   .ai-setup-fields { grid-template-columns: 1fr; }
@@ -933,28 +963,63 @@
   flex-direction: column;
   gap: 6px;
   text-align: left;
+  width: 100%;
 }
-.ai-setup-field span {
+.ai-setup-field > span {
   font-size: 12px;
   font-weight: 700;
-  color: #64748b;
+  color: #475569;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
+}
+.ai-setup-field .custom-select-trigger {
+  height: 44px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+.ai-setup-field .custom-select-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #0f172a;
+  text-transform: none !important;
+  letter-spacing: normal !important;
 }
 .ai-setup-field select {
+  width: 100%;
+  height: 46px;
   border: 1.5px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 13.5px;
+  border-radius: 12px;
+  padding: 0 36px 0 14px;
+  font-size: 14px;
+  font-weight: 500;
   font-family: inherit;
   color: #0f172a;
-  background: #ffffff;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%3C64748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   outline: none;
+  cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 .ai-setup-field select:focus {
-  border-color: #0f172a;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+.ai-setup-field select option {
+  background-color: #ffffff;
+  color: #0f172a;
+  padding: 10px;
+  font-size: 14px;
 }
 .ai-setup-buttons {
   display: flex;
@@ -2240,6 +2305,7 @@
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

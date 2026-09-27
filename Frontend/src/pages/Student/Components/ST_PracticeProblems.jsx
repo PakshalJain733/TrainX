@@ -129,6 +129,7 @@ export default function PracticeProblems() {
       <div className="student-header-box">
         <span className="student-header-eyebrow">C2C TRAINING PROGRAM</span>
         <h2 className="student-header-title">
+          <Terminal size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
           <span>Coding Practice Problems</span>
         </h2>
         <p className="student-header-desc">Master Data Structures & Algorithms with pattern-based coding problems designed for campus placements.</p>

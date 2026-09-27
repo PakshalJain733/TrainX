@@ -103,7 +103,8 @@ export default function Defaulters() {
       <div className="mentor-page-header">
         <div>
           <h2 className="mentor-page-title mentor-defaulter-header-title">
-          <span>Defaulters &amp; Performance Risk Queue</span>
+            <AlertCircle size={20} color="#e11d48" />
+            <span>Defaulters &amp; Performance Risk Queue</span>
           </h2>
           <p className="mentor-page-subtitle mentor-defaulter-header-sub">
             Students currently flagged by the mentor service

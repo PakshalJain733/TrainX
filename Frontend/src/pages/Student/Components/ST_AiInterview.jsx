@@ -30,6 +30,7 @@ import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
 import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
+import CustomSelect from "../../../components/ui/CustomSelect";
 
 
 const INTERVIEW_SECONDS = 5 * 60; // 5 minutes
@@ -865,6 +866,7 @@ function getToken() {
     <div className="ai-interview-page stack-6">
       <div className="student-header-box">
         <h2 className="student-header-title">
+          <Bot size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
           <span>Live AI Interview Simulation</span>
         </h2>
         <p className="student-header-desc">
@@ -922,22 +924,24 @@ function getToken() {
             </div>
 
             <div className="ai-setup-fields">
-              <label className="ai-setup-field">
+              <div className="ai-setup-field">
                 <span>Target Role</span>
-                <select value={role} onChange={(e) => setRole(e.target.value)}>
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r} value={r}>{r}</option>
-                  ))}
-                </select>
-              </label>
-              <label className="ai-setup-field">
+                <CustomSelect
+                  value={role}
+                  onChange={(val) => setRole(val)}
+                  options={ROLE_OPTIONS}
+                  placeholder="Select Target Role"
+                />
+              </div>
+              <div className="ai-setup-field">
                 <span>Interview Topic</span>
-                <select value={topic} onChange={(e) => setTopic(e.target.value)}>
-                  {TOPIC_OPTIONS.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </label>
+                <CustomSelect
+                  value={topic}
+                  onChange={(val) => setTopic(val)}
+                  options={TOPIC_OPTIONS}
+                  placeholder="Select Interview Topic"
+                />
+              </div>
             </div>
 
             {errorMsg && (

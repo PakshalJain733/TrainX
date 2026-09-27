@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  GraduationCap,
+  Briefcase,
   Search,
   Users,
   CheckCircle2,
@@ -184,7 +184,7 @@ export default function AdminC2CEnrollments() {
   return (
     <div className="admin-page-inner c2c-container">
       <SectionHeader
-        icon={GraduationCap}
+        icon={Briefcase}
         title={`${programName} Enrollments`}
         description={`Program ${programCode} · Enrollment, payment, and mentor allocation records returned from the database.`}
         action={

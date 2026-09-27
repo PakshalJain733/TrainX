@@ -85,13 +85,11 @@ export default function AdminWeeklyReports() {
       {/* Header Banner */}
       <div className="ad-wr-header">
         <div>
-          <div className="ad-wr-header-title-row">
-            <div className="ad-wr-header-icon">
-              <FileCheck2 size={24} />
-            </div>
+          <div className="ad-wr-header-title-row" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <FileCheck2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
             <div>
-              <h1 className="ad-wr-title">Weekly Progress & Governance Reports</h1>
-              <p className="ad-wr-subtitle">Audit, review, and archive weekly batch performance & trainer governance reports</p>
+              <h1 className="ad-wr-title" style={{ margin: 0 }}>Weekly Progress & Governance Reports</h1>
+              <p className="ad-wr-subtitle" style={{ margin: "2px 0 0" }}>Audit, review, and archive weekly batch performance & trainer governance reports</p>
             </div>
           </div>
         </div>

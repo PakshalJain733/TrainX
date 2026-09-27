@@ -394,6 +394,7 @@ export default function ProgressAnalytics() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
         <div className="student-header-box">
           <h2 className="student-header-title">
+          <LineChart size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
           <span>Student Progress Analytics</span>
           </h2>
           <p className="student-header-desc">Track problem solving velocity, weekly milestones completion, accuracy trends, and quiz performance analytics.</p>

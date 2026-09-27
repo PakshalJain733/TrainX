@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { BookOpen, Plus, Download, CheckCircle2, X } from "lucide-react";
+import { BookOpenCheck, Plus, Download, CheckCircle2, X } from "lucide-react";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { batchAPI } from "../../../services/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
@@ -149,7 +149,7 @@ export default function StudyMaterial() {
       <div className="mentor-page-header-sm">
         <div>
           <h2 className="mentor-page-title">
-            <BookOpen size={20} color="#4f46e5" />
+            <BookOpenCheck size={20} color="#4f46e5" />
             <span>Study Material & Resources</span>
           </h2>
           <p className="mentor-page-subtitle">Upload reference guides, cheat sheets, and curriculum materials for your students</p>

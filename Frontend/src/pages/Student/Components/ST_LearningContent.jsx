@@ -137,6 +137,7 @@ export default function LearningContent() {
     <div className="learning-content-page stack-6">
       <div className="student-header-box">
         <h2 className="student-header-title">
+          <BookOpenCheck size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
           <span>Learning Resources & Documentation</span>
         </h2>
         <p className="student-header-desc">Access module lecture notes, reference guides, coding cheatsheets, and faculty curriculum resources.</p>

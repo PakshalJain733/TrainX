@@ -3,6 +3,7 @@ import { apiFetch } from "../../../utils/api";
 import {
   Search,
   GraduationCap,
+  Users,
   Mail,
   Phone,
   Sparkles,
@@ -531,11 +532,11 @@ export default function CoordinatorStudents() {
     <div className="coord-students-container">
       <div className="coord-page-header">
         <div className="coord-header-left">
-          <div className="coord-header-icon-box">
-            <GraduationCap size={22} />
-          </div>
           <div>
-            <h1 className="coord-header-title-text">Student Directory & AI Roadmap Audit</h1>
+            <h1 className="coord-header-title-text" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Users size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+              <span>Student Directory & AI Roadmap Audit</span>
+            </h1>
             <p className="coord-header-sub-text">
               Monitor student attendance %, academic scores, selected AI career roadmaps, and risk level.
             </p>

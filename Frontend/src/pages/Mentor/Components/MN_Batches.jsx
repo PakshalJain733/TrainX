@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { Layers, Plus } from 'lucide-react';
+import { Layers, Plus, Code2 } from 'lucide-react';
 
 import "../Styles/MN_Batches.css";
 
@@ -74,7 +74,7 @@ export default function Batches() {
       <div className="mentor-page-header">
         <div>
           <h2 className="mentor-page-title">
-            <Layers size={20} color="#4f46e5" />
+            <Code2 size={20} color="#4f46e5" />
             <span>My Allocated Batches</span>
           </h2>
           <p className="mentor-page-subtitle">Assigned course records, schedules, and batch details</p>

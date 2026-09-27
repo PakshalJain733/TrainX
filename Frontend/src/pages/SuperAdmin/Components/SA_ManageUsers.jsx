@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Users,
+  UserCog,
   UserPlus,
   Search,
   ShieldCheck,
@@ -1274,8 +1275,9 @@ export default function ManageUsers() {
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <div className="manageusers-header-title">
-          <span>Manage Users &amp; Registration Codes</span>
+          <div className="manageusers-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span>Manage Users &amp; Registration Codes</span>
           </div>
           <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>
         </div>

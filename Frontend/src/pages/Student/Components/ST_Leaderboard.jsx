@@ -85,6 +85,7 @@ export default function Leaderboard() {
     <div className="leaderboard-page">
       <div className="student-header-box">
         <h2 className="student-header-title">
+          <Trophy size={24} style={{ color: "#4f46e5", flexShrink: 0, marginRight: "10px" }} />
           <span>Leaderboard & Rankings</span>
         </h2>
         <p className="student-header-desc">

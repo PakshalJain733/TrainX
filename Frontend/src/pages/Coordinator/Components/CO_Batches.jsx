@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { Search, Users, UserCheck, Calendar, CheckSquare, Square } from "lucide-react";
+import { Search, Users, UserCheck, Calendar, CheckSquare, Square, Code2 } from "lucide-react";
 import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../../../data/coordinatorMockData";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -160,11 +160,11 @@ export default function CoordinatorBatches() {
     <div className="coord-batches-container">
       <div className="coord-page-header">
         <div className="coord-header-left">
-          <div className="coord-header-icon-box">
-            <Calendar size={22} />
-          </div>
           <div className="coord-header-text-group">
-            <h1 className="coord-page-title">Batches Governance</h1>
+            <h1 className="coord-page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+              <span>Batches Governance</span>
+            </h1>
             <p className="coord-page-sub">
               Manage training cohorts, allocate industry mentors, and track syllabus completion.
             </p>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { ClipboardCheck, Plus } from 'lucide-react';
+import { Briefcase, Plus } from 'lucide-react';
 import "../Styles/MN_MockDrives.css";
 
 export default function MockDrives() {
@@ -32,7 +32,7 @@ export default function MockDrives() {
       <div className="mentor-page-header">
         <div>
           <h2 className="mentor-page-title">
-            <ClipboardCheck size={20} color="#4f46e5" />
+            <Briefcase size={20} color="#4f46e5" />
             <span>Placement Mock Drives & Code Tests</span>
           </h2>
           <p className="mentor-page-subtitle">Placement drive management is not configured for this workspace</p>

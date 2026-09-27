@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { GraduationCap, Search, Plus, Building2, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from 'lucide-react';
+import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from 'lucide-react';
 import { departmentAPI, collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Departments.css";
@@ -264,8 +264,9 @@ export default function Departments() {
       {/* Page Header */}
       <div className="departments-header-wrap">
         <div>
-          <h2 className="departments-header-title">
-          <span>Academic Departments</span>
+          <h2 className="departments-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Briefcase size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span>Academic Departments</span>
           </h2>
           <p className="departments-header-subtitle">Manage academic streams and HOD allocations across partner institutions</p>
         </div>

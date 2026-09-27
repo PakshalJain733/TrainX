@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, CheckCircle2, Sparkles, X, Send, Search } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Sparkles, X, Send, Search } from 'lucide-react';
 import "../Styles/MN_SkillGaps.css";
 
 const initialSkillGaps = [];
@@ -49,7 +49,7 @@ export default function MentorSkillGaps() {
       <div className="mentor-page-header">
         <div>
           <h2 className="mentor-page-title">
-            <AlertCircle size={20} color="#e11d48" />
+            <AlertTriangle size={20} color="#e11d48" />
             <span>AI Skill Gap Diagnostics & Weak Spot Mapping</span>
           </h2>
           <p className="mentor-page-subtitle">Identify weak concepts across student batches and trigger targeted AI remedial assignments</p>

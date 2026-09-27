@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Layers, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Sparkles } from 'lucide-react';
+import { Layers, Code2, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Sparkles } from 'lucide-react';
 import { batchAPI, collegeAPI, departmentAPI } from '../../../services/api';
 import { EVENTS } from '../../../utils/sharedStore';
 import "../Styles/SA_Batches.css";
@@ -321,7 +321,8 @@ export default function Batches() {
       <div className="batches-header-wrap">
         <div>
           <h2 className="batches-header-title">
-          <span>Training Batches & Batches</span>
+            <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
+            <span>Training Batches & Batches</span>
           </h2>
           <p className="batches-header-subtitle">Monitor batch timelines, completion progress, and assigned mentors</p>
         </div>
@@ -343,7 +344,6 @@ export default function Batches() {
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder="Search Batch name, code, or college..."
 
             placeholder="Search batch name, code, or college..."
 

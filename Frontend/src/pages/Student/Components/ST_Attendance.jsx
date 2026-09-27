@@ -434,6 +434,7 @@ export default function Attendance() {
       <div className="attendance-header-row">
         <div className="student-header-box">
           <h2 className="student-header-title">
+          <CalendarCheck size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
           <span>My Attendance & Reports</span>
           </h2>
           <p className="student-header-desc">

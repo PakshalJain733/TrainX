@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { getApiBaseUrl } from "../../../utils/api.js";
+import "../Styles/ST_Batches.css";
 
 const API_BASE = getApiBaseUrl();
 
@@ -470,7 +471,8 @@ export default function Batches() {
   return (
     <div className="student-page-inner batches-page-container">
       <div className="student-header-box">
-        <h2 className="student-header-title">
+        <h2 className="student-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
           <span>Enrolled Training Batches</span>
         </h2>
         <p className="student-header-desc">

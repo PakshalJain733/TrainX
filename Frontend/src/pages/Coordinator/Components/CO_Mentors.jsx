@@ -5,6 +5,7 @@ import {
   Star,
   BookOpen,
   Users,
+  UserCog,
   Mail,
   Phone,
   Search,
@@ -209,15 +210,13 @@ export default function CoordinatorMentors() {
       {/* Header Banner */}
       <div className="coord-page-header">
         <div className="coord-header-left">
-          <div className="coord-header-icon-box">
-            <Users size={22} />
-          </div>
           <div>
-            <h1 className="coord-page-title">
-              Industry Trainers & Faculty Governance
+            <h1 className="coord-page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+              <span>Assigned Mentors</span>
             </h1>
             <p className="coord-page-sub">
-              Assigned specialized industry trainers for CSE, IT & AI-DS cohorts, performance ratings, and batch allocations.
+              Assigned Mentors for all students from different batches.
             </p>
           </div>
         </div>

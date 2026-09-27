@@ -47,7 +47,7 @@ export default function MentorRoadmaps() {
       <div className="mentor-page-header">
         <div>
           <h2 className="mentor-page-title">
-            <Target size={22} color="#4f46e5" />
+            <Sparkles size={22} color="#4f46e5" />
             <span>Student Adaptive Curriculum Roadmaps</span>
           </h2>
           <p className="mentor-page-subtitle">

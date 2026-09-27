@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Code, BookOpen, Bot, BarChart3 } from "lucide-react";
+import { Code, BookOpen, Bot, LineChart } from "lucide-react";
 import CodingPerformance from "./CO_CodingPerformance";
 import QuizPerformance from "./CO_QuizPerformance";
 import InterviewPerformance from "./CO_InterviewPerformance";
@@ -13,20 +13,8 @@ export default function CoordinatorPerformances() {
       {/* Header & Sub-Tab Switcher */}
       <div className="coord-perf-header-bar">
         <div className="coord-perf-header-left">
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{
-              width: "42px",
-              height: "42px",
-              borderRadius: "10px",
-              background: "#eff6ff",
-              color: "#2563eb",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0
-            }}>
-              <BarChart3 size={22} />
-            </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <LineChart size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
             <div>
               <h1 className="coord-perf-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
                 Performances Governance
