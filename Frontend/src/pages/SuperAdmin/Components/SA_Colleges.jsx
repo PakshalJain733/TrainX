@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import EmptyState from '../../../components/ui/EmptyState';
 import { collegeAPI, departmentAPI } from '../../../services/api';
+import { apiFetch } from '../../../utils/api';
 import { EVENTS } from '../../../utils/sharedStore';
 import {
   Plus,
@@ -200,6 +201,36 @@ export default function Colleges() {
   const [viewCollegeModal, setViewCollegeModal] = useState(null);
   const [editCollege, setEditCollege] = useState(null);
   const [deleteCollege, setDeleteCollege] = useState(null);
+
+  const handleTrigger2FAForCollegeAdmin = async (college) => {
+    const adminEmail = college.adminEmail || college.contact_email || college.email;
+    if (!adminEmail) {
+      alert("No college admin email associated with this college record.");
+      return;
+    }
+    try {
+      const usersRes = await apiFetch('/admin/users');
+      let adminUser = null;
+      if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
+        adminUser = usersRes.data.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
+      }
+      if (!adminUser) {
+        alert(`Could not find active user account for admin email '${adminEmail}'.`);
+        return;
+      }
+      const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
+        method: 'POST',
+      });
+      if (res && res.success) {
+        alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminEmail}. 2FA is now required on their next login.`);
+      } else {
+        alert(res?.message || 'Failed to trigger two-step verification.');
+      }
+    } catch (err) {
+      console.error('Trigger 2FA error:', err);
+      alert('Failed to trigger two-step verification.');
+    }
+  };
 
   useEffect(() => {
     collegeAPI.getColleges()
@@ -581,6 +612,13 @@ export default function Colleges() {
                         onView={() => navigate(`/super-admin/colleges/${college.id}`)}
                         onEdit={() => setEditCollege(college)}
                         onDelete={() => setDeleteCollege(college)}
+                        customActions={[
+                          {
+                            label: 'Re-trigger 2FA Setup',
+                            icon: ShieldCheck,
+                            onClick: () => handleTrigger2FAForCollegeAdmin(college),
+                          }
+                        ]}
                       />
                     </td>
                   </tr>
