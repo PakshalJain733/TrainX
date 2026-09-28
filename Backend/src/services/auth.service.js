@@ -18,6 +18,7 @@ import {
   consumeRegistrationOtp,
   invalidateRegistrationOtps,
   updateUserTwoFactorSecret,
+  resetUserTwoFactorSecret,
   updateUserRememberMe,
   findCollegeByAdminEmail,
   findCollegeByEmailDomain,
@@ -447,7 +448,7 @@ export const registerUser = async (data) => {
     }
 
     const totpSetup = await generateTotpSetup(updatedUser.email || name);
-    await updateUserTwoFactorSecret(updatedUser.id, totpSetup.secret);
+    await resetUserTwoFactorSecret(updatedUser.id, totpSetup.secret);
 
     const token = generateToken({
       userId: updatedUser.id,
@@ -574,7 +575,7 @@ export const registerUser = async (data) => {
   }
 
   const totpSetup = await generateTotpSetup(user.email || user.mobile_number || name);
-  await updateUserTwoFactorSecret(user.id, totpSetup.secret);
+  await resetUserTwoFactorSecret(user.id, totpSetup.secret);
 
   return {
     token: generateFinalToken(user),

@@ -450,6 +450,7 @@ function Login() {
     e.preventDefault();
     const enteredCode = otp.join("");
     if (enteredCode.length < 6) {
+      setSuccessMsg("");
       setErrorMsg("Please enter the complete 6-digit Authenticator code.");
       return;
     }
@@ -491,6 +492,7 @@ function Login() {
     e.preventDefault();
     const enteredOtp = otp.join("");
     if (enteredOtp.length < 6) {
+      setSuccessMsg("");
       setErrorMsg("Please enter the complete 6-digit code.");
       return;
     }
@@ -626,8 +628,11 @@ function Login() {
             </button>
           </div>
 
-          {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
-          {successMsg && <div className="auth-success-msg">{successMsg}</div>}
+          {errorMsg ? (
+            <div className="auth-error-msg">{errorMsg}</div>
+          ) : successMsg ? (
+            <div className="auth-success-msg">{successMsg}</div>
+          ) : null}
 
           {/* ═════════════════════════════════════════════════ */}
           {/* MODE 1: PASSWORD LOGIN                            */}
