@@ -8,8 +8,8 @@ import {
   getCoordinatorDrivesService,
   createMockDriveService,
   getSuperAdminDrivesService,
-} from './Backend/src/services/drive.service.js';
-import { ROLES } from './Backend/src/utils/constants.js';
+} from '../src/services/drive.service.js';
+import { ROLES } from '../src/utils/constants.js';
 
 async function runTests() {
   console.log('=== TEST MOCK DRIVE MODULE ===\n');

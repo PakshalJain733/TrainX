@@ -1,4 +1,4 @@
-import { query } from './src/config/db.js';
+import { query } from '../src/config/db.js';
 
 const payload = {
   title: 'Two Sum (Beginner)',

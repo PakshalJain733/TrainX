@@ -1,5 +1,5 @@
-import { generateNewRoadmap } from '../services/roadmap.service.js';
-import { initializeDatabase } from '../config/init_db.js';
+import { generateNewRoadmap } from '../src/services/roadmap.service.js';
+import { initializeDatabase } from '../src/config/init_db.js';
 
 async function testRoadmap() {
   await initializeDatabase();

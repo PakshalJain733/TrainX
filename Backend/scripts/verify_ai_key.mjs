@@ -1,7 +1,7 @@
-import { describeProvider, detectProvider, generateText, generateJSON } from './src/ai/aiClient.js';
-import { processroadmapAI } from './src/ai/roadmap.ai.js';
-import { generateQuizQuestionsAI, verifyQuizQuestions } from './src/ai/quiz.ai.js';
-import { generateAIDiagnostics } from './src/ai/skillGap.ai.js';
+import { describeProvider, detectProvider, generateText, generateJSON } from '../src/ai/aiClient.js';
+import { processroadmapAI } from '../src/ai/roadmap.ai.js';
+import { generateQuizQuestionsAI, verifyQuizQuestions } from '../src/ai/quiz.ai.js';
+import { generateAIDiagnostics } from '../src/ai/skillGap.ai.js';
 
 console.log('provider      :', detectProvider());
 console.log('describe      :', describeProvider());

@@ -5,24 +5,24 @@
  */
 
 import jwt from 'jsonwebtoken';
-import app from './src/app.js';
-import { config } from './src/config/env.js';
-import { ROLES } from './src/utils/constants.js';
+import app from '../src/app.js';
+import { config } from '../src/config/env.js';
+import { ROLES } from '../src/utils/constants.js';
 import {
   getBatchSkillGapsModel,
   getStudentSkillGapsModel,
   saveRemedialInterventionModel,
   getRemedialInterventionsModel,
-} from './src/models/skillGap.model.js';
+} from '../src/models/skillGap.model.js';
 import {
   generateAIDiagnostics,
   generateRemedialAssignmentAI,
-} from './src/ai/skillGap.ai.js';
+} from '../src/ai/skillGap.ai.js';
 import {
   getBatchSkillGapsService,
   getStudentSkillGapReportService,
   triggerRemedialAssignmentService,
-} from './src/services/skillGap.service.js';
+} from '../src/services/skillGap.service.js';
 
 const log = (label, color = '\x1b[37m') => console.log(`${color}${label}\x1b[0m`);
 const ok   = (msg) => log(`  ✅ ${msg}`, '\x1b[32m');
