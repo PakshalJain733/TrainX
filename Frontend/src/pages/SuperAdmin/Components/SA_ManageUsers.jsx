@@ -903,7 +903,9 @@ export default function ManageUsers() {
               college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
               designation: 'Institutional Admin',
               date: u.created_at ? u.created_at.split('T')[0] : '2026-09-20',
-              status: u.is_active ? 'Verified' : 'Pending'
+              status: u.is_active ? 'Verified' : 'Pending',
+              two_factor_enabled: u.two_factor_enabled,
+              two_factor_secret: u.two_factor_secret,
             })));
           }
 
@@ -974,6 +976,25 @@ export default function ManageUsers() {
 
   const handleRejectAdmin = (id) => {
     setAdminRequests(adminRequests.filter((r) => r.id !== id));
+  };
+
+  const handleTrigger2FA = async (adminItem) => {
+    try {
+      const res = await apiFetch(`/admin/users/${adminItem.id}/trigger-2fa`, {
+        method: 'POST',
+      });
+      if (res && res.success) {
+        alert(res.message || `Two-step verification has been triggered for ${adminItem.name}. 2FA is now required on their next login.`);
+        setAdminRequests((prev) =>
+          prev.map((a) => (a.id === adminItem.id ? { ...a, two_factor_enabled: 1 } : a))
+        );
+      } else {
+        alert(res?.message || 'Failed to trigger two-step verification.');
+      }
+    } catch (err) {
+      console.error('Trigger 2FA error:', err);
+      alert('Failed to trigger two-step verification.');
+    }
   };
 
   // Filtering
@@ -1426,9 +1447,20 @@ export default function ManageUsers() {
                               </button>
                             </div>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 size={14} /> Approved
-                            </span>
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 size={14} /> Approved
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleTrigger2FA(req)}
+                                className="manageusers-btn-2fa"
+                                title="Re-trigger Two-Step Verification for this Admin"
+                              >
+                                <ShieldCheck size={14} />
+                                <span>{req.two_factor_enabled ? 'Re-trigger 2FA' : 'Trigger 2FA'}</span>
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>

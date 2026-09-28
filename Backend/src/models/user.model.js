@@ -523,6 +523,7 @@ export const invalidateRegistrationOtps = async (identifier) => {
 export const getAllUsersModel = async (collegeId = null, department = null) => {
   let sql = `
     SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
+           u.two_factor_enabled, u.two_factor_secret,
            c.name as college_name,
            s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills,
            COALESCE(s.gender, u.gender) as gender,

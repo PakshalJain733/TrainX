@@ -21,6 +21,7 @@ import {
   assignMentorToStudents,
   getMentorAssignments,
   getAdminC2CEnrollments,
+  triggerUser2FAAdmin,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -41,6 +42,7 @@ router.patch('/users/:id/reject', rejectUserAdmin);
 router.post('/users', createUserAdmin);
 router.put('/users/:id', updateUserAdmin);
 router.delete('/users/:id', deleteUserAdmin);
+router.post('/users/:id/trigger-2fa', authorizeRoles(ROLES.SUPER_ADMIN), triggerUser2FAAdmin);
 
 // Admin Profile
 router.get('/profile', getAdminProfile);

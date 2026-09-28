@@ -10,11 +10,13 @@ import {
   getUserStatsModel,
   findUserByEmailOrMobile,
   findUserById,
+  updateUserTwoFactorSecret,
 } from '../models/user.model.js';
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
 import { sendWelcomeEmail } from '../services/email.service.js';
+import { generateTotpSetup } from '../services/auth.service.js';
 
 /**
  * Helper to determine college isolation filter based on caller role
@@ -843,6 +845,36 @@ export const getAdminC2CEnrollments = async (req, res, next) => {
     }));
 
     return sendSuccess(res, 'C2C Training enrollments retrieved successfully', enrollments);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Super Admin controller to re-trigger / enforce Two-Step Verification (2FA) for an Admin
+ */
+export const triggerUser2FAAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await findUserById(id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    // Generate fresh 2FA setup & secret, setting two_factor_enabled = 1
+    const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
+    await updateUserTwoFactorSecret(user.id, totpSetup.secret);
+
+    return sendSuccess(
+      res,
+      `Two-step verification has been triggered for ${user.name || 'Admin'}. 2FA will be strictly required on their next login.`,
+      {
+        userId: user.id,
+        two_factor_enabled: 1,
+        secret: totpSetup.secret,
+        qrCode: totpSetup.qrCode,
+      }
+    );
   } catch (error) {
     next(error);
   }
