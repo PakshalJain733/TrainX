@@ -2,6 +2,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 import {
   getAllUsersModel,
+  getPendingUsersModel,
   createUser,
   saveStudentDetails,
   updateUserModel,
@@ -128,6 +129,70 @@ export const getAdminUsers = async (req, res, next) => {
     }
 
     return sendSuccess(res, 'Users retrieved successfully', users);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAdminPendingUsers = async (req, res, next) => {
+  try {
+    const { role, search } = req.query;
+    const collegeId = getCallerCollegeFilter(req);
+
+    let users = await getPendingUsersModel(collegeId);
+
+    if (role && role !== 'all') {
+      const canonicalRole = role.toLowerCase();
+      users = users.filter((u) => u.role.toLowerCase() === canonicalRole);
+    }
+
+    if (search) {
+      const q = search.trim().toLowerCase();
+      users = users.filter((u) =>
+        (u.name && u.name.toLowerCase().includes(q)) ||
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.mobile_number && u.mobile_number.includes(q)) ||
+        (u.roll_number && u.roll_number.toLowerCase().includes(q)) ||
+        (u.department && u.department.toLowerCase().includes(q))
+      );
+    }
+
+    return sendSuccess(res, 'Pending users retrieved successfully', users);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const approveUserAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await findUserById(id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    await updateUserModel(id, { is_active: 1 });
+
+    if (user.email && user.email.includes('@')) {
+      sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch(() => {});
+    }
+
+    return sendSuccess(res, 'User registration approved successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const rejectUserAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await findUserById(id);
+    if (!user) {
+      return sendError(res, 'User not found', 404);
+    }
+
+    await deleteUserModel(id);
+    return sendSuccess(res, 'User registration rejected and removed');
   } catch (error) {
     next(error);
   }

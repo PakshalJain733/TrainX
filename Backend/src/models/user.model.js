@@ -553,6 +553,35 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
 };
 
 /**
+ * Get all pending user registrations (is_active = 0)
+ */
+export const getPendingUsersModel = async (collegeId = null) => {
+  let sql = `
+    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
+           c.name as college_name,
+           s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills,
+           COALESCE(s.gender, u.gender) as gender,
+           COALESCE(s.city, u.city) as city,
+           COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
+           COALESCE(s.linkedin_url, u.linkedin_url) as linkedin_url,
+           COALESCE(s.target_track, u.target_track) as target_track
+    FROM users u
+    LEFT JOIN colleges c ON u.college_id = c.id
+    LEFT JOIN students s ON u.id = s.user_id
+    WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false) AND u.role != 'super_admin'
+  `;
+  const params = [];
+  if (collegeId) {
+    sql += ' AND u.college_id = ?';
+    params.push(collegeId);
+  }
+  sql += ' ORDER BY u.id DESC';
+
+  const results = await query(sql, params);
+  return results && Array.isArray(results) ? results : [];
+};
+
+/**
  * Update user and assigned hierarchy strictly in MySQL DB
  */
 export const updateUserModel = async (id, data) => {

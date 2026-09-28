@@ -7,11 +7,16 @@ import {
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
-router.use(authenticateToken);
 
-// GET  /api/v1/shared-content          → all items
-// GET  /api/v1/shared-content?type=X   → filtered by type (quiz|coding|drive|learning|broadcast)
-router.get('/', getSharedContent);
+// GET  /api/v1/shared-content?type=maintenance is accessible without forcing 401
+router.get('/', (req, res, next) => {
+  if (req.query.type === 'maintenance') {
+    return getSharedContent(req, res, next);
+  }
+  return authenticateToken(req, res, () => getSharedContent(req, res, next));
+});
+
+router.use(authenticateToken);
 
 // POST /api/v1/shared-content          → create an item
 router.post('/', addSharedContent);

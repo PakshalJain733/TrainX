@@ -77,15 +77,14 @@ function FieldLabel({ icon, children, htmlFor }) {
 }
 
 // ── Auth token storage helper ────────────────────────────
-// rememberMe=true  → sessionStorage  (persists across browser restarts)
+// rememberMe=true  → localStorage   (persists across browser restarts)
 // rememberMe=false → sessionStorage (cleared when tab/browser closes)
 function storeAuthToken(token, remember) {
-  // Always clear the other storage to avoid stale tokens
   if (remember) {
     sessionStorage.removeItem("token");
-    sessionStorage.setItem("token", token);
+    localStorage.setItem("token", token);
   } else {
-    sessionStorage.removeItem("token");
+    localStorage.removeItem("token");
     sessionStorage.setItem("token", token);
   }
 }

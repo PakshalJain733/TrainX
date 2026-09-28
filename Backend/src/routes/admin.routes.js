@@ -3,6 +3,9 @@ import {
   getAdminData,
   getAdminStats,
   getAdminUsers,
+  getAdminPendingUsers,
+  approveUserAdmin,
+  rejectUserAdmin,
   createUserAdmin,
   updateUserAdmin,
   deleteUserAdmin,
@@ -32,6 +35,9 @@ router.use(authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN));
 router.get('/', getAdminData);
 router.get('/stats', getAdminStats);
 router.get('/users', getAdminUsers);
+router.get('/pending-users', getAdminPendingUsers);
+router.patch('/users/:id/approve', approveUserAdmin);
+router.patch('/users/:id/reject', rejectUserAdmin);
 router.post('/users', createUserAdmin);
 router.put('/users/:id', updateUserAdmin);
 router.delete('/users/:id', deleteUserAdmin);

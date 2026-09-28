@@ -6,6 +6,7 @@ import {
   Code2,
   Users,
   UserCog,
+  UserCheck,
   LineChart,
   SlidersHorizontal,
   Activity,
@@ -41,6 +42,7 @@ const primaryNavItems = [
   { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
   { title: "Batches", url: "/super-admin/batches", icon: Code2 },
   { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
+  { title: "Approve Users", url: "/super-admin/approve-users", icon: UserCheck },
 
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },

@@ -231,6 +231,7 @@ function Register() {
   // TOTP Authenticator Setup State
   const [totpSetupData, setTotpSetupData] = useState(null);
   const [showTotpSetup, setShowTotpSetup] = useState(false);
+  const [showPendingApproval, setShowPendingApproval] = useState(false);
   const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
@@ -349,19 +350,10 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
-        setSuccessMsg("Authenticator paired successfully! Account activated.");
-        if (totpSetupData?.token) {
-          const registeredUser = {
-            ...totpSetupData.user,
-            name: formData.name || totpSetupData.user?.name || "Student",
-          };
-          sessionStorage.setItem("token", totpSetupData.token);
-          sessionStorage.setItem("user", JSON.stringify(registeredUser));
-          sessionStorage.setItem("showFirstLoginAlert", "true");
-        }
-        setTimeout(() => {
-          navigate("/");
-        }, 1200);
+        setShowTotpSetup(false);
+        setShowPendingApproval(true);
+        setErrorMsg("");
+        setSuccessMsg("");
       } else {
         setErrorMsg(data.message || "Invalid Authenticator Code. Please check Microsoft or Google Authenticator.");
       }
@@ -595,9 +587,74 @@ function Register() {
         )}
 
         {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
-        {!showTotpSetup && successMsg && <div className="auth-success-msg">{successMsg}</div>}
+        {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
-        {showTotpSetup ? (
+        {showPendingApproval ? (
+          <div className="pending-approval-card" style={{ textAlign: "center", padding: "20px 10px" }}>
+            <div style={{
+              width: "64px",
+              height: "64px",
+              borderRadius: "50%",
+              background: "#fef3c7",
+              color: "#d97706",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px auto",
+              border: "2px solid #fde68a",
+              boxShadow: "0 4px 14px rgba(217, 119, 6, 0.15)"
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+
+            <h3 style={{ fontSize: "19px", fontWeight: "800", color: "#0f172a", margin: "0 0 8px 0" }}>
+              Registration & 2FA Setup Complete!
+            </h3>
+
+            <p style={{ fontSize: "13.5px", color: "#64748b", lineHeight: "1.5", margin: "0 0 18px 0" }}>
+              Your college email address and Google Authenticator setup have been successfully verified.
+            </p>
+
+            <div style={{
+              background: "#fffbeb",
+              border: "1.5px solid #fde68a",
+              borderRadius: "12px",
+              padding: "14px 18px",
+              marginBottom: "22px",
+              textAlign: "left"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#b45309", fontWeight: "700", fontSize: "13px", marginBottom: "4px" }}>
+                <span style={{ display: "inline-flex", padding: "3px 8px", borderRadius: "9999px", background: "#fef3c7", color: "#d97706", fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>
+                  Status: Pending Admin Approval
+                </span>
+              </div>
+              <p style={{ fontSize: "12.5px", color: "#92400e", margin: "6px 0 0 0", lineHeight: "1.5" }}>
+                Your registration is currently under review. An Administrator must approve your account before you can log in to the TrainX Portal.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => navigate("/login")}
+              className="login-send-otp-btn"
+              style={{
+                width: "100%",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "12px",
+                fontSize: "14px",
+                fontWeight: "700"
+              }}
+            >
+              Return to Login Screen
+            </button>
+          </div>
+        ) : showTotpSetup ? (
           <form onSubmit={handleVerifyTotpSetup} className="totp-setup-form">
             <div className="totp-header">
               <h3 className="totp-title">Pair Authenticator App</h3>
