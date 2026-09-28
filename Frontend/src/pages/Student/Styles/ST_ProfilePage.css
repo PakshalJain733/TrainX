@@ -213,6 +213,11 @@
   border-bottom: 1px solid #f1f5f9;
 }
 
+.profile-form-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .profile-section-toggles {
   padding-top: 24px;
 }
@@ -281,6 +286,15 @@
   background: #ffffff;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.profile-input:disabled,
+.profile-input-readonly {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border-color: #cbd5e1 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
 }
 
 .profile-select {

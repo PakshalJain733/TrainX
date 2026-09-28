@@ -174,6 +174,57 @@ export const findCollegeByEmailDomain = async (email) => {
   return null;
 };
 
+export const getDepartmentsByEmailDomain = async (email) => {
+  try {
+    let college = null;
+    if (email && typeof email === 'string' && email.includes('@')) {
+      college = await findCollegeByEmailDomain(email);
+    }
+
+    let depts = [];
+    if (college && college.id) {
+      depts = await query(
+        `SELECT id, name, code FROM departments WHERE college_id = ? AND (status IS NULL OR LOWER(status) = 'active') ORDER BY name ASC`,
+        [college.id]
+      );
+    }
+
+    if (!depts || depts.length === 0) {
+      depts = await query(
+        `SELECT DISTINCT name, code FROM departments WHERE (status IS NULL OR LOWER(status) = 'active') ORDER BY name ASC`
+      );
+    }
+
+    if (depts && depts.length > 0) {
+      return depts.map((d) => ({
+        value: d.name,
+        label: d.code && d.code.toLowerCase() !== d.name.toLowerCase() ? `${d.name} (${d.code})` : d.name,
+        code: d.code || d.name,
+      }));
+    }
+
+    return [
+      { value: "COMPS", label: "COMPS", code: "COMPS" },
+      { value: "IT", label: "IT", code: "IT" },
+      { value: "AIML", label: "AIML", code: "AIML" },
+      { value: "ECS", label: "ECS", code: "ECS" },
+      { value: "MTRX", label: "MTRX", code: "MTRX" },
+      { value: "EXTC", label: "EXTC", code: "EXTC" },
+    ];
+  } catch (err) {
+    console.warn(`[User Model Warning] getDepartmentsByEmailDomain error: ${err.message}`);
+    return [
+      { value: "COMPS", label: "COMPS", code: "COMPS" },
+      { value: "IT", label: "IT", code: "IT" },
+      { value: "AIML", label: "AIML", code: "AIML" },
+      { value: "ECS", label: "ECS", code: "ECS" },
+      { value: "MTRX", label: "MTRX", code: "MTRX" },
+      { value: "EXTC", label: "EXTC", code: "EXTC" },
+    ];
+  }
+};
+
+
 export const createUser = async ({
   name,
   email = null,

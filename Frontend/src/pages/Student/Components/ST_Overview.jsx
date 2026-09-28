@@ -295,11 +295,11 @@ export default function Overview() {
             </h1>
             <p className="overview-hero-desc">
               {[
-                dept || "Computer Engineering",
-                sem ? (String(sem).toLowerCase().includes("sem") ? sem : `Semester ${sem}`) : "Semester 6",
-                cgpa ? `CGPA: ${cgpa}` : "CGPA: 8.5",
-                rollNum ? `Roll: ${rollNum}` : "Roll: 2026COMP042"
-              ].join("  |  ")}
+                dept,
+                sem ? (String(sem).toLowerCase().includes("sem") ? sem : `Semester ${sem}`) : null,
+                cgpa ? `CGPA: ${cgpa}` : null,
+                rollNum ? `Roll: ${rollNum}` : null
+              ].filter(Boolean).join("  |  ")}
             </p>
           </div>
         </div>

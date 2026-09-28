@@ -1,6 +1,16 @@
 import { sendRegistrationOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { findUserById, getStudentByUserId, toSafeUser, updateUserModel } from '../models/user.model.js';
+import { findUserById, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
+
+export const getDepartmentsByEmail = async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    const depts = await getDepartmentsByEmailDomain(email);
+    return sendSuccess(res, 'Departments retrieved successfully', depts);
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const sendRegisterOtp = async (req, res, next) => {
   try {

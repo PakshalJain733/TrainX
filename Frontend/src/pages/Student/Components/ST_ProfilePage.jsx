@@ -29,6 +29,7 @@ import {
   QrCode,
   Copy,
   Loader2,
+  Edit2,
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
@@ -36,7 +37,7 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/ST_ProfilePage.css";
 
 /* ── Inline dropdown for Student Profile (CSS: ProfilePage.css .student-prof-select-*) ── */
-function StudentProfSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+function StudentProfSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
   const selected = options.find(o => String(o.value) === String(value));
@@ -46,13 +47,19 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
     return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`}>
+    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}${disabled ? ' opacity-75 cursor-not-allowed' : ''}`} ref={ref}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setIsOpen(v => !v)}
+        className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`}
+        style={disabled ? { background: '#f1f5f9', cursor: 'not-allowed', borderColor: '#cbd5e1' } : {}}
+      >
         {Icon && <Icon className="student-prof-select-icon" />}
-        <span className="student-prof-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="student-prof-select-text" style={disabled ? { color: '#64748b' } : {}}>{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
         <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} />
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="student-prof-select-dropdown">
           {options.map(opt => {
             const isSel = String(opt.value) === String(value);
@@ -69,7 +76,7 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
   );
 }
 
-function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add skill...' }) {
+function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add skill...', disabled = false }) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
@@ -84,27 +91,28 @@ function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add 
   const showAdd = query.trim().length > 0 && !options.find(o => o.label.toLowerCase() === query.trim().toLowerCase());
 
   return (
-    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}`} ref={ref}>
-      <div className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`} style={{ padding: 0 }}>
+    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}${disabled ? ' opacity-75 cursor-not-allowed' : ''}`} ref={ref}>
+      <div className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`} style={{ padding: 0, ...(disabled ? { background: '#f1f5f9', cursor: 'not-allowed', borderColor: '#cbd5e1' } : {}) }}>
         <input 
           type="text" 
           value={query}
-          onChange={e => { setQuery(e.target.value); setIsOpen(true); }}
-          onFocus={() => setIsOpen(true)}
+          disabled={disabled}
+          onChange={e => { if(!disabled) { setQuery(e.target.value); setIsOpen(true); } }}
+          onFocus={() => { if(!disabled) setIsOpen(true); }}
           onKeyDown={e => {
-            if (e.key === 'Enter' && query.trim()) {
+            if (!disabled && e.key === 'Enter' && query.trim()) {
               e.preventDefault();
               onAdd(query.trim());
               setQuery("");
               setIsOpen(false);
             }
           }}
-          placeholder={placeholder}
-          style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a' }}
+          placeholder={disabled ? "Click Edit Profile to manage skills" : placeholder}
+          style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', padding: '10px 14px', fontSize: '13.5px', color: disabled ? '#64748b' : '#0f172a', cursor: disabled ? 'not-allowed' : 'text' }}
         />
         <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} style={{ marginRight: '14px', flexShrink: 0 }} />
       </div>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="student-prof-select-dropdown">
           {filtered.map(opt => (
             <div key={opt.value} onClick={() => { onAdd(opt.value); setQuery(""); setIsOpen(false); }} className="student-prof-select-option">
@@ -191,30 +199,54 @@ export default function ProfilePage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    rollNo: "",
-    department: "",
-    gender: "",
-    city: "",
-    guardianContact: "",
-    linkedinUrl: "",
-    semester: "",
-    cgpa: "",
-    skills: "",
-    profileCompleted: true,
-    batch: "",
-    college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
-    coordinator: "",
-    mentor: "",
-    track: "",
-    notifMilestones: true,
-    notifWeeklyReport: true,
-    notifInterview: true,
+  const [form, setForm] = useState(() => {
+    let u = {};
+    try { u = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+    const sp = u.studentProfile || {};
+    let rawYear = sp.year || u.year || "";
+    let rawDiv = sp.division || u.division || "";
+    let rawDept = sp.department || u.department || "";
+
+    if (rawYear) {
+      const yStr = String(rawYear).trim().toUpperCase();
+      if (yStr.startsWith("FE") || yStr.includes("FIRST")) rawYear = "FE";
+      else if (yStr.startsWith("SE") || yStr.includes("SECOND")) rawYear = "SE";
+      else if (yStr.startsWith("TE") || yStr.includes("THIRD")) rawYear = "TE";
+      else if (yStr.startsWith("BE") || yStr.includes("FINAL") || yStr.includes("FOURTH")) rawYear = "BE";
+    }
+    if (rawDiv) {
+      const dStr = String(rawDiv).replace(/division\s*/i, "").trim().toUpperCase();
+      if (["A", "B", "C", "D", "E", "F"].includes(dStr)) rawDiv = dStr;
+    }
+
+    return {
+      name: u.name || "",
+      email: u.email || "",
+      phone: u.mobile_number || u.phone || sp.mobile_number || "",
+      rollNo: sp.roll_number || u.roll_number || "",
+      department: rawDept,
+      year: rawYear,
+      division: rawDiv,
+      gender: sp.gender || u.gender || "",
+      city: sp.city || u.city || "",
+      guardianContact: sp.emergency_contact || u.emergency_contact || "",
+      linkedinUrl: sp.linkedin_url || u.linkedin_url || "",
+      semester: sp.semester || u.semester || "",
+      cgpa: sp.cgpa || u.cgpa || "",
+      skills: sp.skills || u.skills || "",
+      profileCompleted: true,
+      batch: sp.batch || u.batch || "",
+      college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+      coordinator: "",
+      mentor: "",
+      track: sp.target_track || u.target_track || "",
+      notifMilestones: true,
+      notifWeeklyReport: true,
+      notifInterview: true,
+    };
   });
 
+  const [isEditing, setIsEditing] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   // 2FA Google Authenticator State
@@ -239,21 +271,44 @@ export default function ProfilePage() {
         if (res && res.data) {
           const user = res.data;
           const sp = user.studentProfile || {};
-          const rawYear = sp.year || user.year;
-          let derivedSem = sp.semester || user.semester;
+          let uStored = {};
+          try { uStored = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+          const uSp = uStored.studentProfile || {};
+
+          let rawYear = sp.year || user.year || uSp.year || uStored.year || "";
+          let rawDiv = sp.division || user.division || uSp.division || uStored.division || "";
+          let rawDept = sp.department || user.department || uSp.department || uStored.department || "";
+
+          if (rawYear) {
+            const yStr = String(rawYear).trim().toUpperCase();
+            if (yStr.startsWith("FE") || yStr.includes("FIRST")) rawYear = "FE";
+            else if (yStr.startsWith("SE") || yStr.includes("SECOND")) rawYear = "SE";
+            else if (yStr.startsWith("TE") || yStr.includes("THIRD")) rawYear = "TE";
+            else if (yStr.startsWith("BE") || yStr.includes("FINAL") || yStr.includes("FOURTH")) rawYear = "BE";
+          }
+
+          if (rawDiv) {
+            const dStr = String(rawDiv).replace(/division\s*/i, "").trim().toUpperCase();
+            if (["A", "B", "C", "D", "E", "F"].includes(dStr)) rawDiv = dStr;
+          }
+
+          let derivedSem = sp.semester || user.semester || uSp.semester || uStored.semester;
           if (!derivedSem && rawYear) {
             if (rawYear === 'FE') derivedSem = 'Semester 1';
             else if (rawYear === 'SE') derivedSem = 'Semester 3';
             else if (rawYear === 'TE') derivedSem = 'Semester 5';
             else if (rawYear === 'BE') derivedSem = 'Semester 7';
           }
+
           setForm((prev) => ({
             ...prev,
             name: user.name || prev.name,
             email: user.email || prev.email,
             phone: user.mobile_number || user.phone || prev.phone,
             rollNo: sp.roll_number || user.roll_number || prev.rollNo,
-            department: sp.department || user.department || prev.department,
+            department: rawDept || prev.department,
+            year: rawYear || prev.year,
+            division: rawDiv || prev.division,
             semester: derivedSem || prev.semester,
             cgpa: sp.cgpa || user.cgpa || user.aggregate_cgpa || prev.cgpa,
             skills: sp.skills || user.skills || prev.skills,
@@ -410,6 +465,8 @@ export default function ProfilePage() {
         mobile_number: form.phone.trim(),
         roll_number: form.rollNo,
         department: form.department,
+        year: form.year,
+        division: form.division,
         semester: form.semester,
         cgpa: form.cgpa,
         skills: form.skills,
@@ -445,10 +502,10 @@ export default function ProfilePage() {
     }
 
     setSaved(true);
+    setIsEditing(false);
     setTimeout(() => {
       setSaved(false);
-      navigate("/student");
-    }, 1500);
+    }, 2000);
   };
 
 
@@ -518,15 +575,23 @@ export default function ProfilePage() {
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
-            <div className="profile-roll-chip">
-              <span className="profile-roll-label">Roll No:</span>
-              <strong>{form.rollNo}</strong>
-            </div>
+            {form.rollNo && String(form.rollNo).trim() !== "" && (
+              <div className="profile-roll-chip">
+                <span className="profile-roll-label">Roll No:</span>
+                <strong>{form.rollNo}</strong>
+              </div>
+            )}
 
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <Badge variant="success">CGPA: {form.cgpa} / 10</Badge>
-              <Badge variant="default">{form.semester}</Badge>
-            </div>
+            {(Boolean(form.cgpa && String(form.cgpa).trim()) || Boolean(form.semester && String(form.semester).trim())) && (
+              <div className="mt-3 flex items-center justify-center gap-2">
+                {form.cgpa && String(form.cgpa).trim() !== "" && (
+                  <Badge variant="success">CGPA: {form.cgpa} / 10</Badge>
+                )}
+                {form.semester && String(form.semester).trim() !== "" && (
+                  <Badge variant="default">{form.semester}</Badge>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="profile-academic-divider" />
@@ -535,37 +600,59 @@ export default function ProfilePage() {
           <div className="profile-academic-details">
             <h4 className="profile-section-subtitle">Academic Overview</h4>
 
-            <div className="profile-detail-row">
-              <Building size={16} className="profile-detail-icon" />
-              <div>
-                <span className="profile-detail-label">College</span>
-                <p className="profile-detail-value">{form.college}</p>
+            {form.college && String(form.college).trim() !== "" && (
+              <div className="profile-detail-row">
+                <Building size={16} className="profile-detail-icon" />
+                <div>
+                  <span className="profile-detail-label">College</span>
+                  <p className="profile-detail-value">{form.college}</p>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="profile-detail-row">
-              <GraduationCap size={16} className="profile-detail-icon" />
-              <div>
-                <span className="profile-detail-label">Department</span>
-                <p className="profile-detail-value">{form.department}</p>
+            {form.department && String(form.department).trim() !== "" && (
+              <div className="profile-detail-row">
+                <GraduationCap size={16} className="profile-detail-icon" />
+                <div>
+                  <span className="profile-detail-label">Department</span>
+                  <p className="profile-detail-value">{form.department}</p>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="profile-detail-row">
-              <BookOpen size={16} className="profile-detail-icon" />
-              <div>
-                <span className="profile-detail-label">Semester & CGPA</span>
-                <p className="profile-detail-value">{form.semester} · {form.cgpa} CGPA</p>
+            {(form.year || form.division) && (
+              <div className="profile-detail-row">
+                <Users size={16} className="profile-detail-icon" />
+                <div>
+                  <span className="profile-detail-label">Year & Division</span>
+                  <p className="profile-detail-value">
+                    {[form.year, form.division ? `Div ${form.division}` : null].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="profile-detail-row">
-              <Target size={16} className="profile-detail-icon text-indigo-500" />
-              <div>
-                <span className="profile-detail-label">Target Career Goal</span>
-                <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.track}</p>
+            {(form.semester || form.cgpa) && (
+              <div className="profile-detail-row">
+                <BookOpen size={16} className="profile-detail-icon" />
+                <div>
+                  <span className="profile-detail-label">Semester & CGPA</span>
+                  <p className="profile-detail-value">
+                    {[form.semester, form.cgpa ? `${form.cgpa} CGPA` : null].filter(Boolean).join(" · ")}
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
+
+            {form.track && String(form.track).trim() !== "" && (
+              <div className="profile-detail-row">
+                <Target size={16} className="profile-detail-icon text-indigo-500" />
+                <div>
+                  <span className="profile-detail-label">Target Career Goal</span>
+                  <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.track}</p>
+                </div>
+              </div>
+            )}
 
             {/* Confirmed Skills Pills */}
             <div className="profile-skills-wrap">
@@ -678,11 +765,77 @@ export default function ProfilePage() {
         <div className="profile-form-card">
           {/* Section 1: Personal & Contact Details (TOP) */}
           <div className="profile-form-section">
-            <div className="profile-section-heading">
-              <User size={18} className="profile-heading-icon text-indigo-500" />
-              <div>
-                <h3 className="profile-heading-title">Personal & Academic Details</h3>
-                <p className="profile-heading-desc">Used for mentor notifications, personal contact, and training drive updates.</p>
+            <div className="profile-section-heading" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: "18px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <User size={18} className="profile-heading-icon text-indigo-500" />
+                <div>
+                  <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Academic Details" : "Personal & Academic Details"}</h3>
+                  <p className="profile-heading-desc">Used for mentor notifications, personal contact, and training drive updates.</p>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+                {!isEditing ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="profile-edit-trigger-btn"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      background: "#2563eb",
+                      color: "#ffffff",
+                      fontWeight: "600",
+                      fontSize: "13px",
+                      border: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 6px rgba(37, 99, 235, 0.2)",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    <Edit2 size={15} /> Edit Profile
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(false)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        color: "#64748b",
+                        fontWeight: "600",
+                        fontSize: "13px",
+                        border: "1px solid #cbd5e1",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                    >
+                      <X size={15} /> Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="profile-save-btn"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        padding: "8px 16px",
+                        borderRadius: "8px",
+                        fontSize: "13px",
+                      }}
+                    >
+                      <Save size={15} /> Save Profile
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -691,9 +844,10 @@ export default function ProfilePage() {
                 <label className="profile-label">Full Name *</label>
                 <input
                   type="text"
-                  className="profile-input"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                   value={form.name}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  readOnly={!isEditing}
                   required
                 />
               </div>
@@ -702,9 +856,10 @@ export default function ProfilePage() {
                 <label className="profile-label">Email Address *</label>
                 <input
                   type="email"
-                  className="profile-input"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                   value={form.email}
                   onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                  readOnly={!isEditing}
                   required
                 />
               </div>
@@ -713,46 +868,58 @@ export default function ProfilePage() {
                 <label className="profile-label">Phone Number *</label>
                 <input
                   type="text"
-                  className="profile-input"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                   value={form.phone}
                   onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                  readOnly={!isEditing}
                   required
                 />
               </div>
 
               <div className="profile-field">
-                <label className="profile-label">Gender</label>
+                <label className="profile-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  Department <span style={{ fontSize: "11px", fontWeight: 400, color: "#94a3b8" }}>(Read-Only)</span>
+                </label>
+                <input
+                  type="text"
+                  className="profile-input profile-input-readonly"
+                  value={form.department || "—"}
+                  readOnly
+                  disabled
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Academic Year</label>
                 <StudentProfSelect
-                  value={form.gender}
-                  placeholder="-- Select Gender --"
+                  value={form.year}
+                  disabled={!isEditing}
+                  placeholder="Select Year"
                   options={[
-                    { value: "Male", label: "Male" },
-                    { value: "Female", label: "Female" },
-                    { value: "Other", label: "Other" },
+                    { value: "FE", label: "FE (First Year)" },
+                    { value: "SE", label: "SE (Second Year)" },
+                    { value: "TE", label: "TE (Third Year)" },
+                    { value: "BE", label: "BE (Final Year)" },
                   ]}
-                  onChange={(val) => setForm((p) => ({ ...p, gender: val }))}
+                  onChange={(val) => setForm((p) => ({ ...p, year: val }))}
                 />
               </div>
 
               <div className="profile-field">
-                <label className="profile-label">Parent / Emergency Contact Number</label>
-                <input
-                  type="text"
-                  placeholder="e.g. 9876543210"
-                  className="profile-input"
-                  value={form.guardianContact}
-                  onChange={(e) => setForm((p) => ({ ...p, guardianContact: e.target.value }))}
-                />
-              </div>
-
-              <div className="profile-field">
-                <label className="profile-label">City / Location</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Mumbai"
-                  className="profile-input"
-                  value={form.city}
-                  onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                <label className="profile-label">Division</label>
+                <StudentProfSelect
+                  value={form.division}
+                  disabled={!isEditing}
+                  placeholder="Select Division"
+                  options={[
+                    { value: "A", label: "Division A" },
+                    { value: "B", label: "Division B" },
+                    { value: "C", label: "Division C" },
+                    { value: "D", label: "Division D" },
+                    { value: "E", label: "Division E" },
+                    { value: "F", label: "Division F" },
+                  ]}
+                  onChange={(val) => setForm((p) => ({ ...p, division: val }))}
                 />
               </div>
 
@@ -760,6 +927,7 @@ export default function ProfilePage() {
                 <label className="profile-label">Current Semester *</label>
                 <StudentProfSelect
                   value={form.semester}
+                  disabled={!isEditing}
                   options={[
                     { value: "Semester 1", label: "Semester 1" },
                     { value: "Semester 2", label: "Semester 2" },
@@ -775,6 +943,45 @@ export default function ProfilePage() {
               </div>
 
               <div className="profile-field">
+                <label className="profile-label">Gender</label>
+                <StudentProfSelect
+                  value={form.gender}
+                  disabled={!isEditing}
+                  placeholder="-- Select Gender --"
+                  options={[
+                    { value: "Male", label: "Male" },
+                    { value: "Female", label: "Female" },
+                    { value: "Other", label: "Other" },
+                  ]}
+                  onChange={(val) => setForm((p) => ({ ...p, gender: val }))}
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">Parent / Emergency Contact Number</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 9876543210"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
+                  value={form.guardianContact}
+                  onChange={(e) => setForm((p) => ({ ...p, guardianContact: e.target.value }))}
+                  readOnly={!isEditing}
+                />
+              </div>
+
+              <div className="profile-field">
+                <label className="profile-label">City / Location</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Mumbai"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
+                  value={form.city}
+                  onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
+                  readOnly={!isEditing}
+                />
+              </div>
+
+              <div className="profile-field">
                 <label className="profile-label">Aggregate CGPA (out of 10.0) *</label>
                 <input
                   type="number"
@@ -782,9 +989,10 @@ export default function ProfilePage() {
                   min="0"
                   max="10"
                   placeholder="e.g. 8.75"
-                  className="profile-input"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                   value={form.cgpa}
                   onChange={(e) => setForm((p) => ({ ...p, cgpa: e.target.value }))}
+                  readOnly={!isEditing}
                   required
                 />
               </div>
@@ -793,9 +1001,10 @@ export default function ProfilePage() {
                 <label className="profile-label">Roll Number *</label>
                 <input
                   type="text"
-                  className="profile-input"
+                  className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                   value={form.rollNo}
                   onChange={(e) => setForm((p) => ({ ...p, rollNo: e.target.value }))}
+                  readOnly={!isEditing}
                   required
                 />
               </div>
@@ -816,22 +1025,26 @@ export default function ProfilePage() {
                   />
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     style={{
                       paddingLeft: "42px",
-                      paddingRight: form.track ? "36px" : "14px",
+                      paddingRight: (form.track && isEditing) ? "36px" : "14px",
                       width: "100%",
                     }}
                     placeholder="Search or type target track (e.g. Full Stack)..."
                     value={form.track}
-                    onFocus={() => setTrackSearchFocus(true)}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
+                    onFocus={() => isEditing && setTrackSearchFocus(true)}
                     onChange={(e) => {
-                      setForm((p) => ({ ...p, track: e.target.value }));
-                      setTrackSearchFocus(true);
+                      if (isEditing) {
+                        setForm((p) => ({ ...p, track: e.target.value }));
+                        setTrackSearchFocus(true);
+                      }
                     }}
                     required
                   />
-                  {form.track && (
+                  {form.track && isEditing && (
                     <button
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, track: "" }))}
@@ -853,7 +1066,7 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {trackSearchFocus && filteredTracks.length > 0 && (
+                {isEditing && trackSearchFocus && filteredTracks.length > 0 && (
                   <div
                     style={{
                       position: "absolute",
@@ -910,7 +1123,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Section 2: Technical Skills & Soft Skills (Full Horizontal Width Below 5 Pairs) */}
-          <div className="profile-form-section mt-6">
+          <div className="profile-form-section mt-6" style={{ borderBottom: "none", paddingBottom: 0 }}>
             <div className="profile-field full-width">
                 <div style={{
                   background: "#ffffff",
@@ -959,13 +1172,14 @@ export default function ProfilePage() {
                   {/* Skill Search, Select & Add */}
                   <div style={{ marginBottom: "16px" }}>
                     <StudentSkillSelect
+                      disabled={!isEditing}
                       placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
                       options={PREDEFINED_SKILLS.map((skill) => ({
                         value: skill,
                         label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
                       }))}
                       onAdd={(val) => {
-                        if (val) {
+                        if (val && isEditing) {
                           const trimmed = val.trim();
                           if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
                             setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
@@ -999,7 +1213,7 @@ export default function ProfilePage() {
 
                     {currentSkillsList.length === 0 ? (
                       <div style={{ fontSize: "13px", color: "#94a3b8", fontStyle: "italic" }}>
-                        No skills added yet. Select from the dropdown catalog or type above.
+                        No skills added yet. Click Edit Profile above to manage skills.
                       </div>
                     ) : (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
@@ -1022,35 +1236,37 @@ export default function ProfilePage() {
                             }}
                           >
                             <span>{skill}</span>
-                            <button
-                              type="button"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "18px",
-                                height: "18px",
-                                borderRadius: "50%",
-                                background: "#dbeafe",
-                                color: "#1e40af",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: 0,
-                                transition: "all 0.15s ease"
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "#ef4444";
-                                e.currentTarget.style.color = "#ffffff";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "#dbeafe";
-                                e.currentTarget.style.color = "#1e40af";
-                              }}
-                              onClick={() => handleRemoveSkill(skill)}
-                              title={`Remove ${skill}`}
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
+                            {isEditing && (
+                              <button
+                                type="button"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  width: "18px",
+                                  height: "18px",
+                                  borderRadius: "50%",
+                                  background: "#dbeafe",
+                                  color: "#1e40af",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  padding: 0,
+                                  transition: "all 0.15s ease"
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#ef4444";
+                                  e.currentTarget.style.color = "#ffffff";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "#dbeafe";
+                                  e.currentTarget.style.color = "#1e40af";
+                                }}
+                                onClick={() => handleRemoveSkill(skill)}
+                                title={`Remove ${skill}`}
+                              >
+                                <X size={12} strokeWidth={2.5} />
+                              </button>
+                            )}
                           </span>
                         ))}
                       </div>
@@ -1060,12 +1276,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-          {/* Bottom Actions */}
-          <div className="profile-actions-bar">
-            <button type="submit" className="profile-save-btn">
-              <Save size={16} /> Save All Profile & Preferences
-            </button>
-          </div>
+
         </div>
       </form>
       <ChangePasswordModal

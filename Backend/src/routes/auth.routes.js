@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterOtp, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterOtp, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -9,6 +9,7 @@ const router = Router();
 // Two-phase: the email OTP must be verified before any account is created.
 // The legacy unauthenticated POST /register is intentionally gone so the
 // email verification cannot be bypassed.
+router.get('/departments-by-email', getDepartmentsByEmail);
 router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOtp);
 router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
 

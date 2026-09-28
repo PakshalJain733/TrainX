@@ -626,8 +626,8 @@ export default function StudentLayout() {
                             navigate("/student/profile");
                           }}
                         >
-                          <UserCog size={15} />
-                          Edit Profile
+                          <User size={15} />
+                          View Profile
                         </button>
                         <button
                           className="student-header__profile-item"

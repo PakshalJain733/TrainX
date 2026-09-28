@@ -173,10 +173,10 @@ function Register() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    mobile_number: "",
     roll_number: "",
     department: "",
     year: "",
-    division: "",
     password: "",
     confirm_password: "",
     secure_code: "",
@@ -184,6 +184,41 @@ function Register() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+
+  const [deptOptions, setDeptOptions] = useState([
+    { value: "COMPS", label: "COMPS" },
+    { value: "IT", label: "IT" },
+    { value: "AIML", label: "AIML" },
+    { value: "ECS", label: "ECS" },
+    { value: "MTRX", label: "MTRX" },
+    { value: "EXTC", label: "EXTC" },
+  ]);
+
+  useEffect(() => {
+    const email = (formData.email || "").trim();
+    if (!email.includes("@") || email.split("@")[1].length < 3) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/auth/departments-by-email?email=${encodeURIComponent(email)}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setDeptOptions(data.data);
+          setFormData((prev) => {
+            const hasExisting = data.data.some((d) => String(d.value).toLowerCase() === String(prev.department).toLowerCase());
+            return {
+              ...prev,
+              department: hasExisting ? prev.department : data.data[0].value,
+            };
+          });
+        }
+      } catch (err) {
+        console.warn("Error fetching departments by email domain:", err);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [formData.email]);
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -381,10 +416,10 @@ function Register() {
 
     if (role === "Student") {
       const roll = (formData.roll_number || "").trim();
+      const mobile = (formData.mobile_number || "").trim();
       const dept = formData.department || "";
       const yr = formData.year || "";
-      const div = formData.division || "";
-      if (!roll || !dept || !yr || !div) return false;
+      if (!roll || !mobile || !dept || !yr) return false;
     } else if (role !== "Admin") {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
@@ -782,23 +817,30 @@ function Register() {
                   )}
                 </div>
 
-                {/* Row 3: Department | Year | Division */}
+                {/* Row 3: Mobile Number | Department | Year */}
                 <div className="form-grid-3">
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
+                    <input
+                      type="tel"
+                      name="mobile_number"
+                      autoComplete="tel"
+                      required
+                      placeholder="Mobile number"
+                      value={formData.mobile_number}
+                      onChange={handleChange}
+                      maxLength={10}
+                    />
+                  </div>
+
                   <div className="input-group">
                     <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
                     <RegSelect
                       value={formData.department}
                       wrapperClass="reg-select"
-                      options={[
-                        { value: "COMPS", label: "COMPS" },
-                        { value: "IT", label: "IT" },
-                        { value: "AIML", label: "AIML" },
-                        { value: "ECS", label: "ECS" },
-                        { value: "MTRX", label: "MTRX" },
-                        { value: "EXTC", label: "EXTC" },
-                      ]}
+                      options={deptOptions}
                       onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder="Dept"
+                      placeholder="Select Dept"
                     />
                   </div>
 
@@ -815,24 +857,6 @@ function Register() {
                       ]}
                       onChange={(val) => setFormData({ ...formData, year: val })}
                       placeholder="Year"
-                    />
-                  </div>
-
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.division}>Div.</FieldLabel>
-                    <RegSelect
-                      value={formData.division}
-                      wrapperClass="reg-select"
-                      options={[
-                        { value: "A", label: "A" },
-                        { value: "B", label: "B" },
-                        { value: "C", label: "C" },
-                        { value: "D", label: "D" },
-                        { value: "E", label: "E" },
-                        { value: "F", label: "F" },
-                      ]}
-                      onChange={(val) => setFormData({ ...formData, division: val })}
-                      placeholder="Div"
                     />
                   </div>
                 </div>
