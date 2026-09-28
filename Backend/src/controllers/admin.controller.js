@@ -12,6 +12,7 @@ import {
   findUserById,
   updateUserTwoFactorSecret,
   resetUserTwoFactorSecret,
+  triggerUserTwoFactorReset,
 } from '../models/user.model.js';
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
@@ -862,9 +863,9 @@ export const triggerUser2FAAdmin = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
-    // Generate fresh 2FA setup secret and set two_factor_enabled = 0 (pending pairing setup)
+    // Generate fresh 2FA setup secret and set two_factor_enabled = 0 and two_factor_reset = 1 (flagged for setup pairing)
     const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
-    await resetUserTwoFactorSecret(user.id, totpSetup.secret);
+    await triggerUserTwoFactorReset(user.id, totpSetup.secret);
 
     return sendSuccess(
       res,
@@ -872,6 +873,7 @@ export const triggerUser2FAAdmin = async (req, res, next) => {
       {
         userId: user.id,
         two_factor_enabled: 0,
+        two_factor_reset: 1,
         secret: totpSetup.secret,
         qrCode: totpSetup.qrCode,
       }

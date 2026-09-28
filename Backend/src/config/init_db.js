@@ -105,6 +105,7 @@ export async function initializeDatabase() {
         target_track VARCHAR(150) NULL,
         two_factor_secret VARCHAR(255) NULL,
         two_factor_enabled BOOLEAN DEFAULT FALSE,
+        two_factor_reset BOOLEAN DEFAULT FALSE,
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -118,6 +119,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users MODIFY COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_reset BOOLEAN DEFAULT FALSE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }

@@ -71,11 +71,8 @@ const assertUserCanAuthenticate = (user) => {
 
 const hasTwoFactorAuthentication = (user) => {
   if (!user || isBlank(user?.two_factor_secret)) return false;
-  if (isTwoFactorEnabled(user?.two_factor_enabled)) return true;
-  const rawFlag = String(user?.two_factor_enabled ?? '').toLowerCase().trim();
-  return rawFlag !== '0' && rawFlag !== 'false';
+  return isTwoFactorEnabled(user?.two_factor_enabled);
 };
-
 
 const verifyStoredPassword = async (user, password) => {
   if (!user || typeof password !== 'string' || password.length === 0) return false;
@@ -160,27 +157,33 @@ const finalizePrimaryAuthentication = async (user) => {
     };
   }
 
-  if (isAdminRole && !isBlank(user?.two_factor_secret) && !isTwoFactorEnabled(user?.two_factor_enabled)) {
-    let qrCode = null;
-    try {
-      const otpauthUrl = speakeasy.otpauthURL({
+  if (isAdminRole) {
+    const isResetTriggered = user?.two_factor_reset === 1 ||
+      user?.two_factor_reset === true ||
+      user?.two_factor_reset === '\x01' ||
+      String(user?.two_factor_reset ?? '').toLowerCase().trim() === '1' ||
+      String(user?.two_factor_reset ?? '').toLowerCase().trim() === 'true';
+
+    if (isResetTriggered && !isBlank(user?.two_factor_secret)) {
+      let qrCode = null;
+      try {
+        const otpauthUrl = speakeasy.otpauthURL({
+          secret: user.two_factor_secret,
+          label: `TrainingPortal (${user.email || user.name})`,
+          issuer: 'TrainingPortal',
+          encoding: 'base32',
+        });
+        qrCode = await QRCode.toDataURL(otpauthUrl);
+      } catch (_) {}
+
+      return {
+        requiresTwoFactorSetup: true,
+        email: user.email,
+        qrCode,
         secret: user.two_factor_secret,
-        label: `TrainingPortal (${user.email || user.name})`,
-        issuer: 'TrainingPortal',
-        encoding: 'base32',
-      });
-      qrCode = await QRCode.toDataURL(otpauthUrl);
-    } catch (_) {}
+      };
+    }
 
-    return {
-      requiresTwoFactorSetup: true,
-      email: user.email,
-      qrCode,
-      secret: user.two_factor_secret,
-    };
-  }
-
-  if (isAdminRole && isBlank(user?.two_factor_secret)) {
     throw createAuthError('2FA setup is incomplete. Please contact the Super Admin to re-trigger 2FA setup.', 400);
   }
 
@@ -846,7 +849,7 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   };
 
   const primaryAuth = await finalizePrimaryAuthentication(user);
-  if (primaryAuth.requiresTwoFactor) {
+  if (primaryAuth.requiresTwoFactor || primaryAuth.requiresTwoFactorSetup) {
     return primaryAuth;
   }
 

@@ -986,7 +986,7 @@ export default function ManageUsers() {
       if (res && res.success) {
         alert(res.message || `Two-step verification has been triggered for ${adminItem.name}. 2FA is now required on their next login.`);
         setAdminRequests((prev) =>
-          prev.map((a) => (a.id === adminItem.id ? { ...a, two_factor_enabled: 1 } : a))
+          prev.map((a) => (a.id === adminItem.id ? { ...a, two_factor_enabled: 0, two_factor_reset: 1 } : a))
         );
       } else {
         alert(res?.message || 'Failed to trigger two-step verification.');
