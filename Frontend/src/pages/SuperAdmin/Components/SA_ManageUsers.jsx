@@ -860,6 +860,16 @@ export default function ManageUsers() {
   const [isAssignTrainerOpen, setIsAssignTrainerOpen] = useState(false);
   const [isAssignMentorOpen, setIsAssignMentorOpen] = useState(false);
 
+  // Generate Code Form State
+  const [codeRole, setCodeRole] = useState('admins');
+  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
+  const [codeAdminName, setCodeAdminName] = useState('');
+  const [codeExpiry, setCodeExpiry] = useState('24 Hours');
+  const [codeMaxUses, setCodeMaxUses] = useState('1');
+  const [generatedCode, setGeneratedCode] = useState(null);
+  const [generatedCodesList, setGeneratedCodesList] = useState([]);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
   useEffect(() => {
     collegeAPI.getColleges()
       .then(data => {
@@ -1068,15 +1078,7 @@ export default function ManageUsers() {
     }
   };
 
-  // Generate Code Form State
-  const [codeRole, setCodeRole] = useState('admins');
-  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
-  const [codeAdminName, setCodeAdminName] = useState('');
-  const [codeExpiry, setCodeExpiry] = useState('24 Hours');
-  const [codeMaxUses, setCodeMaxUses] = useState('1');
-  const [generatedCode, setGeneratedCode] = useState(null);
-  const [generatedCodesList, setGeneratedCodesList] = useState([]);
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+
 
   const loadSecureCodes = async () => {
     try {
