@@ -375,6 +375,11 @@ function Register() {
       setErrorMsg("Please select your role.");
       return false;
     }
+    const name = (formData.name || "").trim();
+    if (!name) {
+      setErrorMsg("Please enter your full name.");
+      return false;
+    }
     const email = (formData.email || "").trim();
     if (!email) {
       setErrorMsg("Please enter your college email address.");
@@ -384,13 +389,24 @@ function Register() {
       setErrorMsg("Please enter a valid college email address.");
       return false;
     }
-    if (formData.password !== formData.confirm_password) {
-      setErrorMsg("Passwords do not match. Please re-enter passwords.");
+    if (!formData.password) {
+      setErrorMsg("Please create a password.");
       return false;
     }
     if (formData.password.length < 6) {
       setErrorMsg("Password must be at least 6 characters long.");
       return false;
+    }
+    if (formData.password !== formData.confirm_password) {
+      setErrorMsg("Passwords do not match. Please re-enter passwords.");
+      return false;
+    }
+    if (role !== "Student") {
+      const secureCode = (formData.secure_code || "").trim();
+      if (!secureCode) {
+        setErrorMsg("Please enter your Secure Access Code.");
+        return false;
+      }
     }
     return true;
   };
@@ -481,6 +497,8 @@ function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateDetails()) return;
 
     // Phase 1: send the code to the college email ONLY for Student role
     if (role === "Student" && !emailOtpSent) {
