@@ -1,4 +1,4 @@
-import { config } from '../config/env.js';
+import { generateJSON, describeProvider } from './aiClient.js';
 
 /**
  * Helper to normalize input map/array into standard format: { [skillName]: scoreNumber }
@@ -246,9 +246,6 @@ export const analyzeStudentPerformance = async (inputData) => {
  * AI Diagnostics Generator for a topic
  */
 export const generateAIDiagnostics = async ({ topic, batchName, deficiencyRate, avgScore }) => {
-  const groqApiKey = process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || process.env.GROQ_API_KEY || (config.ai?.apiKey?.startsWith('gsk_') ? config.ai.apiKey : '');
-  const apiKey = config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-
   const prompt = `You are a Principal Engineering Mentor and Curriculum Diagnostician.
 Perform an in-depth technical skill gap diagnostic for a class/batch of engineering students:
 
@@ -271,81 +268,18 @@ Output ONLY valid JSON matching this exact structure:
   "suggestedExerciseTypes": ["...", "...", "..."]
 }`;
 
-  // 1. Try Groq AI first if key available
-  if (groqApiKey && groqApiKey.startsWith('gsk_')) {
-    const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
-    for (const model of groqModels) {
-      try {
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${groqApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: 'You are a Principal Engineering Mentor and Curriculum Diagnostician. Output valid JSON.' },
-              { role: 'user', content: prompt },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.7,
-          }),
-        });
+  const parsed = await generateJSON(prompt, {
+    system: 'You are a Principal Engineering Mentor and Curriculum Diagnostician. Output ONLY valid JSON.',
+    temperature: 0.7,
+    maxTokens: 3000,
+  });
 
-        if (response.ok) {
-          const data = await response.json();
-          const rawText = data?.choices?.[0]?.message?.content;
-          if (rawText) {
-            const cleanJsonText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-            const parsed = JSON.parse(cleanJsonText);
-            return {
-              source: 'groq-ai',
-              modelUsed: model,
-              ...parsed,
-            };
-          }
-        }
-      } catch (err) {
-        console.warn(`[SkillGap Groq AI] Error with model ${model}: ${err.message}`);
-      }
-    }
-  }
-
-  // 2. Try Gemini AI if valid key starting with AIza
-  if (apiKey && apiKey.startsWith('AIza')) {
-    const geminiModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-    for (const model of geminiModels) {
-      try {
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.7, topK: 40, topP: 0.95 },
-            }),
-          }
-        );
-
-        if (!response.ok) continue;
-
-        const data = await response.json();
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawText) continue;
-
-        const cleanJsonText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanJsonText);
-        return {
-          source: 'gemini-ai',
-          modelUsed: model,
-          ...parsed,
-        };
-      } catch (err) {
-        console.warn(`[SkillGap AI] Gemini ${model} fallback: ${err.message}`);
-      }
-    }
+  if (parsed && typeof parsed === 'object') {
+    return {
+      source: 'ai-live',
+      modelUsed: describeProvider(),
+      ...parsed,
+    };
   }
 
   return getOfflineDiagnosticFallback(topic, deficiencyRate, avgScore);
@@ -355,12 +289,6 @@ Output ONLY valid JSON matching this exact structure:
  * AI Remedial Assignment Generator
  */
 export const generateRemedialAssignmentAI = async ({ topic, batchName, difficultyLevel = 'Medium' }) => {
-  const apiKey = config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-  const configuredModel = config.ai?.model || 'gemini-3.1-flash-lite';
-  const modelsToTry = Array.from(
-    new Set([configuredModel, 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest'])
-  );
-
   const prompt = `You are a Technical Trainer designing an interactive Remedial Assignment for college students weak in: "${topic}".
 Difficulty Target: "${difficultyLevel}".
 Batch: "${batchName || 'TE-A'}".
@@ -390,40 +318,18 @@ Output ONLY valid JSON matching this exact structure:
   ]
 }`;
 
-  if (!apiKey) {
-    return getOfflineRemedialFallback(topic, difficultyLevel);
-  }
+  const parsed = await generateJSON(prompt, {
+    system: 'You are a Technical Trainer designing remedial assignments. Output ONLY valid JSON.',
+    temperature: 0.7,
+    maxTokens: 4000,
+  });
 
-  for (const model of modelsToTry) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, topK: 40, topP: 0.95 },
-          }),
-        }
-      );
-
-      if (!response.ok) continue;
-
-      const data = await response.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!rawText) continue;
-
-      const cleanJsonText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJsonText);
-      return {
-        source: 'gemini-ai',
-        modelUsed: model,
-        ...parsed,
-      };
-    } catch (err) {
-      console.warn(`[SkillGap AI] Gemini ${model} remedial fallback: ${err.message}`);
-    }
+  if (parsed && typeof parsed === 'object') {
+    return {
+      source: 'ai-live',
+      modelUsed: describeProvider(),
+      ...parsed,
+    };
   }
 
   return getOfflineRemedialFallback(topic, difficultyLevel);

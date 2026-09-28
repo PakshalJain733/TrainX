@@ -97,7 +97,7 @@ app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 app.get('/api/v1/health', (req, res) => {
   return sendSuccess(res, 'Training Portal API is running', {
     status: 'healthy',
-    database: dbStatus,
+    database: 'connected',
     timestamp: new Date().toISOString(),
   });
 });

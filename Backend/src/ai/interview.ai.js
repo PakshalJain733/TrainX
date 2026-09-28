@@ -1,52 +1,8 @@
-import { config } from '../config/env.js';
+import { generateText, generateJSON, describeProvider } from './aiClient.js';
 import { retrieveContext } from '../services/rag/rag.service.js';
 
-const getApiKey = () => config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-const getModel = () => config.ai?.model || 'gemini-1.5-flash';
-
-// Try real Gemini models in order
-const modelsToTry = (configured) => Array.from(
-  new Set([configured, 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-pro', 'gemini-2.0-flash'])
-);
-
 export async function callGemini(prompt, { temperature = 0.7 } = {}) {
-  const apiKey = getApiKey();
-  if (!apiKey) return null;
-
-  // Quick sanity check — real Gemini API keys start with "AIza"
-  if (!apiKey.startsWith('AIza')) {
-    console.warn('[Interview AI] AI_API_KEY does not look like a valid Google Gemini key (should start with "AIza"). Skipping Gemini call.');
-    return null;
-  }
-
-  for (const model of modelsToTry(getModel())) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature, topK: 40, topP: 0.95 },
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}));
-        console.warn(`[Interview AI] Gemini ${model} HTTP ${response.status}: ${errBody?.error?.message || 'Unknown error'}`);
-        continue;
-      }
-      const data = await response.json();
-      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (rawText) return rawText;
-    } catch (err) {
-      console.warn(`[Interview AI] Gemini ${model} error: ${err.message}`);
-    }
-  }
-
-  return null;
+  return generateText(prompt, { temperature, maxTokens: 2048 });
 }
 
 export function parseAIJson(rawText) {
@@ -224,7 +180,7 @@ Respond ONLY with valid JSON:
   const parsed = parseAIJson(raw);
   if (parsed && parsed.question) {
     return {
-      source: 'gemini-ai',
+      source: 'ai-live',
       ...parsed,
     };
   }
@@ -272,7 +228,7 @@ Respond ONLY with valid JSON:
   const parsed = parseAIJson(raw);
   if (parsed && parsed.question) {
     return {
-      source: 'gemini-ai',
+      source: 'ai-live',
       ...parsed,
     };
   }
@@ -320,7 +276,7 @@ Respond ONLY with valid JSON:
   const parsed = parseAIJson(raw);
 
   if (parsed && typeof parsed.score === 'number') {
-    return { source: 'gemini-ai', ...parsed };
+    return { source: 'ai-live', ...parsed };
   }
 
   // Fallback: rough heuristic based on answer length and content
@@ -408,7 +364,7 @@ Compute the final scorecard and respond ONLY with valid JSON:
   const parsed = parseAIJson(raw);
 
   if (parsed && typeof parsed.overallScore === 'number') {
-    return { source: 'gemini-ai', ...parsed };
+    return { source: 'ai-live', ...parsed };
   }
 
   // Fallback computed scorecard
@@ -434,3 +390,4 @@ Compute the final scorecard and respond ONLY with valid JSON:
 export const processinterviewAI = async (inputData) => {
   return { status: 'processed', inputData };
 };
+

@@ -60,6 +60,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "View Profile", url: "/admin/profile", icon: UserCog },
   { title: "Broadcast Notice", url: "/admin/broadcast", icon: Megaphone },
   { title: "Support Tickets", url: "/admin/help", icon: HelpCircle },
 ];

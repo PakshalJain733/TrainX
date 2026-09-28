@@ -1,7 +1,8 @@
-import { config } from '../config/env.js';
+import { generateJSON, describeProvider } from './aiClient.js';
 
 /**
- * Pure AI Roadmap Engine with Google Gemini AI integration & Intelligent Dynamic Curriculum Engine
+ * AI Roadmap Engine with provider-agnostic AI integration (NVIDIA / Gemini / Groq)
+ * & Intelligent Dynamic Curriculum Engine.
  * Dynamically designs customized technical and domain learning milestones for any role or career path.
  */
 export const processroadmapAI = async (inputData) => {
@@ -11,7 +12,6 @@ export const processroadmapAI = async (inputData) => {
     currentSkills = [],
   } = inputData;
 
-  const apiKey = config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
   const skillsListStr = Array.isArray(currentSkills) ? currentSkills.join(', ') : currentSkills;
 
   const prompt = `You are a world-class AI Career & Curriculum Architect. Design a detailed, highly progressive 5 to 6 milestone learning roadmap strictly tailored for a user targeting the following career role / topic:
@@ -67,152 +67,52 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
           "duration": "10 Hours",
           "concepts": ["Syntax & Architecture", "Tooling & Best Practices"],
           "practicalOutcome": "Build foundation lab project"
-        }
-      ],
-      "resources": [
-        {
-          "title": "Official MDN / Technical Documentation",
-          "url": "https://developer.mozilla.org",
-          "type": "Documentation",
-          "provider": "MDN Web Docs"
-        }
-      ],
-      "quizzes": 3,
-      "exercises": 8
-    }
-  ]
-}`;
-
-  const groqApiKey = process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || process.env.GROQ_API_KEY || (apiKey && apiKey.startsWith('gsk_') ? apiKey : '');
-  const groqModels = ['qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
-
-  // 1. Try Groq AI Provider first if Groq API key is present
-  if (groqApiKey && groqApiKey.startsWith('gsk_')) {
-    for (const model of groqModels) {
-      try {
-        console.log(`[Groq AI] Requesting live curriculum generation for "${targetRole}" via ${model}...`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${groqApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          signal: controller.signal,
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: 'system', content: 'You are a world-class AI Career & Curriculum Architect. Output valid JSON strictly matching the requested roadmap schema.' },
-              { role: 'user', content: prompt },
-            ],
-            response_format: { type: 'json_object' },
-            temperature: 0.7,
-          }),
-        });
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          const rawText = data?.choices?.[0]?.message?.content;
-          if (rawText) {
-            const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-            const parsed = JSON.parse(cleanText);
-            if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
-              const sanitized = parsed.milestones.map((m, index) => ({
-                id: index + 1,
-                title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
-                desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
-                status: m.status || (index === 0 ? 'in-progress' : 'locked'),
-                progress: typeof m.progress === 'number' ? m.progress : 0,
-                tags: Array.isArray(m.tags) ? m.tags : [targetRole],
-                topics: Array.isArray(m.topics) && m.topics.length > 0 ? m.topics : generateRoleSpecificTopics(targetRole, m.title, index + 1, currentSkills),
-                syllabus: Array.isArray(m.syllabus) && m.syllabus.length > 0 ? m.syllabus : generateRoleSpecificSyllabus(targetRole, m.title, index + 1, currentSkills),
-                resources: Array.isArray(m.resources) && m.resources.length > 0 ? m.resources : generateRoleSpecificResources(targetRole, m.title, index + 1),
-                quizzes: typeof m.quizzes === 'number' ? m.quizzes : 3,
-                exercises: typeof m.exercises === 'number' ? m.exercises : 8,
-              }));
-
-              console.log(`[Groq AI] Successfully generated ${sanitized.length} live AI milestones for "${targetRole}" via ${model}!`);
-              return {
-                source: 'groq-ai-live',
-                modelUsed: model,
-                milestones: sanitized,
-              };
-            }
           }
-        } else {
-          const errText = await response.text().catch(() => '');
-          console.warn(`[Groq AI] Model ${model} status ${response.status}: ${errText.slice(0, 150)}`);
-        }
-      } catch (err) {
-        console.warn(`[Groq AI] Error with model ${model}: ${err.message}`);
-      }
-    }
-  }
-
-  // 2. Try Google Gemini AI Provider if Gemini API key is present and valid
-  const geminiModels = ['gemini-1.5-flash', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-  const geminiKey = apiKey && apiKey.startsWith('AIza') ? apiKey : '';
-
-  if (geminiKey) {
-    for (const model of geminiModels) {
-      try {
-        console.log(`[Google Gemini AI] Requesting live curriculum generation for "${targetRole}" via ${model}...`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-        const response = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+        ],
+        "resources": [
           {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal,
-            body: JSON.stringify({
-              contents: [{ parts: [{ text: prompt }] }],
-              generationConfig: { temperature: 0.7, topK: 40, topP: 0.95 },
-            }),
+            "title": "Official MDN / Technical Documentation",
+            "url": "https://developer.mozilla.org",
+            "type": "Documentation",
+            "provider": "MDN Web Docs"
           }
-        );
-
-        clearTimeout(timeoutId);
-
-        if (response.ok) {
-          const data = await response.json();
-          const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (rawText) {
-            const cleanText = rawText.replace(/```json/gi, '').replace(/```/g, '').trim();
-            const parsed = JSON.parse(cleanText);
-            if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
-              const sanitized = parsed.milestones.map((m, index) => ({
-                id: index + 1,
-                title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
-                desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
-                status: m.status || (index === 0 ? 'in-progress' : 'locked'),
-                progress: typeof m.progress === 'number' ? m.progress : 0,
-                tags: Array.isArray(m.tags) ? m.tags : [targetRole],
-                topics: Array.isArray(m.topics) && m.topics.length > 0 ? m.topics : generateRoleSpecificTopics(targetRole, m.title, index + 1, currentSkills),
-                syllabus: Array.isArray(m.syllabus) && m.syllabus.length > 0 ? m.syllabus : generateRoleSpecificSyllabus(targetRole, m.title, index + 1, currentSkills),
-                resources: Array.isArray(m.resources) && m.resources.length > 0 ? m.resources : generateRoleSpecificResources(targetRole, m.title, index + 1),
-                quizzes: typeof m.quizzes === 'number' ? m.quizzes : 3,
-                exercises: typeof m.exercises === 'number' ? m.exercises : 8,
-              }));
-
-              console.log(`[Google Gemini AI] Successfully generated ${sanitized.length} live AI milestones for "${targetRole}" via ${model}!`);
-              return {
-                source: 'gemini-ai-live',
-                modelUsed: model,
-                milestones: sanitized,
-              };
-            }
-          }
-        }
-      } catch (err) {
-        console.warn(`[Google Gemini AI] Warning for model ${model}: ${err.message}`);
+        ],
+        "quizzes": 3,
+        "exercises": 8
       }
-    }
+    ]
+  }`;
+
+    // Live AI generation through the configured provider (NVIDIA / Gemini / Groq).
+  const parsed = await generateJSON(prompt, {
+    system: 'You are a world-class AI Career & Curriculum Architect. Output valid JSON strictly matching the requested roadmap schema.',
+    temperature: 0.7,
+    maxTokens: 8000,
+    timeoutMs: 180000,
+  });
+
+  if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {
+    const sanitized = parsed.milestones.map((m, index) => ({
+      id: index + 1,
+      title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
+      desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
+      status: m.status || (index === 0 ? 'in-progress' : 'locked'),
+      progress: typeof m.progress === 'number' ? m.progress : 0,
+      tags: Array.isArray(m.tags) ? m.tags : [targetRole],
+      topics: Array.isArray(m.topics) && m.topics.length > 0 ? m.topics : generateRoleSpecificTopics(targetRole, m.title, index + 1, currentSkills),
+      syllabus: Array.isArray(m.syllabus) && m.syllabus.length > 0 ? m.syllabus : generateRoleSpecificSyllabus(targetRole, m.title, index + 1, currentSkills),
+      resources: Array.isArray(m.resources) && m.resources.length > 0 ? m.resources : generateRoleSpecificResources(targetRole, m.title, index + 1),
+      quizzes: typeof m.quizzes === 'number' ? m.quizzes : 3,
+      exercises: typeof m.exercises === 'number' ? m.exercises : 8,
+    }));
+
+    console.log(`[AI Engine] Generated ${sanitized.length} live AI milestones for "${targetRole}" via ${describeProvider()}!`);
+    return {
+      source: 'ai-live',
+      modelUsed: describeProvider(),
+      milestones: sanitized,
+    };
+  }
   }
 
   // Fallback to Role-and-Skill-Tailored Dynamic Generator

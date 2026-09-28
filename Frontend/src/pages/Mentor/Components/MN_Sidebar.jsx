@@ -16,6 +16,7 @@ import {
   Megaphone,
   GraduationCap,
   Code2,
+  UserCog,
 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
@@ -58,6 +59,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "View Profile", url: "/mentor/profile", icon: UserCog },
   { title: "Support Ticket", url: "/mentor/help", icon: HelpCircle },
 ];
 
