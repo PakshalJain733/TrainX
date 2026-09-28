@@ -1455,10 +1455,10 @@ export default function ManageUsers() {
                                 type="button"
                                 onClick={() => handleTrigger2FA(req)}
                                 className="manageusers-btn-2fa"
-                                title="Re-trigger Two-Step Verification for this Admin"
+                                title="Re-trigger Two-Step Verification Setup for this Admin"
                               >
                                 <ShieldCheck size={14} />
-                                <span>{req.two_factor_enabled ? 'Re-trigger 2FA' : 'Trigger 2FA'}</span>
+                                <span>Re-trigger 2FA Setup</span>
                               </button>
                             </div>
                           )}

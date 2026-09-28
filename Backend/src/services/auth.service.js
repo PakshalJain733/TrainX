@@ -146,6 +146,12 @@ const generatePreauthToken = (user) => jwt.sign({
 const finalizePrimaryAuthentication = async (user) => {
   assertUserCanAuthenticate(user);
 
+  const isAdminRole = user && (
+    user.role === 'college_admin' ||
+    user.role === 'admin' ||
+    String(user.role).toLowerCase().includes('admin')
+  ) && user.role !== 'super_admin';
+
   if (hasTwoFactorAuthentication(user)) {
     return {
       requiresTwoFactor: true,
@@ -153,10 +159,28 @@ const finalizePrimaryAuthentication = async (user) => {
     };
   }
 
-  if (isTwoFactorEnabled(user?.two_factor_enabled) && isBlank(user?.two_factor_secret)) {
-    console.warn(
-      `[AUTH] User ${user?.id} <${user?.email}> is flagged for 2FA but has no two_factor_secret; 2FA skipped until the account is enrolled.`
-    );
+  if (isAdminRole && !isBlank(user?.two_factor_secret) && !isTwoFactorEnabled(user?.two_factor_enabled)) {
+    let qrCode = null;
+    try {
+      const otpauthUrl = speakeasy.otpauthURL({
+        secret: user.two_factor_secret,
+        label: `TrainingPortal (${user.email || user.name})`,
+        issuer: 'TrainingPortal',
+        encoding: 'base32',
+      });
+      qrCode = await QRCode.toDataURL(otpauthUrl);
+    } catch (_) {}
+
+    return {
+      requiresTwoFactorSetup: true,
+      email: user.email,
+      qrCode,
+      secret: user.two_factor_secret,
+    };
+  }
+
+  if (isAdminRole && isBlank(user?.two_factor_secret)) {
+    throw createAuthError('2FA setup is incomplete. Please contact the Super Admin to re-trigger 2FA setup.', 400);
   }
 
   return {

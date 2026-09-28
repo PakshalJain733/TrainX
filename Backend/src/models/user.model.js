@@ -290,6 +290,11 @@ export const updateUserTwoFactorSecret = async (userId, secret) => {
   await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 1 WHERE id = ?', [secret, numId]);
 };
 
+export const resetUserTwoFactorSecret = async (userId, secret) => {
+  const numId = parseInt(userId, 10);
+  await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
+};
+
 export const enableTwoFactorForUser = async (userId) => {
   const numId = parseInt(userId, 10);
   await query('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [numId]);

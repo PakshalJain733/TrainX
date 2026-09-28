@@ -111,6 +111,7 @@ function Login() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [preAuthToken, setPreAuthToken] = useState(null);
+  const [totpSetupData, setTotpSetupData] = useState(null);
   const [resendTimer, setResendTimer] = useState(0);
   const inputRefs = useRef([]);
 
@@ -331,7 +332,13 @@ function Login() {
         body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await response.json();
-      if (data.success && data.data?.requiresTwoFactor) {
+      if (data.success && data.data?.requiresTwoFactorSetup) {
+        setTotpSetupData(data.data);
+        setPreAuthToken(null);
+        setStep("authenticator_setup");
+        setSuccessMsg("2FA Setup Re-triggered by Super Admin. Scan the QR code with Google/Microsoft Authenticator app to complete setup.");
+        setOtp(["", "", "", "", "", ""]);
+      } else if (data.success && data.data?.requiresTwoFactor) {
         // 2FA required — store pre-auth token only, NOT the final JWT
         if (!beginAuthenticatorStep(data.data)) {
           setPreAuthToken(null);
@@ -436,6 +443,47 @@ function Login() {
   const handleOtpKeyDown = (e, index) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerifyTotpSetupPairing = async (e) => {
+    e.preventDefault();
+    const enteredCode = otp.join("");
+    if (enteredCode.length < 6) {
+      setErrorMsg("Please enter the complete 6-digit Authenticator code.");
+      return;
+    }
+    setLoading(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-totp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          code: enteredCode,
+          rememberMe,
+        }),
+      });
+      const data = await response.json();
+      if (data.success && data.data?.token) {
+        storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
+        handlePostLoginRedirect(data.data.user || {});
+      } else if (data.success) {
+        setSuccessMsg("2FA Setup completed successfully! Redirecting...");
+        setTimeout(() => {
+          handlePostLoginRedirect(data.data?.user || {});
+        }, 1200);
+      } else {
+        setErrorMsg(data.message || "Invalid Authenticator Code. Please check Google/Microsoft Authenticator app.");
+      }
+    } catch (err) {
+      console.error("2FA setup verification error:", err);
+      setErrorMsg("Unable to verify Authenticator code. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -654,6 +702,72 @@ function Login() {
               )}
 
             </>
+          )}
+
+          {step === "authenticator_setup" && (
+            <form onSubmit={handleVerifyTotpSetupPairing}>
+              <div style={{ textAlign: "center", marginBottom: "14px" }}>
+                <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", margin: "0 0 6px 0" }}>
+                  Authenticator 2FA Setup
+                </h3>
+                <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                  Scan the QR Code below using Microsoft or Google Authenticator app.
+                </p>
+              </div>
+
+              {totpSetupData?.qrCode && (
+                <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
+                  <img
+                    src={totpSetupData.qrCode}
+                    alt="2FA QR Code"
+                    style={{ width: "150px", height: "150px", borderRadius: "12px", border: "2px solid #e2e8f0", padding: "6px", background: "#fff" }}
+                  />
+                </div>
+              )}
+
+              {totpSetupData?.secret && (
+                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "8px 12px", marginBottom: "14px", textAlign: "center" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "600", color: "#64748b", marginBottom: "2px" }}>Secret Setup Key (Manual Entry):</div>
+                  <code style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", letterSpacing: "1px" }}>{totpSetupData.secret}</code>
+                </div>
+              )}
+
+              <div className="login-input-group">
+                <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
+                <div className="login-otp-input-row">
+                  {otp.map((digit, idx) => (
+                    <input
+                      key={idx}
+                      ref={(el) => (inputRefs.current[idx] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                      onChange={(e) => handleOtpChange(e, idx)}
+                      onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
+                {Icons.shield} {loading ? "Verifying Setup..." : "Verify & Complete 2FA Setup"}
+              </button>
+
+              <div className="login-links">
+                <p>
+                  <button
+                    type="button"
+                    onClick={handleEditEmail}
+                    className="login-registeration-link"
+                    style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                  >
+                    Back to Login
+                  </button>
+                </p>
+              </div>
+            </form>
           )}
 
           {step === "authenticator" && (

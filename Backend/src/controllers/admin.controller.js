@@ -11,6 +11,7 @@ import {
   findUserByEmailOrMobile,
   findUserById,
   updateUserTwoFactorSecret,
+  resetUserTwoFactorSecret,
 } from '../models/user.model.js';
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
@@ -861,16 +862,16 @@ export const triggerUser2FAAdmin = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
-    // Generate fresh 2FA setup & secret, setting two_factor_enabled = 1
+    // Generate fresh 2FA setup secret and set two_factor_enabled = 0 (pending pairing setup)
     const totpSetup = await generateTotpSetup(user.email || user.name || `User_${user.id}`);
-    await updateUserTwoFactorSecret(user.id, totpSetup.secret);
+    await resetUserTwoFactorSecret(user.id, totpSetup.secret);
 
     return sendSuccess(
       res,
-      `Two-step verification has been triggered for ${user.name || 'Admin'}. 2FA will be strictly required on their next login.`,
+      `Two-step verification setup has been re-triggered for ${user.name || 'Admin'}. The Admin will be prompted to scan the QR code and complete pairing on their next login.`,
       {
         userId: user.id,
-        two_factor_enabled: 1,
+        two_factor_enabled: 0,
         secret: totpSetup.secret,
         qrCode: totpSetup.qrCode,
       }
