@@ -8,6 +8,7 @@ import {
   findUserById,
   createUser,
   updateUser,
+  updateUserModel,
   saveStudentDetails,
   getStudentByUserId,
   saveOtpRecord,
@@ -362,7 +363,28 @@ export const registerUser = async (data) => {
     }
 
     // User was pre-added by Admin and is now completing registration!
-    let canonicalRole = existingUser.role || ROLES.STUDENT;
+    let canonicalRole = existingUser.role;
+    if (!canonicalRole && role) {
+      const lowerRole = role.toLowerCase();
+      if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
+      else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
+      else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
+      else canonicalRole = ROLES.STUDENT;
+    }
+    if (!canonicalRole) canonicalRole = ROLES.STUDENT;
+
+    let codeRecord = null;
+    const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
+    if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
+      if (!secure_code || String(secure_code).trim().length === 0) {
+        throw createAuthError(`Secure access code is required to register for role: ${role || canonicalRole}`, 400);
+      }
+
+      codeRecord = await findSecureCode(secure_code, canonicalRole);
+      if (!codeRecord) {
+        throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
+      }
+    }
 
     let derivedSemester = semester || '';
     if (!derivedSemester && year) {
@@ -386,6 +408,10 @@ export const registerUser = async (data) => {
       roll_number,
       is_profile_updated: 1,
     });
+
+    if (codeRecord && codeRecord.id) {
+      await markCodeAsUsed(codeRecord.id, existingUser.id);
+    }
 
     const updatedUser = await findUserById(existingUser.id);
     let studentProfile = await getStudentByUserId(updatedUser.id);

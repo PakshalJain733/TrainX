@@ -113,7 +113,6 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
       milestones: sanitized,
     };
   }
-  }
 
   // Fallback to Role-and-Skill-Tailored Dynamic Generator
   console.log(`[AI Engine Fallback] Generating role-tailored dynamic roadmap for "${targetRole}"...`);
