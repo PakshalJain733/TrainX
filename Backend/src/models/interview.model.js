@@ -16,6 +16,12 @@ export const createInterviewSessionModel = async ({
   details = null,
 }) => {
   const date = conducted_date || new Date().toISOString().slice(0, 10);
+  const jsonDetails = details
+    ? typeof details === 'string'
+      ? details
+      : JSON.stringify(details)
+    : null;
+
   const res = await query(
     `INSERT INTO interview_sessions
        (user_id, student_id, interview_type, overall_score, grade, feedback, conducted_date, status, details)
@@ -29,7 +35,7 @@ export const createInterviewSessionModel = async ({
       feedback,
       date,
       status,
-      details ? JSON.stringify(details) : null,
+      jsonDetails,
     ]
   );
   return getInterviewSessionByIdModel(res.insertId);
@@ -51,7 +57,7 @@ export const getInterviewSessionByIdModel = async (id) => {
 
 export const findInterviewSessionsByUserModel = async (userId, limit = 50) => {
   const rows = await query(
-    'SELECT id, interview_type, overall_score, grade, feedback, conducted_date, status, details, created_at FROM interview_sessions WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
+    'SELECT id, user_id, student_id, interview_type, overall_score, grade, feedback, conducted_date, status, details, created_at FROM interview_sessions WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
     [userId, Number(limit) || 50]
   );
   return (rows || []).map((session) => {
@@ -64,4 +70,4 @@ export const findInterviewSessionsByUserModel = async (userId, limit = 50) => {
     }
     return session;
   });
-};
+};

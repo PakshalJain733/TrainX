@@ -581,6 +581,9 @@ export async function initializeDatabase() {
         progress INT DEFAULT 0,
         tags JSON NULL,
         topics JSON NULL,
+        syllabus JSON NULL,
+        resources JSON NULL,
+        completed_topics JSON NULL,
         quizzes INT DEFAULT 0,
         exercises INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -593,6 +596,9 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN description TEXT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN tags JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN topics JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN syllabus JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN resources JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN completed_topics JSON NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN quizzes INT DEFAULT 0`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmap_items ADD COLUMN exercises INT DEFAULT 0`); } catch (_) { }
     try { await conn.query(`ALTER TABLE roadmaps MODIFY COLUMN user_id INT NULL`); } catch (_) { }

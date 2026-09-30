@@ -151,8 +151,7 @@ function getToken() {
   const [overallScorecard, setOverallScorecard] = useState(null);
   const [pastInterviewsList, setPastInterviewsList] = useState([]);
 
-  useEffect(() => {
-    // Fetch user past interview evaluations
+  const fetchPastInterviews = useCallback(() => {
     apiFetch("/interviews/history")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
@@ -163,6 +162,10 @@ function getToken() {
       })
       .catch(() => setPastInterviewsList([]));
   }, []);
+
+  useEffect(() => {
+    fetchPastInterviews();
+  }, [fetchPastInterviews]);
 
   const voiceEnabledRef = useRef(true); // kept in sync for use inside socket callbacks
 
@@ -272,36 +275,62 @@ function getToken() {
     setActiveProctoringModal(null);
   }, []);
 
-  const viewPastResult = useCallback((pastSession) => {
+  const viewPastResult = useCallback(async (pastSession) => {
     if (!pastSession) return;
-    const d = pastSession.details || {};
+    let sessionData = pastSession;
+    if (pastSession.id) {
+      try {
+        const res = await apiFetch(`/interviews/${pastSession.id}`);
+        if (res && res.data) {
+          sessionData = res.data;
+        }
+      } catch (err) {
+        console.warn("Could not fetch interview details by ID:", err);
+      }
+    }
+
+    const d = sessionData.details || {};
+    const sc = d.scorecard || {};
+    const overallScore = Number(sessionData.overall_score ?? d.overallScore ?? sc.overallScore ?? 0);
+    const technical = Number(d.technical ?? sc.technical ?? overallScore);
+    const communication = Number(d.communication ?? sc.communication ?? overallScore);
+    const problemSolving = Number(d.problemSolving ?? sc.problemSolving ?? overallScore);
+
+    const strengths = d.strengths || sc.strengths || (sessionData.feedback || d.feedback ? [sessionData.feedback || d.feedback] : []);
+    const improvementAreas = d.weaknesses || d.improvementAreas || sc.improvementAreas || d.recommendations || [];
+    const recommendedTopics = d.skillGaps || d.recommendedTopics || sc.recommendedTopics || [sessionData.interview_type || "General Technical Practice"];
+    const feedback = sessionData.feedback || d.feedback || sc.feedback || "Interview completed successfully.";
+    const readiness = d.readiness || sc.readiness || sessionData.grade || (overallScore >= 70 ? "Interview Ready" : "Practice Needed");
+    const grade = sessionData.grade || sc.grade || (overallScore >= 80 ? "Excellent" : overallScore >= 60 ? "Good" : "Needs Improvement");
+
     const scorecard = {
-      overallScore: pastSession.overall_score || d.overallScore || 0,
-      technical: d.technical || 80,
-      communication: d.communication || 85,
-      problemSolving: d.problemSolving || 80,
-      strengths: d.strengths || (d.feedback ? [d.feedback] : ["Good technical understanding"]),
-      improvementAreas: d.weaknesses || d.recommendations || d.improvementAreas || ["Review edge cases and error handling"],
-      recommendedTopics: d.skillGaps || d.recommendedTopics || [pastSession.interview_type || "General Practice"],
-      feedback: d.feedback || pastSession.feedback || "Stored evaluation report.",
-      readiness: d.readiness || pastSession.grade || "Interview Ready",
-      grade: pastSession.grade || "Good",
+      overallScore,
+      technical,
+      communication,
+      problemSolving,
+      strengths,
+      improvementAreas,
+      recommendedTopics,
+      feedback,
+      readiness,
+      grade,
     };
 
-    let history = d.evaluationHistory || [];
-    if (history.length === 0 && d.questions && Array.isArray(d.questions)) {
+    let history = d.evaluationHistory || sc.evaluationHistory || [];
+    if (history.length === 0 && Array.isArray(d.questions)) {
       history = d.questions.map((q, idx) => ({
         question: q,
-        answer: d.answers ? d.answers[idx] : "",
-        score: d.questionScores ? d.questionScores[idx] : 7,
-        feedback: "Stored assessment feedback.",
+        answer: Array.isArray(d.answers) ? d.answers[idx] : "",
+        score: Array.isArray(d.questionScores) ? d.questionScores[idx] : null,
+        feedback: Array.isArray(d.questionFeedbacks) ? d.questionFeedbacks[idx] : "Recorded answer.",
+        modelAnswer: Array.isArray(d.modelAnswers) ? d.modelAnswers[idx] : null,
       }));
     }
 
     setResult({
       scorecard,
-      questionsAnswered: d.questionsAnswered || history.length || 5,
-      durationSeconds: d.durationSeconds || 300,
+      questionsAnswered: d.questionsAnswered ?? history.length,
+      durationSeconds: d.durationSeconds ?? null,
       evaluationHistory: history,
     });
     setPhase("result");
@@ -693,20 +722,54 @@ function getToken() {
       }
       setSocketConnected(false);
       const { scorecard, evaluationHistory, durationSeconds, questionsAnswered } = summary || {};
-      setResult({
+      const finalResult = {
         scorecard: scorecard || null,
         questionsAnswered: questionsAnswered ?? (evaluationHistory?.length ?? 0),
         durationSeconds: durationSeconds ?? Math.round((Date.now() - (timerStartRef.current ?? Date.now())) / 1000),
         evaluationHistory: evaluationHistory || [],
-      });
+      };
+      setResult(finalResult);
       setPhase("result");
-      
+
+      // Save via REST as fail-safe if needed, then refresh past interviews
+      const payloadDetails = {
+        role,
+        topic,
+        durationSeconds: finalResult.durationSeconds,
+        questionsAnswered: finalResult.questionsAnswered,
+        overallScore: finalResult.scorecard?.overallScore ?? 0,
+        technical: finalResult.scorecard?.technical ?? 0,
+        communication: finalResult.scorecard?.communication ?? 0,
+        problemSolving: finalResult.scorecard?.problemSolving ?? 0,
+        strengths: finalResult.scorecard?.strengths || [],
+        weaknesses: finalResult.scorecard?.improvementAreas || [],
+        skillGaps: finalResult.scorecard?.recommendedTopics || [],
+        feedback: finalResult.scorecard?.feedback || "",
+        readiness: finalResult.scorecard?.readiness || "Completed",
+        grade: finalResult.scorecard?.grade || "Average",
+        evaluationHistory: finalResult.evaluationHistory,
+        scorecard: finalResult.scorecard,
+      };
+
+      apiFetch("/interviews", {
+        method: "POST",
+        body: JSON.stringify({
+          details: payloadDetails,
+          interviewType: topic || role || "Technical Mock",
+          overallScore: payloadDetails.overallScore,
+          grade: payloadDetails.grade,
+          feedback: payloadDetails.feedback,
+        }),
+      })
+        .then(() => fetchPastInterviews())
+        .catch(() => fetchPastInterviews());
+
       // Exit full screen when interview finishes
       if (typeof document !== "undefined" && document.fullscreenElement) {
         document.exitFullscreen().catch((err) => console.log(err));
       }
     },
-    [stopTimer, stopRecognition, stopCamera, stopSpeaking]
+    [stopTimer, stopRecognition, stopCamera, stopSpeaking, role, topic, fetchPastInterviews]
   );
 
   // ─── End interview ───────────────────────────────────────────────────────────
@@ -959,13 +1022,13 @@ function getToken() {
     setRemaining(INTERVIEW_SECONDS);
     setWarningShown(false);
     setPhase("setup");
+    fetchPastInterviews();
     
     // Exit full screen if resetting
     if (typeof document !== "undefined" && document.fullscreenElement) {
       document.exitFullscreen().catch((err) => console.log(err));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stopTimer, stopRecognition, stopCamera, stopSpeaking]);
+  }, [stopTimer, stopRecognition, stopCamera, stopSpeaking, fetchPastInterviews]);
 
   // ─── Cleanup on unmount ──────────────────────────────────────────────────────
   useEffect(() => {
