@@ -559,590 +559,590 @@ function Login() {
 
       <div className="login-wrapper-outer">
         <div className="login-wrapper">
-        {/* Left Panel - Minimal Premium TrainX Logo Creation Animation */}
-        <div className="lp2-panel">
-          {/* Subtle Ambient Radial Glow */}
-          <div className="tx-ambient-radial-glow"></div>
+          {/* Left Panel - Minimal Premium TrainX Logo Creation Animation */}
+          <div className="lp2-panel">
+            {/* Subtle Ambient Radial Glow */}
+            <div className="tx-ambient-radial-glow"></div>
 
-          {/* Minimal Floating Ambient Energy Particles */}
-          <div className="tx-micro-particle p1"></div>
-          <div className="tx-micro-particle p2"></div>
-          <div className="tx-micro-particle p3"></div>
-          <div className="tx-micro-particle p4"></div>
-          <div className="tx-micro-particle p5"></div>
-          <div className="tx-micro-particle p6"></div>
+            {/* Minimal Floating Ambient Energy Particles */}
+            <div className="tx-micro-particle p1"></div>
+            <div className="tx-micro-particle p2"></div>
+            <div className="tx-micro-particle p3"></div>
+            <div className="tx-micro-particle p4"></div>
+            <div className="tx-micro-particle p5"></div>
+            <div className="tx-micro-particle p6"></div>
 
-          {/* Top Eyebrow Section */}
-          <div className="tx-hero-header">
-            <span className="tx-eyebrow-text">YOUR LEARNING JOURNEY</span>
-            <div className="tx-top-sparkle">✦</div>
-          </div>
-
-          {/* Center Stage — Minimal Premium Logo Creation Animation */}
-          <div className="tx-logo-reveal-stage">
-            <div className="tx-logo-glow-pulse"></div>
-
-            <div className="tx-logo-premium-canvas">
-              <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
+            {/* Top Eyebrow Section */}
+            <div className="tx-hero-header">
+              <span className="tx-eyebrow-text">YOUR LEARNING JOURNEY</span>
+              <div className="tx-top-sparkle">✦</div>
             </div>
 
-            {/* Typography Below Logo */}
-            <div className="tx-brand-text-block">
-              <h1 className="tx-brand-name-title">
-                Train<span className="tx-accent-x">X</span>
-              </h1>
-              <p className="tx-slogan-text">Learn • Practice • Assess • Excel</p>
+            {/* Center Stage — Minimal Premium Logo Creation Animation */}
+            <div className="tx-logo-reveal-stage">
+              <div className="tx-logo-glow-pulse"></div>
+
+              <div className="tx-logo-premium-canvas">
+                <img src={LogoMain} alt="TrainX Logo" className="tx-logo-main-img" />
+              </div>
+
+              {/* Typography Below Logo */}
+              <div className="tx-brand-text-block">
+                <h1 className="tx-brand-name-title">
+                  Train<span className="tx-accent-x">X</span>
+                </h1>
+                <p className="tx-slogan-text">Learn • Practice • Assess • Excel</p>
+              </div>
+            </div>
+
+            {/* Bottom Footer Section */}
+            <div className="tx-bottom-footer-bar">
+              <span className="tx-footer-tag">✦ Interactive Learning</span>
+              <span className="tx-footer-tag">✦ Smart Assessment</span>
+              <span className="tx-footer-tag">✦ Track Your Progress</span>
             </div>
           </div>
 
-          {/* Bottom Footer Section */}
-          <div className="tx-bottom-footer-bar">
-            <span className="tx-footer-tag">✦ Interactive Learning</span>
-            <span className="tx-footer-tag">✦ Smart Assessment</span>
-            <span className="tx-footer-tag">✦ Track Your Progress</span>
-          </div>
-        </div>
 
+          {/* Right Panel - Login Card */}
+          <div className="login-card">
+            <img src={Logo} alt="Logo" className="login-logo" />
 
-        {/* Right Panel - Login Card */}
-        <div className="login-card">
-          <img src={Logo} alt="Logo" className="login-logo" />
+            {/* Segmented Auth Mode Switcher */}
+            <div className="login-mode-segmented-bar">
+              <button
+                type="button"
+                className={`login-mode-tab ${authMode === "password" ? "active" : ""}`}
+                onClick={() => handleModeSwitch("password")}
+              >
+                {Icons.lock}
+                <span>Login with Password</span>
+              </button>
+              <button
+                type="button"
+                className={`login-mode-tab ${authMode === "otp" ? "active" : ""}`}
+                onClick={() => handleModeSwitch("otp")}
+              >
+                {Icons.shield}
+                <span>Login with OTP</span>
+              </button>
+            </div>
 
-          {/* Segmented Auth Mode Switcher */}
-          <div className="login-mode-segmented-bar">
-            <button
-              type="button"
-              className={`login-mode-tab ${authMode === "password" ? "active" : ""}`}
-              onClick={() => handleModeSwitch("password")}
-            >
-              {Icons.lock}
-              <span>Login with Password</span>
-            </button>
-            <button
-              type="button"
-              className={`login-mode-tab ${authMode === "otp" ? "active" : ""}`}
-              onClick={() => handleModeSwitch("otp")}
-            >
-              {Icons.shield}
-              <span>Login with OTP</span>
-            </button>
-          </div>
+            {errorMsg ? (
+              <div className="auth-error-msg">{errorMsg}</div>
+            ) : successMsg ? (
+              <div className="auth-success-msg">{successMsg}</div>
+            ) : null}
 
-          {errorMsg ? (
-            <div className="auth-error-msg">{errorMsg}</div>
-          ) : successMsg ? (
-            <div className="auth-success-msg">{successMsg}</div>
-          ) : null}
-
-          {/* ═════════════════════════════════════════════════ */}
-          {/* MODE 1: PASSWORD LOGIN                            */}
-          {/* ═════════════════════════════════════════════════ */}
-          {authMode === "password" && (
-            <>
-              {step === "email" && (
-                <form onSubmit={handlePasswordLogin}>
-                  <div className="login-input-group">
-                    <FieldLabel htmlFor="email" icon={Icons.email}>Email Address</FieldLabel>
-                    <input
-                      id="email"
-                      type="email"
-                      required
-                      autoComplete="username"
-                      placeholder="user@pvppcoe.ac.in"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="login-input-group">
-                    <FieldLabel htmlFor="password" icon={Icons.lock}>Password</FieldLabel>
-                    <div className="password-input-wrapper">
+            {/* ═════════════════════════════════════════════════ */}
+            {/* MODE 1: PASSWORD LOGIN                            */}
+            {/* ═════════════════════════════════════════════════ */}
+            {authMode === "password" && (
+              <>
+                {step === "email" && (
+                  <form onSubmit={handlePasswordLogin}>
+                    <div className="login-input-group">
+                      <FieldLabel htmlFor="email" icon={Icons.email}>Email Address</FieldLabel>
                       <input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
+                        id="email"
+                        type="email"
                         required
-                        placeholder="••••••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
+                        autoComplete="username"
+                        placeholder="user@pvppcoe.ac.in"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? Icons.eyeOff : Icons.eye}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="login-options-row">
-                    <label htmlFor="remember-me" className="login-remember-label">
-                      <input
-                        type="checkbox"
-                        id="remember-me"
-                        checked={rememberMe}
-                        onChange={(e) => handleRememberMeChange(e.target.checked)}
-                      />
-                      <span>Remember Me</span>
-                    </label>
-                    <button type="button" className="forgot-password-link" onClick={() => handleModeSwitch("forgot")}>
-                      Forgot Password?
-                    </button>
-                  </div>
-
-                  <button type="submit" className="login-send-otp-btn" disabled={loading}>
-                    {Icons.key} {loading ? "Authenticating..." : "Login to Account"}
-                  </button>
-
-                  <div className="login-links">
-                    <p>
-                      Don&apos;t have an account?{" "}
-                      <Link className="login-registeration-link" to="/register">
-                        Create Account
-                      </Link>
-                    </p>
-                  </div>
-                </form>
-              )}
-
-            </>
-          )}
-
-          {step === "authenticator_setup" && (
-            <form onSubmit={handleVerifyTotpSetupPairing}>
-              <div style={{ textAlign: "center", marginBottom: "14px" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", margin: "0 0 6px 0" }}>
-                  Authenticator 2FA Setup
-                </h3>
-                <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
-                  Scan the QR Code below using Microsoft or Google Authenticator app.
-                </p>
-              </div>
-
-              {totpSetupData?.qrCode && (
-                <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
-                  <img
-                    src={totpSetupData.qrCode}
-                    alt="2FA QR Code"
-                    style={{ width: "150px", height: "150px", borderRadius: "12px", border: "2px solid #e2e8f0", padding: "6px", background: "#fff" }}
-                  />
-                </div>
-              )}
-
-              {totpSetupData?.secret && (
-                <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "8px 12px", marginBottom: "14px", textAlign: "center" }}>
-                  <div style={{ fontSize: "11px", fontWeight: "600", color: "#64748b", marginBottom: "2px" }}>Secret Setup Key (Manual Entry):</div>
-                  <code style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", letterSpacing: "1px" }}>{totpSetupData.secret}</code>
-                </div>
-              )}
-
-              <div className="login-input-group">
-                <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-                <div className="login-otp-input-row">
-                  {otp.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => (inputRefs.current[idx] = el)}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                      onChange={(e) => handleOtpChange(e, idx)}
-                      onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
-                {Icons.shield} {loading ? "Verifying Setup..." : "Verify & Complete 2FA Setup"}
-              </button>
-
-              <div className="login-links">
-                <p>
-                  <button
-                    type="button"
-                    onClick={handleEditEmail}
-                    className="login-registeration-link"
-                    style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                  >
-                    Back to Login
-                  </button>
-                </p>
-              </div>
-            </form>
-          )}
-
-          {step === "authenticator" && (
-            <form onSubmit={handleVerifyAndLogin}>
-              <div className="login-input-group">
-                <div className="login-email-header-row">
-                  <FieldLabel icon={Icons.shield}>Microsoft / Google Authenticator</FieldLabel>
-                  <button
-                    type="button"
-                    onClick={handleEditEmail}
-                    className="login-edit-email-btn"
-                  >
-                    {Icons.edit} Edit
-                  </button>
-                </div>
-
-                <div className="login-email-display-card">
-                  <span className="login-email-display-text">{email || "your account"}</span>
-                </div>
-              </div>
-
-              <div className="login-input-group">
-                <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-                <div className="login-otp-input-row">
-                  {otp.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => (inputRefs.current[idx] = el)}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                      onChange={(e) => handleOtpChange(e, idx)}
-                      onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
-                {Icons.shield} {loading ? "Verifying..." : "Verify Authenticator & Login"}
-              </button>
-
-              <div className="login-links">
-                <p>
-                  Wrong account?{" "}
-                  <button
-                    type="button"
-                    onClick={handleEditEmail}
-                    className="login-registeration-link"
-                    style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                  >
-                    Back to Login
-                  </button>
-                </p>
-              </div>
-            </form>
-          )}
-
-          {/* ═════════════════════════════════════════════════ */}
-          {/* MODE 2: OTP LOGIN                                 */}
-          {/* ═════════════════════════════════════════════════ */}
-          {authMode === "otp" && (
-            <>
-              {step === "email" && (
-                <form onSubmit={handleSendOtp}>
-                  <div className="login-input-group">
-                    <FieldLabel htmlFor="otp-email" icon={Icons.email}>Email Address</FieldLabel>
-                    <input
-                      id="otp-email"
-                      type="email"
-                      required
-                      autoComplete="username"
-                      placeholder="user@pvppcoe.ac.in"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="login-options-row">
-                    <label htmlFor="otp-remember-me" className="login-remember-label">
-                      <input
-                        type="checkbox"
-                        id="otp-remember-me"
-                        checked={rememberMe}
-                        onChange={(e) => handleRememberMeChange(e.target.checked)}
-                      />
-                      <span>Remember Me</span>
-                    </label>
-                  </div>
-
-                  <button type="submit" className="login-send-otp-btn" disabled={loading}>
-                    {Icons.send} {loading ? "Sending..." : "Send OTP"}
-                  </button>
-
-                  <div className="login-links">
-                    <p>
-                      Don&apos;t have an account?{" "}
-                      <Link className="login-registeration-link" to="/register">
-                        Create Account
-                      </Link>
-                    </p>
-                  </div>
-                </form>
-              )}
-
-              {step === "otp" && (
-                <form onSubmit={handleVerifyAndLogin}>
-                  <div className="login-input-group">
-                    <div className="login-email-header-row">
-                      <FieldLabel icon={Icons.email}>Code Sent To</FieldLabel>
-                      <button
-                        type="button"
-                        onClick={handleEditEmail}
-                        className="login-edit-email-btn"
-                      >
-                        {Icons.edit} Edit
-                      </button>
                     </div>
 
-                    <div className="login-email-display-card">
-                      <span className="login-email-display-text">{email || "your account"}</span>
-                    </div>
-                  </div>
-
-                  {/* OTP Input Boxes */}
-                  <div className="login-input-group">
-                    <FieldLabel icon={Icons.key}>Enter 6-Digit OTP</FieldLabel>
-                    <div className="login-otp-input-row">
-                      {otp.map((digit, idx) => (
+                    <div className="login-input-group">
+                      <FieldLabel htmlFor="password" icon={Icons.lock}>Password</FieldLabel>
+                      <div className="password-input-wrapper">
                         <input
-                          key={idx}
-                          ref={(el) => (inputRefs.current[idx] = el)}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                          onChange={(e) => handleOtpChange(e, idx)}
-                          onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          required
+                          placeholder="••••••••••••"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
                         />
-                      ))}
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowPassword(!showPassword)}
+                          tabIndex={-1}
+                        >
+                          {showPassword ? Icons.eyeOff : Icons.eye}
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Resend OTP */}
-                  <div className="login-resend-wrap">
-                    <span className="login-resend-text">Didn&apos;t receive OTP?</span>
-                    <button
-                      type="button"
-                      onClick={handleResendOtp}
-                      disabled={resendTimer > 0 || loading}
-                      className="login-resend-link-btn"
-                      style={{ opacity: resendTimer > 0 || loading ? 0.6 : 1, cursor: resendTimer > 0 || loading ? "not-allowed" : "pointer" }}
-                    >
-                      ↺ {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                    <div className="login-options-row">
+                      <label htmlFor="remember-me" className="login-remember-label">
+                        <input
+                          type="checkbox"
+                          id="remember-me"
+                          checked={rememberMe}
+                          onChange={(e) => handleRememberMeChange(e.target.checked)}
+                        />
+                        <span>Remember Me</span>
+                      </label>
+                      <button type="button" className="forgot-password-link" onClick={() => handleModeSwitch("forgot")}>
+                        Forgot Password?
+                      </button>
+                    </div>
+
+                    <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                      {Icons.key} {loading ? "Authenticating..." : "Login to Account"}
                     </button>
-                  </div>
 
-                  <button type="submit" className="login-send-otp-btn" disabled={loading}>
-                    {Icons.send} {loading ? "Verifying..." : "Verify & Login"}
-                  </button>
+                    <div className="login-links">
+                      <p>
+                        Don&apos;t have an account?{" "}
+                        <Link className="login-registeration-link" to="/register">
+                          Create Account
+                        </Link>
+                      </p>
+                    </div>
+                  </form>
+                )}
 
-                  <div className="login-links">
-                    <p>
-                      Don&apos;t have an account?{" "}
-                      <Link className="login-registeration-link" to="/register">
-                        Create Account
-                      </Link>
-                    </p>
-                  </div>
-                </form>
-              )}
-            </>
-          )}
-          {/* ═════════════════════════════════════════════════ */}
-          {/* MODE 3: FORGOT / RESET PASSWORD (3-STEP FLOW)     */}
-          {/* ═════════════════════════════════════════════════ */}
-          {authMode === "forgot" && (
-            <>
-              {/* STEP 1: Enter Email */}
-              {step === "email" && (
-                <form onSubmit={handleSendOtp}>
-                  <div className="login-input-group">
-                    <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Registered Email Address</FieldLabel>
-                    <input
-                      id="forgot-email"
-                      type="email"
-                      required
-                      autoComplete="username"
-                      placeholder="user@pvppcoe.ac.in"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
+              </>
+            )}
 
-                  <p style={{ fontSize: "12px", color: "#64748b", margin: "10px 0 16px", lineHeight: "1.4" }}>
-                    🔒 Enter your registered email address. We will send a 6-digit OTP to reset your password.
+            {step === "authenticator_setup" && (
+              <form onSubmit={handleVerifyTotpSetupPairing}>
+                <div style={{ textAlign: "center", marginBottom: "14px" }}>
+                  <h3 style={{ fontSize: "16px", fontWeight: "700", color: "#1e293b", margin: "0 0 6px 0" }}>
+                    Authenticator 2FA Setup
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                    Scan the QR Code below using Microsoft or Google Authenticator app.
                   </p>
+                </div>
 
-                  <button type="submit" className="login-send-otp-btn" disabled={loading}>
-                    {Icons.send} {loading ? "Sending OTP..." : "Send OTP"}
-                  </button>
-
-                  <div className="login-links">
-                    <p>
-                      Remembered password?{" "}
-                      <button
-                        type="button"
-                        onClick={() => handleModeSwitch("password")}
-                        className="login-registeration-link"
-                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                      >
-                        Back to Login
-                      </button>
-                    </p>
+                {totpSetupData?.qrCode && (
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
+                    <img
+                      src={totpSetupData.qrCode}
+                      alt="2FA QR Code"
+                      style={{ width: "150px", height: "150px", borderRadius: "12px", border: "2px solid #e2e8f0", padding: "6px", background: "#fff" }}
+                    />
                   </div>
-                </form>
-              )}
+                )}
 
-              {/* STEP 2: Enter & Verify 6-Digit OTP */}
-              {step === "otp" && (
-                <form onSubmit={handleVerifyForgotOtp}>
-                  <div className="login-input-group">
-                    <div className="login-email-header-row">
-                      <FieldLabel icon={Icons.email}>OTP Sent To</FieldLabel>
-                      <button
-                        type="button"
-                        onClick={handleEditEmail}
-                        className="login-edit-email-btn"
-                      >
-                        {Icons.edit} Edit
-                      </button>
-                    </div>
-
-                    <div className="login-email-display-card">
-                      <span className="login-email-display-text">{email || "user@pvppcoe.ac.in"}</span>
-                    </div>
+                {totpSetupData?.secret && (
+                  <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "8px 12px", marginBottom: "14px", textAlign: "center" }}>
+                    <div style={{ fontSize: "11px", fontWeight: "600", color: "#64748b", marginBottom: "2px" }}>Secret Setup Key (Manual Entry):</div>
+                    <code style={{ fontSize: "13px", fontWeight: "700", color: "#0f172a", letterSpacing: "1px" }}>{totpSetupData.secret}</code>
                   </div>
+                )}
 
-                  {/* 6-Digit OTP Input Boxes */}
-                  <div className="login-input-group">
-                    <FieldLabel icon={Icons.key}>Enter 6-Digit OTP</FieldLabel>
-                    <div className="login-otp-input-row">
-                      {otp.map((digit, idx) => (
-                        <input
-                          key={idx}
-                          ref={(el) => (inputRefs.current[idx] = el)}
-                          type="text"
-                          inputMode="numeric"
-                          maxLength={1}
-                          value={digit}
-                          className={`login-otp-digit-input ${digit ? "filled" : ""}`}
-                          onChange={(e) => handleOtpChange(e, idx)}
-                          onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                        />
-                      ))}
-                    </div>
+                <div className="login-input-group">
+                  <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
+                  <div className="login-otp-input-row">
+                    {otp.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (inputRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                        onChange={(e) => handleOtpChange(e, idx)}
+                        onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                      />
+                    ))}
                   </div>
+                </div>
 
-                  {/* Resend OTP */}
-                  <div className="login-resend-wrap" style={{ marginTop: "12px" }}>
-                    <span className="login-resend-text">Didn&apos;t receive OTP?</span>
+                <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
+                  {Icons.shield} {loading ? "Verifying Setup..." : "Verify & Complete 2FA Setup"}
+                </button>
+
+                <div className="login-links">
+                  <p>
                     <button
                       type="button"
-                      onClick={handleResendOtp}
-                      disabled={resendTimer > 0 || loading}
-                      className="login-resend-link-btn"
-                      style={{ opacity: resendTimer > 0 || loading ? 0.6 : 1, cursor: resendTimer > 0 || loading ? "not-allowed" : "pointer" }}
+                      onClick={handleEditEmail}
+                      className="login-registeration-link"
+                      style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
                     >
-                      ↺ {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                      Back to Login
+                    </button>
+                  </p>
+                </div>
+              </form>
+            )}
+
+            {step === "authenticator" && (
+              <form onSubmit={handleVerifyAndLogin}>
+                <div className="login-input-group">
+                  <div className="login-email-header-row">
+                    <FieldLabel icon={Icons.shield}>Microsoft / Google Authenticator</FieldLabel>
+                    <button
+                      type="button"
+                      onClick={handleEditEmail}
+                      className="login-edit-email-btn"
+                    >
+                      {Icons.edit} Edit
                     </button>
                   </div>
 
-                  <button type="submit" className="login-send-otp-btn" style={{ marginTop: "14px" }} disabled={loading}>
-                    {Icons.send} {loading ? "Verifying OTP..." : "Verify OTP"}
-                  </button>
-
-                  <div className="login-links">
-                    <p>
-                      Remembered password?{" "}
-                      <button
-                        type="button"
-                        onClick={() => handleModeSwitch("password")}
-                        className="login-registeration-link"
-                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
-                      >
-                        Back to Login
-                      </button>
-                    </p>
+                  <div className="login-email-display-card">
+                    <span className="login-email-display-text">{email || "your account"}</span>
                   </div>
-                </form>
-              )}
+                </div>
 
-              {/* STEP 3: Enter New Password & Confirm */}
-              {step === "new_password" && (
-                <form onSubmit={handleResetPasswordSubmit}>
-                  <div className="login-input-group">
-                    <div className="login-email-header-row">
-                      <FieldLabel icon={Icons.shield}>OTP Verified Account</FieldLabel>
-                    </div>
-                    <div className="login-email-display-card" style={{ borderColor: "#86efac", background: "#f0fdf4" }}>
-                      <span className="login-email-display-text" style={{ color: "#166534", fontWeight: "600" }}>✓ {email}</span>
-                    </div>
-                  </div>
-
-                  {/* New Password Input */}
-                  <div className="login-input-group" style={{ marginTop: "14px" }}>
-                    <FieldLabel htmlFor="new-password" icon={Icons.lock}>New Password *</FieldLabel>
-                    <div className="login-password-input-wrap">
+                <div className="login-input-group">
+                  <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
+                  <div className="login-otp-input-row">
+                    {otp.map((digit, idx) => (
                       <input
-                        id="new-password"
-                        type={showPassword ? "text" : "password"}
-                        required
-                        placeholder="Min. 6 characters"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
+                        key={idx}
+                        ref={(el) => (inputRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                        onChange={(e) => handleOtpChange(e, idx)}
+                        onKeyDown={(e) => handleOtpKeyDown(e, idx)}
                       />
-                      <button
-                        type="button"
-                        className="password-toggle-btn"
-                        onClick={() => setShowPassword(!showPassword)}
-                        tabIndex={-1}
-                      >
-                        {showPassword ? Icons.eyeOff : Icons.eye}
-                      </button>
-                    </div>
+                    ))}
                   </div>
+                </div>
 
-                  {/* Confirm New Password Input */}
-                  <div className="login-input-group">
-                    <FieldLabel htmlFor="confirm-new-password" icon={Icons.lock}>Confirm New Password *</FieldLabel>
-                    <div className="login-password-input-wrap">
+                <button type="submit" className="login-send-otp-btn" style={{ marginTop: "12px" }} disabled={loading}>
+                  {Icons.shield} {loading ? "Verifying..." : "Verify Authenticator & Login"}
+                </button>
+
+                <div className="login-links">
+                  <p>
+                    Wrong account?{" "}
+                    <button
+                      type="button"
+                      onClick={handleEditEmail}
+                      className="login-registeration-link"
+                      style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                    >
+                      Back to Login
+                    </button>
+                  </p>
+                </div>
+              </form>
+            )}
+
+            {/* ═════════════════════════════════════════════════ */}
+            {/* MODE 2: OTP LOGIN                                 */}
+            {/* ═════════════════════════════════════════════════ */}
+            {authMode === "otp" && (
+              <>
+                {step === "email" && (
+                  <form onSubmit={handleSendOtp}>
+                    <div className="login-input-group">
+                      <FieldLabel htmlFor="otp-email" icon={Icons.email}>Email Address</FieldLabel>
                       <input
-                        id="confirm-new-password"
-                        type={showPassword ? "text" : "password"}
+                        id="otp-email"
+                        type="email"
                         required
-                        placeholder="Re-enter new password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        autoComplete="username"
+                        placeholder="user@pvppcoe.ac.in"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
-                  </div>
 
-                  <button type="submit" className="login-send-otp-btn" style={{ marginTop: "16px" }} disabled={loading}>
-                    {Icons.key} {loading ? "Updating Password..." : "Update Password & Login"}
-                  </button>
+                    <div className="login-options-row">
+                      <label htmlFor="otp-remember-me" className="login-remember-label">
+                        <input
+                          type="checkbox"
+                          id="otp-remember-me"
+                          checked={rememberMe}
+                          onChange={(e) => handleRememberMeChange(e.target.checked)}
+                        />
+                        <span>Remember Me</span>
+                      </label>
+                    </div>
 
-                  <div className="login-links">
-                    <p>
-                      Back to{" "}
+                    <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                      {Icons.send} {loading ? "Sending..." : "Send OTP"}
+                    </button>
+
+                    <div className="login-links">
+                      <p>
+                        Don&apos;t have an account?{" "}
+                        <Link className="login-registeration-link" to="/register">
+                          Create Account
+                        </Link>
+                      </p>
+                    </div>
+                  </form>
+                )}
+
+                {step === "otp" && (
+                  <form onSubmit={handleVerifyAndLogin}>
+                    <div className="login-input-group">
+                      <div className="login-email-header-row">
+                        <FieldLabel icon={Icons.email}>Code Sent To</FieldLabel>
+                        <button
+                          type="button"
+                          onClick={handleEditEmail}
+                          className="login-edit-email-btn"
+                        >
+                          {Icons.edit} Edit
+                        </button>
+                      </div>
+
+                      <div className="login-email-display-card">
+                        <span className="login-email-display-text">{email || "your account"}</span>
+                      </div>
+                    </div>
+
+                    {/* OTP Input Boxes */}
+                    <div className="login-input-group">
+                      <FieldLabel icon={Icons.key}>Enter 6-Digit OTP</FieldLabel>
+                      <div className="login-otp-input-row">
+                        {otp.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            ref={(el) => (inputRefs.current[idx] = el)}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={digit}
+                            className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                            onChange={(e) => handleOtpChange(e, idx)}
+                            onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resend OTP */}
+                    <div className="login-resend-wrap">
+                      <span className="login-resend-text">Didn&apos;t receive OTP?</span>
                       <button
                         type="button"
-                        onClick={() => handleModeSwitch("password")}
-                        className="login-registeration-link"
-                        style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                        onClick={handleResendOtp}
+                        disabled={resendTimer > 0 || loading}
+                        className="login-resend-link-btn"
+                        style={{ opacity: resendTimer > 0 || loading ? 0.6 : 1, cursor: resendTimer > 0 || loading ? "not-allowed" : "pointer" }}
                       >
-                        Login
+                        ↺ {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
                       </button>
+                    </div>
+
+                    <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                      {Icons.send} {loading ? "Verifying..." : "Verify & Login"}
+                    </button>
+
+                    <div className="login-links">
+                      <p>
+                        Don&apos;t have an account?{" "}
+                        <Link className="login-registeration-link" to="/register">
+                          Create Account
+                        </Link>
+                      </p>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+            {/* ═════════════════════════════════════════════════ */}
+            {/* MODE 3: FORGOT / RESET PASSWORD (3-STEP FLOW)     */}
+            {/* ═════════════════════════════════════════════════ */}
+            {authMode === "forgot" && (
+              <>
+                {/* STEP 1: Enter Email */}
+                {step === "email" && (
+                  <form onSubmit={handleSendOtp}>
+                    <div className="login-input-group">
+                      <FieldLabel htmlFor="forgot-email" icon={Icons.email}>Registered Email Address</FieldLabel>
+                      <input
+                        id="forgot-email"
+                        type="email"
+                        required
+                        autoComplete="username"
+                        placeholder="user@pvppcoe.ac.in"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+
+                    <p style={{ fontSize: "12px", color: "#64748b", margin: "10px 0 16px", lineHeight: "1.4" }}>
+                      🔒 Enter your registered email address. We will send a 6-digit OTP to reset your password.
                     </p>
-                  </div>
-                </form>
-              )}
-            </>
-          )}
+
+                    <button type="submit" className="login-send-otp-btn" disabled={loading}>
+                      {Icons.send} {loading ? "Sending OTP..." : "Send OTP"}
+                    </button>
+
+                    <div className="login-links">
+                      <p>
+                        Remembered password?{" "}
+                        <button
+                          type="button"
+                          onClick={() => handleModeSwitch("password")}
+                          className="login-registeration-link"
+                          style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                        >
+                          Back to Login
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                )}
+
+                {/* STEP 2: Enter & Verify 6-Digit OTP */}
+                {step === "otp" && (
+                  <form onSubmit={handleVerifyForgotOtp}>
+                    <div className="login-input-group">
+                      <div className="login-email-header-row">
+                        <FieldLabel icon={Icons.email}>OTP Sent To</FieldLabel>
+                        <button
+                          type="button"
+                          onClick={handleEditEmail}
+                          className="login-edit-email-btn"
+                        >
+                          {Icons.edit} Edit
+                        </button>
+                      </div>
+
+                      <div className="login-email-display-card">
+                        <span className="login-email-display-text">{email || "user@pvppcoe.ac.in"}</span>
+                      </div>
+                    </div>
+
+                    {/* 6-Digit OTP Input Boxes */}
+                    <div className="login-input-group">
+                      <FieldLabel icon={Icons.key}>Enter 6-Digit OTP</FieldLabel>
+                      <div className="login-otp-input-row">
+                        {otp.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            ref={(el) => (inputRefs.current[idx] = el)}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={1}
+                            value={digit}
+                            className={`login-otp-digit-input ${digit ? "filled" : ""}`}
+                            onChange={(e) => handleOtpChange(e, idx)}
+                            onKeyDown={(e) => handleOtpKeyDown(e, idx)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Resend OTP */}
+                    <div className="login-resend-wrap" style={{ marginTop: "12px" }}>
+                      <span className="login-resend-text">Didn&apos;t receive OTP?</span>
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={resendTimer > 0 || loading}
+                        className="login-resend-link-btn"
+                        style={{ opacity: resendTimer > 0 || loading ? 0.6 : 1, cursor: resendTimer > 0 || loading ? "not-allowed" : "pointer" }}
+                      >
+                        ↺ {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
+                      </button>
+                    </div>
+
+                    <button type="submit" className="login-send-otp-btn" style={{ marginTop: "14px" }} disabled={loading}>
+                      {Icons.send} {loading ? "Verifying OTP..." : "Verify OTP"}
+                    </button>
+
+                    <div className="login-links">
+                      <p>
+                        Remembered password?{" "}
+                        <button
+                          type="button"
+                          onClick={() => handleModeSwitch("password")}
+                          className="login-registeration-link"
+                          style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                        >
+                          Back to Login
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                )}
+
+                {/* STEP 3: Enter New Password & Confirm */}
+                {step === "new_password" && (
+                  <form onSubmit={handleResetPasswordSubmit}>
+                    <div className="login-input-group">
+                      <div className="login-email-header-row">
+                        <FieldLabel icon={Icons.shield}>OTP Verified Account</FieldLabel>
+                      </div>
+                      <div className="login-email-display-card" style={{ borderColor: "#86efac", background: "#f0fdf4" }}>
+                        <span className="login-email-display-text" style={{ color: "#166534", fontWeight: "600" }}>✓ {email}</span>
+                      </div>
+                    </div>
+
+                    {/* New Password Input */}
+                    <div className="login-input-group" style={{ marginTop: "14px" }}>
+                      <FieldLabel htmlFor="new-password" icon={Icons.lock}>New Password *</FieldLabel>
+                      <div className="login-password-input-wrap">
+                        <input
+                          id="new-password"
+                          type={showPassword ? "text" : "password"}
+                          required
+                          placeholder="Min. 6 characters"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="password-toggle-btn"
+                          onClick={() => setShowPassword(!showPassword)}
+                          tabIndex={-1}
+                        >
+                          {showPassword ? Icons.eyeOff : Icons.eye}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Confirm New Password Input */}
+                    <div className="login-input-group">
+                      <FieldLabel htmlFor="confirm-new-password" icon={Icons.lock}>Confirm New Password *</FieldLabel>
+                      <div className="login-password-input-wrap">
+                        <input
+                          id="confirm-new-password"
+                          type={showPassword ? "text" : "password"}
+                          required
+                          placeholder="Re-enter new password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="login-send-otp-btn" style={{ marginTop: "16px" }} disabled={loading}>
+                      {Icons.key} {loading ? "Updating Password..." : "Update Password & Login"}
+                    </button>
+
+                    <div className="login-links">
+                      <p>
+                        Back to{" "}
+                        <button
+                          type="button"
+                          onClick={() => handleModeSwitch("password")}
+                          className="login-registeration-link"
+                          style={{ background: "none", border: "none", padding: 0, font: "inherit", cursor: "pointer" }}
+                        >
+                          Login
+                        </button>
+                      </p>
+                    </div>
+                  </form>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }
 
