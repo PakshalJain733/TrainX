@@ -177,6 +177,7 @@ function Register() {
     roll_number: "",
     department: "",
     year: "",
+    division: "",
     password: "",
     confirm_password: "",
     secure_code: "",
@@ -222,9 +223,30 @@ function Register() {
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setFormData((prev) => ({ ...prev, email: emailParam }));
-      setSuccessMsg("Pre-registered email detected. Complete your profile details and set a password.");
+    const nameParam = searchParams.get("name");
+    const roleParam = searchParams.get("role");
+    const mobileParam = searchParams.get("mobile_number") || searchParams.get("phone") || searchParams.get("mobile");
+    const rollParam = searchParams.get("roll_number") || searchParams.get("roll_id") || searchParams.get("college_id");
+    const deptParam = searchParams.get("department") || searchParams.get("dept");
+    const yearParam = searchParams.get("year");
+    const divParam = searchParams.get("division") || searchParams.get("div");
+
+    if (emailParam || nameParam) {
+      if (roleParam) {
+        const formattedRole = roleParam.charAt(0).toUpperCase() + roleParam.slice(1).toLowerCase();
+        setRole(formattedRole);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        name: nameParam || prev.name,
+        email: emailParam || prev.email,
+        mobile_number: mobileParam || prev.mobile_number,
+        roll_number: rollParam || prev.roll_number,
+        department: deptParam || prev.department,
+        year: yearParam || prev.year,
+        division: divParam || prev.division,
+      }));
+      setSuccessMsg("Pre-registered account loaded! Your details added by Administrator are pre-filled below. Create a password to complete registration.");
     }
   }, [searchParams]);
 
@@ -892,8 +914,8 @@ function Register() {
                   )}
                 </div>
 
-                {/* Row 3: Mobile Number | Department | Year */}
-                <div className="form-grid-3">
+                {/* Row 3: Mobile Number | Department | Year | Division */}
+                <div className="form-grid-4">
                   <div className="input-group">
                     <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
                     <input
@@ -932,6 +954,21 @@ function Register() {
                       ]}
                       onChange={(val) => setFormData({ ...formData, year: val })}
                       placeholder="Year"
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.dept}>Division</FieldLabel>
+                    <RegSelect
+                      value={formData.division}
+                      wrapperClass="reg-select"
+                      options={[
+                        { value: "A", label: "Division A" },
+                        { value: "B", label: "Division B" },
+                        { value: "C", label: "Division C" },
+                      ]}
+                      onChange={(val) => setFormData({ ...formData, division: val })}
+                      placeholder="Division"
                     />
                   </div>
                 </div>

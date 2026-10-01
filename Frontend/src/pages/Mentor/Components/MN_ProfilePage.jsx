@@ -21,6 +21,7 @@ import {
   Check,
   Loader2,
   X,
+  Edit2
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { mentorProfile } from "../../../data/mentorMockData";
@@ -48,6 +49,7 @@ const specOptions = [
 function MN_ProfilePage() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [showChangePassModal, setShowChangePassModal] = useState(false);
 
@@ -227,6 +229,7 @@ function MN_ProfilePage() {
       window.dispatchEvent(new Event("userProfileUpdated"));
 
       setSaved(true);
+      setIsEditing(false);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error("Failed to save mentor profile:", err);
@@ -272,19 +275,22 @@ function MN_ProfilePage() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              <button
-                type="button"
-                className="profile-camera-btn"
-                onClick={() => fileInputRef.current?.click()}
-                title="Change Avatar Image"
-              >
-                <Camera size={14} />
-              </button>
+              {isEditing && (
+                <button
+                  type="button"
+                  className="profile-camera-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Change Avatar Image"
+                >
+                  <Camera size={14} />
+                </button>
+              )}
               <input
                 type="file"
                 ref={fileInputRef}
                 accept="image/*"
                 className="profile-file-input"
+                disabled={!isEditing}
                 onChange={handleAvatarChange}
               />
             </div>
@@ -347,13 +353,12 @@ function MN_ProfilePage() {
             </div>
 
             {/* Change Password & 2FA Buttons */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex flex-col gap-2.5">
+            <div className="profile-change-pw-wrap">
               <button
                 type="button"
                 onClick={() => setShowChangePassModal(true)}
-                className="profile-change-pass-btn"
+                className="profile-change-pw-btn"
               >
-                <Key size={16} />
                 <span>Change Password</span>
               </button>
 
@@ -361,26 +366,9 @@ function MN_ProfilePage() {
                 type="button"
                 className="profile-2fa-setup-btn"
                 onClick={handleOpen2FASetup}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  background: is2FAEnabled ? "#ecfdf5" : "#4f46e5",
-                  color: is2FAEnabled ? "#047857" : "#ffffff",
-                  border: is2FAEnabled ? "1.5px solid #a7f3d0" : "none",
-                  fontWeight: "600",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 6px rgba(79, 70, 229, 0.15)",
-                  transition: "all 0.2s ease"
-                }}
+                title={is2FAEnabled ? "Reconfigure Google Authenticator 2FA" : "Setup Google Authenticator 2FA"}
               >
-                <QrCode size={16} />
-                {is2FAEnabled ? "Reconfigure Google 2FA QR Code" : "Setup Google Authenticator 2FA"}
+                <span>2FA Authenticator</span>
               </button>
             </div>
           </div>
@@ -390,11 +378,41 @@ function MN_ProfilePage() {
         <div className="profile-form-card">
           <form onSubmit={handleSave}>
             <div className="profile-form-section">
-              <div className="profile-section-heading">
-                <User size={18} className="profile-heading-icon text-indigo-500" />
-                <div>
-                  <h3 className="profile-heading-title">Personal & Contact Details</h3>
-                  <p className="profile-heading-desc">Saved directly to your mentor profile in MySQL database.</p>
+              <div className="profile-section-heading profile-section-heading-flex">
+                <div className="profile-heading-group">
+                  <User size={18} className="profile-heading-icon text-indigo-500" />
+                  <div>
+                    <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
+                    <p className="profile-heading-desc">Saved directly to your mentor profile in MySQL database.</p>
+                  </div>
+                </div>
+
+                <div className="profile-heading-actions">
+                  {!isEditing ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="profile-edit-trigger-btn"
+                    >
+                      <Edit2 size={15} /> Edit Profile
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="profile-cancel-btn"
+                      >
+                        <X size={15} /> Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="profile-save-btn"
+                      >
+                        <Save size={15} /> Save Profile
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -403,9 +421,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Full Name *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -414,9 +434,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Email Address *</label>
                   <input
                     type="email"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.email}
                     onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -425,9 +447,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Phone Number *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.phone}
                     onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                   />
                 </div>
               </div>
@@ -447,9 +471,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Official Title / Role *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.role}
                     onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -459,6 +485,7 @@ function MN_ProfilePage() {
                   <CustomSelect
                     value={form.specialization}
                     options={specOptions}
+                    disabled={!isEditing}
                     onChange={(val) => setForm((p) => ({ ...p, specialization: val }))}
                     placeholder="Select Specialization"
                     icon={Award}
@@ -470,6 +497,7 @@ function MN_ProfilePage() {
                   <CustomSelect
                     value={form.department}
                     options={deptOptions}
+                    disabled={!isEditing}
                     onChange={(val) => setForm((p) => ({ ...p, department: val }))}
                     placeholder="Select Department"
                     icon={Building}
@@ -480,9 +508,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Employee / Staff ID *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.empId}
                     onChange={(e) => setForm((p) => ({ ...p, empId: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -491,9 +521,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Office Location / Cabin</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.officeLocation}
                     onChange={(e) => setForm((p) => ({ ...p, officeLocation: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     placeholder="e.g. Faculty Block C, Room 302"
                   />
                 </div>
@@ -502,9 +534,11 @@ function MN_ProfilePage() {
                   <label className="profile-label">Teaching Experience</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.experience}
                     onChange={(e) => setForm((p) => ({ ...p, experience: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     placeholder="e.g. 6+ Years Teaching & Industry"
                   />
                 </div>
@@ -512,14 +546,156 @@ function MN_ProfilePage() {
             </div>
 
             {/* Bottom Actions */}
-            <div className="profile-actions-bar">
-              <button type="submit" className="profile-save-btn">
-                <Save size={16} /> Save Profile Details
-              </button>
-            </div>
+            {isEditing && (
+              <div className="profile-actions-bar">
+                <button type="submit" className="profile-save-btn">
+                  <Save size={16} /> Save Profile Details
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={showChangePassModal}
+        onClose={() => setShowChangePassModal(false)}
+      />
+
+      {/* Google Authenticator 2FA Modal */}
+      {is2FASetupOpen && createPortal(
+        <div className="modal-overlay profile-2fa-modal-overlay">
+          <div className="modal-dialog profile-2fa-modal-dialog">
+            <div className="profile-2fa-modal-header">
+              <div className="profile-2fa-modal-title-wrap">
+                <div className="profile-2fa-modal-icon">
+                  <QrCode size={20} />
+                </div>
+                <div>
+                  <h3 className="profile-2fa-modal-title">Google Authenticator 2FA</h3>
+                  <p className="profile-2fa-modal-subtitle">Scan QR code to pair your account</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIs2FASetupOpen(false)}
+                className="profile-2fa-modal-close-btn"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {loading2FASetup ? (
+              <div className="profile-2fa-modal-loading">
+                <Loader2 size={32} className="animate-spin profile-2fa-loader-spinner" />
+                <p className="profile-2fa-loading-text">Generating Google Authenticator QR Code...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleVerify2FASubmit}>
+                {totpError && (
+                  <div className="profile-2fa-alert-error">
+                    {totpError}
+                  </div>
+                )}
+
+                {totpSuccess && (
+                  <div className="profile-2fa-alert-success">
+                    <CheckCircle2 size={16} />
+                    <span>{totpSuccess}</span>
+                  </div>
+                )}
+
+                {/* QR Code Container */}
+                <div className="profile-2fa-qr-box">
+                  {totpData?.qrCode ? (
+                    <img
+                      src={totpData.qrCode}
+                      alt="Google Authenticator QR Code"
+                      className="profile-2fa-qr-img"
+                    />
+                  ) : (
+                    <div className="profile-2fa-qr-placeholder">
+                      <QrCode size={40} className="text-slate-400" />
+                    </div>
+                  )}
+                  <p className="profile-2fa-qr-text">
+                    Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app on your phone and scan this QR code.
+                  </p>
+                </div>
+
+                {/* Secret Key Copy Bar */}
+                {totpData?.secret && (
+                  <div className="profile-2fa-secret-box">
+                    <label className="profile-2fa-secret-label">
+                      Or enter Secret Key manually:
+                    </label>
+                    <div className="profile-2fa-secret-row">
+                      <code className="profile-2fa-secret-code">
+                        {totpData.secret.match(/.{1,4}/g)?.join(" ") || totpData.secret}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={handleCopySecret}
+                        className="profile-2fa-copy-btn"
+                      >
+                        {copiedSecret ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        {copiedSecret ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6-Digit Code Input */}
+                <div className="profile-2fa-code-input-section">
+                  <label className="profile-2fa-code-label">
+                    Enter 6-Digit Authenticator Verification Code:
+                  </label>
+                  <div className="profile-2fa-digit-row" onPaste={handleTotpPaste}>
+                    {totpCodeInput.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (totpInputRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleTotpDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleTotpKeyDown(idx, e)}
+                        className="profile-2fa-digit-input"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="profile-2fa-modal-actions">
+                  <button
+                    type="button"
+                    onClick={() => setIs2FASetupOpen(false)}
+                    className="profile-2fa-modal-cancel-btn"
+                    disabled={verifying2FA}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="profile-2fa-modal-submit-btn"
+                    disabled={verifying2FA}
+                  >
+                    {verifying2FA ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Verifying...
+                      </>
+                    ) : (
+                      "Verify & Enable 2FA"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -27,10 +27,14 @@ import {
   Trash2,
   Briefcase,
   BookOpenCheck,
-  Edit3,
   Zap,
-  User
+  User,
+  FileSpreadsheet,
+  UploadCloud,
+  Download,
+  AlertCircle
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import EmptyState from '../../../components/ui/EmptyState';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import { apiFetch } from '../../../utils/api';
@@ -841,10 +845,302 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
   );
 }
 
+/* ── Bulk Excel / CSV Upload Modal Component ── */
+function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
+  const [file, setFile] = useState(null);
+  const [parsedRows, setParsedRows] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+
+  if (!isOpen) return null;
+
+  const handleDownloadTemplate = () => {
+    const templateData = [
+      {
+        "Full Name": "Priya Sharma",
+        "College Email": "priya.sharma@pvppcoe.ac.in",
+        "Mobile Number": "9876543210",
+        "Roll ID": "VU21CS042",
+        "Department": "COMPS",
+        "Academic Year": "TE",
+        "Division": "A",
+      },
+      {
+        "Full Name": "Rahul Verma",
+        "College Email": "rahul.verma@pvppcoe.ac.in",
+        "Mobile Number": "9876543211",
+        "Roll ID": "VU21IT088",
+        "Department": "IT",
+        "Academic Year": "SE",
+        "Division": "B",
+      },
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Student_Upload_Template");
+    XLSX.writeFile(workbook, "Student_Creation_Bulk_Template.xlsx");
+  };
+
+  const processFile = (selectedFile) => {
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    setUploadStatus(null);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        const formatted = jsonRows.map((row, idx) => {
+          const name = String(row["Full Name"] || row["name"] || row["Name"] || row["fullName"] || "").trim();
+          const email = String(row["College Email"] || row["email"] || row["Email"] || row["collegeEmail"] || "").trim();
+          const mobile = String(row["Mobile Number"] || row["mobile_number"] || row["phone"] || row["Mobile"] || "").trim();
+          const rollNo = String(row["Roll ID"] || row["roll_number"] || row["rollNo"] || row["College ID"] || "").trim();
+          const dept = String(row["Department"] || row["department"] || row["dept"] || "COMPS").trim();
+          const year = String(row["Academic Year"] || row["year"] || row["Year"] || "FE").trim();
+          const div = String(row["Division"] || row["division"] || row["div"] || "A").trim();
+
+          let isValid = true;
+          let issue = "";
+          if (!name) {
+            isValid = false;
+            issue = "Missing Name";
+          } else if (!email || !email.includes("@")) {
+            isValid = false;
+            issue = "Invalid Email";
+          }
+
+          return {
+            id: idx + 1,
+            name,
+            email,
+            mobile_number: mobile,
+            roll_number: rollNo,
+            department: dept,
+            year,
+            division: div,
+            isValid,
+            issue,
+          };
+        });
+
+        setParsedRows(formatted);
+      } catch (err) {
+        console.error("Failed to parse Excel file:", err);
+        setUploadStatus({ type: "error", message: "Failed to read Excel file format. Please use .xlsx or .csv." });
+      }
+    };
+    reader.readAsArrayBuffer(selectedFile);
+  };
+
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+    else if (e.type === "dragleave") setDragActive(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const handleBulkSubmit = async () => {
+    const validRows = parsedRows.filter((r) => r.isValid);
+    if (validRows.length === 0) {
+      setUploadStatus({ type: "error", message: "No valid student rows found in the uploaded file." });
+      return;
+    }
+
+    setIsProcessing(true);
+    setUploadStatus(null);
+
+    try {
+      const res = await apiFetch("/admin/users/bulk-upload", {
+        method: "POST",
+        body: JSON.stringify({ students: validRows }),
+      });
+
+      if (res && (res.data || res.success)) {
+        const info = res.data || res;
+        setUploadStatus({
+          type: "success",
+          message: `🎉 Success! Created ${info.createdCount || validRows.length} student accounts and dispatched registration emails. ${info.skippedCount ? `(${info.skippedCount} skipped as already existing)` : ""}`,
+        });
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+          onClose();
+        }, 2200);
+      } else {
+        setUploadStatus({ type: "error", message: res.error || "Bulk upload failed" });
+      }
+    } catch (err) {
+      setUploadStatus({ type: "error", message: err.message || "Bulk upload encountered an error" });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const validCount = parsedRows.filter((r) => r.isValid).length;
+
+  return createPortal(
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-dialog modal-lg bulk-modal-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="modal-header-left">
+            <div className="modal-header-icon-wrap bulk-header-icon-wrap">
+              <FileSpreadsheet size={20} />
+            </div>
+            <div>
+              <h2 className="modal-title">Bulk Student Creation via Excel / CSV</h2>
+              <p className="modal-subtitle">Upload student roster spreadsheet to create accounts & auto-send email registration invitations.</p>
+            </div>
+          </div>
+          <button className="modal-close-btn" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {uploadStatus && (
+            <div className={`modal-feedback-alert ${uploadStatus.type === "error" ? "modal-feedback--error" : "modal-feedback--success"}`}>
+              {uploadStatus.message}
+            </div>
+          )}
+
+          <div className="bulk-template-card">
+            <div>
+              <span className="bulk-template-title">📥 Don't have the format template?</span>
+              <p className="bulk-template-desc">Download the official Excel template with column headers and sample data.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadTemplate}
+              className="sa-btn-secondary bulk-template-btn"
+            >
+              <Download size={14} /> Download Sample Template
+            </button>
+          </div>
+
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            className={`bulk-dropzone ${dragActive ? "bulk-dropzone--drag" : file ? "bulk-dropzone--hasfile" : ""}`}
+            onClick={() => document.getElementById("sa-excel-file-input").click()}
+          >
+            <input
+              id="sa-excel-file-input"
+              type="file"
+              accept=".xlsx, .xls, .csv"
+              style={{ display: "none" }}
+              onChange={handleFileChange}
+            />
+            <div className="bulk-dropzone-icon">
+              <UploadCloud size={24} />
+            </div>
+            <h4 className="bulk-dropzone-title">
+              {file ? file.name : "Click or drag & drop Excel / CSV spreadsheet here"}
+            </h4>
+            <p className="bulk-dropzone-desc">
+              Supports .xlsx, .xls, or .csv (Headers: Full Name, College Email, Mobile Number, Roll ID, Department, Academic Year, Division)
+            </p>
+          </div>
+
+          {parsedRows.length > 0 && (
+            <div className="bulk-preview-wrap">
+              <div className="bulk-preview-header">
+                <span className="bulk-preview-title">
+                  Spreadsheet Preview ({validCount} valid rows ready for import)
+                </span>
+                <span className="bulk-preview-subtitle">
+                  Total detected: {parsedRows.length} rows
+                </span>
+              </div>
+
+              <div className="bulk-preview-table-container">
+                <table className="bulk-preview-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Full Name</th>
+                      <th>College Email</th>
+                      <th>Roll ID</th>
+                      <th>Dept</th>
+                      <th>Year/Div</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {parsedRows.map((r) => (
+                      <tr key={r.id} className={r.isValid ? "bulk-row-valid" : "bulk-row-invalid"}>
+                        <td>{r.id}</td>
+                        <td style={{ fontWeight: "600" }}>{r.name || "—"}</td>
+                        <td style={{ color: "#3b82f6" }}>{r.email || "—"}</td>
+                        <td>{r.roll_number || "—"}</td>
+                        <td>{r.department}</td>
+                        <td>{r.year} ({r.division})</td>
+                        <td>
+                          {r.isValid ? (
+                            <span className="bulk-badge-ready">
+                              <CheckCircle2 size={12} /> Ready
+                            </span>
+                          ) : (
+                            <span className="bulk-badge-error">
+                              <AlertCircle size={12} /> {r.issue}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
+          <button type="button" className="btn-modal-cancel" onClick={onClose} disabled={isProcessing}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn-modal-submit bulk-submit-btn"
+            onClick={handleBulkSubmit}
+            disabled={isProcessing || validCount === 0}
+          >
+            {isProcessing ? "Processing & Dispatching Emails..." : `Import ${validCount} Students & Send Registration Emails`}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
 export default function ManageUsers() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState("admins"); // 'admins' | 'coordinators' | 'mentors' | 'students'
   const [searchQuery, setSearchQuery] = useState('');
+  const [isBulkExcelOpen, setIsBulkExcelOpen] = useState(false);
 
   // Tab Data States
   const [adminRequests, setAdminRequests] = useState(DEFAULT_ADMINS);
@@ -1316,6 +1612,14 @@ export default function ManageUsers() {
           >
             <KeyRound size={16} />
             <span>Generate Code</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsBulkExcelOpen(true)}
+            className="sa-btn-excel"
+          >
+            <FileSpreadsheet size={16} />
+            <span>Upload Excel (.xlsx)</span>
           </button>
           <button
             type="button"
@@ -2018,6 +2322,15 @@ export default function ManageUsers() {
         isOpen={isAssignMentorOpen}
         onClose={() => setIsAssignMentorOpen(false)}
         users={allRawUsers.length > 0 ? allRawUsers : [...students, ...mentors, ...coordinators]}
+      />
+
+      {/* Bulk Excel Upload Modal */}
+      <BulkExcelUploadModal
+        isOpen={isBulkExcelOpen}
+        onClose={() => setIsBulkExcelOpen(false)}
+        onSuccess={() => {
+          window.location.reload();
+        }}
       />
     </div>
   );

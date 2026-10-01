@@ -1557,6 +1557,31 @@
   box-shadow: 0 2px 8px rgba(22, 101, 52, 0.15);
 }
 
+/* Bulk Excel Upload Button & Modal Styling */
+.sa-btn-excel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid #a7f3d0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(4, 120, 87, 0.05);
+}
+
+.sa-btn-excel:hover {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #6ee7b7;
+  transform: translateY(-1px);
+}
+
 
 
 

@@ -5,6 +5,8 @@ import {
   generateNewRoadmap,
   updateMilestoneProgress,
 } from '../services/roadmap.service.js';
+import { generateTopicQuizAI } from '../ai/roadmap.ai.js';
+import { getCachedTopicQuiz, saveCachedTopicQuiz } from '../models/roadmap.model.js';
 
 /**
  * Controller: Get student's current active roadmap
@@ -84,6 +86,38 @@ export const updateMilestone = async (req, res, next) => {
 
     const updatedRoadmap = await updateMilestoneProgress(studentId, itemId, status, progress, completedTopics);
     return sendSuccess(res, 'Milestone status updated successfully', updatedRoadmap);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Generate 5-question AI Quiz for a specific topic with DB caching
+ */
+export const generateTopicQuiz = async (req, res, next) => {
+  try {
+    const { topicTitle, targetRole } = req.body || {};
+    if (!topicTitle || !String(topicTitle).trim()) {
+      return sendError(res, 'topicTitle is required', 400);
+    }
+
+    const cleanTopic = String(topicTitle).trim();
+
+    // 1. Check if DB/Memory cache already has this topic's AI quiz (re-use for all users)
+    const cachedQuiz = await getCachedTopicQuiz(cleanTopic);
+    if (cachedQuiz && Array.isArray(cachedQuiz.questions) && cachedQuiz.questions.length >= 5) {
+      console.log(`[Quiz Controller] DB Cache Hit for topic "${cleanTopic}". Returning stored AI quiz without calling API.`);
+      return sendSuccess(res, 'Topic quiz retrieved from DB cache', cachedQuiz);
+    }
+
+    // 2. Generate via AI for the first time
+    console.log(`[Quiz Controller] Generating NEW AI quiz for topic "${cleanTopic}"...`);
+    const quiz = await generateTopicQuizAI(cleanTopic, targetRole);
+
+    // 3. Save to DB for future requests by any user
+    await saveCachedTopicQuiz(cleanTopic, quiz);
+
+    return sendSuccess(res, 'Topic quiz generated via AI and saved to DB', quiz);
   } catch (error) {
     next(error);
   }

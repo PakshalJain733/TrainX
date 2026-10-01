@@ -273,23 +273,44 @@ export const sendOtpEmail = async ({ to, otp, name = 'Student' }) => {
 /**
  * Send a Welcome Email upon account creation via Brevo
  */
-export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
+export const sendWelcomeEmail = async ({
+  to,
+  name,
+  role = 'student',
+  mobile_number = '',
+  roll_number = '',
+  department = '',
+  year = '',
+  division = '',
+}) => {
   try {
     const roleUpper = role.toUpperCase();
     const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : '#3b82f6';
-    const regUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?email=${encodeURIComponent(to)}`;
+    
+    const queryParams = new URLSearchParams({
+      email: to || '',
+      name: name || '',
+      role: role || 'student',
+      mobile_number: mobile_number || '',
+      roll_number: roll_number || '',
+      department: department || '',
+      year: year || '',
+      division: division || '',
+    }).toString();
+
+    const regUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?${queryParams}`;
 
     const contentHtml = `
       <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
         Welcome ${name}! 🎉
       </div>
       <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
-        Your account on the <strong>Campus Training & Placement Portal</strong> has been created by your Administrator. Please complete your registration to get started.
+        Your account on the <strong>Campus Training & Placement Portal</strong> has been created by your Administrator. Click below to complete your registration with your pre-configured profile details.
       </p>
 
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
         <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-          Registration Account Details
+          Pre-Configured Account Details
         </div>
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;">
           <strong style="width: 140px;">Full Name:</strong> ${name}
@@ -297,6 +318,10 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;">
           <strong style="width: 140px;">Registered Email:</strong> <span style="font-weight:700; color:#4f46e5;">${to}</span>
         </div>
+        ${mobile_number ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Mobile Number:</strong> ${mobile_number}</div>` : ''}
+        ${roll_number ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">College / Roll ID:</strong> ${roll_number}</div>` : ''}
+        ${department ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Department:</strong> ${department}</div>` : ''}
+        ${year ? `<div style="display: flex; align-items: center; font-size: 14px; color: #334155; margin-bottom: 6px;"><strong style="width: 140px;">Academic Year:</strong> ${year} ${division ? `(Division ${division})` : ''}</div>` : ''}
         <div style="display: flex; align-items: center; font-size: 14px; color: #334155;">
           <strong style="width: 140px;">Assigned Role:</strong> 
           <span style="background-color: ${badgeBg}; color: #ffffff; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 700;">
@@ -307,10 +332,10 @@ export const sendWelcomeEmail = async ({ to, name, role = 'student' }) => {
 
       <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 16px; border-radius: 6px; margin: 20px 0;">
         <div style="font-weight: 700; color: #1e40af; font-size: 14px; margin-bottom: 4px;">
-          ⚠️ Important Registration Requirement:
+          ⚠️ One-Click Registration Link:
         </div>
         <div style="color: #1e3a8a; font-size: 13.5px; line-height: 1.5;">
-          Make sure to use this exact email address (<strong>${to}</strong>) when completing your registration so your admin profile preferences are linked correctly.
+          Clicking the button below will open the registration page with your details pre-filled. Simply create your password to finalize registration.
         </div>
       </div>
 

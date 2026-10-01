@@ -447,37 +447,7 @@ input:checked + .profile-slider:before {
   border: 1px solid #e0e7ff;
 }
 
-.profile-change-pw-wrap {
-  margin-top: 18px;
-  padding-top: 14px;
-  border-top: 1px solid #f1f5f9;
-}
 
-.profile-change-pw-btn {
-  width: 100%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 1.5px solid #e0e7ff;
-  background: #eef2ff;
-  color: #4f46e5;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.08);
-}
-
-.profile-change-pw-btn:hover {
-  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-  color: #ffffff;
-  border-color: #4f46e5;
-  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
-  transform: translateY(-1px);
-}
 
 /* Actions Bar */
 .profile-actions-bar {
@@ -663,7 +633,25 @@ input:checked + .profile-slider:before {
 .student-prof-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .student-prof-select-check { width: 15px; height: 15px; color: #4f46e5; flex-shrink: 0; }
 
-/* ── Profile Change Password Button Style ── */
+/* ── Profile Change Password & 2FA Button Styles ── */
+.profile-change-pw-wrap,
+.profile-actions-wrapper {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  width: 100% !important;
+  margin-top: 18px !important;
+  padding-top: 16px !important;
+  border-top: 1px solid #f1f5f9;
+}
+
+@media (max-width: 640px) {
+  .profile-change-pw-wrap,
+  .profile-actions-wrapper {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .profile-change-pw-btn,
 .profile-change-pass-btn {
   width: 100%;
@@ -671,33 +659,602 @@ input:checked + .profile-slider:before {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 11px 18px;
-  border-radius: 12px;
+  padding: 10px 12px;
+  border-radius: 12px !important;
   border: none !important;
-  background: linear-gradient(135deg, #4f46e5 0%, #2563eb 100%) !important;
+  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
   color: #ffffff !important;
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
 }
 
 .profile-change-pw-btn svg,
 .profile-change-pass-btn svg {
   color: #ffffff !important;
   stroke: #ffffff !important;
+  flex-shrink: 0;
 }
 
 .profile-change-pw-btn:hover,
 .profile-change-pass-btn:hover {
-  background: linear-gradient(135deg, #4338ca 0%, #1d4ed8 100%) !important;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
   color: #ffffff !important;
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
-.profile-change-pw-btn:active,
-.profile-change-pass-btn:active {
-  transform: translateY(0);
+.profile-2fa-setup-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+  color: #ffffff !important;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25) !important;
 }
+
+.profile-2fa-setup-btn svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+  flex-shrink: 0;
+}
+
+.profile-2fa-setup-btn:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.35) !important;
+  transform: translateY(-2px);
+}
+
+/* ── Additional Student Profile Helpers & Modals ── */
+.student-prof-select-disabled {
+  background: #f1f5f9 !important;
+  cursor: not-allowed !important;
+  border-color: #cbd5e1 !important;
+}
+
+.student-prof-select-text-disabled {
+  color: #64748b !important;
+}
+
+.student-prof-select-placeholder {
+  color: #94a3b8;
+}
+
+.student-prof-skill-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+
+.student-prof-skill-input:disabled {
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.student-prof-select-add-opt {
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.student-prof-select-empty-opt {
+  color: #94a3b8;
+  cursor: default;
+}
+
+.student-prof-alerts-wrap {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1.5px solid #f1f5f9;
+}
+
+.student-prof-alerts-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.student-prof-alerts-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-section-heading-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.profile-heading-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.profile-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 13px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.profile-cancel-btn:hover {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #94a3b8;
+}
+
+.profile-label-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.profile-label-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #94a3b8;
+}
+
+/* Career Track Search Dropdown */
+.profile-track-search-wrapper {
+  position: relative;
+}
+
+.profile-track-search-icon {
+  position: absolute;
+  left: 14px;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.profile-track-input {
+  padding-left: 42px !important;
+  width: 100%;
+}
+
+.profile-track-clear-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+
+.profile-track-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin-top: 6px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.profile-track-option {
+  padding: 10px 14px;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #334155;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.profile-track-option:hover {
+  background: #f8fafc;
+}
+
+.profile-track-option--selected {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Technical & Soft Skills Section */
+.profile-skills-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04);
+}
+
+.profile-skills-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.profile-skills-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-skills-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-skills-count-badge {
+  background: #e0e7ff;
+  color: #3730a3;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 9999px;
+}
+
+.profile-skills-active-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.profile-skills-active-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #475569;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.profile-skill-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #dbeafe;
+  color: #1e40af;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.profile-skill-badge-btn:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Google Authenticator 2FA Modal Styles */
+.profile-2fa-modal-overlay {
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+}
+
+.profile-2fa-modal-dialog {
+  max-width: 480px;
+  width: 90%;
+  background: #ffffff;
+  padding: 24px 28px;
+  border-radius: 16px;
+  text-align: left;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.profile-2fa-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.profile-2fa-modal-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-2fa-modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #e0e7ff;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-2fa-modal-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.profile-2fa-modal-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.profile-2fa-modal-close-btn {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.profile-2fa-modal-close-btn:hover {
+  color: #0f172a;
+}
+
+.profile-2fa-modal-loading {
+  padding: 40px 0;
+  text-align: center;
+  color: #64748b;
+}
+
+.profile-2fa-loader-spinner {
+  margin: 0 auto 12px auto;
+  color: #4f46e5;
+}
+
+.profile-2fa-loading-text {
+  font-size: 13px;
+  margin: 0;
+}
+
+.profile-2fa-alert-error {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+
+.profile-2fa-alert-success {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-2fa-qr-box {
+  text-align: center;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.profile-2fa-qr-img {
+  width: 160px;
+  height: 160px;
+  margin: 0 auto 8px auto;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+
+.profile-2fa-qr-placeholder {
+  width: 160px;
+  height: 160px;
+  background: #e2e8f0;
+  border-radius: 8px;
+  margin: 0 auto 8px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-2fa-qr-text {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.profile-2fa-secret-box {
+  margin-bottom: 16px;
+}
+
+.profile-2fa-secret-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.profile-2fa-secret-row {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  padding: 6px 10px;
+}
+
+.profile-2fa-secret-code {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.1em;
+  flex: 1;
+  font-family: monospace;
+}
+
+.profile-2fa-copy-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.profile-2fa-copy-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.profile-2fa-code-input-section {
+  margin-bottom: 20px;
+}
+
+.profile-2fa-code-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.profile-2fa-digit-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.profile-2fa-digit-input {
+  width: 42px;
+  height: 46px;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.profile-2fa-digit-input:focus {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+.profile-2fa-modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.profile-2fa-modal-cancel-btn {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.profile-2fa-modal-cancel-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.profile-2fa-modal-submit-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-2fa-modal-submit-btn:hover {
+  background: #4338ca;
+}
+
