@@ -33,12 +33,17 @@ expect('distinct mentors used in assignments', msaMentors[0].c, 15);
 // 4. Enrollments
 const enroll = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029'`))[0].c;
 expect('training_enrollments', enroll, 162);
-const paid = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND te.payment_status='paid'`))[0].c;
-const partial = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND te.payment_status='partial'`))[0].c;
-const unpaid = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND te.payment_status='unpaid'`))[0].c;
-expect('payments paid (>=3500)', paid, 159);
-expect('payments partial', partial, 3);
-expect('payments unpaid', unpaid, 0);
+const paid = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND te.payment_status='completed'`))[0].c;
+const partial = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND te.payment_status='part_payment'`))[0].c;
+const unpaid = (await q(`SELECT COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND te.payment_status='pending'`))[0].c;
+expect('payments completed (>=3500)', paid, 159);
+expect('payments part_payment', partial, 3);
+expect('payments pending', unpaid, 0);
+// No row may sit outside the four mutually-exclusive statuses.
+const stray = (await q(`SELECT COUNT(*) c FROM training_enrollments WHERE payment_status NOT IN ('pending','part_payment','completed','cancelled')`))[0].c;
+expect('payment_status values all valid', stray, 0);
+const dupes = (await q(`SELECT COUNT(*) c FROM (SELECT student_user_id, program_id FROM training_enrollments GROUP BY student_user_id, program_id HAVING COUNT(*) > 1) d`))[0].c;
+expect('no duplicate enrollments per student/program', dupes, 0);
 
 // Payment received by split
 const pb = await q(`SELECT payment_received_by r, COUNT(*) c FROM training_enrollments te JOIN users u ON u.id=te.student_user_id WHERE u.target_track='C2C 2029' AND payment_received_by <> '' GROUP BY r`);

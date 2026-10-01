@@ -63,14 +63,20 @@ export async function apiFetch(endpoint, options = {}) {
       const errorData = await res.json().catch(() => ({}));
       const message = errorData.message || `Request failed with status ${res.status}`;
       console.warn(`[apiFetch] ${endpoint}: ${message}`);
-      return { data: null, error: message, status: res.status };
+      if (res.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        sessionStorage.removeItem("token");
+        localStorage.removeItem("token");
+        sessionStorage.removeItem("authToken");
+        localStorage.removeItem("authToken");
+      }
+      return { success: false, message, data: null, error: message, status: res.status };
     }
 
     return await res.json();
   } catch (error) {
     // Fallback gracefully
     console.warn(`[apiFetch] ${endpoint}:`, error.message);
-    return { data: null, error: error.message };
+    return { success: false, message: error.message, data: null, error: error.message };
   }
 }
 

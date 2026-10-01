@@ -1,4 +1,4 @@
-import { getApiBaseUrl } from "../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../utils/api.js";
 
 async function request(endpoint, options = {}) {
   const baseUrl = getApiBaseUrl();
@@ -6,18 +6,12 @@ async function request(endpoint, options = {}) {
     ? endpoint.slice(7)
     : endpoint;
   const url = `${baseUrl}${cleanEndpoint.startsWith("/") ? "" : "/"}${cleanEndpoint}`;
-  let token =
-    sessionStorage.getItem("token") ||
-    sessionStorage.getItem("auth_token") ||
-    sessionStorage.getItem("authToken") ||
-    sessionStorage.getItem("token") ||
-    sessionStorage.getItem("auth_token") ||
-    sessionStorage.getItem("authToken");
+  let token = getAuthToken();
 
   if (!token) {
     try {
       const u = JSON.parse(
-        sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
       );
       token = u.token || u.authToken || u.auth_token || u.accessToken || u.jwt;
     } catch (e) {}
@@ -33,6 +27,12 @@ async function request(endpoint, options = {}) {
     const response = await fetch(url, { ...options, headers });
     const data = await response.json();
     if (!response.ok) {
+      if (response.status === 401 && typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        sessionStorage.removeItem("token");
+        localStorage.removeItem("token");
+        sessionStorage.removeItem("authToken");
+        localStorage.removeItem("authToken");
+      }
       throw new Error(data.message || "API request failed");
     }
     return data;

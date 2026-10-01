@@ -250,8 +250,49 @@ function Register() {
     }
   }, [searchParams]);
 
-  // TOTP Authenticator Setup State
-  const [totpSetupData, setTotpSetupData] = useState(null);
+  // C2C registration link. A C2C student arrives here from the link the college
+  // admin released after their payment, so the form is pre-filled from the
+  // intake record and the token travels with the registration request.
+  const [c2cToken, setC2cToken] = useState("");
+  const [c2cInfo, setC2cInfo] = useState(null);
+  const [c2cError, setC2cError] = useState("");
+
+  useEffect(() => {
+    const token = (searchParams.get("c2c_token") || searchParams.get("c2cToken") || "").trim();
+    if (!token) return undefined;
+    setC2cToken(token);
+    setRole("Student");
+
+    let mounted = true;
+    fetch(`${getApiBaseUrl()}/c2c/register/validate?token=${encodeURIComponent(token)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (!data.success || !data.data?.valid) {
+          setC2cError(data.message || "This registration link is not valid. Please contact your college admin.");
+          return;
+        }
+        const info = data.data;
+        setC2cInfo(info);
+        setFormData((prev) => ({
+          ...prev,
+          name: info.name || prev.name,
+          email: info.email || prev.email,
+          mobile_number: info.mobile || prev.mobile_number,
+          roll_number: info.rollNumber || prev.roll_number,
+          department: info.branch || prev.department,
+        }));
+      })
+      .catch(() => {
+        if (mounted) setC2cError("Unable to verify this registration link. Please check your connection.");
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [searchParams]);
+
+  // TOTP Authenticator Setup State  const [totpSetupData, setTotpSetupData] = useState(null);
   const [showTotpSetup, setShowTotpSetup] = useState(false);
   const [showPendingApproval, setShowPendingApproval] = useState(false);
   const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
@@ -550,6 +591,7 @@ function Register() {
           email: formData.email.trim(),
           role,
           otp,
+          ...(c2cToken ? { c2c_token: c2cToken } : {}),
         }),
       });
       const data = await response.json();
@@ -623,6 +665,19 @@ function Register() {
               <span className="stepper-badge">{Icons.shield}</span>
               <span className="stepper-label">Authenticator</span>
             </div>
+          </div>
+        )}
+
+        {c2cError && <div className="auth-error-msg">{c2cError}</div>}
+        {c2cInfo && !c2cError && (
+          <div className="c2c-register-banner">
+            <strong>C2C Program Registration</strong>
+            <span>
+              {c2cInfo.name}
+              {c2cInfo.programCode ? ` · ${c2cInfo.programCode}` : ""} — your details were pre-filled from your
+              payment record. Create a password to complete registration. Your college admin will review and
+              approve your enrollment.
+            </span>
           </div>
         )}
 

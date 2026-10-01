@@ -870,7 +870,203 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 38. Ensure Super Admin Account
+    // 38. C2C (Campus to Corporate) enrollment workflow
+    //
+    // The C2C 2026 spreadsheet importer also defines training_programs /
+    // training_enrollments, but they must not depend on a one-off script having
+    // been run. They are declared here as well; both sides use
+    // CREATE TABLE IF NOT EXISTS so whichever runs first wins and the other is
+    // a no-op. The additive ALTERs below then bring an importer-created table
+    // up to the current shape.
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS training_programs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NOT NULL,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        short_name VARCHAR(100) DEFAULT NULL,
+        placement_season_year INT DEFAULT NULL,
+        graduation_year INT DEFAULT NULL,
+        description TEXT,
+        fee_amount INT DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Active',
+        upi_id VARCHAR(128) DEFAULT NULL,
+        upi_payee_name VARCHAR(128) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_program_college_code (college_id, code)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    try { await conn.query(`ALTER TABLE training_programs ADD COLUMN upi_id VARCHAR(128) DEFAULT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE training_programs ADD COLUMN upi_payee_name VARCHAR(128) DEFAULT NULL`); } catch (_) { }
+
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS training_enrollments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        student_user_id INT NOT NULL,
+        program_id INT NOT NULL,
+        batch_id INT DEFAULT NULL,
+        c2c_registration_id INT DEFAULT NULL,
+        training_option VARCHAR(255) DEFAULT NULL,
+        fee_amount INT DEFAULT 0,
+        amount_paid INT DEFAULT 0,
+        payment_status ENUM('pending', 'part_payment', 'completed', 'cancelled') DEFAULT 'pending',
+        access_status ENUM('not_activated', 'pending', 'active', 'suspended', 'revoked') DEFAULT 'not_activated',
+        payment_mode VARCHAR(64) DEFAULT NULL,
+        utr VARCHAR(128) DEFAULT NULL,
+        payment_date DATE DEFAULT NULL,
+        payment_proof_url VARCHAR(2048) DEFAULT NULL,
+        payment_received_by VARCHAR(255) DEFAULT NULL,
+        whatsapp_group_added VARCHAR(10) DEFAULT 'No',
+        source_status VARCHAR(255) DEFAULT NULL,
+        source_timestamp VARCHAR(64) DEFAULT NULL,
+        approved_by INT DEFAULT NULL,
+        approved_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_enroll (student_user_id, program_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // One enrollment per student per program is the hard guarantee against
+    // duplicate C2C enrollment.
+    try {
+      await conn.query(
+        `ALTER TABLE training_enrollments ADD UNIQUE KEY uq_enroll (student_user_id, program_id)`
+      );
+    } catch (e) {
+      if (!/duplicate|exists/i.test(e.message)) throw e;
+    }
+
+    // 39. C2C enrollment columns, added after the base table so an
+    // importer-created table picks them up too.
+    const enrollmentColumns = [
+      "c2c_registration_id INT DEFAULT NULL",
+      "access_status ENUM('not_activated', 'pending', 'active', 'suspended', 'revoked') DEFAULT 'not_activated'",
+      "payment_mode VARCHAR(64) DEFAULT NULL",
+      "utr VARCHAR(128) DEFAULT NULL",
+      "payment_date DATE DEFAULT NULL",
+      "approved_by INT DEFAULT NULL",
+      "approved_at DATETIME DEFAULT NULL",
+    ];
+    for (const c of enrollmentColumns) {
+      try { await conn.query(`ALTER TABLE training_enrollments ADD COLUMN ${c}`); } catch (_) { }
+    }
+
+    // Widen payment_status to a plain VARCHAR, remap the legacy importer values
+    // onto the new mutually-exclusive set, then tighten it back to an ENUM.
+    // Running the three steps in this order is what makes it idempotent.
+    try {
+      await conn.query(
+        `ALTER TABLE training_enrollments MODIFY COLUMN payment_status VARCHAR(20) NOT NULL DEFAULT 'pending'`
+      );
+      await conn.query(
+        `UPDATE training_enrollments SET payment_status = 'completed'   WHERE payment_status = 'paid'`
+      );
+      await conn.query(
+        `UPDATE training_enrollments SET payment_status = 'part_payment' WHERE payment_status = 'partial'`
+      );
+      await conn.query(
+        `UPDATE training_enrollments SET payment_status = 'pending'     WHERE payment_status = 'unpaid'`
+      );
+      await conn.query(
+        `ALTER TABLE training_enrollments MODIFY COLUMN payment_status
+           ENUM('pending', 'part_payment', 'completed', 'cancelled') NOT NULL DEFAULT 'pending'`
+      );
+    } catch (e) {
+      console.warn('[DB Init] payment_status remap notice:', e.message);
+    }
+
+    // 40. C2C intake record: created when the payment QR is issued, holds the
+    // initial payment information captured before the student registers on the
+    // TrainX software, and is the source of truth for the C2C Enrollment that
+    // gets auto-created on approval.
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS c2c_registrations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        program_id INT NOT NULL,
+        college_id INT NOT NULL DEFAULT 1,
+        -- Student identifier, captured before the TrainX account exists
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) DEFAULT NULL,
+        mobile VARCHAR(20) DEFAULT NULL,
+        roll_number VARCHAR(100) DEFAULT NULL,
+        branch VARCHAR(150) DEFAULT NULL,
+        department_id INT DEFAULT NULL,
+        batch_id INT DEFAULT NULL,
+        fee_amount INT DEFAULT 0,
+        -- Initial payment information (recorded before software registration)
+        amount_paid INT DEFAULT 0,
+        utr VARCHAR(128) DEFAULT NULL,
+        payment_date DATE DEFAULT NULL,
+        payment_status ENUM('pending', 'part_payment', 'completed', 'cancelled') DEFAULT 'pending',
+        payment_mode VARCHAR(64) DEFAULT NULL,
+        payment_note VARCHAR(500) DEFAULT NULL,
+        -- UPI coordinates baked into the issued payment QR
+        upi_id VARCHAR(128) DEFAULT NULL,
+        upi_payee_name VARCHAR(128) DEFAULT NULL,
+        qr_payload VARCHAR(1024) DEFAULT NULL,
+        qr_issued_at DATETIME DEFAULT NULL,
+        -- TrainX / software registration link
+        registration_token VARCHAR(64) DEFAULT NULL,
+        registration_link_sent_at DATETIME DEFAULT NULL,
+        registered_at DATETIME DEFAULT NULL,
+        -- Placeholder user created up front so the account can be completed
+        -- when the student redeems the registration link
+        user_id INT DEFAULT NULL,
+        enrollment_id INT DEFAULT NULL,
+        status ENUM('awaiting_payment', 'awaiting_registration', 'awaiting_approval', 'enrolled', 'cancelled') DEFAULT 'awaiting_payment',
+        created_by INT DEFAULT NULL,
+        approved_by INT DEFAULT NULL,
+        approved_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_c2c_registration_token (registration_token),
+        UNIQUE KEY uq_c2c_reg_user_program (user_id, program_id),
+        UNIQUE KEY uq_c2c_reg_email_program (program_id, email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    const c2cRegistrationColumns = [
+      "c2c_registration_id INT DEFAULT NULL",
+      "payment_mode VARCHAR(64) DEFAULT NULL",
+      "payment_note VARCHAR(500) DEFAULT NULL",
+      "upi_id VARCHAR(128) DEFAULT NULL",
+      "upi_payee_name VARCHAR(128) DEFAULT NULL",
+      "qr_payload VARCHAR(1024) DEFAULT NULL",
+      "qr_issued_at DATETIME DEFAULT NULL",
+      "registration_token VARCHAR(64) DEFAULT NULL",
+      "registration_link_sent_at DATETIME DEFAULT NULL",
+      "registered_at DATETIME DEFAULT NULL",
+      "user_id INT DEFAULT NULL",
+      "enrollment_id INT DEFAULT NULL",
+      "created_by INT DEFAULT NULL",
+      "approved_by INT DEFAULT NULL",
+      "approved_at DATETIME DEFAULT NULL",
+    ];
+    for (const c of c2cRegistrationColumns) {
+      try { await conn.query(`ALTER TABLE c2c_registrations ADD COLUMN ${c}`); } catch (_) { }
+    }
+    // NULL registration_token / user_id would otherwise collide in the unique keys.
+    try { await conn.query(`ALTER TABLE c2c_registrations MODIFY COLUMN registration_token VARCHAR(64) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE c2c_registrations MODIFY COLUMN user_id INT NULL`); } catch (_) { }
+    try {
+      await conn.query(`ALTER TABLE c2c_registrations ADD UNIQUE KEY uq_c2c_registration_token (registration_token)`);
+    } catch (e) {
+      if (!/duplicate|exists/i.test(e.message)) throw e;
+    }
+    try {
+      await conn.query(`ALTER TABLE c2c_registrations ADD UNIQUE KEY uq_c2c_reg_user_program (user_id, program_id)`);
+    } catch (e) {
+      if (!/duplicate|exists/i.test(e.message)) throw e;
+    }
+    try {
+      await conn.query(`ALTER TABLE c2c_registrations ADD UNIQUE KEY uq_c2c_reg_email_program (program_id, email)`);
+    } catch (e) {
+      if (!/duplicate|exists/i.test(e.message)) throw e;
+    }
+
+    // 41. Ensure Super Admin Account
     try {
       const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
       const superPass = process.env.SUPER_ADMIN_PASSWORD;

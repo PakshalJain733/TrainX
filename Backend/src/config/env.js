@@ -44,13 +44,28 @@ export const config = {
   compiler: {
     image: process.env.CODE_RUNNER_IMAGE || 'trainx-code-runner',
     memoryMb: parseInt(process.env.CODE_RUNNER_MEMORY_MB || '256', 10),
-    cpus: process.env.CODE_RUNNER_CPUS || '0.5',
+    cpus: parseFloat(process.env.CODE_RUNNER_CPUS || '0.5'),
     pids: parseInt(process.env.CODE_RUNNER_PIDS || '64', 10),
     timeoutSeconds: parseInt(process.env.CODE_RUNNER_TIMEOUT_S || '5', 10),
     maxTimeoutSeconds: parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10),
     maxConcurrent: parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10),
   },
+  c2c: {
+    programCode: process.env.C2C_PROGRAM_CODE || 'C2C 2026',
+    programName: process.env.C2C_PROGRAM_NAME || 'Campus to Corporate (C2C) 2026',
+    // Program fee used when a C2C program row is created for the first time.
+    feeAmount: parseInt(process.env.C2C_FEE_AMOUNT || '3500', 10),
+    // UPI coordinates encoded into the C2C payment QR handed to the student.
+    // These are only defaults: the first Admin save persists them onto the
+    // training_programs row so they stay editable from the Admin C2C page.
+    upiId: process.env.C2C_UPI_ID || '',
+    payeeName: process.env.C2C_PAYEE_NAME || '',
+    // Absolute base the released registration link points at. Falls back to the
+    // configured frontend origin when unset.
+    registrationBaseUrl: process.env.C2C_REGISTRATION_BASE_URL || '',
+  },
 };
+
 
 // Validate critical env vars — error in production, warn in development
 const required = [
