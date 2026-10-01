@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, Key, Clock } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, Key, Clock, User } from "lucide-react";
 import { AdminSidebar } from "./AD_Sidebar";
 import "../Styles/AD_Layout.css";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
@@ -565,8 +565,8 @@ export default function AdminLayout() {
                             navigate("/admin/profile");
                           }}
                         >
-                          <UserCog size={15} />
-                          Edit Profile
+                          <User size={15} />
+                          View Profile
                         </button>
                         <button
                           className="admin-header__profile-item"

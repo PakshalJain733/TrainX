@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import { MentorSidebar } from "./MN_Sidebar";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
@@ -486,8 +486,8 @@ export default function MentorLayout() {
                           navigate("/mentor/profile");
                         }}
                       >
-                        <UserCog size={15} />
-                        Edit Profile
+                        <User size={15} />
+                        View Profile
                       </button>
                       <button
                         className="mentor-header__profile-item"

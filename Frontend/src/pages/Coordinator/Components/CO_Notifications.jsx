@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 import "../Styles/CO_Notifications.css";
 
 const defaultNotifications = [];
@@ -165,6 +166,8 @@ export default function CoordinatorNotifications() {
           );
         })}
       </div>
+
+      <DesktopNotificationToggle />
 
       {/* Notifications List Card */}
       <div className="notif-list-container">

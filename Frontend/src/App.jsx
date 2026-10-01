@@ -98,11 +98,13 @@ import CoordinatorBroadcast from './pages/Coordinator/Components/CO_Broadcast';
 import CoordinatorLeaderboard from './pages/Coordinator/Components/CO_Leaderboard';
 
 import ProtectedRoute from './components/Common/ProtectedRoute';
+import DesktopNotificationListener from './components/Common/DesktopNotificationListener';
 
 function App() {
   return (
     <SystemMaintenanceProvider>
       <BrowserRouter>
+        <DesktopNotificationListener />
         <Routes>
           {/* Auth Routes */}
           <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />

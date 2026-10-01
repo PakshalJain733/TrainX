@@ -870,6 +870,50 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
+    // 37a. Ensure Training Programs Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS training_programs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NULL DEFAULT 1,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) NOT NULL UNIQUE,
+        short_name VARCHAR(100) NULL,
+        placement_season_year INT NULL,
+        graduation_year INT NULL,
+        description TEXT NULL,
+        fee_amount DECIMAL(10,2) DEFAULT 0.00,
+        status VARCHAR(50) DEFAULT 'Active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 37b. Ensure Training Enrollments Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS training_enrollments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        program_id INT NOT NULL,
+        student_user_id INT NOT NULL,
+        batch_id INT NULL,
+        training_option VARCHAR(100) NULL,
+        fee_amount DECIMAL(10,2) DEFAULT 0.00,
+        amount_paid DECIMAL(10,2) DEFAULT 0.00,
+        payment_status VARCHAR(50) DEFAULT 'unpaid',
+        payment_proof_url VARCHAR(500) NULL,
+        payment_received_by VARCHAR(255) NULL,
+        whatsapp_group_added VARCHAR(50) DEFAULT 'No',
+        source_status VARCHAR(100) NULL,
+        source_timestamp VARCHAR(100) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (program_id) REFERENCES training_programs(id) ON DELETE CASCADE,
+        FOREIGN KEY (student_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+        UNIQUE KEY uq_student_program (student_user_id, program_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
     // 38. Ensure Super Admin Account
     try {
       const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';

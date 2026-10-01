@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 import "../Styles/MN_Notifications.css"
 const defaultNotifications = [];
 
@@ -151,6 +152,8 @@ export default function MentorNotifications() {
           );
         })}
       </div>
+
+      <DesktopNotificationToggle />
 
       {/* Notifications List Card */}
       <div className="mn-notif-list-container">
