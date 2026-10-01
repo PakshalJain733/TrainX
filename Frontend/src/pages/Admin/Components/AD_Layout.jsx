@@ -6,7 +6,7 @@ import "../Styles/AD_Layout.css";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
   const [activeTab, setActiveTab] = useState("all");
@@ -120,7 +120,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -340,7 +340,7 @@ export default function AdminLayout() {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const headerRightRef = useRef(null);
@@ -379,7 +379,7 @@ export default function AdminLayout() {
     try {
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       if (!token) return;
-      const res = await fetch(`${getApiBaseUrl()}/admin/profile`, {
+      const res = await fetch('/api/v1/admin/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -396,7 +396,7 @@ export default function AdminLayout() {
           };
           setUser(updated);
           let localUser = {};
-          try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+          try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
           sessionStorage.setItem("user", JSON.stringify({ ...localUser, ...updated }));
         }
       }
@@ -615,5 +615,50 @@ export default function AdminLayout() {
         onClose={() => setIsChangePasswordOpen(false)}
       />
     </div>
+  );
+}
+setIsChangePasswordOpen(true);
+                          }}
+                        >
+  <Key size={15} />
+                          Change Password
+                        </button >
+  <button
+    className="admin-header__profile-item admin-header__profile-item--danger"
+    onClick={() => {
+      setProfileOpen(false);
+      navigate("/");
+    }}
+  >
+    <LogOut size={15} />
+    Logout
+  </button>
+                      </div >
+                    </>
+                  )}
+                </div >
+              </div >
+            </header >
+
+  {/* Page Content Body */ }
+  < div className = "admin-card-body" >
+    <Outlet />
+            </div >
+
+          </div >
+        </main >
+      </div >
+      <BroadcastToast />
+      <FullNotificationModal
+        isOpen={fullNotifOpen}
+        onClose={() => setFullNotifOpen(false)}
+        notifications={notifications}
+        setNotifications={setNotifications}
+      />
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
+    </div >
   );
 }

@@ -88,7 +88,7 @@ export default function SuperAdminProfile() {
           setIs2FAEnabled(Boolean(u.two_factor_enabled || u.two_factor_secret));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleAvatarChange = (e) => {

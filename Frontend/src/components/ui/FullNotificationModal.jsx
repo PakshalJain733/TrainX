@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { 
-  Bell, X, Search, Check, Trash2, Calendar, 
-  AlertTriangle, CheckCircle2, FileText, Filter 
+import {
+  Bell, X, Search, Check, Trash2, Calendar,
+  AlertTriangle, CheckCircle2, FileText, Filter
 } from "lucide-react";
 import "./FullNotificationModal.css";
 
@@ -56,10 +56,10 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
   };
 
   const filteredNotifications = notifications.filter((n) => {
-    const matchesSearch = 
+    const matchesSearch =
       (n.title || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (n.desc || "").toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     if (!matchesSearch) return false;
 
     if (activeTab === "unread") return n.unread;
@@ -87,16 +87,16 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
           </div>
 
           <div className="full-notif-header-actions">
-            <button 
-              className="full-notif-btn" 
+            <button
+              className="full-notif-btn"
               onClick={handleMarkAllRead}
               disabled={unreadCount === 0}
               style={{ opacity: unreadCount === 0 ? 0.5 : 1 }}
             >
               <Check size={14} /> Mark all read
             </button>
-            <button 
-              className="full-notif-btn full-notif-btn-danger" 
+            <button
+              className="full-notif-btn full-notif-btn-danger"
               onClick={handleClearAll}
               disabled={totalCount === 0}
               style={{ opacity: totalCount === 0 ? 0.5 : 1 }}
@@ -113,15 +113,46 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
         <div className="full-notif-controls">
           <div className="full-notif-search">
             <Search size={15} className="full-notif-search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search notifications..." 
+            <input
+              type="text"
+              placeholder="Search notifications..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-
+          <div className="full-notif-tabs">
+            <button
+              className={`full-notif-tab ${activeTab === 'all' ? 'active' : ''}`}
+              onClick={() => setActiveTab('all')}
+            >
+              All ({totalCount})
+            </button>
+            <button
+              className={`full-notif-tab ${activeTab === 'unread' ? 'active' : ''}`}
+              onClick={() => setActiveTab('unread')}
+            >
+              Unread ({unreadCount})
+            </button>
+            <button
+              className={`full-notif-tab ${activeTab === 'alert' ? 'active' : ''}`}
+              onClick={() => setActiveTab('alert')}
+            >
+              Alerts
+            </button>
+            <button
+              className={`full-notif-tab ${activeTab === 'calendar' ? 'active' : ''}`}
+              onClick={() => setActiveTab('calendar')}
+            >
+              Events
+            </button>
+            <button
+              className={`full-notif-tab ${activeTab === 'document' ? 'active' : ''}`}
+              onClick={() => setActiveTab('document')}
+            >
+              Reports
+            </button>
+          </div>
         </div>
 
         {/* Notifications Body */}
@@ -136,8 +167,8 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
             </div>
           ) : (
             filteredNotifications.map((n) => (
-              <div 
-                key={n.id} 
+              <div
+                key={n.id}
                 className={`full-notif-card ${n.unread ? 'unread' : ''}`}
               >
                 <div className={`full-notif-card-icon type-${n.type || 'alert'}`}>
@@ -158,13 +189,13 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
                   </div>
 
                   <div className="full-notif-card-actions">
-                    <button 
+                    <button
                       className="full-notif-action-btn"
                       onClick={() => toggleSingleRead(n.id)}
                     >
                       {n.unread ? "Mark as read" : "Mark as unread"}
                     </button>
-                    <button 
+                    <button
                       className="full-notif-action-btn"
                       onClick={() => handleDeleteItem(n.id)}
                       style={{ color: '#ef4444' }}

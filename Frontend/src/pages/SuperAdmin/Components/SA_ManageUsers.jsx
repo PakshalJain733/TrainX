@@ -3,7 +3,6 @@ import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Users,
-  UserCog,
   UserPlus,
   Search,
   ShieldCheck,
@@ -74,10 +73,160 @@ const mockMentors = [];
 // Mock Data for Students Risk
 const mockStudentsRisk = [];
 
-const DEFAULT_ADMINS = [];
-const DEFAULT_COORDINATORS = [];
-const DEFAULT_MENTORS = [];
-const DEFAULT_STUDENTS = [];
+const DEFAULT_ADMINS = [
+  {
+    id: 101,
+    name: "Dr. Sandeep Meshram",
+    adminName: "Dr. Sandeep Meshram",
+    email: "sandeep.meshram@pvppcoe.ac.in",
+    phone: "+91 98201 11223",
+    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
+    designation: "Institutional Admin",
+    date: "2026-09-20",
+    status: "Verified",
+  },
+  {
+    id: 102,
+    name: "Prof. Sunita Rawat",
+    adminName: "Prof. Sunita Rawat",
+    email: "sunita.rawat@apex.edu.in",
+    phone: "+91 98112 44556",
+    college: "Apex Institute of Technology",
+    designation: "Head of Academic Affairs",
+    date: "2026-09-22",
+    status: "Verified",
+  },
+];
+
+const DEFAULT_COORDINATORS = [
+  {
+    id: 201,
+    name: "Dr. Rajesh Kumar",
+    email: "rajesh.kumar@pvppcoe.ac.in",
+    phone: "+91 98200 99887",
+    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
+    department: "Computer Engineering",
+    status: "Active",
+  },
+  {
+    id: 202,
+    name: "Prof. Archana Patil",
+    email: "archana.patil@apex.edu.in",
+    phone: "+91 98334 11223",
+    college: "Apex Institute of Technology",
+    department: "Information Technology",
+    status: "Active",
+  },
+  {
+    id: 203,
+    name: "Er. Vikram Singh",
+    email: "vikram.singh@pvppcoe.ac.in",
+    phone: "+91 99102 33445",
+    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
+    department: "AI & Data Science",
+    status: "Active",
+  },
+];
+
+const DEFAULT_MENTORS = [
+  {
+    id: 301,
+    name: "Anubhav Shukla",
+    email: "anubhav.shukla@trainx.edu",
+    phone: "+91 98201 44512",
+    college: "Apex Institute of Technology",
+    track: "Java Architecture & Microservices",
+    studentsAssigned: 42,
+    rating: "4.9",
+    status: "Active",
+  },
+  {
+    id: 302,
+    name: "Priya Sharma",
+    email: "priya.sharma@trainx.edu",
+    phone: "+91 98112 33490",
+    college: "PVPP College of Engineering",
+    track: "Fullstack React & Node.js System Architecture",
+    studentsAssigned: 38,
+    rating: "4.8",
+    status: "Active",
+  },
+  {
+    id: 303,
+    name: "Rahul Verma",
+    email: "rahul.verma@trainx.edu",
+    phone: "+91 99304 88123",
+    college: "Apex Institute of Technology",
+    track: "Advanced DSA & Dynamic Programming",
+    studentsAssigned: 50,
+    rating: "4.9",
+    status: "Active",
+  },
+  {
+    id: 304,
+    name: "Dr. Amit Deshmukh",
+    email: "amit.deshmukh@trainx.edu",
+    phone: "+91 98700 12345",
+    college: "PVPP College of Engineering",
+    track: "AI/ML & Python Data Engineering",
+    studentsAssigned: 35,
+    rating: "4.7",
+    status: "Active",
+  },
+];
+
+const DEFAULT_STUDENTS = [
+  {
+    id: 401,
+    name: "Rohan Mehta",
+    rollNo: "CSE26-042",
+    college: "PVPP College of Engineering",
+    batch: "CSE 2026 Alpha Cohort",
+    attendance: "92%",
+    risk: "Low Risk",
+    status: "Active",
+  },
+  {
+    id: 402,
+    name: "Sneha Patil",
+    rollNo: "IT25-018",
+    college: "Apex Institute of Technology",
+    batch: "Fullstack Specialization B",
+    attendance: "88%",
+    risk: "Low Risk",
+    status: "Active",
+  },
+  {
+    id: 403,
+    name: "Aditya Joshi",
+    rollNo: "AIDS26-009",
+    college: "PVPP College of Engineering",
+    batch: "Data Science & AI Cohort",
+    attendance: "71%",
+    risk: "High Risk",
+    status: "Active",
+  },
+  {
+    id: 404,
+    name: "Kavya Nair",
+    rollNo: "CSE26-088",
+    college: "Apex Institute of Technology",
+    batch: "DSA Fast-Track 2025",
+    attendance: "64%",
+    risk: "High Risk",
+    status: "Active",
+  },
+  {
+    id: 405,
+    name: "Yash Sharma",
+    rollNo: "CSE26-102",
+    college: "PVPP College of Engineering",
+    batch: "CSE 2026 Alpha Cohort",
+    attendance: "96%",
+    risk: "Low Risk",
+    status: "Active",
+  },
+];
 
 
 function RiskBadge({ risk }) {
@@ -98,47 +247,21 @@ function RiskBadge({ risk }) {
 
 /* ── Assign Trainer Modal Component ── */
 function AssignTrainerModal({ isOpen, onClose, users = [] }) {
-  const [batches, setBatches] = useState([]);
-  const [selectedBatchId, setSelectedBatchId] = useState("");
-  const [currentTrainer, setCurrentTrainer] = useState("");
-  const [isEditingTrainer, setIsEditingTrainer] = useState(false);
-  const [topicTitle, setTopicTitle] = useState("");
-  const [topicDesc, setTopicDesc] = useState("");
-  const [topicDate, setTopicDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [topicStatus, setTopicStatus] = useState("Scheduled");
-  const [successMsg, setSuccessMsg] = useState("");
+  const [batches, setBatches] = useState([
+    { id: "batch-1", name: "BE-CS-2026-A", label: "BE-CS-2026-A (Computer Science)", trainer: "Rahul Verma", topic: "DSA Marathon: Trees & Graphs", description: "BST insertion, Graph traversals (BFS/DFS), shortest paths", date: new Date().toISOString().split("T")[0], status: "Completed" },
+    { id: "batch-2", name: "TE-IT-2025-B", label: "TE-IT-2025-B (Information Tech)", trainer: "Dr. Priya Sharma", topic: "React Architecture & Custom Hooks", description: "State management, Context API, Redux Toolkit & performance", date: new Date().toISOString().split("T")[0], status: "In Progress" },
+    { id: "batch-3", name: "SE-ECS-2027-C", label: "SE-ECS-2027-C (Electronics & CS)", trainer: "Prof. Anish Deshmukh", topic: "Embedded Systems & Microcontrollers", description: "8051 Architecture, Timers, Interrupts & Assembly language", date: new Date().toISOString().split("T")[0], status: "Scheduled" },
+    { id: "batch-4", name: "BE-AI-2026-X", label: "BE-AI-2026-X (AI & Data Science)", trainer: "Er. Amit Kulkarni", topic: "Machine Learning: Supervised Algorithms", description: "Linear Regression, Logistic Regression, Decision Trees", date: new Date().toISOString().split("T")[0], status: "Scheduled" },
+  ]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    apiFetch("/batches")
-      .then((res) => {
-        const list = res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(list) && list.length > 0) {
-          const formatted = list.map((b) => ({
-            id: b.id || b.batch_id,
-            name: b.name || b.batch_name || b.code,
-            label: `${b.name || b.batch_name || b.code}`,
-            trainer: b.trainer || b.mentor_name || "Unassigned",
-            topic: b.topic || "Daily Training Session",
-            description: b.description || "Curriculum topic",
-            date: b.date || new Date().toISOString().split("T")[0],
-            status: b.status || "Scheduled",
-          }));
-          setBatches(formatted);
-          if (formatted.length > 0) {
-            setSelectedBatchId(formatted[0].id);
-            setCurrentTrainer(formatted[0].trainer);
-            setTopicTitle(formatted[0].topic);
-            setTopicDesc(formatted[0].description);
-            setTopicDate(formatted[0].date);
-            setTopicStatus(formatted[0].status);
-          }
-        } else {
-          setBatches([]);
-        }
-      })
-      .catch(() => setBatches([]));
-  }, [isOpen]);
+  const [selectedBatchId, setSelectedBatchId] = useState("batch-1");
+  const [currentTrainer, setCurrentTrainer] = useState("Rahul Verma");
+  const [isEditingTrainer, setIsEditingTrainer] = useState(false);
+  const [topicTitle, setTopicTitle] = useState("DSA Marathon: Trees & Graphs");
+  const [topicDesc, setTopicDesc] = useState("BST insertion, Graph traversals (BFS/DFS), shortest paths");
+  const [topicDate, setTopicDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [topicStatus, setTopicStatus] = useState("Completed");
+  const [successMsg, setSuccessMsg] = useState("");
 
   // Auto-fill trainer and today's topic when selected batch changes
   useEffect(() => {
@@ -151,7 +274,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       setTopicStatus(selected.status || "Scheduled");
       setIsEditingTrainer(false);
     }
-  }, [selectedBatchId, batches]);
+  }, [selectedBatchId]);
 
   if (!isOpen) return null;
 
@@ -180,7 +303,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
     const today = new Date().toISOString().split("T")[0];
     let updatedStatus = topicStatus;
-    
+
     // When editing topic for today's date, automatically set status to In Progress if currently Scheduled
     if (topicDate === today && topicStatus === "Scheduled") {
       updatedStatus = "In Progress";
@@ -253,7 +376,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   return createPortal(
     <div className="fs-portal-overlay" onClick={onClose}>
       <div className="fs-portal-dialog" onClick={e => e.stopPropagation()}>
-        
+
         {/* Header Bar */}
         <div className="fs-portal-header">
           <div className="fs-portal-header-left">
@@ -277,7 +400,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
         {/* Full-Screen Split Body */}
         <div className="fs-portal-body">
-          
+
           {/* Left Column: Topic & Trainer Editor */}
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
@@ -462,10 +585,28 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
 /* ── Assign Mentor Modal Component ── */
 function AssignMentorModal({ isOpen, onClose, users = [] }) {
-  const [selectedMentor, setSelectedMentor] = useState("");
+  const DEFAULT_MENTORS = [
+    { id: "m-1", name: "Prof. Anish Deshmukh", department: "Computer Science", email: "anish.d@college.edu", title: "Associate Professor" },
+    { id: "m-2", name: "Dr. Priya Sharma", department: "Information Tech", email: "priya.s@college.edu", title: "HOD & Professor" },
+    { id: "m-3", name: "Prof. Rajesh Kulkarni", department: "AI & Data Science", email: "rajesh.k@college.edu", title: "Assistant Professor" },
+    { id: "m-4", name: "Dr. Sunita Patil", department: "Electronics & CS", email: "sunita.p@college.edu", title: "Senior Faculty" },
+  ];
+
+  const DEFAULT_STUDENTS = [
+    { id: "st-101", name: "Aarav Mehta", roll_number: "2026-CS-001", department: "Computer Science", email: "aarav.m@college.edu", year: "FE", status: "Active" },
+    { id: "st-102", name: "Ananya Roy", roll_number: "2026-CS-042", department: "Computer Science", email: "ananya.r@college.edu", year: "SE", status: "Active" },
+    { id: "st-103", name: "Rohan Gupta", roll_number: "2025-IT-015", department: "Information Tech", email: "rohan.g@college.edu", year: "TE", status: "Active" },
+    { id: "st-104", name: "Siddharth Verma", roll_number: "2026-AI-088", department: "AI & Data Science", email: "siddharth.v@college.edu", year: "FE", status: "Active" },
+    { id: "st-105", name: "Priya Nair", roll_number: "2027-EC-023", department: "Electronics & CS", email: "priya.n@college.edu", year: "BE", status: "Active" },
+    { id: "st-106", name: "Ketan Kulkarni", roll_number: "2026-CS-112", department: "Computer Science", email: "ketan.k@college.edu", year: "TE", status: "Active" },
+    { id: "st-107", name: "Neha Deshmukh", roll_number: "2025-IT-074", department: "Information Tech", email: "neha.d@college.edu", year: "BE", status: "Active" },
+    { id: "st-108", name: "Vikram Singh", roll_number: "2026-AI-031", department: "AI & Data Science", email: "vikram.s@college.edu", year: "SE", status: "Active" },
+  ];
+
+  const [selectedMentor, setSelectedMentor] = useState("Prof. Anish Deshmukh");
   const [studentSearch, setStudentSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
-  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [selectedStudentIds, setSelectedStudentIds] = useState(["st-101", "st-102"]);
   const [successMsg, setSuccessMsg] = useState("");
 
   if (!isOpen) return null;
@@ -475,33 +616,37 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
     const r = (u.role || "").toLowerCase();
     return r.includes("mentor") || r.includes("faculty") || r.includes("prof");
   });
-  const mentors = rawMentors;
+  const mentors = rawMentors.length > 0
+    ? [...rawMentors, ...DEFAULT_MENTORS.filter(d => !rawMentors.some(u => u.email === d.email || u.id === d.id))]
+    : DEFAULT_MENTORS;
 
-  // Real DB students
+  // Merge real DB students with DEFAULT_STUDENTS so roster is ALWAYS complete and fallback ready
   const rawStudents = users.filter(u => {
     const r = (u.role || "").toLowerCase();
     return r.includes("student") || r === "user" || (!r && u.name);
   });
-  const allStudents = rawStudents;
+  const allStudents = rawStudents.length > 0
+    ? [...rawStudents, ...DEFAULT_STUDENTS.filter(d => !rawStudents.some(u => u.email === d.email || u.id === d.id))]
+    : DEFAULT_STUDENTS;
 
   // Filter students based on department pills and search input
   const filteredStudents = allStudents.filter(s => {
     const q = studentSearch.toLowerCase().trim();
     const deptStr = (s.department || s.dept || "").toLowerCase();
-    
+
     let matchesDept = true;
     if (deptFilter !== "all") {
       const filterLower = deptFilter.toLowerCase();
       matchesDept = deptStr.includes(filterLower) ||
-                    (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
-                    (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
-                    (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
-                    (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec")));
+        (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
+        (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
+        (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
+        (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec")));
     }
-    
+
     if (!matchesDept) return false;
     if (!q) return true;
-    
+
     return (
       (s.name || "").toLowerCase().includes(q) ||
       (s.email || "").toLowerCase().includes(q) ||
@@ -517,10 +662,10 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
       const deptStr = (s.department || s.dept || "").toLowerCase();
       const filterLower = filterKey.toLowerCase();
       return deptStr.includes(filterLower) ||
-             (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
-             (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
-             (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
-             (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec")));
+        (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
+        (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
+        (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
+        (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec")));
     }).length;
   };
 
@@ -578,7 +723,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
   return createPortal(
     <div className="fs-portal-overlay" onClick={onClose}>
       <div className="fs-portal-dialog" onClick={e => e.stopPropagation()}>
-        
+
         {/* Top Header Bar */}
         <div className="fs-portal-header">
           <div className="fs-portal-header-left">
@@ -602,7 +747,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
 
         {/* Modal Form Grid Body */}
         <form onSubmit={handleAssignMentorSubmit} className="fs-portal-body">
-          
+
           {/* Left Column: Mentor Selection & Live Summary */}
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
@@ -686,7 +831,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
 
           {/* Right Column: Multi-Select Student Selection Dashboard */}
           <div className="fs-portal-panel-main">
-            
+
             {/* Action Bar Header */}
             <div className="fs-portal-main-bar">
               <div>
@@ -803,7 +948,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                         checked={isChecked}
                         onChange={() => toggleStudentSelect(student.id)}
                       />
-                      
+
                       <div className="fs-portal-student-avatar">
                         {(student.name || 'S').charAt(0).toUpperCase()}
                       </div>
@@ -853,22 +998,10 @@ export default function ManageUsers() {
   const [students, setStudents] = useState(DEFAULT_STUDENTS);
   const [collegesList, setCollegesList] = useState([]);
   const [allRawUsers, setAllRawUsers] = useState([]);
-  const [selectedCollege, setSelectedCollege] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
 
   // Modal States
   const [isAssignTrainerOpen, setIsAssignTrainerOpen] = useState(false);
   const [isAssignMentorOpen, setIsAssignMentorOpen] = useState(false);
-
-  // Generate Code Form State
-  const [codeRole, setCodeRole] = useState('admins');
-  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
-  const [codeAdminName, setCodeAdminName] = useState('');
-  const [codeExpiry, setCodeExpiry] = useState('24 Hours');
-  const [codeMaxUses, setCodeMaxUses] = useState('1');
-  const [generatedCode, setGeneratedCode] = useState(null);
-  const [generatedCodesList, setGeneratedCodesList] = useState([]);
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   useEffect(() => {
     collegeAPI.getColleges()
@@ -882,7 +1015,7 @@ export default function ManageUsers() {
   }, []);
 
   useEffect(() => {
-    
+
     const fetchUsers = async () => {
       try {
         const res = await apiFetch('/admin/users');
@@ -977,51 +1110,29 @@ export default function ManageUsers() {
   };
 
   // Filtering
-  const matchesCollegeFilter = (userCollege) => {
-    if (selectedCollege === 'all') return true;
-    return (userCollege || '').toLowerCase().includes(selectedCollege.toLowerCase());
-  };
+  const filteredAdmins = adminRequests.filter(req =>
+    req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    req.college.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const matchesStatusFilter = (userStatus) => {
-    if (selectedStatus === 'all') return true;
-    const statusStr = (userStatus || '').toLowerCase();
-    if (selectedStatus === 'active') return statusStr.includes('active') || statusStr.includes('verified');
-    if (selectedStatus === 'verified') return statusStr.includes('verified');
-    if (selectedStatus === 'pending') return statusStr.includes('pending');
-    return statusStr.includes(selectedStatus.toLowerCase());
-  };
+  const filteredCoordinators = coordinators.filter(c =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.department.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const filteredAdmins = adminRequests.filter((req) => {
-    const matchesSearch =
-      req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      req.college.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && matchesCollegeFilter(req.college) && matchesStatusFilter(req.status);
-  });
+  const filteredMentors = mentors.filter(m =>
+    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    m.track.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const filteredCoordinators = coordinators.filter((c) => {
-    const matchesSearch =
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.department.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && matchesCollegeFilter(c.college) && matchesStatusFilter(c.status);
-  });
-
-  const filteredMentors = mentors.filter((m) => {
-    const matchesSearch =
-      m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.track.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && matchesCollegeFilter(m.college) && matchesStatusFilter(m.status || 'Active');
-  });
-
-  const filteredStudents = students.filter((s) => {
-    const matchesSearch =
-      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.college.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch && matchesCollegeFilter(s.college) && matchesStatusFilter(s.status || 'Active');
-  });
+  const filteredStudents = students.filter(s =>
+    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    s.college.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const tabs = [
     { id: "admins", label: "Admin", icon: ShieldCheck, count: adminRequests.length },
@@ -1078,7 +1189,14 @@ export default function ManageUsers() {
     }
   };
 
-
+  // Generate Code Form State
+  const [codeRole, setCodeRole] = useState('admins');
+  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
+  const [codeExpiry, setCodeExpiry] = useState('7 Days');
+  const [codeMaxUses, setCodeMaxUses] = useState('1');
+  const [generatedCode, setGeneratedCode] = useState(null);
+  const [generatedCodesList, setGeneratedCodesList] = useState([]);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   const loadSecureCodes = async () => {
     try {
@@ -1277,8 +1395,7 @@ export default function ManageUsers() {
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <div className="manageusers-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+          <div className="manageusers-header-title">
             <span>Manage Users &amp; Registration Codes</span>
           </div>
           <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>
@@ -1307,43 +1424,41 @@ export default function ManageUsers() {
         </div>
       </div>
 
+      {/* Navigation Tabs */}
+      <div className="manageusers-tabs-bar">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => {
+                setActiveTab(tab.id);
+                setSearchQuery('');
+              }}
+              className={`manageusers-tab-btn ${isActive ? 'manageusers-tab-btn--active' : ''}`}
+            >
+              <Icon size={15} />
+              <span>{tab.label}</span>
+              <span className="manageusers-tab-badge">
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
-
-      {/* Search Input & Filters Bar */}
-      <div className="sa-search-card" style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%", flexWrap: "wrap" }}>
-        <div className="sa-search-wrap" style={{ flex: "1 1 240px", minWidth: "200px" }}>
+      {/* Search Input */}
+      <div className="sa-search-card">
+        <div className="sa-search-wrap mu-search-wrap-full">
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()} by name, email, roll no, or college...`}
+            placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"
-          />
-        </div>
-
-        <div style={{ width: "220px", flexShrink: 0 }}>
-          <MuSelect
-            icon={Building2}
-            value={selectedCollege}
-            onChange={(val) => setSelectedCollege(val)}
-            options={[
-              { value: 'all', label: 'All Registered Colleges' },
-              ...collegesList.map((c) => ({ value: c.name, label: c.name }))
-            ]}
-          />
-        </div>
-
-        <div style={{ width: "180px", flexShrink: 0 }}>
-          <MuSelect
-            value={selectedStatus}
-            onChange={(val) => setSelectedStatus(val)}
-            options={[
-              { value: 'all', label: 'All Statuses' },
-              { value: 'active', label: 'Active Users' },
-              { value: 'verified', label: 'Verified Users' },
-              { value: 'pending', label: 'Pending Verification' },
-            ]}
           />
         </div>
       </div>
@@ -1414,7 +1529,7 @@ export default function ManageUsers() {
                                 className="manageusers-btn-verify"
                               >
                                 <CheckCircle2 size={15} />
-                                <span>Approve</span>
+                                <span>Verify Access</span>
                               </button>
                               <button
                                 type="button"
@@ -1619,9 +1734,16 @@ export default function ManageUsers() {
             <div className="modal-body modal-body-overflow-visible">
               <div className="form-group-admin">
                 <label>Assign Target Role *</label>
-                <div className="form-input-admin" style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', color: '#64748b', cursor: 'not-allowed', height: '42px', padding: '0 12px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                  Institutional Admin
-                </div>
+                <MuSelect
+                  value={codeRole}
+                  wrapperClass="mu-select"
+                  options={[
+                    { value: "mentors", label: "Mentor" },
+                    { value: "coordinators", label: "Coordinator" },
+                    { value: "admins", label: "Admin" },
+                  ]}
+                  onChange={(val) => setCodeRole(val)}
+                />
               </div>
 
               <div className="form-group-admin">
@@ -1659,7 +1781,7 @@ export default function ManageUsers() {
                     direction="up"
                     wrapperClass="mu-select"
                     options={[
-                      { value: "24 Hours", label: "1 Day" },
+                      { value: "24 Hours", label: "24 Hours" },
                       { value: "3 Days", label: "3 Days" },
                       { value: "7 Days", label: "7 Days" },
                       { value: "30 Days", label: "30 Days" },
@@ -1772,23 +1894,22 @@ export default function ManageUsers() {
 
             <form onSubmit={handleAddUserSubmit}>
               <div className="modal-body">
-                {/* Row 1: College Selection */}
-                <div className="form-group-admin sa-form-group-full">
-                  <label>Select College Institution *</label>
-                  <MuSelect
-                    value={newUserForm.collegeId}
-                    placeholder="Select College Institution"
-                    wrapperClass="mu-select"
-                    options={collegesList.map((c) => ({
-                      value: c.id,
-                      label: `${c.name} (${c.code || ''})`
-                    }))}
-                    onChange={(val) => handleCollegeChange(val)}
-                  />
-                </div>
-
-                {/* Row 2: Role Assignment & Full Name (Side by Side) */}
+                {/* Row 1: College Selection & Role Assignment (Side by Side) */}
                 <div className="form-row-2 sa-form-row-2">
+                  <div className="form-group-admin">
+                    <label>Select College Institution *</label>
+                    <MuSelect
+                      value={newUserForm.collegeId}
+                      placeholder="Select College Institution"
+                      wrapperClass="mu-select"
+                      options={collegesList.map((c) => ({
+                        value: c.id,
+                        label: `${c.name} (${c.code || ''})`
+                      }))}
+                      onChange={(val) => handleCollegeChange(val)}
+                    />
+                  </div>
+
                   <div className="form-group-admin">
                     <label>Assign Role *</label>
                     <MuSelect
@@ -1803,18 +1924,19 @@ export default function ManageUsers() {
                       onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
                     />
                   </div>
+                </div>
 
-                  <div className="form-group-admin">
-                    <label>Full Name *</label>
-                    <input
-                      type="text"
-                      required
-                      className="form-input-admin"
-                      placeholder="e.g. Priya Sharma"
-                      value={newUserForm.name}
-                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                    />
-                  </div>
+                {/* Full Name */}
+                <div className="form-group-admin sa-form-group-full">
+                  <label>Full Name *</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input-admin"
+                    placeholder="e.g. Priya Sharma"
+                    value={newUserForm.name}
+                    onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                  />
                 </div>
 
                 {/* Email & Mobile Number (Mobile Number included for non-students) */}
@@ -1875,6 +1997,7 @@ export default function ManageUsers() {
                         <label>Department *</label>
                         <MuSelect
                           value={newUserForm.departmentId}
+                          direction="up"
                           placeholder={
                             !newUserForm.collegeId
                               ? "Select College First"
@@ -1903,6 +2026,7 @@ export default function ManageUsers() {
                         <label>Academic Year</label>
                         <MuSelect
                           value={newUserForm.year || 'FE'}
+                          direction="up"
                           wrapperClass="mu-select"
                           options={[
                             { value: "FE", label: "FE" },
@@ -1917,6 +2041,7 @@ export default function ManageUsers() {
                         <label>Division</label>
                         <MuSelect
                           value={newUserForm.division || 'A'}
+                          direction="up"
                           wrapperClass="mu-select"
                           options={[
                             { value: "A", label: "Division A" },
@@ -1936,6 +2061,7 @@ export default function ManageUsers() {
                     <label>Department *</label>
                     <MuSelect
                       value={newUserForm.departmentId}
+                      direction="up"
                       placeholder={
                         !newUserForm.collegeId
                           ? "Select College First"
@@ -1989,4 +2115,4 @@ export default function ManageUsers() {
       />
     </div>
   );
-}
+}

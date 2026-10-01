@@ -56,7 +56,7 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
         style={disabled ? { background: '#f1f5f9', cursor: 'not-allowed', borderColor: '#cbd5e1' } : {}}
       >
         {Icon && <Icon className="student-prof-select-icon" />}
-        <span className="student-prof-select-text" style={disabled ? { color: '#64748b' } : {}}>{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="student-prof-select-text" style={disabled ? { color: '#64748b' } : {}}>{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && !disabled && (
@@ -93,12 +93,12 @@ function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add 
   return (
     <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}${disabled ? ' opacity-75 cursor-not-allowed' : ''}`} ref={ref}>
       <div className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`} style={{ padding: 0, ...(disabled ? { background: '#f1f5f9', cursor: 'not-allowed', borderColor: '#cbd5e1' } : {}) }}>
-        <input 
-          type="text" 
+        <input
+          type="text"
           value={query}
           disabled={disabled}
-          onChange={e => { if(!disabled) { setQuery(e.target.value); setIsOpen(true); } }}
-          onFocus={() => { if(!disabled) setIsOpen(true); }}
+          onChange={e => { if (!disabled) { setQuery(e.target.value); setIsOpen(true); } }}
+          onFocus={() => { if (!disabled) setIsOpen(true); }}
           onKeyDown={e => {
             if (!disabled && e.key === 'Enter' && query.trim()) {
               e.preventDefault();
@@ -201,7 +201,7 @@ export default function ProfilePage() {
 
   const [form, setForm] = useState(() => {
     let u = {};
-    try { u = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+    try { u = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
     const sp = u.studentProfile || {};
     let rawYear = sp.year || u.year || "";
     let rawDiv = sp.division || u.division || "";
@@ -272,7 +272,7 @@ export default function ProfilePage() {
           const user = res.data;
           const sp = user.studentProfile || {};
           let uStored = {};
-          try { uStored = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+          try { uStored = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
           const uSp = uStored.studentProfile || {};
 
           let rawYear = sp.year || user.year || uSp.year || uStored.year || "";
@@ -488,7 +488,7 @@ export default function ProfilePage() {
 
       if (res && res.data) {
         let u = {};
-        try { u = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+        try { u = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
         const userKey = u.id || u.email || res.data.id || res.data.email;
         if (userKey) {
           sessionStorage.setItem(`profile_updated_${userKey}`, "true");
@@ -1125,156 +1125,156 @@ export default function ProfilePage() {
           {/* Section 2: Technical Skills & Soft Skills (Full Horizontal Width Below 5 Pairs) */}
           <div className="profile-form-section mt-6" style={{ borderBottom: "none", paddingBottom: 0 }}>
             <div className="profile-field full-width">
-                <div style={{
-                  background: "#ffffff",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.04)"
-                }}>
-                  {/* Header */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <div style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "10px",
-                        background: "#eff6ff",
-                        color: "#2563eb",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                      }}>
-                        <Sparkles size={18} />
-                      </div>
-                      <div>
-                        <label className="profile-label" style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>
-                          Confirmed Technical & Soft Skills *
-                        </label>
-                        <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
-                          Add your core programming languages, frameworks, tools, and soft skills.
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <span style={{
-                      background: "#e0e7ff",
-                      color: "#3730a3",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      padding: "4px 12px",
-                      borderRadius: "9999px"
-                    }}>
-                      {currentSkillsList.length} Skills Selected
-                    </span>
-                  </div>
-
-                  {/* Skill Search, Select & Add */}
-                  <div style={{ marginBottom: "16px" }}>
-                    <StudentSkillSelect
-                      disabled={!isEditing}
-                      placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
-                      options={PREDEFINED_SKILLS.map((skill) => ({
-                        value: skill,
-                        label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
-                      }))}
-                      onAdd={(val) => {
-                        if (val && isEditing) {
-                          const trimmed = val.trim();
-                          if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
-                            setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
-                          }
-                        }
-                      }}
-                    />
-                  </div>
-
-                  {/* Selected Skills Container with Ultra-Clean Badges */}
-                  <div style={{
-                    background: "#f8fafc",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "12px",
-                    padding: "14px"
-                  }}>
+              <div style={{
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: "16px",
+                padding: "20px",
+                boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.04)"
+              }}>
+                {/* Header */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <div style={{
-                      fontSize: "11px",
-                      fontWeight: "700",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.6px",
-                      color: "#475569",
-                      marginBottom: "10px",
+                      width: "32px",
+                      height: "32px",
+                      borderRadius: "10px",
+                      background: "#eff6ff",
+                      color: "#2563eb",
                       display: "flex",
                       alignItems: "center",
-                      gap: "6px"
+                      justifyContent: "center"
                     }}>
-                      <CheckCircle2 size={14} color="#16a34a" />
-                      <span>Active Skills on Profile ({currentSkillsList.length})</span>
+                      <Sparkles size={18} />
                     </div>
-
-                    {currentSkillsList.length === 0 ? (
-                      <div style={{ fontSize: "13px", color: "#94a3b8", fontStyle: "italic" }}>
-                        No skills added yet. Click Edit Profile above to manage skills.
-                      </div>
-                    ) : (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                        {currentSkillsList.map((skill) => (
-                          <span
-                            key={skill}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "6px",
-                              padding: "6px 12px 6px 14px",
-                              borderRadius: "9999px",
-                              background: "#eff6ff",
-                              border: "1px solid #bfdbfe",
-                              color: "#1e40af",
-                              fontSize: "13px",
-                              fontWeight: "600",
-                              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                              transition: "all 0.15s ease"
-                            }}
-                          >
-                            <span>{skill}</span>
-                            {isEditing && (
-                              <button
-                                type="button"
-                                style={{
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  width: "18px",
-                                  height: "18px",
-                                  borderRadius: "50%",
-                                  background: "#dbeafe",
-                                  color: "#1e40af",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  padding: 0,
-                                  transition: "all 0.15s ease"
-                                }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = "#ef4444";
-                                  e.currentTarget.style.color = "#ffffff";
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = "#dbeafe";
-                                  e.currentTarget.style.color = "#1e40af";
-                                }}
-                                onClick={() => handleRemoveSkill(skill)}
-                                title={`Remove ${skill}`}
-                              >
-                                <X size={12} strokeWidth={2.5} />
-                              </button>
-                            )}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div>
+                      <label className="profile-label" style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>
+                        Confirmed Technical & Soft Skills *
+                      </label>
+                      <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
+                        Add your core programming languages, frameworks, tools, and soft skills.
+                      </span>
+                    </div>
                   </div>
+
+                  <span style={{
+                    background: "#e0e7ff",
+                    color: "#3730a3",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    padding: "4px 12px",
+                    borderRadius: "9999px"
+                  }}>
+                    {currentSkillsList.length} Skills Selected
+                  </span>
+                </div>
+
+                {/* Skill Search, Select & Add */}
+                <div style={{ marginBottom: "16px" }}>
+                  <StudentSkillSelect
+                    disabled={!isEditing}
+                    placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
+                    options={PREDEFINED_SKILLS.map((skill) => ({
+                      value: skill,
+                      label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
+                    }))}
+                    onAdd={(val) => {
+                      if (val && isEditing) {
+                        const trimmed = val.trim();
+                        if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                          setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
+                        }
+                      }
+                    }}
+                  />
+                </div>
+
+                {/* Selected Skills Container with Ultra-Clean Badges */}
+                <div style={{
+                  background: "#f8fafc",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "14px"
+                }}>
+                  <div style={{
+                    fontSize: "11px",
+                    fontWeight: "700",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.6px",
+                    color: "#475569",
+                    marginBottom: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "6px"
+                  }}>
+                    <CheckCircle2 size={14} color="#16a34a" />
+                    <span>Active Skills on Profile ({currentSkillsList.length})</span>
+                  </div>
+
+                  {currentSkillsList.length === 0 ? (
+                    <div style={{ fontSize: "13px", color: "#94a3b8", fontStyle: "italic" }}>
+                      No skills added yet. Click Edit Profile above to manage skills.
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                      {currentSkillsList.map((skill) => (
+                        <span
+                          key={skill}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            padding: "6px 12px 6px 14px",
+                            borderRadius: "9999px",
+                            background: "#eff6ff",
+                            border: "1px solid #bfdbfe",
+                            color: "#1e40af",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+                            transition: "all 0.15s ease"
+                          }}
+                        >
+                          <span>{skill}</span>
+                          {isEditing && (
+                            <button
+                              type="button"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                width: "18px",
+                                height: "18px",
+                                borderRadius: "50%",
+                                background: "#dbeafe",
+                                color: "#1e40af",
+                                border: "none",
+                                cursor: "pointer",
+                                padding: 0,
+                                transition: "all 0.15s ease"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = "#ef4444";
+                                e.currentTarget.style.color = "#ffffff";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "#dbeafe";
+                                e.currentTarget.style.color = "#1e40af";
+                              }}
+                              onClick={() => handleRemoveSkill(skill)}
+                              title={`Remove ${skill}`}
+                            >
+                              <X size={12} strokeWidth={2.5} />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
+          </div>
 
 
         </div>

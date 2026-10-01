@@ -185,18 +185,14 @@ function Register() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const [deptOptions, setDeptOptions] = useState([
-    { value: "COMPS", label: "COMPS" },
-    { value: "IT", label: "IT" },
-    { value: "AIML", label: "AIML" },
-    { value: "ECS", label: "ECS" },
-    { value: "MTRX", label: "MTRX" },
-    { value: "EXTC", label: "EXTC" },
-  ]);
+  const [deptOptions, setDeptOptions] = useState([]);
 
   useEffect(() => {
     const email = (formData.email || "").trim();
-    if (!email.includes("@") || email.split("@")[1].length < 3) return;
+    if (!email.includes("@") || email.split("@")[1].length < 3) {
+      setDeptOptions([]);
+      return;
+    }
 
     const timer = setTimeout(async () => {
       try {
@@ -833,16 +829,18 @@ function Register() {
                     />
                   </div>
 
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
-                    <RegSelect
-                      value={formData.department}
-                      wrapperClass="reg-select"
-                      options={deptOptions}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder="Select Dept"
-                    />
-                  </div>
+                  {deptOptions.length > 0 && (
+                    <div className="input-group">
+                      <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
+                      <RegSelect
+                        value={formData.department}
+                        wrapperClass="reg-select"
+                        options={deptOptions}
+                        onChange={(val) => setFormData({ ...formData, department: val })}
+                        placeholder="Select Dept"
+                      />
+                    </div>
+                  )}
 
                   <div className="input-group">
                     <FieldLabel icon={Icons.year}>Year</FieldLabel>
