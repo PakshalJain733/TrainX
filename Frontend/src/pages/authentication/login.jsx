@@ -77,12 +77,16 @@ function FieldLabel({ icon, children, htmlFor }) {
 }
 
 // ── Auth token storage helper ────────────────────────────
-// Store auth token in both sessionStorage and localStorage for 100% component compatibility
+// rememberMe=true  → localStorage   (persists across browser restarts)
+// rememberMe=false → sessionStorage (cleared when tab/browser closes)
 function storeAuthToken(token, remember) {
-  sessionStorage.setItem("token", token);
-  sessionStorage.setItem("authToken", token);
-  localStorage.setItem("token", token);
-  localStorage.setItem("authToken", token);
+  if (remember) {
+    sessionStorage.removeItem("token");
+    localStorage.setItem("token", token);
+  } else {
+    localStorage.removeItem("token");
+    sessionStorage.setItem("token", token);
+  }
 }
 
 function Login() {
@@ -259,7 +263,6 @@ function Login() {
     };
 
     sessionStorage.setItem("user", JSON.stringify(mergedUser));
-    localStorage.setItem("user", JSON.stringify(mergedUser));
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;

@@ -24,7 +24,6 @@ import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
 import mentorRoutes from './routes/mentor.routes.js';
 import coordinatorRoutes from './routes/coordinator.routes.js';
 import superadminRoutes from './routes/superadmin.routes.js';
-import c2cRoutes from './routes/c2c.routes.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
@@ -135,9 +134,6 @@ app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
 app.use('/api/v1/mentor', mentorRoutes);
 app.use('/api/v1/coordinator', coordinatorRoutes);
 app.use('/api/v1/superadmin', superadminRoutes);
-// C2C enrollment workflow. The router keeps the public token-validation route
-// open and locks every admin C2C route to admin roles.
-app.use('/api/v1/c2c', c2cRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

@@ -12,8 +12,8 @@ const toInt = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-// C2C 2026 is identified by the program code, never by a hard-coded id.
-const C2C_PROGRAM_CODE = 'C2C 2026';
+// C2C 2029 is identified by the program code, never by a hard-coded id.
+const C2C_PROGRAM_CODE = 'C2C 2029';
 
 const loadC2CStats = async () => {
   const available = await getAvailableTables([
@@ -36,7 +36,7 @@ const loadC2CStats = async () => {
         feeCollected: null,
         feeOutstanding: null,
       },
-      payments: { paid: null, partial: null, unpaid: null, cancelled: null },
+      payments: { paid: null, partial: null, unpaid: null },
       whatsapp: { added: null, notAdded: null },
       branches: [],
     };
@@ -64,7 +64,7 @@ const loadC2CStats = async () => {
         feeCollected: null,
         feeOutstanding: null,
       },
-      payments: { paid: null, partial: null, unpaid: null, cancelled: null },
+      payments: { paid: null, partial: null, unpaid: null },
       whatsapp: { added: null, notAdded: null },
       branches: [],
     };
@@ -91,10 +91,9 @@ const loadC2CStats = async () => {
 
   const [payments] = await query(
     `SELECT
-        SUM(CASE WHEN e.payment_status = 'completed' THEN 1 ELSE 0 END) AS paid,
-        SUM(CASE WHEN e.payment_status = 'part_payment' THEN 1 ELSE 0 END) AS partial,
-        SUM(CASE WHEN e.payment_status = 'pending' THEN 1 ELSE 0 END) AS unpaid,
-        SUM(CASE WHEN e.payment_status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled
+        SUM(CASE WHEN e.payment_status = 'paid' THEN 1 ELSE 0 END) AS paid,
+        SUM(CASE WHEN e.payment_status = 'partial' THEN 1 ELSE 0 END) AS partial,
+        SUM(CASE WHEN e.payment_status = 'unpaid' THEN 1 ELSE 0 END) AS unpaid
        FROM training_enrollments e
       WHERE e.program_id = ?`,
     [program.id]
@@ -145,7 +144,6 @@ const loadC2CStats = async () => {
       paid: toInt(payments?.paid) || 0,
       partial: toInt(payments?.partial) || 0,
       unpaid: toInt(payments?.unpaid) || 0,
-      cancelled: toInt(payments?.cancelled) || 0,
     },
     whatsapp: {
       added: toInt(whatsapp?.added) || 0,

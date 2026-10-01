@@ -29,7 +29,6 @@ import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
-import { peekC2cRegistrationToken, consumeC2cRegistrationToken } from '../models/c2c.model.js';
 import { config } from '../config/env.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
@@ -285,56 +284,6 @@ export const verifyTotpToken = (secret, token) => {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Resolves the C2C registration link a student arrived with, if any.
- *
- * Returns null when no token was supplied, so a normal self-registration is
- * completely unaffected. Throws when a token is supplied but unusable, which
- * stops someone redeeming a link that was never issued to them.
- */
-const resolveC2cRegistration = async (token, { email, mobile } = {}) => {
-  if (isBlank(token)) return null;
-
-  const registration = await peekC2cRegistrationToken(String(token).trim());
-  if (!registration) {
-    throw createAuthError('This C2C registration link is not valid. Please contact your college admin.', 400);
-  }
-
-  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-  const cleanMobile = typeof mobile === 'string' ? mobile.trim() : '';
-
-  // The lead already knows who it was issued to. Refuse to attach the link to a
-  // different identity than the one the payment was recorded against.
-  if (registration.email && cleanEmail && registration.email !== cleanEmail) {
-    throw createAuthError(
-      `This registration link was issued for ${registration.email}. Please register using that email address.`,
-      400
-    );
-  }
-  if (!registration.email && registration.mobile && cleanMobile && registration.mobile !== cleanMobile) {
-    throw createAuthError(
-      `This registration link was issued for the mobile number ${registration.mobile}. Please register using that number.`,
-      400
-    );
-  }
-
-  return registration;
-};
-
-/**
- * Stamps the C2C lead as registered once the TrainX account exists. The
- * approval step is what later creates the C2C Enrollment from this record.
- */
-const linkC2cRegistrationToUser = async (token, userId) => {
-  if (isBlank(token)) return null;
-  try {
-    return await consumeC2cRegistrationToken(String(token).trim(), userId);
-  } catch (error) {
-    console.warn('[C2C] Could not attach registration link to the new account:', error.message);
-    return null;
-  }
-};
-
-/**
  * Step 1 of college registration: prove ownership of the college email before
  * any account row is created. Stores the OTP in `otps` with purpose
  * 'registration' and applies a resend cooldown.
@@ -389,9 +338,6 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
   const isStudent = !role || role.includes('student');
 
   if (isStudent) {
-    // Fail fast on an unusable C2C link before the emailed OTP is burned.
-    await resolveC2cRegistration(data.c2c_token, { email, mobile: data.mobile_number });
-
     const otp = typeof data.otp === 'string' ? data.otp.trim() : '';
     if (!email || !otp) {
       throw createAuthError('Email and the verification code are required.', 400);
@@ -423,7 +369,7 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
 };
 
 export const registerUser = async (data) => {
-  const { name, email, mobile_number, password, role, secure_code, roll_number, department, year, division, semester, c2c_token } = data;
+  const { name, email, mobile_number, password, role, secure_code, roll_number, department, year, division, semester } = data;
 
   if (isBlank(email) && isBlank(mobile_number)) {
     throw createAuthError('An email address or mobile number is required.', 400);
@@ -431,10 +377,6 @@ export const registerUser = async (data) => {
   if (typeof password !== 'string' || password.length < 6) {
     throw createAuthError('Password must be at least 6 characters long.', 400);
   }
-
-  // Resolve the C2C registration link up front so an invalid one never creates
-  // an account. Null when the student is not coming from a C2C link.
-  const c2cRegistration = await resolveC2cRegistration(c2c_token, { email, mobile: mobile_number });
 
   let existingUser = null;
   if (email) {
@@ -501,12 +443,6 @@ export const registerUser = async (data) => {
 
     const updatedUser = await findUserById(existingUser.id);
     let studentProfile = await getStudentByUserId(updatedUser.id);
-
-    // C2C: the placeholder account created with the payment QR is now a real
-    // TrainX account. Approval will turn this into a C2C Enrollment.
-    if (c2cRegistration) {
-      await linkC2cRegistrationToUser(c2c_token, updatedUser.id);
-    }
 
     if (updatedUser.email && updatedUser.email.includes('@')) {
       sendWelcomeEmail({ to: updatedUser.email, name: updatedUser.name, role: updatedUser.role }).catch((err) => {
@@ -613,10 +549,6 @@ export const registerUser = async (data) => {
 
   if (codeRecord && codeRecord.id) {
     await markCodeAsUsed(codeRecord.id, user.id);
-  }
-
-  if (c2cRegistration) {
-    await linkC2cRegistrationToUser(c2c_token, user.id);
   }
 
   let studentProfile = null;
@@ -904,27 +836,20 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   const cleanIdentifier = String(identifier).trim();
   const cleanPassword = String(password).trim();
 
-  const envSuperEmail = (process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com').trim().toLowerCase();
-  const envSuperPass = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
+  const envSuperEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
+  const envSuperPass = process.env.SUPER_ADMIN_PASSWORD || 'TrainX@2026';
 
   let user = await findUserByEmailOrMobile(cleanIdentifier);
 
-  const isSuperAdminEmail =
-    cleanIdentifier.toLowerCase() === envSuperEmail ||
-    cleanIdentifier.toLowerCase() === 'admin@trainingportal.com' ||
-    cleanIdentifier.toLowerCase() === 'super.admin0987@gmail.com';
+  const isSuperAdminEmail = cleanIdentifier.toLowerCase() === envSuperEmail.toLowerCase();
+  const isSuperAdminPassword = cleanPassword === envSuperPass || cleanPassword === 'TrainX@2026';
 
-  const isSuperAdminPassword =
-    cleanPassword === envSuperPass ||
-    cleanPassword === 'TrainX@2026' ||
-    cleanPassword === 'admin123';
-
-  if (!user && isSuperAdminEmail) {
+  if (!user && isSuperAdminEmail && isSuperAdminPassword) {
     try {
       const passHash = await bcrypt.hash(cleanPassword, 12);
       const newId = await createUser({
         name: 'Super Admin',
-        email: cleanIdentifier.toLowerCase(),
+        email: envSuperEmail,
         mobile_number: '9876543210',
         password_hash: passHash,
         role: 'super_admin',
@@ -952,7 +877,7 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   const isValid = await verifyStoredPassword(user, cleanPassword);
 
   const isSuperAdminMatch = Boolean(
-    (user.email?.toLowerCase() === envSuperEmail || user.role === 'super_admin' || isSuperAdminEmail)
+    (user.email?.toLowerCase() === envSuperEmail.toLowerCase() || user.role === 'super_admin')
     && (isSuperAdminPassword || isValid)
   );
 

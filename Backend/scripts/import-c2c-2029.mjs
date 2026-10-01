@@ -267,17 +267,16 @@ async function run() {
         stats.warnings.push(`No mentor resolved for ${s.id}`);
       }
 
-      // The four mutually-exclusive C2C payment statuses.
-      const status = s.amountPaid >= FEE ? 'completed' : (s.amountPaid > 0 ? 'part_payment' : 'pending');
-      if (status === 'completed') stats.paymentsFull += 1;
-      else if (status === 'part_payment') stats.paymentsPartial += 1;
+      const status = s.amountPaid >= FEE ? 'paid' : (s.amountPaid > 0 ? 'partial' : 'unpaid');
+      if (status === 'paid') stats.paymentsFull += 1;
+      else if (status === 'partial') stats.paymentsPartial += 1;
       else stats.paymentsUnpaid += 1;
       if (digits(s.waGroup).length > 0 || norm(s.waGroup).toLowerCase().startsWith('yes')) stats.whatsappYes += 1;
 
       await conn.query(
         `INSERT INTO training_enrollments
-           (student_user_id, program_id, batch_id, training_option, fee_amount, amount_paid, payment_status, access_status, payment_proof_url, payment_received_by, whatsapp_group_added, source_status, source_timestamp)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?)
+           (student_user_id, program_id, batch_id, training_option, fee_amount, amount_paid, payment_status, payment_proof_url, payment_received_by, whatsapp_group_added, source_status, source_timestamp)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON DUPLICATE KEY UPDATE
            batch_id = VALUES(batch_id), training_option = VALUES(training_option), fee_amount = VALUES(fee_amount),
            amount_paid = VALUES(amount_paid), payment_status = VALUES(payment_status), payment_proof_url = VALUES(payment_proof_url),
@@ -321,8 +320,6 @@ try {
       description TEXT,
       fee_amount INT DEFAULT 0,
       status VARCHAR(50) DEFAULT 'Active',
-      upi_id VARCHAR(128) DEFAULT NULL,
-      upi_payee_name VARCHAR(128) DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uq_program_college_code (college_id, code)
@@ -334,22 +331,15 @@ try {
       student_user_id INT NOT NULL,
       program_id INT NOT NULL,
       batch_id INT DEFAULT NULL,
-      c2c_registration_id INT DEFAULT NULL,
       training_option VARCHAR(255) DEFAULT NULL,
       fee_amount INT DEFAULT 0,
       amount_paid INT DEFAULT 0,
-      payment_status ENUM('pending', 'part_payment', 'completed', 'cancelled') DEFAULT 'pending',
-      access_status ENUM('not_activated', 'pending', 'active', 'suspended', 'revoked') DEFAULT 'not_activated',
-      payment_mode VARCHAR(64) DEFAULT NULL,
-      utr VARCHAR(128) DEFAULT NULL,
-      payment_date DATE DEFAULT NULL,
+      payment_status ENUM('paid', 'partial', 'unpaid') DEFAULT 'unpaid',
       payment_proof_url VARCHAR(2048) DEFAULT NULL,
       payment_received_by VARCHAR(255) DEFAULT NULL,
       whatsapp_group_added VARCHAR(10) DEFAULT 'No',
       source_status VARCHAR(255) DEFAULT NULL,
       source_timestamp VARCHAR(64) DEFAULT NULL,
-      approved_by INT DEFAULT NULL,
-      approved_at DATETIME DEFAULT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uq_enroll (student_user_id, program_id)

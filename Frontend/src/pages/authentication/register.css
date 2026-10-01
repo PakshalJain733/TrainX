@@ -877,33 +877,6 @@
     font-weight: 500;
 }
 
-/* ─── C2C Program Registration Banner ─────────────────── */
-
-.c2c-register-banner {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    margin-bottom: 0.85rem;
-    border: 1px solid #c7d2fe;
-    background: var(--primary-color-light, #eef2ff);
-    border-radius: 8px;
-    font-size: 0.82rem;
-    color: #3730a3;
-    line-height: 1.5;
-}
-
-.c2c-register-banner strong {
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: #312e81;
-}
-
-.c2c-register-banner span {
-    font-weight: 400;
-    color: #4338ca;
-}
-
 /* ─── 2FA TOTP Stepper & Setup Card ─────────────────── */
 
 .totp-stepper-bar {
