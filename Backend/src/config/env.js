@@ -55,6 +55,7 @@ export const config = {
     maxTimeoutSeconds: parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10),
     maxConcurrent: parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10),
   },
+  c2cWebhookSecret: process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026',
 };
 
 // Validate critical env vars — error in production, warn in development

@@ -8,18 +8,22 @@ import {
   RefreshCw,
   ExternalLink,
   TrendingUp,
+  XCircle,
+  Clock,
 } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_C2CEnrollments.css";
 
-const PROGRAM_CODE = "C2C 2029";
-
 const statusMeta = {
-  paid: { label: "Paid", cls: "c2c-status--paid" },
-  partial: { label: "Partial", cls: "c2c-status--partial" },
-  unpaid: { label: "Unpaid", cls: "c2c-status--unpaid" },
+  completed: { label: "Completed", cls: "c2c-status--paid" },
+  paid: { label: "Completed", cls: "c2c-status--paid" },
+  "part payment": { label: "Part Payment", cls: "c2c-status--partial" },
+  partial: { label: "Part Payment", cls: "c2c-status--partial" },
+  pending: { label: "Pending", cls: "c2c-status--unpaid" },
+  unpaid: { label: "Pending", cls: "c2c-status--unpaid" },
+  cancelled: { label: "Cancelled", cls: "c2c-status--cancelled" },
 };
 
 const unwrap = (response) => {
@@ -27,59 +31,10 @@ const unwrap = (response) => {
   return response.data !== undefined ? response.data : response;
 };
 
-const firstValue = (source, keys) => {
-  if (!source || typeof source !== "object") return null;
-  for (const key of keys) {
-    const value = source[key];
-    if (value !== undefined && value !== null && String(value).trim() !== "") return value;
-  }
-  return null;
-};
-
-const getEnrollments = (payload) => {
-  if (Array.isArray(payload)) return payload;
-  if (!payload || typeof payload !== "object") return [];
-  for (const key of ["enrollments", "rows", "records", "items"]) {
-    if (Array.isArray(payload[key])) return payload[key];
-  }
-  if (Array.isArray(payload.data)) return payload.data;
-  return [];
-};
-
-const getProgram = (payload) => {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return { code: PROGRAM_CODE };
-  const value = firstValue(payload, ["program", "programInfo", "trainingProgram", "course"]);
-  if (typeof value === "string") return { code: value };
-  if (value && typeof value === "object") return value;
-  const code = firstValue(payload, ["programCode", "program_code", "code"]);
-  return { code: code || PROGRAM_CODE };
-};
-
-const getCountSources = (payload) => {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return [];
-  return [payload.counts, payload.countSummary, payload.summary, payload.paymentCounts, payload.stats, payload].filter(
-    (source) => source && typeof source === "object" && !Array.isArray(source),
-  );
-};
-
-const asNumber = (value) => {
-  if (value === undefined || value === null || value === "") return null;
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-};
-
-const getServerCount = (payload, keys, fallback) => {
-  for (const source of getCountSources(payload)) {
-    const value = firstValue(source, keys);
-    const number = asNumber(value);
-    if (number !== null) return number;
-  }
-  return fallback;
-};
-
 const formatCurrency = (value) => {
-  const number = asNumber(value);
-  return number === null ? "N/A" : `₹${number.toLocaleString("en-IN")}`;
+  if (value === undefined || value === null || value === "") return "₹0";
+  const number = Number(value);
+  return Number.isFinite(number) ? `₹${number.toLocaleString("en-IN")}` : "₹0";
 };
 
 const textValue = (value) => {
@@ -95,35 +50,39 @@ const getInitials = (name) => {
   return name.slice(0, 2).toUpperCase();
 };
 
-const hasProof = (row) => Boolean(row.paymentProofUrl && /^https?:\/\//i.test(row.paymentProofUrl));
+const hasProof = (row) => {
+  const url = row.payment_proof_url || row.paymentProofUrl;
+  return Boolean(url && /^https?:\/\//i.test(String(url).trim()));
+};
 
 export default function AdminC2CEnrollments() {
   const [rows, setRows] = useState([]);
-  const [program, setProgram] = useState({ code: PROGRAM_CODE });
   const [serverCounts, setServerCounts] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState(null);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const fetchData = useCallback(
-    () =>
-      apiFetch(`/admin/c2c/enrollments?program_code=${encodeURIComponent(PROGRAM_CODE)}`).then((response) => {
-        const payload = unwrap(response);
-        return {
-          rows: getEnrollments(payload),
-          program: getProgram(payload),
-          serverCounts: response?.error ? null : payload,
-          error: response?.error || "",
-        };
-      }),
-    [],
-  );
+  const fetchData = useCallback(() => {
+    return apiFetch("/c2c/enrollments").then((response) => {
+      const payload = unwrap(response);
+      const enrollmentsList = Array.isArray(payload?.enrollments)
+        ? payload.enrollments
+        : Array.isArray(payload)
+        ? payload
+        : [];
+      return {
+        rows: enrollmentsList,
+        serverCounts: payload?.counts || null,
+        error: response?.error || "",
+      };
+    });
+  }, []);
 
   const applyData = useCallback((next) => {
     setRows(next.rows);
-    setProgram(next.program);
     setServerCounts(next.serverCounts);
     setError(next.error);
   }, []);
@@ -150,43 +109,93 @@ export default function AdminC2CEnrollments() {
       .finally(() => setLoading(false));
   };
 
+  const handleStatusChange = async (rowId, newStatus) => {
+    setUpdatingId(rowId);
+    try {
+      const response = await apiFetch(`/c2c/enrollments/${rowId}/status`, {
+        method: "PATCH",
+        body: JSON.stringify({ payment_status: newStatus }),
+      });
+
+      if (response.error) {
+        alert(`Failed to update status: ${response.error}`);
+      } else {
+        // Optimistic / Real-time update in UI
+        const updatedRow = response.data || response;
+        setRows((prev) =>
+          prev.map((r) =>
+            r.id === rowId
+              ? {
+                  ...r,
+                  payment_status: updatedRow.payment_status || newStatus,
+                  paymentStatus: updatedRow.payment_status || newStatus,
+                  amount_paid: updatedRow.amount_paid !== undefined ? updatedRow.amount_paid : r.amount_paid,
+                  amountPaid: updatedRow.amount_paid !== undefined ? updatedRow.amount_paid : r.amountPaid,
+                  balance: updatedRow.balance !== undefined ? updatedRow.balance : r.balance,
+                }
+              : r
+          )
+        );
+        handleRefresh();
+      }
+    } catch (err) {
+      alert(`Error updating payment status: ${err.message}`);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   const branches = [...new Set(rows.map((row) => textValue(row.branch || row.department)).filter(Boolean))].sort();
+
   const filtered = rows.filter((row) => {
     const query = search.trim().toLowerCase();
     if (query) {
-      const haystack = [row.name, row.rollNumber, row.roll_number, row.email, row.mobile, row.batchName, row.batch_name]
+      const haystack = [
+        row.name,
+        row.full_name,
+        row.rollNumber,
+        row.roll_number,
+        row.email,
+        row.mobile,
+        row.batchName,
+        row.batch,
+        row.utr_number,
+        row.utrNumber,
+      ]
         .map(textValue)
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
       if (!haystack.includes(query)) return false;
     }
+
     if (branchFilter !== "all" && (row.branch || row.department) !== branchFilter) return false;
-    const status = String(row.paymentStatus || row.payment_status || "").toLowerCase();
-    if (statusFilter !== "all" && status !== statusFilter) return false;
+
+    const rawStatus = String(row.payment_status || row.paymentStatus || "").toLowerCase();
+    if (statusFilter !== "all") {
+      const normFilter = statusFilter.toLowerCase();
+      if (normFilter === "pending" && rawStatus !== "pending" && rawStatus !== "unpaid") return false;
+      if (normFilter === "part payment" && rawStatus !== "part payment" && rawStatus !== "partial") return false;
+      if (normFilter === "completed" && rawStatus !== "completed" && rawStatus !== "paid") return false;
+      if (normFilter === "cancelled" && rawStatus !== "cancelled") return false;
+    }
     return true;
   });
 
   const counts = {
-    total: getServerCount(serverCounts, ["total", "totalEnrollments", "enrolled", "enrollmentCount", "count"], rows.length),
-    paid: getServerCount(serverCounts, ["paid", "paidCount", "fullyPaid"], rows.filter((row) => String(row.paymentStatus || row.payment_status || "").toLowerCase() === "paid").length),
-    partial: getServerCount(serverCounts, ["partial", "partialCount"], rows.filter((row) => String(row.paymentStatus || row.payment_status || "").toLowerCase() === "partial").length),
-    unpaid: getServerCount(serverCounts, ["unpaid", "unpaidCount"], rows.filter((row) => String(row.paymentStatus || row.payment_status || "").toLowerCase() === "unpaid").length),
+    total: serverCounts?.total ?? rows.length,
+    completed: serverCounts?.completed ?? rows.filter((r) => ["completed", "paid"].includes(String(r.payment_status || r.paymentStatus).toLowerCase())).length,
+    partPayment: serverCounts?.partPayment ?? rows.filter((r) => ["part payment", "partial"].includes(String(r.payment_status || r.paymentStatus).toLowerCase())).length,
+    pending: serverCounts?.pending ?? rows.filter((r) => ["pending", "unpaid"].includes(String(r.payment_status || r.paymentStatus).toLowerCase())).length,
+    cancelled: serverCounts?.cancelled ?? rows.filter((r) => String(r.payment_status || r.paymentStatus).toLowerCase() === "cancelled").length,
   };
-
-  const programName = textValue(firstValue(program, ["name", "title"])) || textValue(program.code) || PROGRAM_CODE;
-  const programCode = textValue(firstValue(program, ["code", "programCode", "program_code"])) || PROGRAM_CODE;
-  const programFee = firstValue(program, ["feeAmount", "programFee", "fee", "amount"]);
-  const firstRowFee = rows.length > 0 ? firstValue(rows[0], ["feeAmount", "fee", "programFee"]) : null;
-  const feeAmount = programFee ?? firstRowFee;
-  const paidLabel = feeAmount === null ? "Paid" : `Paid (Full ${formatCurrency(feeAmount)})`;
 
   return (
     <div className="admin-page-inner c2c-container">
       <SectionHeader
         icon={Briefcase}
-        title={`${programName} Enrollments`}
-        description={`Program ${programCode} · Enrollment, payment, and mentor allocation records returned from the database.`}
+        title="C2C Program Enrollments"
+        description="Live Google Form submissions, payment verification, and enrollment management."
         action={
           <button type="button" className="c2c-btn-refresh" onClick={handleRefresh} disabled={loading}>
             <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
@@ -200,7 +209,8 @@ export default function AdminC2CEnrollments() {
         </div>
       )}
 
-      <div className="c2c-stats-grid">
+      {/* 5 Summary Stat Cards */}
+      <div className="c2c-stats-grid c2c-stats-grid-5">
         <div className="c2c-stat-card">
           <div className="c2c-stat-icon c2c-stat-icon--indigo"><Users size={22} /></div>
           <div className="c2c-stat-info">
@@ -208,25 +218,36 @@ export default function AdminC2CEnrollments() {
             <span className="c2c-stat-lbl">Total Enrolled</span>
           </div>
         </div>
+
         <div className="c2c-stat-card">
           <div className="c2c-stat-icon c2c-stat-icon--emerald"><CheckCircle2 size={22} /></div>
           <div className="c2c-stat-info">
-            <span className="c2c-stat-num">{counts.paid}</span>
-            <span className="c2c-stat-lbl">{paidLabel}</span>
+            <span className="c2c-stat-num">{counts.completed}</span>
+            <span className="c2c-stat-lbl">Completed</span>
           </div>
         </div>
+
         <div className="c2c-stat-card">
           <div className="c2c-stat-icon c2c-stat-icon--amber"><TrendingUp size={22} /></div>
           <div className="c2c-stat-info">
-            <span className="c2c-stat-num">{counts.partial}</span>
-            <span className="c2c-stat-lbl">Partial Payment</span>
+            <span className="c2c-stat-num">{counts.partPayment}</span>
+            <span className="c2c-stat-lbl">Part Payment</span>
           </div>
         </div>
+
         <div className="c2c-stat-card">
-          <div className="c2c-stat-icon c2c-stat-icon--rose"><AlertCircle size={22} /></div>
+          <div className="c2c-stat-icon c2c-stat-icon--rose"><Clock size={22} /></div>
           <div className="c2c-stat-info">
-            <span className="c2c-stat-num">{counts.unpaid}</span>
-            <span className="c2c-stat-lbl">Unpaid</span>
+            <span className="c2c-stat-num">{counts.pending}</span>
+            <span className="c2c-stat-lbl">Pending</span>
+          </div>
+        </div>
+
+        <div className="c2c-stat-card">
+          <div className="c2c-stat-icon" style={{ background: "#f1f5f9", color: "#64748b" }}><XCircle size={22} /></div>
+          <div className="c2c-stat-info">
+            <span className="c2c-stat-num">{counts.cancelled}</span>
+            <span className="c2c-stat-lbl">Cancelled</span>
           </div>
         </div>
       </div>
@@ -237,9 +258,9 @@ export default function AdminC2CEnrollments() {
           <input
             type="text"
             className="c2c-search-input"
-            placeholder="Search by student name, roll ID, email, mobile or batch..."
+            placeholder="Search by student name, email, roll number, mobile or UTR..."
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <div className="c2c-filters">
@@ -256,10 +277,11 @@ export default function AdminC2CEnrollments() {
             value={statusFilter}
             onChange={(val) => setStatusFilter(val)}
             options={[
-              { value: "all", label: "All Payments" },
-              { value: "paid", label: "Paid" },
-              { value: "partial", label: "Partial" },
-              { value: "unpaid", label: "Unpaid" },
+              { value: "all", label: "All Statuses" },
+              { value: "Pending", label: "Pending" },
+              { value: "Part Payment", label: "Part Payment" },
+              { value: "Completed", label: "Completed" },
+              { value: "Cancelled", label: "Cancelled" },
             ]}
             className="c2c-custom-select"
           />
@@ -272,35 +294,49 @@ export default function AdminC2CEnrollments() {
             <thead>
               <tr>
                 <th>Student</th>
-                <th>Branch / Batch</th>
-                <th>Enrollment</th>
+                <th>College / Branch</th>
+                <th>Batch</th>
+                <th>Total Fee</th>
+                <th>Amount Paid</th>
+                <th>Balance</th>
                 <th>Payment Status</th>
-                <th>Amount</th>
-                <th>Paid To</th>
-                <th>Mentor</th>
-                <th>WhatsApp</th>
+                <th>UTR Number</th>
                 <th>Proof</th>
+                <th>Date</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9}><div className="c2c-empty">Loading enrollments...</div></td></tr>
+                <tr>
+                  <td colSpan={11}>
+                    <div className="c2c-empty">Loading C2C enrollments...</div>
+                  </td>
+                </tr>
               ) : filtered.length > 0 ? (
                 filtered.map((row, index) => {
-                  const paymentStatus = String(row.paymentStatus || row.payment_status || "").toLowerCase();
-                  const status = statusMeta[paymentStatus] || { label: "N/A", cls: "" };
-                  const name = textValue(row.name) || "N/A";
-                  const rollNumber = textValue(row.rollNumber || row.roll_number) || "N/A";
+                  const currentStatus = row.payment_status || row.paymentStatus || "Pending";
+                  const statusKey = String(currentStatus).toLowerCase();
+                  const meta = statusMeta[statusKey] || { label: currentStatus, cls: "" };
+
+                  const name = textValue(row.full_name || row.name) || "Student";
+                  const rollNumber = textValue(row.roll_number || row.rollNumber) || "N/A";
+                  const college = textValue(row.college) || "N/A";
                   const branch = textValue(row.branch || row.department) || "N/A";
-                  const batchName = textValue(row.batchName || row.batch_name) || "N/A";
-                  const enrollment = textValue(row.trainingOption || row.training_option || row.enrollmentType || row.enrollment_type) || "N/A";
-                  const amountPaid = firstValue(row, ["amountPaid", "amount_paid", "paidAmount"]);
-                  const fee = firstValue(row, ["feeAmount", "fee_amount", "programFee"]);
-                  const mentorName = textValue(row.mentorName || row.mentor_name) || "N/A";
-                  const whatsapp = textValue(row.whatsappGroupAdded || row.whatsapp_group_added);
-                  const whatsappAdded = whatsapp?.toLowerCase().startsWith("yes");
+                  const year = textValue(row.year) || "";
+                  const div = textValue(row.division) || "";
+                  const batchName = textValue(row.batch || row.batchName) || "C2C 2026";
+                  const utr = textValue(row.utr_number || row.utrNumber) || "—";
+                  const proofUrl = row.payment_proof_url || row.paymentProofUrl;
+                  const dateStr = row.created_at || row.createdAt || row.payment_date || row.paymentDate;
+                  const formattedDate = dateStr ? new Date(dateStr).toLocaleDateString("en-IN") : "—";
+
+                  const totalFee = row.total_fee || row.totalFee || 3500;
+                  const amountPaid = row.amount_paid !== undefined ? row.amount_paid : row.amountPaid || 0;
+                  const balance = row.balance !== undefined ? row.balance : Math.max(0, totalFee - amountPaid);
+
                   return (
-                    <tr key={textValue(row.enrollmentId || row.enrollment_id || row.id) || index}>
+                    <tr key={row.id || index}>
                       <td>
                         <div className="c2c-user-cell">
                           <div className="c2c-avatar">{getInitials(name)}</div>
@@ -316,45 +352,84 @@ export default function AdminC2CEnrollments() {
                       </td>
                       <td>
                         <div className="c2c-branch">{branch}</div>
-                        <div className="c2c-batch">{batchName}</div>
-                      </td>
-                      <td><span className="c2c-enrollment-type">{enrollment}</span></td>
-                      <td>
-                        <span className={`c2c-status ${status.cls}`}>{status.label}</span>
-                        {row.sourceStatus && <div className="c2c-source-hint" title={row.sourceStatus}>Note</div>}
+                        <div className="c2c-batch" title={college}>
+                          {college !== "N/A" ? college : ""}{year || div ? ` (${year} ${div})`.trim() : ""}
+                        </div>
                       </td>
                       <td>
-                        <div className="c2c-amount">{formatCurrency(amountPaid)}</div>
-                        <div className="c2c-fee">of {formatCurrency(fee)}</div>
-                      </td>
-                      <td><span className="c2c-paidto">{textValue(row.paymentReceivedBy || row.payment_received_by) || "N/A"}</span></td>
-                      <td>
-                        <div className="c2c-mentor">{mentorName}</div>
-                        {textValue(row.mentorPhone || row.mentor_phone) && <div className="c2c-mentor-phone">Ph: {textValue(row.mentorPhone || row.mentor_phone)}</div>}
+                        <span className="c2c-enrollment-type">{batchName}</span>
                       </td>
                       <td>
-                        <span className={`c2c-wa ${whatsappAdded ? "c2c-wa--yes" : "c2c-wa--no"}`}>
-                          {whatsapp || "N/A"}
-                        </span>
+                        <div className="c2c-amount">{formatCurrency(totalFee)}</div>
+                      </td>
+                      <td>
+                        <div className="c2c-amount" style={{ color: amountPaid > 0 ? "#059669" : "#64748b" }}>
+                          {formatCurrency(amountPaid)}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="c2c-amount" style={{ color: balance > 0 ? "#e11d48" : "#059669" }}>
+                          {formatCurrency(balance)}
+                        </div>
+                      </td>
+                      <td>
+                        <select
+                          className={`c2c-status-select ${meta.cls}`}
+                          value={currentStatus}
+                          disabled={updatingId === row.id}
+                          onChange={(e) => handleStatusChange(row.id, e.target.value)}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Part Payment">Part Payment</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Cancelled">Cancelled</option>
+                        </select>
+                      </td>
+                      <td>
+                        <span style={{ fontFamily: "monospace", fontSize: "12px", color: "#334155" }}>{utr}</span>
                       </td>
                       <td>
                         {hasProof(row) ? (
-                          <a href={row.paymentProofUrl} target="_blank" rel="noreferrer noopener" className="c2c-proof-link">
-                            <ExternalLink size={13} /> View
+                          <a
+                            href={proofUrl}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="c2c-proof-link"
+                          >
+                            <ExternalLink size={13} /> View Proof
                           </a>
                         ) : (
                           <span className="c2c-proof-none">N/A</span>
                         )}
+                      </td>
+                      <td>
+                        <span style={{ fontSize: "12px", color: "#64748b" }}>{formattedDate}</span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="c2c-btn-refresh"
+                          style={{ padding: "4px 8px", fontSize: "11px" }}
+                          disabled={updatingId === row.id}
+                          onClick={() => {
+                            const newAmount = prompt(`Update amount paid for ${name} (Total Fee: ₹3,500):`, amountPaid);
+                            if (newAmount !== null && !isNaN(parseFloat(newAmount))) {
+                              handleStatusChange(row.id, currentStatus, parseFloat(newAmount));
+                            }
+                          }}
+                        >
+                          Edit Paid
+                        </button>
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={11}>
                     <div className="c2c-empty">
                       <Users size={26} />
-                      <p>No records yet</p>
+                      <p>No C2C enrollment records found</p>
                     </div>
                   </td>
                 </tr>

@@ -205,6 +205,27 @@
 .c2c-status--paid { background: #ecfdf5; color: #059669; }
 .c2c-status--partial { background: #fffbeb; color: #d97706; }
 .c2c-status--unpaid { background: #fff1f2; color: #e11d48; }
+.c2c-status--cancelled { background: #f1f5f9; color: #64748b; }
+
+.c2c-stats-grid-5 {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.c2c-status-select {
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.c2c-status-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
 
 .c2c-source-hint {
   display: inline-block;
