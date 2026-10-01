@@ -31,8 +31,9 @@ const getBrevoClient = () => {
 export const sendEmail = async ({ to, toName = '', subject, htmlContent, textContent, templateId, params }) => {
   const apiKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) {
-    console.error('[Brevo Error] BREVO_API_KEY is not configured in environment variables.');
-    throw new Error('Brevo API key is missing');
+    console.warn('[Brevo Warning] BREVO_API_KEY is not configured in environment variables. Email logged locally.');
+    console.log(`📧 [Email Dispatch Fallback] To: ${to} | Subject: ${subject}`);
+    return { messageId: `fallback_${Date.now()}`, fallback: true };
   }
 
   const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'ganeshvshinde2006@gmail.com').trim().replace(/^["']|["']$/g, '');
