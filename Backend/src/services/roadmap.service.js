@@ -155,8 +155,8 @@ export const generateNewRoadmap = async (studentId, targetRole = '', signalData 
 /**
  * Service: Update progress of a specific milestone item
  */
-export const updateMilestoneProgress = async (studentId, itemId, status, progress) => {
-  const updated = await updateMilestoneItemStatus(studentId, itemId, status, progress);
+export const updateMilestoneProgress = async (studentId, itemId, status, progress, completedTopics) => {
+  const updated = await updateMilestoneItemStatus(studentId, itemId, status, progress, completedTopics);
   if (!updated) {
     throw new Error('Milestone item not found or update failed');
   }

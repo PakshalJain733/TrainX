@@ -23,7 +23,7 @@ export const getInterviewById = async (req, res, next) => {
       return sendSuccess(res, 'Interview sessions retrieved successfully', sessions);
     }
     const session = await getInterviewSessionByIdModel(req.params.id);
-    if (!session || session.user_id !== userId) {
+    if (!session || Number(session.user_id) !== Number(userId)) {
       return sendError(res, 'Interview session not found', 404);
     }
     return sendSuccess(res, 'Interview session retrieved successfully', session);
@@ -35,12 +35,22 @@ export const getInterviewById = async (req, res, next) => {
 export const saveInterviewSession = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
-    const { details } = req.body || {};
+    const { details, interviewType, overallScore, grade, feedback } = req.body || {};
 
-    const payload = validateAndNormalizeSession(details);
+    const payload = validateAndNormalizeSession({
+      ...(details || {}),
+      interviewType: interviewType || details?.interviewType || details?.topic || details?.role,
+      overallScore: overallScore ?? details?.overallScore ?? details?.scorecard?.overallScore,
+      grade: grade || details?.grade || details?.scorecard?.grade,
+      feedback: feedback || details?.feedback || details?.scorecard?.feedback,
+    });
     const session = await createInterviewSessionModel({
       user_id: userId,
-      ...payload,
+      interview_type: payload.interview_type,
+      overall_score: payload.overall_score,
+      grade: payload.grade,
+      feedback: payload.feedback,
+      details: payload.details,
     });
     return sendSuccess(res, 'Interview session saved successfully', session, 201);
   } catch (error) {
@@ -50,10 +60,10 @@ export const saveInterviewSession = async (req, res, next) => {
 
 export const validateAndNormalizeSession = (details = {}) => {
   const normalized = {
-    overall_score: details.overallScore ?? statsOverall(details),
-    grade: details.grade || 'Average',
-    feedback: details.feedback || '',
-    interview_type: details.interviewType || 'Technical Mock',
+    overall_score: details.overallScore ?? details.scorecard?.overallScore ?? statsOverall(details),
+    grade: details.grade || details.scorecard?.grade || 'Average',
+    feedback: details.feedback || details.scorecard?.feedback || '',
+    interview_type: details.interviewType || details.topic || details.role || 'Technical Mock',
     details,
   };
   return normalized;
@@ -64,4 +74,4 @@ const statsOverall = (d) => {
   const history = Array.isArray(d.evaluationHistory) ? d.evaluationHistory : [];
   if (history.length === 0) return 0;
   return Number(((history.reduce((a, e) => a + (e.score || 0), 0) / history.length) * 10).toFixed(2));
-};
+};

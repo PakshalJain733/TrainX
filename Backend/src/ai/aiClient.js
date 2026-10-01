@@ -17,21 +17,35 @@ const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const DEFAULT_MODELS = {
   nvidia: ['openai/gpt-oss-20b'],
   gemini: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
-  groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  groq: ['qwen/qwen3.8-27b', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
 };
 
 const PLACEHOLDER_KEYS = new Set(['your_ai_api_key', 'your_api_key', 'changeme', '']);
 
-export const getApiKey = () =>
-  config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
+export const getActiveKeyAndProvider = () => {
+  const candidateKeys = [
+    config.ai?.apiKey,
+    process.env.AI_API_KEY,
+    process.env.Groq_AI_API_KEY,
+    process.env.GROQ_AI_API_KEY,
+    process.env.GROQ_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.NVIDIA_API_KEY,
+  ].filter(Boolean);
 
-export const detectProvider = (key = getApiKey()) => {
-  if (!key || PLACEHOLDER_KEYS.has(String(key).trim())) return null;
-  if (key.startsWith('nvapi-')) return 'nvidia';
-  if (key.startsWith('AIza')) return 'gemini';
-  if (key.startsWith('gsk_')) return 'groq';
-  return null;
+  for (const rawKey of candidateKeys) {
+    const key = String(rawKey).trim();
+    if (!key || PLACEHOLDER_KEYS.has(key)) continue;
+    if (key.startsWith('nvapi-')) return { key, provider: 'nvidia' };
+    if (key.startsWith('AIza')) return { key, provider: 'gemini' };
+    if (key.startsWith('gsk_')) return { key, provider: 'groq' };
+  }
+  return { key: '', provider: null };
 };
+
+export const getApiKey = () => getActiveKeyAndProvider().key;
+
+export const detectProvider = () => getActiveKeyAndProvider().provider;
 
 /**
  * Ordered list of models to attempt. The configured AI_MODEL is always tried
@@ -39,7 +53,12 @@ export const detectProvider = (key = getApiKey()) => {
  */
 const getModelsToTry = (provider, configured) => {
   const fallback = DEFAULT_MODELS[provider] || [];
-  if (configured && !placeholderModel(configured)) return Array.from(new Set([configured, ...fallback]));
+  if (configured && !placeholderModel(configured)) {
+    if (provider === 'groq' && configured.toLowerCase().startsWith('gemini')) {
+      return Array.from(new Set(fallback));
+    }
+    return Array.from(new Set([configured, ...fallback]));
+  }
   return Array.from(new Set(fallback));
 };
 

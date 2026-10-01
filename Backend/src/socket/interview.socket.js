@@ -103,7 +103,7 @@ async function finalizeSession(io, socket, session, reason = 'completed') {
   try {
     await createInterviewSessionModel({
       user_id: session.userId,
-      interview_type: session.topic || 'Technical Mock',
+      interview_type: session.topic || session.role || 'Technical Mock',
       overall_score: finalReport.overallScore,
       grade: finalReport.grade || 'Average',
       feedback: finalReport.feedback || '',
@@ -119,6 +119,8 @@ async function finalizeSession(io, socket, session, reason = 'completed') {
         questions: session.evaluationHistory.map((e) => e.question),
         answers: session.evaluationHistory.map((e) => e.answer),
         questionScores: session.evaluationHistory.map((e) => e.score),
+        questionFeedbacks: session.evaluationHistory.map((e) => e.feedback),
+        modelAnswers: session.evaluationHistory.map((e) => e.modelAnswer),
         overallScore: finalReport.overallScore,
         technical: finalReport.technical,
         communication: finalReport.communication,
@@ -128,7 +130,10 @@ async function finalizeSession(io, socket, session, reason = 'completed') {
         skillGaps: finalReport.recommendedTopics,
         recommendations: finalReport.improvementAreas,
         feedback: finalReport.feedback,
+        readiness: finalReport.readiness,
+        grade: finalReport.grade,
         evaluationHistory: session.evaluationHistory,
+        scorecard: finalReport,
       },
     });
   } catch (err) {

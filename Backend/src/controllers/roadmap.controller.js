@@ -76,13 +76,13 @@ export const updateMilestone = async (req, res, next) => {
   try {
     const studentId = req.user?.id || req.user?.userId || 1;
     const { itemId } = req.params;
-    const { status, progress } = req.body || {};
+    const { status, progress, completedTopics } = req.body || {};
 
     if (!status) {
       return sendError(res, 'Status field is required (completed, in-progress, locked)', 400);
     }
 
-    const updatedRoadmap = await updateMilestoneProgress(studentId, itemId, status, progress);
+    const updatedRoadmap = await updateMilestoneProgress(studentId, itemId, status, progress, completedTopics);
     return sendSuccess(res, 'Milestone status updated successfully', updatedRoadmap);
   } catch (error) {
     next(error);

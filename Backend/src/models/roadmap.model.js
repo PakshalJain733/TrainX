@@ -22,6 +22,7 @@ const formatRoadmapResult = (roadmap, items) => ({
     topics: typeof item.topics === 'string' ? JSON.parse(item.topics) : (item.topics || []),
     syllabus: typeof item.syllabus === 'string' ? JSON.parse(item.syllabus) : (item.syllabus || []),
     resources: typeof item.resources === 'string' ? JSON.parse(item.resources) : (item.resources || []),
+    completedTopics: typeof item.completed_topics === 'string' ? JSON.parse(item.completed_topics) : (item.completed_topics || []),
     quizzes: item.quizzes || 0,
     exercises: item.exercises || 0,
   })),
@@ -201,15 +202,24 @@ export const saveRoadmap = async (studentId, targetRole, careerTrackName, milest
 /**
  * Update milestone status & progress
  */
-export const updateMilestoneItemStatus = async (studentId, itemId, status, progress) => {
+export const updateMilestoneItemStatus = async (studentId, itemId, status, progress, completedTopics) => {
   const sId = Number(studentId);
   const itId = Number(itemId);
 
   try {
-    const res = await query(
-      'UPDATE roadmap_items SET status = ?, progress = ? WHERE id = ?',
-      [status, progress, itId]
-    );
+    const completedJson = completedTopics ? JSON.stringify(completedTopics) : null;
+    let res;
+    if (completedJson !== null) {
+      res = await query(
+        'UPDATE roadmap_items SET status = ?, progress = ?, completed_topics = ? WHERE id = ?',
+        [status, progress, completedJson, itId]
+      );
+    } else {
+      res = await query(
+        'UPDATE roadmap_items SET status = ?, progress = ? WHERE id = ?',
+        [status, progress, itId]
+      );
+    }
 
     if (res && res.affectedRows > 0) {
       return getRoadmapByStudentId(sId);
@@ -224,6 +234,7 @@ export const updateMilestoneItemStatus = async (studentId, itemId, status, progr
     if (item) {
       item.status = status;
       if (progress !== undefined) item.progress = progress;
+      if (completedTopics !== undefined) item.completedTopics = completedTopics;
     }
     return mockData;
   }
