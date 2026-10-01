@@ -60,9 +60,9 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) { }
 
     // 3. Ensure Batches table
     await conn.query(`
@@ -142,10 +142,10 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE otps ADD COLUMN purpose VARCHAR(50) NOT NULL DEFAULT 'login'`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE otps ADD COLUMN attempts INT NOT NULL DEFAULT 0`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE otps ADD COLUMN consumed_at DATETIME NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE otps ADD INDEX idx_otps_lookup (email, purpose, expires_at)`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN purpose VARCHAR(50) NOT NULL DEFAULT 'login'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN attempts INT NOT NULL DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN consumed_at DATETIME NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE otps ADD INDEX idx_otps_lookup (email, purpose, expires_at)`); } catch (_) { }
 
     // 5. Ensure Students Table
     await conn.query(`

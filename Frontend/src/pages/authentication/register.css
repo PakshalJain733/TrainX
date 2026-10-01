@@ -2003,3 +2003,87 @@
 .get-otp-inline-btn:disabled:not(.active) {
   opacity: 0.7;
 }
+
+/* ── Pending Admin Approval Screen ── */
+.pending-approval-card {
+  text-align: center;
+  padding: 20px 10px;
+}
+
+.pending-approval-icon-wrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: #fef3c7;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px auto;
+  border: 2px solid #fde68a;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.15);
+}
+
+.pending-approval-title {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.pending-approval-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 18px 0;
+}
+
+.pending-approval-box {
+  background: #fffbeb;
+  border: 1.5px solid #fde68a;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 22px;
+  text-align: left;
+}
+
+.pending-approval-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b45309;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.pending-approval-badge {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: #fef3c7;
+  color: #d97706;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.pending-approval-desc {
+  font-size: 13px;
+  color: #92400e;
+  margin: 6px 0 0 0;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.pending-approval-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+

@@ -606,14 +606,9 @@ function Register() {
             navigate("/");
           }, 2500);
         } else {
-          setSuccessMsg("Account created successfully! Redirecting to login...");
-          if (data.data?.token) {
-            sessionStorage.setItem("token", data.data.token);
-            sessionStorage.setItem("user", JSON.stringify(data.data.user));
-          }
-          setTimeout(() => {
-            navigate("/");
-          }, 1500);
+          setShowPendingApproval(true);
+          setErrorMsg("");
+          setSuccessMsg("");
         }
       } else {
         setErrorMsg(data.message || "Registration failed");
@@ -685,66 +680,37 @@ function Register() {
         {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
-          <div className="pending-approval-card" style={{ textAlign: "center", padding: "20px 10px" }}>
-            <div style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "50%",
-              background: "#fef3c7",
-              color: "#d97706",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 16px auto",
-              border: "2px solid #fde68a",
-              boxShadow: "0 4px 14px rgba(217, 119, 6, 0.15)"
-            }}>
+          <div className="pending-approval-card">
+            <div className="pending-approval-icon-wrapper">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
                 <polyline points="12 6 12 12 16 14" />
               </svg>
             </div>
 
-            <h3 style={{ fontSize: "19px", fontWeight: "800", color: "#0f172a", margin: "0 0 8px 0" }}>
+            <h3 className="pending-approval-title">
               Registration & 2FA Setup Complete!
             </h3>
 
-            <p style={{ fontSize: "13.5px", color: "#64748b", lineHeight: "1.5", margin: "0 0 18px 0" }}>
-              Your college email address and Google Authenticator setup have been successfully verified.
+            <p className="pending-approval-subtitle">
+              Your registration details and Authenticator app (2FA) pairing have been successfully verified.
             </p>
 
-            <div style={{
-              background: "#fffbeb",
-              border: "1.5px solid #fde68a",
-              borderRadius: "12px",
-              padding: "14px 18px",
-              marginBottom: "22px",
-              textAlign: "left"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#b45309", fontWeight: "700", fontSize: "13px", marginBottom: "4px" }}>
-                <span style={{ display: "inline-flex", padding: "3px 8px", borderRadius: "9999px", background: "#fef3c7", color: "#d97706", fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>
+            <div className="pending-approval-box">
+              <div className="pending-approval-badge-row">
+                <span className="pending-approval-badge">
                   Status: Pending Admin Approval
                 </span>
               </div>
-              <p style={{ fontSize: "12.5px", color: "#92400e", margin: "6px 0 0 0", lineHeight: "1.5" }}>
-                Your registration is currently under review. An Administrator must approve your account before you can log in to the TrainX Portal.
+              <p className="pending-approval-desc">
+                You can login only after an Administrator approves your account. Your registration is currently under review by college administration.
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() => navigate("/login")}
-              className="login-send-otp-btn"
-              style={{
-                width: "100%",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "12px",
-                fontSize: "14px",
-                fontWeight: "700"
-              }}
+              onClick={() => navigate("/")}
+              className="login-send-otp-btn pending-approval-btn"
             >
               Return to Login Screen
             </button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock } from 'lucide-react';
+import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from 'lucide-react';
 import SuperAdminSidebar from "./SA_Sidebar";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
@@ -583,8 +583,8 @@ export default function SuperAdminLayout() {
                         className="sa-header__profile-item"
                         onClick={() => setProfileOpen(false)}
                       >
-                        <UserCog size={15} />
-                        Edit Profile
+                        <User size={15} />
+                        View Profile
                       </Link>
                       <button
                         type="button"
@@ -597,7 +597,6 @@ export default function SuperAdminLayout() {
                         <Key size={15} />
                         Change Password
                       </button>
-                      <div className="sa-header__profile-divider" />
                       <button
                         className="sa-header__profile-item sa-header__profile-item--danger"
                         onClick={() => {
