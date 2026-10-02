@@ -38,45 +38,27 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
   const IconComponent = iconMap[icon] || Building2;
 
   const themes = {
-    indigo: {
-      box: 'sa-stats-icon-box--indigo',
-      val: 'sa-stats-val--indigo',
-      badge: 'sa-stats-change-text--indigo'
-    },
-    emerald: {
-      box: 'sa-stats-icon-box--emerald',
-      val: 'sa-stats-val--emerald',
-      badge: 'sa-stats-change-text--emerald'
-    },
-    purple: {
-      box: 'sa-stats-icon-box--purple',
-      val: 'sa-stats-val--purple',
-      badge: 'sa-stats-change-text--purple'
-    },
-    sky: {
-      box: 'sa-stats-icon-box--sky',
-      val: 'sa-stats-val--sky',
-      badge: 'sa-stats-change-text--sky'
-    }
+    indigo: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' },
+    emerald: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' },
+    purple: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' },
+    sky: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' }
   };
 
   const currentTheme = themes[theme] || themes.indigo;
 
   return (
-    <div className="sa-stats-card">
-      <div className="sa-stats-card-header">
-        <span className="sa-stats-label">{label}</span>
-        <div className={`sa-stats-icon-box ${currentTheme.box}`}>
-          <IconComponent className="sa-stats-icon" />
+    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s ease' }} className="hover:shadow-md hover:border-indigo-200">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: 'min-content' }}>{label}</span>
+        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: currentTheme.bg, color: currentTheme.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <IconComponent size={14} />
         </div>
       </div>
-
-      <div className="sa-stats-card-body">
-        <span className={`sa-stats-val ${currentTheme.val}`}>{value}</span>
-        <div className={`sa-stats-change ${currentTheme.badge}`}>
-          <TrendingUp className="sa-stats-trend-icon" />
-          <span>{change}</span>
-        </div>
+      <div>
+        <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>{value}</h3>
+        <p style={{ fontSize: '12px', fontWeight: '600', color: '#4f46e5', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <Activity size={12} /> {change}
+        </p>
       </div>
     </div>
   );
@@ -330,46 +312,7 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* Quick Action Shortcuts Row */}
-      <div className="sa-overview-quick-row" style={{ gridTemplateColumns: "1fr" }}>
-        <div className="sa-quick-card">
-          <div className="sa-quick-header">
-            <Activity size={16} className="text-indigo-600" />
-            <h4 className="sa-quick-title">Platform Quick Operations</h4>
-          </div>
-          <div className="sa-quick-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-            <Link to="/super-admin/colleges" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--blue">
-                <Building2 size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">Colleges Hub</span>
-                <span className="sa-quick-item-sub">Add or verify institutes</span>
-              </div>
-            </Link>
 
-            <Link to="/super-admin/users" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--purple">
-                <UserCheck size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">User Directory</span>
-                <span className="sa-quick-item-sub">RBAC & Role Assignments</span>
-              </div>
-            </Link>
-
-            <Link to="/super-admin/maintenance" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--amber">
-                <Server size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">System Controls</span>
-                <span className="sa-quick-item-sub">Maintenance & System Audit</span>
-              </div>
-            </Link>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

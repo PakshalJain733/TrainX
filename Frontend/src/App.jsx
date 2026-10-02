@@ -46,7 +46,7 @@ import AdminApproveUsers from './pages/Admin/Components/AD_ApproveUsers';
 import SuperAdminLayout from './pages/SuperAdmin/Components/SA_Layout';
 import SuperAdminOverview from './pages/SuperAdmin/Components/SA_Overview';
 import CollegesPage from './pages/SuperAdmin/Components/SA_Colleges';
-import DepartmentsPage from './pages/SuperAdmin/Components/SA_Departments';
+import AdminDepartmentsPage from './pages/Admin/Components/AD_Departments';
 import SuperAdminBatches from './pages/SuperAdmin/Components/SA_Batches';
 import SuperAdminManageUsers from './pages/SuperAdmin/Components/SA_ManageUsers';
 import SuperAdminPerformancePage from './pages/SuperAdmin/Components/SA_Performance';
@@ -157,7 +157,7 @@ function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="approve-users" element={<AdminApproveUsers />} />
             <Route path="batches" element={<AdminBatches />} />
-            <Route path="departments" element={<DepartmentsPage />} />
+            <Route path="departments" element={<AdminDepartmentsPage />} />
             <Route path="c2c" element={<AdminC2CEnrollments />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="learning" element={<AdminLearningContent />} />
@@ -259,7 +259,6 @@ function App() {
             <Route index element={<SuperAdminOverview />} />
             <Route path="colleges" element={<MaintenanceGuard moduleKey="collegesPage"><CollegesPage /></MaintenanceGuard>} />
             <Route path="colleges/:collegeId" element={<MaintenanceGuard moduleKey="collegesPage"><CollegesPage /></MaintenanceGuard>} />
-            <Route path="departments" element={<MaintenanceGuard moduleKey="departmentsPage"><DepartmentsPage /></MaintenanceGuard>} />
             <Route path="batches" element={<MaintenanceGuard moduleKey="superAdminBatches"><SuperAdminBatches /></MaintenanceGuard>} />
             <Route path="users" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><SuperAdminManageUsers /></MaintenanceGuard>} />
             <Route path="approve-users" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><AdminApproveUsers /></MaintenanceGuard>} />
@@ -289,7 +288,6 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </ErrorBoundary>
       </BrowserRouter>
     </SystemMaintenanceProvider>
   );

@@ -730,14 +730,7 @@ export default function ProfilePage() {
                 <span>Change Password</span>
               </button>
 
-              <button
-                type="button"
-                className="profile-2fa-setup-btn"
-                onClick={handleOpen2FASetup}
-                title={is2FAEnabled ? "Reconfigure Google Authenticator 2FA" : "Setup Google Authenticator 2FA"}
-              >
-                <span>2FA Authenticator</span>
-              </button>
+
             </div>
           </div>
         </div>

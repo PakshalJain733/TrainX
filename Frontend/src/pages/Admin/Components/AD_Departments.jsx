@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from 'lucide-react';
 import { departmentAPI, collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
-import "../Styles/SA_Departments.css";
+import "../Styles/AD_Departments.css";
 
 /* ── Inline dropdown for Departments ── */
 function DeptSelect(props) {

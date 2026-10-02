@@ -6,6 +6,7 @@ import {
   UserPlus,
   Search,
   ShieldCheck,
+  ShieldAlert,
   UserCheck,
   GraduationCap,
   Mail,
@@ -1242,6 +1243,22 @@ export default function ManageUsers() {
 
   const handleRejectAdmin = (id) => {
     setAdminRequests(adminRequests.filter((r) => r.id !== id));
+  };
+
+  const handleTrigger2FA = async (userId, userName) => {
+    try {
+      const res = await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
+        method: 'POST',
+      });
+      if (res && res.success) {
+        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA is now required on their next login.`);
+      } else {
+        alert(res?.message || 'Failed to trigger two-step verification.');
+      }
+    } catch (err) {
+      console.error('Trigger 2FA error:', err);
+      alert('Failed to trigger two-step verification.');
+    }
   };
 
   // Filtering
