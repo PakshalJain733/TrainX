@@ -1706,10 +1706,7 @@ export default function AdminUsers() {
                   </>
                 )}
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsAddModalOpen(false)}>
-                  Cancel
-                </button>
+              <div className="modal-footer-users">
                 <button type="submit" className="btn-modal-submit" disabled={actionLoading}>
                   {actionLoading ? "Creating..." : "Create User"}
                 </button>

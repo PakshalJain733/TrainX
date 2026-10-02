@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { BookOpenCheck, Plus, Download, CheckCircle2, X } from "lucide-react";
+import { BookOpen, BookOpenCheck, Plus, Download, CheckCircle2, X } from "lucide-react";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { batchAPI } from "../../../services/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
