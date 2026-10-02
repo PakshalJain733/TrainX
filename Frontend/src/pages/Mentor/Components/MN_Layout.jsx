@@ -260,10 +260,9 @@ export default function MentorLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-
   const [notifications, setNotifications] = useState([]);
+  const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
     apiFetch("/mentor/notifications")
@@ -443,7 +442,7 @@ export default function MentorLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                      onUnreadChange={() => {}}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}

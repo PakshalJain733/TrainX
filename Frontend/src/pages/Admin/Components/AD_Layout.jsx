@@ -250,52 +250,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   );
 }
 
-const defaultNotificationsList = [
-  {
-    id: 1,
-    title: "Meeting Regarding Quasar 5.0 Problem Statements",
-    desc: "A mandatory meeting for all Quasar 5.0 participants is scheduled for today at 3:00 PM in Seminar Hall 2.",
-    time: "9/26/2026, 1:37:42 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All CSE & IT Batches",
-    priority: "Urgent Notice",
-    created_by_name: "Coordinator Shinde"
-  },
-  {
-    id: 2,
-    title: "Holiday Announcement",
-    desc: "The campus will remain closed on Friday for the upcoming holiday. Online learning resources remain available.",
-    time: "9/26/2026, 1:30:00 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All Students & Faculty",
-    priority: "General Announcement",
-    created_by_name: "Admin Office"
-  },
-  {
-    id: 3,
-    title: "IA-2 Quiz Rescheduled to Friday 10:00 AM",
-    desc: "The Internal Assessment 2 quiz has been rescheduled to Friday 10:00 AM. Please review your module roadmaps.",
-    time: "9/25/2026, 8:56:20 PM",
-    unread: true,
-    type: "quiz",
-    target: "TE Computer Batches",
-    priority: "Academic Notice",
-    created_by_name: "Prof. Verma"
-  },
-  {
-    id: 4,
-    title: "Goldman Sachs Placement Drive Registration Live",
-    desc: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through placement tab.",
-    time: "9/25/2026, 6:15:00 PM",
-    unread: false,
-    type: "calendar",
-    target: "BE All Branches",
-    priority: "Placement Alert",
-    created_by_name: "Placement Cell"
-  }
-];
+const defaultNotificationsList = [];
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -303,10 +258,9 @@ export default function AdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-
   const [notifications, setNotifications] = useState(defaultNotificationsList);
+  const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
     apiFetch("/admin/broadcast")
@@ -507,7 +461,7 @@ export default function AdminLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                      onUnreadChange={() => {}}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -616,49 +570,4 @@ export default function AdminLayout() {
       />
     </div>
   );
-}
-setIsChangePasswordOpen(true);
-                          }}
-                        >
-  <Key size={15} />
-                          Change Password
-                        </button >
-  <button
-    className="admin-header__profile-item admin-header__profile-item--danger"
-    onClick={() => {
-      setProfileOpen(false);
-      navigate("/");
-    }}
-  >
-    <LogOut size={15} />
-    Logout
-  </button>
-                      </div >
-                    </>
-                  )}
-                </div >
-              </div >
-            </header >
-
-  {/* Page Content Body */ }
-  < div className = "admin-card-body" >
-    <Outlet />
-            </div >
-
-          </div >
-        </main >
-      </div >
-      <BroadcastToast />
-      <FullNotificationModal
-        isOpen={fullNotifOpen}
-        onClose={() => setFullNotifOpen(false)}
-        notifications={notifications}
-        setNotifications={setNotifications}
-      />
-      <ChangePasswordModal
-        isOpen={isChangePasswordOpen}
-        onClose={() => setIsChangePasswordOpen(false)}
-      />
-    </div >
-  );
-}
+}

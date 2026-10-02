@@ -273,55 +273,8 @@ export default function Overview() {
         ))}
       </div>
 
-      {/* Main Content Grid: Security Widget & Connected Institutions */}
-      <div className="sa-bottom-grid">
-        {/* Security & Registration Access Widget */}
-        <div className="sa-widget-card overview-widget-flex">
-          <div className="overview-widget-header">
-            <div className="overview-widget-title-wrap">
-              <ShieldCheck size={18} className="text-emerald-600" />
-              <h3 className="overview-widget-title">Registration Security Posture</h3>
-            </div>
-            <Link to="/super-admin/users" className="overview-widget-link">
-              Manage Keys <ChevronRight size={13} />
-            </Link>
-          </div>
-
-          <div className="sa-sec-body">
-            <div className="sa-sec-banner">
-              <div className="sa-sec-banner-icon">
-                <Lock size={18} />
-              </div>
-              <div className="sa-sec-banner-text">
-                <h4 className="sa-sec-banner-title">Secure Key Verification Active</h4>
-                <p className="sa-sec-banner-desc">
-                  Self-registration is locked. Colleges require a Super Admin invitation code to register.
-                </p>
-              </div>
-            </div>
-
-            <div className="sa-sec-grid">
-              <div className="sa-sec-grid-card">
-                <span className="sa-sec-card-label">Access Method</span>
-                <span className="sa-sec-card-val">
-                  <KeyRound size={14} className="sa-sec-icon-emerald" /> Pre-Authorized Code
-                </span>
-              </div>
-              <div className="sa-sec-grid-card">
-                <span className="sa-sec-card-label">Unverified Self-Signups</span>
-                <span className="sa-sec-card-val sa-sec-val-emerald">
-                  <ShieldCheck size={14} /> Blocked (0 Pending)
-                </span>
-              </div>
-            </div>
-
-            <div className="sa-sec-footer-badge">
-              <Activity size={13} className="text-emerald-500" />
-              <span>System Firewall & RBAC Guard Active (100% Policy Compliance)</span>
-            </div>
-          </div>
-        </div>
-
+      {/* Main Content Grid: Connected Institutions */}
+      <div className="sa-bottom-grid" style={{ gridTemplateColumns: "1fr" }}>
         {/* Connected Institutions Overview Widget */}
         <div className="sa-widget-card overview-widget-flex">
           <div className="overview-widget-header">
@@ -377,14 +330,14 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* Quick Action Shortcuts & Health Status Row */}
-      <div className="sa-overview-quick-row">
+      {/* Quick Action Shortcuts Row */}
+      <div className="sa-overview-quick-row" style={{ gridTemplateColumns: "1fr" }}>
         <div className="sa-quick-card">
           <div className="sa-quick-header">
             <Activity size={16} className="text-indigo-600" />
             <h4 className="sa-quick-title">Platform Quick Operations</h4>
           </div>
-          <div className="sa-quick-grid">
+          <div className="sa-quick-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
             <Link to="/super-admin/colleges" className="sa-quick-item">
               <div className="sa-quick-icon-box sa-quick-icon--blue">
                 <Building2 size={18} />
@@ -392,16 +345,6 @@ export default function Overview() {
               <div className="sa-quick-item-text">
                 <span className="sa-quick-item-title">Colleges Hub</span>
                 <span className="sa-quick-item-sub">Add or verify institutes</span>
-              </div>
-            </Link>
-
-            <Link to="/super-admin/departments" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--emerald">
-                <GraduationCap size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">Departments</span>
-                <span className="sa-quick-item-sub">Manage academic tracks</span>
               </div>
             </Link>
 
@@ -424,38 +367,6 @@ export default function Overview() {
                 <span className="sa-quick-item-sub">Maintenance & System Audit</span>
               </div>
             </Link>
-          </div>
-        </div>
-
-        <div className="sa-health-card">
-          <div className="sa-quick-header">
-            <Server size={16} className="text-emerald-600" />
-            <h4 className="sa-quick-title">Real-Time Core Status</h4>
-          </div>
-          <div className="sa-health-list">
-            <div className="sa-health-item">
-              <div className="sa-health-left">
-                <span className="sa-health-dot sa-health-dot--online"></span>
-                <span className="sa-health-name">API Gateway Proxy</span>
-              </div>
-              <span className="sa-health-status sa-health-status--online">99.9% Operational</span>
-            </div>
-
-            <div className="sa-health-item">
-              <div className="sa-health-left">
-                <span className="sa-health-dot sa-health-dot--online"></span>
-                <span className="sa-health-name">Authentication Engine</span>
-              </div>
-              <span className="sa-health-status sa-health-status--online">Secure</span>
-            </div>
-
-            <div className="sa-health-item">
-              <div className="sa-health-left">
-                <span className="sa-health-dot sa-health-dot--online"></span>
-                <span className="sa-health-name">Database Cluster</span>
-              </div>
-              <span className="sa-health-status sa-health-status--online">Connected</span>
-            </div>
           </div>
         </div>
       </div>

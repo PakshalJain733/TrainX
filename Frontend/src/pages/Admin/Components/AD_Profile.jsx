@@ -333,32 +333,6 @@ export default function AdminProfile() {
                 <Key size={16} />
                 Change Password
               </button>
-
-              <button
-                type="button"
-                className="profile-2fa-setup-btn"
-                onClick={handleOpen2FASetup}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  background: is2FAEnabled ? "#ecfdf5" : "#4f46e5",
-                  color: is2FAEnabled ? "#047857" : "#ffffff",
-                  border: is2FAEnabled ? "1.5px solid #a7f3d0" : "none",
-                  fontWeight: "600",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  boxShadow: "0 2px 6px rgba(79, 70, 229, 0.15)",
-                  transition: "all 0.2s ease"
-                }}
-              >
-                <QrCode size={16} />
-                {is2FAEnabled ? "Reconfigure Google 2FA QR Code" : "Setup Google Authenticator 2FA"}
-              </button>
             </div>
 
           </div>

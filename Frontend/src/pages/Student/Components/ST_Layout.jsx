@@ -253,59 +253,13 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   );
 }
 
-const defaultNotificationsList = [
-  {
-    id: 1,
-    title: "Meeting Regarding Quasar 5.0 Problem Statements",
-    desc: "A mandatory meeting for all Quasar 5.0 participants is scheduled for today at 3:00 PM in Seminar Hall 2.",
-    time: "9/26/2026, 1:37:42 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All CSE & IT Batches",
-    priority: "Urgent Notice",
-    created_by_name: "Coordinator Shinde"
-  },
-  {
-    id: 2,
-    title: "Holiday Announcement",
-    desc: "The campus will remain closed on Friday for the upcoming holiday. Online learning resources remain available.",
-    time: "9/26/2026, 1:30:00 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All Students & Faculty",
-    priority: "General Announcement",
-    created_by_name: "Admin Office"
-  },
-  {
-    id: 3,
-    title: "IA-2 Quiz Rescheduled to Friday 10:00 AM",
-    desc: "The Internal Assessment 2 quiz has been rescheduled to Friday 10:00 AM. Please review your module roadmaps.",
-    time: "9/25/2026, 8:56:20 PM",
-    unread: true,
-    type: "quiz",
-    target: "TE Computer Batches",
-    priority: "Academic Notice",
-    created_by_name: "Prof. Verma"
-  },
-  {
-    id: 4,
-    title: "Goldman Sachs Placement Drive Registration Live",
-    desc: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through placement tab.",
-    time: "9/25/2026, 6:15:00 PM",
-    unread: false,
-    type: "calendar",
-    target: "BE All Branches",
-    priority: "Placement Alert",
-    created_by_name: "Placement Cell"
-  }
-];
+const defaultNotificationsList = [];
 
 export default function StudentLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
   const [interviewLive, setInterviewLive] = useState(false);
   const headerRightRef = useRef(null);
 
@@ -346,6 +300,7 @@ export default function StudentLayout() {
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
 
   const [notifications, setNotifications] = useState(defaultNotificationsList);
+  const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
     apiFetch("/student/notifications")
@@ -450,7 +405,38 @@ export default function StudentLayout() {
 
   useEffect(() => {
     const handleNewNotif = () => {
-      setHasUnreadNotif(true);
+      apiFetch("/student/notifications")
+        .then((res) => {
+          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+            const serverItems = res.data.map((b) => ({
+              id: b.id || `notif-${Math.random()}`,
+              title: b.title || "Announcement",
+              desc: b.message || b.desc || b.description || "",
+              message: b.message || b.desc || "",
+              time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+              unread: b.unread !== undefined ? Boolean(b.unread) : true,
+              type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+              target: b.target || "All Batches",
+              priority: b.priority || "General Notice",
+              created_by_name: b.created_by_name || "Admin",
+            }));
+
+            setNotifications((prev) => {
+              const combined = [...serverItems, ...prev];
+              const unique = [];
+              const seenTitles = new Set();
+              for (const item of combined) {
+                const key = item.title.trim().toLowerCase();
+                if (!seenTitles.has(key)) {
+                  seenTitles.add(key);
+                  unique.push(item);
+                }
+              }
+              return unique;
+            });
+          }
+        })
+        .catch(() => {});
     };
     window.addEventListener("new_broadcast_notification", handleNewNotif);
     return () => window.removeEventListener("new_broadcast_notification", handleNewNotif);
@@ -576,7 +562,7 @@ export default function StudentLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                      onUnreadChange={() => {}}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}

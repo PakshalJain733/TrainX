@@ -96,7 +96,7 @@ export default function LearningContent() {
     );
   };
 
-  
+
   const handleDownloadDocument = (item) => {
     let targetUrl = item.file_url || item.link || "";
     if (!targetUrl || targetUrl === "#") {
@@ -159,9 +159,8 @@ export default function LearningContent() {
           {categories.map((cat) => (
             <button
               key={cat}
-              className={`learning-filter-btn ${
-                selectedFilter === cat ? "active" : ""
-              }`}
+              className={`learning-filter-btn ${selectedFilter === cat ? "active" : ""
+                }`}
               onClick={() => setSelectedFilter(cat)}
             >
               {cat}
@@ -221,12 +220,12 @@ export default function LearningContent() {
 
                 <div className="learning-card-footer">
                   <button
-                      type="button"
-                      className="resource-download-btn"
-                      onClick={() => handleDownloadDocument(item)}
-                    >
-                      <Download size={14} /> Download Document
-                    </button>
+                    type="button"
+                    className="resource-download-btn"
+                    onClick={() => handleDownloadDocument(item)}
+                  >
+                    <Download size={14} /> Download Document
+                  </button>
                   <Badge variant="success" className="learning-status-pill">
                     Published
                   </Badge>

@@ -49,6 +49,7 @@ const primaryNavItems = [
   { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck },
   { title: "C2C Enrollments", url: "/admin/c2c", icon: Briefcase },
   { title: "Batches", url: "/admin/batches", icon: Code2 },
+  { title: "Departments", url: "/admin/departments", icon: Briefcase },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },
   { title: "Coding Practice", url: "/admin/practice", icon: Terminal },
   { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },

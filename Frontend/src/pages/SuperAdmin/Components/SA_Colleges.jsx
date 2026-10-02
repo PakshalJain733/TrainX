@@ -509,7 +509,6 @@ export default function Colleges() {
       <div className="sa-page-header">
         <div>
           <div className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Building2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
             <span className="colleges-header-title">Colleges Directory</span>
           </div>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>

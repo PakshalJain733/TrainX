@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterOtp, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterOtp, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail , registerInstitution } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -34,3 +34,5 @@ router.post('/setup-2fa', authenticateToken, setup2FA);
 router.post('/verify-2fa', authenticateToken, verify2FA);
 
 export default router;
+
+router.post('/register-institution', registerInstitution);

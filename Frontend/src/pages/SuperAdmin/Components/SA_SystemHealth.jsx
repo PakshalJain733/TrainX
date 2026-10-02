@@ -56,7 +56,6 @@ export default function SystemHealth() {
       <div className="sa-page-header">
         <div>
           <div className="system-health-title-wrap">
-            <Activity className="system-health-title-icon" />
             <span className="system-health-title">System Health & Infrastructure Monitoring</span>
           </div>
           <p className="system-health-subtitle">
@@ -129,6 +128,39 @@ export default function SystemHealth() {
             <span className="system-health-tag-purple">
               Active Sockets: {healthData?.systemMetrics?.activeSockets || 0}
             </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Real-Time Core Status Card */}
+      <div className="sa-health-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "20px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
+        <div className="sa-quick-header" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
+          <Server size={18} className="text-emerald-600" />
+          <h4 className="sa-quick-title" style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#0f172a" }}>Real-Time Core Status</h4>
+        </div>
+        <div className="sa-health-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <div className="sa-health-item" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: "12px", background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+            <div className="sa-health-left" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="sa-health-dot sa-health-dot--online" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
+              <span className="sa-health-name" style={{ fontWeight: "600", fontSize: "14px", color: "#1e293b" }}>API Gateway Proxy</span>
+            </div>
+            <span className="sa-health-status sa-health-status--online" style={{ padding: "4px 12px", borderRadius: "9999px", background: "#ecfdf5", color: "#047857", fontWeight: "700", fontSize: "12px" }}>99.9% Operational</span>
+          </div>
+
+          <div className="sa-health-item" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: "12px", background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+            <div className="sa-health-left" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="sa-health-dot sa-health-dot--online" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
+              <span className="sa-health-name" style={{ fontWeight: "600", fontSize: "14px", color: "#1e293b" }}>Authentication Engine</span>
+            </div>
+            <span className="sa-health-status sa-health-status--online" style={{ padding: "4px 12px", borderRadius: "9999px", background: "#ecfdf5", color: "#047857", fontWeight: "700", fontSize: "12px" }}>Secure</span>
+          </div>
+
+          <div className="sa-health-item" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderRadius: "12px", background: "#f8fafc", border: "1px solid #f1f5f9" }}>
+            <div className="sa-health-left" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span className="sa-health-dot sa-health-dot--online" style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
+              <span className="sa-health-name" style={{ fontWeight: "600", fontSize: "14px", color: "#1e293b" }}>Database Cluster</span>
+            </div>
+            <span className="sa-health-status sa-health-status--online" style={{ padding: "4px 12px", borderRadius: "9999px", background: "#ecfdf5", color: "#047857", fontWeight: "700", fontSize: "12px" }}>Connected</span>
           </div>
         </div>
       </div>

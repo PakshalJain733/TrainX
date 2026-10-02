@@ -24,43 +24,59 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     user = null;
   }
 
-  // Localhost Developer Mode: Allow direct URL navigation (e.g. localhost:5173/student)
-  if (isLocalhost && (!token || !user || !user.role)) {
+  // Localhost Developer Mode: Allow direct URL navigation (e.g. localhost:5173/admin, /coordinator, /mentor)
+  if (isLocalhost) {
     const currentPath = location.pathname.toLowerCase();
-    let devRole = "student";
-    let devName = "Local Student";
+    let targetRole = null;
+    let devName = null;
 
     if (currentPath.includes("/super-admin") || currentPath.includes("/superadmin")) {
-      devRole = "superadmin";
+      targetRole = "superadmin";
       devName = "Local Super Admin";
     } else if (currentPath.includes("/coordinator")) {
-      devRole = "coordinator";
+      targetRole = "coordinator";
       devName = "Local Coordinator";
     } else if (currentPath.includes("/admin")) {
-      devRole = "college_admin";
+      targetRole = "college_admin";
       devName = "Local Admin";
     } else if (currentPath.includes("/mentor")) {
-      devRole = "mentor";
+      targetRole = "mentor";
       devName = "Local Mentor";
+    } else if (currentPath.includes("/student")) {
+      targetRole = "student";
+      devName = "Local Student";
     }
 
-    const mockDevUser = {
-      id: 99999,
-      name: devName,
-      email: `${devRole}@localhost.dev`,
-      role: devRole,
-      college_id: 1,
-      is_profile_updated: true,
-      profileCompleted: true,
-    };
+    const userRoleStr = user?.role ? String(user.role).toLowerCase() : "";
+    const isMatchingRole =
+      !targetRole ||
+      userRoleStr.includes("super") ||
+      (targetRole === "college_admin" && (userRoleStr.includes("admin") || userRoleStr.includes("college_admin") || userRoleStr.includes("hod"))) ||
+      (targetRole === "coordinator" && userRoleStr.includes("coordinator")) ||
+      (targetRole === "mentor" && (userRoleStr.includes("mentor") || userRoleStr.includes("faculty"))) ||
+      (targetRole === "student" && (userRoleStr.includes("student") || userRoleStr === "user"));
 
-    token = "mock_localhost_dev_token";
-    user = mockDevUser;
+    if (targetRole && (!isMatchingRole || !token || !user || !user.role)) {
+      const mockDevUser = {
+        id: 99999,
+        name: devName || "Local User",
+        email: `${targetRole}@localhost.dev`,
+        role: targetRole,
+        college_id: 1,
+        is_profile_updated: true,
+        profileCompleted: true,
+      };
 
-    try {
-      sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", JSON.stringify(mockDevUser));
-    } catch (_) {}
+      token = "mock_localhost_dev_token";
+      user = mockDevUser;
+
+      try {
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("authToken", token);
+        sessionStorage.setItem("role", targetRole);
+        sessionStorage.setItem("user", JSON.stringify(mockDevUser));
+      } catch (_) {}
+    }
   }
 
   // In Deployed / Production environment: if unauthenticated, redirect to login page

@@ -98,12 +98,14 @@ import CoordinatorBroadcast from './pages/Coordinator/Components/CO_Broadcast';
 import CoordinatorLeaderboard from './pages/Coordinator/Components/CO_Leaderboard';
 
 import ProtectedRoute from './components/Common/ProtectedRoute';
+import ErrorBoundary from './components/Common/ErrorBoundary';
 
 function App() {
   return (
     <SystemMaintenanceProvider>
       <BrowserRouter>
-        <Routes>
+        <ErrorBoundary>
+          <Routes>
           {/* Auth Routes */}
           <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />
           <Route path="/register" element={<MaintenanceGuard moduleKey="userRegistration"><Register /></MaintenanceGuard>} />
@@ -155,6 +157,7 @@ function App() {
             <Route path="users" element={<AdminUsers />} />
             <Route path="approve-users" element={<AdminApproveUsers />} />
             <Route path="batches" element={<AdminBatches />} />
+            <Route path="departments" element={<DepartmentsPage />} />
             <Route path="c2c" element={<AdminC2CEnrollments />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="learning" element={<AdminLearningContent />} />
@@ -286,6 +289,7 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
     </SystemMaintenanceProvider>
   );

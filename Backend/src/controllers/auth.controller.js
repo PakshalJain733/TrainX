@@ -207,3 +207,18 @@ export const verify2FA = async (req, res, next) => {
     return sendError(res, error.message || 'Failed to verify 2FA code', 400);
   }
 };
+
+export const registerInstitution = async (req, res) => {
+  try {
+    const { collegeName, contactPerson, designation, email, phone, studentCount } = req.body;
+    if (!collegeName || !email) {
+      return sendError(res, 'College Name and Email are required', 400);
+    }
+    const code = collegeName.substring(0, 3).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    await pool.query('INSERT INTO colleges (name, code, contact_email, contact_phone, status) VALUES (?, ?, ?, ?, ?)', [collegeName, code, email, phone || null, 'Pending']);
+    return sendSuccess(res, 'Institution request submitted successfully');
+  } catch (error) {
+    console.error('Register Institution error:', error);
+    return sendError(res, 'Failed to submit request', 500);
+  }
+};

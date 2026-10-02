@@ -355,15 +355,6 @@ export default function CoordinatorProfilePage() {
                 <KeyRound size={16} />
                 <span>Change Password</span>
               </button>
-
-              <button
-                type="button"
-                className={`profile-2fa-setup-btn ${is2FAEnabled ? "profile-2fa-setup-btn--active" : "profile-2fa-setup-btn--inactive"}`}
-                onClick={handleOpen2FASetup}
-              >
-                <QrCode size={16} />
-                {is2FAEnabled ? "Reconfigure Google 2FA QR Code" : "Setup Google Authenticator 2FA"}
-              </button>
             </div>
           </div>
         </div>
