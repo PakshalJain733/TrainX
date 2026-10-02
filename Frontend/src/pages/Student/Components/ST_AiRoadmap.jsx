@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 import {
   Sparkles,
@@ -30,7 +31,6 @@ import {
   GraduationCap,
   Terminal,
   Play,
-  RotateCcw,
   Copy,
   Maximize2,
   Minimize2,
@@ -40,71 +40,7 @@ import { Button } from "../../../components/ui/Button";
 import apiFetch from "../../../utils/api";
 import "../Styles/ST_AiRoadmap.css";
 
-const POPULAR_TARGETS = [
-  { role: "Java Fullstack Developer", icon: "☕", tag: "Hot Skill" },
-  { role: "Frontend (React & Next.js)", icon: "⚛️", tag: "High Demand" },
-  { role: "Python & Data Science", icon: "🐍", tag: "AI/ML" },
-  { role: "Cyber Security Analyst", icon: "🛡️", tag: "Security" },
-  { role: "DevOps & Cloud Engineer", icon: "☁️", tag: "Infrastructure" },
-  { role: "Flutter Mobile Developer", icon: "📱", tag: "Mobile" },
-];
 
-const PRESET_PATHWAYS = [
-  {
-    title: "Java Fullstack Developer",
-    subtitle: "Enterprise Backend + Modern Frontend",
-    desc: "Master Core Java, Spring Boot microservices, REST APIs, Hibernate, PostgreSQL & React integration.",
-    milestonesCount: 6,
-    icon: "☕",
-    badge: "Most Popular",
-    color: "#4f46e5",
-  },
-  {
-    title: "Frontend Web Engineer",
-    subtitle: "Modern Single-Page Application Mastery",
-    desc: "Deep dive into HTML5/CSS3, JavaScript ES6+, React, Redux Toolkit, Next.js & UI design systems.",
-    milestonesCount: 5,
-    icon: "⚛️",
-    badge: "Trending",
-    color: "#0891b2",
-  },
-  {
-    title: "Python & Data Analytics",
-    subtitle: "Data Science, Machine Learning & AI",
-    desc: "Learn Python programming, Pandas, NumPy, Data Visualization, Scikit-Learn & ML Algorithms.",
-    milestonesCount: 6,
-    icon: "🐍",
-    badge: "AI Powered",
-    color: "#059669",
-  },
-  {
-    title: "Cyber Security Analyst",
-    subtitle: "Defensive Security & Threat Analysis",
-    desc: "Network Protocols, Kali Linux tools, Penetration Testing concepts, SIEM tools & Compliance.",
-    milestonesCount: 5,
-    icon: "🛡️",
-    badge: "High Demand",
-    color: "#dc2626",
-  },
-  {
-    title: "DevOps & Cloud Engineer",
-    subtitle: "CI/CD Pipelines & Cloud Infrastructure",
-    desc: "Docker containerization, Kubernetes orchestration, AWS Cloud, Terraform & GitHub Actions.",
-    milestonesCount: 6,
-    icon: "☁️",
-    badge: "Cloud Track",
-    color: "#7c3aed",
-  },
-  {
-    title: "Flutter Cross-Platform Dev",
-    subtitle: "iOS & Android Unified Apps",
-    desc: "Dart language essentials, Flutter Widgets, Provider/Bloc state management & Firebase backend.",
-    milestonesCount: 5,
-    icon: "📱",
-    badge: "Mobile",
-    color: "#ea580c",
-  },
-];
 
 function getTopicsForMilestone(m, targetRole) {
   if (Array.isArray(m.topics) && m.topics.length > 0) {
@@ -161,68 +97,36 @@ function getSyllabusForMilestone(m, targetRole) {
   if (Array.isArray(m.syllabus) && m.syllabus.length > 0) {
     return m.syllabus;
   }
-  const cleanRole = targetRole || "Specialized Role";
-  const roleLower = cleanRole.toLowerCase();
-  const step = m.id || 1;
 
-  if (roleLower.includes("frontend") || roleLower.includes("react") || roleLower.includes("web")) {
-    if (step === 1) {
-      return [
-        {
-          moduleTitle: "Unit 1.1: Web Fundamentals & Semantic HTML5",
-          duration: "Week 1 · 10 Hours",
-          concepts: ["HTML5 Semantic Elements (nav, section, article, header, footer)", "DOM Hierarchy & ARIA Accessibility attributes", "Form Controls & Input Type Validation"],
-          practicalOutcome: "Build a responsive accessible multi-page personal portfolio landing page"
-        },
-        {
-          moduleTitle: "Unit 1.2: Modern Responsive Layouts & CSS Grid/Flexbox",
-          duration: "Week 2 · 12 Hours",
-          concepts: ["CSS Box Model, Positioning & Stacking Context", "Flexbox Alignment, Distribution & Container Properties", "CSS Grid Layout Systems & Dynamic Auto-Fit/Fill Templates"],
-          practicalOutcome: "Develop a responsive product pricing dashboard with dark mode support"
-        }
-      ];
-    }
-  }
+  const cleanRole = targetRole || "Specialized Track";
+  const title = m.title || `Milestone ${m.id || 1}`;
+  const topics = getTopicsForMilestone(m, targetRole);
 
-  if (roleLower.includes("java") || roleLower.includes("backend") || roleLower.includes("spring")) {
-    if (step === 1) {
-      return [
-        {
-          moduleTitle: "Unit 1.1: Core Java 17+ OOP & Data Structures",
-          duration: "Week 1 · 14 Hours",
-          concepts: ["Encapsulation, Inheritance, Interfaces & Abstract Classes", "Java Collections Framework (ArrayList, HashMap, HashSet performance)", "Exception Handling Architecture & Custom Exception Design"],
-          practicalOutcome: "Build an object-oriented CLI inventory management application"
-        },
-        {
-          moduleTitle: "Unit 1.2: Java Streams API & PostgreSQL Queries",
-          duration: "Week 2 · 14 Hours",
-          concepts: ["Functional Interfaces, Lambda Expressions & Stream API Pipelines", "Database Normalization & Indexing Strategies", "Complex SQL Joins, Subqueries & Aggregations"],
-          practicalOutcome: "Construct a JDBC/PostgreSQL database connector and data processing engine"
-        }
-      ];
-    }
-  }
+  const mid = Math.ceil(topics.length / 2);
+  const u1Topics = topics.slice(0, mid);
+  const u2Topics = topics.slice(mid);
+  const cleanTitle = title.replace(/^Milestone\s*\d+\s*:\s*/i, "");
 
   return [
     {
-      moduleTitle: `Unit ${step}.1: Foundational Framework & Core Concepts for ${m.title || cleanRole}`,
-      duration: "Week 1-2 · 12 Hours",
-      concepts: [
-        `Core theoretical framework and architectural principles for ${cleanRole}`,
-        `Environment configuration, toolchain setup, and syntax conventions`,
-        `Industry best practices and standard execution workflows`
+      moduleTitle: `Unit 1: ${cleanTitle} - Core Mechanics`,
+      duration: "12 Hours",
+      concepts: u1Topics.length > 0 ? u1Topics : [
+        `Foundational syntax & architectural principles for ${cleanTitle}`,
+        `Environment setup & toolchain configuration`,
+        `Core data structures & fundamental practices`
       ],
-      practicalOutcome: `Complete foundational lab exercises and dev environment configuration`
+      practicalOutcome: `Implement foundational lab module for ${cleanTitle} with clean architecture.`
     },
     {
-      moduleTitle: `Unit ${step}.2: Applied Engineering & Hands-on Implementation`,
-      duration: "Week 3-4 · 16 Hours",
-      concepts: [
-        `Real-world execution scenarios and hands-on laboratory exercises`,
-        `Diagnostic workflows, automated testing strategies, and performance tuning`,
-        `System integration, security compliance, and code quality standards`
+      moduleTitle: `Unit 2: Advanced ${cleanTitle} & Applied Engineering`,
+      duration: "10 Hours",
+      concepts: u2Topics.length > 0 ? u2Topics : [
+        `Advanced design patterns & state management`,
+        `Diagnostic workflows & performance tuning`,
+        `System integration & production deployment`
       ],
-      practicalOutcome: `Deliver a fully verified capstone module for ${cleanRole}`
+      practicalOutcome: `Build a production-ready capstone lab solution for ${cleanTitle}.`
     }
   ];
 }
@@ -231,122 +135,135 @@ function getResourcesForMilestone(m, targetRole) {
   if (Array.isArray(m.resources) && m.resources.length > 0) {
     return m.resources;
   }
-  const cleanRole = targetRole || "Specialized Role";
-  const roleLower = cleanRole.toLowerCase();
-
-  if (roleLower.includes("frontend") || roleLower.includes("react") || roleLower.includes("web")) {
-    return [
-      {
-        title: "MDN Web Docs - JavaScript & Web APIs",
-        url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript",
-        type: "Documentation",
-        provider: "MDN Web Docs"
-      },
-      {
-        title: "React Official Interactive Learning Guide",
-        url: "https://react.dev/learn",
-        type: "Documentation",
-        provider: "React Official"
-      },
-      {
-        title: "freeCodeCamp Responsive Web Design & React",
-        url: "https://www.freecodecamp.org/learn/",
-        type: "Practice Portal",
-        provider: "freeCodeCamp"
-      },
-      {
-        title: "GeeksforGeeks React JS Developer Tutorials",
-        url: "https://www.geeksforgeeks.org/react-js-tutorials/",
-        type: "Tutorial",
-        provider: "GeeksforGeeks"
-      }
-    ];
-  }
-
-  if (roleLower.includes("java") || roleLower.includes("backend") || roleLower.includes("spring")) {
-    return [
-      {
-        title: "Oracle Java SE 17 Official Documentation",
-        url: "https://docs.oracle.com/en/java/",
-        type: "Documentation",
-        provider: "Oracle"
-      },
-      {
-        title: "Baeldung Spring Boot & Microservices Tutorials",
-        url: "https://www.baeldung.com/spring-boot",
-        type: "Tutorial",
-        provider: "Baeldung"
-      },
-      {
-        title: "Spring.io Official Getting Started Guides",
-        url: "https://spring.io/guides",
-        type: "Documentation",
-        provider: "Spring Framework"
-      },
-      {
-        title: "GeeksforGeeks Java Programming Hub",
-        url: "https://www.geeksforgeeks.org/java/",
-        type: "Guide",
-        provider: "GeeksforGeeks"
-      }
-    ];
-  }
-
-  if (roleLower.includes("python") || roleLower.includes("data") || roleLower.includes("ai") || roleLower.includes("machine learning")) {
-    return [
-      {
-        title: "Python 3 Official Language Tutorial",
-        url: "https://docs.python.org/3/tutorial/",
-        type: "Documentation",
-        provider: "Python Docs"
-      },
-      {
-        title: "Scikit-Learn Machine Learning User Guide",
-        url: "https://scikit-learn.org/stable/user_guide.html",
-        type: "Documentation",
-        provider: "Scikit-Learn"
-      },
-      {
-        title: "Kaggle Learn - Interactive Data Science Courses",
-        url: "https://www.kaggle.com/learn",
-        type: "Practice Portal",
-        provider: "Kaggle"
-      },
-      {
-        title: "PyTorch Deep Learning Official Tutorials",
-        url: "https://pytorch.org/tutorials/",
-        type: "Tutorial",
-        provider: "PyTorch"
-      }
-    ];
-  }
+  const cleanRole = targetRole || "Specialized Track";
+  const cleanTitle = (m.title || cleanRole).replace(/^Milestone\s*\d+\s*:\s*/i, "");
 
   return [
     {
-      title: `GeeksforGeeks Technical Guides for ${cleanRole}`,
-      url: "https://www.geeksforgeeks.org/",
+      title: `Official Technical Documentation for ${cleanTitle}`,
+      url: `https://www.google.com/search?q=${encodeURIComponent(cleanTitle + " official documentation")}`,
+      type: "Documentation",
+      provider: "Official Docs"
+    },
+    {
+      title: `GeeksforGeeks ${cleanRole} Learning Hub`,
+      url: `https://www.geeksforgeeks.org/search/?q=${encodeURIComponent(cleanTitle)}`,
       type: "Tutorial",
       provider: "GeeksforGeeks"
     },
     {
-      title: "freeCodeCamp Open Curriculum & Labs",
-      url: "https://www.freecodecamp.org/",
+      title: `freeCodeCamp ${cleanRole} Open Curriculum`,
+      url: `https://www.freecodecamp.org/news/search/?query=${encodeURIComponent(cleanTitle)}`,
       type: "Practice Portal",
       provider: "freeCodeCamp"
     },
     {
-      title: "W3Schools Reference Documentation",
-      url: "https://www.w3schools.com/",
-      type: "Guide",
-      provider: "W3Schools"
-    },
-    {
-      title: "Roadmap.sh - Developer Roadmaps",
+      title: `Roadmap.sh ${cleanRole} Career Path`,
       url: "https://roadmap.sh/",
-      type: "Documentation",
+      type: "Guide",
       provider: "Roadmap.sh"
     }
   ];
+}
+
+function getVideosForMilestone(m, targetRole) {
+  if (Array.isArray(m.videos) && m.videos.length > 0) {
+    return m.videos;
+  }
+
+  const topics = getTopicsForMilestone(m, targetRole);
+  if (Array.isArray(topics) && topics.length > 0) {
+    return topics.map((t, idx) => getVideoForTopic(t, idx, m, targetRole)).filter(Boolean);
+  }
+
+  const cleanRole = targetRole || "Specialized Role";
+  return [
+    {
+      id: "v-default",
+      title: `${m.title || cleanRole} - Industry Video Lecture & Tutorial`,
+      duration: "22 mins",
+      channel: "Tech Education Academy",
+      videoId: "rfscVS0vtbw",
+      embedUrl: "https://www.youtube.com/embed/rfscVS0vtbw?rel=0",
+      searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent((m.title || cleanRole) + " tutorial")}`,
+      topicsCovered: `Key Concepts, Architecture & Hands-on Implementation for ${cleanRole}`,
+    }
+  ];
+}
+
+
+
+function resolveEmbeddableVideoId(cleanTitle = "", targetRole = "", milestoneTitle = "") {
+  const text = `${cleanTitle} ${targetRole || ""} ${milestoneTitle || ""}`.toLowerCase();
+
+  if (text.includes("comprehension") || text.includes("generator") || text.includes("decorator") || text.includes("pythonic")) return "3dt4OGnU5sM";
+  if (text.includes("typing") || text.includes("type hint") || text.includes("static typing")) return "kqtD5dpn9C8";
+  if (text.includes("pip") || text.includes("venv") || text.includes("virtualenv") || text.includes("environment")) return "N5vscPJsOJ8";
+  if (text.includes("fastapi") || text.includes("pydantic") || text.includes("flask")) return "7t2alSnE2-I";
+  if (text.includes("python") || text.includes("pandas") || text.includes("numpy")) return "rfscVS0vtbw";
+
+  if (text.includes("html") || text.includes("css") || text.includes("flexbox") || text.includes("grid")) return "gQujLPbHMUG";
+  if (text.includes("hook") || text.includes("usestate") || text.includes("useeffect") || text.includes("component") || text.includes("jsx")) return "bMknFK15FiU";
+  if (text.includes("router") || text.includes("routing") || text.includes("axios")) return "0cSVJX8URl0";
+  if (text.includes("react") || text.includes("frontend") || text.includes("vue") || text.includes("angular")) return "w7ejDZ8SWv8";
+
+  if (text.includes("spring") || text.includes("microservice")) return "9SGDpanrc8U";
+  if (text.includes("java") || text.includes("oop") || text.includes("inheritance")) return "eIrMbAQSU34";
+
+  if (text.includes("c++") || text.includes("cpp") || text.includes("pointer") || text.includes("stl")) return "1Rs2ND1ryYc";
+  if (text.includes("structure") || text.includes("algorithm") || text.includes("dsa") || text.includes("tree") || text.includes("graph")) return "8jLOx1hD3_o";
+
+  if (text.includes("sql") || text.includes("postgres") || text.includes("database") || text.includes("query") || text.includes("mongo")) return "HXV3zeQKqGY";
+
+  if (text.includes("docker") || text.includes("container")) return "fqMOX6JJhGo";
+  if (text.includes("kubernetes") || text.includes("k8s")) return "X48VuDVv0do";
+  if (text.includes("aws") || text.includes("cloud") || text.includes("devops")) return "ulprqHHWlng";
+
+  if (text.includes("security") || text.includes("cyber") || text.includes("auth") || text.includes("jwt")) return "SqcY0GlETPk";
+  if (text.includes("machine learning") || text.includes("deep learning") || text.includes("model") || text.includes("ai")) return "i_LwzRVP7bg";
+  if (text.includes("git") || text.includes("github")) return "zOjov-2OZ0E";
+  if (text.includes("node") || text.includes("express") || text.includes("backend") || text.includes("api")) return "Oe421EPjeBE";
+  if (text.includes("system design") || text.includes("architecture")) return "M576WGiDBdQ";
+
+  return null;
+}
+
+function getVideoForTopic(topicInput, topicIndex, m, targetRole) {
+  const topicTitle = typeof topicInput === "string" ? topicInput : topicInput?.title || topicInput?.name || "";
+  const cleanTitle = topicTitle.trim();
+  if (!cleanTitle) return null;
+
+  let vId = null;
+  let vidObj = null;
+
+  if (typeof topicInput === "object" && (topicInput.videoUrl || topicInput.embedUrl || topicInput.video || topicInput.videoId)) {
+    vidObj = topicInput.video || topicInput;
+    vId = vidObj.videoId || (vidObj.videoUrl || vidObj.embedUrl || "").split("/").pop();
+  } else if (Array.isArray(m?.videos) && m.videos[topicIndex]) {
+    vidObj = m.videos[topicIndex];
+    vId = vidObj.videoId || (vidObj.embedUrl || "").split("/").pop();
+  }
+
+  // Validate videoId (must be an 11-char string without query parameters or slashes)
+  if (!vId || typeof vId !== "string" || vId.length !== 11 || vId.includes("?") || vId.includes("/")) {
+    vId = resolveEmbeddableVideoId(cleanTitle, targetRole, m?.title);
+  }
+
+  if (!vId) return null;
+
+  const query = `${cleanTitle} tutorial ${targetRole || ""}`.trim();
+  const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+
+  return {
+    id: vidObj?.id || `v-dyn-${topicIndex}`,
+    title: vidObj?.title || `${cleanTitle} - Video Tutorial`,
+    channel: vidObj?.channel || "Technical Video Lesson",
+    duration: vidObj?.duration || "20 mins",
+    videoId: vId,
+    embedUrl: `https://www.youtube.com/embed/${vId}?rel=0`,
+    searchUrl: searchUrl,
+    topicsCovered: cleanTitle,
+  };
 }
 
 function getStarterCodeForTopic(topicName = "", lang = "node", targetRole = "") {
@@ -528,6 +445,68 @@ export default function AIRoadmap() {
   const [compilerExecutionTime, setCompilerExecutionTime] = useState(null);
   const [compilerTab, setCompilerTab] = useState("code");
 
+  // Video Learning Tutorial Modal States
+  const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState(null);
+
+  // Dynamic AI Topic Quiz Modal States
+  const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+  const [activeQuizTopic, setActiveQuizTopic] = useState("");
+  const [quizData, setQuizData] = useState(null);
+  const [isQuizLoading, setIsQuizLoading] = useState(false);
+  const [currentQuestionIdx, setCurrentQuestionIdx] = useState(0);
+  const [userAnswers, setUserAnswers] = useState({});
+  const [isQuizSubmitted, setIsQuizSubmitted] = useState(false);
+
+  const handleOpenTopicQuiz = async (topicTitle, targetRole) => {
+    const cleanTitle = topicTitle || "Topic Assessment";
+    setActiveQuizTopic(cleanTitle);
+    setIsQuizModalOpen(true);
+    setIsQuizLoading(true);
+    setQuizData(null);
+    setCurrentQuestionIdx(0);
+    setUserAnswers({});
+    setIsQuizSubmitted(false);
+
+    try {
+      const res = await apiFetch("/roadmap/quiz/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          topicTitle: cleanTitle,
+          targetRole: targetRole || currentRoadmap?.targetRole || goalInput,
+        }),
+      });
+      if (res && res.data && Array.isArray(res.data.questions) && res.data.questions.length >= 5) {
+        setQuizData(res.data);
+      } else {
+        setError(res?.message || `Failed to generate AI quiz for "${cleanTitle}". Please try again.`);
+        setIsQuizModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Quiz AI generation error:", err);
+      setError(err?.message || `Unable to reach AI service for "${cleanTitle}". Please try again.`);
+      setIsQuizModalOpen(false);
+    } finally {
+      setIsQuizLoading(false);
+    }
+  };
+
+  const openVideoModal = (videoData, milestone, milestoneIndex, topicIndex) => {
+    if (milestone && milestone.status === "locked") {
+      const prevTitle = currentRoadmap?.milestones?.[milestoneIndex - 1]?.title || `Milestone ${milestoneIndex}`;
+      setError(`🔒 Milestone ${milestoneIndex + 1} ("${milestone.title}") is locked! Complete Milestone ${milestoneIndex} ("${prevTitle}") first to watch videos.`);
+      return;
+    }
+
+    setActiveVideo({
+      ...videoData,
+      milestone,
+      milestoneIndex,
+      topicIndex,
+    });
+    setIsVideoModalOpen(true);
+  };
+
   const openCompilerForTopic = (topicName = "", langOverride = "") => {
     const topic = topicName || currentRoadmap?.targetRole || goalInput || "Roadmap Topic";
     setActiveCompilerTopic(topic);
@@ -649,16 +628,56 @@ export default function AIRoadmap() {
       });
   };
 
+  const enforceSequentialMilestoneLocks = (milestones) => {
+    if (!Array.isArray(milestones) || milestones.length === 0) return [];
+
+    let previousCompleted = true; // Milestone 1 is always unlocked
+
+    return milestones.map((m, idx) => {
+      if (idx === 0) {
+        const isCompleted = m.status === "completed" || m.progress === 100;
+        previousCompleted = isCompleted;
+        return {
+          ...m,
+          status: isCompleted ? "completed" : "in-progress",
+          progress: isCompleted ? 100 : (typeof m.progress === "number" ? m.progress : 0),
+        };
+      }
+
+      if (previousCompleted) {
+        const isCompleted = m.status === "completed" || m.progress === 100;
+        previousCompleted = isCompleted;
+        return {
+          ...m,
+          status: isCompleted ? "completed" : (m.status === "locked" ? "in-progress" : m.status || "in-progress"),
+          progress: isCompleted ? 100 : (typeof m.progress === "number" ? m.progress : 0),
+        };
+      } else {
+        previousCompleted = false;
+        return {
+          ...m,
+          status: "locked",
+          progress: 0,
+          completedTopics: [],
+        };
+      }
+    });
+  };
+
   const loadStudentRoadmap = async () => {
     setIsLoading(true);
     const response = await apiFetch("/roadmaps");
     if (response && response.data) {
-      setCurrentRoadmap(response.data);
-      if (response.data.targetRole) {
-        setGoalInput(response.data.targetRole);
+      const data = response.data;
+      if (Array.isArray(data.milestones)) {
+        data.milestones = enforceSequentialMilestoneLocks(data.milestones);
       }
-      if (response.data.aiSource) {
-        setAiSource(response.data.aiSource);
+      setCurrentRoadmap(data);
+      if (data.targetRole) {
+        setGoalInput(data.targetRole);
+      }
+      if (data.aiSource) {
+        setAiSource(data.aiSource);
       }
     }
     setIsLoading(false);
@@ -686,8 +705,12 @@ export default function AIRoadmap() {
         const existingCheck = await apiFetch(`/roadmaps?role=${encodeURIComponent(targetRole)}`);
         if (existingCheck && existingCheck.data && existingCheck.data.milestones?.length > 0) {
           // Restore the saved roadmap — progress is preserved from last time
-          setCurrentRoadmap(existingCheck.data);
-          if (existingCheck.data.aiSource) setAiSource(existingCheck.data.aiSource);
+          const restoredData = existingCheck.data;
+          if (Array.isArray(restoredData.milestones)) {
+            restoredData.milestones = enforceSequentialMilestoneLocks(restoredData.milestones);
+          }
+          setCurrentRoadmap(restoredData);
+          if (restoredData.aiSource) setAiSource(restoredData.aiSource);
           setIsRestored(true);
           setIsGenerating(false);
           return;
@@ -716,10 +739,14 @@ export default function AIRoadmap() {
       });
 
       if (response && response.data) {
-        setCurrentRoadmap(response.data);
+        const genData = response.data;
+        if (Array.isArray(genData.milestones)) {
+          genData.milestones = enforceSequentialMilestoneLocks(genData.milestones);
+        }
+        setCurrentRoadmap(genData);
         setIsRestored(false);
-        if (response.data.aiSource) {
-          setAiSource(response.data.aiSource);
+        if (genData.aiSource) {
+          setAiSource(genData.aiSource);
         }
       } else if (response && response.error) {
         setError(response.error);
@@ -737,34 +764,48 @@ export default function AIRoadmap() {
     executeGeneration(goalInput.trim(), true);
   };
 
-  const handleToggleStatus = async (item) => {
-    const statusCycle = {
-      completed: "in-progress",
-      "in-progress": "completed",
-      locked: "in-progress",
-    };
-    const newStatus = statusCycle[item.status] || "in-progress";
-    const newProgress = newStatus === "completed" ? 100 : 0;
-
-    // Optimistic UI update
-    if (currentRoadmap && currentRoadmap.milestones) {
-      const updatedMilestones = currentRoadmap.milestones.map((m) =>
-        m.id === item.id ? { ...m, status: newStatus, progress: newProgress } : m
-      );
-      setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+  const handleToggleStatus = async (item, itemIndex) => {
+    if (itemIndex > 0) {
+      const prevMilestone = currentRoadmap?.milestones?.[itemIndex - 1];
+      if (!prevMilestone || prevMilestone.status !== "completed") {
+        setError(`🔒 Milestone ${itemIndex + 1} ("${item.title}") is locked! Complete Milestone ${itemIndex} ("${prevMilestone?.title || 'Previous Milestone'}") first.`);
+        return;
+      }
     }
 
-    // Server status update
+    const newStatus = item.status === "completed" ? "in-progress" : "completed";
+    const newProgress = newStatus === "completed" ? 100 : 0;
+    const newCompletedTopics = newStatus === "completed"
+      ? getTopicsForMilestone(item, currentRoadmap?.targetRole).map((_, idx) => idx)
+      : [];
+
+    const rawMilestones = (currentRoadmap?.milestones || []).map((m, idx) =>
+      idx === itemIndex ? { ...m, status: newStatus, progress: newProgress, completedTopics: newCompletedTopics } : m
+    );
+
+    const updatedMilestones = enforceSequentialMilestoneLocks(rawMilestones);
+    setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+    setError(null);
+
     await apiFetch(`/roadmaps/items/${item.id}`, {
       method: "PATCH",
       body: JSON.stringify({
         status: newStatus,
         progress: newProgress,
+        completedTopics: newCompletedTopics,
       }),
     });
   };
 
-  const handleToggleTopic = async (item, topicIndex) => {
+  const handleToggleTopic = async (item, itemIndex, topicIndex) => {
+    if (itemIndex > 0) {
+      const prevMilestone = currentRoadmap?.milestones?.[itemIndex - 1];
+      if (!prevMilestone || prevMilestone.status !== "completed") {
+        setError(`🔒 Milestone ${itemIndex + 1} ("${item.title}") is locked! Complete Milestone ${itemIndex} ("${prevMilestone?.title || 'Previous Milestone'}") first.`);
+        return;
+      }
+    }
+
     const allTopics = getTopicsForMilestone(item, currentRoadmap?.targetRole);
     const currentCompleted = Array.isArray(item.completedTopics) ? [...item.completedTopics] : [];
 
@@ -775,22 +816,17 @@ export default function AIRoadmap() {
       newCompleted = [...currentCompleted, topicIndex];
     }
 
+    const isAllDone = allTopics.length > 0 && newCompleted.length === allTopics.length;
     const newProgress = allTopics.length > 0 ? Math.round((newCompleted.length / allTopics.length) * 100) : 0;
-    const newStatus = newProgress === 100 ? "completed" : newProgress > 0 ? "in-progress" : (item.id === 1 ? "in-progress" : "locked");
+    const newStatus = isAllDone ? "completed" : "in-progress";
 
-    const updatedMilestone = {
-      ...item,
-      completedTopics: newCompleted,
-      progress: newProgress,
-      status: newStatus,
-    };
+    const rawMilestones = (currentRoadmap?.milestones || []).map((m, idx) =>
+      idx === itemIndex ? { ...m, completedTopics: newCompleted, progress: newProgress, status: newStatus } : m
+    );
 
-    if (currentRoadmap && currentRoadmap.milestones) {
-      const updatedMilestones = currentRoadmap.milestones.map((m) =>
-        m.id === item.id ? updatedMilestone : m
-      );
-      setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
-    }
+    const updatedMilestones = enforceSequentialMilestoneLocks(rawMilestones);
+    setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+    setError(null);
 
     await apiFetch(`/roadmaps/items/${item.id}`, {
       method: "PATCH",
@@ -802,10 +838,17 @@ export default function AIRoadmap() {
     });
   };
 
-  const toggleMilestoneExpand = (id) => {
+  const toggleMilestoneExpand = (m, index) => {
+    if (!m) return;
+    if (m.status === "locked" || (typeof index === "number" && index > 0 && currentRoadmap?.milestones?.[index - 1]?.status !== "completed")) {
+      const prevTitle = currentRoadmap?.milestones?.[index - 1]?.title || `Milestone ${index}`;
+      setError(`🔒 Milestone ${index + 1} ("${m.title}") is locked! Complete Milestone ${index} ("${prevTitle}") first to unlock modules.`);
+      return;
+    }
+
     setExpandedMilestones((prev) => ({
       ...prev,
-      [id]: !prev[id],
+      [m.id]: !prev[m.id],
     }));
   };
 
@@ -950,42 +993,10 @@ export default function AIRoadmap() {
             <div className="roadmap-empty-icon-halo">
               <Compass size={36} className="text-indigo-600" />
             </div>
-            <h3 className="roadmap-empty-title">Ready to Launch Your Career Roadmap?</h3>
+            <h3 className="roadmap-empty-title">Ready to Launch Your AI Career Roadmap?</h3>
             <p className="roadmap-empty-desc">
-              Type your target role in the generator above, or select one of our curated high-demand pathways below to begin instantly.
+              Type your target role in the search box above (e.g. <strong>Java Fullstack Developer</strong>, <strong>React Frontend Engineer</strong>, <strong>Python & AI Analytics</strong>) and click <strong>Generate Roadmap</strong> to build your step-by-step pathway.
             </p>
-          </div>
-
-          <div className="roadmap-preset-section">
-            <div className="roadmap-preset-header">
-              <Sparkles size={16} className="text-indigo-600" />
-              <span>Explore High-Demand Career Tracks</span>
-            </div>
-
-            <div className="roadmap-preset-grid">
-              {PRESET_PATHWAYS.map((path) => (
-                <div
-                  key={path.title}
-                  className="roadmap-preset-card"
-                  onClick={() => generateForRole(path.title)}
-                >
-                  <div className="preset-card-top">
-                    <span className="preset-emoji-badge">{path.icon}</span>
-                    <span className="preset-tag-badge">{path.badge}</span>
-                  </div>
-                  <h4 className="preset-title">{path.title}</h4>
-                  <p className="preset-subtitle">{path.subtitle}</p>
-                  <p className="preset-desc">{path.desc}</p>
-
-                  <div className="preset-card-footer">
-                    <span className="preset-meta-info">{path.milestonesCount} Structured Milestones</span>
-                    <span className="preset-action-link">
-                      Generate <ArrowRight size={14} />
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       ) : (
@@ -1025,30 +1036,8 @@ export default function AIRoadmap() {
                 title="Open interactive code compiler to practice roadmap topics"
                 onClick={() => openCompilerForTopic(currentRoadmap?.targetRole || goalInput)}
               >
-                <Terminal size={13} />
+                <Terminal size={15} />
                 <span>Open Compiler</span>
-              </button>
-              <button
-                type="button"
-                className="roadmap-reset-btn roadmap-regen-btn"
-                title="Regenerate a brand new roadmap for this topic"
-                disabled={isGenerating}
-                onClick={forceRegenerate}
-              >
-                <Sparkles size={13} />
-                <span>{isGenerating ? "Regenerating..." : "Regenerate"}</span>
-              </button>
-              <button
-                type="button"
-                className="roadmap-reset-btn"
-                onClick={() => {
-                  setCurrentRoadmap(null);
-                  setGoalInput("");
-                  setIsRestored(false);
-                }}
-              >
-                <RefreshCw size={13} />
-                <span>Change Target</span>
               </button>
             </div>
           </div>
@@ -1087,9 +1076,15 @@ export default function AIRoadmap() {
                       <div className="milestone-header-main">
                         <div className="milestone-title-row">
                           <h3 className="milestone-title">{m.title}</h3>
-                          {getStatusBadge(m.status, () => handleToggleStatus(m))}
+                          {getStatusBadge(m.status, () => handleToggleStatus(m, index))}
                         </div>
                         <p className="milestone-desc">{m.desc}</p>
+                        {m.status === "locked" && index > 0 && (
+                          <div className="flex items-center gap-2 p-2.5 mt-2 mb-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 rounded-lg text-xs font-semibold">
+                            <Lock size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span>Complete Milestone {index} ("{milestones[index - 1]?.title}") first to unlock.</span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -1124,8 +1119,10 @@ export default function AIRoadmap() {
 
                         <button
                           type="button"
-                          className="milestone-expand-btn"
-                          onClick={() => toggleMilestoneExpand(m.id)}
+                          className={`milestone-expand-btn ${m.status === "locked" ? "opacity-50 cursor-not-allowed pointer-events-none" : ""}`}
+                          onClick={() => toggleMilestoneExpand(m, index)}
+                          disabled={m.status === "locked"}
+                          title={m.status === "locked" ? `Complete Milestone ${index} first to unlock` : "View module syllabus"}
                         >
                           <span>{isExpanded ? "Hide Modules" : "View Modules"}</span>
                           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -1134,7 +1131,7 @@ export default function AIRoadmap() {
                     </div>
 
                     {/* Expandable Detailed Syllabus & Reference Links Drawer */}
-                    {isExpanded && (
+                    {isExpanded && m.status !== "locked" && (
                       <div className="milestone-details-drawer">
                         {/* 1. Key Learning Topics & Objectives */}
                         <div className="drawer-section">
@@ -1144,75 +1141,76 @@ export default function AIRoadmap() {
                           </h4>
                           <ul className="drawer-topics-list">
                             {getTopicsForMilestone(m, currentRoadmap?.targetRole).map((topic, i) => {
+                              const topicTitle = typeof topic === "string" ? topic : topic?.title || topic?.name || String(topic);
                               const isTopicDone = Array.isArray(m.completedTopics) && m.completedTopics.includes(i);
+                              const topicVideo = getVideoForTopic(topic, i, m, currentRoadmap?.targetRole);
+
                               return (
                                 <li key={i} className={`drawer-topic-item ${isTopicDone ? "topic-completed" : ""}`}>
                                   <div
                                     className="topic-text-wrap cursor-pointer hover:opacity-80 transition-opacity"
-                                    onClick={() => handleToggleTopic(m, i)}
-                                    title="Click to toggle topic completion progress"
+                                    onClick={() => handleToggleTopic(m, index, i)}
+                                    title={m.status === "locked" ? `Locked - Complete Milestone ${index} first` : "Click to toggle topic completion progress"}
                                   >
                                     {isTopicDone ? (
                                       <CheckCircle2 size={15} className="text-emerald-500 shrink-0 mt-0.5" />
                                     ) : (
                                       <CircleDot size={15} className="text-slate-400 shrink-0 mt-0.5" />
                                     )}
-                                    <span className={isTopicDone ? "line-through text-slate-400 font-medium" : ""}>{topic}</span>
+                                    <span className={isTopicDone ? "line-through text-slate-400 font-medium" : ""}>{topicTitle}</span>
                                   </div>
-                                  <button
-                                    type="button"
-                                    className="topic-practice-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openCompilerForTopic(topic);
-                                    }}
-                                    title="Open code compiler for this topic"
-                                  >
-                                    <Code2 size={12} />
-                                    <span>Practice</span>
-                                  </button>
+                                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px", minWidth: "98px", flexShrink: 0, alignSelf: "flex-start" }}>
+                                    <button
+                                      type="button"
+                                      className="topic-practice-btn"
+                                      style={{ width: "100%", justifyContent: "center" }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openCompilerForTopic(topicTitle);
+                                      }}
+                                      title="Open code compiler for this topic"
+                                    >
+                                      <Code2 size={12} />
+                                      <span>Practice</span>
+                                    </button>
+
+                                    {topicVideo && (
+                                      <button
+                                        type="button"
+                                        className="topic-video-btn"
+                                        style={{ width: "100%", justifyContent: "center" }}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openVideoModal(topicVideo, m, index, i);
+                                        }}
+                                        title={`Watch video tutorial for ${topicTitle}`}
+                                      >
+                                        <Play size={12} />
+                                        <span>Watch Video</span>
+                                      </button>
+                                    )}
+
+                                    <button
+                                      type="button"
+                                      className="topic-quiz-btn"
+                                      style={{ width: "100%", justifyContent: "center" }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenTopicQuiz(topicTitle, currentRoadmap?.targetRole);
+                                      }}
+                                      title={`Take 5-question AI Quiz on ${topicTitle}`}
+                                    >
+                                      <Award size={12} />
+                                      <span>Take Quiz</span>
+                                    </button>
+                                  </div>
                                 </li>
                               );
                             })}
                           </ul>
                         </div>
 
-                        {/* 2. Detailed Syllabus Breakdown */}
-                        <div className="drawer-section mt-4">
-                          <h4 className="drawer-heading">
-                            <BookOpen size={15} className="text-indigo-600" />
-                            <span>Detailed Unit Syllabus & Learning Modules</span>
-                          </h4>
-                          <div className="syllabus-modules-container">
-                            {getSyllabusForMilestone(m, currentRoadmap?.targetRole).map((unit, uIdx) => (
-                              <div key={uIdx} className="syllabus-unit-card">
-                                <div className="syllabus-unit-header">
-                                  <span className="unit-title">{unit.moduleTitle}</span>
-                                  {unit.duration && (
-                                    <span className="unit-duration-pill">
-                                      <Clock size={12} />
-                                      {unit.duration}
-                                    </span>
-                                  )}
-                                </div>
-                                <ul className="unit-concepts-list">
-                                  {(unit.concepts || []).map((concept, cIdx) => (
-                                    <li key={cIdx} className="unit-concept-item">
-                                      <span className="concept-bullet">•</span>
-                                      <span>{concept}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                                {unit.practicalOutcome && (
-                                  <div className="unit-outcome-box">
-                                    <span className="outcome-label">🎯 Hands-on Lab Outcome:</span>
-                                    <span className="outcome-text">{unit.practicalOutcome}</span>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+
 
                         {/* 3. Reference Links & Learning Resources */}
                         <div className="drawer-section mt-4">
@@ -1253,173 +1251,490 @@ export default function AIRoadmap() {
       )}
 
       {/* Interactive Practice Compiler Modal Overlay */}
-      {isCompilerOpen && (
-        <div className="roadmap-compiler-overlay" onClick={() => setIsCompilerOpen(false)}>
-          <div className="roadmap-compiler-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Top Header Bar */}
-            <div className="compiler-modal-header">
-              <div className="compiler-header-left">
-                <div className="compiler-icon-badge">
-                  <Code2 size={18} />
-                </div>
-                <div>
-                  <h4 className="compiler-topic-title">
-                    Practice Compiler: {activeCompilerTopic || "Roadmap Topic"}
-                  </h4>
-                  <span className="compiler-role-subtitle">
-                    Target Track: {currentRoadmap?.targetRole || goalInput || "Software Development"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="compiler-header-actions">
-                <select
-                  value={compilerLanguage}
-                  onChange={(e) => {
-                    const newLang = e.target.value;
-                    setCompilerLanguage(newLang);
-                    setCompilerCode(getStarterCodeForTopic(activeCompilerTopic, newLang, currentRoadmap?.targetRole || goalInput));
-                    if (newLang === "html") setCompilerTab("preview");
-                    else if (compilerTab === "preview") setCompilerTab("code");
-                  }}
-                  className="compiler-lang-select"
-                >
-                  <option value="node">JavaScript (Node.js)</option>
-                  <option value="python">Python 3</option>
-                  <option value="java">Java 17</option>
-                  <option value="cpp">C++ 20</option>
-                  <option value="sql">SQL Query</option>
-                  <option value="html">HTML5 & CSS3 Live Preview</option>
-                </select>
-
-                <button
-                  type="button"
-                  className="compiler-action-btn compiler-reset-btn"
-                  title="Reset Starter Code"
-                  onClick={() => setCompilerCode(getStarterCodeForTopic(activeCompilerTopic, compilerLanguage, currentRoadmap?.targetRole || goalInput))}
-                >
-                  <RotateCcw size={14} />
-                  <span>Reset</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="compiler-action-btn compiler-run-btn"
-                  disabled={compilerStatus === "running"}
-                  onClick={handleRunCompilerCode}
-                >
-                  <Play size={14} fill="currentColor" />
-                  <span>{compilerStatus === "running" ? "Running..." : "Run Code"}</span>
-                </button>
-
-                <button
-                  type="button"
-                  className="compiler-close-btn"
-                  onClick={() => setIsCompilerOpen(false)}
-                >
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-
-            {/* Compiler Main Split Area */}
-            <div className="compiler-modal-body">
-              {/* Left Side: Code Editor Area */}
-              <div className="compiler-editor-pane">
-                <div className="editor-pane-header">
-                  <span className="pane-title">Code Editor ({compilerLanguage.toUpperCase()})</span>
-                  <button
-                    type="button"
-                    className="copy-code-btn"
-                    onClick={() => {
-                      navigator.clipboard.writeText(compilerCode);
-                      alert("Code copied to clipboard!");
-                    }}
-                  >
-                    <Copy size={13} />
-                    <span>Copy Code</span>
-                  </button>
-                </div>
-                <div className="code-textarea-wrap">
-                  <div className="editor-line-numbers">
-                    {compilerCode.split("\n").map((_, i) => (
-                      <span key={i}>{i + 1}</span>
-                    ))}
+      {isCompilerOpen &&
+        createPortal(
+          <div className="roadmap-compiler-overlay" onClick={() => setIsCompilerOpen(false)}>
+            <div className="roadmap-compiler-modal" onClick={(e) => e.stopPropagation()}>
+              {/* Top Header Bar */}
+              <div className="compiler-modal-header">
+                <div className="compiler-header-left">
+                  <div className="compiler-icon-badge">
+                    <Code2 size={18} />
                   </div>
-                  <textarea
-                    className="code-textarea"
-                    value={compilerCode}
-                    onChange={(e) => setCompilerCode(e.target.value)}
-                    placeholder="Write your code solution here..."
-                    spellCheck="false"
-                  />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h4 className="compiler-topic-title" title={activeCompilerTopic || "Roadmap Topic"}>
+                      Practice Compiler: {activeCompilerTopic || "Roadmap Topic"}
+                    </h4>
+                    <span className="compiler-role-subtitle">
+                      Target Track: {currentRoadmap?.targetRole || goalInput || "Software Development"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="compiler-header-actions">
+                  <select
+                    value={compilerLanguage}
+                    onChange={(e) => {
+                      const newLang = e.target.value;
+                      setCompilerLanguage(newLang);
+                      setCompilerCode(getStarterCodeForTopic(activeCompilerTopic, newLang, currentRoadmap?.targetRole || goalInput));
+                      if (newLang === "html") setCompilerTab("preview");
+                      else if (compilerTab === "preview") setCompilerTab("code");
+                    }}
+                    className="compiler-lang-select"
+                  >
+                    <option value="node">JavaScript (Node.js)</option>
+                    <option value="python">Python 3</option>
+                    <option value="java">Java 17</option>
+                    <option value="cpp">C++ 20</option>
+                    <option value="sql">SQL Query</option>
+                    <option value="html">HTML5 & CSS3 Live Preview</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    className="compiler-action-btn compiler-run-btn"
+                    disabled={compilerStatus === "running"}
+                    onClick={handleRunCompilerCode}
+                  >
+                    <Play size={14} fill="currentColor" />
+                    <span>{compilerStatus === "running" ? "Running..." : "Run Code"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="compiler-action-btn compiler-cancel-btn"
+                    onClick={() => setIsCompilerOpen(false)}
+                    title="Cancel & Exit Compiler"
+                  >
+                    <X size={15} />
+                    <span>Exit</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Right Side: Terminal / Console Output & Stdin */}
-              <div className="compiler-output-pane">
-                <div className="output-pane-tabs">
-                  <button
-                    type="button"
-                    className={`output-tab-btn ${compilerTab === "output" ? "active" : ""}`}
-                    onClick={() => setCompilerTab("output")}
-                  >
-                    <Terminal size={13} />
-                    <span>Console Output</span>
-                    {compilerExecutionTime && (
-                      <span className="execution-time-tag">{compilerExecutionTime}ms</span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className={`output-tab-btn ${compilerTab === "stdin" ? "active" : ""}`}
-                    onClick={() => setCompilerTab("stdin")}
-                  >
-                    <FileText size={13} />
-                    <span>Custom Input (Stdin)</span>
-                  </button>
-                  {compilerLanguage === "html" && (
+              {/* Compiler Main Split Area */}
+              <div className="compiler-modal-body">
+                {/* Left Side: Code Editor Area */}
+                <div className="compiler-editor-pane">
+                  <div className="editor-pane-header">
+                    <span className="pane-title">Code Editor ({compilerLanguage.toUpperCase()})</span>
                     <button
                       type="button"
-                      className={`output-tab-btn ${compilerTab === "preview" ? "active" : ""}`}
-                      onClick={() => setCompilerTab("preview")}
+                      className="copy-code-btn"
+                      onClick={() => {
+                        navigator.clipboard.writeText(compilerCode);
+                        alert("Code copied to clipboard!");
+                      }}
                     >
-                      <Globe size={13} />
-                      <span>Live UI Preview</span>
+                      <Copy size={13} />
+                      <span>Copy Code</span>
                     </button>
-                  )}
+                  </div>
+                  <div className="code-textarea-wrap">
+                    <div className="editor-line-numbers">
+                      {compilerCode.split("\n").map((_, i) => (
+                        <span key={i}>{i + 1}</span>
+                      ))}
+                    </div>
+                    <textarea
+                      className="code-textarea"
+                      value={compilerCode}
+                      onChange={(e) => setCompilerCode(e.target.value)}
+                      placeholder="Write your code solution here..."
+                      spellCheck="false"
+                    />
+                  </div>
                 </div>
 
-                <div className="output-pane-content">
-                  {compilerTab === "output" && (
-                    <pre className={`terminal-output console-status-${compilerStatus}`}>
-                      {compilerOutput || "Click 'Run Code' to execute and view stdout logs."}
-                    </pre>
-                  )}
+                {/* Right Side: Terminal / Console Output & Stdin */}
+                <div className="compiler-output-pane">
+                  <div className="output-pane-tabs">
+                    <button
+                      type="button"
+                      className={`output-tab-btn ${compilerTab === "output" ? "active" : ""}`}
+                      onClick={() => setCompilerTab("output")}
+                    >
+                      <Terminal size={13} />
+                      <span>Console Output</span>
+                      {compilerExecutionTime && (
+                        <span className="execution-time-tag">{compilerExecutionTime}ms</span>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      className={`output-tab-btn ${compilerTab === "stdin" ? "active" : ""}`}
+                      onClick={() => setCompilerTab("stdin")}
+                    >
+                      <FileText size={13} />
+                      <span>Custom Input (Stdin)</span>
+                    </button>
+                    {compilerLanguage === "html" && (
+                      <button
+                        type="button"
+                        className={`output-tab-btn ${compilerTab === "preview" ? "active" : ""}`}
+                        onClick={() => setCompilerTab("preview")}
+                      >
+                        <Globe size={13} />
+                        <span>Live UI Preview</span>
+                      </button>
+                    )}
+                  </div>
 
-                  {compilerTab === "stdin" && (
-                    <textarea
-                      className="stdin-textarea"
-                      value={compilerStdin}
-                      onChange={(e) => setCompilerStdin(e.target.value)}
-                      placeholder="Enter custom standard input (stdin) parameters here..."
-                    />
-                  )}
+                  <div className="output-pane-content">
+                    {compilerTab === "output" && (
+                      <pre className={`terminal-output console-status-${compilerStatus}`}>
+                        {compilerOutput || "Click 'Run Code' to execute and view stdout logs."}
+                      </pre>
+                    )}
 
-                  {compilerTab === "preview" && (
-                    <iframe
-                      title="Live HTML Preview"
-                      srcDoc={compilerCode}
-                      className="html-preview-iframe"
-                      sandbox="allow-scripts"
-                    />
-                  )}
+                    {compilerTab === "stdin" && (
+                      <textarea
+                        className="stdin-textarea"
+                        value={compilerStdin}
+                        onChange={(e) => setCompilerStdin(e.target.value)}
+                        placeholder="Enter custom standard input (stdin) parameters here..."
+                      />
+                    )}
+
+                    {compilerTab === "preview" && (
+                      <iframe
+                        title="Live HTML Preview"
+                        srcDoc={compilerCode}
+                        className="html-preview-iframe"
+                        sandbox="allow-scripts"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-        </div>
-      </div>
-      )}
+          </div>,
+          document.body
+        )}
+
+      {/* Interactive Video Learning Tutorial Modal */}
+      {isVideoModalOpen &&
+        activeVideo &&
+        createPortal(
+          <div className="roadmap-video-modal-overlay" onClick={() => setIsVideoModalOpen(false)}>
+            <div className="roadmap-video-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="compiler-modal-header" style={{ background: "#0f172a" }}>
+                <div className="compiler-header-left">
+                  <div className="compiler-icon-badge" style={{ background: "rgba(220, 38, 38, 0.15)", color: "#ef4444" }}>
+                    <Play size={18} />
+                  </div>
+                  <div>
+                    <h4 className="compiler-topic-title" style={{ color: "#f8fafc" }}>
+                      {activeVideo.title}
+                    </h4>
+                    <span className="compiler-role-subtitle" style={{ color: "#94a3b8" }}>
+                      {activeVideo.channel || "Official Tutorial"} · {activeVideo.duration || "Video Lesson"}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <a
+                    href={activeVideo.videoId ? `https://www.youtube.com/watch?v=${activeVideo.videoId}` : activeVideo.embedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: "rgba(220, 38, 38, 0.15)",
+                      color: "#f87171",
+                      border: "1px solid rgba(239, 68, 68, 0.3)",
+                      padding: "6px 12px",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      textDecoration: "none"
+                    }}
+                    title="Watch video on YouTube site"
+                  >
+                    <ExternalLink size={13} />
+                    <span>Watch on YouTube</span>
+                  </a>
+
+                  <button
+                    type="button"
+                    className="compiler-close-btn"
+                    onClick={() => setIsVideoModalOpen(false)}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ background: "#020617", padding: "16px", display: "flex", justifyContent: "center" }}>
+                <iframe
+                  src={activeVideo.embedUrl}
+                  title={activeVideo.title}
+                  style={{ width: "100%", aspectRatio: "16/9", borderRadius: "12px", border: "1px solid #1e293b" }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+
+              <div style={{ padding: "14px 20px", background: "#0f172a", borderTop: "1px solid #1e293b", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                <div style={{ fontSize: "12px", color: "#94a3b8" }}>
+                  <span>Topics: <strong style={{ color: "#cbd5e1" }}>{activeVideo.topicsCovered}</strong></span>
+                </div>
+
+                <button
+                  type="button"
+                  style={{
+                    background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+                    color: "#ffffff",
+                    padding: "8px 16px",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: "700",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.3)"
+                  }}
+                  onClick={() => {
+                    if (activeVideo.milestone && typeof activeVideo.topicIndex === "number") {
+                      handleToggleTopic(activeVideo.milestone, activeVideo.milestoneIndex, activeVideo.topicIndex);
+                    }
+                    setIsVideoModalOpen(false);
+                  }}
+                >
+                  <CheckCircle2 size={15} />
+                  <span>Mark Completed & Auto-Track Progress</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* 3. AI Topic Quiz Assessment Modal Overlay */}
+      {isQuizModalOpen &&
+        createPortal(
+          <div style={{ position: "fixed", inset: 0, zIndex: 999999, background: "rgba(2, 6, 23, 0.85)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "16px" }}>
+            <div style={{ width: "100%", maxWidth: "660px", background: "#0f172a", borderRadius: "16px", border: "1px solid #1e293b", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.6)", overflow: "hidden", color: "#f8fafc" }}>
+              {/* Header */}
+              <div style={{ padding: "16px 20px", background: "#1e293b", borderBottom: "1px solid #334155", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <div style={{ padding: "8px", background: "rgba(16, 185, 129, 0.15)", borderRadius: "10px", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Award size={20} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#f8fafc" }}>
+                      AI Topic Quiz Assessment
+                    </h3>
+                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>
+                      {activeQuizTopic} · 5 Questions
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsQuizModalOpen(false)}
+                  style={{ background: "transparent", border: "none", color: "#94a3b8", cursor: "pointer", padding: "4px" }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Body Content */}
+              <div style={{ padding: "24px", maxHeight: "75vh", overflowY: "auto" }}>
+                {isQuizLoading ? (
+                  <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                    <RefreshCw size={36} className="animate-spin text-emerald-500" style={{ margin: "0 auto 16px" }} />
+                    <h4 style={{ fontSize: "16px", fontWeight: "600", color: "#f8fafc" }}>Generating AI Quiz Questions...</h4>
+                    <p style={{ fontSize: "13px", color: "#94a3b8", marginTop: "4px" }}>
+                      Synthesizing 5 topic assessment questions for "{activeQuizTopic}"
+                    </p>
+                  </div>
+                ) : quizData && Array.isArray(quizData.questions) && quizData.questions.length > 0 ? (
+                  !isQuizSubmitted ? (
+                    <div>
+                      {/* Question Header & Progress Bar */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                        <span style={{ fontSize: "12px", fontWeight: "700", color: "#10b981", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                          Question {currentQuestionIdx + 1} of {quizData.questions.length}
+                        </span>
+                        <span style={{ fontSize: "12px", color: "#64748b" }}>
+                          {Math.round(((currentQuestionIdx + 1) / quizData.questions.length) * 100)}% Progress
+                        </span>
+                      </div>
+
+                      <div style={{ width: "100%", height: "6px", background: "#1e293b", borderRadius: "3px", overflow: "hidden", marginBottom: "20px" }}>
+                        <div style={{ width: `${((currentQuestionIdx + 1) / quizData.questions.length) * 100}%`, height: "100%", background: "#10b981", transition: "width 0.3s ease" }} />
+                      </div>
+
+                      {/* Question Text */}
+                      <h4 style={{ fontSize: "15px", fontWeight: "600", color: "#f8fafc", lineHeight: "1.5", marginBottom: "20px" }}>
+                        {quizData.questions[currentQuestionIdx]?.question}
+                      </h4>
+
+                      {/* Options */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "24px" }}>
+                        {(quizData.questions[currentQuestionIdx]?.options || []).map((opt, oIdx) => {
+                          const isSelected = userAnswers[currentQuestionIdx] === oIdx;
+                          return (
+                            <button
+                              key={oIdx}
+                              type="button"
+                              onClick={() => setUserAnswers({ ...userAnswers, [currentQuestionIdx]: oIdx })}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "12px",
+                                padding: "12px 16px",
+                                borderRadius: "10px",
+                                background: isSelected ? "rgba(16, 185, 129, 0.15)" : "#1e293b",
+                                border: isSelected ? "1.5px solid #10b981" : "1px solid #334155",
+                                color: isSelected ? "#34d399" : "#cbd5e1",
+                                fontSize: "13.5px",
+                                fontWeight: isSelected ? "600" : "400",
+                                textAlign: "left",
+                                cursor: "pointer",
+                                transition: "all 0.15s ease"
+                              }}
+                            >
+                              <div style={{ width: "20px", height: "20px", borderRadius: "50%", border: isSelected ? "2px solid #10b981" : "2px solid #64748b", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                {isSelected && <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#10b981" }} />}
+                              </div>
+                              <span>{opt}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Navigation */}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid #1e293b", paddingTop: "16px" }}>
+                        <button
+                          type="button"
+                          disabled={currentQuestionIdx === 0}
+                          onClick={() => setCurrentQuestionIdx(prev => Math.max(0, prev - 1))}
+                          style={{ opacity: currentQuestionIdx === 0 ? 0.4 : 1, padding: "8px 16px", borderRadius: "8px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", cursor: currentQuestionIdx === 0 ? "not-allowed" : "pointer", fontSize: "13px" }}
+                        >
+                          Previous
+                        </button>
+
+                        {currentQuestionIdx < quizData.questions.length - 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => setCurrentQuestionIdx(prev => prev + 1)}
+                            style={{ padding: "8px 20px", borderRadius: "8px", background: "#10b981", color: "#ffffff", border: "none", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}
+                          >
+                            Next Question
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setIsQuizSubmitted(true)}
+                            disabled={Object.keys(userAnswers).length < quizData.questions.length}
+                            style={{
+                              opacity: Object.keys(userAnswers).length < quizData.questions.length ? 0.5 : 1,
+                              padding: "8px 24px",
+                              borderRadius: "8px",
+                              background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                              color: "#ffffff",
+                              border: "none",
+                              fontWeight: "700",
+                              cursor: Object.keys(userAnswers).length < quizData.questions.length ? "not-allowed" : "pointer",
+                              fontSize: "13px"
+                            }}
+                          >
+                            Submit Quiz
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      {(() => {
+                        const total = quizData.questions.length;
+                        let correctCount = 0;
+                        quizData.questions.forEach((q, idx) => {
+                          if (userAnswers[idx] === q.correctAnswerIndex) correctCount++;
+                        });
+                        const pct = Math.round((correctCount / total) * 100);
+
+                        return (
+                          <div>
+                            <div style={{ textAlign: "center", padding: "20px 16px", background: "rgba(16, 185, 129, 0.1)", borderRadius: "12px", border: "1px solid rgba(16, 185, 129, 0.2)", marginBottom: "20px" }}>
+                              <span style={{ fontSize: "36px" }}>{pct >= 80 ? "🎉" : pct >= 60 ? "👍" : "📚"}</span>
+                              <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#f8fafc", margin: "8px 0 4px" }}>
+                                Assessment Completed! Score: {correctCount} / {total} ({pct}%)
+                              </h3>
+                              <p style={{ fontSize: "13px", color: "#94a3b8", margin: 0 }}>
+                                {pct >= 80 ? "Outstanding mastery of this topic!" : "Good practice! Review the explanations below to reinforce key concepts."}
+                              </p>
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                              {quizData.questions.map((q, idx) => {
+                                const userChoice = userAnswers[idx];
+                                const isCorrect = userChoice === q.correctAnswerIndex;
+                                return (
+                                  <div key={idx} style={{ padding: "14px", borderRadius: "10px", background: "#1e293b", border: isCorrect ? "1px solid rgba(16, 185, 129, 0.4)" : "1px solid rgba(239, 68, 68, 0.4)" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                                      {isCorrect ? <CheckCircle2 size={16} className="text-emerald-500" /> : <X size={16} className="text-red-500" />}
+                                      <strong style={{ fontSize: "13.5px", color: "#f8fafc" }}>Q{idx + 1}: {q.question}</strong>
+                                    </div>
+                                    <div style={{ fontSize: "12.5px", color: isCorrect ? "#34d399" : "#fca5a5", marginBottom: "4px" }}>
+                                      Your Answer: {q.options[userChoice] !== undefined ? q.options[userChoice] : "Not answered"}
+                                    </div>
+                                    {!isCorrect && (
+                                      <div style={{ fontSize: "12.5px", color: "#34d399", marginBottom: "6px" }}>
+                                        Correct Answer: {q.options[q.correctAnswerIndex]}
+                                      </div>
+                                    )}
+                                    <div style={{ fontSize: "12px", color: "#94a3b8", background: "#0f172a", padding: "8px 10px", borderRadius: "6px", borderLeft: "3px solid #3b82f6" }}>
+                                      💡 <strong>AI Explanation:</strong> {q.explanation}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "24px" }}>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsQuizSubmitted(false);
+                                  setUserAnswers({});
+                                  setCurrentQuestionIdx(0);
+                                }}
+                                style={{ padding: "8px 16px", borderRadius: "8px", background: "#1e293b", color: "#f8fafc", border: "1px solid #334155", cursor: "pointer", fontSize: "13px" }}
+                              >
+                                Retake Quiz
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setIsQuizModalOpen(false)}
+                                style={{ padding: "8px 20px", borderRadius: "8px", background: "#10b981", color: "#ffffff", border: "none", fontWeight: "600", cursor: "pointer", fontSize: "13px" }}
+                              >
+                                Close & Return
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )
+                ) : (
+                  <div style={{ textAlign: "center", padding: "30px 20px", color: "#94a3b8" }}>
+                    No quiz questions available for this topic.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

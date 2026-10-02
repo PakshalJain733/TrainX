@@ -185,40 +185,32 @@ export default function AD_ApproveUsers() {
         </div>
       )}
 
-      {/* Hero Banner Header */}
-      <div className="approve-hero-card">
-        <div className="approve-hero-bg-pattern"></div>
-        <div className="approve-hero-content">
-          <div className="approve-hero-title-group">
-            <div className="approve-hero-icon-box">
-              <UserCheck size={30} />
-            </div>
-            <div>
-              <h1 className="approve-hero-h1">
-                <span>Pending Registrations</span>
-                {pendingUsers.length > 0 && (
-                  <span className="approve-hero-badge">
-                    {pendingUsers.length} Action Required
-                  </span>
-                )}
-              </h1>
-              <p className="approve-hero-desc">
-                Review and approve newly registered students, faculty, and coordinators before granting them full access to the portal.
-              </p>
-            </div>
+      {/* Page Header Section */}
+      <div className="approve-text-header">
+        <div>
+          <div className="approve-title-row">
+            <h1 className="approve-page-title">Pending Registrations</h1>
+            {pendingUsers.length > 0 && (
+              <span className="approve-count-badge">
+                {pendingUsers.length} Action Required
+              </span>
+            )}
           </div>
+          <p className="approve-page-subtitle">
+            Review and approve newly registered students, faculty, and coordinators before granting them full access to the portal.
+          </p>
+        </div>
 
-          <div className="approve-hero-actions">
-            <button
-              type="button"
-              onClick={fetchPendingUsers}
-              className="approve-btn-refresh"
-              disabled={loading}
-            >
-              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-              <span>Refresh List</span>
-            </button>
-          </div>
+        <div className="approve-header-actions">
+          <button
+            type="button"
+            onClick={fetchPendingUsers}
+            className="approve-btn-refresh-text"
+            disabled={loading}
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <span>Refresh List</span>
+          </button>
         </div>
       </div>
 

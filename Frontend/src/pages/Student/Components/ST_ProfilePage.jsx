@@ -52,11 +52,10 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
         type="button"
         disabled={disabled}
         onClick={() => !disabled && setIsOpen(v => !v)}
-        className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`}
-        style={disabled ? { background: '#f1f5f9', cursor: 'not-allowed', borderColor: '#cbd5e1' } : {}}
+        className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}${disabled ? ' student-prof-select-disabled' : ''}`}
       >
         {Icon && <Icon className="student-prof-select-icon" />}
-        <span className="student-prof-select-text" style={disabled ? { color: '#64748b' } : {}}>{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
+        <span className={`student-prof-select-text${disabled ? ' student-prof-select-text-disabled' : ''}`}>{selected ? selected.label : <span className="student-prof-select-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && !disabled && (
@@ -92,9 +91,9 @@ function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add 
 
   return (
     <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}${disabled ? ' opacity-75 cursor-not-allowed' : ''}`} ref={ref}>
-      <div className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}`} style={{ padding: 0, ...(disabled ? { background: '#f1f5f9', cursor: 'not-allowed', borderColor: '#cbd5e1' } : {}) }}>
-        <input
-          type="text"
+      <div className={`student-prof-select-trigger${isOpen ? ' student-prof-select-trigger--open' : ''}${disabled ? ' student-prof-select-disabled' : ''}`}>
+        <input 
+          type="text" 
           value={query}
           disabled={disabled}
           onChange={e => { if (!disabled) { setQuery(e.target.value); setIsOpen(true); } }}
@@ -108,9 +107,9 @@ function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add 
             }
           }}
           placeholder={disabled ? "Click Edit Profile to manage skills" : placeholder}
-          style={{ width: '100%', border: 'none', background: 'transparent', outline: 'none', padding: '10px 14px', fontSize: '13.5px', color: disabled ? '#64748b' : '#0f172a', cursor: disabled ? 'not-allowed' : 'text' }}
+          className="student-prof-skill-input"
         />
-        <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} style={{ marginRight: '14px', flexShrink: 0 }} />
+        <ChevronDown className={`student-prof-select-arrow${isOpen ? ' student-prof-select-arrow--rotate' : ''}`} />
       </div>
       {isOpen && !disabled && (
         <div className="student-prof-select-dropdown">
@@ -120,12 +119,12 @@ function StudentSkillSelect({ options = [], onAdd, placeholder = 'Search or add 
             </div>
           ))}
           {showAdd && (
-            <div onClick={() => { onAdd(query.trim()); setQuery(""); setIsOpen(false); }} className="student-prof-select-option" style={{ color: '#2563eb', fontWeight: 500 }}>
-              <Plus size={14} style={{ marginRight: '6px' }} /> Add "{query.trim()}"
+            <div onClick={() => { onAdd(query.trim()); setQuery(""); setIsOpen(false); }} className="student-prof-select-option student-prof-select-add-opt">
+              <Plus size={14} /> Add "{query.trim()}"
             </div>
           )}
           {filtered.length === 0 && !showAdd && (
-            <div className="student-prof-select-option" style={{ color: '#94a3b8', cursor: 'default' }}>
+            <div className="student-prof-select-option student-prof-select-empty-opt">
               No options found
             </div>
           )}
@@ -671,16 +670,16 @@ export default function ProfilePage() {
             </div>
 
             {/* Account Settings & Alert Preferences in Left Card */}
-            <div style={{ marginTop: "18px", paddingTop: "16px", borderTop: "1.5px solid #f1f5f9" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
+            <div className="student-prof-alerts-wrap">
+              <div className="student-prof-alerts-header">
                 <Bell size={16} color="#4f46e5" />
-                <h4 style={{ margin: 0, fontSize: "13px", fontWeight: "700", color: "#0f172a" }}>Alert Preferences</h4>
+                <h4 className="student-prof-alerts-title">Alert Preferences</h4>
               </div>
 
-              <div className="profile-toggle-list" style={{ gap: "8px" }}>
-                <div className="profile-toggle-item" style={{ padding: "8px 10px" }}>
+              <div className="profile-toggle-list profile-toggle-list-sm">
+                <div className="profile-toggle-item profile-toggle-item-sm">
                   <div className="profile-toggle-text">
-                    <span className="profile-toggle-title" style={{ fontSize: "12px" }}>Milestone Progress Alerts</span>
+                    <span className="profile-toggle-title profile-toggle-title-sm">Milestone Progress Alerts</span>
                   </div>
                   <label className="profile-switch">
                     <input
@@ -692,9 +691,9 @@ export default function ProfilePage() {
                   </label>
                 </div>
 
-                <div className="profile-toggle-item" style={{ padding: "8px 10px" }}>
+                <div className="profile-toggle-item profile-toggle-item-sm">
                   <div className="profile-toggle-text">
-                    <span className="profile-toggle-title" style={{ fontSize: "12px" }}>Weekly Mentor Digest</span>
+                    <span className="profile-toggle-title profile-toggle-title-sm">Weekly Mentor Digest</span>
                   </div>
                   <label className="profile-switch">
                     <input
@@ -706,9 +705,9 @@ export default function ProfilePage() {
                   </label>
                 </div>
 
-                <div className="profile-toggle-item" style={{ padding: "8px 10px" }}>
+                <div className="profile-toggle-item profile-toggle-item-sm">
                   <div className="profile-toggle-text">
-                    <span className="profile-toggle-title" style={{ fontSize: "12px" }}>AI Mock Drill Reminders</span>
+                    <span className="profile-toggle-title profile-toggle-title-sm">AI Mock Drill Reminders</span>
                   </div>
                   <label className="profile-switch">
                     <input
@@ -722,14 +721,22 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="profile-change-pw-wrap flex flex-col gap-2.5 mt-4">
+            <div className="profile-change-pw-wrap">
               <button
                 type="button"
                 className="profile-change-pw-btn"
                 onClick={() => setIsChangePasswordOpen(true)}
               >
-                <Key size={16} />
-                Change Password
+                <span>Change Password</span>
+              </button>
+
+              <button
+                type="button"
+                className="profile-2fa-setup-btn"
+                onClick={handleOpen2FASetup}
+                title={is2FAEnabled ? "Reconfigure Google Authenticator 2FA" : "Setup Google Authenticator 2FA"}
+              >
+                <span>2FA Authenticator</span>
               </button>
             </div>
           </div>
@@ -739,8 +746,8 @@ export default function ProfilePage() {
         <div className="profile-form-card">
           {/* Section 1: Personal & Contact Details (TOP) */}
           <div className="profile-form-section">
-            <div className="profile-section-heading" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: "18px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div className="profile-section-heading profile-section-heading-flex">
+              <div className="profile-heading-group">
                 <User size={18} className="profile-heading-icon text-indigo-500" />
                 <div>
                   <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Academic Details" : "Personal & Academic Details"}</h3>
@@ -748,27 +755,12 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+              <div className="profile-heading-actions">
                 {!isEditing ? (
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
                     className="profile-edit-trigger-btn"
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: "6px",
-                      padding: "8px 16px",
-                      borderRadius: "8px",
-                      background: "#2563eb",
-                      color: "#ffffff",
-                      fontWeight: "600",
-                      fontSize: "13px",
-                      border: "none",
-                      cursor: "pointer",
-                      boxShadow: "0 2px 6px rgba(37, 99, 235, 0.2)",
-                      transition: "all 0.15s ease",
-                    }}
                   >
                     <Edit2 size={15} /> Edit Profile
                   </button>
@@ -777,34 +769,13 @@ export default function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "8px 14px",
-                        borderRadius: "8px",
-                        background: "#ffffff",
-                        color: "#64748b",
-                        fontWeight: "600",
-                        fontSize: "13px",
-                        border: "1px solid #cbd5e1",
-                        cursor: "pointer",
-                        transition: "all 0.15s ease",
-                      }}
+                      className="profile-cancel-btn"
                     >
                       <X size={15} /> Cancel
                     </button>
                     <button
                       type="submit"
                       className="profile-save-btn"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "6px",
-                        padding: "8px 16px",
-                        borderRadius: "8px",
-                        fontSize: "13px",
-                      }}
                     >
                       <Save size={15} /> Save Profile
                     </button>
@@ -851,8 +822,8 @@ export default function ProfilePage() {
               </div>
 
               <div className="profile-field">
-                <label className="profile-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  Department <span style={{ fontSize: "11px", fontWeight: 400, color: "#94a3b8" }}>(Read-Only)</span>
+                <label className="profile-label profile-label-flex">
+                  Department <span className="profile-label-hint">(Read-Only)</span>
                 </label>
                 <input
                   type="text"
@@ -984,27 +955,16 @@ export default function ProfilePage() {
               </div>
 
               {/* SEARCHABLE CAREER TRACK INPUT */}
-              <div className="profile-field" style={{ position: "relative" }} ref={trackWrapperRef}>
+              <div className="profile-field profile-track-search-wrapper" ref={trackWrapperRef}>
                 <label className="profile-label">Target Career Track / Role Goal *</label>
-                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                <div className="flex items-center relative">
                   <Search
                     size={18}
-                    style={{
-                      position: "absolute",
-                      left: "14px",
-                      color: "#64748b",
-                      pointerEvents: "none",
-                      zIndex: 2,
-                    }}
+                    className="profile-track-search-icon"
                   />
                   <input
                     type="text"
-                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
-                    style={{
-                      paddingLeft: "42px",
-                      paddingRight: (form.track && isEditing) ? "36px" : "14px",
-                      width: "100%",
-                    }}
+                    className={`profile-input profile-track-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     placeholder="Search or type target track (e.g. Full Stack)..."
                     value={form.track}
                     readOnly={!isEditing}
@@ -1022,17 +982,7 @@ export default function ProfilePage() {
                     <button
                       type="button"
                       onClick={() => setForm((p) => ({ ...p, track: "" }))}
-                      style={{
-                        position: "absolute",
-                        right: "12px",
-                        background: "none",
-                        border: "none",
-                        color: "#94a3b8",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "2px",
-                      }}
+                      className="profile-track-clear-btn"
                       title="Clear input"
                     >
                       <X size={16} />
@@ -1041,22 +991,7 @@ export default function ProfilePage() {
                 </div>
 
                 {isEditing && trackSearchFocus && filteredTracks.length > 0 && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: 0,
-                      right: 0,
-                      zIndex: 50,
-                      marginTop: "6px",
-                      background: "#ffffff",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: "12px",
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
-                      maxHeight: "220px",
-                      overflowY: "auto",
-                    }}
-                  >
+                  <div className="profile-track-dropdown">
                     {filteredTracks.map((trk) => {
                       const isSelected = form.track === trk;
                       return (
@@ -1066,24 +1001,7 @@ export default function ProfilePage() {
                             setForm((p) => ({ ...p, track: trk }));
                             setTrackSearchFocus(false);
                           }}
-                          style={{
-                            padding: "10px 14px",
-                            fontSize: "13.5px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            background: isSelected ? "#eff6ff" : "transparent",
-                            color: isSelected ? "#2563eb" : "#334155",
-                            fontWeight: isSelected ? 600 : 500,
-                            transition: "background 0.15s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isSelected) e.currentTarget.style.background = "#f8fafc";
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isSelected) e.currentTarget.style.background = "transparent";
-                          }}
+                          className={`profile-track-option${isSelected ? ' profile-track-option--selected' : ''}`}
                         >
                           <span>{trk}</span>
                           {isSelected && <Check size={16} color="#2563eb" />}
@@ -1097,158 +1015,87 @@ export default function ProfilePage() {
           </div>
 
           {/* Section 2: Technical Skills & Soft Skills (Full Horizontal Width Below 5 Pairs) */}
-          <div className="profile-form-section mt-6" style={{ borderBottom: "none", paddingBottom: 0 }}>
+          <div className="profile-form-section mt-6 border-b-0 pb-0">
             <div className="profile-field full-width">
-              <div style={{
-                background: "#ffffff",
-                border: "1px solid #e2e8f0",
-                borderRadius: "16px",
-                padding: "20px",
-                boxShadow: "0 4px 16px -2px rgba(0, 0, 0, 0.04)"
-              }}>
-                {/* Header */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "14px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <div style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "10px",
-                      background: "#eff6ff",
-                      color: "#2563eb",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center"
-                    }}>
-                      <Sparkles size={18} />
-                    </div>
-                    <div>
-                      <label className="profile-label" style={{ margin: 0, fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>
-                        Confirmed Technical & Soft Skills *
-                      </label>
-                      <span style={{ fontSize: "12px", color: "#64748b", display: "block" }}>
-                        Add your core programming languages, frameworks, tools, and soft skills.
-                      </span>
-                    </div>
-                  </div>
-
-                  <span style={{
-                    background: "#e0e7ff",
-                    color: "#3730a3",
-                    fontSize: "12px",
-                    fontWeight: "700",
-                    padding: "4px 12px",
-                    borderRadius: "9999px"
-                  }}>
-                    {currentSkillsList.length} Skills Selected
-                  </span>
-                </div>
-
-                {/* Skill Search, Select & Add */}
-                <div style={{ marginBottom: "16px" }}>
-                  <StudentSkillSelect
-                    disabled={!isEditing}
-                    placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
-                    options={PREDEFINED_SKILLS.map((skill) => ({
-                      value: skill,
-                      label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
-                    }))}
-                    onAdd={(val) => {
-                      if (val && isEditing) {
-                        const trimmed = val.trim();
-                        if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
-                          setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
-                        }
-                      }
-                    }}
-                  />
-                </div>
-
-                {/* Selected Skills Container with Ultra-Clean Badges */}
-                <div style={{
-                  background: "#f8fafc",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "12px",
-                  padding: "14px"
-                }}>
-                  <div style={{
-                    fontSize: "11px",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.6px",
-                    color: "#475569",
-                    marginBottom: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px"
-                  }}>
-                    <CheckCircle2 size={14} color="#16a34a" />
-                    <span>Active Skills on Profile ({currentSkillsList.length})</span>
-                  </div>
-
-                  {currentSkillsList.length === 0 ? (
-                    <div style={{ fontSize: "13px", color: "#94a3b8", fontStyle: "italic" }}>
-                      No skills added yet. Click Edit Profile above to manage skills.
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
-                      {currentSkillsList.map((skill) => (
-                        <span
-                          key={skill}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "6px",
-                            padding: "6px 12px 6px 14px",
-                            borderRadius: "9999px",
-                            background: "#eff6ff",
-                            border: "1px solid #bfdbfe",
-                            color: "#1e40af",
-                            fontSize: "13px",
-                            fontWeight: "600",
-                            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
-                            transition: "all 0.15s ease"
-                          }}
-                        >
-                          <span>{skill}</span>
-                          {isEditing && (
-                            <button
-                              type="button"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                width: "18px",
-                                height: "18px",
-                                borderRadius: "50%",
-                                background: "#dbeafe",
-                                color: "#1e40af",
-                                border: "none",
-                                cursor: "pointer",
-                                padding: 0,
-                                transition: "all 0.15s ease"
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = "#ef4444";
-                                e.currentTarget.style.color = "#ffffff";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "#dbeafe";
-                                e.currentTarget.style.color = "#1e40af";
-                              }}
-                              onClick={() => handleRemoveSkill(skill)}
-                              title={`Remove ${skill}`}
-                            >
-                              <X size={12} strokeWidth={2.5} />
-                            </button>
-                          )}
+                <div className="profile-skills-card">
+                  {/* Header */}
+                  <div className="profile-skills-header">
+                    <div className="profile-skills-title-group">
+                      <div className="profile-skills-icon-box">
+                        <Sparkles size={18} />
+                      </div>
+                      <div>
+                        <label className="profile-label m-0 text-sm font-bold text-slate-900">
+                          Confirmed Technical & Soft Skills *
+                        </label>
+                        <span className="text-xs text-slate-500 block">
+                          Add your core programming languages, frameworks, tools, and soft skills.
                         </span>
-                      ))}
+                      </div>
                     </div>
-                  )}
+                    
+                    <span className="profile-skills-count-badge">
+                      {currentSkillsList.length} Skills Selected
+                    </span>
+                  </div>
+
+                  {/* Skill Search, Select & Add */}
+                  <div className="mb-4">
+                    <StudentSkillSelect
+                      disabled={!isEditing}
+                      placeholder="Search or add custom skill (e.g. Docker, OpenCV, PyTorch)..."
+                      options={PREDEFINED_SKILLS.map((skill) => ({
+                        value: skill,
+                        label: currentSkillsList.includes(skill) ? `${skill} ✓ (Added)` : skill
+                      }))}
+                      onAdd={(val) => {
+                        if (val && isEditing) {
+                          const trimmed = val.trim();
+                          if (trimmed && !currentSkillsList.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+                            setForm(p => ({ ...p, skills: [...currentSkillsList, trimmed].join(", ") }));
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Selected Skills Container */}
+                  <div className="profile-skills-active-box">
+                    <div className="profile-skills-active-title">
+                      <CheckCircle2 size={14} color="#16a34a" />
+                      <span>Active Skills on Profile ({currentSkillsList.length})</span>
+                    </div>
+
+                    {currentSkillsList.length === 0 ? (
+                      <div className="text-xs text-slate-400 italic">
+                        No skills added yet. Click Edit Profile above to manage skills.
+                      </div>
+                    ) : (
+                      <div className="profile-skill-pills-wrap">
+                        {currentSkillsList.map((skill) => (
+                          <span
+                            key={skill}
+                            className="profile-skill-pill"
+                          >
+                            <span>{skill}</span>
+                            {isEditing && (
+                              <button
+                                type="button"
+                                className="profile-skill-badge-btn"
+                                onClick={() => handleRemoveSkill(skill)}
+                                title={`Remove ${skill}`}
+                              >
+                                <X size={12} strokeWidth={2.5} />
+                              </button>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
 
         </div>
@@ -1260,79 +1107,79 @@ export default function ProfilePage() {
 
       {/* Google Authenticator 2FA Modal */}
       {is2FASetupOpen && createPortal(
-        <div className="modal-overlay" style={{ zIndex: 9999, background: "rgba(15, 23, 42, 0.65)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", position: "fixed", inset: 0 }}>
-          <div className="modal-dialog" style={{ maxWidth: "480px", width: "90%", background: "#ffffff", padding: "24px 28px", borderRadius: "16px", textAlign: "left", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <div style={{ width: "36px", height: "36px", borderRadius: "10px", background: "#e0e7ff", color: "#4f46e5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="modal-overlay profile-2fa-modal-overlay">
+          <div className="modal-dialog profile-2fa-modal-dialog">
+            <div className="profile-2fa-modal-header">
+              <div className="profile-2fa-modal-title-wrap">
+                <div className="profile-2fa-modal-icon">
                   <QrCode size={20} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: "800", color: "#0f172a", margin: 0 }}>Google Authenticator 2FA</h3>
-                  <p style={{ fontSize: "12px", color: "#64748b", margin: 0 }}>Scan QR code to pair your account</p>
+                  <h3 className="profile-2fa-modal-title">Google Authenticator 2FA</h3>
+                  <p className="profile-2fa-modal-subtitle">Scan QR code to pair your account</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIs2FASetupOpen(false)}
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: "4px" }}
+                className="profile-2fa-modal-close-btn"
               >
                 <X size={18} />
               </button>
             </div>
 
             {loading2FASetup ? (
-              <div style={{ padding: "40px 0", textAlign: "center", color: "#64748b" }}>
-                <Loader2 size={32} className="animate-spin" style={{ margin: "0 auto 12px auto", color: "#4f46e5" }} />
-                <p style={{ fontSize: "13px", margin: 0 }}>Generating Google Authenticator QR Code...</p>
+              <div className="profile-2fa-modal-loading">
+                <Loader2 size={32} className="animate-spin profile-2fa-loader-spinner" />
+                <p className="profile-2fa-loading-text">Generating Google Authenticator QR Code...</p>
               </div>
             ) : (
               <form onSubmit={handleVerify2FASubmit}>
                 {totpError && (
-                  <div style={{ padding: "10px 14px", borderRadius: "8px", background: "#fff1f2", border: "1px solid #fecdd3", color: "#be123c", fontSize: "12px", fontWeight: "600", marginBottom: "14px" }}>
+                  <div className="profile-2fa-alert-error">
                     {totpError}
                   </div>
                 )}
 
                 {totpSuccess && (
-                  <div style={{ padding: "10px 14px", borderRadius: "8px", background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#047857", fontSize: "12px", fontWeight: "600", marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="profile-2fa-alert-success">
                     <CheckCircle2 size={16} />
                     <span>{totpSuccess}</span>
                   </div>
                 )}
 
                 {/* QR Code Container */}
-                <div style={{ textAlign: "center", background: "#f8fafc", border: "1.5px solid #e2e8f0", borderRadius: "12px", padding: "16px", marginBottom: "16px" }}>
+                <div className="profile-2fa-qr-box">
                   {totpData?.qrCode ? (
                     <img
                       src={totpData.qrCode}
                       alt="Google Authenticator QR Code"
-                      style={{ width: "160px", height: "160px", margin: "0 auto 8px auto", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                      className="profile-2fa-qr-img"
                     />
                   ) : (
-                    <div style={{ width: "160px", height: "160px", background: "#e2e8f0", borderRadius: "8px", margin: "0 auto 8px auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div className="profile-2fa-qr-placeholder">
                       <QrCode size={40} className="text-slate-400" />
                     </div>
                   )}
-                  <p style={{ fontSize: "11.5px", color: "#64748b", margin: 0, fontWeight: "500" }}>
+                  <p className="profile-2fa-qr-text">
                     Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app on your phone and scan this QR code.
                   </p>
                 </div>
 
                 {/* Secret Key Copy Bar */}
                 {totpData?.secret && (
-                  <div style={{ marginBottom: "16px" }}>
-                    <label style={{ fontSize: "11px", fontWeight: "700", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", display: "block", marginBottom: "4px" }}>
+                  <div className="profile-2fa-secret-box">
+                    <label className="profile-2fa-secret-label">
                       Or enter Secret Key manually:
                     </label>
-                    <div style={{ display: "flex", alignItems: "center", background: "#f1f5f9", borderRadius: "8px", border: "1px solid #cbd5e1", padding: "6px 10px" }}>
-                      <code style={{ fontSize: "12px", fontWeight: "700", color: "#334155", letterSpacing: "0.1em", flex: 1, fontFamily: "monospace" }}>
+                    <div className="profile-2fa-secret-row">
+                      <code className="profile-2fa-secret-code">
                         {totpData.secret.match(/.{1,4}/g)?.join(" ") || totpData.secret}
                       </code>
                       <button
                         type="button"
                         onClick={handleCopySecret}
-                        style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "6px", padding: "4px 8px", fontSize: "11px", fontWeight: "600", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                        className="profile-2fa-copy-btn"
                       >
                         {copiedSecret ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
                         {copiedSecret ? "Copied" : "Copy"}
@@ -1342,11 +1189,11 @@ export default function ProfilePage() {
                 )}
 
                 {/* 6-Digit Code Input */}
-                <div style={{ marginBottom: "20px" }}>
-                  <label style={{ fontSize: "11.5px", fontWeight: "700", color: "#334155", display: "block", marginBottom: "8px" }}>
+                <div className="profile-2fa-code-input-section">
+                  <label className="profile-2fa-code-label">
                     Enter 6-Digit Authenticator Verification Code:
                   </label>
-                  <div style={{ display: "flex", gap: "8px", justifyContent: "center" }} onPaste={handleTotpPaste}>
+                  <div className="profile-2fa-digit-row" onPaste={handleTotpPaste}>
                     {totpCodeInput.map((digit, idx) => (
                       <input
                         key={idx}
@@ -1357,35 +1204,24 @@ export default function ProfilePage() {
                         value={digit}
                         onChange={(e) => handleTotpDigitChange(idx, e.target.value)}
                         onKeyDown={(e) => handleTotpKeyDown(idx, e)}
-                        style={{
-                          width: "42px",
-                          height: "46px",
-                          fontSize: "18px",
-                          fontWeight: "800",
-                          textAlign: "center",
-                          borderRadius: "8px",
-                          border: "1.5px solid #cbd5e1",
-                          background: "#ffffff",
-                          color: "#0f172a",
-                          outline: "none",
-                        }}
+                        className="profile-2fa-digit-input"
                       />
                     ))}
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+                <div className="profile-2fa-modal-actions">
                   <button
                     type="button"
                     onClick={() => setIs2FASetupOpen(false)}
-                    style={{ padding: "9px 16px", borderRadius: "8px", border: "1px solid #cbd5e1", background: "#ffffff", color: "#475569", fontSize: "13px", fontWeight: "600", cursor: "pointer" }}
+                    className="profile-2fa-modal-cancel-btn"
                     disabled={verifying2FA}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    style={{ padding: "9px 18px", borderRadius: "8px", border: "none", background: "#4f46e5", color: "#ffffff", fontSize: "13px", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
+                    className="profile-2fa-modal-submit-btn"
                     disabled={verifying2FA}
                   >
                     {verifying2FA ? (

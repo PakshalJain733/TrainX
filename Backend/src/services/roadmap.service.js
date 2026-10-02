@@ -2,6 +2,7 @@ import { processroadmapAI } from '../ai/roadmap.ai.js';
 import {
   getRoadmapByStudentId,
   getRoadmapByStudentAndRole,
+  getGlobalCachedRoadmap,
   saveRoadmap,
   updateMilestoneItemStatus,
 } from '../models/roadmap.model.js';
@@ -97,12 +98,24 @@ export const collectRealStudentSignals = async (studentId) => {
 export const generateNewRoadmap = async (studentId, targetRole = '', signalData = {}) => {
   const numericId = Number(studentId);
 
-  // If the student already has a roadmap for this role, restore it with saved progress
+  // 1. If the student already has a roadmap for this role, restore it with saved progress
   if (targetRole && String(targetRole).trim()) {
     const existing = await getRoadmapByStudentAndRole(numericId, targetRole.trim());
     if (existing && existing.milestones && existing.milestones.length > 0) {
       console.log(`[Roadmap Service] Restoring saved roadmap for student #${numericId}, role: "${targetRole}"`);
       return { ...existing, restored: true };
+    }
+
+    // 2. Check if ANY student has previously generated this roadmap in the DB (Global Cache)
+    const globalCached = await getGlobalCachedRoadmap(targetRole.trim());
+    if (globalCached && globalCached.milestones && globalCached.milestones.length > 0) {
+      console.log(`[Roadmap Service] Global DB Cache Hit! Reusing DB stored roadmap for role: "${targetRole}" (No AI API call)`);
+      const savedData = await saveRoadmap(numericId, targetRole.trim(), targetRole.trim(), globalCached.milestones);
+      return {
+        ...savedData,
+        aiSource: 'db-global-cache',
+        restored: false,
+      };
     }
   }
 

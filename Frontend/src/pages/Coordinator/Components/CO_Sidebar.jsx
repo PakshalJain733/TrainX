@@ -57,7 +57,6 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
-  { title: "View Profile", url: "/coordinator/profile", icon: UserCog },
   { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone },
   { title: "Support Ticket", url: "/coordinator/help", icon: HelpCircle },
 ];

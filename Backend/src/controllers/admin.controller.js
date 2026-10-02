@@ -306,6 +306,11 @@ export const createUserAdmin = async (req, res, next) => {
         to: newUser.email,
         name: newUser.name,
         role: canonicalRole,
+        mobile_number: mobile_number || newUser.mobile_number || '',
+        roll_number: roll_number || (studentProfile && studentProfile.roll_number) || '',
+        department: validatedDeptName || department || '',
+        year: year || (studentProfile && studentProfile.year) || '',
+        division: division || (studentProfile && studentProfile.division) || '',
       }).catch((err) => {
         console.warn(`[Admin User Creation Email Notice] ${err.message}`);
       });
@@ -317,6 +322,122 @@ export const createUserAdmin = async (req, res, next) => {
       {
         ...newUser,
         studentProfile,
+      },
+      201
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Bulk Student Creation from Excel / CSV Sheet Upload
+ */
+export const bulkCreateUsersAdmin = async (req, res, next) => {
+  try {
+    const { students = [], college_id: requestedCollegeId } = req.body || {};
+
+    if (!Array.isArray(students) || students.length === 0) {
+      return sendError(res, 'No student data provided in request body', 400);
+    }
+
+    let targetCollegeId = req.user.collegeId;
+    if (req.user.role === ROLES.SUPER_ADMIN) {
+      targetCollegeId = requestedCollegeId ? parseInt(requestedCollegeId, 10) : 1;
+    }
+
+    const createdList = [];
+    const skippedList = [];
+    const errorList = [];
+
+    for (let i = 0; i < students.length; i++) {
+      const item = students[i] || {};
+      const name = String(item.name || item.fullName || item['Full Name'] || item['Name'] || '').trim();
+      const email = String(item.email || item.collegeEmail || item['College Email'] || item['Email'] || '').trim();
+      const mobile_number = String(item.mobile_number || item.phone || item.mobile || item['Mobile Number'] || item['Mobile'] || '').trim();
+      const roll_number = String(item.roll_number || item.rollNo || item.collegeId || item['College ID'] || item['Roll ID'] || item['Roll No'] || '').trim();
+      const department = String(item.department || item.dept || item['Department'] || item['Dept'] || 'COMPS').trim();
+      const year = String(item.year || item['Academic Year'] || item['Year'] || 'FE').trim();
+      const division = String(item.division || item.div || item['Division'] || 'A').trim();
+
+      if (!name || !email) {
+        errorList.push(`Row #${i + 1}: Name and Email are required.`);
+        continue;
+      }
+
+      // Check existing user by email or mobile
+      const existingEmail = await findUserByEmailOrMobile(email);
+      if (existingEmail) {
+        skippedList.push({ name, email, reason: 'Email already registered' });
+        continue;
+      }
+
+      if (mobile_number) {
+        const existingMobile = await findUserByEmailOrMobile(mobile_number);
+        if (existingMobile) {
+          skippedList.push({ name, email, reason: 'Mobile number already registered' });
+          continue;
+        }
+      }
+
+      // Create User
+      const newUser = await createUser({
+        name,
+        email,
+        mobile_number,
+        role: ROLES.STUDENT,
+        college_id: targetCollegeId,
+      });
+
+      // Create Student Profile
+      const studentProfile = await saveStudentDetails({
+        user_id: newUser.id,
+        college_id: targetCollegeId,
+        roll_number: roll_number || `AUTO_${newUser.id}`,
+        department,
+        year,
+        division,
+        semester: 'Semester 1',
+        cgpa: '8.0',
+        skills: '',
+      });
+
+      // Send Welcome & Pre-Filled Registration Email
+      if (newUser.email && newUser.email.includes('@')) {
+        sendWelcomeEmail({
+          to: newUser.email,
+          name: newUser.name,
+          role: ROLES.STUDENT,
+          mobile_number,
+          roll_number: roll_number || studentProfile.roll_number,
+          department,
+          year,
+          division,
+        }).catch((err) => {
+          console.warn(`[Bulk Welcome Email Notice] ${err.message}`);
+        });
+      }
+
+      createdList.push({
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        roll_number: studentProfile.roll_number,
+        department,
+        year,
+        division,
+      });
+    }
+
+    return sendSuccess(
+      res,
+      `Bulk processing complete. Created ${createdList.length} students, skipped ${skippedList.length}.`,
+      {
+        createdCount: createdList.length,
+        skippedCount: skippedList.length,
+        createdList,
+        skippedList,
+        errorList,
       },
       201
     );

@@ -60,9 +60,9 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_name VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN hod_email VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE departments ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`); } catch (_) { }
 
     // 3. Ensure Batches table
     await conn.query(`
@@ -142,10 +142,10 @@ export async function initializeDatabase() {
       )
     `);
 
-    try { await conn.query(`ALTER TABLE otps ADD COLUMN purpose VARCHAR(50) NOT NULL DEFAULT 'login'`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE otps ADD COLUMN attempts INT NOT NULL DEFAULT 0`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE otps ADD COLUMN consumed_at DATETIME NULL`); } catch (_) {}
-    try { await conn.query(`ALTER TABLE otps ADD INDEX idx_otps_lookup (email, purpose, expires_at)`); } catch (_) {}
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN purpose VARCHAR(50) NOT NULL DEFAULT 'login'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN attempts INT NOT NULL DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE otps ADD COLUMN consumed_at DATETIME NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE otps ADD INDEX idx_otps_lookup (email, purpose, expires_at)`); } catch (_) { }
 
     // 5. Ensure Students Table
     await conn.query(`
@@ -867,6 +867,37 @@ export async function initializeDatabase() {
         category VARCHAR(100) DEFAULT 'Technical',
         status VARCHAR(50) DEFAULT 'Active',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 38. Ensure C2C Enrollments Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS c2c_enrollments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        response_id VARCHAR(150) NULL UNIQUE,
+        full_name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        mobile VARCHAR(50) NULL,
+        roll_number VARCHAR(100) NULL,
+        college VARCHAR(255) NULL,
+        branch VARCHAR(100) NULL,
+        year VARCHAR(50) NULL,
+        division VARCHAR(50) NULL,
+        batch VARCHAR(100) NULL,
+        total_fee DECIMAL(10,2) NOT NULL DEFAULT 3500.00,
+        amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+        balance DECIMAL(10,2) NOT NULL DEFAULT 3500.00,
+        payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+        utr_number VARCHAR(100) NULL,
+        payment_date VARCHAR(100) NULL,
+        payment_proof_url TEXT NULL,
+        source VARCHAR(50) DEFAULT 'google_form',
+        raw_payload JSON NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_c2c_email (email),
+        INDEX idx_c2c_status (payment_status),
+        INDEX idx_c2c_utr (utr_number)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 

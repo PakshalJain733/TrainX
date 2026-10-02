@@ -3,7 +3,7 @@ import {
   Bell, X, Search, Check, Trash2, Calendar,
   AlertTriangle, CheckCircle2, FileText, Filter
 } from "lucide-react";
-import "./FullNotificationModal.css";
+import DesktopNotificationToggle from "../Common/DesktopNotificationToggle";
 
 export default function FullNotificationModal({ isOpen, onClose, notifications = [], setNotifications }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -157,6 +157,7 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
 
         {/* Notifications Body */}
         <div className="full-notif-body">
+          <DesktopNotificationToggle />
           {filteredNotifications.length === 0 ? (
             <div className="full-notif-empty">
               <Bell className="full-notif-empty-icon" />

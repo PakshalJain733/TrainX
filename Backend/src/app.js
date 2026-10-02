@@ -24,6 +24,7 @@ import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
 import mentorRoutes from './routes/mentor.routes.js';
 import coordinatorRoutes from './routes/coordinator.routes.js';
 import superadminRoutes from './routes/superadmin.routes.js';
+import c2cRoutes from './routes/c2c.routes.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
@@ -84,7 +85,7 @@ app.use(
       return cb(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token', 'x-c2c-webhook-secret'],
   })
 );
 app.use(express.json());
@@ -134,6 +135,8 @@ app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
 app.use('/api/v1/mentor', mentorRoutes);
 app.use('/api/v1/coordinator', coordinatorRoutes);
 app.use('/api/v1/superadmin', superadminRoutes);
+app.use('/api/v1/c2c', c2cRoutes);
+app.use('/api/v1/admin/c2c', c2cRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

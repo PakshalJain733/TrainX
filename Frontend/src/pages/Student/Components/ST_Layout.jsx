@@ -8,6 +8,7 @@ import "../Styles/ST_Layout.css";
 
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
   const navigate = useNavigate();
@@ -142,7 +143,8 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
             </div>
           </div>
         </div>
-        <div className="notif-header-actions-right">
+        <div className="notif-header-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <DesktopNotificationToggle compact />
           <button
             className="notif-mark-read-btn"
             onClick={handleMarkAllRead}

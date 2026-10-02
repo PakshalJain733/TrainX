@@ -32,9 +32,14 @@ export const config = {
     senderName: process.env.BREVO_SENDER_NAME || 'Training Portal',
   },
   ai: {
-    apiKey: process.env.AI_API_KEY || process.env.GEMINI_API_KEY || process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || '',
-    groqApiKey: process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || process.env.GROQ_API_KEY || '',
-    model: process.env.AI_MODEL || 'qwen/qwen3.8-27b',
+    apiKey: process.env.AI_API_KEY || process.env.NVIDIA_AI_API_KEY || process.env.NVIDIA_API_KEY || '',
+    model: process.env.AI_MODEL || 'openai/gpt-oss-20b',
+    nvidiaApiKey: process.env.NVIDIA_AI_API_KEY || process.env.NVIDIA_API_KEY || (process.env.AI_API_KEY?.startsWith('nvapi-') ? process.env.AI_API_KEY : ''),
+    nvidiaModel: process.env.NVIDIA_AI_MODEL || process.env.AI_MODEL || 'openai/gpt-oss-20b',
+    geminiApiKey: process.env.GEMINI_AI_API_KEY || process.env.GEMINI_API_KEY || (process.env.AI_API_KEY?.startsWith('AQ.') || process.env.AI_API_KEY?.startsWith('AIza') ? process.env.AI_API_KEY : ''),
+    geminiModel: process.env.GEMINI_AI_MODEL || 'gemini-2.0-flash',
+    groqApiKey: process.env.Groq_AI_API_KEY || process.env.GROQ_AI_API_KEY || process.env.GROQ_API_KEY || (process.env.AI_API_KEY?.startsWith('gsk_') ? process.env.AI_API_KEY : ''),
+    groqModel: process.env.Groq_AI_MODEL || 'qwen/qwen3.8-27b',
   },
   supabase: {
     url: process.env.SUPABASE_URL || '',
@@ -50,6 +55,7 @@ export const config = {
     maxTimeoutSeconds: parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10),
     maxConcurrent: parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10),
   },
+  c2cWebhookSecret: process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026',
 };
 
 // Validate critical env vars — error in production, warn in development

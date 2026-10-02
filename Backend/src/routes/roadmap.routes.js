@@ -3,6 +3,7 @@ import {
   getRoadmapData,
   generateRoadmap,
   updateMilestone,
+  generateTopicQuiz,
 } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -19,6 +20,9 @@ router.get('/student/:id', getRoadmapData);
 // AI Roadmap Generation
 router.post('/generate', generateRoadmap);
 router.post('/student/:id/generate', generateRoadmap);
+
+// AI Topic 5-Question Quiz Generation
+router.post('/quiz/generate', generateTopicQuiz);
 
 // Milestone Item Status & Progress Update
 router.patch('/items/:itemId', updateMilestone);

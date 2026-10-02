@@ -1591,3 +1591,204 @@ textarea.form-input-admin:focus,
   background: #10b981 !important;
 }
 
+/* Bulk Excel Upload Button & Modal Styling */
+.admin-btn-excel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 600;
+  font-size: 13.5px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: 1px solid #a7f3d0;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(4, 120, 87, 0.05);
+}
+
+.admin-btn-excel:hover {
+  background: #d1fae5;
+  color: #065f46;
+  border-color: #6ee7b7;
+  transform: translateY(-1px);
+}
+
+.bulk-modal-dialog {
+  max-width: 850px !important;
+  width: 92% !important;
+}
+
+.bulk-header-icon-wrap {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+.bulk-template-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.bulk-template-title {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 13.5px;
+}
+
+.bulk-template-desc {
+  margin: 2px 0 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.bulk-template-btn {
+  padding: 7px 14px;
+  font-size: 12.5px;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+.bulk-dropzone {
+  border: 2px dashed #cbd5e1;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bulk-dropzone--drag {
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
+}
+
+.bulk-dropzone--hasfile {
+  border-color: #059669 !important;
+  background: #f0fdf4 !important;
+}
+
+.bulk-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #d1fae5;
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.bulk-dropzone-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.bulk-dropzone-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.bulk-preview-wrap {
+  margin-top: 18px;
+}
+
+.bulk-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.bulk-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.bulk-preview-subtitle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.bulk-preview-table-container {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.bulk-preview-table {
+  width: 100%;
+  font-size: 12.5px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.bulk-preview-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+}
+
+.bulk-preview-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bulk-row-valid {
+  background: #ffffff;
+}
+
+.bulk-row-invalid {
+  background: #fff1f2;
+}
+
+.bulk-badge-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #d1fae5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bulk-badge-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #ffe4e6;
+  color: #be123c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bulk-submit-btn {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+}
+
+.bulk-submit-btn:hover {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+}
+

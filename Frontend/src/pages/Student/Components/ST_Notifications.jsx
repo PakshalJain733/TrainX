@@ -18,6 +18,7 @@ import {
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 import "../Styles/ST_Notifications.css";
 
 const defaultNotifications = [];
@@ -149,6 +150,8 @@ export default function Notifications() {
           );
         })}
       </div>
+
+      <DesktopNotificationToggle />
 
       {/* Notifications List Card */}
       <div className="notif-list-container">
