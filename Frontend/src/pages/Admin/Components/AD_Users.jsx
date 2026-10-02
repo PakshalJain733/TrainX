@@ -1045,10 +1045,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
           )}
         </div>
 
-        <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
-          <button type="button" className="btn-modal-cancel" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </button>
+        <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end" }}>
           <button
             type="button"
             className="btn-modal-submit bulk-submit-btn"
@@ -1825,9 +1822,6 @@ export default function AdminUsers() {
                 )}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsEditModalOpen(false)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit" disabled={actionLoading}>
                   {actionLoading ? "Saving..." : "Save Changes"}
                 </button>
@@ -1869,9 +1863,6 @@ export default function AdminUsers() {
               </div>
             </div>
             <div className="modal-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setIsDeleteModalOpen(false)}>
-                Cancel
-              </button>
               <button type="button" className="btn-modal-submit btn-modal-danger" onClick={handleDeleteUser} disabled={actionLoading}>
                 {actionLoading ? "Deleting..." : "Delete User"}
               </button>
