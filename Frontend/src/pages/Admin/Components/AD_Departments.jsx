@@ -295,23 +295,12 @@ export default function Departments() {
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder="Search department, code, or college..."
+            placeholder="Search department or code..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sa-search-input"
           />
         </div>
-
-        <DeptSelect
-          icon={Building2}
-          value={selectedCollegeId}
-          onChange={(val) => setSelectedCollegeId(val)}
-          wrapperClass="dept-select"
-          options={[
-            { value: 'all', label: 'All Registered Colleges' },
-            ...colleges.map((c) => ({ value: c.id, label: `${c.name} (${c.code})` }))
-          ]}
-        />
       </div>
 
       {/* Department Cards Grid */}

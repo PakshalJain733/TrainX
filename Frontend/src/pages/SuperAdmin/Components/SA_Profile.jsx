@@ -517,14 +517,6 @@ export default function SuperAdminProfile() {
               </div>
             </div>
           </div>
-
-          {isEditing && (
-            <div className="profile-actions-bar">
-              <button type="submit" className="profile-save-btn">
-                <Save size={16} /> Save Profile Changes
-              </button>
-            </div>
-          )}
         </div>
       </form>
 

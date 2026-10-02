@@ -538,14 +538,6 @@ function MN_ProfilePage() {
               </div>
             </div>
 
-            {/* Bottom Actions */}
-            {isEditing && (
-              <div className="profile-actions-bar">
-                <button type="submit" className="profile-save-btn">
-                  <Save size={16} /> Save Profile Details
-                </button>
-              </div>
-            )}
           </form>
         </div>
       </div>

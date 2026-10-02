@@ -1,9 +1,10 @@
 import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import {
   Bell, X, Search, Check, Trash2, Calendar,
   AlertTriangle, CheckCircle2, FileText, Filter
 } from "lucide-react";
-import DesktopNotificationToggle from "../Common/DesktopNotificationToggle";
+import "./FullNotificationModal.css";
 
 export default function FullNotificationModal({ isOpen, onClose, notifications = [], setNotifications }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -69,7 +70,7 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
     return true;
   });
 
-  return (
+  return createPortal(
     <div className="full-notif-overlay" onClick={onClose}>
       <div className="full-notif-container" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -128,36 +129,11 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
             >
               All ({totalCount})
             </button>
-            <button
-              className={`full-notif-tab ${activeTab === 'unread' ? 'active' : ''}`}
-              onClick={() => setActiveTab('unread')}
-            >
-              Unread ({unreadCount})
-            </button>
-            <button
-              className={`full-notif-tab ${activeTab === 'alert' ? 'active' : ''}`}
-              onClick={() => setActiveTab('alert')}
-            >
-              Alerts
-            </button>
-            <button
-              className={`full-notif-tab ${activeTab === 'calendar' ? 'active' : ''}`}
-              onClick={() => setActiveTab('calendar')}
-            >
-              Events
-            </button>
-            <button
-              className={`full-notif-tab ${activeTab === 'document' ? 'active' : ''}`}
-              onClick={() => setActiveTab('document')}
-            >
-              Reports
-            </button>
           </div>
         </div>
 
         {/* Notifications Body */}
         <div className="full-notif-body">
-          <DesktopNotificationToggle />
           {filteredNotifications.length === 0 ? (
             <div className="full-notif-empty">
               <Bell className="full-notif-empty-icon" />
@@ -210,6 +186,7 @@ export default function FullNotificationModal({ isOpen, onClose, notifications =
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
