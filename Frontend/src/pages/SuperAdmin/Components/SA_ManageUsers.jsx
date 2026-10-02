@@ -1441,16 +1441,6 @@ export default function ManageUsers() {
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
-  const handleTrigger2FA = async (userId, userName) => {
-    try {
-      await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
-        method: 'POST'
-      });
-      alert(`2-Step verification re-triggered for ${userName || 'Admin'}. They will be prompted to set up 2FA on their next login.`);
-    } catch (err) {
-      alert(`2-Step verification re-triggered for ${userName || 'Admin'}. They will be prompted to set up 2FA on their next login.`);
-    }
-  };
 
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
