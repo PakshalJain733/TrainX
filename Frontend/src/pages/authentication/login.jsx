@@ -304,7 +304,7 @@ function Login() {
     rememberMeRef.current = rememberMe;
     setPreAuthToken(temporaryToken);
     setStep("authenticator");
-    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Google Authenticator.");
+    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Authenticator App.");
     setOtp(["", "", "", "", "", ""]);
     setTimeout(() => {
       inputRefs.current[0]?.focus();

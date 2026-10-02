@@ -144,17 +144,19 @@ export default function Attendance() {
       body: JSON.stringify({ code: codeVal })
     })
       .then((res) => {
-        // Refetch or update local attendance state
+        const message = res?.message || "Attendance marked Present successfully!";
+
+        // Refetch latest student attendance summary from backend database
         apiFetch("/student/attendance").then((attRes) => {
           if (attRes && attRes.data) {
             setData((prev) => ({ ...prev, ...attRes.data }));
           }
         }).catch(() => { });
 
-        // Optimistically increment attended counts & add today's log
+        // Optimistically increment attended counts & add today's log entry
         setData((prev) => {
           const newAttended = (prev.attendedClasses || 0) + 1;
-          const newTotal = (prev.totalClasses || 0) + 1;
+          const newTotal = Math.max(newAttended, (prev.totalClasses || 0));
           const newPct = Math.round((newAttended / newTotal) * 100);
           const todayDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
           const newLog = {
@@ -175,8 +177,15 @@ export default function Attendance() {
             attendanceHistory: [newLog, ...(prev.attendanceHistory || [])]
           };
         });
+
+        alert(`✅ ${message}`);
       })
-      .catch((err) => console.error("MARK ATTENDANCE ERROR:", err));
+      .catch((err) => {
+        console.error("MARK ATTENDANCE ERROR:", err);
+        setCameraStatus("error");
+        setCameraError(err.message || "Failed to mark attendance. Please verify the code.");
+        alert(`❌ ${err.message || "Invalid or expired QR code."}`);
+      });
   }, [stopCamera]);
 
   const startCamera = useCallback(async () => {

@@ -249,7 +249,17 @@ function getVideoForTopic(topicInput, topicIndex, m, targetRole) {
     vId = resolveEmbeddableVideoId(cleanTitle, targetRole, m?.title);
   }
 
-  if (!vId) return null;
+  // Guarantee every topic has a visible working video tutorial
+  if (!vId) {
+    const roleLower = (targetRole || m?.title || cleanTitle).toLowerCase();
+    if (roleLower.includes("python") || roleLower.includes("django") || roleLower.includes("data")) vId = "rfscVS0vtbw";
+    else if (roleLower.includes("java") || roleLower.includes("spring")) vId = "eIrMbAQSU34";
+    else if (roleLower.includes("c++") || roleLower.includes("cpp")) vId = "1Rs2ND1ryYc";
+    else if (roleLower.includes("react") || roleLower.includes("frontend") || roleLower.includes("html") || roleLower.includes("css")) vId = "w7ejDZ8SWv8";
+    else if (roleLower.includes("sql") || roleLower.includes("db") || roleLower.includes("mongo")) vId = "HXV3zeQKqGY";
+    else if (roleLower.includes("node") || roleLower.includes("backend") || roleLower.includes("express")) vId = "Oe421EPjeBE";
+    else vId = "rfscVS0vtbw";
+  }
 
   const query = `${cleanTitle} tutorial ${targetRole || ""}`.trim();
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
@@ -260,7 +270,7 @@ function getVideoForTopic(topicInput, topicIndex, m, targetRole) {
     channel: vidObj?.channel || "Technical Video Lesson",
     duration: vidObj?.duration || "20 mins",
     videoId: vId,
-    embedUrl: `https://www.youtube.com/embed/${vId}?rel=0`,
+    embedUrl: `https://www.youtube-nocookie.com/embed/${vId}?rel=0&autoplay=1`,
     searchUrl: searchUrl,
     topicsCovered: cleanTitle,
   };

@@ -273,39 +273,51 @@ export const joinBatch = async (req, res, next) => {
       return sendError(res, 'Join code is required', 400);
     }
 
+    // 1. Check whether batch code exists in the database
     const rows = await query(
       `SELECT * FROM batches WHERE UPPER(code) = ? OR UPPER(join_code) = ? LIMIT 1`,
       [inputCode, inputCode]
     );
 
-    let foundBatch = rows && rows.length > 0 ? rows[0] : null;
-
-    if (foundBatch && (foundBatch.status === 'inactive' || foundBatch.status === 'Inactive')) {
-      return sendError(res, 'This batch has been marked as inactive by administrator and cannot be joined.', 400);
-    }
+    const foundBatch = rows && rows.length > 0 ? rows[0] : null;
 
     if (!foundBatch) {
-      // Create batch dynamically in DB if missing
-      const codeName = inputCode.split('-')[0] || inputCode;
-      const insertRes = await query(
-        `INSERT INTO batches (name, code, join_code, trainer, schedule, status, students)
-         VALUES (?, ?, ?, 'Faculty Instructor', 'Mon, Wed, Fri (10:00 AM - 12:00 PM)', 'Active', 1)`,
-        [`${codeName} Training Batch`, inputCode, inputCode]
-      );
-      const [created] = await query('SELECT * FROM batches WHERE id = ?', [insertRes.insertId]);
-      foundBatch = created;
+      return sendError(res, `Invalid batch join code '${inputCode}'. No matching batch exists in the database.`, 404);
     }
 
-    if (!foundBatch) {
-      return sendError(res, 'Invalid batch join code.', 404);
+    // 2. Check whether batch is active
+    const batchStatus = (foundBatch.status || 'Active').toLowerCase();
+    if (batchStatus === 'inactive' || batchStatus === 'archived' || batchStatus === 'expired') {
+      return sendError(res, `Batch '${foundBatch.name}' is currently ${batchStatus} and cannot be joined.`, 400);
+    }
+
+    // 3. Check whether batch join code has expired
+    const expiresAtVal = foundBatch.code_expires_at || foundBatch.expires_at || foundBatch.code_expires;
+    if (expiresAtVal && String(expiresAtVal).toLowerCase() !== 'never') {
+      const expDate = new Date(expiresAtVal);
+      if (!isNaN(expDate.getTime()) && expDate.getTime() < Date.now()) {
+        return sendError(res, `The join code for batch '${foundBatch.name}' has expired. Please request an updated code from your instructor or administrator.`, 400);
+      }
     }
 
     const userId = req.user?.userId || req.user?.id || 1;
 
-    // Update batch student count in DB
-    await query(`UPDATE batches SET students = students + 1 WHERE id = ?`, [foundBatch.id]);
+    // 4. Check if student is already linked to this batch
+    const existingLinks = await query(
+      `SELECT * FROM student_batches WHERE user_id = ? AND batch_id = ? LIMIT 1`,
+      [userId, foundBatch.id]
+    );
+    if (existingLinks && existingLinks.length > 0) {
+      return sendSuccess(res, `You are already enrolled in batch '${foundBatch.name}'!`, {
+        batch: foundBatch,
+        batch_id: foundBatch.id,
+        batch_name: foundBatch.name,
+        join_code: foundBatch.code || foundBatch.join_code
+      });
+    }
 
-    // Insert student batch link into DB
+    // 5. Update batch student count and insert student batch link in DB
+    await query(`UPDATE batches SET students = GREATEST(COALESCE(students, 0) + 1, 1) WHERE id = ?`, [foundBatch.id]);
     await query(
       `INSERT IGNORE INTO student_batches (user_id, batch_id) VALUES (?, ?)`,
       [userId, foundBatch.id]

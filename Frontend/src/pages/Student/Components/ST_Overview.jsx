@@ -115,10 +115,10 @@ export default function Overview() {
           const student = u.studentProfile || {};
 
           let resolvedName = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
-          const dept = student.department || u.department || "";
-          const sem = student.semester || u.semester || "";
+          const dept = student.department || u.department || u.dept || "";
+          const sem = student.semester || u.semester || u.sem || u.current_semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
-          const rollNum = student.roll_number || u.roll_number || "";
+          const rollNum = student.roll_number || u.roll_number || u.rollNumber || "";
           const userKey = u.id || u.email;
           const isCompleted = Boolean(
             u.is_profile_updated ||
@@ -262,11 +262,17 @@ export default function Overview() {
     }
   };
 
-  const studentName = dashboard.personalDetails.name || getStoredUserName() || "Student";
-  const dept = dashboard.personalDetails.department || "";
-  const sem = dashboard.academicOverview.semester || "";
-  const rollNum = dashboard.academicOverview.rollNumber || "";
-  const cgpa = dashboard.academicOverview.cgpa || "";
+  const storedUser = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch { return {}; }
+  })();
+
+  const studentName = dashboard.personalDetails.name || storedUser.name || getStoredUserName() || "Student";
+  const dept = dashboard.personalDetails.department || storedUser.department || storedUser.dept || storedUser.studentProfile?.department || "";
+  const sem = dashboard.academicOverview.semester || storedUser.semester || storedUser.sem || storedUser.current_semester || storedUser.studentProfile?.semester || "";
+  const rollNum = dashboard.academicOverview.rollNumber || storedUser.rollNumber || storedUser.roll_number || storedUser.studentProfile?.roll_number || "";
+  const cgpa = dashboard.academicOverview.cgpa || storedUser.cgpa || storedUser.aggregate_cgpa || storedUser.studentProfile?.cgpa || "";
   const upcoming = dashboard.upcomingDeadlines || [];
   const leaderboardList = dashboard.leaderboard || [];
 
