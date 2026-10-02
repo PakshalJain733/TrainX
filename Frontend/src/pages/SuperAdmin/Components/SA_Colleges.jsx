@@ -486,9 +486,6 @@ export default function Colleges() {
                 </div>
 
                 <div className="modal-footer">
-                  <button type="button" className="btn-modal-cancel" onClick={() => setIsAddDeptModalOpen(false)}>
-                    Cancel
-                  </button>
                   <button type="submit" className="btn-modal-submit">
                     Save Department
                   </button>
@@ -723,9 +720,6 @@ export default function Colleges() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsAddCollegeModalOpen(false)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit">
                   Register Institution
                 </button>
@@ -859,9 +853,6 @@ export default function Colleges() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setEditCollege(null)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit">
                   Save Changes
                 </button>
@@ -898,9 +889,6 @@ export default function Colleges() {
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setDeleteCollege(null)}>
-                Cancel
-              </button>
               <button
                 type="button"
                 className="manageusers-btn-reject college-btn-delete-confirm"

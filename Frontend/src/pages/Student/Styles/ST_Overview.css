@@ -866,7 +866,11 @@
     box-sizing: border-box !important;
   }
 
-  .overview-grid-4,
+  .overview-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
   .overview-split-grid {
     grid-template-columns: 1fr !important;
     gap: 12px !important;
@@ -874,11 +878,26 @@
 
   .overview-stat-card {
     width: 100% !important;
+    min-height: auto !important;
     box-sizing: border-box !important;
   }
 
+  .overview-card-content {
+    padding: 14px 12px !important;
+  }
+
   .overview-stat-value {
-    font-size: 22px !important;
+    font-size: 18px !important;
+  }
+
+  .overview-stat-label {
+    font-size: 12px !important;
+  }
+
+  .overview-stat-trend-pill {
+    font-size: 10px !important;
+    white-space: normal;
+    line-height: 1.2;
   }
 
   .overview-subcard,

@@ -1208,9 +1208,7 @@ function Register() {
                 </div>
 
                 <div className="sa-modal-footer">
-                  <button type="button" className="btn-modal-cancel" onClick={() => setIsRequestDemoOpen(false)}>
-                    Cancel
-                  </button>
+
                   <button type="submit" className="btn-modal-submit">
                     Submit Access Request
                   </button>

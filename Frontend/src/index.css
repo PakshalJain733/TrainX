@@ -495,3 +495,36 @@ select option,
 *:has(.perf-select-wrap--open) {
   z-index: 2147483647 !important;
 }
+
+/* Global Mobile Card Overrides for Dashboards */
+@media (max-width: 768px) {
+  .overview-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .overview-stat-card {
+    width: 100% !important;
+    min-height: auto !important;
+    box-sizing: border-box !important;
+  }
+
+  .overview-card-content {
+    padding: 14px 12px !important;
+  }
+
+  .overview-stat-value {
+    font-size: 18px !important;
+  }
+
+  .overview-stat-label {
+    font-size: 12px !important;
+  }
+
+  .overview-stat-trend-pill {
+    font-size: 10px !important;
+    white-space: normal !important;
+    line-height: 1.2 !important;
+  }
+}
+

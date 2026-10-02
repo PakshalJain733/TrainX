@@ -606,9 +606,7 @@ export default function AdminPracticeProblems() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddModal(false)}>
-                  Cancel
-                </button>
+
                 <button type="submit" className="btn-modal-submit">
                   Save Problem
                 </button>

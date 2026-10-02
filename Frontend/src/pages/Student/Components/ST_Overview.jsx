@@ -530,14 +530,7 @@ export default function Overview() {
               </div>
 
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn-modal-cancel"
-                  onClick={() => setShowJoinModal(false)}
-                  disabled={joining}
-                >
-                  Cancel
-                </button>
+
                 <button
                   type="submit"
                   className="btn-modal-submit"

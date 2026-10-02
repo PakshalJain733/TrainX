@@ -664,15 +664,7 @@ export default function Batches() {
                 </div>
               </div>
 
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn-modal-cancel"
-                  onClick={() => setShowJoinModal(false)}
-                  disabled={joining}
-                >
-                  Cancel
-                </button>
+              <div className="modal-footer" style={{ justifyContent: "flex-end" }}>
                 <button
                   type="submit"
                   className="btn-modal-submit"

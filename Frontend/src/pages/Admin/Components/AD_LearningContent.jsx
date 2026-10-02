@@ -427,9 +427,7 @@ export default function AdminLearningContent() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowForm(false)}>
-                  Cancel
-                </button>
+
                 <button type="submit" className="btn-modal-submit">
                   Add Content
                 </button>

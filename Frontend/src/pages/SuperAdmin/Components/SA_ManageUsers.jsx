@@ -1102,10 +1102,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
           )}
         </div>
 
-        <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between" }}>
-          <button type="button" className="btn-modal-cancel" onClick={onClose} disabled={isProcessing}>
-            Cancel
-          </button>
+        <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end" }}>
           <button
             type="button"
             className="btn-modal-submit bulk-submit-btn"
@@ -2009,9 +2006,6 @@ export default function ManageUsers() {
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setIsGenerateCodeModalOpen(false)}>
-                Cancel
-              </button>
               <button
                 type="submit"
                 onClick={handleGenerateCode}
@@ -2238,9 +2232,6 @@ export default function ManageUsers() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsAddUserModalOpen(false)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit">
                   Create User
                 </button>

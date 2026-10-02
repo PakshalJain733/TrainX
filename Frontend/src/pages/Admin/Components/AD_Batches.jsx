@@ -1222,9 +1222,7 @@ export default function AdminBatches() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddForm(false)}>
-                  Cancel
-                </button>
+
                 <button type="submit" className="btn-modal-submit" disabled={submitting}>
                   {submitting ? "Creating..." : "Create Batch"}
                 </button>

@@ -435,9 +435,7 @@ export default function Departments() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsAddModalOpen(false)}>
-                  Cancel
-                </button>
+
                 <button type="submit" className="btn-modal-submit">
                   Save Department
                 </button>
@@ -615,9 +613,7 @@ export default function Departments() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setEditDept(null)}>
-                  Cancel
-                </button>
+
                 <button type="submit" className="btn-modal-submit">
                   Save Changes
                 </button>
@@ -654,9 +650,7 @@ export default function Departments() {
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setDeleteDept(null)}>
-                Cancel
-              </button>
+
               <button
                 type="button"
                 className="manageusers-btn-reject dept-btn-delete-confirm"
