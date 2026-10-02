@@ -58,6 +58,24 @@
   text-transform: uppercase;
 }
 
+@media (max-width: 768px) {
+  .attendance-warning-banner {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .warning-banner-icon {
+    order: 1;
+  }
+  .warning-banner-badge {
+    order: 2;
+    margin-left: auto;
+  }
+  .warning-banner-body {
+    order: 3;
+    flex: 1 1 100%;
+  }
+}
+
 /* Task 1: My Attendance Summary Card */
 .my-attendance-summary-card {
   background: #ffffff;

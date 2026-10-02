@@ -289,7 +289,6 @@ function App() {
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        </ErrorBoundary>
       </BrowserRouter>
     </SystemMaintenanceProvider>
   );

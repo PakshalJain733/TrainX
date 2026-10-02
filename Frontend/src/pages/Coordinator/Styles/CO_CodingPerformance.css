@@ -770,6 +770,9 @@
 
   .coord-perf-search-wrap {
     width: 100%;
+    max-width: none !important;
+    flex: none !important;
+    height: 42px !important;
   }
 
   .coord-perf-search-input {
@@ -778,15 +781,18 @@
   }
 
   .coord-perf-filters-group {
-    width: 100%;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    width: 100% !important;
+    flex: none !important;
+    height: auto !important;
   }
 
+  .coord-perf-filters-group .custom-select-wrap,
   .coord-perf-select {
-    flex: 1 1 calc(50% - 6px);
-    min-width: 120px;
-    box-sizing: border-box;
+    width: 100% !important;
+    max-width: none !important;
   }
 
   .coord-perf-table-wrap {
