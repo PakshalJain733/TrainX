@@ -797,6 +797,7 @@ export default function AIRoadmap() {
       body: JSON.stringify({
         status: newStatus,
         progress: newProgress,
+        completedTopics: newCompleted,
       }),
     });
   };

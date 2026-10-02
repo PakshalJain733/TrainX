@@ -11,14 +11,14 @@
  */
 
 import jwt from 'jsonwebtoken';
-import app from './src/app.js';
-import { config } from './src/config/env.js';
-import { query } from './src/config/db.js';
-import { ROLES } from './src/utils/constants.js';
+import app from '../src/app.js';
+import { config } from '../src/config/env.js';
+import { query } from '../src/config/db.js';
+import { ROLES } from '../src/utils/constants.js';
 import {
   getStudentSkillGapsModel,
   getBatchSkillGapsModel,
-} from './src/models/skillGap.model.js';
+} from '../src/models/skillGap.model.js';
 
 const log = function(label, color) { color = color || '\x1b[37m'; console.log(color + label + '\x1b[0m'); };
 const ok   = function(msg) { log('  [OK]   ' + msg, '\x1b[32m'); };

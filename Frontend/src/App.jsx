@@ -39,6 +39,7 @@ import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
 import AdminWeeklyReports from './pages/Admin/Components/AD_WeeklyReports';
 import AdminC2CEnrollments from './pages/Admin/Components/AD_C2CEnrollments';
+import AdminApproveUsers from './pages/Admin/Components/AD_ApproveUsers';
 
 
 // Super Admin Workspace Imports
@@ -152,6 +153,7 @@ function App() {
           >
             <Route index element={<AdminOverview />} />
             <Route path="users" element={<AdminUsers />} />
+            <Route path="approve-users" element={<AdminApproveUsers />} />
             <Route path="batches" element={<AdminBatches />} />
             <Route path="c2c" element={<AdminC2CEnrollments />} />
             <Route path="attendance" element={<AdminAttendance />} />
@@ -257,6 +259,7 @@ function App() {
             <Route path="departments" element={<MaintenanceGuard moduleKey="departmentsPage"><DepartmentsPage /></MaintenanceGuard>} />
             <Route path="batches" element={<MaintenanceGuard moduleKey="superAdminBatches"><SuperAdminBatches /></MaintenanceGuard>} />
             <Route path="users" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><SuperAdminManageUsers /></MaintenanceGuard>} />
+            <Route path="approve-users" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><AdminApproveUsers /></MaintenanceGuard>} />
             <Route path="verification" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><SuperAdminManageUsers /></MaintenanceGuard>} />
             <Route path="coordinators" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><SuperAdminManageUsers /></MaintenanceGuard>} />
             <Route path="mentors" element={<MaintenanceGuard moduleKey="superAdminManageUsers"><SuperAdminManageUsers /></MaintenanceGuard>} />

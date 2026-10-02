@@ -19,6 +19,7 @@ import {
   GraduationCap,
   Settings,
   UserCheck,
+  UserCog,
   Bell,
   ChartBar,
   ChartLineIcon,
@@ -66,6 +67,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "View Profile", url: "/student/profile", icon: UserCog },
   { title: "Support Tickets", url: "/student/help", icon: HelpCircle },
 ];
 

@@ -79,6 +79,7 @@ const SAFE_USER_FIELDS = [
   'linkedin_url',
   'target_track',
   'two_factor_enabled',
+  'two_factor_reset',
   'is_active',
   'is_profile_updated',
   'created_at',
@@ -290,9 +291,39 @@ export const updateUserTwoFactorSecret = async (userId, secret) => {
   await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 1 WHERE id = ?', [secret, numId]);
 };
 
+export const resetUserTwoFactorSecret = async (userId, secret) => {
+  const numId = parseInt(userId, 10);
+  try {
+    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 0 WHERE id = ?', [secret, numId]);
+  } catch (_) {
+    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
+  }
+};
+
+export const triggerUserTwoFactorReset = async (userId, secret) => {
+  const numId = parseInt(userId, 10);
+  try {
+    await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 1 WHERE id = ?', [secret, numId]);
+  } catch (err) {
+    if (err.message && err.message.includes("Unknown column 'two_factor_reset'")) {
+      try {
+        await query('ALTER TABLE users ADD COLUMN two_factor_reset BOOLEAN DEFAULT FALSE');
+        await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0, two_factor_reset = 1 WHERE id = ?', [secret, numId]);
+      } catch (alterErr) {
+        console.warn(`[User Model] Failed to add two_factor_reset column: ${alterErr.message}`);
+        await query('UPDATE users SET two_factor_secret = ?, two_factor_enabled = 0 WHERE id = ?', [secret, numId]);
+      }
+    }
+  }
+};
+
 export const enableTwoFactorForUser = async (userId) => {
   const numId = parseInt(userId, 10);
-  await query('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [numId]);
+  try {
+    await query('UPDATE users SET two_factor_enabled = 1, two_factor_reset = 0 WHERE id = ?', [numId]);
+  } catch (_) {
+    await query('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [numId]);
+  }
 };
 
 export const updateUserRememberMe = async (userId, rememberMe) => {
@@ -523,6 +554,7 @@ export const invalidateRegistrationOtps = async (identifier) => {
 export const getAllUsersModel = async (collegeId = null, department = null) => {
   let sql = `
     SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
+           u.two_factor_enabled, u.two_factor_secret, u.two_factor_reset,
            c.name as college_name,
            s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills,
            COALESCE(s.gender, u.gender) as gender,
@@ -545,6 +577,35 @@ export const getAllUsersModel = async (collegeId = null, department = null) => {
     const cleanDept = String(department).trim().toLowerCase();
     sql += ' AND (LOWER(s.department) LIKE ? OR LOWER(s.department) = ? OR CAST(s.department_id AS CHAR) = ?)';
     params.push(`%${cleanDept}%`, cleanDept, cleanDept);
+  }
+  sql += ' ORDER BY u.id DESC';
+
+  const results = await query(sql, params);
+  return results && Array.isArray(results) ? results : [];
+};
+
+/**
+ * Get all pending user registrations (is_active = 0)
+ */
+export const getPendingUsersModel = async (collegeId = null) => {
+  let sql = `
+    SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.college_id, u.is_active, u.created_at,
+           c.name as college_name,
+           s.roll_number, s.department_id, s.batch_id, s.department, s.year, s.division, s.semester, s.cgpa, s.skills,
+           COALESCE(s.gender, u.gender) as gender,
+           COALESCE(s.city, u.city) as city,
+           COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
+           COALESCE(s.linkedin_url, u.linkedin_url) as linkedin_url,
+           COALESCE(s.target_track, u.target_track) as target_track
+    FROM users u
+    LEFT JOIN colleges c ON u.college_id = c.id
+    LEFT JOIN students s ON u.id = s.user_id
+    WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false) AND u.role != 'super_admin'
+  `;
+  const params = [];
+  if (collegeId) {
+    sql += ' AND u.college_id = ?';
+    params.push(collegeId);
   }
   sql += ' ORDER BY u.id DESC';
 

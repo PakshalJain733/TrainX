@@ -50,4 +50,6 @@ Thumbs.db
 # Uploaded Media & Temp Runtime Data
 Backend/uploads/*
 !Backend/uploads/.gitkeep
-Backend/scratch/
+
+# Script Run Output
+Backend/scripts/tests_and_logs/

@@ -38,7 +38,6 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
   { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
-  { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
   { title: "Batches", url: "/super-admin/batches", icon: Code2 },
   { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
   { title: "Performance", url: "/super-admin/performance", icon: LineChart },

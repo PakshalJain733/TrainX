@@ -49,14 +49,14 @@ The **Campus Training Portal** is a full-stack platform built for educational in
 ```text
 CAMPUS-TRAINING-PORTAL/
 │
-├── frontend/                  # React + Vite Frontend Application
+├── Frontend/                  # React + Vite Frontend Application
 │   ├── public/                # Static public assets
 │   ├── src/
 │   │   ├── assets/            # Images, branding & icons
-│   │   ├── components/        # Reusable UI components & layouts
+│   │   ├── components/        # Reusable UI components & layouts (Common/, ui/)
 │   │   ├── context/           # React Context Providers (Auth, Theme)
-│   │   ├── hooks/             # Custom React Hooks
-│   │   ├── pages/             # Role-based pages (Student, Mentor, Coordinator, SuperAdmin, Auth)
+│   │   ├── data/              # Static mock data for dashboards
+│   │   ├── pages/             # Role-based pages (Student, Mentor, Coordinator, Admin, SuperAdmin, authentication)
 │   │   ├── services/          # API client services
 │   │   ├── utils/             # Utility functions & helpers
 │   │   ├── App.jsx            # Application root & routes
@@ -64,7 +64,7 @@ CAMPUS-TRAINING-PORTAL/
 │   ├── package.json
 │   └── vite.config.js
 │
-├── backend/                   # Express.js Backend API
+├── Backend/                   # Express.js Backend API
 │   ├── src/
 │   │   ├── ai/                # AI integration modules (Gemini / Groq)
 │   │   ├── config/            # DB, environment & initialization logic
@@ -72,20 +72,23 @@ CAMPUS-TRAINING-PORTAL/
 │   │   ├── middleware/        # Auth, role-checking & upload middlewares
 │   │   ├── models/            # Database models & queries
 │   │   ├── routes/            # REST API route endpoints
-│   │   ├── services/          # Business logic & email services
+│   │   ├── services/          # Business logic, email & RAG services
 │   │   ├── socket/            # Real-time WebSockets handlers
 │   │   └── utils/             # Helper utilities
-│   ├── scripts/               # DB seeders & maintenance scripts
+│   ├── data/                  # Data source files (e.g. c2c_2029.xlsx)
+│   ├── docker/                # Dockerfile & runner for the code compiler sandbox
+│   ├── scripts/               # DB seeders, importers & maintenance scripts
+│   ├── uploads/               # User-uploaded media (git-ignored)
 │   ├── server.js              # Entry server point
 │   └── package.json
 │
 ├── database/                  # Database definitions
 │   ├── schema/
 │   │   └── schema.sql         # Database schema (DDL)
-│   ├── migrations/            # Database migration scripts
-│   └── seeds/                 # Seeding resources
+│   └── README.md
 │
-├── docs/                      # Architectural & verification documentation
+├── docs/                      # Architectural, verification & API documentation
+│   ├── API_Tests.postman_collection.json
 │   ├── END_TO_END_FUNCTIONALITY_REPORT.md
 │   ├── FINAL_DEPLOYMENT_READINESS_REPORT.md
 │   └── VERIFICATION_REPORT.md

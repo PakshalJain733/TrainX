@@ -1,4 +1,4 @@
-import { query } from './src/config/db.js';
+import { query } from '../src/config/db.js';
 
 const run = async () => {
   const problems = [

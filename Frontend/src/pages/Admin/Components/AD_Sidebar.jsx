@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Users,
   UserCog,
+  UserCheck,
   UserPlus,
   CalendarCheck,
   BookOpenCheck,
@@ -45,6 +46,7 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Manage Users", url: "/admin/users", icon: UserCog },
+  { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck },
   { title: "C2C Enrollments", url: "/admin/c2c", icon: Briefcase },
   { title: "Batches", url: "/admin/batches", icon: Code2 },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },
@@ -58,6 +60,7 @@ const primaryNavItems = [
 ];
 
 const footerNavItems = [
+  { title: "View Profile", url: "/admin/profile", icon: UserCog },
   { title: "Broadcast Notice", url: "/admin/broadcast", icon: Megaphone },
   { title: "Support Tickets", url: "/admin/help", icon: HelpCircle },
 ];

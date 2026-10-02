@@ -1,6 +1,6 @@
-import { markSelfAttendanceByCode } from '../controllers/attendance.controller.js';
-import { initializeDatabase } from '../config/init_db.js';
-import { query } from '../config/db.js';
+import { markSelfAttendanceByCode } from '../src/controllers/attendance.controller.js';
+import { initializeDatabase } from '../src/config/init_db.js';
+import { query } from '../src/config/db.js';
 
 async function testQrAttendance() {
   await initializeDatabase();

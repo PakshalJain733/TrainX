@@ -1,6 +1,6 @@
 import mysql from 'mysql2/promise';
-import { config } from '../config/env.js';
-import { initializeDatabase } from '../config/init_db.js';
+import { config } from '../src/config/env.js';
+import { initializeDatabase } from '../src/config/init_db.js';
 
 async function clearDatabase() {
   console.log('=== CLEARING ALL DATA FROM DATABASE FOR FRESH REGISTER ===');

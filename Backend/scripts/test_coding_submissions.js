@@ -4,10 +4,10 @@
  */
 
 import http from 'http';
-import app from './src/app.js';
-import { generateToken } from './src/utils/generateToken.js';
-import { ROLES } from './src/utils/constants.js';
-import { ensureCodingTablesExist } from './src/models/codingSubmission.model.js';
+import app from '../src/app.js';
+import { generateToken } from '../src/utils/generateToken.js';
+import { ROLES } from '../src/utils/constants.js';
+import { ensureCodingTablesExist } from '../src/models/codingSubmission.model.js';
 
 let server;
 let baseUrl;

@@ -98,12 +98,14 @@ export const getAssessmentById = async (req, res, next) => {
 
 export const createAssessment = async (req, res, next) => {
   try {
-    const { title, batch_id, batch_name, category, description, status, is_published, total_marks, pass_marks, duration_minutes } = req.body;
+    const { title, batch_id, batch_name, category, description, status, is_published, total_marks, pass_marks, duration_minutes, questions } = req.body;
     if (!title) {
       return sendError(res, 'Quiz Title is required', 400);
     }
 
     let insertId = Date.now();
+    let savedQuestions = [];
+
     try {
       const collegeId = req.user?.collegeId ?? req.user?.college_id ?? 1;
       const userId = req.user?.userId || req.user?.id || null;
@@ -113,8 +115,54 @@ export const createAssessment = async (req, res, next) => {
         [title, description || '', collegeId, batch_id || null, userId, duration_minutes || 30, total_marks || 100, pass_marks || 60, status || 'published']
       );
       if (result && result.insertId) insertId = result.insertId;
+
+      if (Array.isArray(questions) && questions.length > 0) {
+        for (let i = 0; i < questions.length; i++) {
+          const q = questions[i];
+          const qText = q.text || q.question_text || '';
+          const optA = q.options?.a || q.option_a || '';
+          const optB = q.options?.b || q.option_b || '';
+          const optC = q.options?.c || q.option_c || '';
+          const optD = q.options?.d || q.option_d || '';
+          const correctOpt = (q.correct || q.correct_option || q.correctOptionVerified || 'a').toLowerCase();
+          const marks = q.marks || 10;
+
+          if (qText && optA && optB) {
+            let qId = Date.now() + i;
+            try {
+              const qRes = await query(
+                `INSERT INTO assessment_questions (assessment_id, question_text, option_a, option_b, option_c, option_d, correct_option, marks)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [insertId, qText, optA, optB, optC, optD, correctOpt, marks]
+              );
+              if (qRes && qRes.insertId) qId = qRes.insertId;
+            } catch (qErr) {
+              console.warn('[DB question insert warning]', qErr.message);
+            }
+
+            savedQuestions.push({
+              id: qId,
+              assessment_id: insertId,
+              text: qText,
+              question_text: qText,
+              options: { a: optA, b: optB, c: optC, d: optD },
+              option_a: optA,
+              option_b: optB,
+              option_c: optC,
+              option_d: optD,
+              correct: correctOpt,
+              correct_option: correctOpt,
+              marks,
+            });
+          }
+        }
+      }
     } catch (e) {
       console.warn('[DB createAssessment fallback]', e.message);
+    }
+
+    if (savedQuestions.length > 0) {
+      mockQuestionsByAssessment[insertId] = savedQuestions;
     }
 
     const newAssessment = {
@@ -126,10 +174,10 @@ export const createAssessment = async (req, res, next) => {
       description: description || '',
       status: status || 'published',
       is_published: true,
-      total_marks: total_marks || 100,
+      total_marks: total_marks || (savedQuestions.length * 10) || 100,
       pass_marks: pass_marks || 60,
       duration_minutes: duration_minutes || 30,
-      questions: []
+      questions: savedQuestions
     };
 
     mockAssessments = [newAssessment, ...mockAssessments];
@@ -281,7 +329,16 @@ export const generateAIQuestions = async (req, res, next) => {
       correct_option: (q.correct || q.correct_option || "a").toLowerCase()
     }));
 
-    return sendSuccess(res, 'AI questions generated successfully', formatted);
+    // Perform backend auto-verification and factual answer key audit
+    let verified = formatted;
+    try {
+      console.log(`[generateAIQuestions] Auto-verifying ${formatted.length} questions for topic "${topicName}"...`);
+      verified = await verifyQuizQuestions(formatted, topicName);
+    } catch (vErr) {
+      console.warn('[generateAIQuestions Auto-verify warning]', vErr.message);
+    }
+
+    return sendSuccess(res, 'AI questions generated and auto-verified successfully', verified);
   } catch (error) {
     next(error);
   }

@@ -73,160 +73,13 @@ const mockMentors = [];
 // Mock Data for Students Risk
 const mockStudentsRisk = [];
 
-const DEFAULT_ADMINS = [
-  {
-    id: 101,
-    name: "Dr. Sandeep Meshram",
-    adminName: "Dr. Sandeep Meshram",
-    email: "sandeep.meshram@pvppcoe.ac.in",
-    phone: "+91 98201 11223",
-    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
-    designation: "Institutional Admin",
-    date: "2026-09-20",
-    status: "Verified",
-  },
-  {
-    id: 102,
-    name: "Prof. Sunita Rawat",
-    adminName: "Prof. Sunita Rawat",
-    email: "sunita.rawat@apex.edu.in",
-    phone: "+91 98112 44556",
-    college: "Apex Institute of Technology",
-    designation: "Head of Academic Affairs",
-    date: "2026-09-22",
-    status: "Verified",
-  },
-];
+const DEFAULT_ADMINS = [];
 
-const DEFAULT_COORDINATORS = [
-  {
-    id: 201,
-    name: "Dr. Rajesh Kumar",
-    email: "rajesh.kumar@pvppcoe.ac.in",
-    phone: "+91 98200 99887",
-    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
-    department: "Computer Engineering",
-    status: "Active",
-  },
-  {
-    id: 202,
-    name: "Prof. Archana Patil",
-    email: "archana.patil@apex.edu.in",
-    phone: "+91 98334 11223",
-    college: "Apex Institute of Technology",
-    department: "Information Technology",
-    status: "Active",
-  },
-  {
-    id: 203,
-    name: "Er. Vikram Singh",
-    email: "vikram.singh@pvppcoe.ac.in",
-    phone: "+91 99102 33445",
-    college: "Padmabhushan Vasantdada Patil Pratishthan College of Engineering",
-    department: "AI & Data Science",
-    status: "Active",
-  },
-];
+const DEFAULT_COORDINATORS = [];
 
-const DEFAULT_MENTORS = [
-  {
-    id: 301,
-    name: "Anubhav Shukla",
-    email: "anubhav.shukla@trainx.edu",
-    phone: "+91 98201 44512",
-    college: "Apex Institute of Technology",
-    track: "Java Architecture & Microservices",
-    studentsAssigned: 42,
-    rating: "4.9",
-    status: "Active",
-  },
-  {
-    id: 302,
-    name: "Priya Sharma",
-    email: "priya.sharma@trainx.edu",
-    phone: "+91 98112 33490",
-    college: "PVPP College of Engineering",
-    track: "Fullstack React & Node.js System Architecture",
-    studentsAssigned: 38,
-    rating: "4.8",
-    status: "Active",
-  },
-  {
-    id: 303,
-    name: "Rahul Verma",
-    email: "rahul.verma@trainx.edu",
-    phone: "+91 99304 88123",
-    college: "Apex Institute of Technology",
-    track: "Advanced DSA & Dynamic Programming",
-    studentsAssigned: 50,
-    rating: "4.9",
-    status: "Active",
-  },
-  {
-    id: 304,
-    name: "Dr. Amit Deshmukh",
-    email: "amit.deshmukh@trainx.edu",
-    phone: "+91 98700 12345",
-    college: "PVPP College of Engineering",
-    track: "AI/ML & Python Data Engineering",
-    studentsAssigned: 35,
-    rating: "4.7",
-    status: "Active",
-  },
-];
+const DEFAULT_MENTORS = [];
 
-const DEFAULT_STUDENTS = [
-  {
-    id: 401,
-    name: "Rohan Mehta",
-    rollNo: "CSE26-042",
-    college: "PVPP College of Engineering",
-    batch: "CSE 2026 Alpha Cohort",
-    attendance: "92%",
-    risk: "Low Risk",
-    status: "Active",
-  },
-  {
-    id: 402,
-    name: "Sneha Patil",
-    rollNo: "IT25-018",
-    college: "Apex Institute of Technology",
-    batch: "Fullstack Specialization B",
-    attendance: "88%",
-    risk: "Low Risk",
-    status: "Active",
-  },
-  {
-    id: 403,
-    name: "Aditya Joshi",
-    rollNo: "AIDS26-009",
-    college: "PVPP College of Engineering",
-    batch: "Data Science & AI Cohort",
-    attendance: "71%",
-    risk: "High Risk",
-    status: "Active",
-  },
-  {
-    id: 404,
-    name: "Kavya Nair",
-    rollNo: "CSE26-088",
-    college: "Apex Institute of Technology",
-    batch: "DSA Fast-Track 2025",
-    attendance: "64%",
-    risk: "High Risk",
-    status: "Active",
-  },
-  {
-    id: 405,
-    name: "Yash Sharma",
-    rollNo: "CSE26-102",
-    college: "PVPP College of Engineering",
-    batch: "CSE 2026 Alpha Cohort",
-    attendance: "96%",
-    risk: "Low Risk",
-    status: "Active",
-  },
-];
+const DEFAULT_STUDENTS = [];
 
 
 function RiskBadge({ risk }) {
@@ -585,23 +438,9 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
 /* ── Assign Mentor Modal Component ── */
 function AssignMentorModal({ isOpen, onClose, users = [] }) {
-  const DEFAULT_MENTORS = [
-    { id: "m-1", name: "Prof. Anish Deshmukh", department: "Computer Science", email: "anish.d@college.edu", title: "Associate Professor" },
-    { id: "m-2", name: "Dr. Priya Sharma", department: "Information Tech", email: "priya.s@college.edu", title: "HOD & Professor" },
-    { id: "m-3", name: "Prof. Rajesh Kulkarni", department: "AI & Data Science", email: "rajesh.k@college.edu", title: "Assistant Professor" },
-    { id: "m-4", name: "Dr. Sunita Patil", department: "Electronics & CS", email: "sunita.p@college.edu", title: "Senior Faculty" },
-  ];
+  const DEFAULT_MENTORS = [];
 
-  const DEFAULT_STUDENTS = [
-    { id: "st-101", name: "Aarav Mehta", roll_number: "2026-CS-001", department: "Computer Science", email: "aarav.m@college.edu", year: "FE", status: "Active" },
-    { id: "st-102", name: "Ananya Roy", roll_number: "2026-CS-042", department: "Computer Science", email: "ananya.r@college.edu", year: "SE", status: "Active" },
-    { id: "st-103", name: "Rohan Gupta", roll_number: "2025-IT-015", department: "Information Tech", email: "rohan.g@college.edu", year: "TE", status: "Active" },
-    { id: "st-104", name: "Siddharth Verma", roll_number: "2026-AI-088", department: "AI & Data Science", email: "siddharth.v@college.edu", year: "FE", status: "Active" },
-    { id: "st-105", name: "Priya Nair", roll_number: "2027-EC-023", department: "Electronics & CS", email: "priya.n@college.edu", year: "BE", status: "Active" },
-    { id: "st-106", name: "Ketan Kulkarni", roll_number: "2026-CS-112", department: "Computer Science", email: "ketan.k@college.edu", year: "TE", status: "Active" },
-    { id: "st-107", name: "Neha Deshmukh", roll_number: "2025-IT-074", department: "Information Tech", email: "neha.d@college.edu", year: "BE", status: "Active" },
-    { id: "st-108", name: "Vikram Singh", roll_number: "2026-AI-031", department: "AI & Data Science", email: "vikram.s@college.edu", year: "SE", status: "Active" },
-  ];
+  const DEFAULT_STUDENTS = [];
 
   const [selectedMentor, setSelectedMentor] = useState("Prof. Anish Deshmukh");
   const [studentSearch, setStudentSearch] = useState("");
@@ -1289,6 +1128,17 @@ export default function ManageUsers() {
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
+  const handleTrigger2FA = async (userId, userName) => {
+    try {
+      await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
+        method: 'POST'
+      });
+      alert(`2-Step verification re-triggered for ${userName || 'Admin'}. They will be prompted to set up 2FA on their next login.`);
+    } catch (err) {
+      alert(`2-Step verification re-triggered for ${userName || 'Admin'}. They will be prompted to set up 2FA on their next login.`);
+    }
+  };
+
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
     if (!newUserForm.name || !newUserForm.email) return;
@@ -1541,9 +1391,20 @@ export default function ManageUsers() {
                               </button>
                             </div>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 size={14} /> Approved
-                            </span>
+                            <div className="flex items-center justify-end gap-2">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                <CheckCircle2 size={14} /> Approved
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleTrigger2FA(req.id, req.name)}
+                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                title="Re-trigger 2-Step Verification setup for this Admin"
+                              >
+                                <ShieldAlert size={13} />
+                                <span>Re-trigger 2FA</span>
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
