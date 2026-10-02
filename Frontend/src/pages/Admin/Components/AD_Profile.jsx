@@ -520,14 +520,6 @@ export default function AdminProfile() {
               </div>
             </div>
           </div>
-
-          {isEditing && (
-            <div className="profile-actions-bar">
-              <button type="submit" className="profile-save-btn" disabled={saving}>
-                <Save size={16} /> {saving ? "Saving Changes..." : "Save Profile Changes"}
-              </button>
-            </div>
-          )}
         </div>
       </form>
 
