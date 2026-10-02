@@ -779,7 +779,7 @@ function Login() {
               <form onSubmit={handleVerifyAndLogin}>
                 <div className="login-input-group">
                   <div className="login-email-header-row">
-                    <FieldLabel icon={Icons.shield}>Microsoft / Google Authenticator</FieldLabel>
+                    <FieldLabel icon={Icons.shield}>Email Address</FieldLabel>
                     <button
                       type="button"
                       onClick={handleEditEmail}

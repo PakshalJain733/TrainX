@@ -6,6 +6,7 @@ import {
   UserPlus,
   Search,
   ShieldCheck,
+  ShieldAlert,
   UserCheck,
   GraduationCap,
   Mail,
@@ -1244,6 +1245,22 @@ export default function ManageUsers() {
     setAdminRequests(adminRequests.filter((r) => r.id !== id));
   };
 
+  const handleTrigger2FA = async (userId, userName) => {
+    try {
+      const res = await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
+        method: 'POST',
+      });
+      if (res && res.success) {
+        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA is now required on their next login.`);
+      } else {
+        alert(res?.message || 'Failed to trigger two-step verification.');
+      }
+    } catch (err) {
+      console.error('Trigger 2FA error:', err);
+      alert('Failed to trigger two-step verification.');
+    }
+  };
+
   // Filtering
   const filteredAdmins = adminRequests.filter(req =>
     req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1271,9 +1288,6 @@ export default function ManageUsers() {
 
   const tabs = [
     { id: "admins", label: "Admin", icon: ShieldCheck, count: adminRequests.length },
-    { id: "students", label: "Students", icon: Users, count: students.length },
-    { id: "coordinators", label: "Coordinators", icon: UserCheck, count: coordinators.length },
-    { id: "mentors", label: "Mentors", icon: GraduationCap, count: mentors.length },
   ];
 
   // Modal states
@@ -1285,7 +1299,7 @@ export default function ManageUsers() {
   const [newUserForm, setNewUserForm] = useState({
     name: '',
     email: '',
-    role: 'students',
+    role: 'admins',
     collegeId: '',
     college: '',
     departmentId: '',
@@ -1327,7 +1341,7 @@ export default function ManageUsers() {
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
   const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
-  const [codeExpiry, setCodeExpiry] = useState('7 Days');
+  const [codeExpiry, setCodeExpiry] = useState('1 Day');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
   const [generatedCodesList, setGeneratedCodesList] = useState([]);
@@ -1424,16 +1438,6 @@ export default function ManageUsers() {
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
-  const handleTrigger2FA = async (userId, userName) => {
-    try {
-      await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
-        method: 'POST'
-      });
-      alert(`2-Step verification re-triggered for ${userName || 'Admin'}. They will be prompted to set up 2FA on their next login.`);
-    } catch (err) {
-      alert(`2-Step verification re-triggered for ${userName || 'Admin'}. They will be prompted to set up 2FA on their next login.`);
-    }
-  };
 
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
@@ -1522,7 +1526,7 @@ export default function ManageUsers() {
     setNewUserForm({
       name: '',
       email: '',
-      role: 'students',
+      role: 'admins',
       collegeId: '',
       college: '',
       departmentId: '',
@@ -1558,14 +1562,6 @@ export default function ManageUsers() {
           >
             <KeyRound size={16} />
             <span>Generate Code</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsBulkExcelOpen(true)}
-            className="sa-btn-excel"
-          >
-            <FileSpreadsheet size={16} />
-            <span>Upload Excel (.xlsx)</span>
           </button>
           <button
             type="button"
@@ -1903,8 +1899,6 @@ export default function ManageUsers() {
                   value={codeRole}
                   wrapperClass="mu-select"
                   options={[
-                    { value: "mentors", label: "Mentor" },
-                    { value: "coordinators", label: "Coordinator" },
                     { value: "admins", label: "Admin" },
                   ]}
                   onChange={(val) => setCodeRole(val)}
@@ -1946,12 +1940,7 @@ export default function ManageUsers() {
                     direction="up"
                     wrapperClass="mu-select"
                     options={[
-                      { value: "24 Hours", label: "24 Hours" },
-                      { value: "3 Days", label: "3 Days" },
-                      { value: "7 Days", label: "7 Days" },
-                      { value: "30 Days", label: "30 Days" },
-                      { value: "90 Days", label: "90 Days" },
-                      { value: "Never", label: "Never" },
+                      { value: "1 Day", label: "1 Day" },
                     ]}
                     onChange={(val) => setCodeExpiry(val)}
                   />
@@ -2081,9 +2070,6 @@ export default function ManageUsers() {
                       value={newUserForm.role}
                       wrapperClass="mu-select"
                       options={[
-                        { value: "students", label: "Student" },
-                        { value: "mentors", label: "Mentor" },
-                        { value: "coordinators", label: "Coordinator" },
                         { value: "admins", label: "College Administrator (Admin)" },
                       ]}
                       onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
