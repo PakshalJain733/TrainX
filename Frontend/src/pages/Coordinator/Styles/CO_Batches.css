@@ -46,7 +46,7 @@
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
-  margin-bottom: 20px;
+  margin-bottom: 6px;
   width: 100%;
   box-sizing: border-box;
 }

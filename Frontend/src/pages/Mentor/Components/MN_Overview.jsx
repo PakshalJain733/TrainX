@@ -87,57 +87,50 @@ export default function Overview() {
   const [studentCount, setStudentCount] = useState(0);
   const [sessionsCount, setSessionsCount] = useState(0);
   const [tasksCount, setTasksCount] = useState(0);
-
+  const [liveSessionsData, setLiveSessionsData] = useState([]);
   useEffect(() => {
     let mounted = true;
-    apiFetch("/mentor/overview")
-      .then((response) => {
+    Promise.allSettled([
+      apiFetch("/mentor/overview").then((response) => {
         if (!mounted) return;
         const payload = unwrap(response);
-        if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-          setOverview({});
-          return;
+        if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+          const inner = firstValue(payload, ["overview"]);
+          setOverview(inner && typeof inner === "object" ? { ...payload, ...inner } : payload);
         }
-        const inner = firstValue(payload, ["overview"]);
-        setOverview(inner && typeof inner === "object" ? { ...payload, ...inner } : payload);
-      })
-      .catch(() => {});
-
-    apiFetch("/batches")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data)) {
+      }),
+      apiFetch("/batches").then((res) => {
+        if (mounted && res && res.data && Array.isArray(res.data)) {
           setBatches(res.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
-        } else {
-          setBatches([]);
         }
-      })
-      .catch(() => setBatches([]));
-
-    apiFetch("/students")
-      .then((res) => {
+      }),
+      apiFetch("/students").then((res) => {
+        if (!mounted) return;
         const list = res?.data || (Array.isArray(res) ? res : []);
         setStudentCount(list.length);
-      })
-      .catch(() => setStudentCount(0));
-
-    apiFetch("/mentor/live-sessions")
-      .then((res) => {
+      }),
+      apiFetch("/mentor/live-sessions").then((res) => {
+        if (!mounted) return;
         const list = res?.data || (Array.isArray(res) ? res : []);
+        setLiveSessionsData(list);
         setSessionsCount(list.length);
-      })
-      .catch(() => setSessionsCount(0));
-
-    apiFetch("/batches/1/tasks")
-      .then((res) => {
+      }),
+      apiFetch("/batches/1/tasks").then((res) => {
+        if (!mounted) return;
         const list = res?.data || (Array.isArray(res) ? res : []);
         setTasksCount(list.length);
       })
-      .catch(() => setTasksCount(0));
+    ]).finally(() => {
+      if (mounted) setLoading(false);
+    });
+
+    return () => { mounted = false; };
   }, []);
 
   const overviewData = overview && typeof overview === "object" ? overview : {};
   const mentor = overviewData.user || overviewData.mentor || overviewData;
-  const sessionsList = getList(overviewData, ["sessions", "upcomingSessions", "liveSessions", "upcoming_sessions"]);
+  const fetchedList = getList(overviewData, ["sessions", "upcomingSessions", "liveSessions", "upcoming_sessions"]);
+  const sessionsList = fetchedList.length > 0 ? fetchedList : liveSessionsData;
 
   const fullName = mentorUser.name || asText(firstValue(mentor, ["name", "fullName", "full_name"])) || mentorUser.email?.split("@")[0] || "Faculty Mentor";
   const department = mentorUser.department || asText(firstValue(mentor, ["department", "dept", "collegeDepartment"])) || "N/A";
@@ -328,12 +321,9 @@ export default function Overview() {
               </div>
               <div>
                 <CardTitle className="overview-card-title">Upcoming Sessions Timetable</CardTitle>
-                <CardDescription className="overview-card-desc">Sessions returned for the authenticated mentor</CardDescription>
+                <CardDescription className="overview-card-desc">Upcoming live training sessions & schedule</CardDescription>
               </div>
             </div>
-            <Link to="/mentor/sessions" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
-              View All <ChevronRight size={14} />
-            </Link>
           </CardHeader>
           <CardContent style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
             {loading ? (
