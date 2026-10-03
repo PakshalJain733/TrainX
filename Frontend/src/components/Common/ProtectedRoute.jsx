@@ -11,14 +11,16 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
   // 1. Retrieve auth token
   let token =
     sessionStorage.getItem("token") ||
-    sessionStorage.getItem("token") ||
+    localStorage.getItem("token") ||
     sessionStorage.getItem("authToken") ||
-    sessionStorage.getItem("auth_token");
+    localStorage.getItem("authToken") ||
+    sessionStorage.getItem("auth_token") ||
+    localStorage.getItem("auth_token");
 
   // 2. Retrieve user object
   let user = null;
   try {
-    const rawUser = sessionStorage.getItem("user") || sessionStorage.getItem("user");
+    const rawUser = sessionStorage.getItem("user") || localStorage.getItem("user");
     if (rawUser) user = JSON.parse(rawUser);
   } catch (e) {
     user = null;

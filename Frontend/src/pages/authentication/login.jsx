@@ -80,12 +80,14 @@ function FieldLabel({ icon, children, htmlFor }) {
 // rememberMe=true  → localStorage   (persists across browser restarts)
 // rememberMe=false → sessionStorage (cleared when tab/browser closes)
 function storeAuthToken(token, remember) {
+  sessionStorage.setItem("token", token);
+  sessionStorage.setItem("authToken", token);
   if (remember) {
-    sessionStorage.removeItem("token");
     localStorage.setItem("token", token);
+    localStorage.setItem("authToken", token);
   } else {
     localStorage.removeItem("token");
-    sessionStorage.setItem("token", token);
+    localStorage.removeItem("authToken");
   }
 }
 
@@ -245,14 +247,12 @@ function Login() {
 
   const handlePostLoginRedirect = (serverUser) => {
     let existingUser = {};
-    try { existingUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-
     try {
-      existingUser = JSON.parse(sessionStorage.getItem("user")) || {};
+      existingUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
     } catch {
       sessionStorage.removeItem("user");
+      localStorage.removeItem("user");
     }
-
 
     let finalName = serverUser.name || existingUser.name || serverUser.email?.split("@")[0] || "Student";
 
@@ -263,6 +263,11 @@ function Login() {
     };
 
     sessionStorage.setItem("user", JSON.stringify(mergedUser));
+    if (rememberMeRef.current || rememberMe) {
+      localStorage.setItem("user", JSON.stringify(mergedUser));
+    } else {
+      localStorage.removeItem("user");
+    }
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;
