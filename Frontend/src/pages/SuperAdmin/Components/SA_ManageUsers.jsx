@@ -1203,17 +1203,32 @@ export default function ManageUsers() {
           apiFetch('/admin/pending-users').catch(() => null)
         ]);
 
-        if (pendingRes && pendingRes.data && Array.isArray(pendingRes.data)) {
-          setPendingUsersList(pendingRes.data);
-          setPendingUsersCount(pendingRes.data.length);
-        }
+        const pendingData = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
+          ? pendingRes.data
+          : (Array.isArray(pendingRes) ? pendingRes : []);
 
-        if (res && Array.isArray(res.users) && res.users.length > 0) {
-          setAllRawUsers(res.users);
-          const dbAdmins = res.users.filter(u => u.role === 'college_admin');
-          const dbCoords = res.users.filter(u => u.role === 'coordinator');
-          const dbMentors = res.users.filter(u => u.role === 'mentor');
-          const dbStudents = res.users.filter(u => u.role === 'student');
+        setPendingUsersList(pendingData);
+        setPendingUsersCount(pendingData.length);
+
+        const usersData = res && res.data && Array.isArray(res.data)
+          ? res.data
+          : (Array.isArray(res) ? res : (res && Array.isArray(res.users) ? res.users : []));
+
+        if (usersData.length > 0 || pendingData.length > 0) {
+          setAllRawUsers(usersData);
+
+          // Combine active users with pending users
+          const allCombined = [...usersData];
+          pendingData.forEach(p => {
+            if (!allCombined.some(u => u.id === p.id)) {
+              allCombined.push({ ...p, is_active: 0 });
+            }
+          });
+
+          const dbAdmins = allCombined.filter(u => u.role === 'college_admin' || u.role === 'admin' || u.role === 'hod');
+          const dbCoords = allCombined.filter(u => u.role === 'coordinator');
+          const dbMentors = allCombined.filter(u => u.role === 'mentor' || u.role === 'faculty');
+          const dbStudents = allCombined.filter(u => u.role === 'student');
 
           if (dbAdmins.length > 0) {
             setAdminRequests(dbAdmins.map(u => ({
@@ -1263,12 +1278,12 @@ export default function ManageUsers() {
               batch: u.batch || 'CSE 2026 Cohort',
               attendance: u.attendance || '90%',
               risk: u.risk || 'Low Risk',
-              status: 'Active'
+              status: u.is_active ? 'Active' : 'Pending'
             })));
           }
         }
       } catch (err) {
-        console.warn("Error fetching users from database, using fallback system data:", err);
+        console.warn("Error fetching users from database:", err);
       }
     };
 
@@ -1290,12 +1305,33 @@ export default function ManageUsers() {
   }, [location.pathname]);
 
   // Admin Verification handlers
-  const handleVerifyAdmin = (id) => {
-    setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+  const handleVerifyAdmin = async (id) => {
+    try {
+      const res = await apiFetch(`/admin/users/${id}/approve`, { method: "PATCH" });
+      if (res && (res.success || !res.error)) {
+        setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+        setPendingUsersList((prev) => prev.filter((u) => u.id !== id));
+      } else {
+        alert(res?.error || "Failed to verify admin account");
+      }
+    } catch (err) {
+      setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+    }
   };
 
-  const handleRejectAdmin = (id) => {
-    setAdminRequests(adminRequests.filter((r) => r.id !== id));
+  const handleRejectAdmin = async (id) => {
+    if (!window.confirm("Are you sure you want to reject this admin request?")) return;
+    try {
+      const res = await apiFetch(`/admin/users/${id}/reject`, { method: "PATCH" });
+      if (res && (res.success || !res.error)) {
+        setAdminRequests(adminRequests.filter((r) => r.id !== id));
+        setPendingUsersList((prev) => prev.filter((u) => u.id !== id));
+      } else {
+        alert(res?.error || "Failed to reject admin account");
+      }
+    } catch (err) {
+      setAdminRequests(adminRequests.filter((r) => r.id !== id));
+    }
   };
 
   const handleTrigger2FA = async (userId, userName) => {
