@@ -232,6 +232,16 @@ export default function Colleges() {
     }
   };
 
+  const handleDeleteCollege = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+      setColleges((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error removing college:", err);
+      alert(err.message || "Failed to remove college.");
+    }
+  };
+
   useEffect(() => {
     collegeAPI.getColleges()
       .then((data) => setColleges(Array.isArray(data) ? data : []))
@@ -331,15 +341,6 @@ export default function Colleges() {
 
     setIsAddDeptModalOpen(false);
     setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
-  };
-
-  const handleDeleteCollege = async (id) => {
-    try {
-      await collegeAPI.deleteCollege(id);
-    } catch (err) {
-      console.error("Failed to delete college from API:", err);
-    }
-    setColleges(colleges.filter((c) => c.id !== id));
   };
 
   // If collegeId URL param is present, render College Departments view
