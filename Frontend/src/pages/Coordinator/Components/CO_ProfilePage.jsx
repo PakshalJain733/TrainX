@@ -531,9 +531,10 @@ export default function CoordinatorProfilePage() {
       </div>
 
       {/* Change Password Modal */}
-      {showChangePassModal && (
-        <ChangePasswordModal onClose={() => setShowChangePassModal(false)} />
-      )}
+      <ChangePasswordModal
+        isOpen={showChangePassModal}
+        onClose={() => setShowChangePassModal(false)}
+      />
 
       {/* Google Authenticator 2FA Modal */}
       {is2FASetupOpen && createPortal(

@@ -1263,27 +1263,27 @@ export default function ManageUsers() {
 
   // Filtering
   const filteredAdmins = adminRequests.filter(req =>
-    req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.college.toLowerCase().includes(searchQuery.toLowerCase())
+    (req?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (req?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (req?.college || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredCoordinators = coordinators.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.department.toLowerCase().includes(searchQuery.toLowerCase())
+    (c?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c?.college || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c?.department || c?.dept || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredMentors = mentors.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.track.toLowerCase().includes(searchQuery.toLowerCase())
+    (m?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m?.college || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m?.track || m?.department || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.college.toLowerCase().includes(searchQuery.toLowerCase())
+    (s?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s?.rollNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s?.college || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const tabs = [

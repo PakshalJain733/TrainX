@@ -2435,6 +2435,29 @@ input::-ms-clear {
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
   }
 
+  /* Card content body padding */
+  .login-card-welcome-header,
+  .login-mode-segmented-bar,
+  .auth-error-msg,
+  .auth-success-msg,
+  form,
+  .login-mobile-card-footer {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .login-card-welcome-header {
+    margin-top: 18px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .login-card-welcome-sub {
+    font-size: 13.5px !important;
+    color: #64748b !important;
+    text-align: center !important;
+  }
+
   .login-mode-segmented-bar {
     background: #f1f5f9 !important;
     padding: 4px !important;
