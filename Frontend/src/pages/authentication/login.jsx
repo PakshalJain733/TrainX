@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoMain from "../../assets/Logo.png";
 import Logo from "../../assets/Logo2.png";
+import TrainXLogo from "../../assets/TrainX.png";
 import { getApiBaseUrl } from "../../utils/api";
 
 import "./login.css";
@@ -612,7 +613,18 @@ function Login() {
 
           {/* Right Panel - Login Card */}
           <div className="login-card">
+            {/* Mobile Top Header Banner (Matching Reference Image Layout) */}
+            <div className="mobile-login-top-banner">
+              <div className="mobile-banner-logo-wrap">
+                <img src={Logo} alt="Logo" className="mobile-banner-logo-img" />
+              </div>
+            </div>
+
             <img src={Logo} alt="Logo" className="login-logo" />
+
+            <div className="login-card-welcome-header">
+              <p className="login-card-welcome-sub">Enter your credentials to access your account</p>
+            </div>
 
             {/* Segmented Auth Mode Switcher */}
             <div className="login-mode-segmented-bar">
@@ -622,15 +634,15 @@ function Login() {
                 onClick={() => handleModeSwitch("password")}
               >
                 {Icons.lock}
-                <span>Login with Password</span>
+                <span>Password</span>
               </button>
               <button
                 type="button"
                 className={`login-mode-tab ${authMode === "otp" ? "active" : ""}`}
                 onClick={() => handleModeSwitch("otp")}
               >
-                {Icons.shield}
-                <span>Login with OTP</span>
+                {Icons.email}
+                <span>Email code</span>
               </button>
             </div>
 
@@ -648,7 +660,7 @@ function Login() {
                 {step === "email" && (
                   <form onSubmit={handlePasswordLogin}>
                     <div className="login-input-group">
-                      <FieldLabel htmlFor="email" icon={Icons.email}>Email Address</FieldLabel>
+                      <FieldLabel htmlFor="email" icon={Icons.email}>Email address *</FieldLabel>
                       <input
                         id="email"
                         type="email"
@@ -661,13 +673,13 @@ function Login() {
                     </div>
 
                     <div className="login-input-group">
-                      <FieldLabel htmlFor="password" icon={Icons.lock}>Password</FieldLabel>
+                      <FieldLabel htmlFor="password" icon={Icons.lock}>Password *</FieldLabel>
                       <div className="password-input-wrapper">
                         <input
                           id="password"
                           type={showPassword ? "text" : "password"}
                           required
-                          placeholder="••••••••••••"
+                          placeholder="Enter your password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                         />
@@ -698,7 +710,7 @@ function Login() {
                     </div>
 
                     <button type="submit" className="login-send-otp-btn" disabled={loading}>
-                      {Icons.key} {loading ? "Authenticating..." : "Login to Account"}
+                      {loading ? "Authenticating..." : "Sign in"}
                     </button>
 
                     <div className="login-links">
@@ -1145,6 +1157,10 @@ function Login() {
                 )}
               </>
             )}
+
+            <div className="login-mobile-card-footer">
+              <span>Campus Training Portal</span>
+            </div>
           </div>
         </div>
       </div>
