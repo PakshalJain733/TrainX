@@ -874,6 +874,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative !important;
 }
 
 .admin-header__badges {
@@ -982,7 +983,7 @@ body {
 }
 
 .admin-header__notif-wrap {
-  position: relative;
+  position: static !important;
   flex-shrink: 0;
 }
 

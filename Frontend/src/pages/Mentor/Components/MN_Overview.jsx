@@ -133,7 +133,6 @@ export default function Overview() {
   const sessionsList = fetchedList.length > 0 ? fetchedList : liveSessionsData;
 
   const fullName = mentorUser.name || asText(firstValue(mentor, ["name", "fullName", "full_name"])) || mentorUser.email?.split("@")[0] || "Faculty Mentor";
-  const department = mentorUser.department || asText(firstValue(mentor, ["department", "dept", "collegeDepartment"])) || "N/A";
   const role = mentorUser.role || asText(firstValue(mentor, ["role", "designation"])) || "Mentor";
   const email = mentorUser.email || asText(firstValue(mentor, ["email"])) || "N/A";
   const assignedStudents = getNumber(mentor, ["assignedStudents", "totalStudents", "studentsCount", "studentCount", "assigned_students"]) ?? 0;

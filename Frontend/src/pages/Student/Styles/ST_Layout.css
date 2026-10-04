@@ -820,6 +820,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative !important;
 }
 
 .student-header__badges {
@@ -928,7 +929,7 @@ body {
 }
 
 .student-header__notif-wrap {
-  position: relative;
+  position: static !important;
   flex-shrink: 0;
 }
 

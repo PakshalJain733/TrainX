@@ -827,6 +827,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative !important;
 }
 
 .coordinator-header__badges {
@@ -935,7 +936,7 @@ body {
 }
 
 .coordinator-header__notif-wrap {
-  position: relative;
+  position: static !important;
   flex-shrink: 0;
 }
 

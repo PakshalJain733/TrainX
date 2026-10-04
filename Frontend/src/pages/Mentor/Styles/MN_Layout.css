@@ -960,6 +960,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative !important;
 }
 
 .mentor-header__badges {
@@ -1068,7 +1069,7 @@ body {
 }
 
 .mentor-header__notif-wrap {
-  position: relative;
+  position: static !important;
   flex-shrink: 0;
 }
 

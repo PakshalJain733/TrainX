@@ -265,6 +265,7 @@ body {
   align-items: center;
   gap: 12px;
   flex-shrink: 0;
+  position: relative !important;
 }
 
 .superadmin-header__badge {
@@ -734,7 +735,7 @@ body {
 }
 
 .sa-header__notif-wrap {
-  position: relative;
+  position: static !important;
   flex-shrink: 0;
   height: 100%;
 }

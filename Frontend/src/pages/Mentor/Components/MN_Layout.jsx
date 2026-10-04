@@ -268,22 +268,20 @@ export default function MentorLayout() {
   useEffect(() => {
     apiFetch("/mentor/notifications")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-
-          setNotifications(serverItems);
-        }
+        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+        setNotifications(serverItems);
       })
       .catch(() => { });
   }, []);
