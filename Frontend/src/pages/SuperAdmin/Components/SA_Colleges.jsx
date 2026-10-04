@@ -211,8 +211,9 @@ export default function Colleges() {
     try {
       const usersRes = await apiFetch('/admin/users');
       let adminUser = null;
-      if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
-        adminUser = usersRes.data.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
+      const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
+      if (userList.length > 0) {
+        adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
       }
       if (!adminUser) {
         alert(`Could not find active user account for admin email '${adminEmail}'.`);
@@ -221,14 +222,14 @@ export default function Colleges() {
       const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
         method: 'POST',
       });
-      if (res && res.success) {
+      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
         alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminEmail}. 2FA is now required on their next login.`);
       } else {
-        alert(res?.message || 'Failed to trigger two-step verification.');
+        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
       }
     } catch (err) {
       console.error('Trigger 2FA error:', err);
-      alert('Failed to trigger two-step verification.');
+      alert(err?.message || 'Failed to trigger two-step verification.');
     }
   };
 
