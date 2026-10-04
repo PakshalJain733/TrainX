@@ -366,6 +366,7 @@ export default function Colleges() {
             <p className="text-xs text-slate-500 ml-9">
               Managing departments inside {selectedCollege ? selectedCollege.name : "selected college"}
             </p>
+          </div>
         </div>
 
         <div className="sa-search-card">
