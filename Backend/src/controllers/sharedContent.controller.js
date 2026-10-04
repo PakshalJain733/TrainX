@@ -36,13 +36,30 @@ export const addSharedContent = async (req, res, next) => {
       return sendError(res, 'type and title are required', 400);
     }
 
-    const validTypes = ['quiz', 'coding', 'drive', 'learning', 'broadcast'];
+    const validTypes = ['quiz', 'coding', 'drive', 'learning', 'broadcast', 'maintenance'];
     if (!validTypes.includes(type)) {
       return sendError(res, `type must be one of: ${validTypes.join(', ')}`, 400);
     }
 
     const collegeId = getCollegeId(req);
     const created_by = req.user?.id || req.user?.userId || null;
+
+    if (type === 'maintenance') {
+      const dataJson = JSON.stringify(data || {});
+      try {
+        const existing = await query(`SELECT id FROM shared_content WHERE type = 'maintenance' ORDER BY id DESC LIMIT 1`);
+        if (existing && existing.length > 0) {
+          await query(`UPDATE shared_content SET data_json = ?, status = ? WHERE id = ?`, [dataJson, status || 'Active', existing[0].id]);
+          const updated = await query(`SELECT * FROM shared_content WHERE id = ?`, [existing[0].id]);
+          return sendSuccess(res, 'Maintenance configuration updated successfully', {
+            ...updated[0],
+            data: data || {}
+          });
+        }
+      } catch (err) {
+        console.warn('[SharedContent] Maintenance upsert error:', err.message);
+      }
+    }
 
     const item = await createSharedContent({
       type,

@@ -34,7 +34,7 @@ function SidebarBrand({ collapsed, subtitle }) {
             <span className="brand-name1">Train</span>
             <img src={trainXImg} alt="X" className="brand-x-img-mentor" />
           </div>
-          <span className="sidebar-brand-sub">Mentor Workspace</span>
+          <span className="sidebar-brand-sub">{subtitle || "Training Portal"}</span>
         </div>
       )}
     </div>

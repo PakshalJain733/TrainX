@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import {
   Users,
   UserPlus,
+  UserCog,
   Search,
   ShieldCheck,
   ShieldAlert,
@@ -1542,9 +1543,10 @@ export default function ManageUsers() {
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <div className="manageusers-header-title">
+          <h2 className="manageusers-header-title" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>
+            <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
             <span>Manage Users &amp; Registration Codes</span>
-          </div>
+          </h2>
           <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>
         </div>
 
@@ -1571,38 +1573,13 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="manageusers-tabs-bar">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.id);
-                setSearchQuery('');
-              }}
-              className={`manageusers-tab-btn ${isActive ? 'manageusers-tab-btn--active' : ''}`}
-            >
-              <Icon size={15} />
-              <span>{tab.label}</span>
-              <span className="manageusers-tab-badge">
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Search Input */}
       <div className="sa-search-card">
         <div className="sa-search-wrap mu-search-wrap-full">
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()}...`}
+            placeholder="Search admins..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"

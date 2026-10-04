@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from 'lucide-react';
 import SuperAdminSidebar from "./SA_Sidebar";
+import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
@@ -45,7 +46,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const autoCloseTimerRef = useRef(null);
@@ -156,7 +157,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -327,7 +328,7 @@ export default function SuperAdminLayout() {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   const headerRightRef = useRef(null);
 
@@ -411,24 +412,6 @@ export default function SuperAdminLayout() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const getPageTitle = (path) => {
-    if (path === "/super-admin" || path === "/super-admin/") return "Overview";
-    if (path.startsWith("/super-admin/colleges")) return "Colleges";
-    if (path.startsWith("/super-admin/departments")) return "Departments";
-    if (path.startsWith("/super-admin/batches")) return "Batches";
-    if (path.startsWith("/super-admin/users")) return "Manage Users";
-    if (path.startsWith("/super-admin/verification")) return "College Admins";
-    if (path.startsWith("/super-admin/coordinators")) return "Coordinators";
-    if (path.startsWith("/super-admin/mentors")) return "Mentors";
-    if (path.startsWith("/super-admin/students")) return "Students";
-    if (path.startsWith("/super-admin/performance")) return "Performance";
-    if (path.startsWith("/super-admin/health")) return "System Health";
-    if (path.startsWith("/super-admin/maintenance")) return "Feature Switches";
-    if (path.startsWith("/super-admin/tickets")) return "Support Tickets";
-    if (path.startsWith("/super-admin/profile")) return "Profile";
-    return "Overview";
-  };
-
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
       setMobileOpen((o) => !o);
@@ -473,9 +456,7 @@ export default function SuperAdminLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="sa-breadcrumb">
-                  <span className="sa-breadcrumb-active">{getPageTitle(pathname)}</span>
-                </div>
+                <GlobalHeaderSearch role="superadmin" />
               </div>
 
               <div className="sa-header__right" ref={headerRightRef}>
@@ -497,7 +478,7 @@ export default function SuperAdminLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={() => {}}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -515,11 +496,12 @@ export default function SuperAdminLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="sa-header__user-info">
-                      <span className="sa-header__name">{userProfile.name}</span>
-                    </div>
                     <div className="sa-header__avatar" aria-label={userProfile.name}>
                       {userProfile.initials}
+                    </div>
+                    <div className="sa-header__user-info">
+                      <span className="sa-header__name">{userProfile.name}</span>
+                      <span className="sa-header__role">{userProfile.role || "Super Admin"}</span>
                     </div>
                   </button>
 

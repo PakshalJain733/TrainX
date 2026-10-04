@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import { MentorSidebar } from "./MN_Sidebar";
+import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -122,7 +123,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -284,7 +285,7 @@ export default function MentorLayout() {
           setNotifications(serverItems);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const headerRightRef = useRef(null);
@@ -303,8 +304,8 @@ export default function MentorLayout() {
   const resolveUser = (rawUser) => {
     let localUser = {};
     let mentorProf = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
-    try { mentorProf = JSON.parse(sessionStorage.getItem("mentorProfile")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
+    try { mentorProf = JSON.parse(sessionStorage.getItem("mentorProfile")) || {}; } catch { }
     const u = rawUser || {};
     let name = mentorProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Faculty Mentor";
     let email = mentorProf.email || localUser.email || u.email || "mentor@pvppcoe.ac.in";
@@ -320,7 +321,7 @@ export default function MentorLayout() {
           setUser(resolveUser(res.data));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -330,7 +331,7 @@ export default function MentorLayout() {
         .then((res) => {
           if (res && res.data) setUser(resolveUser(res.data));
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -357,30 +358,6 @@ export default function MentorLayout() {
   };
 
   const userInitials = getInitials(user.name);
-
-  const getPageTitle = (path) => {
-    if (path === "/mentor" || path === "/mentor/") return "Overview";
-    if (path.startsWith("/mentor/students")) return "Assigned Students";
-    if (path.startsWith("/mentor/quizzes") || path.startsWith("/mentor/assessments")) return "Assessments & Quizzes";
-    if (path.startsWith("/mentor/roadmaps")) return "Roadmaps Guidance";
-    if (path.startsWith("/mentor/ai-interviews")) return "AI Mock Interviews";
-    if (path.startsWith("/mentor/skill-gaps")) return "Skill Gap Analysis";
-    if (path.startsWith("/mentor/attendance")) return "Attendance Management";
-    if (path.startsWith("/mentor/performance")) return "Performance Analytics";
-    if (path.startsWith("/mentor/leaderboard")) return "Leaderboard";
-    if (path.startsWith("/mentor/mock-drives")) return "Placement Mock Drives";
-    if (path.startsWith("/mentor/defaulters")) return "Defaulters Watchlist";
-    if (path.startsWith("/mentor/study-material")) return "Study Material & Resources";
-    if (path.startsWith("/mentor/weekly-reports")) return "Weekly Progress Reports";
-    if (path.startsWith("/mentor/batches")) return "Assigned Batches";
-    if (path.startsWith("/mentor/assignments")) return "Assignments";
-    if (path.startsWith("/mentor/sessions")) return "Live Mentorship Sessions";
-    if (path.startsWith("/mentor/broadcast")) return "Broadcast Notice Center";
-    if (path.startsWith("/mentor/notifications")) return "Notifications";
-    if (path.startsWith("/mentor/profile")) return "Profile";
-    if (path.startsWith("/mentor/help")) return "Help & Support";
-    return "Mentor Workspace";
-  };
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -418,9 +395,7 @@ export default function MentorLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="mentor-breadcrumb">
-                  <span className="mentor-breadcrumb-active">{getPageTitle(pathname)}</span>
-                </div>
+                <GlobalHeaderSearch role="faculty" />
               </div>
 
               <div className="mentor-header__right" ref={headerRightRef}>
@@ -442,7 +417,7 @@ export default function MentorLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={() => {}}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -460,11 +435,12 @@ export default function MentorLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="mentor-header__user-info">
-                      <span className="mentor-header__name">{user.name}</span>
-                    </div>
                     <div className="mentor-header__avatar" aria-label={`User profile ${user.name}`}>
                       {userInitials}
+                    </div>
+                    <div className="mentor-header__user-info">
+                      <span className="mentor-header__name">{user.name || "Faculty"}</span>
+                      <span className="mentor-header__role">{user.role || "Faculty"}</span>
                     </div>
                   </button>
 

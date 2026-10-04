@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import { CoordinatorSidebar } from "./CO_Sidebar";
+import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -122,7 +123,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -284,7 +285,7 @@ export default function CoordinatorLayout() {
           setNotifications(serverItems);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const headerRightRef = useRef(null);
@@ -303,8 +304,8 @@ export default function CoordinatorLayout() {
   const resolveUser = (rawUser) => {
     let localUser = {};
     let coordProf = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
-    try { coordProf = JSON.parse(sessionStorage.getItem("coordinatorProfile")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
+    try { coordProf = JSON.parse(sessionStorage.getItem("coordinatorProfile")) || {}; } catch { }
     const u = rawUser || {};
     let name = coordProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Department Coordinator";
     let email = coordProf.email || localUser.email || u.email || "coordinator@pvppcoe.ac.in";
@@ -320,7 +321,7 @@ export default function CoordinatorLayout() {
           setUser(resolveUser(res.data));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -330,7 +331,7 @@ export default function CoordinatorLayout() {
         .then((res) => {
           if (res && res.data) setUser(resolveUser(res.data));
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -357,27 +358,6 @@ export default function CoordinatorLayout() {
   };
 
   const userInitials = getInitials(user.name);
-
-  const getPageTitle = (path) => {
-    if (path === "/coordinator" || path === "/coordinator/") return "Overview";
-    if (path.startsWith("/coordinator/batches")) return "Batches Governance";
-    if (path.startsWith("/coordinator/students")) return "Student Directory";
-    if (path.startsWith("/coordinator/quizzes-and-codes")) return "Quizzes & Practice Codes";
-    if (path.startsWith("/coordinator/performances")) return "Performance Analytics";
-    if (path.startsWith("/coordinator/interviews")) return "AI Mock Interviews";
-    if (path.startsWith("/coordinator/improvement")) return "Students Needing Support";
-    if (path.startsWith("/coordinator/attendance")) return "Attendance Governance";
-    if (path.startsWith("/coordinator/mentors")) return "Faculty & Mentors";
-    if (path.startsWith("/coordinator/requests")) return "Requests & Approvals";
-    if (path.startsWith("/coordinator/broadcast")) return "Broadcast Notice Center";
-    if (path.startsWith("/coordinator/notifications")) return "Notifications";
-    if (path.startsWith("/coordinator/placement")) return "Placement Readiness";
-    if (path.startsWith("/coordinator/profile")) return "Profile";
-    if (path.startsWith("/coordinator/help") || path.startsWith("/coordinator/support")) return "Help & Support";
-    return "Coordinator Workspace";
-  };
-
-  const pageTitle = getPageTitle(pathname);
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -413,9 +393,7 @@ export default function CoordinatorLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="coordinator-breadcrumb">
-                  <span className="coordinator-breadcrumb-active">{pageTitle}</span>
-                </div>
+                <GlobalHeaderSearch role="coordinator" />
               </div>
 
               <div className="coordinator-header__right" ref={headerRightRef}>
@@ -436,7 +414,7 @@ export default function CoordinatorLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={() => {}}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -453,11 +431,12 @@ export default function CoordinatorLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="coordinator-header__user-info">
-                      <span className="coordinator-header__name">{user.name}</span>
-                    </div>
                     <div className="coordinator-header__avatar">
                       {userInitials}
+                    </div>
+                    <div className="coordinator-header__user-info">
+                      <span className="coordinator-header__name">{user.name || "Coordinator"}</span>
+                      <span className="coordinator-header__role">{user.role || "Coordinator"}</span>
                     </div>
                   </button>
 

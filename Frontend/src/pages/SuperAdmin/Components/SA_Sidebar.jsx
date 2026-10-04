@@ -27,7 +27,7 @@ function SidebarBrand({ collapsed, subtitle }) {
             <span className="brand-name1">Train</span>
             <img src={trainXImg} alt="X" className="brand-x-img-sa" />
           </div>
-          <span className="sidebar-brand-sub">{subtitle || "Super Admin"}</span>
+          <span className="sidebar-brand-sub">{subtitle || "Training Portal"}</span>
         </div>
       )}
     </div>

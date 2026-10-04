@@ -505,9 +505,10 @@ export default function Colleges() {
       {/* Header & Main Action */}
       <div className="sa-page-header">
         <div>
-          <div className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span className="colleges-header-title">Colleges Directory</span>
-          </div>
+          <h2 className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+            <Building2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span className="colleges-header-title" style={{ fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>Colleges Directory</span>
+          </h2>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>
         </div>
         <button onClick={() => setIsAddCollegeModalOpen(true)} className="sa-btn-primary">

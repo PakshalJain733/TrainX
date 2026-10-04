@@ -385,6 +385,10 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "email" && emailOtpSent) {
+      setEmailOtpSent(false);
+      setEmailOtp(["", "", "", "", "", ""]);
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -443,9 +447,10 @@ function Register() {
     if (role === "Student") {
       const roll = (formData.roll_number || "").trim();
       const mobile = (formData.mobile_number || "").trim();
-      const dept = formData.department || "";
       const yr = formData.year || "";
-      if (!roll || !mobile || !dept || !yr) return false;
+      const div = formData.division || "";
+      if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
+      if (deptOptions.length > 0 && !formData.department) return false;
     } else if (role !== "Admin") {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
@@ -455,7 +460,10 @@ function Register() {
   };
 
   const requestEmailOtp = async () => {
-    if (!validateDetails()) return;
+    if (!isFormFullyFilled()) {
+      setErrorMsg("Please fill out all registration details before requesting OTP.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg("");
@@ -518,9 +526,10 @@ function Register() {
 
     if (!validateDetails()) return;
 
-    // Phase 1: send the code to the college email ONLY for Student role
+    // Phase 1: send the code to the college email ONLY when user explicitly clicks Get OTP
     if (role === "Student" && !emailOtpSent) {
-      return requestEmailOtp();
+      setErrorMsg("Please click the 'Get OTP' button to receive the verification code on your email.");
+      return;
     }
 
     // Phase 2: verify 6-digit OTP code ONLY for Student role
@@ -824,7 +833,7 @@ function Register() {
                         name="email"
                         autoComplete="email"
                         required
-                        placeholder="user@pvppcoe.ac.in"
+                        placeholder="name@college.edu"
                         value={formData.email}
                         onChange={handleChange}
                       />
@@ -877,7 +886,7 @@ function Register() {
                 </div>
 
                 {/* Row 3: Mobile Number | Department | Year | Division */}
-                <div className="form-grid-4">
+                <div className={deptOptions.length > 0 ? "form-grid-4" : "form-grid-3"}>
                   <div className="input-group">
                     <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
                     <input
@@ -922,7 +931,7 @@ function Register() {
                   </div>
 
                   <div className="input-group">
-                    <FieldLabel icon={Icons.dept}>Division</FieldLabel>
+                    <FieldLabel icon={Icons.division}>Division</FieldLabel>
                     <RegSelect
                       value={formData.division}
                       wrapperClass="reg-select"

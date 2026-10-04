@@ -1,6 +1,7 @@
 import { BrevoClient } from '@getbrevo/brevo';
 import dotenv from 'dotenv';
 import path from 'path';
+import { query } from '../config/db.js';
 
 // Ensure environment variables are loaded
 if (!process.env.BREVO_API_KEY) {
@@ -26,9 +27,31 @@ const getBrevoClient = () => {
 };
 
 /**
+ * Helper to check if email system or email OTP is disabled by Super Admin Feature Switches
+ */
+export const isEmailSystemDisabled = async () => {
+  try {
+    const rows = await query(`SELECT data_json FROM shared_content WHERE type = 'maintenance' ORDER BY id DESC LIMIT 1`);
+    if (rows && rows.length > 0) {
+      const config = JSON.parse(rows[0].data_json || '{}');
+      if (config.globalEmergencyMode) return true;
+      if (config.modules) {
+        if (config.modules.emailSystem && config.modules.emailSystem.active === false) return true;
+      }
+    }
+  } catch (e) {}
+  return false;
+};
+
+/**
  * Centralized function to send emails via Brevo Transactional Email API (HTTPS REST)
  */
 export const sendEmail = async ({ to, toName = '', subject, htmlContent, textContent, templateId, params }) => {
+  if (await isEmailSystemDisabled()) {
+    console.warn(`[Email Service Warning] Blocked attempt to send email to ${to}: Email system is currently toggled OFF in Feature Switches.`);
+    throw new Error('Email delivery system is currently disabled by Super Admin maintenance policy.');
+  }
+
   const apiKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) {
     console.warn('[Brevo Warning] BREVO_API_KEY is not configured in environment variables. Email logged locally.');
