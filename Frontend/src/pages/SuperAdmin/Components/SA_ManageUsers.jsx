@@ -1250,14 +1250,14 @@ export default function ManageUsers() {
       const res = await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
         method: 'POST',
       });
-      if (res && res.success) {
-        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA is now required on their next login.`);
+      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
+        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA setup will be required on their next login.`);
       } else {
-        alert(res?.message || 'Failed to trigger two-step verification.');
+        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
       }
     } catch (err) {
       console.error('Trigger 2FA error:', err);
-      alert('Failed to trigger two-step verification.');
+      alert(err?.message || 'Failed to trigger two-step verification.');
     }
   };
 

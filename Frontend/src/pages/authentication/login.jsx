@@ -466,11 +466,12 @@ function Login() {
     setSuccessMsg("");
 
     try {
+      const emailToVerify = (email || totpSetupData?.email || totpSetupData?.user?.email || "").trim();
       const response = await fetch(`${API_BASE_URL}/verify-totp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim(),
+          email: emailToVerify,
           code: enteredCode,
           rememberMe,
         }),
@@ -479,6 +480,11 @@ function Login() {
       if (data.success && data.data?.token) {
         storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
         handlePostLoginRedirect(data.data.user || {});
+      } else if (data.success && data.data?.pendingApproval) {
+        setSuccessMsg(data.message || "2FA Setup completed! Your account is pending Admin approval.");
+        setTimeout(() => {
+          setStep("email");
+        }, 2000);
       } else if (data.success) {
         setSuccessMsg("2FA Setup completed successfully! Redirecting...");
         setTimeout(() => {
