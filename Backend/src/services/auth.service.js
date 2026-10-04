@@ -159,13 +159,8 @@ const finalizePrimaryAuthentication = async (user) => {
 
   if (isAdminRole) {
     let secret = user?.two_factor_secret;
-    let isResetTriggered = user?.two_factor_reset === 1 ||
-      user?.two_factor_reset === true ||
-      user?.two_factor_reset === '\x01' ||
-      String(user?.two_factor_reset ?? '').toLowerCase().trim() === '1' ||
-      String(user?.two_factor_reset ?? '').toLowerCase().trim() === 'true';
 
-    if (isBlank(secret) || !isResetTriggered) {
+    if (isBlank(secret)) {
       secret = speakeasy.generateSecret({ length: 20, name: `TrainingPortal (${user.email || user.name})` }).base32;
       try {
         await updateUserModel(user.id, {
@@ -178,6 +173,7 @@ const finalizePrimaryAuthentication = async (user) => {
       }
       user.two_factor_secret = secret;
       user.two_factor_reset = 1;
+      user.two_factor_enabled = 0;
     }
 
     let qrCode = null;
@@ -669,12 +665,11 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
 
   const user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    throw createAuthError('No account is pending Authenticator pairing for this identifier.', 400);
+    throw createAuthError('No account found matching this email or mobile number.', 400);
   }
-  assertUserCanAuthenticate(user);
 
-  if (isTwoFactorEnabled(user.two_factor_enabled) || isBlank(user.two_factor_secret)) {
-    throw createAuthError('This account is not pending Authenticator pairing. Please sign in instead.', 400);
+  if (isBlank(user.two_factor_secret)) {
+    throw createAuthError('No Authenticator 2FA setup found for this account. Please log in with password.', 400);
   }
 
   if (!verifyTotpToken(user.two_factor_secret, totpCode)) {
@@ -682,6 +677,14 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
   }
 
   await enableTwoFactorForUser(user.id);
+
+  if (user.role !== 'super_admin' && isInactiveUser(user)) {
+    return {
+      requiresTwoFactor: false,
+      pendingApproval: true,
+      message: '2FA verification completed. Your account is pending Admin approval.',
+    };
+  }
 
   return {
     requiresTwoFactor: false,
