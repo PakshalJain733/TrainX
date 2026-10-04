@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Users,
@@ -1180,7 +1180,6 @@ export default function ManageUsers() {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setCollegesList(data);
-          setCodeCollege(data[0].name);
         }
       })
       .catch(err => console.error("Error loading colleges for ManageUsers modal:", err));
