@@ -18,7 +18,8 @@ import {
   Shield,
   Layers,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -256,6 +257,20 @@ export default function Overview() {
     }
   };
 
+  const handleDeleteCollege = async (collegeId, collegeName) => {
+    if (!window.confirm(`Are you sure you want to remove ${collegeName || 'this college'}?`)) {
+      return;
+    }
+    try {
+      await apiFetch(`/colleges/${collegeId}`, { method: 'DELETE' });
+      setCollegesList((prev) => prev.filter((c) => c.id !== collegeId));
+      fetchOverviewData();
+    } catch (err) {
+      console.error("Failed to remove college:", err);
+      alert(err?.message || "Failed to remove college.");
+    }
+  };
+
   const stats = [
     {
       id: 1,
@@ -309,7 +324,7 @@ export default function Overview() {
               Welcome back, {userName}!
             </h1>
             <p className="overview-hero-desc">
-              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "superadmin@pvppcoe.ac.in"} &nbsp;|&nbsp; Institutional Control
+              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "admin@trainingportal.com"} &nbsp;|&nbsp; Institutional Control
             </p>
           </div>
         </div>
@@ -363,10 +378,11 @@ export default function Overview() {
                     <th className="overview-table-th">Location</th>
                     <th className="overview-table-th">Students</th>
                     <th className="overview-table-th">Status</th>
+                    <th className="overview-table-th" style={{ textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {collegesList.slice(0, 5).map((college) => (
+                  {collegesList.slice(0, 10).map((college) => (
                     <tr key={college.id} className="overview-table-row">
                       <td className="overview-table-td">
                         <div className="overview-td-title">{college.name}</div>
@@ -376,6 +392,38 @@ export default function Overview() {
                       <td className="overview-table-td overview-td-count">{college.studentsCount || college.student_count || 0}</td>
                       <td className="overview-table-td">
                         <StatusBadge status={college.status || 'Active'} />
+                      </td>
+                      <td className="overview-table-td" style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCollege(college.id, college.name)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#ef4444",
+                            backgroundColor: "#fef2f2",
+                            border: "1px solid #fecaca",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#fee2e2";
+                            e.currentTarget.style.borderColor = "#fca5a5";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#fef2f2";
+                            e.currentTarget.style.borderColor = "#fecaca";
+                          }}
+                          title="Remove College"
+                        >
+                          <Trash2 size={13} />
+                          <span>Remove</span>
+                        </button>
                       </td>
                     </tr>
                   ))}

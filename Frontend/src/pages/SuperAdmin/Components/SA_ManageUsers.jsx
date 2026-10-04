@@ -33,7 +33,9 @@ import {
   FileSpreadsheet,
   UploadCloud,
   Download,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -845,7 +847,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
     const templateData = [
       {
         "Full Name": "Priya Sharma",
-        "College Email": "priya.sharma@pvppcoe.ac.in",
+        "College Email": "priya.sharma@institution.edu",
         "Mobile Number": "9876543210",
         "Roll ID": "VU21CS042",
         "Department": "COMPS",
@@ -854,7 +856,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
       },
       {
         "Full Name": "Rahul Verma",
-        "College Email": "rahul.verma@pvppcoe.ac.in",
+        "College Email": "rahul.verma@institution.edu",
         "Mobile Number": "9876543211",
         "Roll ID": "VU21IT088",
         "Department": "IT",
@@ -1167,7 +1169,7 @@ export default function ManageUsers() {
               adminName: u.name || 'College Admin',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
+              college: u.college_name || u.college || 'Partner Institution',
               designation: 'Institutional Admin',
               date: u.created_at ? u.created_at.split('T')[0] : '2026-09-20',
               status: u.is_active ? 'Verified' : 'Pending'
@@ -1180,7 +1182,7 @@ export default function ManageUsers() {
               name: u.name || 'Coordinator',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
+              college: u.college_name || u.college || 'Partner Institution',
               department: u.department_name || u.department || 'Computer Engineering',
               status: u.is_active ? 'Active' : 'Inactive'
             })));
@@ -1292,10 +1294,12 @@ export default function ManageUsers() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isGenerateCodeModalOpen, setIsGenerateCodeModalOpen] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState(null);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   // New User Form State
   const [newUserForm, setNewUserForm] = useState({
     name: '',
+    password: '',
     email: '',
     role: 'admins',
     collegeId: '',
@@ -1338,7 +1342,7 @@ export default function ManageUsers() {
 
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
-  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
+  const [codeCollege, setCodeCollege] = useState('Partner Campus');
   const [codeExpiry, setCodeExpiry] = useState('1 Day');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
@@ -1451,6 +1455,7 @@ export default function ManageUsers() {
     const targetRole = roleMapping[newUserForm.role] || 'student';
     const payload = {
       name: newUserForm.name,
+      password: newUserForm.password,
       email: newUserForm.email,
       mobile_number: newUserForm.phone,
       role: targetRole,
@@ -1646,7 +1651,7 @@ export default function ManageUsers() {
                         </td>
                         <td className="manageusers-td-right">
                           {req.status === 'Pending' ? (
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="manageusers-actions-row">
                               <button
                                 type="button"
                                 onClick={() => handleVerifyAdmin(req.id)}
@@ -1665,14 +1670,14 @@ export default function ManageUsers() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <div className="manageusers-actions-row">
+                              <span className="manageusers-badge-approved">
                                 <CheckCircle2 size={14} /> Approved
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleTrigger2FA(req.id, req.name)}
-                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                className="manageusers-btn-retrigger-2fa"
                                 title="Re-trigger 2-Step Verification setup for this Admin"
                               >
                                 <ShieldAlert size={13} />
@@ -2048,17 +2053,51 @@ export default function ManageUsers() {
                   </div>
                 </div>
 
-                {/* Full Name */}
-                <div className="form-group-admin sa-form-group-full">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    placeholder="e.g. Priya Sharma"
-                    value={newUserForm.name}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                  />
+                {/* Full Name & Password (Side-by-Side) */}
+                <div className="form-row-2 sa-form-row-2">
+                  <div className="form-group-admin">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Priya Sharma"
+                      value={newUserForm.name}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Password *</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showNewUserPassword ? "text" : "password"}
+                        required
+                        className="form-input-admin"
+                        style={{ paddingRight: '40px' }}
+                        placeholder="••••••••"
+                        value={newUserForm.password}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#64748b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: 0
+                        }}
+                        tabIndex={-1}
+                      >
+                        {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Email & Mobile Number (Mobile Number included for non-students) */}

@@ -846,6 +846,20 @@ function Register() {
                         {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
                       </button>
                     </div>
+                    {(() => {
+                      if (!formData.email || !formData.email.includes("@")) return null;
+                      const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
+                      const selectedCollege = colleges.find(c => String(c.id) === String(formData.college_id));
+                      const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
+                      if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
+                        return (
+                          <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}

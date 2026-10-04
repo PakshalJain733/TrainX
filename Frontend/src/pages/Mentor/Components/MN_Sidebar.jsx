@@ -55,7 +55,6 @@ const primaryNavItems = [
   { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
   { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2 },
   { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle },
-  { title: "Mock Drives", url: "/mentor/mock-drives", icon: Briefcase },
 ];
 
 const footerNavItems = [

@@ -232,6 +232,16 @@ export default function Colleges() {
     }
   };
 
+  const handleDeleteCollege = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+      setColleges((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error removing college:", err);
+      alert(err.message || "Failed to remove college.");
+    }
+  };
+
   useEffect(() => {
     collegeAPI.getColleges()
       .then((data) => setColleges(Array.isArray(data) ? data : []))
@@ -331,15 +341,6 @@ export default function Colleges() {
 
     setIsAddDeptModalOpen(false);
     setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
-  };
-
-  const handleDeleteCollege = async (id) => {
-    try {
-      await collegeAPI.deleteCollege(id);
-    } catch (err) {
-      console.error("Failed to delete college from API:", err);
-    }
-    setColleges(colleges.filter((c) => c.id !== id));
   };
 
   // If collegeId URL param is present, render College Departments view
@@ -654,7 +655,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="Vasantdada Patil Pratishthan"
+                      placeholder="Apex Institute of Technology"
                       value={collegeForm.name}
                       onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
                     />
@@ -665,7 +666,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="PVPPCOE"
+                      placeholder="AIT-2026"
                       value={collegeForm.code}
                       onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
                     />
@@ -679,7 +680,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="Sion, Mumbai"
+                      placeholder="Mumbai Campus"
                       value={collegeForm.location}
                       onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
                     />
@@ -689,7 +690,7 @@ export default function Colleges() {
                     <input
                       type="text"
                       className="form-input-admin"
-                      placeholder="pvppcoe.ac.in"
+                      placeholder="institution.edu"
                       value={collegeForm.domain}
                       onChange={(e) => setCollegeForm({ ...collegeForm, domain: e.target.value })}
                     />
@@ -712,7 +713,7 @@ export default function Colleges() {
                     <input
                       type="email"
                       className="form-input-admin"
-                      placeholder="admin@pvppcoe.ac.in"
+                      placeholder="admin@institution.edu"
                       value={collegeForm.adminEmail}
                       onChange={(e) => setCollegeForm({ ...collegeForm, adminEmail: e.target.value })}
                     />

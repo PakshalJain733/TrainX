@@ -235,7 +235,7 @@ export default function ProfilePage() {
       skills: sp.skills || u.skills || "",
       profileCompleted: true,
       batch: sp.batch || u.batch || "",
-      college: "Padmabhushan Vasantdada Patil Pratishthan's College of Engineering (PVPPCOE)",
+      college: u.college_name || u.college || sp.college_name || "Enterprise Partner Institution",
       coordinator: "",
       mentor: "",
       track: sp.target_track || u.target_track || "",

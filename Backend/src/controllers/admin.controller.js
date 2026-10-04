@@ -209,6 +209,7 @@ export const createUserAdmin = async (req, res, next) => {
   try {
     const {
       name,
+      password,
       email,
       mobile_number,
       role = 'student',
@@ -278,6 +279,7 @@ export const createUserAdmin = async (req, res, next) => {
 
     const newUser = await createUser({
       name,
+      password: password || '',
       email: email || '',
       mobile_number: mobile_number || '',
       role: canonicalRole,

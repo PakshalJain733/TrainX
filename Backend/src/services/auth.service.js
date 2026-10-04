@@ -158,33 +158,45 @@ const finalizePrimaryAuthentication = async (user) => {
   }
 
   if (isAdminRole) {
-    const isResetTriggered = user?.two_factor_reset === 1 ||
+    let secret = user?.two_factor_secret;
+    let isResetTriggered = user?.two_factor_reset === 1 ||
       user?.two_factor_reset === true ||
       user?.two_factor_reset === '\x01' ||
       String(user?.two_factor_reset ?? '').toLowerCase().trim() === '1' ||
       String(user?.two_factor_reset ?? '').toLowerCase().trim() === 'true';
 
-    if (isResetTriggered && !isBlank(user?.two_factor_secret)) {
-      let qrCode = null;
+    if (isBlank(secret) || !isResetTriggered) {
+      secret = speakeasy.generateSecret({ length: 20, name: `TrainingPortal (${user.email || user.name})` }).base32;
       try {
-        const otpauthUrl = speakeasy.otpauthURL({
-          secret: user.two_factor_secret,
-          label: `TrainingPortal (${user.email || user.name})`,
-          issuer: 'TrainingPortal',
-          encoding: 'base32',
+        await updateUserModel(user.id, {
+          two_factor_secret: secret,
+          two_factor_reset: 1,
+          two_factor_enabled: 0
         });
-        qrCode = await QRCode.toDataURL(otpauthUrl);
-      } catch (_) {}
-
-      return {
-        requiresTwoFactorSetup: true,
-        email: user.email,
-        qrCode,
-        secret: user.two_factor_secret,
-      };
+      } catch (err) {
+        console.warn('[Auth Service] 2FA auto-setup init error:', err.message);
+      }
+      user.two_factor_secret = secret;
+      user.two_factor_reset = 1;
     }
 
-    throw createAuthError('2FA setup is incomplete. Please contact the Super Admin to re-trigger 2FA setup.', 400);
+    let qrCode = null;
+    try {
+      const otpauthUrl = speakeasy.otpauthURL({
+        secret: user.two_factor_secret,
+        label: `TrainingPortal (${user.email || user.name})`,
+        issuer: 'TrainingPortal',
+        encoding: 'base32',
+      });
+      qrCode = await QRCode.toDataURL(otpauthUrl);
+    } catch (_) {}
+
+    return {
+      requiresTwoFactorSetup: true,
+      email: user.email,
+      qrCode,
+      secret: user.two_factor_secret,
+    };
   }
 
   return {
@@ -316,6 +328,7 @@ export const sendRegistrationOtp = async (data = {}) => {
 
   const otp = generateOtp(6);
   await saveRegistrationOtp(email, otp);
+  console.log(`🔑 [AUTH OTP] Registration OTP generated for ${email}: ${otp}`);
 
   try {
     const emailResult = await sendOtpEmail({ to: email, otp, name: data.name || '' });

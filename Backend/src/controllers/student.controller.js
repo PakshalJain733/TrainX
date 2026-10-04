@@ -155,9 +155,6 @@ export const getStudentDashboard = async (req, res, next) => {
         `SELECT status FROM attendance WHERE user_id = ?`,
         [callerId]
       );
-      if (!attRows || attRows.length === 0) {
-        attRows = await query(`SELECT status FROM attendance`);
-      }
       if (attRows && attRows.length > 0) {
         const total = attRows.length;
         const present = attRows.filter(r => String(r.status).toLowerCase() === 'present').length;
@@ -407,15 +404,6 @@ export const getStudentAttendance = async (req, res, next) => {
            ORDER BY a.session_date DESC, a.id DESC`,
           [userId, userEmail, userMobile]
         );
-
-        if (!rows || rows.length === 0) {
-          rows = await query(
-            `SELECT a.*, b.name AS batch_name, b.code AS batch_code
-             FROM attendance a
-             LEFT JOIN batches b ON a.batch_id = b.id
-             ORDER BY a.session_date DESC, a.id DESC`
-          );
-        }
         if (rows && rows.length > 0) {
           totalClasses = rows.length;
           presentClasses = rows.filter(r => String(r.status).toLowerCase() === 'present').length;
