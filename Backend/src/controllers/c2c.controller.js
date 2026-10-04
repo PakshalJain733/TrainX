@@ -1,4 +1,3 @@
-import { config } from '../config/env.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import {
   upsertGoogleFormEnrollment,
@@ -12,7 +11,7 @@ import {
  */
 export const handleGoogleFormWebhook = async (req, res, next) => {
   try {
-    const expectedSecret = config.c2cWebhookSecret || process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026';
+    const expectedSecret = process.env.C2C_WEBHOOK_SECRET || 'TrainX_C2C_Webhook_Secret_Key_2026';
     
     // Extract secret from header, query param, or body
     const providedSecret =

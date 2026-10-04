@@ -1787,12 +1787,6 @@ export default function ManageUsers() {
       {/* TAB CONTENT: HODs & College Admins */}
       {activeTab === "admins" && (
         <div className="manageusers-tab-content">
-          <div className="manageusers-banner">
-            <ShieldCheck className="manageusers-banner-icon" />
-            <p className="manageusers-banner-text">
-              College Admin register using pre-authorized secure invitation codes issued directly by the Super Admin.
-            </p>
-          </div>
 
 
           <div className="manageusers-table-card">

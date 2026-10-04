@@ -1297,8 +1297,8 @@ export const getLiveSessions = async (req, res, next) => {
     if (!mentorId) return;
 
     const sessions = await query(
-      `SELECT ls.id, ls.mentor_id, ls.title, ls.subject, ls.batch, ls.date, ls.time,
-              ls.duration, ls.meeting_link, ls.status, ls.created_at
+      `SELECT ls.id, ls.mentor_id, ls.title, ls.subject, ls.batch, ls.student_id, ls.student_name,
+              ls.date, ls.time, ls.duration, ls.meeting_link, ls.notes, ls.status, ls.created_at
          FROM live_sessions ls
         WHERE ls.mentor_id = ?
         ORDER BY ls.id DESC`,
@@ -1316,10 +1316,23 @@ export const createLiveSession = async (req, res, next) => {
     const mentorId = requireMentor(req, res);
     if (!mentorId) return;
 
-    const { title, subject, batch, batchId, date, time, duration, meetingLink } = req.body || {};
-    if (!title || !date || !time) {
-      return sendError(res, 'title, date and time are required', 400);
-    }
+    const { title, subject, batch, batchId, studentId, studentName, date, time, duration, meetingLink, notes } = req.body || {};
+    
+    const finalDate = date && String(date).trim() ? String(date).trim() : new Date().toISOString().split("T")[0];
+    const finalTime = time && String(time).trim() ? String(time).trim() : "Immediate / Now";
+    const finalTitle = title && String(title).trim() ? String(title).trim() : (studentName ? `1-on-1 Call with ${studentName}` : "Batch Mentorship Call");
+
+    const generateMeetUrl = () => {
+      const chars = "abcdefghijklmnopqrstuvwxyz";
+      const p1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      const p3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+      return `https://meet.google.com/${p1}-${p2}-${p3}`;
+    };
+
+    const finalLink = (meetingLink && String(meetingLink).startsWith("http")) 
+      ? String(meetingLink).trim() 
+      : generateMeetUrl();
 
     let batchLabel = batch || null;
     const parsedBatchId = parseBatchId(batchId);
@@ -1334,13 +1347,47 @@ export const createLiveSession = async (req, res, next) => {
     }
 
     const result = await query(
-      `INSERT INTO live_sessions (mentor_id, title, subject, batch, date, time, duration, meeting_link, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Upcoming')`,
-      [mentorId, title, subject || 'General', batchLabel || 'All Batches', date, time, duration || '60 mins', meetingLink || null]
+      `INSERT INTO live_sessions (mentor_id, title, subject, batch, student_id, student_name, date, time, duration, meeting_link, notes, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Upcoming')`,
+      [
+        mentorId,
+        finalTitle,
+        subject || '1-on-1 Mentorship',
+        batchLabel || 'All Batches',
+        studentId ? String(studentId) : 'all',
+        studentName ? String(studentName) : 'All Assigned Students',
+        finalDate,
+        finalTime,
+        duration || '30 mins',
+        finalLink,
+        notes || null,
+      ]
     );
 
+    // Auto broadcast notification for target students
+    try {
+      const mentorRow = (await query(`SELECT name, college_id FROM users WHERE id = ?`, [mentorId]))[0];
+      const collegeId = mentorRow?.college_id || null;
+      const mentorName = mentorRow?.name || 'Mentor';
+
+      const broadcastMsg = `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})`;
+      await query(
+        `INSERT INTO broadcasts (college_id, title, message, desc_text, target, priority, created_by, created_by_name, sender_role)
+         VALUES (?, ?, ?, ?, ?, 'Urgent', ?, ?, 'Mentor')`,
+        [
+          collegeId,
+          `Meeting Call: ${finalTitle}`,
+          broadcastMsg,
+          notes || `Please join the meeting at ${finalLink}`,
+          studentName || batchLabel || 'All Batches',
+          mentorId,
+          mentorName,
+        ]
+      );
+    } catch (_) { }
+
     const created = await query(
-      `SELECT id, mentor_id, title, subject, batch, date, time, duration, meeting_link, status, created_at
+      `SELECT id, mentor_id, title, subject, batch, student_id, student_name, date, time, duration, meeting_link, notes, status, created_at
          FROM live_sessions WHERE id = ?`,
       [result.insertId]
     );

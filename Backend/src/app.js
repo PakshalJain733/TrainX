@@ -28,22 +28,23 @@ import c2cRoutes from './routes/c2c.routes.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
-import { config } from './config/env.js';
 import { pool } from './config/db.js';
 
 import path from 'path';
 
 const app = express();
 
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const nodeEnv = process.env.NODE_ENV || 'development';
+
 // Production-safe CORS: allow the configured frontend origin(s) plus local dev
 const allowedOrigins = new Set(
   [
-    config.frontendUrl,
-    process.env.FRONTEND_URL,
+    frontendUrl,
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
-    config.nodeEnv === 'production' ? '' : 'http://localhost:5500',
+    nodeEnv === 'production' ? '' : 'http://localhost:5500',
   ]
     .filter(Boolean)
     .filter((o) => typeof o === 'string')

@@ -82,7 +82,7 @@ import CoordinatorLayout from './pages/Coordinator/Components/CO_Layout';
 import CoordinatorOverview from './pages/Coordinator/Components/CO_Overview';
 import CoordinatorBatches from './pages/Coordinator/Components/CO_Batches';
 import CoordinatorStudents from './pages/Coordinator/Components/CO_Students';
-import CoordinatorInterviewPerformance from './pages/Coordinator/Components/CO_InterviewPerformance';
+import { InterviewPerformance as CoordinatorInterviewPerformance } from './pages/Coordinator/Components/CO_Performances';
 import CoordinatorStudentsNeedImprovement from './pages/Coordinator/Components/CO_StudentsNeedImprovement';
 import CoordinatorMentors from './pages/Coordinator/Components/CO_Mentors';
 import CoordinatorAttendance from './pages/Coordinator/Components/CO_Attendance';
@@ -236,7 +236,7 @@ function App() {
             <Route path="broadcast" element={<CoordinatorBroadcast />} />
             <Route path="support" element={<CoordinatorHelp />} />
             <Route path="help" element={<CoordinatorHelp />} />
-            <Route path="leaderboard" element={<AdminLeaderboard />} />
+            <Route path="leaderboard" element={<CoordinatorLeaderboard />} />
             <Route path="weekly-reports" element={<AdminWeeklyReports />} />
             <Route path="profile" element={<CoordinatorProfilePage />} />
             <Route path="settings" element={<CoordinatorProfilePage />} />

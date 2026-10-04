@@ -1,17 +1,24 @@
 import mysql from 'mysql2/promise';
-import { config } from './env.js';
+
+const dbHost = process.env.DB_HOST || 'localhost';
+const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
+const dbUser = process.env.DB_USER || 'root';
+const dbPassword = process.env.DB_PASSWORD || '';
+const dbName = process.env.DB_NAME || 'training_portal_db';
+const dbSsl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
+const connectTimeout = parseInt(process.env.DB_CONNECT_TIMEOUT || '15000', 10);
 
 export const pool = mysql.createPool({
-  host: config.db.host,
-  port: config.db.port,
-  user: config.db.user,
-  password: config.db.password,
-  database: config.db.database,
+  host: dbHost,
+  port: dbPort,
+  user: dbUser,
+  password: dbPassword,
+  database: dbName,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
-  ...(config.db.ssl ? { ssl: config.db.ssl } : {}),
-  connectTimeout: config.db.connectTimeout,
+  ...(dbSsl ? { ssl: dbSsl } : {}),
+  connectTimeout: connectTimeout,
 });
 
 export const query = async (sql, params = []) => {
@@ -24,7 +31,7 @@ export const checkDatabaseConnection = async () => {
   try {
     const connection = await pool.getConnection();
     connection.release();
-    console.log(`[Database] Connected successfully to MySQL database: ${config.db.database}`);
+    console.log(`[Database] Connected successfully to MySQL database: ${dbName}`);
     return true;
   } catch (error) {
     console.warn(`[Database Warning] Database connection failed (${error.message}). Server running with fallback mode.`);

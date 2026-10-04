@@ -29,7 +29,6 @@ import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
-import { config } from '../config/env.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 const PREAUTH_TOKEN_TTL = '10m';
@@ -137,7 +136,7 @@ const generatePreauthToken = (user) => jwt.sign({
   tokenType: PREAUTH_TOKEN_TYPE,
   purpose: PREAUTH_PURPOSE,
   jti: randomUUID(),
-}, config.jwt.secret, {
+}, process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal', {
   expiresIn: PREAUTH_TOKEN_TTL,
 });
 
@@ -222,7 +221,7 @@ const decodePreauthToken = (token) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(normalizedToken, config.jwt.secret);
+    decoded = jwt.verify(normalizedToken, process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal');
   } catch {
     throw createAuthError('Invalid or expired temporary authentication token.', 401);
   }
@@ -751,7 +750,7 @@ export const sendUserOtp = async (identifier) => {
     console.log(`[AUTH] OTP email successfully dispatched to ${recipientEmail} (Message ID: ${emailResult?.messageId || 'sent'})`);
   } catch (error) {
     console.error(`[AUTH Error] OTP email dispatch failed for ${recipientEmail}:`, error.message);
-    if (!isSuperAdminEmail && config.nodeEnv === 'production') {
+    if (!isSuperAdminEmail && process.env.NODE_ENV === 'production') {
       throw createAuthError(`Failed to send OTP email: ${error.message || 'Email service error'}`, 500);
     }
   }

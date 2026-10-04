@@ -634,7 +634,6 @@ export default function Attendance() {
         <TabsList>
           <TabsTrigger value="subjects">Subject-Wise Breakdown</TabsTrigger>
           <TabsTrigger value="leave">Apply Leave / Absence</TabsTrigger>
-          <TabsTrigger value="verify">Verification Tracker</TabsTrigger>
         </TabsList>
 
         {/* Subject-Wise Breakdown Tab */}
@@ -713,28 +712,6 @@ export default function Attendance() {
                 </form>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-
-        {/* Verification Tab */}
-        <TabsContent value="verify" className="stack-6">
-          <div className="attendance-stack-4">
-            {verifications.map((v) => (
-              <Card key={v.id} className="attendance-verify-card">
-                <CardContent className="attendance-verify-card-content">
-                  <div className="attendance-verify-card-header">
-                    <div>
-                      <Badge variant="outline">{v.id}</Badge>
-                      <h4 className="attendance-verify-card-title">{v.title}</h4>
-                      <p className="attendance-verify-dates-text">{v.startDate} ({v.days} Days)</p>
-                    </div>
-                    <Badge className={v.status === "Approved" ? "attendance-status-badge-present" : "attendance-status-badge-excused"}>
-                      {v.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </TabsContent>
       </Tabs>

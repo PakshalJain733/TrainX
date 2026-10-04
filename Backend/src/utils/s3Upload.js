@@ -2,13 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { config } from '../config/env.js';
+
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+const supabaseBucket = process.env.SUPABASE_STORAGE_BUCKET || 'learning-materials';
 
 // Initialize Supabase client if credentials exist
-const hasSupabaseConfig = Boolean(config.supabase.url && config.supabase.serviceKey);
+const hasSupabaseConfig = Boolean(supabaseUrl && supabaseServiceKey);
 
 export const supabase = hasSupabaseConfig
-  ? createClient(config.supabase.url, config.supabase.serviceKey)
+  ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 
 // Ensure local uploads directory exists as fallback
@@ -40,7 +43,7 @@ export const uploadFileToStorage = async (file) => {
   if (hasSupabaseConfig && supabase) {
     try {
       const { data, error } = await supabase.storage
-        .from(config.supabase.bucketName)
+        .from(supabaseBucket)
         .upload(filePath, file.buffer, {
           contentType: file.mimetype,
           upsert: true,
@@ -51,7 +54,7 @@ export const uploadFileToStorage = async (file) => {
       } else {
         // Retrieve public URL from Supabase Bucket
         const { data: publicUrlData } = supabase.storage
-          .from(config.supabase.bucketName)
+          .from(supabaseBucket)
           .getPublicUrl(filePath);
 
         if (publicUrlData && publicUrlData.publicUrl) {

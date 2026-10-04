@@ -443,13 +443,14 @@ export const getBatchStudents = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
 
-    // 1. Query students enrolled via student_batches or matching batch_id column in users/students table
+    // Query students enrolled via student_batches or matching batch_id column in users/students table
     const enrolledUsers = await query(
-      `SELECT u.id, u.name, u.email, u.mobile_number, s.roll_number AS rollNo, s.department
+      `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, s.roll_number AS rollNo, s.department
        FROM users u
        LEFT JOIN students s ON u.id = s.user_id
        LEFT JOIN student_batches sb ON u.id = sb.user_id
-       WHERE sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ? OR u.role = 'student'`,
+       WHERE sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ?
+       ORDER BY u.name ASC`,
       [id, cleanId, id, cleanId]
     );
 

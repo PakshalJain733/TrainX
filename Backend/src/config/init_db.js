@@ -1,20 +1,27 @@
 import mysql from 'mysql2/promise';
 import bcrypt from 'bcryptjs';
-import { config } from './env.js';
 
 export async function initializeDatabase() {
   try {
+    const dbHost = process.env.DB_HOST || 'localhost';
+    const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
+    const dbUser = process.env.DB_USER || 'root';
+    const dbPassword = process.env.DB_PASSWORD || '';
+    const dbName = process.env.DB_NAME || 'training_portal_db';
+    const dbSsl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
+    const connectTimeout = parseInt(process.env.DB_CONNECT_TIMEOUT || '15000', 10);
+
     const conn = await mysql.createConnection({
-      host: config.db.host,
-      port: config.db.port,
-      user: config.db.user,
-      password: config.db.password,
-      database: config.db.database,
-      ...(config.db.ssl ? { ssl: config.db.ssl } : {}),
-      connectTimeout: config.db.connectTimeout,
+      host: dbHost,
+      port: dbPort,
+      user: dbUser,
+      password: dbPassword,
+      database: dbName,
+      ...(dbSsl ? { ssl: dbSsl } : {}),
+      connectTimeout: connectTimeout,
     });
 
-    console.log('[DB Init] Connected to MySQL database:', config.db.database);
+    console.log('[DB Init] Connected to MySQL database:', dbName);
 
     // 1. Ensure Colleges
     await conn.query(`
@@ -375,15 +382,22 @@ export async function initializeDatabase() {
         title VARCHAR(255) NOT NULL,
         subject VARCHAR(100) NOT NULL,
         batch VARCHAR(100) DEFAULT 'All Batches',
+        student_id VARCHAR(100) NULL,
+        student_name VARCHAR(255) NULL,
         date VARCHAR(50) NOT NULL,
         time VARCHAR(50) NOT NULL,
         duration VARCHAR(50) DEFAULT '60 mins',
         meeting_link VARCHAR(500) NULL,
+        notes TEXT NULL,
         status ENUM('Upcoming', 'Live', 'Completed') DEFAULT 'Upcoming',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (mentor_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN student_id VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN student_name VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE live_sessions ADD COLUMN notes TEXT NULL`); } catch (_) { }
 
     // 12. Ensure Study Materials Table
     await conn.query(`

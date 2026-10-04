@@ -1,6 +1,5 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/env.js';
 import {
   generateOpeningQuestion,
   generateFollowUpQuestion,
@@ -150,7 +149,7 @@ export function initInterviewSocket(httpServer) {
         if (!origin) return cb(null, true);
         const cleanOrigin = origin.replace(/\/$/, '');
         const allowed = new Set([
-          (config.frontendUrl || '').replace(/\/$/, ''),
+          (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''),
           'http://localhost:5173',
           'http://127.0.0.1:5173',
         ]);
@@ -175,7 +174,7 @@ export function initInterviewSocket(httpServer) {
           if (isLocalHost || isAllowedDeployment) return cb(null, true);
         } catch (e) {}
 
-        if (!config.frontendUrl || config.nodeEnv !== 'production') {
+        if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
           return cb(null, true);
         }
 
@@ -199,7 +198,8 @@ export function initInterviewSocket(httpServer) {
 
       let decoded;
       try {
-        decoded = jwt.verify(token, config.jwt.secret);
+        const jwtSecret = process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal';
+        decoded = jwt.verify(token, jwtSecret);
       } catch (err) {
         return next(new Error(err?.name === 'TokenExpiredError' ? 'Session expired. Please log in again.' : 'Invalid or expired token'));
       }

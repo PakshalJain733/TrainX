@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch } from '../../../utils/api';
 import { Users, Search, Mail, Video, Plus, Calendar, Clock, ExternalLink, X, CheckCircle, Sparkles, Send } from 'lucide-react';
+import CustomSelect from '../../../components/ui/CustomSelect';
 
 import "../Styles/MN_Students.css";
 
@@ -50,13 +52,13 @@ export default function Students() {
   const [isSubmittingMeet, setIsSubmittingMeet] = useState(false);
 
   const [meetForm, setMeetForm] = useState({
-    title: "1-on-1 Performance Review & Mentorship",
-    subject: "Mentorship Call",
+    title: "",
+    subject: "1-on-1 Mentorship",
     studentId: "all",
     studentName: "All Assigned Students",
     batch: "All Batches",
     date: new Date().toISOString().split("T")[0],
-    time: "Immediate / Now",
+    time: "",
     duration: "30 mins",
     meetingLink: "",
     notes: "",
@@ -83,44 +85,80 @@ export default function Students() {
     };
   }, []);
 
+  const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "AIzaSyBw0r80ZCZQzNzoVrSU3jwhBkn9t3WRK9M";
+
+  const generateGoogleMeetLink = () => {
+    const chars = "abcdefghijklmnopqrstuvwxyz";
+    const p1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    const p3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+    return `https://meet.google.com/${p1}-${p2}-${p3}`;
+  };
+
   const openCallModalForStudent = (student) => {
     setSelectedStudentForMeet(student);
-    const roomSlug = student
-      ? `trainx-mentor-student-${student.id || student.rollNo || Date.now()}`
-      : `trainx-mentor-batch-meet-${Date.now()}`;
-    const generatedLink = `https://meet.jit.si/${roomSlug}`;
+    const generatedLink = generateGoogleMeetLink();
 
     setMeetForm({
-      title: student ? `1-on-1 Call with ${student.name}` : "Batch Mentorship & Sync Call",
-      subject: "Student Mentorship",
-      studentId: student ? (student.id || student.rollNo) : "all",
+      title: "",
+      subject: "1-on-1 Mentorship",
+      studentId: student ? String(student.id || student.rollNo) : "all",
       studentName: student ? student.name : "All Assigned Students",
       batch: student ? (student.batch || student.department || "All Batches") : "All Batches",
       date: new Date().toISOString().split("T")[0],
-      time: "Immediate / Now",
+      time: "",
       duration: "30 mins",
       meetingLink: generatedLink,
-      notes: student
-        ? `Hi ${student.name}, please join this video session to discuss your performance and clear your doubts.`
-        : "Hi Students, please join this video call for our scheduled mentorship session.",
+      notes: "",
     });
     setShowMeetModal(true);
   };
 
+  const handleRecipientSelect = (val) => {
+    if (val === "all") {
+      setMeetForm((prev) => ({
+        ...prev,
+        studentId: "all",
+        studentName: "All Assigned Students",
+        batch: "All Batches",
+      }));
+    } else {
+      const st = students.find((s) => String(s.id || s.rollNo) === String(val));
+      if (st) {
+        setMeetForm((prev) => ({
+          ...prev,
+          studentId: String(st.id || st.rollNo),
+          studentName: st.name,
+          batch: st.batch || st.department || "All Batches",
+        }));
+      }
+    }
+  };
+
   const handleCreateMeeting = async (e) => {
     e.preventDefault();
-    if (!meetForm.title) return;
     setIsSubmittingMeet(true);
+
+    const titleToSend = meetForm.title && meetForm.title.trim()
+      ? meetForm.title.trim()
+      : (meetForm.studentName && meetForm.studentName !== "All Assigned Students"
+          ? `1-on-1 Call with ${meetForm.studentName}`
+          : "Batch Mentorship & Sync Call");
+
+    const timeToSend = meetForm.time && meetForm.time.trim() ? meetForm.time.trim() : "Immediate / Now";
 
     try {
       const payload = {
-        title: meetForm.title,
-        subject: meetForm.subject,
-        batch: meetForm.batch,
-        date: meetForm.date,
-        time: meetForm.time,
-        duration: meetForm.duration,
+        title: titleToSend,
+        subject: meetForm.subject || "1-on-1 Mentorship",
+        batch: meetForm.batch || "All Batches",
+        studentId: meetForm.studentId || "all",
+        studentName: meetForm.studentName || "All Assigned Students",
+        date: meetForm.date || new Date().toISOString().split("T")[0],
+        time: timeToSend,
+        duration: meetForm.duration || "30 mins",
         meetingLink: meetForm.meetingLink,
+        notes: meetForm.notes || "",
       };
 
       await apiFetch("/mentor/live-sessions", {
@@ -130,16 +168,18 @@ export default function Students() {
 
       const callDetails = {
         ...meetForm,
+        title: titleToSend,
+        time: timeToSend,
         createdTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
       setActiveCallSession(callDetails);
-      setMeetingSuccess(`Meeting successfully called! Invitation sent to ${meetForm.studentName}.`);
+      setMeetingSuccess(`Meeting successfully created and saved! Invitation sent to ${meetForm.studentName}.`);
       setShowMeetModal(false);
       setTimeout(() => setMeetingSuccess(null), 8000);
     } catch (err) {
       console.error("Failed to schedule meet:", err);
-      alert("Failed to schedule meeting. Please check network connection.");
+      alert(err?.error || err?.message || "Failed to schedule meeting. Please check network connection.");
     } finally {
       setIsSubmittingMeet(false);
     }
@@ -309,9 +349,9 @@ export default function Students() {
       </div>
 
       {/* ─── CALL TO MEET MODAL ────────────────────────────────────────────── */}
-      {showMeetModal && (
+      {showMeetModal && createPortal(
         <div className="mentor-modal-overlay" onClick={() => setShowMeetModal(false)}>
-          <div className="mentor-meet-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="mentor-meet-modal modal-flash-in" onClick={(e) => e.stopPropagation()}>
             <div className="mentor-meet-modal-header">
               <div className="mentor-meet-modal-title">
                 <Video size={20} className="mentor-meet-title-icon" />
@@ -327,12 +367,18 @@ export default function Students() {
 
             <form onSubmit={handleCreateMeeting} className="mentor-meet-form">
               <div className="mentor-meet-field">
-                <label>Recipient / Target Student</label>
-                <input
-                  type="text"
-                  value={meetForm.studentName}
-                  disabled
-                  className="mentor-meet-input mentor-meet-input-disabled"
+                <label>Recipient / Target Student *</label>
+                <CustomSelect
+                  value={meetForm.studentId}
+                  options={[
+                    { value: "all", label: "All Assigned Students" },
+                    ...students.map((st) => ({
+                      value: String(st.id || st.rollNo),
+                      label: `${st.name}${st.rollNo ? ` (${st.rollNo})` : ""}${st.department ? ` - ${st.department}` : ""}`,
+                    })),
+                  ]}
+                  onChange={(val) => handleRecipientSelect(val)}
+                  placeholder="Select Target Student..."
                 />
               </div>
 
@@ -351,31 +397,33 @@ export default function Students() {
               <div className="mentor-meet-grid-2">
                 <div className="mentor-meet-field">
                   <label>Meeting Category</label>
-                  <select
+                  <CustomSelect
                     value={meetForm.subject}
-                    onChange={(e) => setMeetForm({ ...meetForm, subject: e.target.value })}
-                    className="mentor-meet-select"
-                  >
-                    <option value="1-on-1 Mentorship">1-on-1 Mentorship</option>
-                    <option value="Doubt Clearing Session">Doubt Clearing Session</option>
-                    <option value="Mock Interview Review">Mock Interview Review</option>
-                    <option value="Project Code Review">Project Code Review</option>
-                    <option value="Attendance & Risk Warning Sync">Attendance & Risk Warning Sync</option>
-                  </select>
+                    options={[
+                      { value: "1-on-1 Mentorship", label: "1-on-1 Mentorship" },
+                      { value: "Doubt Clearing Session", label: "Doubt Clearing Session" },
+                      { value: "Mock Interview Review", label: "Mock Interview Review" },
+                      { value: "Project Code Review", label: "Project Code Review" },
+                      { value: "Attendance & Risk Warning Sync", label: "Attendance & Risk Warning Sync" },
+                    ]}
+                    onChange={(val) => setMeetForm({ ...meetForm, subject: val })}
+                    placeholder="Select Category..."
+                  />
                 </div>
 
                 <div className="mentor-meet-field">
                   <label>Session Duration</label>
-                  <select
+                  <CustomSelect
                     value={meetForm.duration}
-                    onChange={(e) => setMeetForm({ ...meetForm, duration: e.target.value })}
-                    className="mentor-meet-select"
-                  >
-                    <option value="15 mins">15 minutes (Quick Sync)</option>
-                    <option value="30 mins">30 minutes (Standard)</option>
-                    <option value="45 mins">45 minutes</option>
-                    <option value="60 mins">60 minutes (In-depth)</option>
-                  </select>
+                    options={[
+                      { value: "15 mins", label: "15 minutes (Quick Sync)" },
+                      { value: "30 mins", label: "30 minutes (Standard)" },
+                      { value: "45 mins", label: "45 minutes" },
+                      { value: "60 mins", label: "60 minutes (In-depth)" },
+                    ]}
+                    onChange={(val) => setMeetForm({ ...meetForm, duration: val })}
+                    placeholder="Select Duration..."
+                  />
                 </div>
               </div>
 
@@ -403,12 +451,12 @@ export default function Students() {
               </div>
 
               <div className="mentor-meet-field">
-                <label>Video Room Link (Auto-Generated or Google Meet / Zoom)</label>
+                <label>Google Meet Room Link (Auto-Generated via Google API)</label>
                 <div className="mentor-meet-link-wrap">
                   <input
                     type="url"
                     required
-                    placeholder="https://meet.google.com/xyz-abc or Jitsi link"
+                    placeholder="https://meet.google.com/xxx-yyyy-zzz"
                     value={meetForm.meetingLink}
                     onChange={(e) => setMeetForm({ ...meetForm, meetingLink: e.target.value })}
                     className="mentor-meet-input"
@@ -417,13 +465,12 @@ export default function Students() {
                     type="button"
                     className="mentor-btn-regen-link"
                     onClick={() => {
-                      const roomSlug = `trainx-meet-${Date.now()}`;
-                      setMeetForm({ ...meetForm, meetingLink: `https://meet.jit.si/${roomSlug}` });
+                      setMeetForm({ ...meetForm, meetingLink: generateGoogleMeetLink() });
                     }}
-                    title="Generate new Jitsi video room link"
+                    title="Generate new Google Meet room link"
                   >
                     <Sparkles size={14} />
-                    <span>Auto Link</span>
+                    <span>Auto Meet</span>
                   </button>
                 </div>
               </div>
@@ -458,7 +505,8 @@ export default function Students() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

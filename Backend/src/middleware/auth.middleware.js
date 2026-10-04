@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { config } from '../config/env.js';
 import { sendError } from '../utils/response.js';
 
 export const authenticateToken = (req, res, next) => {
@@ -23,7 +22,9 @@ export const authenticateToken = (req, res, next) => {
     return sendError(res, 'Authentication required. Please log in.', 401);
   }
 
-  jwt.verify(token, config.jwt.secret, (err, decodedUser) => {
+  const jwtSecret = process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal';
+
+  jwt.verify(token, jwtSecret, (err, decodedUser) => {
     if (err) {
       return sendError(res, 'Invalid or expired authentication token. Please log in again.', 401);
     }

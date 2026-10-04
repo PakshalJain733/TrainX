@@ -171,79 +171,79 @@ export default function AIInterview() {
   const [answer, setAnswer] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const recognitionRef = useRef(null);
-  
+
   // Speech & Interview State
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
 
-const TOPIC_OPTIONS = [
-  "JavaScript",
-  "Python",
-  "SQL / Databases",
-  "Data Structures & Algorithms",
-  "React",
-  "Node.js",
-  "Java",
-  "System Design Basics",
-];
+  const TOPIC_OPTIONS = [
+    "JavaScript",
+    "Python",
+    "SQL / Databases",
+    "Data Structures & Algorithms",
+    "React",
+    "Node.js",
+    "Java",
+    "System Design Basics",
+  ];
 
-const fmtTime = (totalSeconds) => {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
-  const s = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
-};
+  const fmtTime = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+    const s = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
-function pickVoice() {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices();
-  return (
-    voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        (v.name.includes("Natural") ||
-          v.name.includes("Google") ||
-          v.name.includes("Microsoft") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Zira"))
-    ) ||
-    voices.find((v) => v.lang.startsWith("en")) ||
-    null
-  );
-}
-
-function speakNow(text, onEnd) {
-  if (!text || typeof window === "undefined" || !window.speechSynthesis) {
-    onEnd && onEnd();
-    return;
+  function pickVoice() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    return (
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Natural") ||
+            v.name.includes("Google") ||
+            v.name.includes("Microsoft") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Zira"))
+      ) ||
+      voices.find((v) => v.lang.startsWith("en")) ||
+      null
+    );
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.92;
-  utterance.pitch = 1.0;
-  const voice = pickVoice();
-  if (voice) utterance.voice = voice;
-  utterance.onend = () => onEnd && onEnd();
-  utterance.onerror = () => onEnd && onEnd();
-  window.speechSynthesis.speak(utterance);
-}
 
-function getToken() {
-  let token = getAuthToken();
-  if (!token) {
-    try {
-      const uSession = JSON.parse(
-        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
-      );
-      token =
-        uSession.token ||
-        uSession.authToken ||
-        uSession.auth_token ||
-        uSession.accessToken ||
-        uSession.jwt;
-    } catch (e) {}
+  function speakNow(text, onEnd) {
+    if (!text || typeof window === "undefined" || !window.speechSynthesis) {
+      onEnd && onEnd();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.92;
+    utterance.pitch = 1.0;
+    const voice = pickVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => onEnd && onEnd();
+    utterance.onerror = () => onEnd && onEnd();
+    window.speechSynthesis.speak(utterance);
   }
-  if (!token) return "";
-  return String(token).replace(/^Bearer\s+/i, "").trim();
-}
+
+  function getToken() {
+    let token = getAuthToken();
+    if (!token) {
+      try {
+        const uSession = JSON.parse(
+          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        );
+        token =
+          uSession.token ||
+          uSession.authToken ||
+          uSession.auth_token ||
+          uSession.accessToken ||
+          uSession.jwt;
+      } catch (e) { }
+    }
+    if (!token) return "";
+    return String(token).replace(/^Bearer\s+/i, "").trim();
+  }
 
   const [phase, setPhase] = useState("setup"); // setup | live | result
   const [role, setRole] = useState(ROLE_OPTIONS[0]);
@@ -495,14 +495,14 @@ function getToken() {
   const studentName =
     typeof window !== "undefined"
       ? (() => {
-          try {
-            return JSON.parse(
-              sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
-            )?.name || "";
-          } catch {
-            return "";
-          }
-        })()
+        try {
+          return JSON.parse(
+            sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+          )?.name || "";
+        } catch {
+          return "";
+        }
+      })()
       : "";
 
   // Keep refs in sync with state
@@ -566,7 +566,7 @@ function getToken() {
     if (question?.question) speakQuestion(question.question);
   }, [question, speakQuestion]);
 
-    // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
+  // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
   const [camMicOn, setCamMicOn] = useState(false);
 
   const stopCamera = useCallback(() => {
@@ -593,7 +593,7 @@ function getToken() {
       setCameraState("on");
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     } catch {
       setCameraState("denied");
@@ -676,7 +676,7 @@ function getToken() {
   useEffect(() => {
     if (cameraState === "on" && cameraStreamRef.current && videoRef.current) {
       videoRef.current.srcObject = cameraStreamRef.current;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, [cameraState, phase]);
 
@@ -898,7 +898,7 @@ function getToken() {
         if (endInterviewRef.current) endInterviewRef.current();
       }
     }, 1000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopTimer]);
 
   // ─── Finish interview ────────────────────────────────────────────────────────
@@ -1226,12 +1226,12 @@ function getToken() {
     setResult(null);
     setRemaining(INTERVIEW_SECONDS);
     setPhase("live");
-    
+
     // Request full screen when starting
     if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch((err) => console.log(err));
     }
-    
+
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
   }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart]);
@@ -1264,7 +1264,7 @@ function getToken() {
     setWarningShown(false);
     setPhase("setup");
     fetchPastInterviews();
-    
+
     // Exit full screen if resetting
     if (typeof document !== "undefined" && document.fullscreenElement) {
       document.exitFullscreen().catch((err) => console.log(err));
@@ -1642,8 +1642,8 @@ function getToken() {
                       {cameraState === "denied"
                         ? "Camera Permission Denied"
                         : cameraState === "unsupported"
-                        ? "Camera Unsupported"
-                        : "Initializing HD Proctoring Camera..."}
+                          ? "Camera Unsupported"
+                          : "Initializing HD Proctoring Camera..."}
                     </div>
                     <div className="ai-cam-placeholder-sub">
                       {cameraState === "denied"
@@ -1670,9 +1670,9 @@ function getToken() {
                   <div className="ai-status-name">AI Interviewer</div>
                   <div className="ai-status-state">
                     {isEvaluating ? <span className="ai-state-thinking"><Loader2 size={10} className="ai-spin" /> Thinking...</span>
-                    : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
-                    : question ? <span className="ai-state-listening">Listening for answer</span>
-                    : <span>Starting interview...</span>}
+                      : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
+                        : question ? <span className="ai-state-listening">Listening for answer</span>
+                          : <span>Starting interview...</span>}
                   </div>
                 </div>
                 <button
@@ -1767,8 +1767,8 @@ function getToken() {
                     !question
                       ? "Waiting for the AI question..."
                       : SpeechRecognitionCtor
-                      ? "Speak via mic or type your answer here..."
-                      : "Type your answer here..."
+                        ? "Speak via mic or type your answer here..."
+                        : "Type your answer here..."
                   }
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}

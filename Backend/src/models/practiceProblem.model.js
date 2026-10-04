@@ -80,6 +80,9 @@ export const createPracticeProblemModel = async ({
   tags = '',
   points = 100,
   created_by = null,
+  sampleInput = '',
+  sampleOutput = '',
+  testCases = [],
 }) => {
   const cId = college_id ? parseInt(college_id, 10) : 1;
   const tagsStr = Array.isArray(tags) ? tags.join(', ') : (tags || '');
@@ -118,7 +121,33 @@ export const createPracticeProblemModel = async ({
   );
 
   if (res && res.insertId) {
-    return getPracticeProblemByIdModel(res.insertId);
+    const probId = res.insertId;
+
+    if (sampleInput || sampleOutput) {
+      try {
+        await query(
+          `INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, 0)`,
+          [probId, sampleInput || '', sampleOutput || '']
+        );
+      } catch (e) { }
+    }
+
+    if (Array.isArray(testCases) && testCases.length > 0) {
+      for (const tc of testCases) {
+        const inp = tc.input || '';
+        const out = tc.expectedOutput || tc.expected_output || tc.output || '';
+        if (inp || out) {
+          try {
+            await query(
+              `INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, ?)`,
+              [probId, inp, out, tc.isHidden ? 1 : 0]
+            );
+          } catch (e) { }
+        }
+      }
+    }
+
+    return getPracticeProblemByIdModel(probId);
   }
   return null;
 };
@@ -126,5 +155,8 @@ export const createPracticeProblemModel = async ({
 // Delete a practice problem
 export const deletePracticeProblemModel = async (id) => {
   const numId = parseInt(id, 10);
+  try {
+    await query('DELETE FROM coding_test_cases WHERE problem_id = ?', [numId]);
+  } catch (e) { }
   return await query('DELETE FROM practice_problems WHERE id = ?', [numId]);
 };
