@@ -844,7 +844,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
     const templateData = [
       {
         "Full Name": "Priya Sharma",
-        "College Email": "priya.sharma@pvppcoe.ac.in",
+        "College Email": "priya.sharma@institution.edu",
         "Mobile Number": "9876543210",
         "Roll ID": "VU21CS042",
         "Department": "COMPS",
@@ -853,7 +853,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
       },
       {
         "Full Name": "Rahul Verma",
-        "College Email": "rahul.verma@pvppcoe.ac.in",
+        "College Email": "rahul.verma@institution.edu",
         "Mobile Number": "9876543211",
         "Roll ID": "VU21IT088",
         "Department": "IT",
@@ -1166,7 +1166,7 @@ export default function ManageUsers() {
               adminName: u.name || 'College Admin',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
+              college: u.college_name || u.college || 'Partner Institution',
               designation: 'Institutional Admin',
               date: u.created_at ? u.created_at.split('T')[0] : '2026-09-20',
               status: u.is_active ? 'Verified' : 'Pending'
@@ -1179,7 +1179,7 @@ export default function ManageUsers() {
               name: u.name || 'Coordinator',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
+              college: u.college_name || u.college || 'Partner Institution',
               department: u.department_name || u.department || 'Computer Engineering',
               status: u.is_active ? 'Active' : 'Inactive'
             })));
@@ -1337,7 +1337,7 @@ export default function ManageUsers() {
 
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
-  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
+  const [codeCollege, setCodeCollege] = useState('Partner Campus');
   const [codeExpiry, setCodeExpiry] = useState('1 Day');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);

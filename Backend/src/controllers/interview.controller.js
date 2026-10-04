@@ -8,7 +8,7 @@ import {
 export const getInterviewData = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
-    const sessions = await findInterviewSessionsByUserModel(userId);
+    const sessions = await findInterviewSessionsByUserModel(userId, 10);
     return sendSuccess(res, 'Interview sessions retrieved successfully', sessions);
   } catch (error) {
     next(error);
@@ -19,7 +19,7 @@ export const getInterviewById = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
     if (req.params.id === 'history') {
-      const sessions = await findInterviewSessionsByUserModel(userId);
+      const sessions = await findInterviewSessionsByUserModel(userId, 10);
       return sendSuccess(res, 'Interview sessions retrieved successfully', sessions);
     }
     const session = await getInterviewSessionByIdModel(req.params.id);

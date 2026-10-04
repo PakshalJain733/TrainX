@@ -36,7 +36,7 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
     return { messageId: `fallback_${Date.now()}`, fallback: true };
   }
 
-  const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'ganeshvshinde2006@gmail.com').trim().replace(/^["']|["']$/g, '');
+  const senderEmail = (process.env.BREVO_SENDER_EMAIL || 'admin@trainingportal.com').trim().replace(/^["']|["']$/g, '');
   const senderName = (process.env.BREVO_SENDER_NAME || 'Campus Training Portal').trim().replace(/^["']|["']$/g, '');
 
   const sendOptions = {

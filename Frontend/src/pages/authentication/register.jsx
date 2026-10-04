@@ -442,10 +442,9 @@ function Register() {
 
     if (role === "Student") {
       const roll = (formData.roll_number || "").trim();
-      const mobile = (formData.mobile_number || "").trim();
       const dept = formData.department || "";
       const yr = formData.year || "";
-      if (!roll || !mobile || !dept || !yr) return false;
+      if (!roll || !dept || !yr) return false;
     } else if (role !== "Admin") {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
@@ -837,6 +836,20 @@ function Register() {
                         {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
                       </button>
                     </div>
+                    {(() => {
+                      if (!formData.email || !formData.email.includes("@")) return null;
+                      const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
+                      const selectedCollege = colleges.find(c => String(c.id) === String(formData.college_id));
+                      const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
+                      if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
+                        return (
+                          <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
@@ -876,21 +889,8 @@ function Register() {
                   )}
                 </div>
 
-                {/* Row 3: Mobile Number | Department | Year | Division */}
-                <div className="form-grid-4">
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      autoComplete="tel"
-                      required
-                      placeholder="Mobile number"
-                      value={formData.mobile_number}
-                      onChange={handleChange}
-                      maxLength={10}
-                    />
-                  </div>
+                {/* Row 3: Department | Year | Division */}
+                <div className="form-grid-3">
 
                   {deptOptions.length > 0 && (
                     <div className="input-group">

@@ -131,7 +131,6 @@ function App() {
             <Route path="attendance" element={<MaintenanceGuard moduleKey="attendance"><Attendance /></MaintenanceGuard>} />
             <Route path="skill-gaps" element={<MaintenanceGuard moduleKey="studentSkillGaps"><StudentSkillGaps /></MaintenanceGuard>} />
             <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="weeklyReports"><WeeklyReports /></MaintenanceGuard>} />
-            <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mockDrives"><StudentMockDrives /></MaintenanceGuard>} />
             <Route path="batches" element={<MaintenanceGuard moduleKey="studentBatches"><Batches /></MaintenanceGuard>} />
             <Route path="practice" element={<MaintenanceGuard moduleKey="practiceCoding"><PracticeProblems /></MaintenanceGuard>} />
             <Route path="coding-platform/:taskId" element={<MaintenanceGuard moduleKey="codingCompiler"><CodingPlatform /></MaintenanceGuard>} />
@@ -170,7 +169,6 @@ function App() {
             <Route path="leaderboard" element={<AdminLeaderboard />} />
             <Route path="weekly-reports" element={<AdminWeeklyReports />} />
             <Route path="defaulters" element={<MentorDefaulters />} />
-            <Route path="mock-drives" element={<MentorMockDrives />} />
             <Route path="help" element={<AdminHelp />} />
             <Route path="profile" element={<AdminProfile />} />
           </Route>
@@ -196,7 +194,6 @@ function App() {
             <Route path="attendance" element={<MaintenanceGuard moduleKey="mentorAttendance"><MentorAttendance /></MaintenanceGuard>} />
             <Route path="performance" element={<MaintenanceGuard moduleKey="mentorPerformance"><MentorPerformance /></MaintenanceGuard>} />
             <Route path="leaderboard" element={<MaintenanceGuard moduleKey="mentorLeaderboard"><MentorLeaderboard /></MaintenanceGuard>} />
-            <Route path="mock-drives" element={<MaintenanceGuard moduleKey="mentorMockDrives"><MentorMockDrives /></MaintenanceGuard>} />
             <Route path="defaulters" element={<MaintenanceGuard moduleKey="defaulters"><MentorDefaulters /></MaintenanceGuard>} />
             <Route path="study-material" element={<MaintenanceGuard moduleKey="mentorStudyMaterial"><MentorStudyMaterial /></MaintenanceGuard>} />
             <Route path="weekly-reports" element={<MaintenanceGuard moduleKey="mentorWeeklyReports"><MentorWeeklyReports /></MaintenanceGuard>} />
@@ -275,7 +272,6 @@ function App() {
             <Route path="coding-practice" element={<SuperAdminPerformancePage />} />
             <Route path="ai-roadmaps" element={<SuperAdminPerformancePage />} />
             <Route path="ai-interviews" element={<SuperAdminPerformancePage />} />
-            <Route path="mock-drives" element={<SuperAdminPerformancePage />} />
             <Route path="health" element={<MaintenanceGuard moduleKey="systemHealth"><SuperAdminSystemHealth /></MaintenanceGuard>} />
             <Route path="notifications" element={<AdminBroadcast />} />
             <Route path="weekly-reports" element={<AdminWeeklyReports />} />

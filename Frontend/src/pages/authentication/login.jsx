@@ -384,6 +384,7 @@ function Login() {
       const data = await response.json();
       if (data.success) {
         setStep("otp");
+        setSuccessMsg(data.message || `OTP sent to ${email}! Please check your email inbox.`);
         setResendTimer(30);
       } else {
         setErrorMsg(data.message || "Failed to send OTP. Please try again.");

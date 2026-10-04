@@ -235,7 +235,7 @@ export default function Overview() {
               Welcome back, {userName}!
             </h1>
             <p className="overview-hero-desc">
-              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "superadmin@pvppcoe.ac.in"} &nbsp;|&nbsp; Institutional Control
+              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "admin@trainingportal.com"} &nbsp;|&nbsp; Institutional Control
             </p>
           </div>
         </div>

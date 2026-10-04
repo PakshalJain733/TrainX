@@ -1220,6 +1220,43 @@ export default function AIRoadmap() {
                           </ul>
                         </div>
 
+                        {/* 2. Detailed Syllabus & Subtopic Breakdown */}
+                        {Array.isArray(m.syllabus) && m.syllabus.length > 0 && (
+                          <div className="drawer-section mt-4">
+                            <h4 className="drawer-heading">
+                              <BookOpen size={15} className="text-indigo-600" />
+                              <span>Detailed Syllabus & Subtopic Breakdown</span>
+                            </h4>
+                            <div className="roadmap-syllabus-grid" style={{ display: "grid", gap: "10px", marginTop: "10px" }}>
+                              {m.syllabus.map((syl, sIdx) => (
+                                <div key={sIdx} style={{
+                                  backgroundColor: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "10px",
+                                  padding: "14px 16px"
+                                }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                    <h5 style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>{syl.moduleTitle}</h5>
+                                    {syl.duration && <span style={{ fontSize: "12px", background: "#e0e7ff", color: "#4338ca", padding: "2px 8px", borderRadius: "12px", fontWeight: 600 }}>{syl.duration}</span>}
+                                  </div>
+                                  {Array.isArray(syl.concepts) && (
+                                    <ul style={{ margin: "6px 0", paddingLeft: "18px", fontSize: "13px", color: "#475569" }}>
+                                      {syl.concepts.map((c, cIdx) => (
+                                        <li key={cIdx} style={{ marginBottom: "3px" }}>{c}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {syl.practicalOutcome && (
+                                    <div style={{ fontSize: "12px", color: "#059669", fontWeight: 600, marginTop: "6px" }}>
+                                      💡 Practical Outcome: {syl.practicalOutcome}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
 
 
                         {/* 3. Reference Links & Learning Resources */}

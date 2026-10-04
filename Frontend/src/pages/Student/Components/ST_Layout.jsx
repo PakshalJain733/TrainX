@@ -646,7 +646,7 @@ export default function StudentLayout() {
             )}
 
             {/* Page Content Body */}
-            <div className="student-card-body" style={interviewLive ? { padding: '20px 24px' } : {}}>
+            <div className="student-card-body" style={interviewLive ? { padding: 0, overflow: 'hidden' } : {}}>
               <Outlet />
             </div>
 

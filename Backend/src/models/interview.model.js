@@ -55,10 +55,10 @@ export const getInterviewSessionByIdModel = async (id) => {
   return session;
 };
 
-export const findInterviewSessionsByUserModel = async (userId, limit = 50) => {
+export const findInterviewSessionsByUserModel = async (userId, limit = 10) => {
   const rows = await query(
     'SELECT id, user_id, student_id, interview_type, overall_score, grade, feedback, conducted_date, status, details, created_at FROM interview_sessions WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?',
-    [userId, Number(limit) || 50]
+    [userId, Number(limit) || 10]
   );
   return (rows || []).map((session) => {
     if (typeof session.details === 'string') {

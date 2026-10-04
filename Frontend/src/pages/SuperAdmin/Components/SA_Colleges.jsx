@@ -653,7 +653,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="Vasantdada Patil Pratishthan"
+                      placeholder="Apex Institute of Technology"
                       value={collegeForm.name}
                       onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
                     />
@@ -664,7 +664,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="PVPPCOE"
+                      placeholder="AIT-2026"
                       value={collegeForm.code}
                       onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
                     />
@@ -678,7 +678,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="Sion, Mumbai"
+                      placeholder="Mumbai Campus"
                       value={collegeForm.location}
                       onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
                     />
@@ -688,7 +688,7 @@ export default function Colleges() {
                     <input
                       type="text"
                       className="form-input-admin"
-                      placeholder="pvppcoe.ac.in"
+                      placeholder="institution.edu"
                       value={collegeForm.domain}
                       onChange={(e) => setCollegeForm({ ...collegeForm, domain: e.target.value })}
                     />
@@ -711,7 +711,7 @@ export default function Colleges() {
                     <input
                       type="email"
                       className="form-input-admin"
-                      placeholder="admin@pvppcoe.ac.in"
+                      placeholder="admin@institution.edu"
                       value={collegeForm.adminEmail}
                       onChange={(e) => setCollegeForm({ ...collegeForm, adminEmail: e.target.value })}
                     />

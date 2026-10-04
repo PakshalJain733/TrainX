@@ -316,6 +316,7 @@ export const sendRegistrationOtp = async (data = {}) => {
 
   const otp = generateOtp(6);
   await saveRegistrationOtp(email, otp);
+  console.log(`🔑 [AUTH OTP] Registration OTP generated for ${email}: ${otp}`);
 
   try {
     const emailResult = await sendOtpEmail({ to: email, otp, name: data.name || '' });
