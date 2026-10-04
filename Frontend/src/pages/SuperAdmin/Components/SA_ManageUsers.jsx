@@ -1128,6 +1128,7 @@ export default function ManageUsers() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isBulkExcelOpen, setIsBulkExcelOpen] = useState(false);
   const [pendingUsersCount, setPendingUsersCount] = useState(0);
+  const [pendingUsersList, setPendingUsersList] = useState([]);
 
   // Tab Data States
   const [adminRequests, setAdminRequests] = useState(DEFAULT_ADMINS);
@@ -1140,6 +1141,39 @@ export default function ManageUsers() {
   // Modal States
   const [isAssignTrainerOpen, setIsAssignTrainerOpen] = useState(false);
   const [isAssignMentorOpen, setIsAssignMentorOpen] = useState(false);
+
+  const handleApprovePendingUser = async (user) => {
+    try {
+      const res = await apiFetch(`/admin/users/${user.id}/approve`, { method: 'PATCH' });
+      if (res && (res.success || !res.error)) {
+        alert(`Account approved successfully for ${user.name}! They can now log in.`);
+        setPendingUsersList(prev => prev.filter(u => u.id !== user.id));
+        setPendingUsersCount(prev => Math.max(0, prev - 1));
+      } else {
+        alert(res?.error || res?.message || 'Failed to approve user.');
+      }
+    } catch (err) {
+      console.error('Approve error:', err);
+      alert('Failed to approve user account.');
+    }
+  };
+
+  const handleRejectPendingUser = async (user) => {
+    if (!window.confirm(`Are you sure you want to reject registration for ${user.name}?`)) return;
+    try {
+      const res = await apiFetch(`/admin/users/${user.id}/reject`, { method: 'PATCH' });
+      if (res && (res.success || !res.error)) {
+        alert(`Registration rejected for ${user.name}.`);
+        setPendingUsersList(prev => prev.filter(u => u.id !== user.id));
+        setPendingUsersCount(prev => Math.max(0, prev - 1));
+      } else {
+        alert(res?.error || res?.message || 'Failed to reject user.');
+      }
+    } catch (err) {
+      console.error('Reject error:', err);
+      alert('Failed to reject user account.');
+    }
+  };
 
   useEffect(() => {
     collegeAPI.getColleges()
@@ -1154,6 +1188,7 @@ export default function ManageUsers() {
     apiFetch('/admin/pending-users')
       .then(res => {
         if (res && res.data && Array.isArray(res.data)) {
+          setPendingUsersList(res.data);
           setPendingUsersCount(res.data.length);
         }
       })
@@ -1170,6 +1205,7 @@ export default function ManageUsers() {
         ]);
 
         if (pendingRes && pendingRes.data && Array.isArray(pendingRes.data)) {
+          setPendingUsersList(pendingRes.data);
           setPendingUsersCount(pendingRes.data.length);
         }
 
@@ -1668,6 +1704,86 @@ export default function ManageUsers() {
           />
         </div>
       </div>
+
+      {/* PENDING REGISTRATIONS APPROVAL SECTION */}
+      {pendingUsersList.length > 0 && (
+        <div className="manageusers-table-card mb-6" style={{ border: '1px solid #fcd34d', background: '#fffefb', marginBottom: '24px' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={18} color="#d97706" />
+              <span>Pending User Registrations Awaiting Approval ({pendingUsersList.length})</span>
+            </h3>
+            <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
+              Action Required
+            </span>
+          </div>
+          <div className="manageusers-table-wrap">
+            <table className="manageusers-table">
+              <thead>
+                <tr className="manageusers-thead-row">
+                  <th className="manageusers-th">Applicant Name &amp; Contact</th>
+                  <th className="manageusers-th">Requested Role</th>
+                  <th className="manageusers-th">College / Dept</th>
+                  <th className="manageusers-th">Status</th>
+                  <th className="manageusers-th-right">Governance Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingUsersList.map((user) => (
+                  <tr key={user.id} className="manageusers-tr">
+                    <td className="manageusers-td">
+                      <div className="font-bold text-slate-900">{user.name}</div>
+                      <div className="manageusers-contact-row mt-1">
+                        <Mail size={14} className="manageusers-contact-icon" />
+                        <span className="manageusers-contact-text">{user.email || user.mobile_number || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="manageusers-td">
+                      <span style={{ textTransform: 'capitalize', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: '#e0e7ff', color: '#3730a3', fontSize: '12px' }}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="manageusers-td">
+                      <div className="manageusers-contact-row manageusers-contact-row--bold">
+                        <Building2 size={15} className="manageusers-contact-icon manageusers-contact-icon--indigo" />
+                        <span>{user.college_name || user.department || 'Apex Institution'}</span>
+                      </div>
+                    </td>
+                    <td className="manageusers-td">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                        Pending Admin Approval
+                      </span>
+                    </td>
+                    <td className="manageusers-td-right">
+                      <div className="manageusers-actions-row">
+                        <button
+                          type="button"
+                          onClick={() => handleApprovePendingUser(user)}
+                          className="manageusers-btn-verify"
+                          style={{ background: '#16a34a', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer' }}
+                        >
+                          <CheckCircle2 size={15} />
+                          <span>Approve Account</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectPendingUser(user)}
+                          className="manageusers-btn-reject"
+                          style={{ background: '#ef4444', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer' }}
+                        >
+                          <XCircle size={15} />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* TAB CONTENT: HODs & College Admins */}
       {activeTab === "admins" && (
