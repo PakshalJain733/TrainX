@@ -53,6 +53,7 @@ import SuperAdminSystemHealth from './pages/SuperAdmin/Components/SA_SystemHealt
 import SuperAdminProfilePage from './pages/SuperAdmin/Components/SA_Profile';
 import SuperAdminMaintenanceControls from './pages/SuperAdmin/Components/SA_MaintenanceControls';
 import SuperAdminTickets from './pages/SuperAdmin/Components/SA_Tickets';
+import SuperAdminPerformancePage from './pages/SuperAdmin/Components/SA_Performance';
 
 // Mentor Workspace Imports
 import MentorLayout from './pages/Mentor/Components/MN_Layout';
