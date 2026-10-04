@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, Key, Clock, User } from "lucide-react";
 import { AdminSidebar } from "./AD_Sidebar";
+import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import "../Styles/AD_Layout.css";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -265,34 +266,20 @@ export default function AdminLayout() {
   useEffect(() => {
     apiFetch("/admin/broadcast")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
-        }
+        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+        setNotifications(serverItems);
       })
       .catch(() => { });
   }, []);
@@ -382,24 +369,6 @@ export default function AdminLayout() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const getPageTitle = (path) => {
-    if (path === "/admin" || path === "/admin/") return "Overview";
-    if (path.startsWith("/admin/users")) return "User Management";
-    if (path.startsWith("/admin/batches")) return "Manage Batches";
-    if (path.startsWith("/admin/attendance")) return "Track Attendance";
-    if (path.startsWith("/admin/learning")) return "Manage Learning Content";
-    if (path.startsWith("/admin/quiz")) return "Manage Quizzes";
-    if (path.startsWith("/admin/practice")) return "Coding Practice";
-    if (path.startsWith("/admin/broadcast")) return "Broadcast Notice Center";
-    if (path.startsWith("/admin/progress")) return "Student Progress Analytics";
-    if (path.startsWith("/admin/leaderboard")) return "Leaderboard";
-    if (path.startsWith("/admin/weekly-reports")) return "Weekly Reports";
-    if (path.startsWith("/admin/help")) return "Support Tickets";
-    return "Overview";
-  };
-
-  const pageTitle = getPageTitle(pathname);
-
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
       setMobileOpen((o) => !o);
@@ -436,9 +405,7 @@ export default function AdminLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="admin-breadcrumb">
-                  <span className="admin-breadcrumb-active">{pageTitle}</span>
-                </div>
+                <GlobalHeaderSearch role="admin" />
               </div>
 
               <div className="admin-header__right" ref={headerRightRef}>
@@ -461,7 +428,7 @@ export default function AdminLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={() => {}}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -479,9 +446,6 @@ export default function AdminLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="admin-header__user-info">
-                      <span className="admin-header__name">{user.name}</span>
-                    </div>
                     <div className="admin-header__avatar" aria-label={`User profile ${user.name}`}>
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
@@ -490,6 +454,10 @@ export default function AdminLayout() {
                       ) : (
                         "AD"
                       )}
+                    </div>
+                    <div className="admin-header__user-info">
+                      <span className="admin-header__name">{user.name || "Admin User"}</span>
+                      <span className="admin-header__role">{user.role || "Admin"}</span>
                     </div>
                   </button>
 

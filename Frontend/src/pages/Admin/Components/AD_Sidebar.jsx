@@ -36,7 +36,7 @@ function SidebarBrand({ collapsed, subtitle }) {
             <span className="brand-name1">Train</span>
             <img src={trainXImg} alt="X" className="brand-x-img-admin" />
           </div>
-          {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
+          <span className="sidebar-brand-sub">{subtitle || "Training Portal"}</span>
         </div>
       )}
     </div>
@@ -98,7 +98,7 @@ export function AdminSidebar({ collapsed, mobileOpen, onClose }) {
     <aside className={`admin-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
       {/* Header */}
       <div className="sidebar-header-admin">
-        <SidebarBrand collapsed={collapsed} subtitle="Admin Workspace" />
+        <SidebarBrand collapsed={collapsed} subtitle="Training Portal" />
       </div>
 
       {/* Nav */}

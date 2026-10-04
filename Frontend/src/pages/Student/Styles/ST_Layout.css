@@ -31,26 +31,31 @@
   .student-content {
     padding: 0 !important;
   }
+
   .student-page-card {
     border-radius: 0 !important;
     border: none !important;
     box-shadow: none !important;
     background: #ffffff !important;
   }
+
   .student-main {
     padding: 0 !important;
     background: #ffffff !important;
   }
+
   .student-header {
     border-radius: 0 !important;
     background: #ffffff !important;
   }
+
   .student-page-inner {
     padding: 12px !important;
     gap: 12px !important;
     background: transparent !important;
   }
-  .student-page-inner  {
+
+  .student-page-inner {
     margin-bottom: 16px;
   }
 }
@@ -439,14 +444,14 @@ body {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   transition: all 0.15s ease !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02) !important;
   cursor: pointer;
 }
 
 .notif-list-card:hover {
   border-color: #cbd5e1 !important;
   background: #f8fafc !important;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.04) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
 }
 
 .notif-list-card.unread {
@@ -740,8 +745,13 @@ body {
 }
 
 @keyframes marqueeHeaderScroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-100%); }
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 .student-header__sidebar-toggle {
@@ -750,7 +760,7 @@ body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 50%;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
@@ -810,6 +820,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative !important;
 }
 
 .student-header__badges {
@@ -828,7 +839,7 @@ body {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 50%;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
@@ -918,7 +929,7 @@ body {
 }
 
 .student-header__notif-wrap {
-  position: relative;
+  position: static !important;
   flex-shrink: 0;
 }
 
@@ -926,69 +937,6 @@ body {
 .student-header__user-wrap {
   position: relative;
   flex-shrink: 0;
-}
-
-.student-header__user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 40px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  padding: 3px 6px 3px 14px;
-  border-radius: 9999px;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
-
-.student-header__user:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transform: translateY(-1px);
-}
-
-.student-header__user-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  line-height: 1.25;
-  white-space: nowrap;
-}
-
-.student-header__name {
-  font-size: 15px;
-  font-weight: 700;
-  color: #0f172a;
-  white-space: nowrap;
-}
-
-.student-header__sub {
-  font-size: 13px;
-  font-weight: 500;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.student-header__avatar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #4f46e5;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
-  box-sizing: border-box;
 }
 
 /* ── Profile Dropdown ── */
@@ -1148,6 +1096,7 @@ body {
   .student-header__user-info {
     display: none !important;
   }
+
   .student-header__user {
     background: transparent !important;
     border: none !important;
@@ -1549,7 +1498,7 @@ body {
     max-width: 100vw !important;
     border-radius: 0 !important;
     background: #ffffff !important;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08) !important;
   }
 
   .student-main {
@@ -1850,6 +1799,7 @@ button:active:not(:disabled),
    ════════════════════════════════════════════════════════════ */
 
 @media (max-width: 768px) {
+
   /* Layout Padding & Spacing */
   .admin-content,
   .hod-content,
@@ -2121,5 +2071,5 @@ button:active:not(:disabled),
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom:10px;
+  margin-bottom: 10px;
 }

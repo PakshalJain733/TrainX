@@ -55,9 +55,10 @@ export default function SystemHealth() {
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <div className="system-health-title-wrap">
-            <span className="system-health-title">System Health & Infrastructure Monitoring</span>
-          </div>
+          <h2 className="system-health-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>
+            <Activity size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span className="system-health-title">System Health &amp; Infrastructure Monitoring</span>
+          </h2>
           <p className="system-health-subtitle">
             Real-time server latency, service status, database load, and API uptime monitoring
             {lastUpdated && ` • Updated at ${lastUpdated}`}

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User } from "lucide-react";
 import { StudentSidebar } from "./ST_Sidebar";
+import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/ST_Layout.css";
@@ -124,7 +125,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -279,7 +280,7 @@ export default function StudentLayout() {
   // Hide sidebar & header when AI Interview goes live
   useEffect(() => {
     const onLive = () => setInterviewLive(true);
-    const onEnd  = () => setInterviewLive(false);
+    const onEnd = () => setInterviewLive(false);
     window.addEventListener('interviewLive', onLive);
     window.addEventListener('interviewEnded', onEnd);
     return () => {
@@ -307,36 +308,22 @@ export default function StudentLayout() {
   useEffect(() => {
     apiFetch("/student/notifications")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
-        }
+        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+        setNotifications(serverItems);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const [showFirstLoginFlash, setShowFirstLoginFlash] = useState(false);
@@ -368,7 +355,7 @@ export default function StudentLayout() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -395,7 +382,7 @@ export default function StudentLayout() {
             }
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -438,7 +425,7 @@ export default function StudentLayout() {
             });
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     window.addEventListener("new_broadcast_notification", handleNewNotif);
     return () => window.removeEventListener("new_broadcast_notification", handleNewNotif);
@@ -462,38 +449,6 @@ export default function StudentLayout() {
     if (d.includes("artificial intelligence") || d.includes("data science")) return "AI&DS";
     return dept;
   };
-
-  const getPageTitle = (path) => {
-    if (path === "/student" || path === "/student/") return "Overview";
-    if (path.startsWith("/student/roadmap")) return "AI Career Roadmap";
-    if (path.startsWith("/student/learning")) return "Learning Content";
-    if (path.startsWith("/student/ai-interview")) return "AI Mock Interview";
-    if (path.startsWith("/student/progress")) return "Progress & Skill Radar";
-    if (path.startsWith("/student/leaderboard")) return "Leaderboard";
-    if (path.startsWith("/student/weekly-reports")) return "Weekly Reports";
-    if (path.startsWith("/student/academic")) return "Academic";
-    if (path.startsWith("/student/attendance")) return "Attendance";
-    if (path.startsWith("/student/assessment")) return "Assessments";
-    if (path.startsWith("/student/performance")) return "Performance";
-    if (path.startsWith("/student/certificates")) return "Certificates";
-    if (path.startsWith("/student/timetable")) return "Timetable";
-    if (path.startsWith("/student/compiler")) return "Compiler / Code Editor";
-    if (path.startsWith("/student/quiz")) return "Quiz";
-    if (path.startsWith("/student/batches")) return "Batches";
-    if (path.startsWith("/student/practice")) return "Practice Problems";
-    if (path.startsWith("/student/notes")) return "Study Notes & Resources";
-    if (path.startsWith("/student/coding-exam")) return "Coding Exam";
-    if (path.startsWith("/student/exam-type-select")) return "Select Exam Type";
-    if (path.startsWith("/student/mcq-exam")) return "MCQ Test";
-    if (path.startsWith("/student/notifications")) return "Notifications";
-    if (path.startsWith("/student/profile")) return "Profile";
-    if (path.startsWith("/student/settings")) return "Settings";
-    if (path.startsWith("/student/help")) return "Help & Support";
-    if (path.startsWith("/student/coding-platform")) return "Coding Platform";
-    return "Dashboard";
-  };
-
-  const pageTitle = getPageTitle(pathname);
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -525,124 +480,121 @@ export default function StudentLayout() {
 
             {/* Header — hidden during live interview */}
             {!interviewLive && (
-            <header className="student-header">
-              <div className="student-header__left">
-                <button
-                  className="student-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
-
-                <div className="student-breadcrumb">
-                  <span className="student-breadcrumb-active">{pageTitle}</span>
-                </div>
-
-
-              </div>
-
-              <div className="student-header__right" ref={headerRightRef}>
-
-
-                {/* Notification Bell Dropdown Wrap */}
-                <div className="student-header__notif-wrap">
+              <header className="student-header">
+                <div className="student-header__left">
                   <button
-                    className="student-header__icon-btn"
-                    aria-label="Notifications"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      setNotifOpen((o) => !o);
-                    }}
-                    title="Notifications"
+                    className="student-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                    title="Toggle sidebar"
                   >
-                    <Bell size={21} className="student-header__bell-icon" />
-                    {hasUnreadNotif && <span className="student-header__notification-dot"></span>}
+                    <PanelLeft size={20} />
                   </button>
 
-                  {notifOpen && (
-                    <NotificationDropdown
-                      onClose={() => setNotifOpen(false)}
-                      onUnreadChange={() => {}}
-                      onOpenViewAll={() => setFullNotifOpen(true)}
-                      notifications={notifications}
-                      setNotifications={setNotifications}
-                    />
-                  )}
+                  <GlobalHeaderSearch role="student" />
                 </div>
 
-                {/* Profile section with dropdown */}
-                <div className="student-header__user-wrap">
-                  <button
-                    className="student-header__user"
-                    onClick={() => {
-                      setNotifOpen(false);
-                      setProfileOpen((o) => !o);
-                    }}
-                    aria-label="User menu"
-                  >
-                    <div className="student-header__user-info">
-                      <span className="student-header__name">{user.name}</span>
-                    </div>
-                    <div className="student-header__avatar" aria-label={`User profile ${user.name}`}>
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : (
-                        user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
-                      )}
-                    </div>
-                  </button>
+                <div className="student-header__right" ref={headerRightRef}>
 
-                  {profileOpen && (
-                    <>
-                      <div className="student-header__profile-dropdown">
-                        <div className="student-header__profile-top">
-                          <div className="student-header__profile-avatar">
-                            {user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
-                          </div>
-                          <div className="student-header__profile-info">
-                            <span className="student-header__profile-name">{user.name || "Ganesh Shinde"}</span>
-                            <span className="student-header__profile-sub">{user.email || "ganesh.shinde@student.pvppcoe.ac.in"}</span>
-                          </div>
-                        </div>
-                        <div className="student-header__profile-divider" />
-                        <button
-                          className="student-header__profile-item"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            navigate("/student/profile");
-                          }}
-                        >
-                          <User size={15} />
-                          View Profile
-                        </button>
-                        <button
-                          className="student-header__profile-item"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            setIsChangePasswordOpen(true);
-                          }}
-                        >
-                          <Key size={15} />
-                          Change Password
-                        </button>
-                        <button
-                          className="student-header__profile-item student-header__profile-item--danger"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            navigate("/");
-                          }}
-                        >
-                          <LogOut size={15} />
-                          Logout
-                        </button>
+
+                  {/* Notification Bell Dropdown Wrap */}
+                  <div className="student-header__notif-wrap">
+                    <button
+                      className="student-header__icon-btn"
+                      aria-label="Notifications"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setNotifOpen((o) => !o);
+                      }}
+                      title="Notifications"
+                    >
+                      <Bell size={21} className="student-header__bell-icon" />
+                      {hasUnreadNotif && <span className="student-header__notification-dot"></span>}
+                    </button>
+
+                    {notifOpen && (
+                      <NotificationDropdown
+                        onClose={() => setNotifOpen(false)}
+                        onUnreadChange={() => { }}
+                        onOpenViewAll={() => setFullNotifOpen(true)}
+                        notifications={notifications}
+                        setNotifications={setNotifications}
+                      />
+                    )}
+                  </div>
+
+                  {/* Profile section with dropdown */}
+                  <div className="student-header__user-wrap">
+                    <button
+                      className="student-header__user"
+                      onClick={() => {
+                        setNotifOpen(false);
+                        setProfileOpen((o) => !o);
+                      }}
+                      aria-label="User menu"
+                    >
+                      <div className="student-header__avatar" aria-label={`User profile ${user.name}`}>
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
+                        )}
                       </div>
-                    </>
-                  )}
+                      <div className="student-header__user-info">
+                        <span className="student-header__name">{user.name || "Student"}</span>
+                        <span className="student-header__role">{user.role || "Student"}</span>
+                      </div>
+                    </button>
+
+                    {profileOpen && (
+                      <>
+                        <div className="student-header__profile-dropdown">
+                          <div className="student-header__profile-top">
+                            <div className="student-header__profile-avatar">
+                              {user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
+                            </div>
+                            <div className="student-header__profile-info">
+                              <span className="student-header__profile-name">{user.name || "Ganesh Shinde"}</span>
+                              <span className="student-header__profile-sub">{user.email || "ganesh.shinde@student.pvppcoe.ac.in"}</span>
+                            </div>
+                          </div>
+                          <div className="student-header__profile-divider" />
+                          <button
+                            className="student-header__profile-item"
+                            onClick={() => {
+                              setProfileOpen(false);
+                              navigate("/student/profile");
+                            }}
+                          >
+                            <User size={15} />
+                            View Profile
+                          </button>
+                          <button
+                            className="student-header__profile-item"
+                            onClick={() => {
+                              setProfileOpen(false);
+                              setIsChangePasswordOpen(true);
+                            }}
+                          >
+                            <Key size={15} />
+                            Change Password
+                          </button>
+                          <button
+                            className="student-header__profile-item student-header__profile-item--danger"
+                            onClick={() => {
+                              setProfileOpen(false);
+                              navigate("/");
+                            }}
+                          >
+                            <LogOut size={15} />
+                            Logout
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </header>
+              </header>
             )}
 
             {/* Page Content Body */}

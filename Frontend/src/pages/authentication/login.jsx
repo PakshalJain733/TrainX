@@ -654,7 +654,7 @@ function Login() {
                         type="email"
                         required
                         autoComplete="username"
-                        placeholder="user@pvppcoe.ac.in"
+                        placeholder="name@college.edu"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />

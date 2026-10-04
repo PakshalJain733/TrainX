@@ -49,7 +49,6 @@ import CollegesPage from './pages/SuperAdmin/Components/SA_Colleges';
 import AdminDepartmentsPage from './pages/Admin/Components/AD_Departments';
 import SuperAdminBatches from './pages/SuperAdmin/Components/SA_Batches';
 import SuperAdminManageUsers from './pages/SuperAdmin/Components/SA_ManageUsers';
-import SuperAdminPerformancePage from './pages/SuperAdmin/Components/SA_Performance';
 import SuperAdminSystemHealth from './pages/SuperAdmin/Components/SA_SystemHealth';
 import SuperAdminProfilePage from './pages/SuperAdmin/Components/SA_Profile';
 import SuperAdminMaintenanceControls from './pages/SuperAdmin/Components/SA_MaintenanceControls';
@@ -109,7 +108,7 @@ function App() {
           {/* Auth Routes */}
           <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />
           <Route path="/register" element={<MaintenanceGuard moduleKey="userRegistration"><Register /></MaintenanceGuard>} />
-          
+
           {/* Student Workspace Routes */}
           <Route
             path="/student"
@@ -266,7 +265,6 @@ function App() {
             <Route path="tickets" element={<MaintenanceGuard moduleKey="superAdminTickets"><SuperAdminTickets /></MaintenanceGuard>} />
             <Route path="support" element={<MaintenanceGuard moduleKey="superAdminTickets"><SuperAdminTickets /></MaintenanceGuard>} />
             <Route path="maintenance" element={<MaintenanceGuard moduleKey="featureSwitches"><SuperAdminMaintenanceControls /></MaintenanceGuard>} />
-            <Route path="performance" element={<MaintenanceGuard moduleKey="systemHealth"><SuperAdminPerformancePage /></MaintenanceGuard>} />
             <Route path="leaderboard" element={<AdminLeaderboard />} />
             <Route path="attendance" element={<SuperAdminPerformancePage />} />
             <Route path="coding-practice" element={<SuperAdminPerformancePage />} />
