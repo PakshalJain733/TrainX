@@ -366,12 +366,6 @@ export default function Colleges() {
             <p className="text-xs text-slate-500 ml-9">
               Managing departments inside {selectedCollege ? selectedCollege.name : "selected college"}
             </p>
-          </div>
-
-          <button className="sa-btn-primary ml-auto" onClick={() => setIsAddDeptModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            <span>Add Department</span>
-          </button>
         </div>
 
         <div className="sa-search-card">
@@ -417,86 +411,6 @@ export default function Colleges() {
           ))}
         </div>
 
-        {/* Add Department Modal */}
-        {isAddDeptModalOpen && createPortal(
-          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddDeptModalOpen(false); }}>
-            <div className="modal-dialog college-modal-540">
-              <div className="modal-header">
-                <div className="modal-header-left">
-                  <div className="modal-header-icon-wrap modal-header-icon--indigo">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div>
-                    <h2 className="modal-title">Add New Department</h2>
-                    <p className="modal-subtitle">Create an academic department for this college.</p>
-                  </div>
-                </div>
-                <button className="modal-close-btn" onClick={() => setIsAddDeptModalOpen(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddDepartment}>
-                <div className="modal-body">
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>Department Name *</label>
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin"
-                        placeholder="e.g. Computer Science & Engineering"
-                        value={deptForm.name}
-                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label>Department Code *</label>
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin"
-                        placeholder="e.g. CSE"
-                        value={deptForm.code}
-                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>HOD Name</label>
-                      <input
-                        type="text"
-                        className="form-input-admin"
-                        placeholder="Dr. Arvind Kulkarni"
-                        value={deptForm.hodName}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label>HOD Email</label>
-                      <input
-                        type="email"
-                        className="form-input-admin"
-                        placeholder="hod.cse@college.edu.in"
-                        value={deptForm.hodEmail}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-footer">
-                  <button type="submit" className="btn-modal-submit">
-                    Save Department
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
       </div>
     );
   }
