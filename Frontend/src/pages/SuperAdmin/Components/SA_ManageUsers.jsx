@@ -1489,7 +1489,25 @@ export default function ManageUsers() {
   };
 
   const handleCopyCode = (code, id = 'hero') => {
-    navigator.clipboard.writeText(code);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).catch(() => {
+          const textArea = document.createElement("textarea");
+          textArea.value = code;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand("copy");
+          document.body.removeChild(textArea);
+        });
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = code;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+    } catch (_) {}
     setCopiedCodeId(id);
     setTimeout(() => setCopiedCodeId(null), 2000);
   };

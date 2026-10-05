@@ -23,6 +23,9 @@ import {
   getMentorAssignments,
   getAdminC2CEnrollments,
   triggerUser2FAAdmin,
+  getAdminSupportTickets,
+  updateAdminSupportTicket,
+  escalateSupportTicketToSuperAdmin,
 } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -69,5 +72,10 @@ router.get('/assign-mentor', getMentorAssignments);
 
 // C2C 2029 Training Enrollments
 router.get('/c2c/enrollments', getAdminC2CEnrollments);
+
+// Support Ticket Management & Escalation
+router.get('/support/tickets', getAdminSupportTickets);
+router.put('/support/tickets/:id', updateAdminSupportTicket);
+router.post('/support/tickets/:id/escalate', escalateSupportTicketToSuperAdmin);
 
 export default router;

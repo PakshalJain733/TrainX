@@ -623,7 +623,22 @@ export const getSupportTickets = async (req, res, next) => {
     } catch (e) {
       console.warn('[DB getSupportTickets fallback]', e.message);
     }
-    return sendSuccess(res, 'Support tickets retrieved', tickets || []);
+
+    const formatted = (tickets || []).map(t => ({
+      id: `TICK-${t.id}`,
+      dbId: t.id,
+      subject: t.subject,
+      category: t.category || 'Technical',
+      priority: t.priority || 'Medium',
+      status: t.status || 'Open',
+      created: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Just now',
+      description: t.description || '',
+      resolutionNote: t.resolution_note || '',
+      isEscalated: Boolean(t.is_escalated),
+      escalationReason: t.escalation_reason || ''
+    }));
+
+    return sendSuccess(res, 'Support tickets retrieved', formatted);
   } catch (error) {
     next(error);
   }
@@ -642,6 +657,26 @@ export const createSupportTicket = async (req, res, next) => {
         [userId, subject, category || 'Technical', priority || 'Medium', description || '']
       );
       if (result && result.insertId) insertId = result.insertId;
+
+      // Automatically generate a notification for College Admin
+      try {
+        const uRows = await query('SELECT name, college_id FROM users WHERE id = ?', [userId]);
+        const userName = uRows && uRows[0] ? uRows[0].name : 'Student';
+        const userCollegeId = uRows && uRows[0] ? uRows[0].college_id : 1;
+
+        await query(
+          `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
+           VALUES (?, ?, ?, 'Admin Resolution Desk', 'High Priority', ?, 'Student Support Ticket')`,
+          [
+            userCollegeId,
+            `🎫 Support Ticket: ${subject}`,
+            `New support ticket submitted by ${userName} (${category}, Priority: ${priority || 'Medium'}). Ticket ID: TICK-${insertId}. Details: "${description || subject}"`,
+            userName
+          ]
+        );
+      } catch (notifErr) {
+        console.warn('[DB notifySupportTicket warning]', notifErr.message);
+      }
     } catch (e) {
       console.warn('[DB createSupportTicket fallback]', e.message);
     }

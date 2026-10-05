@@ -19,7 +19,12 @@ export default function AD_ApproveUsers() {
     try {
       const res = await apiFetch("/admin/pending-users");
       if (res && res.data && Array.isArray(res.data)) {
-        setPendingUsers(res.data);
+        // College Admins approve Students, Mentors, and Coordinators (not Admins)
+        const nonAdminPending = res.data.filter(u => {
+          const r = String(u.role || '').toLowerCase();
+          return !r.includes('admin');
+        });
+        setPendingUsers(nonAdminPending);
       } else {
         setPendingUsers([]);
       }
