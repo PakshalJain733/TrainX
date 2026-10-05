@@ -1,14 +1,3 @@
-import { config } from '../config/env.js';
-
-/**
- * Multi-Provider AI Client (NVIDIA NIM, Google Gemini, Groq)
- *
- * Automatically rotates and falls back across all 3 configured AI providers:
- *   1. NVIDIA NIM        (https://integrate.api.nvidia.com/v1)
- *   2. Google Gemini     (https://generativelanguage.googleapis.com)
- *   3. Groq              (https://api.groq.com/openai/v1)
- */
-
 const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -28,55 +17,52 @@ export const getAllAvailableProviders = () => {
 
   // NVIDIA
   const nvidiaKey = (
-    config.ai?.nvidiaApiKey ||
     process.env.NVIDIA_AI_API_KEY ||
     process.env.NVIDIA_API_KEY ||
-    (String(config.ai?.apiKey || '').startsWith('nvapi-') ? config.ai?.apiKey : '')
+    (String(process.env.AI_API_KEY || '').startsWith('nvapi-') ? process.env.AI_API_KEY : '')
   ).trim();
 
   if (nvidiaKey && !PLACEHOLDER_KEYS.has(nvidiaKey)) {
     providers.push({
       provider: 'nvidia',
       key: nvidiaKey,
-      configuredModel: config.ai?.nvidiaModel || process.env.NVIDIA_AI_MODEL || (String(config.ai?.apiKey || '').startsWith('nvapi-') ? config.ai?.model : null),
+      configuredModel: process.env.NVIDIA_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('nvapi-') ? process.env.AI_MODEL : null),
     });
   }
 
   // Gemini
   const geminiKey = (
-    config.ai?.geminiApiKey ||
     process.env.GEMINI_AI_API_KEY ||
     process.env.GEMINI_API_KEY ||
-    (String(config.ai?.apiKey || '').startsWith('AIza') || String(config.ai?.apiKey || '').startsWith('AQ.') ? config.ai?.apiKey : '')
+    (String(process.env.AI_API_KEY || '').startsWith('AIza') || String(process.env.AI_API_KEY || '').startsWith('AQ.') ? process.env.AI_API_KEY : '')
   ).trim();
 
   if (geminiKey && !PLACEHOLDER_KEYS.has(geminiKey)) {
     providers.push({
       provider: 'gemini',
       key: geminiKey,
-      configuredModel: config.ai?.geminiModel || process.env.GEMINI_AI_MODEL || (String(config.ai?.apiKey || '').startsWith('AIza') || String(config.ai?.apiKey || '').startsWith('AQ.') ? config.ai?.model : null),
+      configuredModel: process.env.GEMINI_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('AIza') || String(process.env.AI_API_KEY || '').startsWith('AQ.') ? process.env.AI_MODEL : null),
     });
   }
 
   // Groq
   const groqKey = (
-    config.ai?.groqApiKey ||
     process.env.Groq_AI_API_KEY ||
     process.env.GROQ_AI_API_KEY ||
     process.env.GROQ_API_KEY ||
-    (String(config.ai?.apiKey || '').startsWith('gsk_') ? config.ai?.apiKey : '')
+    (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_API_KEY : '')
   ).trim();
 
   if (groqKey && !PLACEHOLDER_KEYS.has(groqKey)) {
     providers.push({
       provider: 'groq',
       key: groqKey,
-      configuredModel: config.ai?.groqModel || process.env.Groq_AI_MODEL || (String(config.ai?.apiKey || '').startsWith('gsk_') ? config.ai?.model : null),
+      configuredModel: process.env.Groq_AI_MODEL || process.env.GROQ_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_MODEL : null),
     });
   }
 
   // Prioritize primary provider specified by AI_API_KEY if present
-  const primaryRawKey = String(config.ai?.apiKey || process.env.AI_API_KEY || '').trim();
+  const primaryRawKey = String(process.env.AI_API_KEY || '').trim();
   if (primaryRawKey.startsWith('nvapi-')) {
     providers.sort((a, b) => (a.provider === 'nvidia' ? -1 : b.provider === 'nvidia' ? 1 : 0));
   } else if (primaryRawKey.startsWith('AQ.') || primaryRawKey.startsWith('AIza')) {

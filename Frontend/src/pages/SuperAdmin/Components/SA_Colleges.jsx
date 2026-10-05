@@ -211,8 +211,9 @@ export default function Colleges() {
     try {
       const usersRes = await apiFetch('/admin/users');
       let adminUser = null;
-      if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
-        adminUser = usersRes.data.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
+      const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
+      if (userList.length > 0) {
+        adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
       }
       if (!adminUser) {
         alert(`Could not find active user account for admin email '${adminEmail}'.`);
@@ -221,14 +222,24 @@ export default function Colleges() {
       const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
         method: 'POST',
       });
-      if (res && res.success) {
+      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
         alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminEmail}. 2FA is now required on their next login.`);
       } else {
-        alert(res?.message || 'Failed to trigger two-step verification.');
+        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
       }
     } catch (err) {
       console.error('Trigger 2FA error:', err);
-      alert('Failed to trigger two-step verification.');
+      alert(err?.message || 'Failed to trigger two-step verification.');
+    }
+  };
+
+  const handleDeleteCollege = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+      setColleges((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error removing college:", err);
+      alert(err.message || "Failed to remove college.");
     }
   };
 
@@ -333,15 +344,6 @@ export default function Colleges() {
     setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
   };
 
-  const handleDeleteCollege = async (id) => {
-    try {
-      await collegeAPI.deleteCollege(id);
-    } catch (err) {
-      console.error("Failed to delete college from API:", err);
-    }
-    setColleges(colleges.filter((c) => c.id !== id));
-  };
-
   // If collegeId URL param is present, render College Departments view
   if (collegeId) {
     return (
@@ -365,11 +367,6 @@ export default function Colleges() {
               Managing departments inside {selectedCollege ? selectedCollege.name : "selected college"}
             </p>
           </div>
-
-          <button className="sa-btn-primary ml-auto" onClick={() => setIsAddDeptModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            <span>Add Department</span>
-          </button>
         </div>
 
         <div className="sa-search-card">
@@ -415,86 +412,6 @@ export default function Colleges() {
           ))}
         </div>
 
-        {/* Add Department Modal */}
-        {isAddDeptModalOpen && createPortal(
-          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddDeptModalOpen(false); }}>
-            <div className="modal-dialog college-modal-540">
-              <div className="modal-header">
-                <div className="modal-header-left">
-                  <div className="modal-header-icon-wrap modal-header-icon--indigo">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div>
-                    <h2 className="modal-title">Add New Department</h2>
-                    <p className="modal-subtitle">Create an academic department for this college.</p>
-                  </div>
-                </div>
-                <button className="modal-close-btn" onClick={() => setIsAddDeptModalOpen(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddDepartment}>
-                <div className="modal-body">
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>Department Name *</label>
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin"
-                        placeholder="e.g. Computer Science & Engineering"
-                        value={deptForm.name}
-                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label>Department Code *</label>
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin"
-                        placeholder="e.g. CSE"
-                        value={deptForm.code}
-                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>HOD Name</label>
-                      <input
-                        type="text"
-                        className="form-input-admin"
-                        placeholder="Dr. Arvind Kulkarni"
-                        value={deptForm.hodName}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label>HOD Email</label>
-                      <input
-                        type="email"
-                        className="form-input-admin"
-                        placeholder="hod.cse@college.edu.in"
-                        value={deptForm.hodEmail}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-footer">
-                  <button type="submit" className="btn-modal-submit">
-                    Save Department
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
       </div>
     );
   }
@@ -505,9 +422,10 @@ export default function Colleges() {
       {/* Header & Main Action */}
       <div className="sa-page-header">
         <div>
-          <div className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span className="colleges-header-title">Colleges Directory</span>
-          </div>
+          <h2 className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
+            <Building2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span className="colleges-header-title" style={{ fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>Colleges Directory</span>
+          </h2>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>
         </div>
         <button onClick={() => setIsAddCollegeModalOpen(true)} className="sa-btn-primary">
@@ -653,7 +571,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="Vasantdada Patil Pratishthan"
+                      placeholder="Apex Institute of Technology"
                       value={collegeForm.name}
                       onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
                     />
@@ -664,7 +582,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="PVPPCOE"
+                      placeholder="AIT-2026"
                       value={collegeForm.code}
                       onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
                     />
@@ -678,7 +596,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className="form-input-admin"
-                      placeholder="Sion, Mumbai"
+                      placeholder="Mumbai Campus"
                       value={collegeForm.location}
                       onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
                     />
@@ -688,7 +606,7 @@ export default function Colleges() {
                     <input
                       type="text"
                       className="form-input-admin"
-                      placeholder="pvppcoe.ac.in"
+                      placeholder="institution.edu"
                       value={collegeForm.domain}
                       onChange={(e) => setCollegeForm({ ...collegeForm, domain: e.target.value })}
                     />
@@ -711,7 +629,7 @@ export default function Colleges() {
                     <input
                       type="email"
                       className="form-input-admin"
-                      placeholder="admin@pvppcoe.ac.in"
+                      placeholder="admin@institution.edu"
                       value={collegeForm.adminEmail}
                       onChange={(e) => setCollegeForm({ ...collegeForm, adminEmail: e.target.value })}
                     />

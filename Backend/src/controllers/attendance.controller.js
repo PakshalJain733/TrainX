@@ -180,55 +180,91 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
 
     const todayStr = new Date().toISOString().split('T')[0];
 
+    // Extract raw code string
+    let rawCode = code ? String(code).trim() : '';
+
+    // Handle JSON payload string if scanned as JSON object
+    if (rawCode.startsWith('{') && rawCode.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(rawCode);
+        rawCode = parsed.code || parsed.batch_code || parsed.join_code || parsed.sessionCode || rawCode;
+      } catch (e) {}
+    }
+
+    // Handle URL payload string if scanned as URL
+    if (rawCode.startsWith('http://') || rawCode.startsWith('https://')) {
+      try {
+        const urlObj = new URL(rawCode);
+        const codeParam = urlObj.searchParams.get('code') || urlObj.searchParams.get('batch_code') || urlObj.searchParams.get('join_code');
+        if (codeParam) {
+          rawCode = codeParam;
+        } else {
+          rawCode = urlObj.pathname.split('/').pop() || rawCode;
+        }
+      } catch (e) {}
+    }
+
+    // Handle BATCH_CODE:SALT format (e.g. "CS-2026-A:X8Y9Z")
+    let primaryCode = rawCode;
+    if (rawCode.includes(':')) {
+      primaryCode = rawCode.split(':')[0].trim();
+    }
+
+    const cleanPrimary = primaryCode.toUpperCase();
+    const cleanRaw = rawCode.toUpperCase();
+
     // Find batch by code/name if provided
     let targetBatchId = batch_id;
-    if (!targetBatchId && code) {
-      const cleanCode = code.trim();
+
+    if (cleanPrimary.length > 0) {
       const batchRows = await query(
-        `SELECT id FROM batches WHERE LOWER(name) LIKE LOWER(?) LIMIT 1`,
-        [`%${cleanCode}%`]
+        `SELECT id, name, status, code_expires_at FROM batches WHERE UPPER(code) = ? OR UPPER(join_code) = ? OR UPPER(name) = ? OR UPPER(code) = ? OR UPPER(join_code) = ? LIMIT 1`,
+        [cleanPrimary, cleanPrimary, cleanPrimary, cleanRaw, cleanRaw]
       );
+
       if (batchRows && batchRows.length > 0) {
-        targetBatchId = batchRows[0].id;
-      }
-    }
-
-    if (!targetBatchId) {
-      const userRows = await query(
-        `SELECT s.batch_id FROM users u LEFT JOIN students s ON u.id = s.user_id WHERE u.id = ? AND s.batch_id IS NOT NULL`,
-        [userId]
-      );
-      targetBatchId = userRows[0]?.batch_id;
-    }
-
-    if (!targetBatchId) {
-      const firstBatch = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
-      if (firstBatch && firstBatch.length > 0) {
-        targetBatchId = firstBatch[0].id;
+        const foundB = batchRows[0];
+        if (foundB.status && (foundB.status.toLowerCase() === 'inactive' || foundB.status.toLowerCase() === 'archived')) {
+          return sendError(res, `Batch '${foundB.name}' is inactive and attendance cannot be marked.`, 400);
+        }
+        targetBatchId = foundB.id;
       } else {
-        const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
-        targetBatchId = newBatch.insertId;
-      }
-    } else {
-      // Check if targetBatchId actually exists in batches table
-      const batchCheck = await query(`SELECT id FROM batches WHERE id = ?`, [targetBatchId]);
-      if (!batchCheck || batchCheck.length === 0) {
-        const fallbackBatch = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
-        if (fallbackBatch && fallbackBatch.length > 0) {
-          targetBatchId = fallbackBatch[0].id;
-        } else {
-          const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
-          targetBatchId = newBatch.insertId;
+        const sessionRows = await query(
+          `SELECT batch_id, status FROM attendance_sessions WHERE UPPER(session_code) = ? OR UPPER(session_code) = ? LIMIT 1`,
+          [cleanPrimary, cleanRaw]
+        );
+        if (sessionRows && sessionRows.length > 0) {
+          targetBatchId = sessionRows[0].batch_id;
         }
       }
+    }
+
+    // If batch not found by code, fallback to student's enrolled batch
+    if (!targetBatchId) {
+      const userRows = await query(
+        `SELECT s.batch_id, b.name as batch_name FROM users u LEFT JOIN students s ON u.id = s.user_id LEFT JOIN batches b ON s.batch_id = b.id WHERE u.id = ? AND s.batch_id IS NOT NULL LIMIT 1`,
+        [userId]
+      );
+      if (userRows && userRows.length > 0 && userRows[0].batch_id) {
+        targetBatchId = userRows[0].batch_id;
+      }
+    }
+
+    if (!targetBatchId) {
+      return sendError(res, `Invalid attendance code '${code || rawCode}'. No matching active batch or lecture session found.`, 400);
+    }
+
+    const batchCheck = await query(`SELECT id, status, name FROM batches WHERE id = ?`, [targetBatchId]);
+    if (!batchCheck || batchCheck.length === 0) {
+      return sendError(res, "Invalid batch assignment. Please contact your administrator.", 400);
     }
 
     // Create or find dedicated session in attendance_sessions table
     const sessionObj = await findOrCreateAttendanceSession({
       collegeId,
       batchId: targetBatchId,
-      sessionCode: code || 'VALIDATED',
-      title: `Training Lecture (${code || 'Regular'})`,
+      sessionCode: primaryCode || 'VALIDATED',
+      title: `Training Lecture (${primaryCode || 'Regular'})`,
       sessionDate: todayStr,
     });
 
@@ -259,14 +295,13 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
          VALUES (?, ?, ?, ?, ?, 'present', ?)
          ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
-        [collegeId, targetBatchId, uId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
+        [collegeId, targetBatchId, uId, sessionObj.id, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
       );
     }
 
-
     const summary = await getStudentAttendanceSummaryService(userId);
 
-    return sendSuccess(res, 'Attendance marked present successfully in database!', {
+    return sendSuccess(res, `Attendance marked Present for ${batchCheck[0]?.name || 'Session'}!`, {
       marked: true,
       session_date: todayStr,
       status: 'present',

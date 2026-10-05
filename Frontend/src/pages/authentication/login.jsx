@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoMain from "../../assets/Logo.png";
 import Logo from "../../assets/Logo2.png";
+import TrainXLogo from "../../assets/TrainX.png";
 import { getApiBaseUrl } from "../../utils/api";
 
 import "./login.css";
@@ -80,12 +81,14 @@ function FieldLabel({ icon, children, htmlFor }) {
 // rememberMe=true  → localStorage   (persists across browser restarts)
 // rememberMe=false → sessionStorage (cleared when tab/browser closes)
 function storeAuthToken(token, remember) {
+  sessionStorage.setItem("token", token);
+  sessionStorage.setItem("authToken", token);
   if (remember) {
-    sessionStorage.removeItem("token");
     localStorage.setItem("token", token);
+    localStorage.setItem("authToken", token);
   } else {
     localStorage.removeItem("token");
-    sessionStorage.setItem("token", token);
+    localStorage.removeItem("authToken");
   }
 }
 
@@ -245,14 +248,12 @@ function Login() {
 
   const handlePostLoginRedirect = (serverUser) => {
     let existingUser = {};
-    try { existingUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-
     try {
-      existingUser = JSON.parse(sessionStorage.getItem("user")) || {};
+      existingUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
     } catch {
       sessionStorage.removeItem("user");
+      localStorage.removeItem("user");
     }
-
 
     let finalName = serverUser.name || existingUser.name || serverUser.email?.split("@")[0] || "Student";
 
@@ -263,6 +264,11 @@ function Login() {
     };
 
     sessionStorage.setItem("user", JSON.stringify(mergedUser));
+    if (rememberMeRef.current || rememberMe) {
+      localStorage.setItem("user", JSON.stringify(mergedUser));
+    } else {
+      localStorage.removeItem("user");
+    }
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;
@@ -304,7 +310,7 @@ function Login() {
     rememberMeRef.current = rememberMe;
     setPreAuthToken(temporaryToken);
     setStep("authenticator");
-    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Google Authenticator.");
+    setSuccessMsg("Primary authentication verified. Enter the 6-digit code from Authenticator App.");
     setOtp(["", "", "", "", "", ""]);
     setTimeout(() => {
       inputRefs.current[0]?.focus();
@@ -379,6 +385,7 @@ function Login() {
       const data = await response.json();
       if (data.success) {
         setStep("otp");
+        setSuccessMsg(data.message || `OTP sent to ${email}! Please check your email inbox.`);
         setResendTimer(30);
       } else {
         setErrorMsg(data.message || "Failed to send OTP. Please try again.");
@@ -459,11 +466,12 @@ function Login() {
     setSuccessMsg("");
 
     try {
+      const emailToVerify = (email || totpSetupData?.email || totpSetupData?.user?.email || "").trim();
       const response = await fetch(`${API_BASE_URL}/verify-totp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: email.trim(),
+          email: emailToVerify,
           code: enteredCode,
           rememberMe,
         }),
@@ -472,6 +480,11 @@ function Login() {
       if (data.success && data.data?.token) {
         storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
         handlePostLoginRedirect(data.data.user || {});
+      } else if (data.success && data.data?.pendingApproval) {
+        setSuccessMsg(data.message || "2FA Setup completed! Your account is pending Admin approval.");
+        setTimeout(() => {
+          setStep("email");
+        }, 2000);
       } else if (data.success) {
         setSuccessMsg("2FA Setup completed successfully! Redirecting...");
         setTimeout(() => {
@@ -606,7 +619,18 @@ function Login() {
 
           {/* Right Panel - Login Card */}
           <div className="login-card">
+            {/* Mobile Top Header Banner (Matching Reference Image Layout) */}
+            <div className="mobile-login-top-banner">
+              <div className="mobile-banner-logo-wrap">
+                <img src={Logo} alt="Logo" className="mobile-banner-logo-img" />
+              </div>
+            </div>
+
             <img src={Logo} alt="Logo" className="login-logo" />
+
+            <div className="login-card-welcome-header">
+              <p className="login-card-welcome-sub">Enter your credentials to access your account</p>
+            </div>
 
             {/* Segmented Auth Mode Switcher */}
             <div className="login-mode-segmented-bar">
@@ -616,15 +640,15 @@ function Login() {
                 onClick={() => handleModeSwitch("password")}
               >
                 {Icons.lock}
-                <span>Login with Password</span>
+                <span>Password</span>
               </button>
               <button
                 type="button"
                 className={`login-mode-tab ${authMode === "otp" ? "active" : ""}`}
                 onClick={() => handleModeSwitch("otp")}
               >
-                {Icons.shield}
-                <span>Login with OTP</span>
+                {Icons.email}
+                <span>Email code</span>
               </button>
             </div>
 
@@ -642,26 +666,26 @@ function Login() {
                 {step === "email" && (
                   <form onSubmit={handlePasswordLogin}>
                     <div className="login-input-group">
-                      <FieldLabel htmlFor="email" icon={Icons.email}>Email Address</FieldLabel>
+                      <FieldLabel htmlFor="email" icon={Icons.email}>Email address *</FieldLabel>
                       <input
                         id="email"
                         type="email"
                         required
                         autoComplete="username"
-                        placeholder="user@pvppcoe.ac.in"
+                        placeholder="name@college.edu"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
 
                     <div className="login-input-group">
-                      <FieldLabel htmlFor="password" icon={Icons.lock}>Password</FieldLabel>
+                      <FieldLabel htmlFor="password" icon={Icons.lock}>Password *</FieldLabel>
                       <div className="password-input-wrapper">
                         <input
                           id="password"
                           type={showPassword ? "text" : "password"}
                           required
-                          placeholder="••••••••••••"
+                          placeholder="Enter your password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                         />
@@ -692,7 +716,7 @@ function Login() {
                     </div>
 
                     <button type="submit" className="login-send-otp-btn" disabled={loading}>
-                      {Icons.key} {loading ? "Authenticating..." : "Login to Account"}
+                      {loading ? "Authenticating..." : "Sign in"}
                     </button>
 
                     <div className="login-links">

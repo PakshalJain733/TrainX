@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import {
   Check,
   Users,
   UserPlus,
+  UserCog,
   Search,
   ShieldCheck,
   ShieldAlert,
@@ -33,7 +34,9 @@ import {
   FileSpreadsheet,
   UploadCloud,
   Download,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -845,7 +848,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
     const templateData = [
       {
         "Full Name": "Priya Sharma",
-        "College Email": "priya.sharma@pvppcoe.ac.in",
+        "College Email": "priya.sharma@institution.edu",
         "Mobile Number": "9876543210",
         "Roll ID": "VU21CS042",
         "Department": "COMPS",
@@ -854,7 +857,7 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
       },
       {
         "Full Name": "Rahul Verma",
-        "College Email": "rahul.verma@pvppcoe.ac.in",
+        "College Email": "rahul.verma@institution.edu",
         "Mobile Number": "9876543211",
         "Roll ID": "VU21IT088",
         "Department": "IT",
@@ -1121,9 +1124,12 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
 
 export default function ManageUsers() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("admins"); // 'admins' | 'coordinators' | 'mentors' | 'students'
   const [searchQuery, setSearchQuery] = useState('');
   const [isBulkExcelOpen, setIsBulkExcelOpen] = useState(false);
+  const [pendingUsersCount, setPendingUsersCount] = useState(0);
+  const [pendingUsersList, setPendingUsersList] = useState([]);
 
   // Tab Data States
   const [adminRequests, setAdminRequests] = useState(DEFAULT_ADMINS);
@@ -1137,28 +1143,93 @@ export default function ManageUsers() {
   const [isAssignTrainerOpen, setIsAssignTrainerOpen] = useState(false);
   const [isAssignMentorOpen, setIsAssignMentorOpen] = useState(false);
 
+  const handleApprovePendingUser = async (user) => {
+    try {
+      const res = await apiFetch(`/admin/users/${user.id}/approve`, { method: 'PATCH' });
+      if (res && (res.success || !res.error)) {
+        alert(`Account approved successfully for ${user.name}! They can now log in.`);
+        setPendingUsersList(prev => prev.filter(u => u.id !== user.id));
+        setPendingUsersCount(prev => Math.max(0, prev - 1));
+      } else {
+        alert(res?.error || res?.message || 'Failed to approve user.');
+      }
+    } catch (err) {
+      console.error('Approve error:', err);
+      alert('Failed to approve user account.');
+    }
+  };
+
+  const handleRejectPendingUser = async (user) => {
+    if (!window.confirm(`Are you sure you want to reject registration for ${user.name}?`)) return;
+    try {
+      const res = await apiFetch(`/admin/users/${user.id}/reject`, { method: 'PATCH' });
+      if (res && (res.success || !res.error)) {
+        alert(`Registration rejected for ${user.name}.`);
+        setPendingUsersList(prev => prev.filter(u => u.id !== user.id));
+        setPendingUsersCount(prev => Math.max(0, prev - 1));
+      } else {
+        alert(res?.error || res?.message || 'Failed to reject user.');
+      }
+    } catch (err) {
+      console.error('Reject error:', err);
+      alert('Failed to reject user account.');
+    }
+  };
+
   useEffect(() => {
     collegeAPI.getColleges()
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setCollegesList(data);
-          setCodeCollege(data[0].name);
         }
       })
       .catch(err => console.error("Error loading colleges for ManageUsers modal:", err));
+
+    apiFetch('/admin/pending-users')
+      .then(res => {
+        if (res && res.data && Array.isArray(res.data)) {
+          setPendingUsersList(res.data);
+          setPendingUsersCount(res.data.length);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
 
     const fetchUsers = async () => {
       try {
-        const res = await apiFetch('/admin/users');
-        if (res && Array.isArray(res.users) && res.users.length > 0) {
-          setAllRawUsers(res.users);
-          const dbAdmins = res.users.filter(u => u.role === 'college_admin');
-          const dbCoords = res.users.filter(u => u.role === 'coordinator');
-          const dbMentors = res.users.filter(u => u.role === 'mentor');
-          const dbStudents = res.users.filter(u => u.role === 'student');
+        const [res, pendingRes] = await Promise.all([
+          apiFetch('/admin/users').catch(() => null),
+          apiFetch('/admin/pending-users').catch(() => null)
+        ]);
+
+        const pendingData = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
+          ? pendingRes.data
+          : (Array.isArray(pendingRes) ? pendingRes : []);
+
+        setPendingUsersList(pendingData);
+        setPendingUsersCount(pendingData.length);
+
+        const usersData = res && res.data && Array.isArray(res.data)
+          ? res.data
+          : (Array.isArray(res) ? res : (res && Array.isArray(res.users) ? res.users : []));
+
+        if (usersData.length > 0 || pendingData.length > 0) {
+          setAllRawUsers(usersData);
+
+          // Combine active users with pending users
+          const allCombined = [...usersData];
+          pendingData.forEach(p => {
+            if (!allCombined.some(u => u.id === p.id)) {
+              allCombined.push({ ...p, is_active: 0 });
+            }
+          });
+
+          const dbAdmins = allCombined.filter(u => u.role === 'college_admin' || u.role === 'admin' || u.role === 'hod');
+          const dbCoords = allCombined.filter(u => u.role === 'coordinator');
+          const dbMentors = allCombined.filter(u => u.role === 'mentor' || u.role === 'faculty');
+          const dbStudents = allCombined.filter(u => u.role === 'student');
 
           if (dbAdmins.length > 0) {
             setAdminRequests(dbAdmins.map(u => ({
@@ -1167,7 +1238,7 @@ export default function ManageUsers() {
               adminName: u.name || 'College Admin',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
+              college: u.college_name || u.college || 'Partner Institution',
               designation: 'Institutional Admin',
               date: u.created_at ? u.created_at.split('T')[0] : '2026-09-20',
               status: u.is_active ? 'Verified' : 'Pending'
@@ -1180,7 +1251,7 @@ export default function ManageUsers() {
               name: u.name || 'Coordinator',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Padmabhushan Vasantdada Patil Pratishthan College of Engineering',
+              college: u.college_name || u.college || 'Partner Institution',
               department: u.department_name || u.department || 'Computer Engineering',
               status: u.is_active ? 'Active' : 'Inactive'
             })));
@@ -1208,12 +1279,12 @@ export default function ManageUsers() {
               batch: u.batch || 'CSE 2026 Cohort',
               attendance: u.attendance || '90%',
               risk: u.risk || 'Low Risk',
-              status: 'Active'
+              status: u.is_active ? 'Active' : 'Pending'
             })));
           }
         }
       } catch (err) {
-        console.warn("Error fetching users from database, using fallback system data:", err);
+        console.warn("Error fetching users from database:", err);
       }
     };
 
@@ -1235,12 +1306,33 @@ export default function ManageUsers() {
   }, [location.pathname]);
 
   // Admin Verification handlers
-  const handleVerifyAdmin = (id) => {
-    setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+  const handleVerifyAdmin = async (id) => {
+    try {
+      const res = await apiFetch(`/admin/users/${id}/approve`, { method: "PATCH" });
+      if (res && (res.success || !res.error)) {
+        setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+        setPendingUsersList((prev) => prev.filter((u) => u.id !== id));
+      } else {
+        alert(res?.error || "Failed to verify admin account");
+      }
+    } catch (err) {
+      setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+    }
   };
 
-  const handleRejectAdmin = (id) => {
-    setAdminRequests(adminRequests.filter((r) => r.id !== id));
+  const handleRejectAdmin = async (id) => {
+    if (!window.confirm("Are you sure you want to reject this admin request?")) return;
+    try {
+      const res = await apiFetch(`/admin/users/${id}/reject`, { method: "PATCH" });
+      if (res && (res.success || !res.error)) {
+        setAdminRequests(adminRequests.filter((r) => r.id !== id));
+        setPendingUsersList((prev) => prev.filter((u) => u.id !== id));
+      } else {
+        alert(res?.error || "Failed to reject admin account");
+      }
+    } catch (err) {
+      setAdminRequests(adminRequests.filter((r) => r.id !== id));
+    }
   };
 
   const handleTrigger2FA = async (userId, userName) => {
@@ -1248,40 +1340,40 @@ export default function ManageUsers() {
       const res = await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
         method: 'POST',
       });
-      if (res && res.success) {
-        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA is now required on their next login.`);
+      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
+        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA setup will be required on their next login.`);
       } else {
-        alert(res?.message || 'Failed to trigger two-step verification.');
+        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
       }
     } catch (err) {
       console.error('Trigger 2FA error:', err);
-      alert('Failed to trigger two-step verification.');
+      alert(err?.message || 'Failed to trigger two-step verification.');
     }
   };
 
   // Filtering
   const filteredAdmins = adminRequests.filter(req =>
-    req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    req.college.toLowerCase().includes(searchQuery.toLowerCase())
+    (req?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (req?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (req?.college || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredCoordinators = coordinators.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.department.toLowerCase().includes(searchQuery.toLowerCase())
+    (c?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c?.college || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c?.department || c?.dept || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredMentors = mentors.filter(m =>
-    m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.college.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    m.track.toLowerCase().includes(searchQuery.toLowerCase())
+    (m?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m?.college || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m?.track || m?.department || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const filteredStudents = students.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.rollNo.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.college.toLowerCase().includes(searchQuery.toLowerCase())
+    (s?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s?.rollNo || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (s?.college || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const tabs = [
@@ -1292,10 +1384,12 @@ export default function ManageUsers() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isGenerateCodeModalOpen, setIsGenerateCodeModalOpen] = useState(false);
   const [copiedCodeId, setCopiedCodeId] = useState(null);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   // New User Form State
   const [newUserForm, setNewUserForm] = useState({
     name: '',
+    password: '',
     email: '',
     role: 'admins',
     collegeId: '',
@@ -1338,7 +1432,7 @@ export default function ManageUsers() {
 
   // Generate Code Form State
   const [codeRole, setCodeRole] = useState('admins');
-  const [codeCollege, setCodeCollege] = useState('PVPPCOE Mumbai');
+  const [codeCollege, setCodeCollege] = useState('Partner Campus');
   const [codeExpiry, setCodeExpiry] = useState('1 Day');
   const [codeMaxUses, setCodeMaxUses] = useState('1');
   const [generatedCode, setGeneratedCode] = useState(null);
@@ -1451,6 +1545,7 @@ export default function ManageUsers() {
     const targetRole = roleMapping[newUserForm.role] || 'student';
     const payload = {
       name: newUserForm.name,
+      password: newUserForm.password,
       email: newUserForm.email,
       mobile_number: newUserForm.phone,
       role: targetRole,
@@ -1543,13 +1638,23 @@ export default function ManageUsers() {
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <div className="manageusers-header-title">
+          <h2 className="manageusers-header-title" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>
+            <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
             <span>Manage Users &amp; Registration Codes</span>
-          </div>
+          </h2>
           <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>
         </div>
 
         <div className="sa-header-actions">
+          <button
+            type="button"
+            onClick={() => navigate('/super-admin/approve-users')}
+            className="manageusers-btn-secondary"
+            style={{ background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0", fontWeight: 700 }}
+          >
+            <UserCheck size={16} />
+            <span>Approve Registrations {pendingUsersCount > 0 && `(${pendingUsersCount})`}</span>
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -1572,30 +1677,55 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="manageusers-tabs-bar">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => {
-                setActiveTab(tab.id);
-                setSearchQuery('');
-              }}
-              className={`manageusers-tab-btn ${isActive ? 'manageusers-tab-btn--active' : ''}`}
-            >
-              <Icon size={15} />
-              <span>{tab.label}</span>
-              <span className="manageusers-tab-badge">
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {pendingUsersCount > 0 && (
+        <div
+          style={{
+            background: '#fffbeb',
+            border: '1px solid #fcd34d',
+            borderRadius: '12px',
+            padding: '14px 18px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            boxShadow: '0 2px 8px rgba(217, 119, 6, 0.08)'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Clock size={20} style={{ color: '#b45309', flexShrink: 0 }} />
+            <div>
+              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#92400e' }}>
+                {pendingUsersCount} User Registration(s) Pending Approval
+              </h4>
+              <p style={{ margin: 0, fontSize: '12.5px', color: '#b45309' }}>
+                New user accounts have completed registration &amp; 2FA setup and are waiting for administrator review and approval.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/super-admin/approve-users')}
+            style={{
+              background: '#d97706',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <UserCheck size={15} />
+            <span>Review &amp; Approve Users</span>
+          </button>
+        </div>
+      )}
 
       {/* Search Input */}
       <div className="sa-search-card">
@@ -1603,7 +1733,7 @@ export default function ManageUsers() {
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-            placeholder={`Search ${tabs.find(t => t.id === activeTab)?.label.toLowerCase()}...`}
+            placeholder="Search admins..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"
@@ -1611,15 +1741,89 @@ export default function ManageUsers() {
         </div>
       </div>
 
+      {/* PENDING REGISTRATIONS APPROVAL SECTION */}
+      {pendingUsersList.length > 0 && (
+        <div className="manageusers-table-card mb-6" style={{ border: '1px solid #fcd34d', background: '#fffefb', marginBottom: '24px' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Clock size={18} color="#d97706" />
+              <span>Pending User Registrations Awaiting Approval ({pendingUsersList.length})</span>
+            </h3>
+            <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
+              Action Required
+            </span>
+          </div>
+          <div className="manageusers-table-wrap">
+            <table className="manageusers-table">
+              <thead>
+                <tr className="manageusers-thead-row">
+                  <th className="manageusers-th">Applicant Name &amp; Contact</th>
+                  <th className="manageusers-th">Requested Role</th>
+                  <th className="manageusers-th">College / Dept</th>
+                  <th className="manageusers-th">Status</th>
+                  <th className="manageusers-th-right">Governance Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingUsersList.map((user) => (
+                  <tr key={user.id} className="manageusers-tr">
+                    <td className="manageusers-td">
+                      <div className="font-bold text-slate-900">{user.name}</div>
+                      <div className="manageusers-contact-row mt-1">
+                        <Mail size={14} className="manageusers-contact-icon" />
+                        <span className="manageusers-contact-text">{user.email || user.mobile_number || 'N/A'}</span>
+                      </div>
+                    </td>
+                    <td className="manageusers-td">
+                      <span style={{ textTransform: 'capitalize', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: '#e0e7ff', color: '#3730a3', fontSize: '12px' }}>
+                        {user.role}
+                      </span>
+                    </td>
+                    <td className="manageusers-td">
+                      <div className="manageusers-contact-row manageusers-contact-row--bold">
+                        <Building2 size={15} className="manageusers-contact-icon manageusers-contact-icon--indigo" />
+                        <span>{user.college_name || user.department || 'Apex Institution'}</span>
+                      </div>
+                    </td>
+                    <td className="manageusers-td">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
+                        Pending Admin Approval
+                      </span>
+                    </td>
+                    <td className="manageusers-td-right">
+                      <div className="manageusers-actions-row">
+                        <button
+                          type="button"
+                          onClick={() => handleApprovePendingUser(user)}
+                          className="manageusers-btn-verify"
+                          style={{ background: '#16a34a', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer' }}
+                        >
+                          <CheckCircle2 size={15} />
+                          <span>Approve Account</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRejectPendingUser(user)}
+                          className="manageusers-btn-reject"
+                          style={{ background: '#ef4444', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer' }}
+                        >
+                          <XCircle size={15} />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* TAB CONTENT: HODs & College Admins */}
       {activeTab === "admins" && (
         <div className="manageusers-tab-content">
-          <div className="manageusers-banner">
-            <ShieldCheck className="manageusers-banner-icon" />
-            <p className="manageusers-banner-text">
-              College Admin register using pre-authorized secure invitation codes issued directly by the Super Admin.
-            </p>
-          </div>
 
 
           <div className="manageusers-table-card">
@@ -1670,7 +1874,7 @@ export default function ManageUsers() {
                         </td>
                         <td className="manageusers-td-right">
                           {req.status === 'Pending' ? (
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="manageusers-actions-row">
                               <button
                                 type="button"
                                 onClick={() => handleVerifyAdmin(req.id)}
@@ -1689,14 +1893,14 @@ export default function ManageUsers() {
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-end gap-2">
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <div className="manageusers-actions-row">
+                              <span className="manageusers-badge-approved">
                                 <CheckCircle2 size={14} /> Approved
                               </span>
                               <button
                                 type="button"
                                 onClick={() => handleTrigger2FA(req.id, req.name)}
-                                className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                className="manageusers-btn-retrigger-2fa"
                                 title="Re-trigger 2-Step Verification setup for this Admin"
                               >
                                 <ShieldAlert size={13} />
@@ -2072,17 +2276,51 @@ export default function ManageUsers() {
                   </div>
                 </div>
 
-                {/* Full Name */}
-                <div className="form-group-admin sa-form-group-full">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    className="form-input-admin"
-                    placeholder="e.g. Priya Sharma"
-                    value={newUserForm.name}
-                    onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
-                  />
+                {/* Full Name & Password (Side-by-Side) */}
+                <div className="form-row-2 sa-form-row-2">
+                  <div className="form-group-admin">
+                    <label>Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Priya Sharma"
+                      value={newUserForm.name}
+                      onChange={(e) => setNewUserForm({ ...newUserForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Password *</label>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        type={showNewUserPassword ? "text" : "password"}
+                        required
+                        className="form-input-admin"
+                        style={{ paddingRight: '40px' }}
+                        placeholder="••••••••"
+                        value={newUserForm.password}
+                        onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                        style={{
+                          position: 'absolute',
+                          right: '12px',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#64748b',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: 0
+                        }}
+                        tabIndex={-1}
+                      >
+                        {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Email & Mobile Number (Mobile Number included for non-students) */}

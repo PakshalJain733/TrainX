@@ -1,6 +1,5 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
-import { config } from '../config/env.js';
 import {
   generateOpeningQuestion,
   generateFollowUpQuestion,
@@ -47,7 +46,7 @@ function getOrCreateSession(sessionId, payload) {
     session.topic = payload.topic || session.topic;
     session.difficulty = payload.difficulty || session.difficulty;
     session.userId = payload.userId || session.userId;
-    session.totalQuestions = Number(payload.totalQuestions) || session.totalQuestions || 12;
+    session.totalQuestions = Number(payload.totalQuestions) || session.totalQuestions || 10;
     session.owner = payload.owner || session.owner;
   }
   return session;
@@ -150,7 +149,7 @@ export function initInterviewSocket(httpServer) {
         if (!origin) return cb(null, true);
         const cleanOrigin = origin.replace(/\/$/, '');
         const allowed = new Set([
-          (config.frontendUrl || '').replace(/\/$/, ''),
+          (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''),
           'http://localhost:5173',
           'http://127.0.0.1:5173',
         ]);
@@ -175,7 +174,7 @@ export function initInterviewSocket(httpServer) {
           if (isLocalHost || isAllowedDeployment) return cb(null, true);
         } catch (e) {}
 
-        if (!config.frontendUrl || config.nodeEnv !== 'production') {
+        if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
           return cb(null, true);
         }
 
@@ -192,13 +191,15 @@ export function initInterviewSocket(httpServer) {
     try {
       const token =
         socket.handshake.auth?.token ||
+        socket.handshake.query?.token ||
         socket.handshake.headers?.authorization?.replace(/^Bearer\s+/i, '') ||
         '';
       if (!token) return next(new Error('Authentication token required'));
 
       let decoded;
       try {
-        decoded = jwt.verify(token, config.jwt.secret);
+        const jwtSecret = process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal';
+        decoded = jwt.verify(token, jwtSecret);
       } catch (err) {
         return next(new Error(err?.name === 'TokenExpiredError' ? 'Session expired. Please log in again.' : 'Invalid or expired token'));
       }
@@ -268,23 +269,23 @@ export function initInterviewSocket(httpServer) {
           sessionId: session.id,
         });
 
-        if (!opening) {
-          socket.emit('interview:error', {
-            message: 'Could not generate an interview question. Please try again.',
-          });
-          return;
-        }
+        const effectiveOpening = opening || {
+          source: 'fallback-hardcoded',
+          question: `Welcome to your ${session.role || 'technical'} interview focusing on ${session.topic || 'Core CS'}. To get started, please introduce yourself and tell me about one project you have built or feel most confident in.`,
+          topic: 'Introduction & Project Overview',
+          hint: 'Briefly state your background, role focus, and describe a project you built.',
+        };
 
-        session.priorQa.push({ question: opening.question, answer: null, score: null });
-        session.askedTopics.push(opening.topic);
+        session.priorQa.push({ question: effectiveOpening.question, answer: null, score: null });
+        session.askedTopics.push(effectiveOpening.topic);
 
         socket.emit('interview:question', {
           sessionId: session.id,
           index: 1,
           total: session.totalQuestions,
-          question: opening.question,
-          topic: opening.topic,
-          hint: opening.hint,
+          question: effectiveOpening.question,
+          topic: effectiveOpening.topic,
+          hint: effectiveOpening.hint,
         });
       } catch (err) {
         socket.emit('interview:error', { message: `Interview start failed: ${err.message}` });
@@ -305,15 +306,31 @@ export function initInterviewSocket(httpServer) {
         }
 
         const qa = session.priorQa[session.priorQa.length - 1];
+        const isLastQuestion = session.currentIndex + 1 >= session.totalQuestions;
 
-        const evaluation = await evaluateAnswer({
-          role: session.role,
-          topic: session.topic,
-          question: qa.question,
-          answer,
-          difficulty: session.difficulty,
-          owner: session.owner,
-        });
+        // Run evaluation and next question generation concurrently for maximum speed
+        const [evaluation, followUp] = await Promise.all([
+          evaluateAnswer({
+            role: session.role,
+            topic: session.topic,
+            question: qa.question,
+            answer,
+            difficulty: session.difficulty,
+            owner: session.owner,
+          }),
+          !isLastQuestion
+            ? generateFollowUpQuestion({
+                role: session.role,
+                topic: session.topic,
+                difficulty: session.difficulty,
+                owner: session.owner,
+                priorQa: session.priorQa,
+                evaluationHistory: session.evaluationHistory,
+                askedTopics: session.askedTopics,
+                sessionId: session.id,
+              })
+            : Promise.resolve(null),
+        ]);
 
         const score = evaluation?.score ?? 0;
         qa.answer = answer;
@@ -343,16 +360,6 @@ export function initInterviewSocket(httpServer) {
           await finalizeSession(io, socket, session, 'completed');
           return;
         }
-
-        const followUp = await generateFollowUpQuestion({
-          role: session.role,
-          topic: session.topic,
-          difficulty: session.difficulty,
-          owner: session.owner,
-          priorQa: session.priorQa,
-          askedTopics: session.askedTopics,
-          sessionId: session.id,
-        });
 
         if (!followUp) {
           socket.emit('interview:error', {

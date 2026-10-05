@@ -29,7 +29,6 @@ import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
-import { config } from '../config/env.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 const PREAUTH_TOKEN_TTL = '10m';
@@ -137,7 +136,7 @@ const generatePreauthToken = (user) => jwt.sign({
   tokenType: PREAUTH_TOKEN_TYPE,
   purpose: PREAUTH_PURPOSE,
   jti: randomUUID(),
-}, config.jwt.secret, {
+}, process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal', {
   expiresIn: PREAUTH_TOKEN_TTL,
 });
 
@@ -158,33 +157,41 @@ const finalizePrimaryAuthentication = async (user) => {
   }
 
   if (isAdminRole) {
-    const isResetTriggered = user?.two_factor_reset === 1 ||
-      user?.two_factor_reset === true ||
-      user?.two_factor_reset === '\x01' ||
-      String(user?.two_factor_reset ?? '').toLowerCase().trim() === '1' ||
-      String(user?.two_factor_reset ?? '').toLowerCase().trim() === 'true';
+    let secret = user?.two_factor_secret;
 
-    if (isResetTriggered && !isBlank(user?.two_factor_secret)) {
-      let qrCode = null;
+    if (isBlank(secret)) {
+      secret = speakeasy.generateSecret({ length: 20, name: `TrainingPortal (${user.email || user.name})` }).base32;
       try {
-        const otpauthUrl = speakeasy.otpauthURL({
-          secret: user.two_factor_secret,
-          label: `TrainingPortal (${user.email || user.name})`,
-          issuer: 'TrainingPortal',
-          encoding: 'base32',
+        await updateUserModel(user.id, {
+          two_factor_secret: secret,
+          two_factor_reset: 1,
+          two_factor_enabled: 0
         });
-        qrCode = await QRCode.toDataURL(otpauthUrl);
-      } catch (_) {}
-
-      return {
-        requiresTwoFactorSetup: true,
-        email: user.email,
-        qrCode,
-        secret: user.two_factor_secret,
-      };
+      } catch (err) {
+        console.warn('[Auth Service] 2FA auto-setup init error:', err.message);
+      }
+      user.two_factor_secret = secret;
+      user.two_factor_reset = 1;
+      user.two_factor_enabled = 0;
     }
 
-    throw createAuthError('2FA setup is incomplete. Please contact the Super Admin to re-trigger 2FA setup.', 400);
+    let qrCode = null;
+    try {
+      const otpauthUrl = speakeasy.otpauthURL({
+        secret: user.two_factor_secret,
+        label: `TrainingPortal (${user.email || user.name})`,
+        issuer: 'TrainingPortal',
+        encoding: 'base32',
+      });
+      qrCode = await QRCode.toDataURL(otpauthUrl);
+    } catch (_) {}
+
+    return {
+      requiresTwoFactorSetup: true,
+      email: user.email,
+      qrCode,
+      secret: user.two_factor_secret,
+    };
   }
 
   return {
@@ -214,7 +221,7 @@ const decodePreauthToken = (token) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(normalizedToken, config.jwt.secret);
+    decoded = jwt.verify(normalizedToken, process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal');
   } catch {
     throw createAuthError('Invalid or expired temporary authentication token.', 401);
   }
@@ -316,6 +323,7 @@ export const sendRegistrationOtp = async (data = {}) => {
 
   const otp = generateOtp(6);
   await saveRegistrationOtp(email, otp);
+  console.log(`🔑 [AUTH OTP] Registration OTP generated for ${email}: ${otp}`);
 
   try {
     const emailResult = await sendOtpEmail({ to: email, otp, name: data.name || '' });
@@ -656,12 +664,11 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
 
   const user = await findUserByEmailOrMobile(identifier);
   if (!user) {
-    throw createAuthError('No account is pending Authenticator pairing for this identifier.', 400);
+    throw createAuthError('No account found matching this email or mobile number.', 400);
   }
-  assertUserCanAuthenticate(user);
 
-  if (isTwoFactorEnabled(user.two_factor_enabled) || isBlank(user.two_factor_secret)) {
-    throw createAuthError('This account is not pending Authenticator pairing. Please sign in instead.', 400);
+  if (isBlank(user.two_factor_secret)) {
+    throw createAuthError('No Authenticator 2FA setup found for this account. Please log in with password.', 400);
   }
 
   if (!verifyTotpToken(user.two_factor_secret, totpCode)) {
@@ -669,6 +676,14 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
   }
 
   await enableTwoFactorForUser(user.id);
+
+  if (user.role !== 'super_admin' && isInactiveUser(user)) {
+    return {
+      requiresTwoFactor: false,
+      pendingApproval: true,
+      message: '2FA verification completed. Your account is pending Admin approval.',
+    };
+  }
 
   return {
     requiresTwoFactor: false,
@@ -735,7 +750,7 @@ export const sendUserOtp = async (identifier) => {
     console.log(`[AUTH] OTP email successfully dispatched to ${recipientEmail} (Message ID: ${emailResult?.messageId || 'sent'})`);
   } catch (error) {
     console.error(`[AUTH Error] OTP email dispatch failed for ${recipientEmail}:`, error.message);
-    if (!isSuperAdminEmail && config.nodeEnv === 'production') {
+    if (!isSuperAdminEmail && process.env.NODE_ENV === 'production') {
       throw createAuthError(`Failed to send OTP email: ${error.message || 'Email service error'}`, 500);
     }
   }

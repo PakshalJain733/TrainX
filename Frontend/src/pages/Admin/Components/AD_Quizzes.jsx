@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send } from "lucide-react";
+import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send, UploadCloud, FileSpreadsheet, FileText, Copy, Download, FileCheck } from "lucide-react";
+import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
@@ -67,6 +68,7 @@ function mapAssessment(a) {
 }
 
 
+
 export default function AdminQuizzes() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -97,6 +99,99 @@ export default function AdminQuizzes() {
   const [optC, setOptC] = useState("");
   const [optD, setOptD] = useState("");
   const [correctOpt, setCorrectOpt] = useState("a");
+
+  // Excel Bulk Upload State
+  const [parsedBulkQuestions, setParsedBulkQuestions] = useState([]);
+  const [bulkFileName, setBulkFileName] = useState("");
+  const [showBulkPreview, setShowBulkPreview] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Generate & Download Sample Excel (.xlsx) Template
+  const downloadExcelTemplate = () => {
+    const templateData = [
+      {
+        "Question": "",
+        "Option A": "",
+        "Option B": "",
+        "Option C": "",
+        "Option D": "",
+        "Correct Option": ""
+      }
+    ];
+
+    const worksheet = XLSX.utils.json_to_sheet(templateData);
+    worksheet['!cols'] = [
+      { wch: 45 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 15 }
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Quiz Questions");
+    XLSX.writeFile(workbook, "Quiz_Questions_Template.xlsx");
+  };
+
+  // Parse Uploaded Excel (.xlsx, .xls, .csv) File
+  const handleExcelFileUpload = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+        if (!jsonRows || jsonRows.length === 0) {
+          alert("The uploaded file appears to be empty.");
+          return;
+        }
+
+        const parsedQuestions = jsonRows.map((row, idx) => {
+          const qText = row["Question"] || row["question"] || row["Question Text"] || row["Q"] || Object.values(row)[0] || "";
+          const optA = row["Option A"] || row["option_a"] || row["OptionA"] || row["A"] || Object.values(row)[1] || "";
+          const optB = row["Option B"] || row["option_b"] || row["OptionB"] || row["B"] || Object.values(row)[2] || "";
+          const optC = row["Option C"] || row["option_c"] || row["OptionC"] || row["C"] || Object.values(row)[3] || "N/A";
+          const optD = row["Option D"] || row["option_d"] || row["OptionD"] || row["D"] || Object.values(row)[4] || "N/A";
+          let rawAns = (row["Correct Option"] || row["correct_option"] || row["Correct"] || row["Answer"] || Object.values(row)[5] || "A").toString().toLowerCase().trim();
+
+          let correct = "a";
+          if (["a", "1", "option a", "option_a"].includes(rawAns)) correct = "a";
+          else if (["b", "2", "option b", "option_b"].includes(rawAns)) correct = "b";
+          else if (["c", "3", "option c", "option_c"].includes(rawAns)) correct = "c";
+          else if (["d", "4", "option d", "option_d"].includes(rawAns)) correct = "d";
+          else if (optA && rawAns === optA.toLowerCase()) correct = "a";
+          else if (optB && rawAns === optB.toLowerCase()) correct = "b";
+          else if (optC && rawAns === optC.toLowerCase()) correct = "c";
+          else if (optD && rawAns === optD.toLowerCase()) correct = "d";
+
+          return {
+            id: Date.now() + idx,
+            text: String(qText).trim(),
+            options: { a: String(optA).trim(), b: String(optB).trim(), c: String(optC).trim(), d: String(optD).trim() },
+            correct
+          };
+        }).filter(q => q.text && q.options.a && q.options.b);
+
+        if (parsedQuestions.length === 0) {
+          alert("Could not parse valid questions. Please ensure row 1 has column headers: Question, Option A, Option B, Option C, Option D, Correct Option.");
+          return;
+        }
+
+        setParsedBulkQuestions(parsedQuestions);
+        setBulkFileName(file.name);
+        setShowBulkPreview(true);
+      } catch (err) {
+        alert("Error reading Excel file: " + err.message);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  };
 
   // View Quiz Questions Modal
   const [activeQuizQuestions, setActiveQuizQuestions] = useState(null);
@@ -371,6 +466,21 @@ export default function AdminQuizzes() {
         setGeneratingPhase("");
       }
 
+    } else if (mode === "bulk") {
+      if (parsedBulkQuestions.length === 0) {
+        alert("No valid questions parsed. Please upload a valid Excel (.xlsx, .xls, .csv) file.");
+        return;
+      }
+      setIsGenerating(true);
+      try {
+        await saveQuizToDB(parsedBulkQuestions, "Bulk Upload");
+        await fetchQuizzes();
+        resetForm();
+      } catch (err) {
+        alert("Error creating quiz from bulk upload: " + err.message);
+      } finally {
+        setIsGenerating(false);
+      }
     } else {
       if (manualQuestions.length === 0) { alert("Please add at least 1 question before saving the quiz."); return; }
       setIsGenerating(true);
@@ -390,6 +500,7 @@ export default function AdminQuizzes() {
     setTitle(""); setBatch("All Batches"); setNumQuestions("10");
     setManualQuestions([]); setShowForm(false); setShowManualModal(false);
     setShowVerifyModal(false); setVerifiedQuestions([]);
+    setParsedBulkQuestions([]); setShowBulkPreview(false); setBulkFileName("");
   };
 
   const handleDelete = async (id) => {
@@ -416,7 +527,7 @@ export default function AdminQuizzes() {
               <span>Manage Quizzes</span>
             </h2>
             <p className="ui-section-desc">
-              Create and track quiz assessments across batches using AI or manual entry.
+              Create and track quiz assessments across batches using AI, manual entry, or bulk upload.
             </p>
           </div>
           <div className="ui-section-action">
@@ -430,7 +541,7 @@ export default function AdminQuizzes() {
       {/* CREATE QUIZ MODAL / FLASH SCREEN OVERLAY */}
       {showForm && createPortal(
         <div className="quiz-modal-backdrop" onClick={() => setShowForm(false)}>
-          <div className="quiz-modal-content modal-flash-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px' }}>
+          <div className="quiz-modal-content modal-flash-in" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '820px' }}>
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap modal-header-icon--indigo">
@@ -438,7 +549,7 @@ export default function AdminQuizzes() {
                 </div>
                 <div>
                   <h2 className="modal-title">Create New Quiz Assessment</h2>
-                  <p className="modal-subtitle">Generate questions automatically using AI or build your custom question set manually.</p>
+                  <p className="modal-subtitle">Generate questions automatically using AI, build custom sets manually, or bulk import questions.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
@@ -469,7 +580,19 @@ export default function AdminQuizzes() {
                   <ListPlus size={18} className="mode-icon" />
                   <div className="mode-text">
                     <span className="mode-title">Add Questions (Manual)</span>
-                    <span className="mode-sub">Open custom editor screen to enter questions & choices</span>
+                    <span className="mode-sub">Enter custom questions & choices manually</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`mode-tab ${mode === "bulk" ? "active" : ""}`}
+                  onClick={() => setMode("bulk")}
+                >
+                  <FileSpreadsheet size={18} className="mode-icon bulk-upload-icon" />
+                  <div className="mode-text">
+                    <span className="mode-title">Excel Bulk Upload</span>
+                    <span className="mode-sub">Upload .xlsx layout file to create quiz</span>
                   </div>
                 </button>
               </div>
@@ -517,6 +640,24 @@ export default function AdminQuizzes() {
                         required
                       />
                     </div>
+                  ) : mode === "bulk" ? (
+                    <div className="form-group">
+                      <label>Excel File Status</label>
+                      <div className="manual-status-box">
+                        <span className={`q-count-badge ${parsedBulkQuestions.length > 0 ? "badge-success" : ""}`}>
+                          {parsedBulkQuestions.length} Parsed Question{parsedBulkQuestions.length !== 1 ? "s" : ""}
+                        </span>
+                        {parsedBulkQuestions.length > 0 && (
+                          <button
+                            type="button"
+                            className="open-modal-btn"
+                            onClick={() => setShowBulkPreview(!showBulkPreview)}
+                          >
+                            <Eye size={15} /> {showBulkPreview ? "Hide Preview" : "Preview Questions"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   ) : (
                     <div className="form-group">
                       <label>Manual Questions Status</label>
@@ -553,6 +694,94 @@ export default function AdminQuizzes() {
                   </div>
                 </div>
 
+                {/* DEDICATED COMPACT EXCEL BULK UPLOAD SECTION */}
+                {mode === "bulk" && (
+                  <div className="compact-excel-container">
+                    {/* 1. Compact Top Bar: Columns Guide & Template Download Button */}
+                    <div className="excel-compact-topbar">
+                      <div className="excel-topbar-left">
+                        <FileSpreadsheet size={18} className="excel-green-icon" />
+                        <span className="excel-topbar-title">Excel Columns:</span>
+                        <div className="compact-col-pills">
+                          <span className="col-pill req" title="Question text (Required)">Question</span>
+                          <span className="col-pill req" title="Choice A (Required)">Option A</span>
+                          <span className="col-pill req" title="Choice B (Required)">Option B</span>
+                          <span className="col-pill opt" title="Choice C (Optional)">Option C</span>
+                          <span className="col-pill opt" title="Choice D (Optional)">Option D</span>
+                          <span className="col-pill req" title="Correct Key A/B/C/D (Required)">Correct Option</span>
+                        </div>
+                      </div>
+                      <button type="button" className="excel-download-btn-sm" onClick={downloadExcelTemplate} title="Download standard template layout">
+                        <Download size={14} /> Download Layout (.xlsx)
+                      </button>
+                    </div>
+
+                    {/* 2. Compact Drag & Drop Upload Zone */}
+                    <div className="excel-dropzone-compact" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+                      {bulkFileName ? (
+                        <div className="upload-success-compact">
+                          <CheckCircle2 size={18} color="#10b981" />
+                          <span className="filename-text">{bulkFileName}</span>
+                          <span className="parsed-badge">✓ {parsedBulkQuestions.length} Questions Loaded</span>
+                          <button type="button" className="browse-btn-sm">Change File</button>
+                        </div>
+                      ) : (
+                        <div className="dropzone-content-compact">
+                          <UploadCloud size={20} className="dropzone-icon-sm" />
+                          <span>
+                            Drag & drop Excel file (<strong>.xlsx</strong>, <strong>.xls</strong>) or <span className="browse-link">Upload</span>
+                          </span>
+                        </div>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        required
+                        accept=".xlsx,.xls"
+                        onChange={handleExcelFileUpload}
+                        style={{ display: "none" }}
+                      />
+                    </div>
+
+                    {/* 3. Parsed Questions Preview Section */}
+                    {parsedBulkQuestions.length > 0 && showBulkPreview && (
+                      <div className="bulk-preview-list">
+                        <div className="bulk-preview-header">
+                          <span>Parsed Questions ({parsedBulkQuestions.length})</span>
+                          <span className="bulk-preview-hint">Review parsed choices & correct answers before saving</span>
+                        </div>
+                        <div className="bulk-preview-items">
+                          {parsedBulkQuestions.map((q, idx) => (
+                            <div key={q.id || idx} className="bulk-preview-card">
+                              <div className="bulk-preview-qtext">
+                                <span className="q-num">Q{idx + 1}.</span> {q.text}
+                              </div>
+                              <div className="bulk-preview-options-grid">
+                                <div className={`bulk-opt-item ${q.correct === "a" ? "is-correct" : ""}`}>
+                                  <span className="opt-key">A:</span> {q.options.a}
+                                  {q.correct === "a" && <CheckCircle2 size={13} className="correct-check" />}
+                                </div>
+                                <div className={`bulk-opt-item ${q.correct === "b" ? "is-correct" : ""}`}>
+                                  <span className="opt-key">B:</span> {q.options.b}
+                                  {q.correct === "b" && <CheckCircle2 size={13} className="correct-check" />}
+                                </div>
+                                <div className={`bulk-opt-item ${q.correct === "c" ? "is-correct" : ""}`}>
+                                  <span className="opt-key">C:</span> {q.options.c}
+                                  {q.correct === "c" && <CheckCircle2 size={13} className="correct-check" />}
+                                </div>
+                                <div className={`bulk-opt-item ${q.correct === "d" ? "is-correct" : ""}`}>
+                                  <span className="opt-key">D:</span> {q.options.d}
+                                  {q.correct === "d" && <CheckCircle2 size={13} className="correct-check" />}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="form-actions">
                   <button
                     type="button"
@@ -574,6 +803,14 @@ export default function AdminQuizzes() {
                           <ShieldCheck size={16} /> Generate & Auto-Verify with AI
                         </>
                       )}
+                    </button>
+                  ) : mode === "bulk" ? (
+                    <button
+                      type="submit"
+                      className="quiz-submit-btn bulk-btn"
+                      disabled={isGenerating || parsedBulkQuestions.length === 0}
+                    >
+                      <UploadCloud size={16} /> Save Quiz ({parsedBulkQuestions.length} Questions)
                     </button>
                   ) : (
                     <button type="submit" className="quiz-submit-btn manual-btn" disabled={isGenerating}>

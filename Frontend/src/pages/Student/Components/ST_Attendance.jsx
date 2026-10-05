@@ -144,17 +144,19 @@ export default function Attendance() {
       body: JSON.stringify({ code: codeVal })
     })
       .then((res) => {
-        // Refetch or update local attendance state
+        const message = res?.message || "Attendance marked Present successfully!";
+
+        // Refetch latest student attendance summary from backend database
         apiFetch("/student/attendance").then((attRes) => {
           if (attRes && attRes.data) {
             setData((prev) => ({ ...prev, ...attRes.data }));
           }
         }).catch(() => { });
 
-        // Optimistically increment attended counts & add today's log
+        // Optimistically increment attended counts & add today's log entry
         setData((prev) => {
           const newAttended = (prev.attendedClasses || 0) + 1;
-          const newTotal = (prev.totalClasses || 0) + 1;
+          const newTotal = Math.max(newAttended, (prev.totalClasses || 0));
           const newPct = Math.round((newAttended / newTotal) * 100);
           const todayDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
           const newLog = {
@@ -175,8 +177,15 @@ export default function Attendance() {
             attendanceHistory: [newLog, ...(prev.attendanceHistory || [])]
           };
         });
+
+        alert(`✅ ${message}`);
       })
-      .catch((err) => console.error("MARK ATTENDANCE ERROR:", err));
+      .catch((err) => {
+        console.error("MARK ATTENDANCE ERROR:", err);
+        setCameraStatus("error");
+        setCameraError(err.message || "Failed to mark attendance. Please verify the code.");
+        alert(`❌ ${err.message || "Invalid or expired QR code."}`);
+      });
   }, [stopCamera]);
 
   const startCamera = useCallback(async () => {
@@ -625,7 +634,6 @@ export default function Attendance() {
         <TabsList>
           <TabsTrigger value="subjects">Subject-Wise Breakdown</TabsTrigger>
           <TabsTrigger value="leave">Apply Leave / Absence</TabsTrigger>
-          <TabsTrigger value="verify">Verification Tracker</TabsTrigger>
         </TabsList>
 
         {/* Subject-Wise Breakdown Tab */}
@@ -704,28 +712,6 @@ export default function Attendance() {
                 </form>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-
-        {/* Verification Tab */}
-        <TabsContent value="verify" className="stack-6">
-          <div className="attendance-stack-4">
-            {verifications.map((v) => (
-              <Card key={v.id} className="attendance-verify-card">
-                <CardContent className="attendance-verify-card-content">
-                  <div className="attendance-verify-card-header">
-                    <div>
-                      <Badge variant="outline">{v.id}</Badge>
-                      <h4 className="attendance-verify-card-title">{v.title}</h4>
-                      <p className="attendance-verify-dates-text">{v.startDate} ({v.days} Days)</p>
-                    </div>
-                    <Badge className={v.status === "Approved" ? "attendance-status-badge-present" : "attendance-status-badge-excused"}>
-                      {v.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </TabsContent>
       </Tabs>

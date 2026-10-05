@@ -249,7 +249,17 @@ function getVideoForTopic(topicInput, topicIndex, m, targetRole) {
     vId = resolveEmbeddableVideoId(cleanTitle, targetRole, m?.title);
   }
 
-  if (!vId) return null;
+  // Guarantee every topic has a visible working video tutorial
+  if (!vId) {
+    const roleLower = (targetRole || m?.title || cleanTitle).toLowerCase();
+    if (roleLower.includes("python") || roleLower.includes("django") || roleLower.includes("data")) vId = "rfscVS0vtbw";
+    else if (roleLower.includes("java") || roleLower.includes("spring")) vId = "eIrMbAQSU34";
+    else if (roleLower.includes("c++") || roleLower.includes("cpp")) vId = "1Rs2ND1ryYc";
+    else if (roleLower.includes("react") || roleLower.includes("frontend") || roleLower.includes("html") || roleLower.includes("css")) vId = "w7ejDZ8SWv8";
+    else if (roleLower.includes("sql") || roleLower.includes("db") || roleLower.includes("mongo")) vId = "HXV3zeQKqGY";
+    else if (roleLower.includes("node") || roleLower.includes("backend") || roleLower.includes("express")) vId = "Oe421EPjeBE";
+    else vId = "rfscVS0vtbw";
+  }
 
   const query = `${cleanTitle} tutorial ${targetRole || ""}`.trim();
   const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
@@ -260,7 +270,7 @@ function getVideoForTopic(topicInput, topicIndex, m, targetRole) {
     channel: vidObj?.channel || "Technical Video Lesson",
     duration: vidObj?.duration || "20 mins",
     videoId: vId,
-    embedUrl: `https://www.youtube.com/embed/${vId}?rel=0`,
+    embedUrl: `https://www.youtube-nocookie.com/embed/${vId}?rel=0&autoplay=1`,
     searchUrl: searchUrl,
     topicsCovered: cleanTitle,
   };
@@ -1209,6 +1219,43 @@ export default function AIRoadmap() {
                             })}
                           </ul>
                         </div>
+
+                        {/* 2. Detailed Syllabus & Subtopic Breakdown */}
+                        {Array.isArray(m.syllabus) && m.syllabus.length > 0 && (
+                          <div className="drawer-section mt-4">
+                            <h4 className="drawer-heading">
+                              <BookOpen size={15} className="text-indigo-600" />
+                              <span>Detailed Syllabus & Subtopic Breakdown</span>
+                            </h4>
+                            <div className="roadmap-syllabus-grid" style={{ display: "grid", gap: "10px", marginTop: "10px" }}>
+                              {m.syllabus.map((syl, sIdx) => (
+                                <div key={sIdx} style={{
+                                  backgroundColor: "#f8fafc",
+                                  border: "1px solid #e2e8f0",
+                                  borderRadius: "10px",
+                                  padding: "14px 16px"
+                                }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                                    <h5 style={{ margin: 0, fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>{syl.moduleTitle}</h5>
+                                    {syl.duration && <span style={{ fontSize: "12px", background: "#e0e7ff", color: "#4338ca", padding: "2px 8px", borderRadius: "12px", fontWeight: 600 }}>{syl.duration}</span>}
+                                  </div>
+                                  {Array.isArray(syl.concepts) && (
+                                    <ul style={{ margin: "6px 0", paddingLeft: "18px", fontSize: "13px", color: "#475569" }}>
+                                      {syl.concepts.map((c, cIdx) => (
+                                        <li key={cIdx} style={{ marginBottom: "3px" }}>{c}</li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                  {syl.practicalOutcome && (
+                                    <div style={{ fontSize: "12px", color: "#059669", fontWeight: 600, marginTop: "6px" }}>
+                                      💡 Practical Outcome: {syl.practicalOutcome}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
 
 

@@ -102,7 +102,7 @@ export default function AdminAttendance() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodePayload, setQrCodePayload] = useState("");
   const [copied, setCopied] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30); // 30 secs validity
+  const [timeLeft, setTimeLeft] = useState(5); // 5 secs validity
   const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
   const canvasRef = useRef(null);
   const isDirtyRef = useRef(false);
@@ -278,7 +278,7 @@ export default function AdminAttendance() {
     const randomSalt = Math.random().toString(36).substring(2, 7).toUpperCase();
     const payload = `${selectedBatchCode || "JAVA-QRVL"}:${randomSalt}`;
     setQrCodePayload(payload);
-    setTimeLeft(10);
+    setTimeLeft(5);
   }, [selectedBatchCode]);
 
   // Manual regenerate button resets auto-refresh counter
@@ -308,7 +308,7 @@ export default function AdminAttendance() {
     }
   }, [qrModalOpen, qrCodePayload]);
 
-  // QR Validity Timer & 18 Auto-Refresh Logic (10s per cycle)
+  // QR Validity Timer & 18 Auto-Refresh Logic (5s per cycle)
   useEffect(() => {
     let timer = null;
     if (qrModalOpen) {
@@ -459,7 +459,7 @@ export default function AdminAttendance() {
                   }}>
                     <XCircle size={36} color="#ef4444" />
                     <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>QR Code Expired</span>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>10 second session window reached</span>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>5 second session window reached</span>
                     <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "4px", background: "#2563eb", color: "#ffffff", border: "none" }}>
                       <RefreshCw size={14} /> Regenerate QR
                     </button>
@@ -472,10 +472,10 @@ export default function AdminAttendance() {
 
               {/* Timer Countdown */}
               <div className="admin-qr-details">
-                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 10 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 10 ? "1px solid #fecaca" : "none" }}>
-                  <Clock size={16} className={timeLeft <= 10 ? "text-red-600 animate-pulse" : "text-blue-600"} />
-                  <span>Valid for: <strong style={{ color: timeLeft <= 10 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
-                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (10-Sec Limit)</span>}
+                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "none" }}>
+                  <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
+                  <span>Valid for: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
+                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (5-Sec Limit)</span>}
                 </div>
               </div>
             </div>

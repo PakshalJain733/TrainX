@@ -242,8 +242,6 @@ export default function MaintenanceControls() {
         return CalendarCheck;
       case "College Admin":
         return SlidersHorizontal;
-      case "Super Admin & Core AI":
-        return Sparkles;
       default:
         return SlidersHorizontal;
     }
@@ -261,7 +259,6 @@ export default function MaintenanceControls() {
     { id: "Mentor Features", label: "Mentor Workspace", count: modulesList.filter(m => m.category === "Mentor Features").length },
     { id: "Coordinator Features", label: "Coordinator Faculty", count: modulesList.filter(m => m.category === "Coordinator Features").length },
     { id: "College Admin", label: "College Admin", count: modulesList.filter(m => m.category === "College Admin").length },
-    { id: "Super Admin & Core AI", label: "Super Admin & Core AI", count: modulesList.filter(m => m.category === "Super Admin & Core AI").length },
   ];
 
   return (

@@ -26,8 +26,9 @@ import {
   UserX,
   Users,
   Flag,
+  ArrowLeft,
 } from "lucide-react";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
 import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
@@ -47,72 +48,211 @@ const ROLE_OPTIONS = [
   "DevOps Trainee",
 ];
 
+const ROLE_TOPIC_MAP = {
+  "Data Analyst": {
+    keywords: [
+      "sql", "database", "databases", "python", "data analytics", "analytics",
+      "pandas", "numpy", "tableau", "powerbi", "power bi", "excel",
+      "statistics", "visualization", "bigquery", "data engineering", "dsa",
+      "data structures", "algorithms"
+    ],
+    recommendedTopics: ["SQL / Databases", "Python", "Data Structures & Algorithms"],
+    description: "Data Analyst roles focus on SQL, Python, Statistics, Data Visualization (Tableau/PowerBI), and Excel rather than Web UI or JavaScript application development.",
+    suggestedRoles: ["Full Stack Developer", "Backend Developer", "Frontend Developer"],
+  },
+  "Frontend Developer": {
+    keywords: [
+      "javascript", "js", "react", "html", "css", "typescript", "ts", "frontend",
+      "web", "vue", "angular", "nextjs", "next.js", "tailwind", "ui", "ux",
+      "browser", "dom", "dsa", "data structures", "algorithms"
+    ],
+    recommendedTopics: ["JavaScript", "React", "Data Structures & Algorithms"],
+    description: "Frontend Developer roles focus on JavaScript, React, TypeScript, HTML/CSS, and Web Performance.",
+    suggestedRoles: ["Full Stack Developer", "Software Engineer Intern"],
+  },
+  "Backend Developer": {
+    keywords: [
+      "node", "nodejs", "node.js", "express", "java", "python", "sql", "database",
+      "databases", "mongodb", "postgres", "mysql", "redis", "system design",
+      "rest", "api", "microservices", "dsa", "data structures", "algorithms",
+      "c++", "cpp", "go", "golang", "django", "fastapi", "spring", "springboot"
+    ],
+    recommendedTopics: ["Node.js", "Java", "SQL / Databases", "System Design Basics", "Data Structures & Algorithms", "Python"],
+    description: "Backend Developer roles focus on Node.js, Java, Python, SQL/Databases, System Design, and REST APIs.",
+    suggestedRoles: ["Full Stack Developer", "Software Engineer Intern"],
+  },
+  "Full Stack Developer": {
+    keywords: [
+      "javascript", "js", "react", "node", "nodejs", "node.js", "python", "java",
+      "sql", "database", "databases", "fullstack", "full stack", "dsa",
+      "data structures", "algorithms", "system design", "html", "css", "express", "mongodb"
+    ],
+    recommendedTopics: ["JavaScript", "React", "Node.js", "SQL / Databases", "Data Structures & Algorithms", "Python", "Java", "System Design Basics"],
+    description: "Full Stack roles cover both Frontend (JS/React) and Backend (Node/Java/SQL).",
+    suggestedRoles: ["Backend Developer", "Frontend Developer"],
+  },
+  "QA / Testing Engineer": {
+    keywords: [
+      "testing", "qa", "selenium", "cypress", "junit", "testng", "automation",
+      "api testing", "postman", "jest", "unit testing", "playwright", "cucumber",
+      "pytest", "python", "java", "javascript", "sql", "database"
+    ],
+    recommendedTopics: ["Java", "Python", "SQL / Databases", "JavaScript"],
+    description: "QA & Testing roles focus on Automation Testing (Selenium/Cypress), Unit/API Testing, Python/Java, and SQL.",
+    suggestedRoles: ["Software Engineer Intern"],
+  },
+  "DevOps Trainee": {
+    keywords: [
+      "devops", "docker", "kubernetes", "k8s", "ci/cd", "cicd", "jenkins",
+      "linux", "bash", "shell", "aws", "cloud", "terraform", "ansible", "git",
+      "python", "system design", "sql"
+    ],
+    recommendedTopics: ["System Design Basics", "Python", "SQL / Databases"],
+    description: "DevOps roles focus on Docker, Kubernetes, Linux/Shell, CI/CD, Infrastructure & Cloud Services.",
+    suggestedRoles: ["Backend Developer"],
+  },
+  "Software Engineer Intern": {
+    keywords: [
+      "dsa", "data structures", "algorithms", "java", "python", "c++", "cpp",
+      "javascript", "sql", "database", "databases", "oops", "object oriented",
+      "react", "node", "system design"
+    ],
+    recommendedTopics: ["Data Structures & Algorithms", "Java", "Python", "JavaScript", "SQL / Databases", "React", "Node.js", "System Design Basics"],
+    description: "Software Engineer Intern roles cover Core CS (DSA, OOP, System Design, SQL, Programming Languages).",
+    suggestedRoles: ["Full Stack Developer", "Backend Developer"],
+  },
+};
+
+function checkRoleTopicCompatibility(selectedRole, selectedTopic, customTopicText = "") {
+  if (!selectedRole) return { isMismatch: false };
+  const roleInfo = ROLE_TOPIC_MAP[selectedRole];
+  if (!roleInfo) return { isMismatch: false };
+
+  const effectiveTopic = (selectedTopic === "Other / Custom Topic..." || selectedTopic === "Custom Topic")
+    ? (customTopicText ? customTopicText.trim() : "")
+    : selectedTopic;
+
+  if (!effectiveTopic) return { isMismatch: false, effectiveTopic: "" };
+
+  // 1. Direct match with recommended topics for the selected role
+  const isDirectlyRecommended = roleInfo.recommendedTopics.some(
+    (rt) => rt.toLowerCase() === effectiveTopic.toLowerCase()
+  );
+  if (isDirectlyRecommended) {
+    return { isMismatch: false, effectiveTopic };
+  }
+
+  // 2. Strict word boundary regex matching for custom topics / keywords
+  const topicLower = effectiveTopic.toLowerCase();
+
+  const hasKeywordMatch = roleInfo.keywords.some((kw) => {
+    const kwLower = kw.toLowerCase();
+    const escaped = kwLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i");
+    return regex.test(topicLower);
+  });
+
+  if (!hasKeywordMatch) {
+    return {
+      isMismatch: true,
+      role: selectedRole,
+      topic: effectiveTopic,
+      description: roleInfo.description,
+      recommendedTopics: roleInfo.recommendedTopics,
+      suggestedRoles: roleInfo.suggestedRoles,
+      reason: `'${effectiveTopic}' is not a valid interview topic for a '${selectedRole}' role.`
+    };
+  }
+
+  return { isMismatch: false, effectiveTopic };
+}
+
 export default function AIInterview() {
   const [answer, setAnswer] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const recognitionRef = useRef(null);
-  
+
   // Speech & Interview State
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
 
-const TOPIC_OPTIONS = [
-  "JavaScript",
-  "Python",
-  "SQL / Databases",
-  "Data Structures & Algorithms",
-  "React",
-  "Node.js",
-  "Java",
-  "System Design Basics",
-];
+  const TOPIC_OPTIONS = [
+    "JavaScript",
+    "Python",
+    "SQL / Databases",
+    "Data Structures & Algorithms",
+    "React",
+    "Node.js",
+    "Java",
+    "System Design Basics",
+  ];
 
-const fmtTime = (totalSeconds) => {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
-  const s = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
-};
+  const fmtTime = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+    const s = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
-function pickVoice() {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices();
-  return (
-    voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        (v.name.includes("Natural") ||
-          v.name.includes("Google") ||
-          v.name.includes("Microsoft") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Zira"))
-    ) ||
-    voices.find((v) => v.lang.startsWith("en")) ||
-    null
-  );
-}
-
-function speakNow(text, onEnd) {
-  if (!text || typeof window === "undefined" || !window.speechSynthesis) {
-    onEnd && onEnd();
-    return;
+  function pickVoice() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    return (
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Natural") ||
+            v.name.includes("Google") ||
+            v.name.includes("Microsoft") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Zira"))
+      ) ||
+      voices.find((v) => v.lang.startsWith("en")) ||
+      null
+    );
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.92;
-  utterance.pitch = 1.0;
-  const voice = pickVoice();
-  if (voice) utterance.voice = voice;
-  utterance.onend = () => onEnd && onEnd();
-  utterance.onerror = () => onEnd && onEnd();
-  window.speechSynthesis.speak(utterance);
-}
 
-function getToken() {
-  return sessionStorage.getItem("token") || sessionStorage.getItem("token") || "";
-}
+  function speakNow(text, onEnd) {
+    if (!text || typeof window === "undefined" || !window.speechSynthesis) {
+      onEnd && onEnd();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.92;
+    utterance.pitch = 1.0;
+    const voice = pickVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => onEnd && onEnd();
+    utterance.onerror = () => onEnd && onEnd();
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function getToken() {
+    let token = getAuthToken();
+    if (!token) {
+      try {
+        const uSession = JSON.parse(
+          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        );
+        token =
+          uSession.token ||
+          uSession.authToken ||
+          uSession.auth_token ||
+          uSession.accessToken ||
+          uSession.jwt;
+      } catch (e) { }
+    }
+    if (!token) return "";
+    return String(token).replace(/^Bearer\s+/i, "").trim();
+  }
 
   const [phase, setPhase] = useState("setup"); // setup | live | result
   const [role, setRole] = useState(ROLE_OPTIONS[0]);
   const [topic, setTopic] = useState(TOPIC_OPTIONS[0]);
+  const [customTopic, setCustomTopic] = useState("");
+
+  const compatibility = useCallback(() => {
+    return checkRoleTopicCompatibility(role, topic, customTopic);
+  }, [role, topic, customTopic])();
 
   // Camera
   const [cameraState, setCameraState] = useState("idle"); // idle | on | denied | unsupported
@@ -136,6 +276,7 @@ function getToken() {
   const [conversation, setConversation] = useState([]);
   const conversationEndRef = useRef(null);
   const sessionIdRef = useRef(null);
+  const existingAnswerRef = useRef("");
 
   // Timer — only starts after first question arrives
   const [remaining, setRemaining] = useState(INTERVIEW_SECONDS);
@@ -155,7 +296,7 @@ function getToken() {
     apiFetch("/interviews/history")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
-          setPastInterviewsList(res.data);
+          setPastInterviewsList(res.data.slice(0, 10));
         } else {
           setPastInterviewsList([]);
         }
@@ -187,6 +328,8 @@ function getToken() {
   const [activeProctoringModal, setActiveProctoringModal] = useState(null);
   const [isInterviewFlagged, setIsInterviewFlagged] = useState(false);
   const lastWarningTimeRef = useRef(0);
+  const livePhaseStartTimeRef = useRef(0);
+  const lastWarningTypeTimestampRef = useRef({});
   const proctoringCanvasRef = useRef(null);
   const hasCameraBeenTurnedOnRef = useRef(false);
   const consecutiveViolationsRef = useRef({ noFace: 0, device: 0, lookingAway: 0 });
@@ -198,6 +341,19 @@ function getToken() {
   }, [cameraState]);
 
   const triggerProctoringWarning = useCallback((type = "SUSPICIOUS_BEHAVIOR", customMsg = "") => {
+    const nowMs = Date.now();
+
+    // 5-second startup grace period: no false-positive warnings during initial stream setup
+    if (nowMs - livePhaseStartTimeRef.current < 5000) {
+      return;
+    }
+
+    const lastTimeMs = lastWarningTypeTimestampRef.current[type] || 0;
+    if (nowMs - lastTimeMs < 6000) {
+      return;
+    }
+    lastWarningTypeTimestampRef.current[type] = nowMs;
+
     const timestamp = new Date().toLocaleTimeString();
     const defaultMsgs = {
       MULTIPLE_PERSONS: "Multiple persons / background occupants detected in camera feed!",
@@ -339,14 +495,14 @@ function getToken() {
   const studentName =
     typeof window !== "undefined"
       ? (() => {
-          try {
-            return JSON.parse(
-              sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
-            )?.name || "";
-          } catch {
-            return "";
-          }
-        })()
+        try {
+          return JSON.parse(
+            sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+          )?.name || "";
+        } catch {
+          return "";
+        }
+      })()
       : "";
 
   // Keep refs in sync with state
@@ -410,7 +566,7 @@ function getToken() {
     if (question?.question) speakQuestion(question.question);
   }, [question, speakQuestion]);
 
-    // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
+  // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
   const [camMicOn, setCamMicOn] = useState(false);
 
   const stopCamera = useCallback(() => {
@@ -437,7 +593,7 @@ function getToken() {
       setCameraState("on");
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     } catch {
       setCameraState("denied");
@@ -461,19 +617,28 @@ function getToken() {
     }
   }, [cameraState, enableCamera, stopCamera, triggerProctoringWarning]);
 
-  // Monitor camera off / disabled state during live interview (ONLY if candidate previously turned camera ON!)
+  // Auto-start camera automatically as soon as interview page loads
+  useEffect(() => {
+    if ((phase === "setup" || phase === "live") && cameraState === "idle") {
+      enableCamera();
+    }
+  }, [phase, cameraState, enableCamera]);
+
+  // Monitor camera off / disabled state during live interview
   useEffect(() => {
     if (phase !== "live") return;
+    const now = Date.now();
+    if (now - livePhaseStartTimeRef.current < 6000) return;
+
     if (
-      hasCameraBeenTurnedOnRef.current &&
-      (cameraState === "idle" || cameraState === "denied" || cameraState === "unsupported")
+      (cameraState === "idle" || cameraState === "denied" || cameraState === "unsupported") &&
+      hasCameraBeenTurnedOnRef.current
     ) {
-      const now = Date.now();
-      if (now - lastWarningTimeRef.current > 4000) {
+      if (now - lastWarningTimeRef.current > 20000) {
         lastWarningTimeRef.current = now;
         triggerProctoringWarning(
-          "CAMERA_OFF",
-          "Camera turned off or disabled during live interview!"
+          "NO_FACE",
+          "Mandatory camera feed interrupted or disabled during live interview!"
         );
       }
     }
@@ -511,14 +676,15 @@ function getToken() {
   useEffect(() => {
     if (cameraState === "on" && cameraStreamRef.current && videoRef.current) {
       videoRef.current.srcObject = cameraStreamRef.current;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, [cameraState, phase]);
 
-  // Real-Time Camera Proctoring & Anti-Cheating Monitor
+  // Real-Time Camera Proctoring & Gaze / Device Detection Monitor
   useEffect(() => {
     if (cameraState !== "on" || phase !== "live") return;
 
+    // 400ms sampling interval for smooth, accurate, non-erratic proctoring
     const intervalId = setInterval(() => {
       if (!videoRef.current || videoRef.current.readyState < 2) return;
 
@@ -529,16 +695,19 @@ function getToken() {
         const canvas = proctoringCanvasRef.current;
         canvas.width = 160;
         canvas.height = 120;
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) return;
 
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = frameData.data;
 
-        let leftSum = 0, centerSum = 0, rightSum = 0;
-        let bottomSum = 0, topSum = 0;
         let totalSum = 0;
+        let skinPixels = 0;
+        let topSkinPixels = 0;
+        let bottomSkinPixels = 0;
+        let activeScreenGlowPixels = 0;
+        let roiPixelCount = 0;
         const pixelCount = data.length / 4;
 
         for (let i = 0; i < data.length; i += 4) {
@@ -553,66 +722,91 @@ function getToken() {
           const x = pixelIndex % 160;
           const y = Math.floor(pixelIndex / 160);
 
-          if (x < 50) leftSum += brightness;
-          else if (x > 110) rightSum += brightness;
-          else centerSum += brightness;
+          // Active central region where candidate's face & eyes/head appear
+          if (x >= 20 && x <= 140 && y >= 10 && y <= 110) {
+            roiPixelCount++;
 
-          if (y < 45) topSum += brightness;
-          else if (y > 75) bottomSum += brightness;
+            // 1. Strict human skin tone detection
+            const isSkin = r > 50 && g > 30 && b > 20 && r > g && r > b && (r - g) >= 8;
+            if (isSkin) {
+              skinPixels++;
+              if (y < 65) topSkinPixels++;
+              else bottomSkinPixels++;
+            }
+
+            // 2. Mobile Phone Screen Glow / Active Electronic Display:
+            // High-luminance screen light (r,g,b > 210) in front of face
+            if (r > 210 && g > 210 && b > 210) {
+              activeScreenGlowPixels++;
+            }
+          }
         }
 
         const avgBrightness = totalSum / pixelCount;
-        const leftAvg = leftSum / (50 * 120);
-        const rightAvg = rightSum / (50 * 120);
-        const bottomAvg = bottomSum / (160 * 45);
-
+        const skinRatio = roiPixelCount > 0 ? skinPixels / roiPixelCount : 0;
+        const screenGlowRatio = roiPixelCount > 0 ? activeScreenGlowPixels / roiPixelCount : 0;
         const now = Date.now();
 
-        // 1. Camera covered or dark check (pitch dark / covered lens: avgBrightness < 6 for 4 consecutive checks)
-        if (avgBrightness < 6) {
-          consecutiveViolationsRef.current.noFace += 1;
-          if (consecutiveViolationsRef.current.noFace >= 4) {
-            if (now - lastWarningTimeRef.current > 12000) {
-              lastWarningTimeRef.current = now;
-              consecutiveViolationsRef.current.noFace = 0;
-              triggerProctoringWarning("NO_FACE", "Face not detected in camera view! Please stay visible in front of camera.");
-            }
-          }
-        } else {
-          consecutiveViolationsRef.current.noFace = 0;
-        }
+        // 10-second startup grace period (gives user time to settle in before any checks activate)
+        if (now - livePhaseStartTimeRef.current < 10000) return;
 
-        // 2. Mobile Phone / Flash specular reflection check (avgBrightness > 215 & bottomAvg > 240 for 4 consecutive checks)
-        if (avgBrightness > 215 && bottomAvg > 240) {
-          consecutiveViolationsRef.current.device += 1;
-          if (consecutiveViolationsRef.current.device >= 4) {
-            if (now - lastWarningTimeRef.current > 12000) {
-              lastWarningTimeRef.current = now;
-              consecutiveViolationsRef.current.device = 0;
-              triggerProctoringWarning("DEVICE_DETECTED", "Mobile phone or copying device glare detected in camera frame!");
-            }
-          }
-        } else {
-          consecutiveViolationsRef.current.device = 0;
-        }
+        // Enforce 8 seconds cooldown between consecutive warnings
+        if (now - lastWarningTimeRef.current < 8000) return;
 
-        // 3. Looking away check (extreme head turn sustained for 5 consecutive checks)
-        if (Math.abs(leftAvg - rightAvg) > 75) {
+        // ─── CHECK A: Eye Gaze / Head Turned Away continuously (LOOKING_AWAY) ───
+        const isLookingAway = skinRatio > 0.06 && (topSkinPixels < 5 || bottomSkinPixels / (topSkinPixels + 1) > 5.0);
+
+        if (isLookingAway) {
           consecutiveViolationsRef.current.lookingAway += 1;
-          if (consecutiveViolationsRef.current.lookingAway >= 5) {
-            if (now - lastWarningTimeRef.current > 12000) {
-              lastWarningTimeRef.current = now;
-              consecutiveViolationsRef.current.lookingAway = 0;
-              triggerProctoringWarning("LOOKING_AWAY", "Candidate looking away from screen for prolonged duration!");
-            }
+          if (consecutiveViolationsRef.current.lookingAway >= 9) { // 9 ticks x 400ms = 3.6s continuous looking away
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.lookingAway = 0;
+            triggerProctoringWarning(
+              "LOOKING_AWAY",
+              "Candidate continuously looking away from camera screen!"
+            );
           }
         } else {
-          consecutiveViolationsRef.current.lookingAway = 0;
+          consecutiveViolationsRef.current.lookingAway = Math.max(0, consecutiveViolationsRef.current.lookingAway - 1);
+        }
+
+        // ─── CHECK B: Electronic Device / Active Screen Glow (DEVICE_DETECTED) ───
+        const isDeviceInView = screenGlowRatio > 0.15;
+
+        if (isDeviceInView) {
+          consecutiveViolationsRef.current.device += 1;
+          if (consecutiveViolationsRef.current.device >= 7) { // 7 ticks x 400ms = 2.8s continuous device display
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.device = 0;
+            triggerProctoringWarning(
+              "DEVICE_DETECTED",
+              "Mobile phone or electronic copying device detected in camera frame!"
+            );
+          }
+        } else {
+          consecutiveViolationsRef.current.device = Math.max(0, consecutiveViolationsRef.current.device - 1);
+        }
+
+        // ─── CHECK C: Face Covered / No Face in View (NO_FACE) ───
+        const isFaceObscured = (skinRatio < 0.025 && !isDeviceInView) || avgBrightness < 4;
+
+        if (isFaceObscured) {
+          consecutiveViolationsRef.current.noFace += 1;
+          if (consecutiveViolationsRef.current.noFace >= 10) { // 10 ticks x 400ms = 4.0s continuous no-face
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.noFace = 0;
+            triggerProctoringWarning(
+              "NO_FACE",
+              "Face not detected in camera view! Please look at the camera."
+            );
+          }
+        } else {
+          consecutiveViolationsRef.current.noFace = Math.max(0, consecutiveViolationsRef.current.noFace - 1);
         }
       } catch (e) {
         console.warn("Proctoring frame warning:", e);
       }
-    }, 2000);
+    }, 400);
 
     return () => clearInterval(intervalId);
   }, [cameraState, phase, triggerProctoringWarning]);
@@ -637,18 +831,22 @@ function getToken() {
       return;
     }
     stopSpeaking(); // stop TTS before listening
+    existingAnswerRef.current = answer; // Preserve existing typed/spoken text
     const recognition = new SpeechRecognitionCtor();
     recognitionRef.current = recognition;
     recognition.lang = "en-IN";
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
     recognition.onresult = (event) => {
       let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-      setAnswer(transcript);
+      const base = existingAnswerRef.current ? existingAnswerRef.current.trim() : "";
+      const cleanTranscript = transcript.trim();
+      const fullText = base ? (cleanTranscript ? `${base} ${cleanTranscript}` : base) : cleanTranscript;
+      setAnswer(fullText);
     };
     recognition.onend = () => setIsRecording(false);
     recognition.onerror = (event) => {
@@ -659,7 +857,7 @@ function getToken() {
     };
     setIsRecording(true);
     try { recognition.start(); } catch { setIsRecording(false); }
-  }, [SpeechRecognitionCtor, stopSpeaking]);
+  }, [SpeechRecognitionCtor, stopSpeaking, answer]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) stopRecognition();
@@ -700,7 +898,7 @@ function getToken() {
         if (endInterviewRef.current) endInterviewRef.current();
       }
     }, 1000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopTimer]);
 
   // ─── Finish interview ────────────────────────────────────────────────────────
@@ -831,6 +1029,8 @@ function getToken() {
     };
   }, [triggerProctoringWarning]);
 
+
+
   // ─── Send Answer ─────────────────────────────────────────────────────────────
   const sendAnswer = useCallback(() => {
     const trimmed = answer.trim();
@@ -869,12 +1069,27 @@ function getToken() {
     }
 
     const apiBase = getApiBaseUrl();
-    const base = apiBase.replace(/\/api\/v1\/?$/, "") || "";
+    let base = apiBase.replace(/\/api\/v1\/?$/, "") || "";
+    if (!base.startsWith("http://") && !base.startsWith("https://")) {
+      if (typeof window !== "undefined") {
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        base = `${protocol}//${hostname}:5000`;
+      } else {
+        base = "http://localhost:5000";
+      }
+    }
 
     const socket = io(`${base}/interviews`, {
       auth: { token },
-      transports: ["polling", "websocket"],
-      reconnection: false, // we handle reconnection manually
+      query: { token },
+      extraHeaders: {
+        Authorization: `Bearer ${token}`
+      },
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: 15,
+      reconnectionDelay: 500,
     });
     socketRef.current = socket;
 
@@ -885,8 +1100,8 @@ function getToken() {
 
     socket.on("disconnect", (reason) => {
       setSocketConnected(false);
-      if (!completedRef.current && !endRequestedRef.current) {
-        setErrorMsg(`Connection lost (${reason}). Your answers so far are preserved.`);
+      if (!completedRef.current && !endRequestedRef.current && reason !== "io client disconnect") {
+        setErrorMsg(`Network connection interrupted (${reason}). Reconnecting...`);
       }
     });
 
@@ -916,16 +1131,23 @@ function getToken() {
         startTimer();
       }
 
-      setQuestion(q);
+      // Clean plain-text question (strip any backticks or code fences for clear voice readout)
+      const cleanText = String(q?.question || "")
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/`/g, "")
+        .trim();
+      const sanitizedQ = { ...q, question: cleanText };
+
+      setQuestion(sanitizedQ);
       setAnswer("");
       setConversation((prev) => [
         ...prev,
-        { type: "q", index: q.index, text: q.question, topic: q.topic },
+        { type: "q", index: q.index, text: cleanText, topic: q.topic },
       ]);
 
       // Auto-speak the question
       if (voiceEnabledRef.current) {
-        speakQuestion(q.question);
+        speakQuestion(cleanText);
       }
     });
 
@@ -951,15 +1173,19 @@ function getToken() {
     });
 
     // Tell server to start
+    const effectiveTopic = (topic === "Other / Custom Topic..." || topic === "Custom Topic")
+      ? (customTopic.trim() || "General Technical")
+      : topic;
+
     const sessionId = `student-${Date.now()}`;
     socket.emit("interview:start", {
       sessionId,
       role,
-      topic,
+      topic: effectiveTopic,
       difficulty: "Medium",
-      totalQuestions: 12,
+      totalQuestions: 10,
     });
-  }, [role, topic, startTimer, speakQuestion, finishInterview]);
+  }, [role, topic, customTopic, startTimer, speakQuestion, finishInterview]);
 
   // ─── Start Interview ─────────────────────────────────────────────────────────
   const startInterview = useCallback(() => {
@@ -967,7 +1193,22 @@ function getToken() {
       setErrorMsg("Please choose a target role to begin.");
       return;
     }
-    // Reset all state
+
+    if ((topic === "Other / Custom Topic..." || topic === "Custom Topic") && !customTopic.trim()) {
+      setErrorMsg("Please type your custom interview topic (e.g. Docker, Next.js, System Architecture).");
+      return;
+    }
+
+    if (compatibility.isMismatch) {
+      setErrorMsg(`Domain Mismatch Blocked: Topic '${compatibility.topic}' does not match target role '${role}'. Please select a recommended topic for ${role} above.`);
+      return;
+    }
+
+    // Reset all state & initialize startup grace period
+    const startNow = Date.now();
+    livePhaseStartTimeRef.current = startNow;
+    lastWarningTimeRef.current = startNow + 5000;
+    consecutiveViolationsRef.current = { noFace: 0, device: 0, lookingAway: 0 };
     completedRef.current = false;
     endRequestedRef.current = false;
     firstQuestionRef.current = false;
@@ -985,15 +1226,15 @@ function getToken() {
     setResult(null);
     setRemaining(INTERVIEW_SECONDS);
     setPhase("live");
-    
+
     // Request full screen when starting
     if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch((err) => console.log(err));
     }
-    
+
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
-  }, [role, stopTimer, connectAndStart]);
+  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart]);
 
   // ─── Reset ───────────────────────────────────────────────────────────────────
   const resetInterview = useCallback(() => {
@@ -1023,12 +1264,35 @@ function getToken() {
     setWarningShown(false);
     setPhase("setup");
     fetchPastInterviews();
-    
+
     // Exit full screen if resetting
     if (typeof document !== "undefined" && document.fullscreenElement) {
       document.exitFullscreen().catch((err) => console.log(err));
     }
   }, [stopTimer, stopRecognition, stopCamera, stopSpeaking, fetchPastInterviews]);
+
+  // ─── Escape Key & Fullscreen Exit Handler (Stop & Return to Setup Screen) ─
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && phaseRef.current === "live") {
+        e.preventDefault();
+        resetInterview();
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (typeof document !== "undefined" && !document.fullscreenElement && phaseRef.current === "live") {
+        resetInterview();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [resetInterview]);
 
   // ─── Cleanup on unmount ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -1056,15 +1320,17 @@ function getToken() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="ai-interview-page stack-6">
-      <div className="student-header-box">
-        <h2 className="student-header-title">
-          <Bot size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
-          <span>Live AI Interview Simulation</span>
-        </h2>
-        <p className="student-header-desc">
-          5-minute voice-driven technical interview with real-time AI questions, speech recognition and instant evaluation.
-        </p>
-      </div>
+      {phase === "setup" && (
+        <div className="student-header-box">
+          <h2 className="student-header-title">
+            <Bot size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
+            <span>Live AI Interview Simulation</span>
+          </h2>
+          <p className="student-header-desc">
+            5-minute voice-driven technical interview with real-time AI questions, speech recognition and instant evaluation.
+          </p>
+        </div>
+      )}
 
       {/* ─── SETUP PHASE ─────────────────────────────────────────────────────── */}
       {phase === "setup" && (
@@ -1099,7 +1365,7 @@ function getToken() {
                   <div className="ai-meta-val">
                     Camera {cameraState === "on" ? "Active" : cameraState === "denied" ? "Blocked" : "Standby"}
                   </div>
-                  <div className="ai-meta-lbl">Optional video preview</div>
+                  <div className="ai-meta-lbl">Mandatory Proctoring Stream</div>
                 </div>
               </div>
               <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
@@ -1130,11 +1396,72 @@ function getToken() {
                 <CustomSelect
                   value={topic}
                   onChange={(val) => setTopic(val)}
-                  options={TOPIC_OPTIONS}
+                  options={[...TOPIC_OPTIONS, "Other / Custom Topic..."]}
                   placeholder="Select Interview Topic"
                 />
               </div>
+              {(topic === "Other / Custom Topic..." || topic === "Custom Topic") && (
+                <div className="ai-setup-field" style={{ width: "100%" }}>
+                  <span>Type Custom Interview Topic</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Docker, Next.js, System Architecture, WebSockets, Go..."
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "14px",
+                      outline: "none",
+                      backgroundColor: "#fff",
+                      color: "#1e293b",
+                      marginTop: "4px",
+                    }}
+                  />
+                </div>
+              )}
             </div>
+
+            {compatibility.isMismatch && (
+              <div className="ai-mismatch-banner">
+                <div className="ai-mismatch-header">
+                  <Sparkles size={18} className="ai-mismatch-icon" />
+                  <div>
+                    <h4 className="ai-mismatch-title">
+                      Topic Alignment Notice: <strong>{compatibility.role}</strong> vs <strong>{compatibility.topic}</strong>
+                    </h4>
+                    <p className="ai-mismatch-desc">
+                      {compatibility.reason} {compatibility.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ai-mismatch-actions">
+                  <span className="ai-mismatch-recommend-label">Recommended Topics for {compatibility.role}:</span>
+                  <div className="ai-mismatch-pills">
+                    {compatibility.recommendedTopics?.map((recTop) => (
+                      <button
+                        key={recTop}
+                        type="button"
+                        className="ai-recommend-pill-btn"
+                        onClick={() => {
+                          setTopic(recTop);
+                          setCustomTopic("");
+                          setErrorMsg("");
+                        }}
+                      >
+                        <Sparkles size={12} /> Switch Topic to <strong>{recTop}</strong>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ai-mismatch-blocked-notice">
+                    <span>Select a recommended topic above to unlock interview start for <strong>{compatibility.role}</strong>.</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {errorMsg && (
               <div className="ai-error-banner">
@@ -1145,10 +1472,11 @@ function getToken() {
             <div className="ai-setup-buttons">
               <button
                 type="button"
-                className="ai-start-interview-btn"
+                className={`ai-start-interview-btn ${compatibility.isMismatch ? "ai-start-btn-disabled" : ""}`}
                 onClick={startInterview}
+                disabled={compatibility.isMismatch}
               >
-                <Play size={18} fill="currentColor" /> Start Interview
+                <Play size={18} fill="currentColor" /> {compatibility.isMismatch ? "Select Matching Topic to Start" : "Start Interview"}
               </button>
             </div>
           </div>
@@ -1169,7 +1497,7 @@ function getToken() {
           </div>
 
           <div className="past-interviews-grid">
-            {pastInterviewsList.map((item) => {
+            {pastInterviewsList.slice(0, 10).map((item) => {
               const score = item.overall_score || 0;
               const dateStr = item.conducted_date ? new Date(item.conducted_date).toLocaleDateString() : (item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent");
               return (
@@ -1295,39 +1623,40 @@ function getToken() {
             {/* ── LEFT COLUMN: Webcam + AI status ── */}
             <div className="ai-left-column">
               <div className={`ai-camera-panel ${cameraState === "on" ? "" : "ai-camera-off-panel"}`}>
+                <div className="ai-camera-top-overlay">
+                  <span className="ai-cam-live-indicator">
+                    <span className={`ai-live-dot ${cameraState === "on" ? "green" : "red"}`} />
+                    LIVE PROCTORING STREAM
+                  </span>
+                </div>
 
                 {cameraState === "on" ? (
                   <video ref={videoRef} className="ai-camera-video" autoPlay playsInline muted />
                 ) : (
                   <div className="ai-camera-placeholder">
-                    {cameraState === "denied" ? (
-                      <>
-                        <XCircle size={32} />
-                        <span>Camera permission denied</span>
-                      </>
-                    ) : cameraState === "unsupported" ? (
-                      <>
-                        <XCircle size={32} />
-                        <span>Camera not supported</span>
-                      </>
-                    ) : (
-                      <>
-                        <Video size={32} />
-                        <span>Camera Off</span>
-                      </>
-                    )}
+                    <div className="ai-cam-placeholder-graphic">
+                      <Video size={32} />
+                      <div className="ai-cam-pulse-ring" />
+                    </div>
+                    <div className="ai-cam-placeholder-title">
+                      {cameraState === "denied"
+                        ? "Camera Permission Denied"
+                        : cameraState === "unsupported"
+                          ? "Camera Unsupported"
+                          : "Initializing HD Proctoring Camera..."}
+                    </div>
+                    <div className="ai-cam-placeholder-sub">
+                      {cameraState === "denied"
+                        ? "Please allow camera access in your browser to enable live AI proctoring."
+                        : "Video proctoring feed active."}
+                    </div>
                   </div>
                 )}
                 <div className="ai-camera-controls-bar">
-                  <button
-                    type="button"
-                    className={`ai-cam-ctrl-btn ${cameraState === "on" ? "active" : ""}`}
-                    onClick={toggleCamera}
-                    title={cameraState === "on" ? "Turn Camera Off" : "Turn Camera On"}
-                  >
-                    {cameraState === "on" ? <Camera size={14} /> : <CameraOff size={14} />}
-                    <span>{cameraState === "on" ? "Camera ON" : "Camera OFF"}</span>
-                  </button>
+                  <div className="ai-cam-live-status-pill">
+                    <span className={`ai-live-dot ${cameraState === "on" ? "green" : "red"}`} />
+                    <span>{cameraState === "on" ? "AI Proctoring Active" : "Camera Initializing..."}</span>
+                  </div>
                 </div>
               </div>
 
@@ -1341,9 +1670,9 @@ function getToken() {
                   <div className="ai-status-name">AI Interviewer</div>
                   <div className="ai-status-state">
                     {isEvaluating ? <span className="ai-state-thinking"><Loader2 size={10} className="ai-spin" /> Thinking...</span>
-                    : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
-                    : question ? <span className="ai-state-listening">Listening for answer</span>
-                    : <span>Starting interview...</span>}
+                      : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
+                        : question ? <span className="ai-state-listening">Listening for answer</span>
+                          : <span>Starting interview...</span>}
                   </div>
                 </div>
                 <button
@@ -1438,8 +1767,8 @@ function getToken() {
                     !question
                       ? "Waiting for the AI question..."
                       : SpeechRecognitionCtor
-                      ? "Speak via mic or type your answer here..."
-                      : "Type your answer here..."
+                        ? "Speak via mic or type your answer here..."
+                        : "Type your answer here..."
                   }
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
@@ -1490,6 +1819,11 @@ function getToken() {
             {/* ── HERO SCORECARD ── */}
             <div className="ai-report-hero">
               <div className="ai-report-hero-bg" />
+              <div className="ai-report-top-nav">
+                <button type="button" className="ai-back-nav-btn" onClick={resetInterview} title="Return to Interview Setup">
+                  <ArrowLeft size={16} /> Back to Setup
+                </button>
+              </div>
               <div className="ai-report-label">Interview Report</div>
               <h2 className="ai-report-title">AI Interview Completed</h2>
               <p className="ai-report-meta">
@@ -1514,12 +1848,13 @@ function getToken() {
                 </span>
               </div>
 
-              {/* 3-metric breakdown */}
+              {/* 4-metric breakdown */}
               <div className="ai-metrics-grid">
                 {[
                   { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech" },
                   { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm" },
                   { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob" },
+                  { label: "Confidence Level", value: result?.scorecard?.confidence ?? (overallScore === 0 ? 0 : Math.min(100, Math.round((overallScore * 0.9) + 10))), type: "conf" },
                 ].map(({ label, value, type }) => (
                   <div key={label} className={`ai-metric-card ai-metric-${type}`}>
                     <div className="ai-metric-val">{value}%</div>
@@ -1579,13 +1914,32 @@ function getToken() {
                             <div className="ai-q-feedback-text">{item.feedback || item.f || "No feedback available."}</div>
                           </div>
 
-                          {/* Model answer */}
-                          {item.modelAnswer && item.modelAnswer !== "AI evaluation unavailable. Review the topic independently." && (
-                            <div className="ai-q-model-ans-box">
-                              <div className="ai-q-model-ans-lbl">💡 Model Answer</div>
-                              <div className="ai-q-model-ans-text">{item.modelAnswer}</div>
-                            </div>
-                          )}
+                          {/* Key concepts & takeaways */}
+                          {(() => {
+                            const rawModelAns = item.modelAnswer || item.ma || "";
+                            const questionText = item.question || item.q || "";
+                            if (!rawModelAns || rawModelAns === "AI evaluation unavailable. Review the topic independently.") return null;
+
+                            let cleanModelAns = rawModelAns;
+                            if (questionText && cleanModelAns.includes(questionText)) {
+                              cleanModelAns = cleanModelAns.replace(questionText, "").replace(/["“”'']/g, "").trim();
+                            }
+                            cleanModelAns = cleanModelAns
+                              .replace(/^a\s+(proper|technical|correct|gold-standard)\s+answer\s+to\s+.*?\s+covering/i, "Key concepts:")
+                              .replace(/^a\s+(proper|technical|correct|gold-standard)\s+response\s+should\s+explain/i, "Key concepts:")
+                              .replace(/^a\s+proper\s+technical\s+answer\s+to\b/i, "Key concepts:")
+                              .replace(/^covering\s+core\s+concepts\s+in\s+/i, "Key concepts in ")
+                              .trim();
+
+                            if (!cleanModelAns || cleanModelAns.length < 10 || /^key concepts:?$/i.test(cleanModelAns)) return null;
+
+                            return (
+                              <div className="ai-q-model-ans-box">
+                                <div className="ai-q-model-ans-lbl">💡 Key Concepts & Core Takeaways</div>
+                                <div className="ai-q-model-ans-text">{cleanModelAns}</div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     );

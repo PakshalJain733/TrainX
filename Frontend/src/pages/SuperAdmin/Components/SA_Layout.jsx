@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from 'lucide-react';
 import SuperAdminSidebar from "./SA_Sidebar";
+import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
@@ -45,7 +46,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const autoCloseTimerRef = useRef(null);
@@ -156,7 +157,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -298,36 +299,22 @@ export default function SuperAdminLayout() {
   useEffect(() => {
     apiFetch("/admin/broadcast")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
-        }
+        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+        setNotifications(serverItems);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   const headerRightRef = useRef(null);
 
@@ -411,24 +398,6 @@ export default function SuperAdminLayout() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const getPageTitle = (path) => {
-    if (path === "/super-admin" || path === "/super-admin/") return "Overview";
-    if (path.startsWith("/super-admin/colleges")) return "Colleges";
-    if (path.startsWith("/super-admin/departments")) return "Departments";
-    if (path.startsWith("/super-admin/batches")) return "Batches";
-    if (path.startsWith("/super-admin/users")) return "Manage Users";
-    if (path.startsWith("/super-admin/verification")) return "College Admins";
-    if (path.startsWith("/super-admin/coordinators")) return "Coordinators";
-    if (path.startsWith("/super-admin/mentors")) return "Mentors";
-    if (path.startsWith("/super-admin/students")) return "Students";
-    if (path.startsWith("/super-admin/performance")) return "Performance";
-    if (path.startsWith("/super-admin/health")) return "System Health";
-    if (path.startsWith("/super-admin/maintenance")) return "Feature Switches";
-    if (path.startsWith("/super-admin/tickets")) return "Support Tickets";
-    if (path.startsWith("/super-admin/profile")) return "Profile";
-    return "Overview";
-  };
-
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
       setMobileOpen((o) => !o);
@@ -473,9 +442,7 @@ export default function SuperAdminLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="sa-breadcrumb">
-                  <span className="sa-breadcrumb-active">{getPageTitle(pathname)}</span>
-                </div>
+                <GlobalHeaderSearch role="superadmin" />
               </div>
 
               <div className="sa-header__right" ref={headerRightRef}>
@@ -497,7 +464,7 @@ export default function SuperAdminLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={() => {}}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -515,11 +482,12 @@ export default function SuperAdminLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="sa-header__user-info">
-                      <span className="sa-header__name">{userProfile.name}</span>
-                    </div>
                     <div className="sa-header__avatar" aria-label={userProfile.name}>
                       {userProfile.initials}
+                    </div>
+                    <div className="sa-header__user-info">
+                      <span className="sa-header__name">{userProfile.name}</span>
+                      <span className="sa-header__role">{userProfile.role || "Super Admin"}</span>
                     </div>
                   </button>
 

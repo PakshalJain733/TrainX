@@ -186,7 +186,23 @@ function Register() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const [colleges, setColleges] = useState([]);
   const [deptOptions, setDeptOptions] = useState([]);
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/colleges`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.data)) {
+          setColleges(data.data);
+        } else if (Array.isArray(data)) {
+          setColleges(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load colleges for domain validation:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const email = (formData.email || "").trim();
@@ -385,6 +401,10 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "email" && emailOtpSent) {
+      setEmailOtpSent(false);
+      setEmailOtp(["", "", "", "", "", ""]);
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -443,9 +463,10 @@ function Register() {
     if (role === "Student") {
       const roll = (formData.roll_number || "").trim();
       const mobile = (formData.mobile_number || "").trim();
-      const dept = formData.department || "";
       const yr = formData.year || "";
-      if (!roll || !mobile || !dept || !yr) return false;
+      const div = formData.division || "";
+      if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
+      if (deptOptions.length > 0 && !formData.department) return false;
     } else if (role !== "Admin") {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
@@ -455,7 +476,10 @@ function Register() {
   };
 
   const requestEmailOtp = async () => {
-    if (!validateDetails()) return;
+    if (!isFormFullyFilled()) {
+      setErrorMsg("Please fill out all registration details before requesting OTP.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg("");
@@ -518,9 +542,10 @@ function Register() {
 
     if (!validateDetails()) return;
 
-    // Phase 1: send the code to the college email ONLY for Student role
+    // Phase 1: send the code to the college email ONLY when user explicitly clicks Get OTP
     if (role === "Student" && !emailOtpSent) {
-      return requestEmailOtp();
+      setErrorMsg("Please click the 'Get OTP' button to receive the verification code on your email.");
+      return;
     }
 
     // Phase 2: verify 6-digit OTP code ONLY for Student role
@@ -824,7 +849,7 @@ function Register() {
                         name="email"
                         autoComplete="email"
                         required
-                        placeholder="user@pvppcoe.ac.in"
+                        placeholder="name@college.edu"
                         value={formData.email}
                         onChange={handleChange}
                       />
@@ -837,6 +862,20 @@ function Register() {
                         {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
                       </button>
                     </div>
+                    {(() => {
+                      if (!formData.email || !formData.email.includes("@")) return null;
+                      const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
+                      const selectedCollege = Array.isArray(colleges) ? colleges.find(c => String(c.id) === String(formData.college_id)) : null;
+                      const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
+                      if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
+                        return (
+                          <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
@@ -877,7 +916,7 @@ function Register() {
                 </div>
 
                 {/* Row 3: Mobile Number | Department | Year | Division */}
-                <div className="form-grid-4">
+                <div className={deptOptions.length > 0 ? "form-grid-4" : "form-grid-3"}>
                   <div className="input-group">
                     <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
                     <input
@@ -922,7 +961,7 @@ function Register() {
                   </div>
 
                   <div className="input-group">
-                    <FieldLabel icon={Icons.dept}>Division</FieldLabel>
+                    <FieldLabel icon={Icons.division}>Division</FieldLabel>
                     <RegSelect
                       value={formData.division}
                       wrapperClass="reg-select"

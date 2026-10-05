@@ -424,6 +424,31 @@ export default function AD_ApproveUsers() {
                         >
                           {u.role}
                         </span>
+                        {(() => {
+                          const isDomainMismatch = u.email && u.email.includes("@") && !u.email.endsWith("pvppcoe.ac.in") && !u.email.includes("pvppcoe.ac.in");
+                          if (u.domain_flagged || isDomainMismatch) {
+                            return (
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px",
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                  background: "#fee2e2",
+                                  color: "#dc2626",
+                                  textTransform: "uppercase",
+                                }}
+                                title="Email domain does not match official college domain"
+                              >
+                                ⚠️ Domain Flagged
+                              </span>
+                            );
+                          }
+                          return null;
+                        })()}
                         <span
                           style={{
                             display: "inline-flex",

@@ -18,7 +18,8 @@ import {
   Shield,
   Layers,
   ChevronRight,
-  UserCheck
+  UserCheck,
+  Trash2
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import EmptyState from '../../../components/ui/EmptyState';
@@ -37,28 +38,102 @@ const iconMap = {
 function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', theme = 'indigo' }) {
   const IconComponent = iconMap[icon] || Building2;
 
-  const themes = {
-    indigo: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' },
-    emerald: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' },
-    purple: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' },
-    sky: { bg: '#eff6ff', color: '#3b82f6', text: '#3b82f6' }
+  const themeConfig = {
+    indigo: {
+      accent: 'linear-gradient(90deg, #4f46e5 0%, #6366f1 100%)',
+      iconBg: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+      iconColor: '#4338ca',
+      iconBorder: '#c7d2fe',
+      iconShadow: '0 4px 12px rgba(79, 70, 229, 0.15)',
+      pillBg: '#eef2ff',
+      pillColor: '#3730a3',
+      pillBorder: '#c7d2fe',
+      className: 'stat-card-indigo'
+    },
+    emerald: {
+      accent: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+      iconBg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+      iconColor: '#047857',
+      iconBorder: '#a7f3d0',
+      iconShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
+      pillBg: '#ecfdf5',
+      pillColor: '#065f46',
+      pillBorder: '#a7f3d0',
+      className: 'stat-card-emerald'
+    },
+    purple: {
+      accent: 'linear-gradient(90deg, #a855f7 0%, #7c3aed 100%)',
+      iconBg: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+      iconColor: '#6d28d9',
+      iconBorder: '#ddd6fe',
+      iconShadow: '0 4px 12px rgba(124, 58, 237, 0.15)',
+      pillBg: '#f3e8ff',
+      pillColor: '#5b21b6',
+      pillBorder: '#ddd6fe',
+      className: 'stat-card-purple'
+    },
+    sky: {
+      accent: 'linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)',
+      iconBg: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+      iconColor: '#0369a1',
+      iconBorder: '#7dd3fc',
+      iconShadow: '0 4px 12px rgba(14, 165, 233, 0.15)',
+      pillBg: '#e0f2fe',
+      pillColor: '#075985',
+      pillBorder: '#7dd3fc',
+      className: 'stat-card-sky'
+    }
   };
 
-  const currentTheme = themes[theme] || themes.indigo;
+  const t = themeConfig[theme] || themeConfig.indigo;
 
   return (
-    <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s ease' }} className="hover:shadow-md hover:border-indigo-200">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', width: 'min-content' }}>{label}</span>
-        <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: currentTheme.bg, color: currentTheme.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <IconComponent size={14} />
+    <div className={`sa-pro-card ${t.className}`}>
+      {/* Top Accent Gradient Ribbon */}
+      <div className="sa-pro-card-accent" style={{ background: t.accent }} />
+
+      {/* Header Row: Label & Icon Badge */}
+      <div className="sa-pro-card-header">
+        <span className="sa-pro-card-label">{label}</span>
+        <div
+          className="sa-pro-card-icon-box"
+          style={{
+            background: t.iconBg,
+            color: t.iconColor,
+            border: `1px solid ${t.iconBorder}`,
+            boxShadow: t.iconShadow
+          }}
+        >
+          <IconComponent size={18} />
         </div>
       </div>
-      <div>
-        <h3 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>{value}</h3>
-        <p style={{ fontSize: '12px', fontWeight: '600', color: '#4f46e5', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Activity size={12} /> {change}
-        </p>
+
+      {/* Body Section */}
+      <div className="sa-pro-card-body">
+        <div className="sa-pro-card-value-wrap">
+          {value === "Protected" ? (
+            <span className="sa-pro-card-value-protected">
+              <span className="sa-pro-card-dot" />
+              {value}
+            </span>
+          ) : (
+            <h3 className="sa-pro-card-value">{value}</h3>
+          )}
+        </div>
+
+        <div className="sa-pro-card-pill-wrap">
+          <span
+            className="sa-pro-card-pill"
+            style={{
+              backgroundColor: t.pillBg,
+              color: t.pillColor,
+              border: `1px solid ${t.pillBorder}`
+            }}
+          >
+            <Activity size={12} />
+            <span>{change}</span>
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -117,7 +192,7 @@ export default function Overview() {
           setUserRole(u.role || stored.role || "Super Admin");
           setUserInitials(apiName ? apiName.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     loadUser();
@@ -182,6 +257,20 @@ export default function Overview() {
     }
   };
 
+  const handleDeleteCollege = async (collegeId, collegeName) => {
+    if (!window.confirm(`Are you sure you want to remove ${collegeName || 'this college'}?`)) {
+      return;
+    }
+    try {
+      await apiFetch(`/colleges/${collegeId}`, { method: 'DELETE' });
+      setCollegesList((prev) => prev.filter((c) => c.id !== collegeId));
+      fetchOverviewData();
+    } catch (err) {
+      console.error("Failed to remove college:", err);
+      alert(err?.message || "Failed to remove college.");
+    }
+  };
+
   const stats = [
     {
       id: 1,
@@ -235,7 +324,7 @@ export default function Overview() {
               Welcome back, {userName}!
             </h1>
             <p className="overview-hero-desc">
-              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "superadmin@pvppcoe.ac.in"} &nbsp;|&nbsp; Institutional Control
+              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "admin@trainingportal.com"} &nbsp;|&nbsp; Institutional Control
             </p>
           </div>
         </div>
@@ -289,10 +378,11 @@ export default function Overview() {
                     <th className="overview-table-th">Location</th>
                     <th className="overview-table-th">Students</th>
                     <th className="overview-table-th">Status</th>
+                    <th className="overview-table-th" style={{ textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {collegesList.slice(0, 5).map((college) => (
+                  {collegesList.slice(0, 10).map((college) => (
                     <tr key={college.id} className="overview-table-row">
                       <td className="overview-table-td">
                         <div className="overview-td-title">{college.name}</div>
@@ -302,6 +392,38 @@ export default function Overview() {
                       <td className="overview-table-td overview-td-count">{college.studentsCount || college.student_count || 0}</td>
                       <td className="overview-table-td">
                         <StatusBadge status={college.status || 'Active'} />
+                      </td>
+                      <td className="overview-table-td" style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCollege(college.id, college.name)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#ef4444",
+                            backgroundColor: "#fef2f2",
+                            border: "1px solid #fecaca",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#fee2e2";
+                            e.currentTarget.style.borderColor = "#fca5a5";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#fef2f2";
+                            e.currentTarget.style.borderColor = "#fecaca";
+                          }}
+                          title="Remove College"
+                        >
+                          <Trash2 size={13} />
+                          <span>Remove</span>
+                        </button>
                       </td>
                     </tr>
                   ))}

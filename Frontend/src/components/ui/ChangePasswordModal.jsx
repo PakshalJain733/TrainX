@@ -4,7 +4,7 @@ import { Lock, Eye, EyeOff, X, CheckCircle, AlertCircle, Shield } from 'lucide-r
 import { apiFetch } from '../../utils/api';
 import './ChangePasswordModal.css';
 
-export default function ChangePasswordModal({ isOpen, onClose }) {
+export default function ChangePasswordModal({ isOpen = true, onClose }) {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

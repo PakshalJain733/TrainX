@@ -2074,9 +2074,28 @@
   border-radius: 8px;
 }
 
+/* Welcome Subtitle Header */
+.login-card-welcome-header {
+  margin-top: 6px;
+  margin-bottom: 14px;
+  text-align: center;
+  width: 100%;
+}
+
+.login-card-welcome-sub {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+}
+
 /* Segmented Auth Mode Switcher Bar */
 .login-mode-segmented-bar {
   display: flex;
+  flex-direction: row;
+  align-items: center;
   flex-shrink: 0;
   background: #f1f5f9;
   border: 1.5px solid #e2e8f0;
@@ -2084,6 +2103,7 @@
   padding: 4px;
   margin-bottom: 16px;
   gap: 4px;
+  width: 100%;
 }
 
 .login-mode-tab {
@@ -2331,7 +2351,25 @@ input::-ms-clear {
    3) <=700px tall -> compact laptops, keeps the card short
    ═══════════════════════════════════════════════════════════ */
 
-/* 1) Single column: drop the left hero panel before the halves get squeezed */
+/* 1) Single column: mobile login card matching reference design */
+.mobile-login-top-banner {
+  display: none;
+}
+
+.login-card-welcome-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.3px;
+}
+
+.login-card-welcome-sub {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
 @media (max-width: 880px) {
   .lp2-panel {
     display: none;
@@ -2339,16 +2377,130 @@ input::-ms-clear {
 
   .login-wrapper {
     min-height: auto;
-    max-width: 440px;
-    border-radius: 20px;
+    max-width: 420px;
+    border-radius: 24px;
+    box-shadow: 0 20px 50px rgba(30, 11, 80, 0.18);
   }
 
   .login-card {
     flex: 1 1 100%;
     width: 100%;
-    max-width: 440px;
-    padding: 28px 24px;
-    border-radius: 20px;
+    max-width: 420px;
+    padding: 0 0 24px 0 !important;
+    border-radius: 24px;
+    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .login-logo {
+    display: none !important;
+  }
+
+  /* Header banner matching hero card default gradient */
+  .mobile-login-top-banner {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: linear-gradient(135deg, #0f2942 0%, #0053c0 100%) !important;
+    padding: 30px 20px 24px !important;
+    text-align: center !important;
+    width: 100% !important;
+    box-shadow: 0 8px 24px rgba(15, 41, 66, 0.25) !important;
+  }
+
+  .mobile-banner-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .mobile-banner-logo-img {
+    height: 76px;
+    width: auto;
+    max-width: 280px;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+  }
+
+  /* Card content body padding */
+  .login-card-welcome-header,
+  .login-mode-segmented-bar,
+  .auth-error-msg,
+  .auth-success-msg,
+  form {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .login-card-welcome-header {
+    margin-top: 18px;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  .login-card-welcome-sub {
+    font-size: 13.5px !important;
+    color: #64748b !important;
+    text-align: center !important;
+  }
+
+  .login-mode-segmented-bar {
+    background: #f1f5f9 !important;
+    padding: 4px !important;
+    border-radius: 14px !important;
+    display: flex !important;
+    gap: 4px !important;
+    margin-bottom: 20px !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .login-mode-tab {
+    flex: 1 !important;
+    padding: 10px 14px !important;
+    font-size: 13.5px !important;
+    font-weight: 600 !important;
+    border-radius: 10px !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    color: #64748b !important;
+    background: transparent !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .login-mode-tab.active {
+    background: #ffffff !important;
+    color: #1e1b4b !important;
+    font-weight: 700 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  /* Inputs styling */
+  .login-input-group input[type="email"],
+  .login-input-group input[type="text"],
+  .login-input-group input[type="password"] {
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    font-size: 14px !important;
+  }
+
+  .login-send-otp-btn {
+    background: #2e1065 !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 13px 18px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    width: 100% !important;
+    box-shadow: 0 4px 14px rgba(46, 16, 101, 0.25) !important;
+    margin-top: 12px !important;
+    margin-bottom: 16px !important;
   }
 }
 
@@ -2360,65 +2512,53 @@ input::-ms-clear {
 
   .login-wrapper {
     max-width: 100%;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(0, 50, 150, 0.08);
+    border-radius: 20px;
   }
 
   .login-card {
-    padding: 22px 18px;
-    border-radius: 16px;
+    border-radius: 20px;
   }
 
-  .login-logo {
-    width: 118px;
+  .mobile-login-top-banner {
+    padding: 24px 16px 20px !important;
+  }
+
+  .mobile-banner-logo-box {
+    width: 60px;
+    height: 60px;
+    border-radius: 14px;
+    margin-bottom: 8px;
+  }
+
+  .mobile-banner-title {
+    font-size: 20px !important;
+  }
+
+  .mobile-banner-subtitle {
+    font-size: 12px !important;
+  }
+
+  .login-card-welcome-header,
+  .login-mode-segmented-bar,
+  .auth-error-msg,
+  .auth-success-msg,
+  form{
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+
+  .login-card-welcome-header {
+    margin-top: 10px;
     margin-bottom: 10px;
+    display: flex;
+    justify-content: center;
   }
 
-  .login-subtitle {
-    font-size: 13px;
-    margin-bottom: 12px;
+  .login-card-welcome-title {
+    font-size: 18px !important;
   }
 
-  .login-mode-segmented-bar {
-    margin-bottom: 14px;
-  }
-
-  .login-mode-tab {
-    padding: 7px 4px;
-    gap: 4px;
-    font-size: 11.5px;
-    letter-spacing: -0.2px;
-  }
-
-  .login-mode-tab svg {
-    width: 12px;
-    height: 12px;
-  }
-
-  .login-input-group {
-    margin-bottom: 12px;
-  }
-
-  .login-input-group input[type="email"],
-  .login-input-group input[type="text"],
-  .login-input-group input[type="password"] {
-    padding: 9px 12px;
-    font-size: 13px;
-  }
-
-  .login-otp-digit-input {
-    height: 42px;
-    font-size: 16px;
-  }
-
-  .login-send-otp-btn {
-    padding: 10px 14px;
-    font-size: 13.5px;
-    margin-bottom: 16px;
-  }
-
-  .login-links p,
-  .login-links a {
-    font-size: 13px;
+  .login-card-welcome-sub {
+    font-size: 12.5px !important;
   }
 }

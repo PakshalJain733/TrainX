@@ -265,15 +265,85 @@ export default function AdminLearningContent() {
   };
 
   
-  const handleDownloadDocument = (item) => {
-    let targetUrl = item.file_url || item.link || "";
-    if (!targetUrl || targetUrl === "#") {
-      alert("No downloadable document file attached to this resource.");
+  const resolveUrl = (rawUrl) => {
+    if (!rawUrl || rawUrl === "#") return null;
+    if (
+      rawUrl.startsWith("http://") ||
+      rawUrl.startsWith("https://") ||
+      rawUrl.startsWith("blob:") ||
+      rawUrl.startsWith("data:")
+    ) {
+      return rawUrl;
+    }
+    const normalizedPath = rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`;
+    const apiBase = getApiBaseUrl();
+    const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin;
+    const backendHost = (origin.includes(":5173") || origin.includes(":3000")) ? "http://localhost:5000" : origin;
+    return `${backendHost}${normalizedPath}`;
+  };
+
+  const getEmbedVideoUrl = (url) => {
+    if (!url) return null;
+    if (url.includes("youtube.com/watch?v=")) {
+      const videoId = url.split("v=")[1]?.split("&")[0];
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    }
+    if (url.includes("youtu.be/")) {
+      const videoId = url.split("youtu.be/")[1]?.split("?")[0];
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    }
+    if (url.includes("vimeo.com/")) {
+      const videoId = url.split("vimeo.com/")[1]?.split("?")[0];
+      return `https://player.vimeo.com/video/${videoId}?autoplay=1`;
+    }
+    return url;
+  };
+
+  const handleOpenLink = (item) => {
+    let targetUrl = resolveUrl(item.link || item.file_url);
+    if (!targetUrl) {
+      alert("No valid web link found for this item.");
       return;
     }
-    if (!targetUrl.startsWith("http") && !targetUrl.startsWith("blob:") && !targetUrl.startsWith("data:")) {
-      const normalizedPath = targetUrl.startsWith("/") ? targetUrl : `/${targetUrl}`;
-      targetUrl = `http://localhost:5000${normalizedPath}`;
+    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+      targetUrl = `https://${targetUrl}`;
+    }
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleOpenVideo = (item) => {
+    const videoUrl = resolveUrl(item.link || item.file_url);
+    if (!videoUrl) {
+      alert("No video source found for this item.");
+      return;
+    }
+    setViewingDocument({
+      type: "video",
+      title: item.title,
+      url: videoUrl,
+      originalItem: item,
+    });
+  };
+
+  const handleViewDocument = (item) => {
+    const docUrl = resolveUrl(item.file_url || item.link);
+    if (!docUrl) {
+      alert("No viewable document file attached to this resource.");
+      return;
+    }
+    setViewingDocument({
+      type: "document",
+      title: item.title,
+      url: docUrl,
+      originalItem: item,
+    });
+  };
+
+  const handleDownloadDocument = (item) => {
+    let targetUrl = resolveUrl(item.file_url || item.link);
+    if (!targetUrl) {
+      alert("No downloadable document file attached to this resource.");
+      return;
     }
 
     const a = document.createElement("a");
@@ -481,6 +551,14 @@ export default function AdminLearningContent() {
             const IconComponent = iconMap[item.type] || FileText;
             const fileName = item.file_name || (item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null);
 
+            const typeLower = (item.type || "").toLowerCase();
+            const fileUrl = item.file_url || "";
+            const linkUrl = item.link || "";
+
+            const isLink = typeLower.includes("link") || (!fileUrl && linkUrl && !linkUrl.includes("youtube") && !linkUrl.includes("youtu.be") && !linkUrl.includes("vimeo"));
+            const isVideo = typeLower.includes("video") || fileUrl.match(/\.(mp4|webm|mov|mkv)$/i) || linkUrl.includes("youtube.com") || linkUrl.includes("youtu.be") || linkUrl.includes("vimeo.com");
+            const isDocument = !isLink && !isVideo;
+
             return (
               <div key={item.id} className="learning-resource-card">
                 <div className="learning-card-header-row">
@@ -516,13 +594,46 @@ export default function AdminLearningContent() {
                 </div>
 
                 <div className="learning-card-footer">
-                  <button
+                  {isLink && (
+                    <button
                       type="button"
-                      className="resource-download-btn"
-                      onClick={() => handleDownloadDocument(item)}
+                      className="resource-action-btn resource-btn-link"
+                      onClick={() => handleOpenLink(item)}
                     >
-                      <Download size={14} /> Download Document
+                      <ExternalLink size={14} /> Open Link
                     </button>
+                  )}
+
+                  {isVideo && (
+                    <button
+                      type="button"
+                      className="resource-action-btn resource-btn-video"
+                      onClick={() => handleOpenVideo(item)}
+                    >
+                      <Video size={14} /> Watch Video
+                    </button>
+                  )}
+
+                  {isDocument && (
+                    <div className="resource-doc-btn-group">
+                      <button
+                        type="button"
+                        className="resource-action-btn resource-btn-view"
+                        onClick={() => handleViewDocument(item)}
+                      >
+                        <Eye size={14} /> View Document
+                      </button>
+                      <button
+                        type="button"
+                        className="resource-action-btn resource-btn-download"
+                        onClick={() => handleDownloadDocument(item)}
+                        title="Download document file"
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
+                  )}
+
                   <Badge variant="success" className="learning-status-pill">
                     {item.status}
                   </Badge>
@@ -555,6 +666,89 @@ export default function AdminLearningContent() {
           )}
         </div>
       </div>
+
+      {/* Dynamic File & Video Viewer Modal */}
+      {viewingDocument && createPortal(
+        <div className="lc-viewer-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewingDocument(null); }}>
+          <div className="lc-viewer-modal">
+            <div className="lc-viewer-header">
+              <div className="lc-viewer-title-group">
+                {viewingDocument.type === "video" ? (
+                  <div className="lc-viewer-icon-wrap lc-icon--video"><Video size={20} /></div>
+                ) : (
+                  <div className="lc-viewer-icon-wrap lc-icon--doc"><FileText size={20} /></div>
+                )}
+                <div>
+                  <h3 className="lc-viewer-title">{viewingDocument.title}</h3>
+                  <span className="lc-viewer-subtitle">
+                    {viewingDocument.type === "video" ? "Interactive Video Player" : "Document & File Viewer"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="lc-viewer-actions">
+                <button
+                  className="lc-viewer-action-btn"
+                  onClick={() => window.open(viewingDocument.url, "_blank", "noopener,noreferrer")}
+                  title="Open in new window"
+                >
+                  <ExternalLink size={15} /> Open in New Tab
+                </button>
+                {viewingDocument.type === "document" && (
+                  <button
+                    className="lc-viewer-action-btn lc-viewer-btn-primary"
+                    onClick={() => handleDownloadDocument(viewingDocument.originalItem)}
+                    title="Download File"
+                  >
+                    <Download size={15} /> Download
+                  </button>
+                )}
+                <button className="lc-viewer-close-btn" onClick={() => setViewingDocument(null)} title="Close Viewer">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="lc-viewer-body">
+              {viewingDocument.type === "video" ? (
+                getEmbedVideoUrl(viewingDocument.url) !== viewingDocument.url ? (
+                  <iframe
+                    src={getEmbedVideoUrl(viewingDocument.url)}
+                    title={viewingDocument.title}
+                    className="lc-viewer-iframe"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : viewingDocument.url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                  <video controls autoPlay src={viewingDocument.url} className="lc-viewer-video" />
+                ) : (
+                  <iframe
+                    src={viewingDocument.url}
+                    title={viewingDocument.title}
+                    className="lc-viewer-iframe"
+                    allowFullScreen
+                  />
+                )
+              ) : (
+                viewingDocument.url.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i) ? (
+                  <div className="lc-viewer-image-wrap">
+                    <img src={viewingDocument.url} alt={viewingDocument.title} className="lc-viewer-img" />
+                  </div>
+                ) : viewingDocument.url.match(/\.(mp4|webm|ogg)$/i) ? (
+                  <video controls autoPlay src={viewingDocument.url} className="lc-viewer-video" />
+                ) : (
+                  <iframe
+                    src={viewingDocument.url}
+                    title={viewingDocument.title}
+                    className="lc-viewer-iframe"
+                  />
+                )
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

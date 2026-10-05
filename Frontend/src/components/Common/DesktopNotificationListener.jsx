@@ -31,8 +31,9 @@ export default function DesktopNotificationListener() {
 
     // Periodic sync function to pull latest announcements for the active user role
     const syncRoleNotifications = async () => {
+      const token = sessionStorage.getItem("token") || localStorage.getItem("token");
       const userRaw = sessionStorage.getItem("user") || localStorage.getItem("user");
-      if (!userRaw) return;
+      if (!userRaw || !token) return;
 
       let role = "";
       try {
