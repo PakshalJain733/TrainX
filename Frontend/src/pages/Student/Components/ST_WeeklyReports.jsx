@@ -1,12 +1,5 @@
 import React, { useState } from "react";
-import {
-  FileCheck2,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  CheckCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { FileCheck2, ChevronDown, ChevronUp, Download, CheckCircle, AlertTriangle } from "lucide-react";
 import "../Styles/ST_WeeklyReports.css"
 
 const reportsData = [];

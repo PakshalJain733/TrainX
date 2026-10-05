@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import {Check,  ChevronDown, Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import "./CustomSelect.css";
 
 export default function CustomSelect({

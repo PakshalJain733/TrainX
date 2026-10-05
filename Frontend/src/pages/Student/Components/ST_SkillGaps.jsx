@@ -1,23 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {Check, 
-  AlertTriangle,
-  CheckCircle2,
-  BookOpen,
-  ArrowRight,
-  Target,
-  Sparkles,
-  Award,
-  TrendingDown,
-  RotateCcw,
-  Check,
-  ChevronRight,
-  Info,
-  Layers,
-  GraduationCap,
-  PlayCircle,
-  UserCheck,
-  Calendar,
-} from "lucide-react";
+import { Check, AlertTriangle, CheckCircle2, BookOpen, ArrowRight, Target, Sparkles, Award, TrendingDown, RotateCcw, ChevronRight, Info, Layers, GraduationCap, PlayCircle, UserCheck, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ST_SkillGaps.css";

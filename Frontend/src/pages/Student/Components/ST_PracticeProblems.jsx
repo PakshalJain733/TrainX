@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-import {
-  Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy,
-  BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight,
-  Bookmark, Sliders, ExternalLink, Cpu, Terminal
-} from "lucide-react";
+import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";

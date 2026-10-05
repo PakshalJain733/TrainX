@@ -1,16 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  Briefcase,
-  Search,
-  Users,
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  ExternalLink,
-  TrendingUp,
-  XCircle,
-  Clock,
-} from "lucide-react";
+import { Briefcase, Search, Users, CheckCircle2, AlertCircle, RefreshCw, ExternalLink, TrendingUp, XCircle, Clock } from "lucide-react";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";

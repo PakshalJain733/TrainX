@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
-import {
-  Search,
-  GraduationCap,
-  Users,
-  Mail,
-  Phone,
-  Sparkles,
-  CheckCircle2,
-  CircleDot,
-  Lock,
-  ArrowLeft,
-  Send,
-  Target,
-} from "lucide-react";
+import { Search, GraduationCap, Users, Mail, Phone, Sparkles, CheckCircle2, CircleDot, Lock, ArrowLeft, Send, Target } from "lucide-react";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";

@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import {Check, 
-  Search,
-  BookOpen,
-  FileText,
-  Video,
-  Sparkles,
-  Plus,
-  Trash2,
-  X,
-  Link as LinkIcon,
-  UploadCloud,
-  ExternalLink,
-  Download,
-  Eye,
-  ChevronDown,
-  Check,
-  BookOpenCheck,
-} from "lucide-react";
+import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";

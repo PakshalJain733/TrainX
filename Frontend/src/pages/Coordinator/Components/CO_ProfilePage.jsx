@@ -1,25 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import {Check, 
-  User,
-  Camera,
-  GraduationCap,
-  Building,
-  Users,
-  ShieldCheck,
-  CheckCircle2,
-  Save,
-  Sparkles,
-  MapPin,
-  Clock,
-  KeyRound,
-  QrCode,
-  Copy,
-  Check,
-  Loader2,
-  X,
-  Edit2
-} from "lucide-react";
+import { Check, User, Camera, GraduationCap, Building, Users, ShieldCheck, CheckCircle2, Save, Sparkles, MapPin, Clock, KeyRound, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";

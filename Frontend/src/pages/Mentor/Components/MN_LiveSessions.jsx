@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { Video, Plus, Clock, ExternalLink, X } from 'lucide-react';
+import { Video, Plus, Clock, ExternalLink, X } from "lucide-react";
 import "../Styles/MN_LiveSessions.css";
 
 const generateGoogleMeetLink = () => {

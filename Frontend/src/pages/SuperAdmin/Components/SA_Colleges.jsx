@@ -5,25 +5,7 @@ import EmptyState from '../../../components/ui/EmptyState';
 import { collegeAPI, departmentAPI } from '../../../services/api';
 import { apiFetch } from '../../../utils/api';
 import { EVENTS } from '../../../utils/sharedStore';
-import {
-  Plus,
-  Search,
-  Filter,
-  Building2,
-  MapPin,
-  Mail,
-  Users,
-  X,
-  ArrowLeft,
-  GraduationCap,
-  MoreVertical,
-  Edit2,
-  Trash2,
-  Eye,
-  ShieldCheck,
-  ChevronDown,
-  Check
-} from 'lucide-react';
+import { Plus, Search, Filter, Building2, MapPin, Mail, Users, X, ArrowLeft, GraduationCap, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, ChevronDown, Check } from "lucide-react";
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Colleges.css";
 

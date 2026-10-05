@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { Trophy, Flame } from 'lucide-react';
+import { Trophy, Flame } from "lucide-react";
 import "../Styles/CO_Leaderboard.css";
 
 export default function CoordinatorLeaderboard() {

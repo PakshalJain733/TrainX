@@ -1,25 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {Check, 
-  HelpCircle,
-  MessageCircle,
-  Phone,
-  Search,
-  Plus,
-  ChevronDown,
-  Check,
-  Sparkles,
-  Ticket,
-  FileText,
-  Download,
-  ThumbsUp,
-  ThumbsDown,
-  X,
-  Send,
-  ShieldAlert,
-  Clock,
-  CheckCircle2,
-  AlertCircle
-} from "lucide-react";
+import { Check, HelpCircle, MessageCircle, Phone, Search, Plus, ChevronDown, Sparkles, Ticket, FileText, Download, ThumbsUp, ThumbsDown, X, Send, ShieldAlert, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/CO_Help.css";
 

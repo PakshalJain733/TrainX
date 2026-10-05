@@ -2,13 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import * as XLSX from "xlsx";
-import {
-  CheckCircle2, XCircle, QrCode, RefreshCw,
-  Copy, Check, Calendar, CalendarCheck, Users, ShieldCheck,
-  Download, Clock, Info, Sparkles, X, History,
-  Eye, FileText, ArrowLeft, Zap, FileSpreadsheet,
-  ChevronDown
-} from "lucide-react";
+import { CheckCircle2, XCircle, QrCode, RefreshCw, Copy, Check, Calendar, CalendarCheck, Users, ShieldCheck, Download, Clock, Info, Sparkles, X, History, Eye, FileText, ArrowLeft, Zap, FileSpreadsheet, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_Attendance.css";
