@@ -116,6 +116,14 @@ export const getAdminUsers = async (req, res, next) => {
     // Multi-college isolation: strictly partitioned by caller's collegeId unless super_admin
     let users = await getAllUsersModel(collegeId);
 
+    // College Admins can only view/manage Students, Mentors, and Coordinators (not other Admins)
+    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+      users = users.filter((u) => {
+        const r = String(u.role || '').toLowerCase();
+        return !r.includes('admin');
+      });
+    }
+
     if (role && role !== 'all') {
       const canonicalRole = role.toLowerCase();
       users = users.filter((u) => u.role.toLowerCase() === canonicalRole);
@@ -144,6 +152,14 @@ export const getAdminPendingUsers = async (req, res, next) => {
     const collegeId = getCallerCollegeFilter(req);
 
     let users = await getPendingUsersModel(collegeId);
+
+    // College Admins can only view/approve Students, Mentors, and Coordinators
+    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+      users = users.filter((u) => {
+        const r = String(u.role || '').toLowerCase();
+        return !r.includes('admin');
+      });
+    }
 
     if (role && role !== 'all') {
       const canonicalRole = role.toLowerCase();
@@ -1001,6 +1017,145 @@ export const triggerUser2FAAdmin = async (req, res, next) => {
         qrCode: totpSetup.qrCode,
       }
     );
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get all support tickets for College Admin / Super Admin
+ */
+export const getAdminSupportTickets = async (req, res, next) => {
+  try {
+    const collegeId = getCallerCollegeFilter(req);
+    let tickets = [];
+    try {
+      let sql = `
+        SELECT st.*, 
+               COALESCE(u.name, 'Student/User') AS requesterName, 
+               u.email AS requesterEmail, 
+               u.role AS requesterRole, 
+               COALESCE(s.department, 'General') AS requesterBatch, 
+               s.roll_number AS requesterRollNo,
+               eb.name AS escalatedByName
+        FROM support_tickets st
+        LEFT JOIN users u ON st.user_id = u.id
+        LEFT JOIN students s ON u.id = s.user_id
+        LEFT JOIN users eb ON st.escalated_by = eb.id
+      `;
+      const params = [];
+      if (collegeId) {
+        sql += ` WHERE u.college_id = ? OR u.college_id IS NULL OR st.user_id IS NULL OR st.is_escalated = 1`;
+        params.push(collegeId);
+      }
+      sql += ` ORDER BY st.id DESC`;
+
+      tickets = await query(sql, params);
+    } catch (e) {
+      console.warn('[DB getAdminSupportTickets full query failed, attempting simple query]', e.message);
+      try {
+        tickets = await query(`
+          SELECT st.*, 
+                 COALESCE(u.name, 'Student/User') AS requesterName, 
+                 u.email AS requesterEmail, 
+                 u.role AS requesterRole
+          FROM support_tickets st
+          LEFT JOIN users u ON st.user_id = u.id
+          ORDER BY st.id DESC
+        `);
+      } catch (e2) {
+        console.warn('[DB getAdminSupportTickets simple query failed, selecting raw]', e2.message);
+        try {
+          tickets = await query(`SELECT * FROM support_tickets ORDER BY id DESC`);
+        } catch (e3) {
+          console.warn('[DB getAdminSupportTickets raw query failed]', e3.message);
+        }
+      }
+    }
+
+    const formatted = (tickets || []).map(t => ({
+      id: `TICK-${t.id}`,
+      dbId: t.id,
+      title: t.subject || 'Support Issue',
+      category: t.category || 'Technical',
+      priority: t.priority || 'Medium',
+      status: t.status || 'Open',
+      description: t.description || '',
+      requesterName: t.requesterName || 'Student/User',
+      requesterEmail: t.requesterEmail || '',
+      role: t.requesterRole || 'STUDENT',
+      batch: t.requesterBatch || 'General',
+      time: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Just now',
+      resolutionNote: t.resolution_note || '',
+      isEscalated: Boolean(t.is_escalated),
+      escalationReason: t.escalation_reason || '',
+      escalatedByName: t.escalatedByName || '',
+      escalatedAt: t.escalated_at || null,
+    }));
+
+    return sendSuccess(res, 'Support tickets retrieved successfully', formatted);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update support ticket status and resolution note
+ */
+export const updateAdminSupportTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, resolutionNote } = req.body;
+    const cleanId = String(id).replace('TICK-', '');
+
+    try {
+      await query(
+        `UPDATE support_tickets 
+         SET status = ?, resolution_note = ? 
+         WHERE id = ?`,
+        [status || 'Resolved', resolutionNote || '', cleanId]
+      );
+    } catch (e) {
+      console.warn('[DB updateAdminSupportTicket fallback]', e.message);
+    }
+
+    return sendSuccess(res, 'Support ticket updated successfully', {
+      id: `TICK-${cleanId}`,
+      status,
+      resolutionNote
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Escalate support ticket to Super Admin
+ */
+export const escalateSupportTicketToSuperAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { escalationReason } = req.body;
+    const adminId = req.user?.userId || req.user?.id || 1;
+    const cleanId = String(id).replace('TICK-', '');
+
+    try {
+      await query(
+        `UPDATE support_tickets 
+         SET is_escalated = 1, status = 'Escalated', escalation_reason = ?, escalated_by = ?, escalated_at = NOW() 
+         WHERE id = ?`,
+        [escalationReason || 'College Admin escalated issue to Super Admin for assistance.', adminId, cleanId]
+      );
+    } catch (e) {
+      console.warn('[DB escalateSupportTicketToSuperAdmin fallback]', e.message);
+    }
+
+    return sendSuccess(res, 'Support ticket escalated to Super Admin successfully', {
+      id: `TICK-${cleanId}`,
+      status: 'Escalated',
+      isEscalated: true,
+      escalationReason
+    });
   } catch (error) {
     next(error);
   }

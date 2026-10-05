@@ -279,8 +279,42 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding-bottom: 16px;
-  border-bottom: 1.5px solid #f1f5f9;
+  padding-bottom: 4px;
+  border-bottom: none;
+}
+
+.profile-change-pw-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.profile-change-pw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 20px;
+  background: #2563eb;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13.5px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  transition: all 0.2s ease;
+  width: auto;
+}
+
+.profile-change-pw-btn:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
 }
 
 .profile-heading-title {
