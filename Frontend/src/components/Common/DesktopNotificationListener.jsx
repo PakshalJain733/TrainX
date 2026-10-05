@@ -44,7 +44,7 @@ export default function DesktopNotificationListener() {
       if (role.includes("student")) endpoint = "/student/notifications";
       else if (role.includes("mentor") || role.includes("faculty")) endpoint = "/mentor/notifications";
       else if (role.includes("coordinator")) endpoint = "/coordinator/notifications";
-      else if (role.includes("admin")) endpoint = "/admin/notifications";
+      else if (role.includes("admin")) endpoint = "/admin/broadcast";
 
       if (!endpoint) return;
 

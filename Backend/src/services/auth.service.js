@@ -272,7 +272,7 @@ export const verifyTotpToken = (secret, token) => {
       secret: String(secret).trim(),
       encoding: 'base32',
       token: cleanToken,
-      window: 2,
+      window: 6,
     });
     return Boolean(verified);
   } catch (err) {
