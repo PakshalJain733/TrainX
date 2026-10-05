@@ -84,6 +84,7 @@ export default function AdminAttendance() {
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [qrScannedMap, setQrScannedMap] = useState({});
+  const [rosterFilter, setRosterFilter] = useState("all"); // "all" | "qr_scanned" | "present" | "absent"
   const [saved, setSaved] = useState(false);
   const [lastScannedName, setLastScannedName] = useState("");
 
@@ -362,18 +363,33 @@ export default function AdminAttendance() {
   };
 
   const presentCount = students.filter(s => attendance[s.id]).length;
+  const qrScannedCount = students.filter(s => qrScannedMap[s.id]).length;
   const totalCount = students.length;
   const ratePct = totalCount ? Math.round((presentCount / totalCount) * 100) : 0;
   const currentBatchObj = batches.find(b => b.code === selectedBatchCode) || batches[0];
 
+  const filteredStudents = students.filter(s => {
+    if (rosterFilter === "qr_scanned") return Boolean(qrScannedMap[s.id]);
+    if (rosterFilter === "present") return Boolean(attendance[s.id]);
+    if (rosterFilter === "absent") return !attendance[s.id];
+    return true;
+  });
+
   const handleSave = async () => {
     try {
+      const payloadAttendance = {};
+      students.forEach(s => {
+        const isPresent = Boolean(attendance[s.id]);
+        const targetKey = s.userId || s.studentId || s.id;
+        payloadAttendance[targetKey] = isPresent;
+      });
+
       await apiFetch("/attendance/mark", {
         method: "POST",
         body: JSON.stringify({
           batch_id: currentBatchObj ? currentBatchObj.id : 1,
           date: sessionDate,
-          attendance
+          attendance: payloadAttendance
         })
       });
     } catch (e) {}
@@ -718,16 +734,20 @@ export default function AdminAttendance() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="attendance-stats-row">
-        <div className="attendance-stat-card">
+      <div className="attendance-stats-row att-stats-grid-5">
+        <div className={`attendance-stat-card ${rosterFilter === 'all' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('all')} style={{ cursor: 'pointer' }}>
           <span className="att-stat-val">{totalCount}</span>
           <span className="att-stat-label">Total Enrolled</span>
         </div>
-        <div className="attendance-stat-card att-present">
+        <div className={`attendance-stat-card att-qr-card ${rosterFilter === 'qr_scanned' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('qr_scanned')} style={{ cursor: 'pointer' }}>
+          <span className="att-stat-val">{qrScannedCount}</span>
+          <span className="att-stat-label">QR Scanned</span>
+        </div>
+        <div className={`attendance-stat-card att-present ${rosterFilter === 'present' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('present')} style={{ cursor: 'pointer' }}>
           <span className="att-stat-val">{presentCount}</span>
           <span className="att-stat-label">Present Today</span>
         </div>
-        <div className="attendance-stat-card att-absent">
+        <div className={`attendance-stat-card att-absent ${rosterFilter === 'absent' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('absent')} style={{ cursor: 'pointer' }}>
           <span className="att-stat-val">{totalCount - presentCount}</span>
           <span className="att-stat-label">Absent</span>
         </div>
@@ -745,9 +765,26 @@ export default function AdminAttendance() {
               Student Attendance Roster — {currentBatchObj ? currentBatchObj.name : selectedBatchCode}
             </CardTitle>
             <p className="att-card-subtitle">
-              Session Date: {sessionDate}
+              Session Date: {sessionDate} · Showing {rosterFilter === 'qr_scanned' ? 'QR Scanned Attendees' : rosterFilter === 'present' ? 'Present Students' : rosterFilter === 'absent' ? 'Absent Students' : 'All Students'} ({filteredStudents.length})
             </p>
           </div>
+
+          {/* Roster Filter Tabs */}
+          <div className="att-roster-filter-pills">
+            <button className={`att-filter-pill ${rosterFilter === 'all' ? 'active' : ''}`} onClick={() => setRosterFilter('all')}>
+              All ({totalCount})
+            </button>
+            <button className={`att-filter-pill att-filter-pill-qr ${rosterFilter === 'qr_scanned' ? 'active' : ''}`} onClick={() => setRosterFilter('qr_scanned')}>
+              <QrCode size={13} /> QR Scanned ({qrScannedCount})
+            </button>
+            <button className={`att-filter-pill att-filter-pill-present ${rosterFilter === 'present' ? 'active' : ''}`} onClick={() => setRosterFilter('present')}>
+              Present ({presentCount})
+            </button>
+            <button className={`att-filter-pill att-filter-pill-absent ${rosterFilter === 'absent' ? 'active' : ''}`} onClick={() => setRosterFilter('absent')}>
+              Absent ({totalCount - presentCount})
+            </button>
+          </div>
+
           <div className="att-bulk-actions">
             <button className="att-mark-btn att-mark-all" onClick={() => markAll(true)} disabled={students.length === 0}>
               <CheckCircle2 size={14} /> Mark All Present
@@ -770,14 +807,27 @@ export default function AdminAttendance() {
                 </tr>
               </thead>
               <tbody>
-                {students.length === 0 ? (
+                {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="admin-table-empty-cell">
-                      No students enrolled in this batch.
+                      {rosterFilter === 'qr_scanned' ? (
+                        <div style={{ padding: "24px 12px", textAlign: "center" }}>
+                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
+                            <QrCode size={22} />
+                          </div>
+                          <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>No Students Have Scanned QR Code Yet</p>
+                          <p style={{ margin: "0 0 12px", fontSize: "12.5px", color: "#64748b" }}>Students who scan the session QR code with their mobile phone will appear here in real time.</p>
+                          <button className="admin-create-qr-btn" onClick={openQrModal} style={{ margin: "0 auto", display: "inline-flex" }}>
+                            <QrCode size={15} /> Show Live QR Code
+                          </button>
+                        </div>
+                      ) : (
+                        "No students found matching the selected filter."
+                      )}
                     </td>
                   </tr>
                 ) : (
-                  students.map(s => (
+                  filteredStudents.map(s => (
                     <tr key={s.id} className={attendance[s.id] ? "att-row-present" : "att-row-absent"}>
                       <td className="att-roll">{s.rollNo}</td>
                       <td className="att-name">
