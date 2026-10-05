@@ -1322,17 +1322,20 @@ export const createLiveSession = async (req, res, next) => {
     const finalTime = time && String(time).trim() ? String(time).trim() : "Immediate / Now";
     const finalTitle = title && String(title).trim() ? String(title).trim() : (studentName ? `1-on-1 Call with ${studentName}` : "Batch Mentorship Call");
 
-    const generateMeetUrl = () => {
-      const chars = "abcdefghijklmnopqrstuvwxyz";
-      const p1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-      const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-      const p3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-      return `https://meet.google.com/${p1}-${p2}-${p3}`;
-    };
+    const { generateRealGoogleMeetLink } = require('../utils/googleMeet');
+
+    let generatedMeetUrl = '';
+    try {
+      generatedMeetUrl = await generateRealGoogleMeetLink(finalTitle);
+    } catch (err) {
+      console.warn("Could not generate real Google Meet link:", err.message);
+      // Fallback to manual setup message if OAuth is not configured
+      generatedMeetUrl = 'https://meet.google.com/'; 
+    }
 
     const finalLink = (meetingLink && String(meetingLink).startsWith("http")) 
       ? String(meetingLink).trim() 
-      : generateMeetUrl();
+      : generatedMeetUrl;
 
     let batchLabel = batch || null;
     const parsedBatchId = parseBatchId(batchId);

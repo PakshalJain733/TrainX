@@ -431,12 +431,19 @@ export async function initializeDatabase() {
         subject VARCHAR(255) NOT NULL,
         category VARCHAR(100) DEFAULT 'Technical',
         priority ENUM('Low', 'Medium', 'High', 'Urgent') DEFAULT 'Medium',
-        status ENUM('Open', 'In Progress', 'Resolved', 'Closed') DEFAULT 'Open',
+        status VARCHAR(50) DEFAULT 'Open',
         description TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    try { await conn.query(`ALTER TABLE support_tickets MODIFY COLUMN status VARCHAR(50) DEFAULT 'Open'`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE support_tickets ADD COLUMN resolution_note TEXT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE support_tickets ADD COLUMN is_escalated TINYINT(1) DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE support_tickets ADD COLUMN escalation_reason TEXT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE support_tickets ADD COLUMN escalated_by INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE support_tickets ADD COLUMN escalated_at TIMESTAMP NULL`); } catch (_) { }
 
     // 14. Ensure Skill Gap Analysis Table
     await conn.query(`

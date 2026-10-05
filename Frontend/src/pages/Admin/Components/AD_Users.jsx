@@ -1112,7 +1112,12 @@ export default function AdminUsers() {
 
       const res = await apiFetch(`/admin/users?${queryParams.toString()}`);
       if (res && res.data) {
-        setUsers(res.data);
+        // Filter out admin accounts from College Admin user list
+        const nonAdmins = (res.data || []).filter(u => {
+          const r = String(u.role || '').toLowerCase();
+          return !r.includes('admin');
+        });
+        setUsers(nonAdmins);
       }
     } catch (err) {
       console.error("Failed to fetch users:", err);
@@ -1125,7 +1130,10 @@ export default function AdminUsers() {
     try {
       const res = await apiFetch("/admin/stats");
       if (res && res.data) {
-        setStats(res.data);
+        const s = { ...res.data };
+        // Total registered users for College Admin includes Students + Mentors + Coordinators
+        s.totalUsers = (s.students || 0) + (s.mentors || 0) + (s.coordinators || 0);
+        setStats(s);
       }
     } catch (err) {
       console.error("Failed to fetch stats:", err);
@@ -1381,12 +1389,6 @@ export default function AdminUsers() {
           >
             Coordinators ({stats.coordinators})
           </button>
-          <button
-            className={`admin-filter-pill ${roleFilter === "college_admin" ? "admin-filter-pill--active" : ""}`}
-            onClick={() => setRoleFilter("college_admin")}
-          >
-            Admins
-          </button>
         </div>
       </div>
 
@@ -1601,8 +1603,28 @@ export default function AdminUsers() {
                         </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            navigator.clipboard.writeText(generatedCode);
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            try {
+                              if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(generatedCode).catch(() => {
+                                  const textArea = document.createElement("textarea");
+                                  textArea.value = generatedCode;
+                                  document.body.appendChild(textArea);
+                                  textArea.select();
+                                  document.execCommand("copy");
+                                  document.body.removeChild(textArea);
+                                });
+                              } else {
+                                const textArea = document.createElement("textarea");
+                                textArea.value = generatedCode;
+                                document.body.appendChild(textArea);
+                                textArea.select();
+                                document.execCommand("copy");
+                                document.body.removeChild(textArea);
+                              }
+                            } catch (_) {}
                             setCopiedCode(true);
                             setTimeout(() => setCopiedCode(false), 2000);
                           }}

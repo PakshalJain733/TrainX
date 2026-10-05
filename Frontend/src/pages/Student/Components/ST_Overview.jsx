@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
-  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
-  Plus, X, KeyRound, Loader2, UserCog, GraduationCap, Award, BadgeCheck,
-  Activity, Layers, Zap
-} from "lucide-react";
+import { CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame, Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight, Plus, X, KeyRound, Loader2, UserCog, GraduationCap, Award, BadgeCheck, Activity, Layers, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";

@@ -686,7 +686,7 @@ function Register() {
             <div className="totp-header">
               <h3 className="totp-title">Pair Authenticator App</h3>
               <p className="totp-subtitle">
-                Scan QR Code using Google or Microsoft Authenticator.
+                Scan QR Code using Authenticator App.
               </p>
             </div>
 

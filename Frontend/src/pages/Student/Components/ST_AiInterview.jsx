@@ -3,31 +3,7 @@ import { createPortal } from "react-dom";
 
 import { io } from "socket.io-client";
 
-import {
-  Bot,
-  Camera,
-  CameraOff,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  Send,
-  Timer,
-  Award,
-  Sparkles,
-  RotateCcw,
-  Play,
-  Video,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  ShieldAlert,
-  Eye,
-  UserX,
-  Users,
-  Flag,
-  ArrowLeft,
-} from "lucide-react";
+import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft } from "lucide-react";
 import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 

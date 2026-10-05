@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../../services/api';
-import {
-  Briefcase,
-  CheckCircle,
-  Play,
-  Award,
-  ArrowRight,
-  Code,
-  HelpCircle,
-  Video,
-  AlertTriangle,
-  RotateCcw,
-  Sparkles,
-} from 'lucide-react';
+import { Briefcase, CheckCircle, Play, Award, ArrowRight, Code, HelpCircle, Video, AlertTriangle, RotateCcw, Sparkles } from "lucide-react";
 import { getSharedDrives, EVENTS } from '../../../utils/sharedStore';
 import "../Styles/ST_MockDrives.css";
 

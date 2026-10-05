@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { FileCheck2, Plus, Download, RefreshCw, X, FileText, CheckCircle2 } from 'lucide-react';
+import { FileCheck2, Plus, Download, RefreshCw, X, FileText, CheckCircle2 } from "lucide-react";
 import "../Styles/MN_WeeklyReports.css";
 
 const unwrap = (response) => {

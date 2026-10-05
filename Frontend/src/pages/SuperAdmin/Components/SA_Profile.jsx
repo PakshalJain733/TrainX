@@ -315,6 +315,7 @@ export default function SuperAdminProfile() {
                 className="profile-change-pw-btn"
                 onClick={() => setIsChangePasswordOpen(true)}
               >
+                <Key size={15} />
                 <span>Change Password</span>
               </button>
 
@@ -364,7 +365,7 @@ export default function SuperAdminProfile() {
               </div>
             </div>
 
-            <div className="profile-form-grid">
+            <div className="sa-profile-form-grid">
               <div className="profile-field">
                 <label className="profile-label">Full Name *</label>
                 <input

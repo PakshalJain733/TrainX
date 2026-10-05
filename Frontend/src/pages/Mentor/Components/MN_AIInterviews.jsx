@@ -1,20 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Bot,
-  Search,
-  Filter,
-  TrendingUp,
-  Award,
-  AlertCircle,
-  FileText,
-  Eye,
-  X,
-  CheckCircle2,
-  BrainCircuit,
-  UserCheck,
-  Sparkles,
-  RefreshCw,
-} from 'lucide-react';
+import { Bot, Search, Filter, TrendingUp, Award, AlertCircle, FileText, Eye, X, CheckCircle2, BrainCircuit, UserCheck, Sparkles, RefreshCw } from "lucide-react";
 import { apiFetch } from '../../../utils/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import '../Styles/MN_AIInterviews.css';

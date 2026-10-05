@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Brain,
-  Sparkles,
-  AlertTriangle,
-  CheckCircle2,
-  RefreshCw,
-  Zap,
-  Award,
-  BarChart3,
-  ListChecks,
-  Search,
-  BookOpen,
-  TrendingDown,
-  LineChart,
-  X,
-} from "lucide-react";
+import { Brain, Sparkles, AlertTriangle, CheckCircle2, RefreshCw, Zap, Award, BarChart3, ListChecks, Search, BookOpen, TrendingDown, LineChart, X } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ST_ProgressAnalytics.css";
 
