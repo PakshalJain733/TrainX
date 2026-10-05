@@ -7,11 +7,11 @@ import "../Styles/AD_Layout.css";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
+import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import { apiFetch } from "../../../utils/api";
 
-function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onNavigate, onSelectNotification }) {
   const [activeTab, setActiveTab] = useState("all");
-  const [expandedId, setExpandedId] = useState(null);
 
   const autoCloseTimerRef = useRef(null);
 
@@ -168,7 +168,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
         </button>
       </div>
 
-      {/* List */}
+      {/* List - Small Form Preview Cards */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
           <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
@@ -176,14 +176,16 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           </div>
         ) : (
           visibleNotifications.slice(0, 5).map((n) => {
-            const isExpanded = expandedId === n.id;
             return (
               <div
                 key={n.id}
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
-                  setExpandedId(isExpanded ? null : n.id);
+                  if (onClose) onClose();
+                  if (onSelectNotification) {
+                    onSelectNotification(n);
+                  }
                 }}
               >
                 {getIcon(n)}
@@ -197,21 +199,6 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
-
-                  {isExpanded && (
-                    <div className="notif-expanded-desc">
-                      {(n.target || n.created_by_name || n.priority) && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px', fontSize: '11px', fontWeight: '700' }}>
-                          {n.target && <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px' }}>🎯 For: {n.target}</span>}
-                          {n.created_by_name && <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '2px 8px', borderRadius: '6px' }}>👤 By: {n.created_by_name}</span>}
-                          {n.priority && <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px' }}>⚡ {n.priority}</span>}
-                        </div>
-                      )}
-                      <div>
-                        {n.message || n.desc || "No additional details available."}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <button
@@ -259,29 +246,96 @@ export default function AdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
+  const [selectedNotifModal, setSelectedNotifModal] = useState(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [notifications, setNotifications] = useState(defaultNotificationsList);
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    apiFetch("/admin/broadcast")
-      .then((res) => {
-        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        const serverItems = rawItems.map((b) => ({
-          id: b.id || `notif-${Math.random()}`,
-          title: b.title || "Announcement",
-          desc: b.message || b.desc || b.description || "",
-          message: b.message || b.desc || "",
-          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-          unread: b.unread !== undefined ? Boolean(b.unread) : true,
-          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-          target: b.target || "All Batches",
-          priority: b.priority || "General Notice",
-          created_by_name: b.created_by_name || "Admin",
-        }));
-        setNotifications(serverItems);
-      })
-      .catch(() => { });
+    const loadNotifications = () => {
+      let prefs = { notifSystemAlerts: true, notifWeeklyReport: true, notifNewUsers: true };
+      try {
+        const stored = JSON.parse(sessionStorage.getItem("adminNotifPrefs") || "{}");
+        prefs = { ...prefs, ...stored };
+      } catch (_) {}
+
+      apiFetch("/admin/broadcast")
+        .then((res) => {
+          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+          const serverItems = rawItems.map((b) => ({
+            id: b.id || `notif-${Math.random()}`,
+            title: b.title || "Announcement",
+            desc: b.message || b.desc || b.description || "",
+            message: b.message || b.desc || "",
+            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+            unread: b.unread !== undefined ? Boolean(b.unread) : true,
+            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+            target: b.target || "All Batches",
+            priority: b.priority || "General Notice",
+            created_by_name: b.created_by_name || "Admin",
+          }));
+
+          const prefItems = [];
+          if (prefs.notifSystemAlerts) {
+            prefItems.push({
+              id: "pref-sec-alert",
+              title: "🛡️ System Security Alert",
+              desc: "2FA Authentication & System Security monitoring active.",
+              message: "2FA Authentication & System Security monitoring active.",
+              time: "Just now",
+              unread: true,
+              type: "alert",
+              target: "System Security",
+              priority: "High Priority",
+              created_by_name: "Security Engine"
+            });
+          }
+          if (prefs.notifWeeklyReport) {
+            prefItems.push({
+              id: "pref-weekly-audit",
+              title: "📊 Weekly Audit Digest",
+              desc: "Weekly institutional audit report and analytics digest is available.",
+              message: "Weekly institutional audit report and analytics digest is available.",
+              time: "Today",
+              unread: true,
+              type: "calendar",
+              target: "Institutional Audit",
+              priority: "Weekly Digest",
+              created_by_name: "Analytics Service"
+            });
+          }
+          if (prefs.notifNewUsers) {
+            prefItems.push({
+              id: "pref-new-users",
+              title: "👤 New User Enrollment",
+              desc: "New student and faculty registration applications pending verification.",
+              message: "New student and faculty registration applications pending verification.",
+              time: "Today",
+              unread: true,
+              type: "alert",
+              target: "User Management",
+              priority: "Action Required",
+              created_by_name: "Enrollment Desk"
+            });
+          }
+
+          // Combine server items and active preference items
+          const combined = [...prefItems, ...serverItems];
+          setNotifications(combined);
+        })
+        .catch(() => { });
+    };
+
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 8000);
+    window.addEventListener("adminNotifPrefsUpdated", loadNotifications);
+    window.addEventListener("userProfileUpdated", loadNotifications);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("adminNotifPrefsUpdated", loadNotifications);
+      window.removeEventListener("userProfileUpdated", loadNotifications);
+    };
   }, []);
 
   const headerRightRef = useRef(null);
@@ -432,6 +486,11 @@ export default function AdminLayout() {
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
+                      onSelectNotification={(n) => setSelectedNotifModal(n)}
+                      onNavigate={(path) => {
+                        setNotifOpen(false);
+                        navigate(path);
+                      }}
                     />
                   )}
                 </div>
@@ -526,6 +585,13 @@ export default function AdminLayout() {
         </main>
       </div>
       <BroadcastToast />
+      <NotificationDetailModal
+        notification={selectedNotifModal}
+        onClose={() => setSelectedNotifModal(null)}
+        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
+        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onNavigate={(path) => navigate(path)}
+      />
       <FullNotificationModal
         isOpen={fullNotifOpen}
         onClose={() => setFullNotifOpen(false)}

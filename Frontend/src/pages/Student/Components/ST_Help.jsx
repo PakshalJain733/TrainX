@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
+import {Check, 
   HelpCircle,
   MessageCircle,
   Phone,
@@ -141,9 +141,8 @@ export default function Help() {
     setLoadingTickets(true);
     try {
       const res = await apiFetch('/student/support/tickets');
-      if (res && res.success && Array.isArray(res.data)) {
-        setTickets(res.data);
-      }
+      const rawData = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : (res?.data?.tickets || []);
+      setTickets(rawData);
     } catch (err) {
       console.error('[Help.jsx fetchTickets error]', err);
     } finally {
@@ -176,7 +175,7 @@ export default function Help() {
         method: 'POST',
         body: JSON.stringify(newTicket)
       });
-      if (res && res.success) {
+      if (res && (res.success || res.data || res.id)) {
         setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
         setIsTicketModalOpen(false);
         setActiveTab("tickets");

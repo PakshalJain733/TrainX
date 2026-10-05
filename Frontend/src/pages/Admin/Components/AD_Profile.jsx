@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import {
+import {Check, 
   User,
   Camera,
   Mail,
@@ -280,7 +280,6 @@ export default function AdminProfile() {
             </div>
 
             <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
-              <Badge variant="success">Active Admin</Badge>
               <Badge variant="default">PVPPCOE</Badge>
             </div>
           </div>
@@ -336,12 +335,10 @@ export default function AdminProfile() {
                 className="profile-change-pw-btn"
                 onClick={() => setIsChangePasswordOpen(true)}
               >
+                <Key size={15} />
                 <span>Change Password</span>
               </button>
-
-
             </div>
-
           </div>
         </div>
 
@@ -481,8 +478,20 @@ export default function AdminProfile() {
                     <input
                       type="checkbox"
                       checked={form.notifSystemAlerts}
-                      disabled={!isEditing}
-                      onChange={(e) => setForm((p) => ({ ...p, notifSystemAlerts: e.target.checked }))}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setForm((p) => {
+                          const updated = { ...p, notifSystemAlerts: val };
+                          const prefs = {
+                            notifSystemAlerts: val,
+                            notifWeeklyReport: p.notifWeeklyReport,
+                            notifNewUsers: p.notifNewUsers,
+                          };
+                          sessionStorage.setItem("adminNotifPrefs", JSON.stringify(prefs));
+                          window.dispatchEvent(new CustomEvent("adminNotifPrefsUpdated", { detail: prefs }));
+                          return updated;
+                        });
+                      }}
                     />
                     <span className="profile-slider round" />
                   </label>
@@ -496,8 +505,20 @@ export default function AdminProfile() {
                     <input
                       type="checkbox"
                       checked={form.notifWeeklyReport}
-                      disabled={!isEditing}
-                      onChange={(e) => setForm((p) => ({ ...p, notifWeeklyReport: e.target.checked }))}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setForm((p) => {
+                          const updated = { ...p, notifWeeklyReport: val };
+                          const prefs = {
+                            notifSystemAlerts: p.notifSystemAlerts,
+                            notifWeeklyReport: val,
+                            notifNewUsers: p.notifNewUsers,
+                          };
+                          sessionStorage.setItem("adminNotifPrefs", JSON.stringify(prefs));
+                          window.dispatchEvent(new CustomEvent("adminNotifPrefsUpdated", { detail: prefs }));
+                          return updated;
+                        });
+                      }}
                     />
                     <span className="profile-slider round" />
                   </label>
@@ -511,8 +532,20 @@ export default function AdminProfile() {
                     <input
                       type="checkbox"
                       checked={form.notifNewUsers}
-                      disabled={!isEditing}
-                      onChange={(e) => setForm((p) => ({ ...p, notifNewUsers: e.target.checked }))}
+                      onChange={(e) => {
+                        const val = e.target.checked;
+                        setForm((p) => {
+                          const updated = { ...p, notifNewUsers: val };
+                          const prefs = {
+                            notifSystemAlerts: p.notifSystemAlerts,
+                            notifWeeklyReport: p.notifWeeklyReport,
+                            notifNewUsers: val,
+                          };
+                          sessionStorage.setItem("adminNotifPrefs", JSON.stringify(prefs));
+                          window.dispatchEvent(new CustomEvent("adminNotifPrefsUpdated", { detail: prefs }));
+                          return updated;
+                        });
+                      }}
                     />
                     <span className="profile-slider round" />
                   </label>

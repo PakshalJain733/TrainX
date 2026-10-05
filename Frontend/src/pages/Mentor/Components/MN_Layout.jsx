@@ -7,13 +7,13 @@ import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
+import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import "../Styles/MN_Layout.css";
 
-function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("all");
-  const [expandedId, setExpandedId] = useState(null);
 
   const autoCloseTimerRef = useRef(null);
 
@@ -170,7 +170,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
         </button>
       </div>
 
-      {/* List */}
+      {/* List - Small Form Preview Cards */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
           <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
@@ -178,14 +178,14 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           </div>
         ) : (
           visibleNotifications.slice(0, 5).map((n) => {
-            const isExpanded = expandedId === n.id;
             return (
               <div
                 key={n.id}
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
-                  setExpandedId(isExpanded ? null : n.id);
+                  if (onClose) onClose();
+                  if (onSelectNotification) onSelectNotification(n);
                 }}
               >
                 {getIcon(n)}
@@ -199,21 +199,6 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
-
-                  {isExpanded && (
-                    <div className="notif-expanded-desc">
-                      {(n.target || n.created_by_name || n.priority) && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px', fontSize: '11px', fontWeight: '700' }}>
-                          {n.target && <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px' }}>🎯 For: {n.target}</span>}
-                          {n.created_by_name && <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '2px 8px', borderRadius: '6px' }}>👤 By: {n.created_by_name}</span>}
-                          {n.priority && <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px' }}>⚡ {n.priority}</span>}
-                        </div>
-                      )}
-                      <div>
-                        {n.message || (n.desc ? n.desc.replace('...', ' regarding upcoming schedule.') : "No additional details available.")}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <button
@@ -261,6 +246,7 @@ export default function MentorLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
+  const [selectedNotifModal, setSelectedNotifModal] = useState(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const hasUnreadNotif = notifications.some((n) => n.unread);
@@ -419,6 +405,7 @@ export default function MentorLayout() {
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
+                      onSelectNotification={(n) => setSelectedNotifModal(n)}
                     />
                   )}
                 </div>
@@ -503,6 +490,13 @@ export default function MentorLayout() {
       <ChangePasswordModal
         isOpen={isChangePasswordOpen}
         onClose={() => setIsChangePasswordOpen(false)}
+      />
+      <NotificationDetailModal
+        notification={selectedNotifModal}
+        onClose={() => setSelectedNotifModal(null)}
+        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
+        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onNavigate={(path) => navigate(path)}
       />
       <FullNotificationModal
         isOpen={fullNotifOpen}
