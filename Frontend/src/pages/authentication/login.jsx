@@ -3,7 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import LogoMain from "../../assets/Logo.png";
 import Logo from "../../assets/Logo2.png";
 import TrainXLogo from "../../assets/TrainX.png";
-import { getApiBaseUrl } from "../../utils/api";
+import { getApiBaseUrl, getAuthToken } from "../../utils/api";
+import { dashboardPathForRole, roleFromAccessToken } from "../../utils/authRole";
 
 import "./login.css";
 
@@ -263,7 +264,15 @@ function Login() {
       name: finalName,
     };
 
+    if (!mergedUser.role) {
+      const jwtRole = roleFromAccessToken(getAuthToken());
+      if (jwtRole) mergedUser.role = jwtRole;
+    }
+
     sessionStorage.setItem("user", JSON.stringify(mergedUser));
+    if (mergedUser.role) {
+      sessionStorage.setItem("role", String(mergedUser.role).toLowerCase());
+    }
     if (rememberMeRef.current || rememberMe) {
       localStorage.setItem("user", JSON.stringify(mergedUser));
     } else {
@@ -288,18 +297,7 @@ function Login() {
       sessionStorage.setItem("showFirstLoginAlert", "true");
     }
 
-    const role = mergedUser.role?.toLowerCase() || "";
-    if (role.includes("superadmin") || role.includes("super admin") || role.includes("super_admin")) {
-      navigate("/super-admin");
-    } else if (role.includes("coordinator")) {
-      navigate("/coordinator");
-    } else if (role.includes("admin")) {
-      navigate("/admin");
-    } else if (role.includes("mentor") || role.includes("faculty")) {
-      navigate("/mentor");
-    } else {
-      navigate("/student");
-    }
+    navigate(dashboardPathForRole(mergedUser.role));
   };
 
   const beginAuthenticatorStep = (data) => {
@@ -488,6 +486,9 @@ function Login() {
       } else if (data.success) {
         setSuccessMsg("2FA Setup completed successfully! Redirecting...");
         setTimeout(() => {
+          if (data.data?.token) {
+            storeAuthToken(data.data.token, rememberMeRef.current || rememberMe);
+          }
           handlePostLoginRedirect(data.data?.user || {});
         }, 1200);
       } else {
