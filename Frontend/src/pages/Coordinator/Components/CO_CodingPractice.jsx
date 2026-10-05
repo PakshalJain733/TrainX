@@ -34,7 +34,7 @@ import {
   initialSubmissions,
 } from "../../../data/codingPracticeMockData";
 import { coordinatorBatches } from "../../../data/coordinatorMockData";
-import CodingPerformance from "./CO_CodingPerformance";
+import { CodingPerformance } from "./CO_Performances";
 
 export default function CodingPractice() {
   const [activeTab, setActiveTab] = useState("problems"); // 'problems' | 'assign' | 'submissions' | 'performance'
@@ -864,6 +864,16 @@ export default function CodingPractice() {
                       { value: "Medium", label: "Medium" },
                       { value: "Hard", label: "Hard" },
                     ]}
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Due Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={problemForm.dueDate || ""}
+                    onChange={(e) => setProblemForm({ ...problemForm, dueDate: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 font-medium"
                   />
                 </div>
 

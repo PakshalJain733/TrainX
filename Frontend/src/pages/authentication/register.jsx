@@ -186,7 +186,23 @@ function Register() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const [colleges, setColleges] = useState([]);
   const [deptOptions, setDeptOptions] = useState([]);
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/colleges`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.data)) {
+          setColleges(data.data);
+        } else if (Array.isArray(data)) {
+          setColleges(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load colleges for domain validation:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const email = (formData.email || "").trim();
@@ -849,7 +865,7 @@ function Register() {
                     {(() => {
                       if (!formData.email || !formData.email.includes("@")) return null;
                       const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
-                      const selectedCollege = colleges.find(c => String(c.id) === String(formData.college_id));
+                      const selectedCollege = Array.isArray(colleges) ? colleges.find(c => String(c.id) === String(formData.college_id)) : null;
                       const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
                       if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
                         return (

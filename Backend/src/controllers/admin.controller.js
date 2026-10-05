@@ -552,9 +552,15 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       batch_id = null,
       difficulty = 'Medium',
       category = 'General DSA',
+      topic = '',
       tags = '',
+      companies = '',
       description = '',
       points = 100,
+      xp = 50,
+      sampleInput = '',
+      sampleOutput = '',
+      testCases = [],
     } = req.body;
 
     if (!title || !title.trim()) {
@@ -569,10 +575,13 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       title: title.trim(),
       description,
       difficulty,
-      category,
-      tags,
-      points,
+      category: category || topic || 'General DSA',
+      tags: tags || (Array.isArray(companies) ? companies.join(', ') : companies) || '',
+      points: points || xp || 100,
       created_by: req.user ? req.user.id : 1,
+      sampleInput,
+      sampleOutput,
+      testCases,
     });
 
     return sendSuccess(res, 'Coding problem created successfully', newProblem, 201);

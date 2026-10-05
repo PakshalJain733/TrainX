@@ -25,7 +25,13 @@ import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { config } from '../config/env.js';
+
+const COMPILER_IMAGE = process.env.CODE_RUNNER_IMAGE || 'trainx-code-runner';
+const COMPILER_MEMORY_MB = parseInt(process.env.CODE_RUNNER_MEMORY_MB || '256', 10);
+const COMPILER_CPUS = process.env.CODE_RUNNER_CPUS || '0.5';
+const COMPILER_PIDS = parseInt(process.env.CODE_RUNNER_PIDS || '64', 10);
+const COMPILER_TIMEOUT_S = parseInt(process.env.CODE_RUNNER_TIMEOUT_S || '5', 10);
+const COMPILER_MAX_TIMEOUT_S = parseInt(process.env.CODE_RUNNER_MAX_TIMEOUT_S || '10', 10);
 
 const SUPPORTED_LANGUAGES = {};
 
@@ -116,7 +122,7 @@ export const compilerUnavailableError = () => {
 
 // Concurrency cap: each run boots a container, so limit how many can be in
 // flight at once to protect the host from unbounded `docker run` spawns.
-const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(String(config.compiler.maxConcurrent || '4'), 10));
+const MAX_CONCURRENT_RUNS = Math.max(1, parseInt(process.env.CODE_RUNNER_MAX_CONCURRENT || '4', 10));
 let activeRuns = 0;
 const runWaiters = [];
 
@@ -209,9 +215,9 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
     throw error;
   }
 
-  const maxTimeout = config.compiler.maxTimeoutSeconds;
+  const maxTimeout = COMPILER_MAX_TIMEOUT_S;
   const execTimeout = Math.min(
-    Math.max(parseInt(timeoutSeconds, 10) || config.compiler.timeoutSeconds, 1),
+    Math.max(parseInt(timeoutSeconds, 10) || COMPILER_TIMEOUT_S, 1),
     maxTimeout
   );
 
@@ -239,10 +245,10 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
       '--rm',
       '--name', containerName,
       '--network', 'none',
-      '--cpus', String(config.compiler.cpus),
-      '--memory', `${config.compiler.memoryMb}m`,
-      '--memory-swap', `${config.compiler.memoryMb}m`,
-      '--pids-limit', String(config.compiler.pids),
+      '--cpus', String(COMPILER_CPUS),
+      '--memory', `${COMPILER_MEMORY_MB}m`,
+      '--memory-swap', `${COMPILER_MEMORY_MB}m`,
+      '--pids-limit', String(COMPILER_PIDS),
       '--cap-drop', 'ALL',
       '--security-opt', 'no-new-privileges',
       '--read-only',
@@ -250,7 +256,7 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
       '-e', `EXEC_TIMEOUT=${execTimeout}`,
       '-v', `${hostDir.split(path.sep).join('/')}:/workspace`,
       '-w', '/workspace',
-      config.compiler.image,
+      COMPILER_IMAGE,
     ];
 
     containerResult = await new Promise((resolve, reject) => {
@@ -328,7 +334,7 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
         /unable to find image|pull access denied|not found|no such image/i.test(msg);
       const error = new Error(
         isMissingImage
-          ? `Docker image "${config.compiler.image}" not found. Run: docker build -t ${config.compiler.image} ./Backend/docker/compiler`
+          ? `Docker image "${COMPILER_IMAGE}" not found. Run: docker build -t ${COMPILER_IMAGE} ./Backend/docker/compiler`
           : 'Compiler service unavailable. Please ensure Docker is running.'
       );
       error.statusCode = 503;

@@ -69,6 +69,10 @@
   --sidebar-group-title-weight: 800;
 }
 
+textarea {
+  resize: none !important;
+}
+
 /* ════════════════════════════════════════════════════════════════════
    GLOBAL CIRCULAR BRAND LOGO CONTAINER
    ════════════════════════════════════════════════════════════════════ */

@@ -23,62 +23,26 @@ export default function PracticeProblems() {
     const loadProblems = async () => {
       try {
         const res = await apiFetch("/student/practice-problems");
-        let apiItems = [];
-        if (res.data && res.data.length > 0) {
-          apiItems = res.data.map((p) => ({
-            id: p.id,
-            title: p.title,
-            topic: p.category || "General DSA",
-            difficulty: p.difficulty,
-            acceptance: "65.0%",
-            points: p.points || 100,
-            solved: p.solve_status === "Solved",
-            companies: ["TCS", "Infosys"],
-            solutionAvailable: true,
-            description: p.description || "No problem description provided.", dueDate: p.due_date || p.dueDate || "N/A",
-          }));
-        }
-        const shared = await getSharedCodingTasks([]);
-        const mappedShared = shared.map((s) => ({
-          id: s.id,
-          title: s.title,
-          topic: s.data?.category || s.category || s.topic || "General DSA",
-          difficulty: s.data?.difficulty || s.difficulty || "Medium",
-          acceptance: "70.0%",
-          points: s.data?.points || s.points || 100,
-          solved: false,
-          companies: ["Core Tech"],
+        const rawList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const mapped = rawList.map((p) => ({
+          id: p.id,
+          title: p.title,
+          topic: p.category || "General DSA",
+          difficulty: p.difficulty || "Medium",
+          acceptance: "65.0%",
+          points: p.points || 100,
+          solved: p.solve_status === "Solved",
+          companies: p.tags ? (Array.isArray(p.tags) ? p.tags : p.tags.split(",").map(t => t.trim())) : ["TCS", "Infosys"],
           solutionAvailable: true,
-          description: s.data?.description || s.description || "No problem description provided.", dueDate: s.data?.due_date || s.due_date || s.dueDate || "N/A",
+          description: p.description || "No problem description provided.",
+          dueDate: p.due_date || p.dueDate || "N/A",
         }));
-        const existingIds = new Set(apiItems.map((i) => i.id));
-        const uniqueShared = mappedShared.filter((s) => !existingIds.has(s.id));
-        setProblemsList([...uniqueShared, ...apiItems]);
-      } catch {
-        const shared = await getSharedCodingTasks([]);
-        if (shared.length > 0) {
-          setProblemsList(
-            shared.map((s) => ({
-              id: s.id,
-              title: s.title,
-              topic: s.data?.category || s.category || s.topic || "General DSA",
-              difficulty: s.data?.difficulty || s.difficulty || "Medium",
-              acceptance: "70.0%",
-              points: s.data?.points || s.points || 100,
-              solved: false,
-              companies: ["Core Tech"],
-              solutionAvailable: true,
-              dueDate: s.data?.due_date || s.due_date || s.dueDate || "N/A"
-            }))
-          );
-        }
+        setProblemsList(mapped);
+      } catch (err) {
+        console.error("Failed to load student practice problems from DB:", err);
       }
     };
-
     loadProblems();
-    const handleUpdate = () => loadProblems();
-    window.addEventListener(EVENTS.CODING_UPDATED, handleUpdate);
-    return () => window.removeEventListener(EVENTS.CODING_UPDATED, handleUpdate);
   }, []);
   const [selectedTopic, setSelectedTopic] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
