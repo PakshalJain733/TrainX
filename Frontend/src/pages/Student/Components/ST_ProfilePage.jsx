@@ -1,36 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
-import {Check, 
-  User,
-  Camera,
-  Mail,
-  Phone,
-  GraduationCap,
-  Building,
-  Users,
-  UserCheck,
-  Award,
-  CheckCircle2,
-  Save,
-  Sparkles,
-  BookOpen,
-  Star,
-  AlertCircle,
-  Plus,
-  X,
-  Check,
-  ChevronDown,
-  Target,
-  Bell,
-  Search,
-  Briefcase,
-  Key,
-  QrCode,
-  Copy,
-  Loader2,
-  Edit2,
-} from "lucide-react";
+import { Check, User, Camera, Mail, Phone, GraduationCap, Building, Users, UserCheck, Award, CheckCircle2, Save, Sparkles, BookOpen, Star, AlertCircle, Plus, X, ChevronDown, Target, Bell, Search, Briefcase, Key, QrCode, Copy, Loader2, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { apiFetch } from '../../../utils/api';
 import { Video, Plus, Clock, ExternalLink, X } from 'lucide-react';
 import "../Styles/MN_LiveSessions.css";
@@ -97,7 +98,7 @@ export default function LiveSessions() {
               No live sessions scheduled yet in database.
             </div>
           ) : (
-            sessions.map((s) => (
+            (Array.isArray(sessions) ? sessions : []).map((s) => (
               <div key={s.id} className="mentor-session-card">
                 <div className="mentor-session-top">
                   <span className="mentor-batch-code-tag">{s.batch}</span>
@@ -145,9 +146,9 @@ export default function LiveSessions() {
       </div>
 
       {/* Schedule Live Class Modal */}
-      {showModal && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: '480px', width: '90%', padding: '24px', background: '#ffffff', borderRadius: '12px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+      {showModal && createPortal(
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+          <div className="modal-content" style={{ maxWidth: '480px', width: '90%', padding: '24px', background: '#ffffff', borderRadius: '12px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Schedule Live Lecture</h3>
               <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
@@ -220,7 +221,8 @@ export default function LiveSessions() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

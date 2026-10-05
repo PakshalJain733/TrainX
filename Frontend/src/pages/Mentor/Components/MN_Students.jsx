@@ -88,11 +88,8 @@ export default function Students() {
   const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "AIzaSyBw0r80ZCZQzNzoVrSU3jwhBkn9t3WRK9M";
 
   const generateGoogleMeetLink = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyz";
-    const p1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    const p3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-    return `https://meet.google.com/${p1}-${p2}-${p3}`;
+    // Immediately launch a new Google Meet session
+    return `https://meet.google.com/new`;
   };
 
   const openCallModalForStudent = (student) => {
@@ -185,7 +182,7 @@ export default function Students() {
     }
   };
 
-  const filteredStudents = students.filter((s) => {
+  const filteredStudents = (Array.isArray(students) ? students : []).filter((s) => {
     const q = search.toLowerCase();
     return (
       (s.name && s.name.toLowerCase().includes(q)) ||
@@ -296,7 +293,7 @@ export default function Students() {
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.map((s, idx) => (
+                {(Array.isArray(filteredStudents) ? filteredStudents : []).map((s, idx) => (
                   <tr key={s.id || idx}>
                     <td>
                       <p className="mentor-student-name">{s.name}</p>
@@ -372,7 +369,7 @@ export default function Students() {
                   value={meetForm.studentId}
                   options={[
                     { value: "all", label: "All Assigned Students" },
-                    ...students.map((st) => ({
+                    ...(Array.isArray(students) ? students : []).map((st) => ({
                       value: String(st.id || st.rollNo),
                       label: `${st.name}${st.rollNo ? ` (${st.rollNo})` : ""}${st.department ? ` - ${st.department}` : ""}`,
                     })),

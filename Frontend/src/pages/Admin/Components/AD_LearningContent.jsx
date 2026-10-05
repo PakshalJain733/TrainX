@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import {Check, 
-  Search,
-  BookOpen,
-  FileText,
-  Video,
-  Sparkles,
-  Plus,
-  Trash2,
-  X,
-  Link as LinkIcon,
-  UploadCloud,
-  ExternalLink,
-  Download,
-  Eye,
-  ChevronDown,
-  Check,
-  BookOpenCheck,
-} from "lucide-react";
+import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
@@ -394,25 +377,25 @@ export default function AdminLearningContent() {
 
       {/* Add Content Modal / Flash Screen */}
       {showForm && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <div className="modal-header-left">
-                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+        <div className="sa-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
+          <div className="sa-modal-dialog dept-modal-540">
+            <div className="sa-modal-header">
+              <div className="sa-modal-header-left">
+                <div className="sa-modal-icon-wrap" style={{ background: '#e0e7ff', color: '#4f46e5' }}>
                   <BookOpen size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Upload Learning Content</h2>
-                  <p className="modal-subtitle">Publish videos, documents, web links, or study notes for student batches.</p>
+                  <h2 className="sa-modal-title">Upload Learning Content</h2>
+                  <p className="sa-modal-subtitle">Publish videos, documents, web links, or study notes for student batches.</p>
                 </div>
               </div>
-              <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
+              <button type="button" className="sa-modal-close" onClick={() => setShowForm(false)} title="Close Modal">
                 <X size={18} />
               </button>
             </div>
 
             <form onSubmit={handleAdd}>
-              <div className="modal-body">
+              <div className="sa-modal-body">
                 <div className="form-group-admin">
                   <label>Content Title *</label>
                   <input
@@ -496,10 +479,12 @@ export default function AdminLearningContent() {
                 </div>
               </div>
 
-              <div className="modal-footer">
-
-                <button type="submit" className="btn-modal-submit">
-                  Add Content
+              <div className="sa-modal-footer">
+                <button type="button" className="sa-modal-btn-cancel" onClick={() => setShowForm(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="sa-modal-btn-submit">
+                  Publish Resource
                 </button>
               </div>
             </form>
