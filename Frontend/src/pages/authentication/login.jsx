@@ -1163,10 +1163,6 @@ function Login() {
                 )}
               </>
             )}
-
-            <div className="login-mobile-card-footer">
-              <span>Campus Training Portal</span>
-            </div>
           </div>
         </div>
       </div>

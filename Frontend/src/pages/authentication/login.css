@@ -2370,17 +2370,6 @@ input::-ms-clear {
   margin: 0;
 }
 
-.login-mobile-card-footer {
-  border-top: 1px solid #f1f5f9;
-  padding-top: 14px;
-  margin-top: 20px;
-  text-align: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: #94a3b8;
-  letter-spacing: 0.2px;
-}
-
 @media (max-width: 880px) {
   .lp2-panel {
     display: none;
@@ -2440,8 +2429,7 @@ input::-ms-clear {
   .login-mode-segmented-bar,
   .auth-error-msg,
   .auth-success-msg,
-  form,
-  .login-mobile-card-footer {
+  form {
     padding-left: 24px;
     padding-right: 24px;
   }
@@ -2554,8 +2542,7 @@ input::-ms-clear {
   .login-mode-segmented-bar,
   .auth-error-msg,
   .auth-success-msg,
-  form,
-  .login-mobile-card-footer {
+  form{
     padding-left: 18px;
     padding-right: 18px;
   }
