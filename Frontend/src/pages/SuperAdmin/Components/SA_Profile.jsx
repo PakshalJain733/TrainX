@@ -315,6 +315,7 @@ export default function SuperAdminProfile() {
                 className="profile-change-pw-btn"
                 onClick={() => setIsChangePasswordOpen(true)}
               >
+                <Key size={15} />
                 <span>Change Password</span>
               </button>
 
