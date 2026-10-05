@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft, Play, CheckCircle2, Terminal, Code2, 
-  FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight
-} from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../../../utils/api';
-import { Users, Search, Mail, Video, Plus, Calendar, Clock, ExternalLink, X, CheckCircle, Sparkles, Send } from 'lucide-react';
+import { Users, Search, Mail, Video, Plus, Calendar, Clock, ExternalLink, X, CheckCircle, Sparkles, Send } from "lucide-react";
 import CustomSelect from '../../../components/ui/CustomSelect';
 
 import "../Styles/MN_Students.css";

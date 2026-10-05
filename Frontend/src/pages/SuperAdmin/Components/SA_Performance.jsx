@@ -1,26 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  TrendingUp,
-  Award,
-  CheckCircle2,
-  BarChart2,
-  ArrowUpRight,
-  ShieldCheck,
-  Code,
-  Target,
-  Sparkles,
-  ClipboardCheck,
-  CalendarCheck,
-  Building2,
-  Search,
-  Activity,
-  Zap,
-  Users,
-  ChevronDown,
-  Check,
-  X,
-  Filter
-} from 'lucide-react';
+import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck, Code, Target, Sparkles, ClipboardCheck, CalendarCheck, Building2, Search, Activity, Zap, Users, ChevronDown, Check, X, Filter } from "lucide-react";
 import { collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Performance.css";

@@ -1,26 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { 
-  User,
-  Camera,
-  Mail,
-  Phone,
-  Building,
-  Briefcase,
-  CheckCircle2,
-  Save,
-  ShieldCheck,
-  Key,
-  AlertCircle,
-  Bell,
-  Globe,
-  QrCode,
-  Copy,
-  Check,
-  Loader2,
-  X,
-  Edit2
-} from "lucide-react";
+import { Check, User, Camera, Mail, Phone, Building, Briefcase, CheckCircle2, Save, ShieldCheck, Key, AlertCircle, Bell, Globe, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";

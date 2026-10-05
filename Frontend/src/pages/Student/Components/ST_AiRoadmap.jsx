@@ -1,40 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import {
-  Sparkles,
-  CheckCircle2,
-  CircleDot,
-  Lock,
-  BookOpen,
-  RefreshCw,
-  Cpu,
-  Target,
-  Award,
-  Check,
-  Search,
-  ChevronDown,
-  ChevronUp,
-  Zap,
-  BookMarked,
-  Code2,
-  ArrowRight,
-  X,
-  Compass,
-  AlertTriangle,
-  ExternalLink,
-  FileText,
-  Layers,
-  Globe,
-  Clock,
-  Link2,
-  GraduationCap,
-  Terminal,
-  Play,
-  Copy,
-  Maximize2,
-  Minimize2,
-} from "lucide-react";
+import { Sparkles, CheckCircle2, CircleDot, Lock, BookOpen, RefreshCw, Cpu, Target, Award, Check, Search, ChevronDown, ChevronUp, Zap, BookMarked, Code2, ArrowRight, X, Compass, AlertTriangle, ExternalLink, FileText, Layers, Globe, Clock, Link2, GraduationCap, Terminal, Play, Copy, Maximize2, Minimize2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import apiFetch from "../../../utils/api";

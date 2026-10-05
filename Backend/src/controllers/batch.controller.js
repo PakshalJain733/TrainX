@@ -338,7 +338,11 @@ export const joinBatch = async (req, res, next) => {
 export const getMyBatches = async (req, res, next) => {
   try {
     await ensureTables();
-    const userId = req.user?.userId || req.user?.id || 1;
+    const userId = req.user?.userId || req.user?.id;
+
+    if (!userId) {
+      return sendSuccess(res, 'Enrolled batches retrieved successfully', []);
+    }
 
     const dbEnrolled = await query(
       `SELECT b.* FROM batches b
@@ -348,13 +352,7 @@ export const getMyBatches = async (req, res, next) => {
       [userId]
     );
 
-    if (dbEnrolled && dbEnrolled.length > 0) {
-      return sendSuccess(res, 'Enrolled batches retrieved successfully', dbEnrolled);
-    }
-
-    // Fallback: if no enrollment record exists for this userId specifically, return active batches in DB
-    const allDbBatches = await query("SELECT * FROM batches WHERE status IS NULL OR (LOWER(status) != 'inactive' AND LOWER(status) != 'deleted') ORDER BY id DESC");
-    return sendSuccess(res, 'Batches retrieved successfully', allDbBatches || []);
+    return sendSuccess(res, 'Enrolled batches retrieved successfully', dbEnrolled || []);
   } catch (error) {
     next(error);
   }
@@ -443,15 +441,15 @@ export const getBatchStudents = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
 
-    // Query students enrolled via student_batches or matching batch_id column in users/students table
+    // Query students enrolled explicitly via student_batches join table (joined via batch code)
     const enrolledUsers = await query(
       `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, s.roll_number AS rollNo, s.department
-       FROM users u
+       FROM student_batches sb
+       JOIN users u ON sb.user_id = u.id
        LEFT JOIN students s ON u.id = s.user_id
-       LEFT JOIN student_batches sb ON u.id = sb.user_id
-       WHERE sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ?
+       WHERE sb.batch_id = ? OR sb.batch_id = ?
        ORDER BY u.name ASC`,
-      [id, cleanId, id, cleanId]
+      [id, cleanId]
     );
 
     const formatted = (enrolledUsers || []).map((s, idx) => ({

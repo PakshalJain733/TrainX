@@ -1,24 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Sparkles,
-  BookOpenCheck,
-  Bot,
-  LineChart,
-  CalendarCheck,
-  FileCheck2,
-  Code2,
-  Terminal,
-  GraduationCap,
-  Settings,
-  HelpCircle,
-  Gauge,
-  Eye,
-  Bell,
-  PanelLeft,
-  X,
-} from "lucide-react";
+import { LayoutDashboard, Sparkles, BookOpenCheck, Bot, LineChart, CalendarCheck, FileCheck2, Code2, Terminal, GraduationCap, Settings, HelpCircle, Gauge, Eye, Bell, PanelLeft, X } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentDashboardProfessionalPreview.css";
 

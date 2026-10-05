@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Activity,
-  Server,
-  Zap,
-  Clock,
-  CheckCircle2,
-  RefreshCw,
-  Search,
-  Database,
-  Cpu
-} from 'lucide-react';
+import { Activity, Server, Zap, Clock, CheckCircle2, RefreshCw, Search, Database, Cpu } from "lucide-react";
 import { apiFetch } from '../../../utils/api';
 import "../Styles/SA_SystemHealth.css";
 

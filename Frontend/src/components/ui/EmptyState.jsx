@@ -1,5 +1,5 @@
 import React from 'react';
-import { Inbox, FolderOpen, AlertCircle, Plus } from 'lucide-react';
+import { Inbox, FolderOpen, AlertCircle, Plus } from "lucide-react";
 import './ui.css';
 
 export default function EmptyState({

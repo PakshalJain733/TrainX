@@ -1,33 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Sparkles,
-  BookOpenCheck,
-  Bot,
-  LineChart,
-  Trophy,
-  CalendarCheck,
-  FileCheck2,
-  CalendarDays,
-  Award,
-  Code2,
-  Terminal,
-  BookOpen,
-  Users,
-  FileQuestion,
-  HelpCircle,
-  GraduationCap,
-  Settings,
-  UserCheck,
-  UserCog,
-  Bell,
-  ChartBar,
-  ChartLineIcon,
-  ChartBarIncreasing,
-  ChartBarIncreasingIcon,
-  Briefcase,
-  Target,
-} from "lucide-react";
+import { LayoutDashboard, Sparkles, BookOpenCheck, Bot, LineChart, Trophy, CalendarCheck, FileCheck2, CalendarDays, Award, Code2, Terminal, BookOpen, Users, FileQuestion, HelpCircle, GraduationCap, Settings, UserCheck, UserCog, Bell, ChartBar, ChartLineIcon, ChartBarIncreasing, ChartBarIncreasingIcon, Briefcase, Target } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/ST_Sidebar.css";

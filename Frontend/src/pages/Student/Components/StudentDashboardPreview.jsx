@@ -1,29 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Sparkles,
-  BookOpenCheck,
-  Terminal,
-  GraduationCap,
-  Bot,
-  LineChart,
-  Gauge,
-  CalendarCheck,
-  FileCheck2,
-  Settings,
-  HelpCircle,
-  Bell,
-  ChevronDown,
-  Target,
-  TrendingUp,
-  Compass,
-  CalendarClock,
-  CheckCircle2,
-  ArrowRight,
-  AlertTriangle,
-  Search,
-} from "lucide-react";
+import { LayoutDashboard, Sparkles, BookOpenCheck, Terminal, GraduationCap, Bot, LineChart, Gauge, CalendarCheck, FileCheck2, Settings, HelpCircle, Bell, ChevronDown, Target, TrendingUp, Compass, CalendarClock, CheckCircle2, ArrowRight, AlertTriangle, Search } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import logoImg from "../../../assets/Logo.png";
 import "../Styles/StudentDashboardPreview.css";

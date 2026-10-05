@@ -1,33 +1,6 @@
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { useState } from "react";
-import {
-  Code,
-  Plus,
-  Search,
-  Filter,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Send,
-  Eye,
-  Edit,
-  Trash2,
-  Sparkles,
-  BookOpen,
-  Users,
-  Check,
-  X,
-  FileCode,
-  SlidersHorizontal,
-  ChevronRight,
-  AlertCircle,
-  BarChart3,
-  Layers,
-  Calendar,
-  Award,
-  Terminal,
-  RefreshCw,
-} from "lucide-react";
+import { Code, Plus, Search, Filter, CheckCircle2, XCircle, Clock, Send, Eye, Edit, Trash2, Sparkles, BookOpen, Users, Check, X, FileCode, SlidersHorizontal, ChevronRight, AlertCircle, BarChart3, Layers, Calendar, Award, Terminal, RefreshCw } from "lucide-react";
 import {
   initialCodingProblems,
   initialAssignments,

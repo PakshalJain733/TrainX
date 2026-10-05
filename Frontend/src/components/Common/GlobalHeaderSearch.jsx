@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, X, LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, 
-  UserCheck, SlidersHorizontal, Activity, HelpCircle, User, CalendarCheck,
-  BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, 
-  AlertTriangle, Megaphone, Sparkles, Bot, AlertCircle, Inbox, Flame
-} from 'lucide-react';
+import { Search, X, LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, User, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, AlertTriangle, Megaphone, Sparkles, Bot, AlertCircle, Inbox, Flame } from "lucide-react";
 
 const SEARCH_REGISTRY = [
   // ── SUPER ADMIN DASHBOARD ──

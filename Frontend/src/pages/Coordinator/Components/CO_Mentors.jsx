@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import {
-  UserCheck,
-  Star,
-  BookOpen,
-  Users,
-  UserCog,
-  Mail,
-  Phone,
-  Search,
-  Award,
-  X,
-  Building2,
-  Eye,
-} from "lucide-react";
+import { UserCheck, Star, BookOpen, Users, UserCog, Mail, Phone, Search, Award, X, Building2, Eye } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_Mentors.css";

@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone
-} from "lucide-react";
+import { CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";

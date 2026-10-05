@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { FileCode, Plus, X, RefreshCw } from 'lucide-react';
+import { FileCode, Plus, X, RefreshCw } from "lucide-react";
 import "../Styles/MN_Assignments.css";
 
 const unwrap = (response) => {

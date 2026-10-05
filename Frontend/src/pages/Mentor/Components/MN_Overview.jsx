@@ -1,17 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-import {
-  Layers,
-  Users,
-  CalendarCheck,
-  FileCode,
-  Clock,
-  Sparkles,
-  Info,
-  ChevronRight,
-  MapPin,
-} from "lucide-react";
+import { Layers, Users, CalendarCheck, FileCode, Clock, Sparkles, Info, ChevronRight, MapPin } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
