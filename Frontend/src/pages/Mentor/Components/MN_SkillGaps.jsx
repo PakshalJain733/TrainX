@@ -180,7 +180,7 @@ export default function MentorSkillGaps() {
                   Submission Deadline
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   className="mentor-form-control"

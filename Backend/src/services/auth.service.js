@@ -29,6 +29,7 @@ import { generateOtp } from '../utils/generateOtp.js';
 import { ROLES } from '../utils/constants.js';
 import { sendOtpEmail, sendWelcomeEmail } from './email.service.js';
 import { findSecureCode, markCodeAsUsed } from '../models/secureCode.model.js';
+import { findCollegeById } from '../models/college.model.js';
 
 const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 const PREAUTH_TOKEN_TTL = '10m';
@@ -377,7 +378,7 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
 };
 
 export const registerUser = async (data) => {
-  const { name, email, mobile_number, password, role, secure_code, roll_number, department, year, division, semester } = data;
+  const { name, email, mobile_number, password, role, secure_code, college_id, collegeId, roll_number, department, year, division, semester } = data;
 
   if (isBlank(email) && isBlank(mobile_number)) {
     throw createAuthError('An email address or mobile number is required.', 400);
@@ -513,6 +514,8 @@ export const registerUser = async (data) => {
 
   // College assignment and domain check
   let assignedCollegeId = 1;
+  const colInputId = parseInt(college_id || collegeId, 10);
+
   if (canonicalRole === ROLES.COLLEGE_ADMIN) {
     const cleanEmail = String(email || '').trim().toLowerCase();
     const cleanName = String(name || '').trim().toLowerCase();
@@ -535,13 +538,21 @@ export const registerUser = async (data) => {
     }
 
     assignedCollegeId = matchingCollege.id;
-  } else if (email) {
-    const matchingCollege = await findCollegeByEmailDomain(email);
-    if (!matchingCollege) {
+  } else {
+    let matchingCollege = null;
+    if (!isNaN(colInputId) && colInputId > 0) {
+      matchingCollege = await findCollegeById(colInputId);
+    }
+    if (!matchingCollege && email) {
+      matchingCollege = await findCollegeByEmailDomain(email);
+    }
+
+    if (matchingCollege) {
+      assignedCollegeId = matchingCollege.id;
+    } else if (email) {
       const domain = email.includes('@') ? email.split('@')[1] : email;
       throw createAuthError(`Registration denied: College does not exist or your email domain (@${domain}) is not authorized. You cannot register.`, 400);
     }
-    assignedCollegeId = matchingCollege.id;
   }
 
   // Create base User with is_active = 0 (pending Admin approval) for non-superadmin registrations

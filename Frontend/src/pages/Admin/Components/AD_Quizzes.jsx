@@ -1202,7 +1202,7 @@ export default function AdminQuizzes() {
                     <span className="quiz-batch-tag">{q.batch}</span>
                     <span className="quiz-questions">{q.questionsCount} Questions</span>
                     <span className={`quiz-type-tag ${q.type === "AI Generated" ? "type-ai" : "type-manual"}`}>
-                      {q.type === "AI Generated" ? "⚡ AI Generated" : "✍️ Manual"}
+                      {q.type === "AI Generated" ? "AI Generated" : "Manual"}
                     </span>
                     <span className="quiz-submissions">{q.submissions} submissions</span>
                   </div>

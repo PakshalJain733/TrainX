@@ -92,8 +92,63 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+// Serve uploaded files statically with path resolution fallback
+const uploadPaths = [
+  path.resolve(process.cwd(), 'uploads'),
+  path.resolve(__dirname, '../uploads'),
+  path.resolve(__dirname, '../../uploads'),
+];
+
+const handleUploadsFile = (req, res, next) => {
+  const filename = req.params.filename || req.params[0];
+  if (!filename) return next();
+
+  for (const uploadDir of uploadPaths) {
+    const fullPath = path.join(uploadDir, filename);
+    if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+      return res.sendFile(fullPath);
+    }
+  }
+
+  // If file not found on disk, return a clean HTML notice page instead of JSON 404
+  res.status(200).send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Document File Notice</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; }
+        .card { background: #1e293b; border: 1.5px solid #334155; border-radius: 16px; padding: 32px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        .icon { width: 56px; height: 56px; border-radius: 50%; background: #312e81; color: #818cf8; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px; font-weight: bold; }
+        h2 { font-size: 20px; margin: 0 0 8px 0; color: #ffffff; }
+        p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }
+        .badge { display: inline-block; background: #334155; color: #cbd5e1; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; word-break: break-all; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="icon">📄</div>
+        <h2>Document Unavailable</h2>
+        <p>The uploaded file is not stored on local disk or has been replaced. Please re-upload the document or select an active file.</p>
+        <div class="badge">${filename}</div>
+      </div>
+    </body>
+    </html>
+  `);
+};
+
+uploadPaths.forEach((p) => {
+  if (fs.existsSync(p)) {
+    app.use('/uploads', express.static(p));
+    app.use('/api/v1/uploads', express.static(p));
+    app.use('/api/uploads', express.static(p));
+  }
+});
+
+app.get('/uploads/:filename', handleUploadsFile);
+app.get('/api/v1/uploads/:filename', handleUploadsFile);
+app.get('/api/uploads/:filename', handleUploadsFile);
 
 // Health Check Endpoint (Section 28)
 app.get('/api/v1/health', (req, res) => {

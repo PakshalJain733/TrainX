@@ -614,19 +614,31 @@ textarea.form-input-admin:focus,
 }
 
 .modal-feedback-alert {
-  font-size: 13px;
-  padding: 8px;
-  border-radius: 6px;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.4;
+}
+
+.modal-feedback-alert svg,
+.modal-feedback-alert .shrink-0 {
+  flex-shrink: 0;
 }
 
 .modal-feedback--error {
   color: #dc2626;
   background: #fef2f2;
+  border: 1px solid #fecaca;
 }
 
 .modal-feedback--success {
-  color: #16a34a;
+  color: #15803d;
   background: #f0fdf4;
+  border: 1px solid #bbf7d0;
 }
 
 .delete-user-row {

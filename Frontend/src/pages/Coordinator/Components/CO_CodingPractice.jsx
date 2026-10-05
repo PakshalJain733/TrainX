@@ -39,18 +39,18 @@ export default function CodingPractice() {
   // Form State for Problem (Create/Edit)
   const [problemForm, setProblemForm] = useState({
     title: "",
-    topic: "Arrays & Hashing",
+    topic: "",
     difficulty: "Easy",
-    points: 100,
-    timeLimit: "1.0s",
-    memoryLimit: "256MB",
+    points: "",
+    timeLimit: "",
+    memoryLimit: "",
     description: "",
     inputFormat: "",
     outputFormat: "",
     sampleInput: "",
     sampleOutput: "",
-    tags: "Array, Hash Table",
-    companies: "TCS, Infosys",
+    tags: "",
+    companies: "",
   });
 
   // Form State for Assignment
@@ -1129,9 +1129,9 @@ export default function CodingPractice() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-bold text-slate-700 mb-1">Due Date</label>
+                  <label className="block font-bold text-slate-700 mb-1">Due Date & Time</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={assignForm.dueDate}
                     onChange={(e) => setAssignForm({ ...assignForm, dueDate: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 font-medium"

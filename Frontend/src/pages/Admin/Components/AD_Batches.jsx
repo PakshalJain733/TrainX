@@ -373,7 +373,7 @@ export default function AdminBatches() {
         const sorted = [...res.data]
           .map((s) => ({
             ...s,
-            xp: s.xp || `${Math.floor(Math.random() * 500 + 100)} XP`,
+            xp: s.xp !== undefined && s.xp !== null ? (typeof s.xp === 'number' ? `${s.xp} XP` : (String(s.xp).includes("XP") ? String(s.xp) : `${s.xp} XP`)) : "0 XP",
           }))
           .sort((a, b) => parseInt(b.xp || 0) - parseInt(a.xp || 0));
         setBatchLeaderboard(sorted);
@@ -731,7 +731,7 @@ export default function AdminBatches() {
                         <span>Submission Deadline</span>
                       </label>
                       <input
-                        type="date"
+                        type="datetime-local"
                         className="form-input-admin"
                         value={taskForm.deadline}
                         onChange={(e) => setTaskForm((p) => ({ ...p, deadline: e.target.value }))}
@@ -847,7 +847,8 @@ export default function AdminBatches() {
 
                   <div className="add-task-form-footer">
                     <button type="submit" className="add-task-submit-btn">
-                      <Plus size={18} /> Assign Task to Batch
+                      <Plus size={18} />
+                      <span>Assign Task to Batch</span>
                     </button>
                   </div>
                 </form>
@@ -863,25 +864,6 @@ export default function AdminBatches() {
                   <h3 className="batch-tab-title" style={{ fontSize: "18px" }}>Assigned Tasks for {selectedBatch.name}</h3>
                   <p className="batch-tab-sub">All coding problems and assignments created for students in this batch.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setBatchTab("addTask")}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    background: "#4f46e5",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "9999px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  <Plus size={16} /> Create New Task
-                </button>
               </div>
 
               {batchTasks.length === 0 ? (

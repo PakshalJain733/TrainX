@@ -105,8 +105,14 @@ export default function AD_ApproveUsers() {
 
   // Filtered List
   const filteredUsers = pendingUsers.filter((u) => {
-    const matchesRole =
-      selectedRole === "all" || String(u.role).toLowerCase() === selectedRole.toLowerCase();
+    const roleLower = String(u.role || "").toLowerCase();
+    let matchesRole = false;
+    if (selectedRole === "all") matchesRole = true;
+    else if (selectedRole === "student") matchesRole = roleLower === "student";
+    else if (selectedRole === "mentor") matchesRole = roleLower === "mentor" || roleLower === "faculty";
+    else if (selectedRole === "coordinator") matchesRole = roleLower === "coordinator";
+    else matchesRole = roleLower === selectedRole.toLowerCase();
+
     const q = searchTerm.trim().toLowerCase();
     const matchesSearch =
       !q ||
@@ -129,7 +135,10 @@ export default function AD_ApproveUsers() {
 
   // Counts
   const studentCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "student").length;
-  const staffCount = pendingUsers.filter((u) => String(u.role).toLowerCase() !== "student").length;
+  const mentorCount = pendingUsers.filter(
+    (u) => String(u.role).toLowerCase() === "mentor" || String(u.role).toLowerCase() === "faculty"
+  ).length;
+  const coordCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "coordinator").length;
 
   return (
     <div className="approve-users-container">
@@ -221,9 +230,9 @@ export default function AD_ApproveUsers() {
 
         <div className="approve-stat-card">
           <div>
-            <div className="approve-stat-lbl">Mentors & Staff</div>
-            <div className="approve-stat-val">{staffCount}</div>
-            <div className="approve-stat-sub">Faculty / Coordinator requests</div>
+            <div className="approve-stat-lbl">Mentors & Faculty</div>
+            <div className="approve-stat-val">{mentorCount}</div>
+            <div className="approve-stat-sub">Faculty / mentor requests</div>
           </div>
           <div className="approve-stat-icon-wrap icon-wrap--purple">
             <Briefcase size={24} />
@@ -232,11 +241,9 @@ export default function AD_ApproveUsers() {
 
         <div className="approve-stat-card">
           <div>
-            <div className="approve-stat-lbl">Security Status</div>
-            <div className="approve-stat-val" style={{ fontSize: "18px", color: "#059669" }}>
-              2FA Verified
-            </div>
-            <div className="approve-stat-sub">All candidates verified OTP & 2FA</div>
+            <div className="approve-stat-lbl">Coordinators</div>
+            <div className="approve-stat-val">{coordCount}</div>
+            <div className="approve-stat-sub">Department coordinator requests</div>
           </div>
           <div className="approve-stat-icon-wrap icon-wrap--emerald">
             <ShieldCheck size={24} />
@@ -247,51 +254,61 @@ export default function AD_ApproveUsers() {
       {/* Toolbar & Filters Card */}
       <div className="approve-toolbar-card">
         <div className="approve-toolbar-top">
-          {/* Search Box */}
-          <div className="approve-search-box">
-            <Search size={18} className="approve-search-icon" />
-            <input
-              type="text"
-              placeholder="Search by name, email, department, roll no..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="approve-search-input"
-            />
-            {searchTerm && (
+          {/* Left Group: Search Box + Role Filter Tabs */}
+          <div className="approve-toolbar-left">
+            {/* Search Box */}
+            <div className="approve-search-box">
+              <Search size={18} className="approve-search-icon" />
+              <input
+                type="text"
+                placeholder="Search by name, email, department, roll no..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="approve-search-input"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm("")}
+                  className="approve-search-clear"
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+
+            {/* Role Filter Tabs */}
+            <div className="approve-tabs-wrap">
               <button
                 type="button"
-                onClick={() => setSearchTerm("")}
-                className="approve-search-clear"
-                title="Clear search"
+                className={`approve-tab-btn ${selectedRole === "all" ? "active" : ""}`}
+                onClick={() => setSelectedRole("all")}
               >
-                <X size={15} />
+                All Requests ({pendingUsers.length})
               </button>
-            )}
-          </div>
-
-          {/* Role Filter Tabs */}
-          <div className="approve-tabs-wrap">
-            <button
-              type="button"
-              className={`approve-tab-btn ${selectedRole === "all" ? "active" : ""}`}
-              onClick={() => setSelectedRole("all")}
-            >
-              All Requests ({pendingUsers.length})
-            </button>
-            <button
-              type="button"
-              className={`approve-tab-btn ${selectedRole === "student" ? "active" : ""}`}
-              onClick={() => setSelectedRole("student")}
-            >
-              Students ({studentCount})
-            </button>
-            <button
-              type="button"
-              className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
-              onClick={() => setSelectedRole("mentor")}
-            >
-              Mentors / Faculty ({staffCount})
-            </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "student" ? "active" : ""}`}
+                onClick={() => setSelectedRole("student")}
+              >
+                Students ({studentCount})
+              </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
+                onClick={() => setSelectedRole("mentor")}
+              >
+                Mentors / Faculty ({mentorCount})
+              </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "coordinator" ? "active" : ""}`}
+                onClick={() => setSelectedRole("coordinator")}
+              >
+                Coordinators ({coordCount})
+              </button>
+            </div>
           </div>
 
           {/* View Switcher */}
@@ -475,13 +492,6 @@ export default function AD_ApproveUsers() {
                       <div className="user-info-item">
                         <Phone size={14} className="user-info-icon" />
                         <span className="user-info-val">{u.mobile_number}</span>
-                      </div>
-                    )}
-
-                    {u.department && (
-                      <div className="user-info-item">
-                        <Building2 size={14} className="user-info-icon" />
-                        <span className="user-info-val">{u.department}</span>
                       </div>
                     )}
 

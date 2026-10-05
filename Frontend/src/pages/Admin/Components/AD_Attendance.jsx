@@ -164,6 +164,8 @@ export default function AdminAttendance() {
           if (res && res.data && Array.isArray(res.data)) {
             fetchedStudents = res.data.map((s, idx) => ({
               id: s.id || s.user_id || `S-${idx + 1}`,
+              userId: s.user_id || s.id,
+              studentId: s.id,
               rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
               name: s.name || s.full_name || "Student User",
               status: false
@@ -179,6 +181,8 @@ export default function AdminAttendance() {
           if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
             fetchedStudents = res.data.map((s, idx) => ({
               id: s.id || s.user_id || `S-${idx + 1}`,
+              userId: s.user_id || s.id,
+              studentId: s.id,
               rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
               name: s.name || s.full_name || "Student User",
               status: false
@@ -199,19 +203,21 @@ export default function AdminAttendance() {
 
         fetchedStudents.forEach((s) => {
           // Check if student has marked attendance present on DB (by ID or student name)
-          const record = dbList.find(d => 
-            Number(d.id || d.student_id || d.user_id) === Number(s.id) ||
-            (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim())
-          );
+          const record = dbList.find(d => {
+            const dId = Number(d.id || d.student_id || d.user_id || d.studentId || d.userId);
+            const matchesId = dId && (dId === Number(s.id) || dId === Number(s.userId) || dId === Number(s.studentId));
+            const matchesName = (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim()) ||
+                                (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
+            return matchesId || matchesName;
+          });
           const isPresentInDb = record ? (
-            record.status?.toLowerCase() === 'present' || 
-            Number(record.attendance_percentage || 0) > 0 || 
-            Number(record.present_count || 0) > 0
+            String(record.status || '').toLowerCase() === 'present' || 
+            Number(record.present || record.present_count || 0) > 0 ||
+            Number(record.attendance_percentage || 0) > 0
           ) : false;
           attendanceMap[s.id] = isPresentInDb;
           if (isPresentInDb) scannedMap[s.id] = true;
         });
-
 
         setAttendance(attendanceMap);
         setQrScannedMap(scannedMap);
