@@ -365,7 +365,7 @@ export default function SuperAdminProfile() {
               </div>
             </div>
 
-            <div className="profile-form-grid">
+            <div className="sa-profile-form-grid">
               <div className="profile-field">
                 <label className="profile-label">Full Name *</label>
                 <input
