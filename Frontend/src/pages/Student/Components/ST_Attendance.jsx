@@ -14,7 +14,8 @@ import "../Styles/ST_Attendance.css";
 function StudentAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -29,7 +30,7 @@ function StudentAttSelect({ value, options = [], onChange, placeholder = 'Select
       </button>
       {isOpen && (
         <div className="student-att-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-att-select-option${isSel ? ' student-att-select-option--selected' : ''}`}>

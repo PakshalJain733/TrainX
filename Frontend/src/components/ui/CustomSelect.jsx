@@ -19,8 +19,9 @@ export default function CustomSelect({
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Normalize options array
-  const normalizedOptions = options.map((opt) =>
+  // Normalize options array safely
+  const safeOptions = Array.isArray(options) ? options : [];
+  const normalizedOptions = safeOptions.map((opt) =>
     typeof opt === "string" ? { value: opt, label: opt } : opt
   );
 

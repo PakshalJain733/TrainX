@@ -9,7 +9,8 @@ import "../Styles/CO_Broadcast.css";
 function CoordinatorBcastSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -24,7 +25,7 @@ function CoordinatorBcastSelect({ value, options = [], onChange, placeholder = '
       </button>
       {isOpen && (
         <div className="coordination-bcast-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`coordination-bcast-select-option${isSel ? ' coordination-bcast-select-option--selected' : ''}`}>
@@ -249,7 +250,7 @@ export default function CoordinatorBroadcast() {
                   options={[
                     { value: "Entire Department & Students", label: "Entire Department & Students" },
                     { value: "Department Mentors Only", label: "Department Mentors Only" },
-                    ...batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })),
+                    ...(Array.isArray(batches) ? batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })) : []),
                   ]}
                 />
               </div>

@@ -14,7 +14,8 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
   const triggerRef = useRef(null);
   const dropdownRef = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
 
   const updateCoords = () => {
     if (triggerRef.current) {
@@ -82,7 +83,7 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
             zIndex: 99999,
           }}
         >
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>

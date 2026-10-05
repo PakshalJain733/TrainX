@@ -13,7 +13,8 @@ function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...
   const [isOpen, setIsOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
 
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
@@ -45,7 +46,7 @@ function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...
       </button>
       {isOpen && (
         <div className={`admin-pp-select-dropdown${dropUp ? ' admin-pp-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-pp-select-option${isSel ? ' admin-pp-select-option--selected' : ''}`}>

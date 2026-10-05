@@ -428,9 +428,15 @@ export default function AIInterview() {
     const communication = Number(d.communication ?? sc.communication ?? overallScore);
     const problemSolving = Number(d.problemSolving ?? sc.problemSolving ?? overallScore);
 
-    const strengths = d.strengths || sc.strengths || (sessionData.feedback || d.feedback ? [sessionData.feedback || d.feedback] : []);
-    const improvementAreas = d.weaknesses || d.improvementAreas || sc.improvementAreas || d.recommendations || [];
-    const recommendedTopics = d.skillGaps || d.recommendedTopics || sc.recommendedTopics || [sessionData.interview_type || "General Technical Practice"];
+    const ensureArr = (val) => {
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string' && val.trim()) return [val.trim()];
+      return [];
+    };
+
+    const strengths = ensureArr(d.strengths || sc.strengths || (sessionData.feedback || d.feedback ? [sessionData.feedback || d.feedback] : []));
+    const improvementAreas = ensureArr(d.weaknesses || d.improvementAreas || sc.improvementAreas || d.recommendations || []);
+    const recommendedTopics = ensureArr(d.skillGaps || d.recommendedTopics || sc.recommendedTopics || [sessionData.interview_type || "General Technical Practice"]);
     const feedback = sessionData.feedback || d.feedback || sc.feedback || "Interview completed successfully.";
     const readiness = d.readiness || sc.readiness || sessionData.grade || (overallScore >= 70 ? "Interview Ready" : "Practice Needed");
     const grade = sessionData.grade || sc.grade || (overallScore >= 80 ? "Excellent" : overallScore >= 60 ? "Good" : "Needs Improvement");
@@ -1926,7 +1932,7 @@ export default function AIInterview() {
 
             {/* ── STRENGTHS + IMPROVE + TOPICS ── */}
             <div className="ai-summary-3grid">
-              {result?.scorecard?.strengths?.length > 0 && (
+              {Array.isArray(result?.scorecard?.strengths) && result.scorecard.strengths.length > 0 && (
                 <div className="ai-summary-card ai-card-strengths">
                   <div className="ai-summary-card-title">✅ Strengths</div>
                   <ul className="ai-summary-card-list">
@@ -1934,7 +1940,7 @@ export default function AIInterview() {
                   </ul>
                 </div>
               )}
-              {result?.scorecard?.improvementAreas?.length > 0 && (
+              {Array.isArray(result?.scorecard?.improvementAreas) && result.scorecard.improvementAreas.length > 0 && (
                 <div className="ai-summary-card ai-card-improve">
                   <div className="ai-summary-card-title">❌ Areas to Improve</div>
                   <ul className="ai-summary-card-list">
@@ -1942,7 +1948,7 @@ export default function AIInterview() {
                   </ul>
                 </div>
               )}
-              {result?.scorecard?.recommendedTopics?.length > 0 && (
+              {Array.isArray(result?.scorecard?.recommendedTopics) && result.scorecard.recommendedTopics.length > 0 && (
                 <div className="ai-summary-card ai-card-topics">
                   <div className="ai-summary-card-title">📚 Study These Topics</div>
                   <ul className="ai-summary-card-list">

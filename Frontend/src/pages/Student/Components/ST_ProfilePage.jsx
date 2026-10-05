@@ -11,7 +11,8 @@ import "../Styles/ST_ProfilePage.css";
 function StudentProfSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, disabled = false }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -31,7 +32,7 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
       </button>
       {isOpen && !disabled && (
         <div className="student-prof-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-prof-select-option${isSel ? ' student-prof-select-option--selected' : ''}`}>

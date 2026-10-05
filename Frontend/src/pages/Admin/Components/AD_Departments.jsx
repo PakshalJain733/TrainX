@@ -133,7 +133,7 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
             </button>
           )}
 
-          {customActions.map((action, idx) => (
+          {Array.isArray(customActions) && customActions.map((action, idx) => (
             <button
               key={idx}
               type="button"
@@ -335,7 +335,7 @@ export default function Departments() {
 
       {/* Department Cards Grid */}
       <div className="departments-grid">
-        {filtered.map((dept) => (
+        {Array.isArray(filtered) && filtered.map((dept) => (
           <div key={dept.id} className="dept-card">
             <div>
               <div className="dept-card-top">
@@ -406,7 +406,7 @@ export default function Departments() {
                   <label>College *</label>
                   <DeptSelect
                     value={deptForm.collegeId}
-                    options={colleges.map((c) => ({
+                    options={(Array.isArray(colleges) ? colleges : []).map((c) => ({
                       value: c.id,
                       label: `${c.name} (${c.code})`
                     }))}
