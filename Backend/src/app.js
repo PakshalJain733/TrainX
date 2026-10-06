@@ -31,6 +31,7 @@ import { sendSuccess, sendError } from './utils/response.js';
 import { pool } from './config/db.js';
 
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
