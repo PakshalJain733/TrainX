@@ -5,11 +5,7 @@ import { Video, Plus, Clock, ExternalLink, X } from "lucide-react";
 import "../Styles/MN_LiveSessions.css";
 
 const generateGoogleMeetLink = () => {
-  const chars = "abcdefghijklmnopqrstuvwxyz";
-  const p1 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  const p2 = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  const p3 = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
-  return `https://meet.google.com/${p1}-${p2}-${p3}`;
+  return ""; // The backend will generate the real Google Meet link
 };
 
 export default function LiveSessions() {

@@ -88,8 +88,7 @@ export default function Students() {
   const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "AIzaSyBw0r80ZCZQzNzoVrSU3jwhBkn9t3WRK9M";
 
   const generateGoogleMeetLink = () => {
-    // Immediately launch a new Google Meet session
-    return `https://meet.google.com/new`;
+    return ""; // The backend will generate the real Google Meet link
   };
 
   const openCallModalForStudent = (student) => {
