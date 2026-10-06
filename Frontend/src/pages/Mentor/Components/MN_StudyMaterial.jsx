@@ -345,32 +345,51 @@ export default function StudyMaterial() {
                     </div>
                   </div>
 
-                  {/* Upload Document / File */}
-                  <div>
-                    <label className="mentor-form-label">
-                      Upload Document / File (PDF, DOCX, ZIP)
-                    </label>
-                    <div className="mentor-file-input-box">
+                  {/* Side-by-Side Upload Document & Resource Link Row */}
+                  <div className="mentor-grid-2">
+                    {/* Upload Document / File */}
+                    <div>
+                      <label className="mentor-form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>Upload Document / File</span>
+                        <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>(PDF, PPT)</span>
+                      </label>
+                      <div className="mentor-file-input-box">
+                        <input
+                          type="file"
+                          accept=".pdf,.ppt,.pptx"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              const ext = file.name.split('.').pop().toLowerCase();
+                              if (!['pdf', 'ppt', 'pptx'].includes(ext)) {
+                                alert("Only PDF and PPT/PPTX files are allowed!");
+                                e.target.value = "";
+                                setSelectedFile(null);
+                                return;
+                              }
+                              setSelectedFile(file);
+                            } else {
+                              setSelectedFile(null);
+                            }
+                          }}
+                          className="mentor-file-input"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Resource Link / URL */}
+                    <div>
+                      <label className="mentor-form-label">
+                        Resource Link / URL
+                      </label>
                       <input
-                        type="file"
-                        onChange={(e) => setSelectedFile(e.target.files[0] || null)}
-                        className="mentor-file-input"
+                        type="url"
+                        value={resourceLink}
+                        onChange={(e) => setResourceLink(e.target.value)}
+                        placeholder="e.g. https://drive.google.com/... (Optional)"
+                        className="mentor-input-text"
                       />
                     </div>
-                  </div>
-
-                  {/* Resource Link / URL (Optional) */}
-                  <div>
-                    <label className="mentor-form-label">
-                      Resource Link / URL (Optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={resourceLink}
-                      onChange={(e) => setResourceLink(e.target.value)}
-                      placeholder="e.g. https://drive.google.com/... or https://..."
-                      className="mentor-input-text"
-                    />
                   </div>
 
                   {/* Modal Footer Actions */}

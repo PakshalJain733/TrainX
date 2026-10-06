@@ -457,33 +457,56 @@ export default function AdminLearningContent() {
                   </div>
                 </div>
 
-                {/* Clean, Full-Width Upload Document & Resource Link inputs */}
-                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Upload Document / File {newType !== "Link" ? "*" : "(Optional)"}</label>
-                  <input
-                    type="file"
-                    className="form-input-admin"
-                    style={{ padding: "8px 12px", height: "auto", cursor: "pointer" }}
-                    onChange={e => setSelectedFile(e.target.files[0] || null)}
-                    required={newType !== "Link" && !resourceLink}
-                  />
-                  {selectedFile && (
-                    <span className="form-hint" style={{ color: "#059669", fontWeight: "600", marginTop: "4px", display: "block" }}>
-                      ✓ Selected File: {selectedFile.name}
-                    </span>
-                  )}
-                </div>
+                {/* Side-by-Side Upload Document & Resource Link inputs */}
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>Upload Document / File {newType !== "Link" ? "*" : ""}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>(PDF, PPT)</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.ppt,.pptx"
+                      className="form-input-admin"
+                      style={{ padding: "8px 12px", height: "42px", boxSizing: "border-box", cursor: "pointer" }}
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const ext = file.name.split('.').pop().toLowerCase();
+                          if (!['pdf', 'ppt', 'pptx'].includes(ext)) {
+                            alert("Only PDF and PPT/PPTX files are allowed!");
+                            e.target.value = "";
+                            setSelectedFile(null);
+                            return;
+                          }
+                          setSelectedFile(file);
+                        } else {
+                          setSelectedFile(null);
+                        }
+                      }}
+                      required={newType !== "Link" && !resourceLink}
+                    />
+                    {selectedFile && (
+                      <span className="form-hint" style={{ color: "#059669", fontWeight: "600", marginTop: "4px", display: "block" }}>
+                        ✓ Selected File: {selectedFile.name}
+                      </span>
+                    )}
+                  </div>
 
-                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Link / URL {newType === "Link" ? "*" : "(Optional)"}</label>
-                  <input
-                    type="url"
-                    className="form-input-admin"
-                    value={resourceLink}
-                    onChange={e => setResourceLink(e.target.value)}
-                    placeholder="e.g. https://drive.google.com/... or https://..."
-                    required={newType === "Link"}
-                  />
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                      Resource Link / URL {newType === "Link" ? "*" : ""}
+                    </label>
+                    <input
+                      type="url"
+                      className="form-input-admin"
+                      style={{ height: "42px", boxSizing: "border-box" }}
+                      value={resourceLink}
+                      onChange={e => setResourceLink(e.target.value)}
+                      placeholder="e.g. https://drive.google.com/... (Optional)"
+                      required={newType === "Link"}
+                    />
+                  </div>
                 </div>
               </div>
 
