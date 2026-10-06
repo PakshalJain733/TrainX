@@ -1,6 +1,10 @@
-const { google } = require('googleapis');
-const fs = require('fs');
-const path = require('path');
+import { google } from 'googleapis';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // To use this, you MUST download your OAuth 2.0 Client credentials from Google Cloud Console
 // and save them as 'credentials.json' in the Backend root directory.
@@ -71,7 +75,4 @@ async function generateRealGoogleMeetLink(summary = 'Mentorship Meeting') {
   }
 }
 
-module.exports = {
-  generateRealGoogleMeetLink,
-  oAuth2Client
-};
+export { generateRealGoogleMeetLink, oAuth2Client };

@@ -141,5 +141,10 @@ export const handleIncomingNotificationForDesktop = (notifItem) => {
       body: notifItem.desc || notifItem.message || notifItem.description || "You have a new notice on TrainX Portal.",
       tag: String(id),
     });
+    
+    // Also trigger the in-app Broadcast Toast popup
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("new_broadcast_notification", { detail: notifItem }));
+    }
   }
 };

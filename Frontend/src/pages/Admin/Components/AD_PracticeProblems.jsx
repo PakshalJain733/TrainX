@@ -1,30 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import {Check, 
-  Code,
-  Plus,
-  Edit,
-  Trash2,
-  ListChecks,
-  Send,
-  Eye,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Award,
-  Search,
-  Filter,
-  X,
-  FileCode,
-  FileCode2,
-  Layers,
-  ChevronRight,
-  TrendingUp,
-  Terminal,
-  Sparkles,
-  ChevronDown,
-  Check,
-} from "lucide-react";
+import { Check, Code, Plus, Edit, Trash2, ListChecks, Send, Eye, CheckCircle2, XCircle, Clock, Award, Search, Filter, X, FileCode, FileCode2, Layers, ChevronRight, TrendingUp, Terminal, Sparkles, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { SectionHeader } from "../../../components/ui/SectionHeader";

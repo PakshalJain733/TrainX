@@ -1,4 +1,4 @@
-import { sendSuccess, sendError } from '../utils/response.js';
+  import { sendSuccess, sendError } from '../utils/response.js';
 import { query, pool } from '../config/db.js';
 import { tableAvailabilityMap, inPlaceholders } from '../utils/tableAvailability.js';
 import { DEFAULTER_THRESHOLDS } from '../services/intervention.service.js';
@@ -6,6 +6,7 @@ import { uploadFileToS3 } from '../utils/s3Upload.js';
 import { ROLES } from '../utils/constants.js';
 import { createSharedContent, deleteSharedContent } from '../models/sharedContent.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { generateRealGoogleMeetLink } from '../utils/googleMeet.js';
 
 const ATTENDANCE_THRESHOLD = DEFAULTER_THRESHOLDS.ATTENDANCE_THRESHOLD;
 const PERFORMANCE_THRESHOLD = DEFAULTER_THRESHOLDS.PERFORMANCE_THRESHOLD;
@@ -1322,8 +1323,6 @@ export const createLiveSession = async (req, res, next) => {
     const finalTime = time && String(time).trim() ? String(time).trim() : "Immediate / Now";
     const finalTitle = title && String(title).trim() ? String(title).trim() : (studentName ? `1-on-1 Call with ${studentName}` : "Batch Mentorship Call");
 
-    const { generateRealGoogleMeetLink } = require('../utils/googleMeet');
-
     let generatedMeetUrl = '';
     try {
       generatedMeetUrl = await generateRealGoogleMeetLink(finalTitle);
@@ -1373,15 +1372,16 @@ export const createLiveSession = async (req, res, next) => {
       const collegeId = mentorRow?.college_id || null;
       const mentorName = mentorRow?.name || 'Mentor';
 
-      const broadcastMsg = `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})`;
+      const broadcastMsg = notes 
+        ? `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})\n\nNotes: ${notes}`
+        : `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})`;
       await query(
-        `INSERT INTO broadcasts (college_id, title, message, desc_text, target, priority, created_by, created_by_name, sender_role)
-         VALUES (?, ?, ?, ?, ?, 'Urgent', ?, ?, 'Mentor')`,
+        `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by, created_by_name, sender_role)
+         VALUES (?, ?, ?, ?, 'Urgent', ?, ?, 'Mentor')`,
         [
           collegeId,
           `Meeting Call: ${finalTitle}`,
           broadcastMsg,
-          notes || `Please join the meeting at ${finalLink}`,
           studentName || batchLabel || 'All Batches',
           mentorId,
           mentorName,
