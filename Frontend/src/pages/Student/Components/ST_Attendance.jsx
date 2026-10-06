@@ -95,20 +95,51 @@ export default function Attendance() {
 
   // Fetch Attendance Data from Backend API
   useEffect(() => {
-    apiFetch("/student/attendance")
+    apiFetch("/attendance/history")
       .then((res) => {
         if (res && res.data) {
+          const summary = res.data.summary || {};
+          const rawHistory = res.data.history || [];
+
+          const formattedHistory = rawHistory.map((item) => {
+            const rawDate = item.session_date || item.created_at || item.date;
+            const formattedDate = rawDate
+              ? new Date(rawDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+              : "Today";
+            const monthName = rawDate
+              ? new Date(rawDate).toLocaleDateString("en-IN", { month: "long" })
+              : "October";
+
+            const rawStatus = item.status ? String(item.status).toLowerCase() : "present";
+            const statusDisplay = (rawStatus === "present" || rawStatus === "late") ? "Present" : "Absent";
+
+            return {
+              id: item.id || Math.random(),
+              date: formattedDate,
+              month: monthName,
+              subject: item.session_title || item.batch_name || item.subject || "Training Session",
+              status: statusDisplay,
+              slot: item.session_code || item.slot || "Regular",
+              faculty: item.marked_by_name || item.faculty || "Course Instructor"
+            };
+          });
+
+          const total = Number(summary.total_classes ?? summary.totalSessions ?? 0);
+          const present = Number(summary.present_count ?? summary.present ?? 0);
+          const missed = Number(summary.absent_count ?? summary.absent ?? Math.max(0, total - present));
+          const pct = Number(summary.attendance_percentage ?? summary.percentage ?? (total > 0 ? Math.round((present / total) * 100) : 0));
+
           setData({
-            overallPercentage: res.data.overallPercentage ?? 0,
-            attendedClasses: res.data.attendedClasses ?? 0,
-            missedClasses: res.data.missedClasses ?? 0,
-            totalClasses: res.data.totalClasses ?? 0,
-            requiredThreshold: res.data.requiredThreshold ?? 75,
-            status: res.data.status || "Good",
-            isLowAttendance: res.data.isLowAttendance ?? false,
-            warningMessage: res.data.warningMessage || "⚠ Attendance is below the required 75% threshold.",
-            subjects: res.data.subjects || [],
-            attendanceHistory: res.data.attendanceHistory || res.data.recentLogs || [],
+            overallPercentage: pct,
+            attendedClasses: present,
+            missedClasses: missed,
+            totalClasses: total,
+            requiredThreshold: 75,
+            status: pct >= 75 ? "Good" : "Low",
+            isLowAttendance: pct < 75 && total > 0,
+            warningMessage: "⚠ Attendance is below the required 75% threshold.",
+            subjects: formattedHistory,
+            attendanceHistory: formattedHistory,
             verifications: res.data.verifications || []
           });
           if (res.data.verifications && res.data.verifications.length > 0) {
@@ -150,10 +181,53 @@ export default function Attendance() {
           window.dispatchEvent(new CustomEvent("qr_scan_completed", { detail: scanEvent }));
         } catch (_) {}
 
-        // Refetch latest student attendance summary from backend database
-        apiFetch("/student/attendance").then((attRes) => {
+        // Refetch latest student attendance summary & history from backend database
+        apiFetch("/attendance/history").then((attRes) => {
           if (attRes && attRes.data) {
-            setData((prev) => ({ ...prev, ...attRes.data }));
+            const summary = attRes.data.summary || {};
+            const rawHistory = attRes.data.history || [];
+
+            const formattedHistory = rawHistory.map((item) => {
+              const rawDate = item.session_date || item.created_at || item.date;
+              const formattedDate = rawDate
+                ? new Date(rawDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                : "Today";
+              const monthName = rawDate
+                ? new Date(rawDate).toLocaleDateString("en-IN", { month: "long" })
+                : "October";
+
+              const rawStatus = item.status ? String(item.status).toLowerCase() : "present";
+              const statusDisplay = (rawStatus === "present" || rawStatus === "late") ? "Present" : "Absent";
+
+              return {
+                id: item.id || Math.random(),
+                date: formattedDate,
+                month: monthName,
+                subject: item.session_title || item.batch_name || item.subject || "Training Session",
+                status: statusDisplay,
+                slot: item.session_code || item.slot || "Regular",
+                faculty: item.marked_by_name || item.faculty || "Course Instructor"
+              };
+            });
+
+            const total = Number(summary.total_classes ?? summary.totalSessions ?? 0);
+            const present = Number(summary.present_count ?? summary.present ?? 0);
+            const missed = Number(summary.absent_count ?? summary.absent ?? Math.max(0, total - present));
+            const pct = Number(summary.attendance_percentage ?? summary.percentage ?? (total > 0 ? Math.round((present / total) * 100) : 0));
+
+            setData({
+              overallPercentage: pct,
+              attendedClasses: present,
+              missedClasses: missed,
+              totalClasses: total,
+              requiredThreshold: 75,
+              status: pct >= 75 ? "Good" : "Low",
+              isLowAttendance: pct < 75 && total > 0,
+              warningMessage: "⚠ Attendance is below the required 75% threshold.",
+              subjects: formattedHistory,
+              attendanceHistory: formattedHistory,
+              verifications: attRes.data.verifications || []
+            });
           }
         }).catch(() => { });
 

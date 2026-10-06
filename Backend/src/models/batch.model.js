@@ -239,12 +239,12 @@ export const getBatchStudentsModel = async (batchId) => {
     const bId = parseInt(batchId, 10);
     const rows = await query(
       `SELECT DISTINCT u.id, s.id AS student_id, s.user_id, u.name, u.email, s.roll_number, s.department, s.year, s.division, s.cgpa
-       FROM student_batches sb
-       JOIN users u ON sb.user_id = u.id
+       FROM users u
        LEFT JOIN students s ON s.user_id = u.id
-       WHERE sb.batch_id = ?
+       LEFT JOIN student_batches sb ON sb.user_id = u.id
+       WHERE (sb.batch_id = ? OR s.batch_id = ?) AND u.role = 'student'
        ORDER BY u.name ASC`,
-      [bId]
+      [bId, bId]
     );
     return rows || [];
   } catch (error) {

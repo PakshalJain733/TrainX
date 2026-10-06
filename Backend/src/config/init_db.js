@@ -295,6 +295,10 @@ export async function initializeDatabase() {
       await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`);
     } catch (_) { }
 
+    try {
+      await conn.query(`ALTER TABLE attendance ADD CONSTRAINT unique_user_session_date UNIQUE (user_id, session_date)`);
+    } catch (_) { }
+
     // 9c. Ensure Attendance Summary Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS attendance_summary (

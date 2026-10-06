@@ -14,6 +14,11 @@ export const supabase = hasSupabaseConfig
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Ensure local uploads directory exists as fallback across working environments
 const uploadDirs = [
   path.resolve(process.cwd(), 'uploads'),

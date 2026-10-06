@@ -175,23 +175,6 @@ export default function AdminAttendance() {
         } catch (_) {}
       }
 
-      // If batch-specific fetch returns empty, fallback to fetching system students
-      if (fetchedStudents.length === 0) {
-        try {
-          const res = await apiFetch('/students');
-          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-            fetchedStudents = res.data.map((s, idx) => ({
-              id: s.id || s.user_id || `S-${idx + 1}`,
-              userId: s.user_id || s.id,
-              studentId: s.id,
-              rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
-              name: s.name || s.full_name || "Student User",
-              status: false
-            }));
-          }
-        } catch (_) {}
-      }
-
       setStudents(fetchedStudents);
 
       // Query database for attendance marked on the selected date or present via live scan
