@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { getApiBaseUrl } from "../utils/api";
+import { getApiBaseUrl, getAuthToken } from "../utils/api";
 
 const initialMaintenanceConfig = {
   globalEmergencyMode: false,
@@ -1088,7 +1088,7 @@ export function SystemMaintenanceProvider({ children }) {
       sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(newConfig));
     } catch (e) {}
 
-    const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
+    const token = getAuthToken() || '';
     fetch(`${getApiBaseUrl()}/shared-content`, {
       method: 'POST',
       headers: {
@@ -1105,34 +1105,40 @@ export function SystemMaintenanceProvider({ children }) {
   };
 
   useEffect(() => {
-    const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken') || '';
-    if (!token) return;
-    // Fetch maintenance config directly from MySQL Database
+    const token = getAuthToken() || '';
+    // Maintenance GET is public; prefer server truth over stale sessionStorage flags
     fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
-      .then(res => res.json())
-      .then(json => {
-        if (json && json.data && json.data.length > 0) {
-          const item = json.data[0];
-          if (item && item.data && Object.keys(item.data).length > 0) {
-            setConfig(prev => {
-              const updated = {
-                ...prev,
-                ...item.data,
-                modules: {
-                  ...initialMaintenanceConfig.modules,
-                  ...(prev.modules || {}),
-                  ...(item.data?.modules || {}),
-                },
-              };
-              try {
-                sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(updated));
-              } catch (e) {}
-              return updated;
-            });
-          }
+      .then((res) => res.json())
+      .then((json) => {
+        const item = json?.data?.[0];
+        const serverData = item?.data;
+        const hasServerConfig =
+          serverData && typeof serverData === "object" && Object.keys(serverData).length > 0;
+
+        if (hasServerConfig) {
+          setConfig(() => {
+            const updated = {
+              ...initialMaintenanceConfig,
+              ...serverData,
+              modules: {
+                ...initialMaintenanceConfig.modules,
+                ...(serverData.modules || {}),
+              },
+            };
+            try {
+              sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(updated));
+            } catch (e) {}
+            return updated;
+          });
+          return;
         }
+
+        setConfig(initialMaintenanceConfig);
+        try {
+          sessionStorage.removeItem("system_maintenance_config_v2");
+        } catch (e) {}
       })
       .catch(() => {});
   }, []);

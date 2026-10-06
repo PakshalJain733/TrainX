@@ -1,20 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Code2,
-  Users,
-  CheckCircle2,
-  CalendarDays,
-  GraduationCap,
-  BookOpen,
-  Trophy,
-  ArrowLeft,
-  ArrowUpRight,
-  Hash,
-  RefreshCw,
-  FileCheck2,
-  Layers,
-  School,
-} from "lucide-react";
+import { Code2, Users, CheckCircle2, CalendarDays, GraduationCap, BookOpen, Trophy, ArrowLeft, ArrowUpRight, Hash, RefreshCw, FileCheck2, Layers, School } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/StudentProfessionalBatches.css";
 

@@ -11,7 +11,8 @@ function AdminLcSelect({ value, options = [], onChange, placeholder = 'Select...
   const [isOpen, setIsOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
 
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
@@ -43,7 +44,7 @@ function AdminLcSelect({ value, options = [], onChange, placeholder = 'Select...
       </button>
       {isOpen && (
         <div className={`admin-lc-select-dropdown${dropUp ? ' admin-lc-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-lc-select-option${isSel ? ' admin-lc-select-option--selected' : ''}`}>
@@ -377,27 +378,34 @@ export default function AdminLearningContent() {
 
       {/* Add Content Modal / Flash Screen */}
       {showForm && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <div className="modal-header-left">
-                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+        <div 
+          className="sa-modal-overlay" 
+          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'fadeIn 0.2s ease-out' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        >
+          <div 
+            className="sa-modal-dialog" 
+            style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 48px)' }}
+          >
+            <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
+              <div className="sa-modal-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div className="sa-modal-icon-wrap" style={{ background: '#e0e7ff', color: '#4f46e5', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <BookOpen size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Upload Learning Content</h2>
-                  <p className="modal-subtitle">Publish videos, documents, web links, or study notes for student batches.</p>
+                  <h2 className="sa-modal-title" style={{ fontSize: '18px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>Upload Learning Content</h2>
+                  <p className="sa-modal-subtitle" style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>Publish videos, documents, web links, or study notes for student batches.</p>
                 </div>
               </div>
-              <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
-                <X size={18} />
+              <button type="button" className="sa-modal-close" onClick={() => setShowForm(false)} title="Close Modal" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleAdd}>
-              <div className="modal-body">
-                <div className="form-group-admin">
-                  <label>Content Title *</label>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="sa-modal-body" style={{ overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Content Title *</label>
                   <input
                     className="form-input-admin"
                     value={newTitle}
@@ -408,8 +416,8 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-group-admin" style={{ marginTop: "12px" }}>
-                  <label>Description (Optional)</label>
+                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Description (Optional)</label>
                   <textarea
                     className="form-input-admin form-textarea-admin"
                     rows={3}
@@ -419,9 +427,9 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Resource Type</label>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Type</label>
                     <AdminLcSelect
                       value={newType}
                       onChange={setNewType}
@@ -433,8 +441,8 @@ export default function AdminLearningContent() {
                       ]}
                     />
                   </div>
-                  <div className="form-group-admin">
-                    <label>Target Batch / Batch</label>
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Target Batch / Batch</label>
                     <AdminLcSelect
                       value={newBatch}
                       onChange={setNewBatch}
@@ -450,8 +458,8 @@ export default function AdminLearningContent() {
                 </div>
 
                 {/* Clean, Full-Width Upload Document & Resource Link inputs */}
-                <div className="form-group-admin" style={{ marginTop: "12px" }}>
-                  <label>Upload Document / File {newType !== "Link" ? "*" : "(Optional)"}</label>
+                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Upload Document / File {newType !== "Link" ? "*" : "(Optional)"}</label>
                   <input
                     type="file"
                     className="form-input-admin"
@@ -466,8 +474,8 @@ export default function AdminLearningContent() {
                   )}
                 </div>
 
-                <div className="form-group-admin" style={{ marginTop: "12px" }}>
-                  <label>Resource Link / URL {newType === "Link" ? "*" : "(Optional)"}</label>
+                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Link / URL {newType === "Link" ? "*" : "(Optional)"}</label>
                   <input
                     type="url"
                     className="form-input-admin"
@@ -479,10 +487,12 @@ export default function AdminLearningContent() {
                 </div>
               </div>
 
-              <div className="modal-footer">
-
-                <button type="submit" className="btn-modal-submit">
-                  Add Content
+              <div className="sa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-start', gap: '12px', background: '#ffffff' }}>
+                <button type="button" className="sa-modal-btn-cancel" onClick={() => setShowForm(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease' }}>
+                  Cancel
+                </button>
+                <button type="submit" className="sa-modal-btn-submit" style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#ffffff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease' }}>
+                  Publish Resource
                 </button>
               </div>
             </form>

@@ -39,7 +39,7 @@ export default function AdminProgress() {
           apiFetch("/students").catch(() => null),
           apiFetch("/batches").catch(() => null),
           apiFetch("/interviews").catch(() => null),
-          apiFetch("/leaderboards").catch(() => null),
+          apiFetch("/leaderboards/overall").catch(() => null),
         ]);
 
         if (batchesRes && (batchesRes.data || Array.isArray(batchesRes))) {
@@ -59,45 +59,49 @@ export default function AdminProgress() {
           ? (leaderboardRes.data || leaderboardRes)
           : [];
 
-        // Build a map of student ID/email to interview scores
+        // Build a map of student ID / user_id / name to interview scores
         const interviewMap = {};
         if (Array.isArray(interviewData)) {
           interviewData.forEach((iv) => {
-            const key = iv.user_id || iv.student_id || iv.studentName;
-            if (key) {
-              interviewMap[key] = Math.round(Number(iv.overall_score) || 78);
-            }
+            const keyId = iv.user_id || iv.student_id;
+            const keyName = (iv.studentName || iv.name || "").toLowerCase().trim();
+            if (keyId) interviewMap[keyId] = Math.round(Number(iv.overall_score) || 0);
+            if (keyName) interviewMap[keyName] = Math.round(Number(iv.overall_score) || 0);
           });
         }
 
-        // Build a map for XP and Coding Rank
+        // Build a map for DB metrics, XP, and Coding Rank
         const leaderboardMap = {};
         if (Array.isArray(leaderboardData)) {
           leaderboardData.forEach((lb) => {
-            const key = lb.id || lb.user_id || lb.student_id || lb.name;
-            if (key) {
-              leaderboardMap[key] = {
-                rank: lb.rank || 1,
-                xp: lb.points || lb.score || 0,
-              };
-            }
+            const keyId = lb.id || lb.user_id || lb.student_id;
+            const keyName = (lb.name || "").toLowerCase().trim();
+            if (keyId) leaderboardMap[keyId] = lb;
+            if (keyName) leaderboardMap[keyName] = lb;
           });
         }
 
-        // Map student records with calculated progress, quiz averages & AI interview scores
+        // Map student records with real database performance metrics
         const mappedStudents = studentUsers.map((s, idx) => {
-          const userKey = s.id || s.user_id || s.name;
-          const ivScore = interviewMap[userKey] !== undefined
-            ? interviewMap[userKey]
-            : (75 + ((idx * 7) % 20)); // Dynamic realistic default for registered students
+          const keyId = s.id || s.user_id;
+          const keyName = (s.name || s.student_name || "").toLowerCase().trim();
+          const lb = leaderboardMap[keyId] || leaderboardMap[keyName] || {};
 
-          const lbInfo = leaderboardMap[userKey] || {
-            rank: idx + 1,
-            xp: Math.max(100, 1200 - idx * 150),
-          };
+          const quizAvg = typeof s.quizAvg === "number"
+            ? s.quizAvg
+            : Math.round(Number(lb.quiz_score || s.quiz_score) || 0);
 
-          const quizAvg = s.quizAvg || Math.min(95, 70 + ((idx * 9) % 25));
-          const attendance = s.attendancePct || s.attendance || Math.min(100, 80 + ((idx * 5) % 20));
+          const attendance = typeof s.attendancePct === "number"
+            ? s.attendancePct
+            : (typeof s.attendance === "number" ? s.attendance : Math.round(Number(lb.attendance_score || s.attendance_score) || 0));
+
+          const aiInterview = interviewMap[keyId] !== undefined
+            ? interviewMap[keyId]
+            : (interviewMap[keyName] !== undefined ? interviewMap[keyName] : Math.round(Number(lb.interview_score || s.interview_score) || 0));
+
+          const codingRank = lb.rank ? `#${lb.rank}` : "-";
+          const xp = Math.round(Number(lb.score || lb.overall_score || lb.points || s.xp) || 0);
+          const overallProgress = Math.round(Number(lb.overall_score) || Math.round((quizAvg * 0.3) + (attendance * 0.15) + (aiInterview * 0.25) + (Math.min(100, xp / 20) * 0.3)));
 
           return {
             id: s.id || s.user_id || idx,
@@ -106,9 +110,10 @@ export default function AdminProgress() {
             batch: s.batch || s.batch_name || 'General Batch',
             quizAvg: quizAvg,
             attendance: attendance,
-            aiInterview: ivScore,
-            codingRank: lbInfo.rank,
-            xp: lbInfo.xp,
+            aiInterview: aiInterview,
+            codingRank: codingRank,
+            xp: xp,
+            overallProgress: overallProgress,
           };
         });
 
@@ -188,11 +193,11 @@ export default function AdminProgress() {
                       <td><span className={`progress-score ${s.quizAvg >= 85 ? "score-high" : s.quizAvg >= 70 ? "score-mid" : "score-low"}`}>{s.quizAvg}%</span></td>
                       <td><span className={`progress-score ${s.attendance >= 90 ? "score-high" : s.attendance >= 75 ? "score-mid" : "score-low"}`}>{s.attendance}%</span></td>
                       <td><span className={`progress-score ${s.aiInterview >= 80 ? "score-high" : s.aiInterview >= 65 ? "score-mid" : "score-low"}`}>{s.aiInterview}%</span></td>
-                      <td><span className="progress-rank">#{s.codingRank}</span></td>
+                      <td><span className="progress-rank">{s.codingRank.startsWith("#") ? s.codingRank : (s.codingRank === "-" ? "-" : `#${s.codingRank}`)}</span></td>
                       <td><span className="progress-xp">{s.xp.toLocaleString()} XP</span></td>
                       <td>
                         <div className="progress-bar-wrap">
-                          <div className="progress-bar-fill" style={{ '--progress-fill': `${Math.min(s.xp / 20, 100)}%` }} />
+                          <div className="progress-bar-fill" style={{ '--progress-fill': `${Math.min(100, Math.max(0, s.overallProgress))}%` }} />
                         </div>
                       </td>
                     </tr>

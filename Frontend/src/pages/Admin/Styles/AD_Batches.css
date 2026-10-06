@@ -617,7 +617,7 @@
 }
 
 .add-task-header-banner {
-  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+  background: #1e1b4b;
   padding: 1.5rem 1.75rem;
   color: #ffffff;
   display: flex;
@@ -864,21 +864,31 @@
 }
 
 .add-task-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 12px 28px;
   font-size: 14px;
   font-weight: 700;
-  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+  background: #4f46e5;
   color: #ffffff;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
   transition: all 0.2s ease;
+  line-height: 1.2;
 }
 
 .add-task-submit-btn:hover {
+  background: #4338ca;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
+}
+
+.add-task-submit-btn svg {
+  flex-shrink: 0;
 }
 
 /* Inline Custom Select for Admin Batches */

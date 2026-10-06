@@ -1,5 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { getAuthToken } from "../../utils/api";
+import { roleFromAccessToken, getRoleFlags } from "../../utils/authRole";
 
 export default function ProtectedRoute({ allowedRoles = [], children }) {
   const location = useLocation();
@@ -8,14 +10,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     typeof window !== "undefined" &&
     ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 
-  // 1. Retrieve auth token
-  let token =
-    sessionStorage.getItem("token") ||
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("authToken") ||
-    localStorage.getItem("authToken") ||
-    sessionStorage.getItem("auth_token") ||
-    localStorage.getItem("auth_token");
+  let token = getAuthToken();
 
   // 2. Retrieve user object
   let user = null;
@@ -81,25 +76,22 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     }
   }
 
+  if (token && (!user || !user.role)) {
+    const jwtRole = roleFromAccessToken(token);
+    if (jwtRole) {
+      user = { ...(user || {}), role: jwtRole };
+      try {
+        sessionStorage.setItem("user", JSON.stringify(user));
+      } catch (_) {}
+    }
+  }
+
   // In Deployed / Production environment: if unauthenticated, redirect to login page
   if (!token || !user || !user.role) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  const userRole = String(user.role).toLowerCase();
-
-  // Determine user role flags
-  const isSuperAdmin =
-    userRole.includes("superadmin") ||
-    userRole.includes("super admin") ||
-    userRole.includes("super_admin") ||
-    userRole.includes("super");
-  const isAdmin =
-    (userRole.includes("admin") || userRole.includes("college_admin") || userRole.includes("hod")) &&
-    !isSuperAdmin;
-  const isCoordinator = userRole.includes("coordinator");
-  const isMentor = userRole.includes("mentor") || userRole.includes("faculty");
-  const isStudent = userRole.includes("student") || userRole === "user";
+  const { userRole, isSuperAdmin, isAdmin, isCoordinator, isMentor, isStudent } = getRoleFlags(user.role);
 
   // Check if role is authorized
   let isAllowed = false;

@@ -1,9 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  Bell, X, Search, Check, Trash2, Calendar,
-  AlertTriangle, CheckCircle2, FileText, Filter
-} from "lucide-react";
+import { Bell, X, Search, Check, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Filter } from "lucide-react";
 import "./FullNotificationModal.css";
 
 export default function FullNotificationModal({ isOpen, onClose, notifications = [], setNotifications }) {

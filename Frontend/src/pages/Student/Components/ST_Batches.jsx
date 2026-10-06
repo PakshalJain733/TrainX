@@ -1,34 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import {
-  Users,
-  Calendar,
-  Clock,
-  BookOpen,
-  ArrowUpRight,
-  Code2,
-  Database,
-  Layers,
-  CheckCircle2,
-  ArrowLeft,
-  FileText,
-  Video,
-  PlayCircle,
-  Trophy,
-  AlertCircle,
-  Clock3,
-  CalendarDays,
-  CheckSquare,
-  Square,
-  Award,
-  Flame,
-  Check,
-  Plus,
-  X,
-  KeyRound,
-  Loader2
-} from "lucide-react";
+import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { getApiBaseUrl } from "../../../utils/api.js";
 import "../Styles/ST_Batches.css";
@@ -70,6 +43,7 @@ function mapApiBatch(b) {
   const userName = getStoredUserName();
   const userInitials = getInitials(userName);
   const isInactive = b.status === "inactive" || b.status === "Inactive";
+  const initialXp = Number(b.xp || b.user_xp || b.earned_xp) || 0;
 
   return {
     id: b.id || `batch-${b.id}`,
@@ -87,7 +61,7 @@ function mapApiBatch(b) {
     description: b.description || `${b.name} training batch curriculum and assignments.`,
     stats: { completedTasks: 0, pendingTasks: 0, urgentTaskNumber: "None", urgentTaskDeadline: "No Deadline" },
     leaderboard: [
-      { rank: 1, name: `${userName} (You)`, xp: b.xp || 0, initials: userInitials, self: true },
+      { rank: 1, name: `${userName} (You)`, xp: initialXp, initials: userInitials, self: true },
     ],
     modules: [],
     apiTasks: [],
@@ -145,10 +119,26 @@ export default function Batches() {
           due: t.deadline ? `Due ${t.deadline}` : "No Deadline",
           status: t.status || "Pending",
           platform: t.platform || "coding",
+          points: Number(t.points) || 100,
         }));
+
+        // Initial batch XP starts at 0, afterwards increases according to task performance
+        const completedXp = customTasks
+          .filter(t => (t.status || "").toLowerCase() === "completed" || (t.status || "").toLowerCase() === "passed")
+          .reduce((sum, t) => sum + (t.points || 100), 0);
+
         setSelectedBatch((prev) => ({
           ...prev,
           apiTasks: customTasks,
+          leaderboard: [
+            {
+              rank: 1,
+              name: `${getStoredUserName()} (You)`,
+              xp: completedXp,
+              initials: getInitials(getStoredUserName()),
+              self: true,
+            }
+          ],
           stats: {
             ...prev.stats,
             pendingTasks: customTasks.filter(t => t.status !== "Completed").length,

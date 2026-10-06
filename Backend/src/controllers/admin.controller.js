@@ -153,11 +153,17 @@ export const getAdminPendingUsers = async (req, res, next) => {
 
     let users = await getPendingUsersModel(collegeId);
 
-    // College Admins can only view/approve Students, Mentors, and Coordinators
-    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+    // Super Admin ONLY receives approval requests for Admin roles
+    // College Admins ONLY receive approval requests for non-Admin users (Students, Mentors, Coordinators) belonging to their college
+    if (req.user?.role === ROLES.SUPER_ADMIN) {
       users = users.filter((u) => {
         const r = String(u.role || '').toLowerCase();
-        return !r.includes('admin');
+        return r === 'college_admin' || r === 'admin' || r === 'hod';
+      });
+    } else {
+      users = users.filter((u) => {
+        const r = String(u.role || '').toLowerCase();
+        return !r.includes('admin') && r !== 'super_admin';
       });
     }
 
@@ -191,6 +197,17 @@ export const approveUserAdmin = async (req, res, next) => {
       return sendError(res, 'User not found', 404);
     }
 
+    const userRole = String(user.role || '').toLowerCase();
+    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+      if (userRole.includes('admin') || userRole === 'super_admin') {
+        return sendError(res, 'Unauthorized: Only Super Admin can approve College Admin registrations.', 403);
+      }
+      const callerCollegeId = getCallerCollegeFilter(req);
+      if (callerCollegeId && user.college_id && String(callerCollegeId) !== String(user.college_id)) {
+        return sendError(res, 'Unauthorized: You can only approve pending users from your own college.', 403);
+      }
+    }
+
     await updateUserModel(id, { is_active: 1 });
 
     if (user.email && user.email.includes('@')) {
@@ -209,6 +226,17 @@ export const rejectUserAdmin = async (req, res, next) => {
     const user = await findUserById(id);
     if (!user) {
       return sendError(res, 'User not found', 404);
+    }
+
+    const userRole = String(user.role || '').toLowerCase();
+    if (req.user?.role !== ROLES.SUPER_ADMIN) {
+      if (userRole.includes('admin') || userRole === 'super_admin') {
+        return sendError(res, 'Unauthorized: Only Super Admin can reject College Admin registrations.', 403);
+      }
+      const callerCollegeId = getCallerCollegeFilter(req);
+      if (callerCollegeId && user.college_id && String(callerCollegeId) !== String(user.college_id)) {
+        return sendError(res, 'Unauthorized: You can only reject pending users from your own college.', 403);
+      }
     }
 
     await deleteUserModel(id);

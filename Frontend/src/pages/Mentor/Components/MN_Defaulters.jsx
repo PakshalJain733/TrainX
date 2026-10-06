@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { AlertCircle, Search, Filter, ShieldAlert, UserX } from 'lucide-react';
+import { AlertCircle, Search, Filter, ShieldAlert, UserX } from "lucide-react";
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/MN_Defaulters.css";
 

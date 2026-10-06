@@ -1,18 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import {
-  Search,
-  BookOpen,
-  BookOpenCheck,
-  FileText,
-  Video,
-  Sparkles,
-  ExternalLink,
-  Download,
-  Eye,
-  X,
-  Play,
-} from "lucide-react";
+import { Search, BookOpen, BookOpenCheck, FileText, Video, Sparkles, ExternalLink, Download, Eye, X, Play } from "lucide-react";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { Badge } from "../../../components/ui/Badge";
 import { EVENTS, getSharedLearningContent } from "../../../utils/sharedStore";

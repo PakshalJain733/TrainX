@@ -13,7 +13,8 @@ function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...
   const [isOpen, setIsOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
 
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
@@ -45,7 +46,7 @@ function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...
       </button>
       {isOpen && (
         <div className={`admin-pp-select-dropdown${dropUp ? ' admin-pp-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-pp-select-option${isSel ? ' admin-pp-select-option--selected' : ''}`}>
@@ -76,20 +77,22 @@ export default function AdminPracticeProblems() {
   const [searchTerm, setSearchTerm] = useState("");
   const [difficultyFilter, setDifficultyFilter] = useState("All");
 
-  const [newProb, setNewProb] = useState({
+  const emptyProbState = {
     title: "",
-    topic: "Arrays & Hashing",
+    topic: "",
     difficulty: "Easy",
-    xp: 50,
-    companies: "TCS, Infosys",
-    timeLimit: "1.0s",
-    memoryLimit: "128 MB",
+    xp: "",
+    companies: "",
+    timeLimit: "",
+    memoryLimit: "",
     description: "",
     dueDate: "",
     sampleInput: "",
     sampleOutput: "",
     testCases: [],
-  });
+  };
+
+  const [newProb, setNewProb] = useState(emptyProbState);
 
   const [formTestCase, setFormTestCase] = useState({ input: "", output: "", isHidden: false });
   const [newTestCase, setNewTestCase] = useState({ input: "", output: "", isHidden: false });
@@ -224,20 +227,7 @@ export default function AdminPracticeProblems() {
     }
 
     setShowAddModal(false);
-    setNewProb({
-      title: "",
-      topic: "Arrays & Hashing",
-      difficulty: "Easy",
-      xp: 50,
-      companies: "TCS, Infosys",
-      timeLimit: "1.0s",
-      memoryLimit: "128 MB",
-      description: "",
-      dueDate: "",
-      sampleInput: "",
-      sampleOutput: "",
-      testCases: [],
-    });
+    setNewProb(emptyProbState);
     setFormTestCase({ input: "", output: "", isHidden: false });
   };
 
@@ -326,7 +316,14 @@ export default function AdminPracticeProblems() {
         title="Coding Practice Management"
         description="Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts."
         action={
-          <button className="admin-btn-add" onClick={() => setShowAddModal(true)}>
+          <button
+            className="admin-btn-add"
+            onClick={() => {
+              setNewProb(emptyProbState);
+              setFormTestCase({ input: "", output: "", isHidden: false });
+              setShowAddModal(true);
+            }}
+          >
             <Plus size={16} /> Add Coding Problem
           </button>
         }

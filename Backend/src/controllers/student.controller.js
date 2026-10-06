@@ -446,9 +446,6 @@ export const getStudentAttendance = async (req, res, next) => {
       verifications: verifications,
       recentLogs: recentLogs,
       attendanceHistory: recentLogs,
-      subjects: [
-        { id: 'sub-1', code: 'CS-301', name: 'Java & OOP', attended: presentClasses, total: totalClasses || 1, pct: percentage, status: percentage >= 75 ? 'Good' : 'Warning', safeMargin: 'Margin based on real scans' }
-      ]
     };
     return sendSuccess(res, 'Attendance data retrieved successfully', attendanceData);
   } catch (error) {

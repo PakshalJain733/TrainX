@@ -1,16 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import {
-  Gauge,
-  Target,
-  AlertTriangle,
-  RefreshCw,
-  ShieldCheck,
-  Lightbulb,
-  TrendingUp,
-  Loader2,
-  CheckCircle2,
-} from "lucide-react";
+import { Gauge, Target, AlertTriangle, RefreshCw, ShieldCheck, Lightbulb, TrendingUp, Loader2, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { SectionHeader } from "../../../components/ui/SectionHeader";
 import "../Styles/SkillGapAnalysis.css";

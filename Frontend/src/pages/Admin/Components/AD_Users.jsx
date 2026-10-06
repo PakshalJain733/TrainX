@@ -470,7 +470,9 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
       console.warn('[DB Save Mentor Assignment Error]', err);
     }
 
-    setSuccessMsg(`Successfully assigned ${selectedStudentIds.length} mentees to ${selectedMentor} in database!`);
+    const count = selectedStudentIds.length;
+    const menteeText = count === 1 ? 'mentee' : 'mentees';
+    setSuccessMsg(`Successfully assigned ${count} ${menteeText} to ${selectedMentor}.`);
     setTimeout(() => {
       setSuccessMsg("");
       onClose();
@@ -533,26 +535,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               />
             </div>
 
-            {/* Active Selected Mentor Info Card */}
-            {activeMentorObj && (
-              <div className="fs-portal-mentor-active-card">
-                <div className="fs-portal-mentor-avatar">
-                  {(activeMentorObj.name || 'M').charAt(0)}
-                </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div className="fs-portal-mentor-name">
-                    {activeMentorObj.name}
-                  </div>
-                  <div className="fs-portal-mentor-meta">
-                    <span className="fs-portal-dept-pill">
-                      {activeMentorObj.department || 'CSE'}
-                    </span>
-                    <span>·</span>
-                    <span>{activeMentorObj.email || 'mentor@college.edu'}</span>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {/* Selected Students Chips Banner */}
             {selectedStudentsList.length > 0 && (

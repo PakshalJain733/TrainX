@@ -1,22 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  CalendarCheck,
-  Users,
-  TrendingUp,
-  Flame,
-  Info,
-  Clock,
-  Trophy,
-  BookOpen,
-  CalendarDays,
-  UserCheck,
-  ArrowRight,
-  ChevronRight,
-  Activity,
-  Layers,
-  Zap,
-} from "lucide-react";
+import { CalendarCheck, Users, TrendingUp, Flame, Info, Clock, Trophy, BookOpen, CalendarDays, UserCheck, ArrowRight, ChevronRight, Activity, Layers, Zap } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 
 const getInitials = (name) => {

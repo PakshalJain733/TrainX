@@ -14,11 +14,20 @@ export const supabase = hasSupabaseConfig
   ? createClient(supabaseUrl, supabaseServiceKey)
   : null;
 
-// Ensure local uploads directory exists as fallback
-const uploadDir = path.resolve(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Ensure local uploads directory exists as fallback across working environments
+const uploadDirs = [
+  path.resolve(process.cwd(), 'uploads'),
+  path.resolve(__dirname, '../uploads'),
+  path.resolve(__dirname, '../../uploads'),
+];
+
+uploadDirs.forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    try {
+      fs.mkdirSync(dir, { recursive: true });
+    } catch (e) {}
+  }
+});
 
 // Multer Memory Storage Configuration for file buffer processing
 const storage = multer.memoryStorage();
@@ -69,8 +78,14 @@ export const uploadFileToStorage = async (file) => {
   // Fallback to local uploads directory if Supabase credentials are not set or upload fails
   const cleanOriginalName = file.originalname ? file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_') : 'document.pdf';
   const localFileName = `${Date.now()}_${cleanOriginalName}`;
-  const localFilePath = path.join(uploadDir, localFileName);
-  fs.writeFileSync(localFilePath, file.buffer);
+
+  uploadDirs.forEach((dir) => {
+    try {
+      if (fs.existsSync(dir)) {
+        fs.writeFileSync(path.join(dir, localFileName), file.buffer);
+      }
+    } catch (e) {}
+  });
 
   return `/uploads/${localFileName}`;
 };

@@ -1,17 +1,8 @@
 export const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  // In the browser, always use same-origin /api/v1 (Vite proxy locally, Vercel rewrites in prod).
   if (typeof window !== "undefined") {
-    const host = window.location.hostname;
-    const isLocal =
-      ["localhost", "127.0.0.1", "::1"].includes(host) ||
-      host.endsWith(".local") ||
-      /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
-      /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
-      /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
-
-    if (isLocal) {
-      return "/api/v1";
-    }
+    return "/api/v1";
   }
   return "https://trainx-6w8m.onrender.com/api/v1";
 };

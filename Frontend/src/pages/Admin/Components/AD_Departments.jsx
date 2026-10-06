@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from 'lucide-react';
+import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from "lucide-react";
 import { departmentAPI, collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/AD_Departments.css";
@@ -133,7 +133,7 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
             </button>
           )}
 
-          {customActions.map((action, idx) => (
+          {Array.isArray(customActions) && customActions.map((action, idx) => (
             <button
               key={idx}
               type="button"
@@ -193,7 +193,32 @@ export default function Departments() {
         departmentAPI.getDepartments(selectedCollegeId === 'all' ? null : selectedCollegeId).catch(() => []),
       ]);
 
-      setColleges(Array.isArray(collegesData) ? collegesData : []);
+      const rawUser = sessionStorage.getItem("user") || sessionStorage.getItem("authUser") || "{}";
+      let currentUser = {};
+      try { currentUser = JSON.parse(rawUser); } catch (_) {}
+
+      let rawColleges = Array.isArray(collegesData) ? collegesData : [];
+      const userRole = (currentUser.role || "").toLowerCase();
+
+      if (userRole && !userRole.includes("super")) {
+        const userEmail = (currentUser.email || "").toLowerCase().trim();
+        const emailDomain = userEmail.includes("@") ? userEmail.split("@")[1] : "";
+        const matched = rawColleges.filter((c) => {
+          const colEmail = (c.contact_email || c.adminEmail || c.contactEmail || "").toLowerCase();
+          const colDomain = (c.domain || "").toLowerCase().replace(/^@/, "");
+          return (
+            String(c.id) === String(currentUser.college_id || currentUser.collegeId) ||
+            colEmail === userEmail ||
+            (emailDomain && colDomain && emailDomain.endsWith(colDomain))
+          );
+        });
+        if (matched.length > 0) rawColleges = matched;
+      }
+
+      setColleges(rawColleges);
+      if (rawColleges.length > 0) {
+        setDeptForm(prev => ({ ...prev, collegeId: prev.collegeId || rawColleges[0].id }));
+      }
       setDepartments(Array.isArray(deptsData) ? deptsData : []);
     } catch (err) {
       console.warn("API load failed, fallback state maintained.");
@@ -223,13 +248,13 @@ export default function Departments() {
     e.preventDefault();
     if (!deptForm.name || !deptForm.code) return;
 
-    const selectedCol = colleges.find((c) => String(c.id) === String(deptForm.collegeId));
+    const selectedColId = deptForm.collegeId || (colleges[0] ? colleges[0].id : 1);
 
     const payload = {
       name: deptForm.name,
       code: deptForm.code,
-      collegeId: deptForm.collegeId || (colleges[0] ? colleges[0].id : 1),
-      college_id: deptForm.collegeId || (colleges[0] ? colleges[0].id : 1),
+      collegeId: selectedColId,
+      college_id: selectedColId,
       hodName: deptForm.hodName || "Dr. Department HOD",
       hodEmail: deptForm.hodEmail || `hod.${deptForm.code.toLowerCase()}@college.edu.in`,
     };
@@ -280,7 +305,12 @@ export default function Departments() {
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
           </button>
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              if (colleges.length > 0 && !deptForm.collegeId) {
+                setDeptForm(prev => ({ ...prev, collegeId: colleges[0].id }));
+              }
+              setIsAddModalOpen(true);
+            }}
             className="sa-btn-primary"
           >
             <Plus size={16} />
@@ -305,7 +335,7 @@ export default function Departments() {
 
       {/* Department Cards Grid */}
       <div className="departments-grid">
-        {filtered.map((dept) => (
+        {Array.isArray(filtered) && filtered.map((dept) => (
           <div key={dept.id} className="dept-card">
             <div>
               <div className="dept-card-top">
@@ -314,7 +344,7 @@ export default function Departments() {
                     <span className="dept-code-tag">{dept.code}</span>
                     <span className="dept-college-tag">
                       <Building2 size={12} />
-                      <span>{dept.collegeName || "Apex Institute"}</span>
+                      <span>{dept.collegeName || dept.college_name || (colleges[0] ? colleges[0].name : "")}</span>
                     </span>
                   </div>
                   <h3 className="dept-name">{dept.name}</h3>
@@ -376,7 +406,7 @@ export default function Departments() {
                   <label>College *</label>
                   <DeptSelect
                     value={deptForm.collegeId}
-                    options={colleges.map((c) => ({
+                    options={(Array.isArray(colleges) ? colleges : []).map((c) => ({
                       value: c.id,
                       label: `${c.name} (${c.code})`
                     }))}
@@ -472,7 +502,7 @@ export default function Departments() {
                     <Building2 size={13} className="text-indigo-500" />
                     <span>Parent Institution</span>
                   </span>
-                  <span className="sa-modal-detail-value">{viewDept.collegeName || "Apex Institute"}</span>
+                  <span className="sa-modal-detail-value">{viewDept.collegeName || viewDept.college_name || (colleges[0] ? colleges[0].name : "")}</span>
                 </div>
 
                 <div className="sa-modal-detail-item">

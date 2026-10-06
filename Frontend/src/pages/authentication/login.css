@@ -2426,7 +2426,6 @@ input::-ms-clear {
 
   /* Card content body padding */
   .login-card-welcome-header,
-  .login-mode-segmented-bar,
   .auth-error-msg,
   .auth-success-msg,
   form {
@@ -2452,7 +2451,11 @@ input::-ms-clear {
     border-radius: 14px !important;
     display: flex !important;
     gap: 4px !important;
+    margin-left: 24px !important;
+    margin-right: 24px !important;
     margin-bottom: 20px !important;
+    width: calc(100% - 48px) !important;
+    box-sizing: border-box !important;
     border: 1px solid #e2e8f0 !important;
   }
 
@@ -2507,7 +2510,7 @@ input::-ms-clear {
 /* 2) Compact phones */
 @media (max-width: 480px) {
   .login-page {
-    padding: 10px;
+    padding: 14px 12px;
   }
 
   .login-wrapper {
@@ -2539,12 +2542,17 @@ input::-ms-clear {
   }
 
   .login-card-welcome-header,
-  .login-mode-segmented-bar,
   .auth-error-msg,
   .auth-success-msg,
-  form{
+  form {
     padding-left: 18px;
     padding-right: 18px;
+  }
+
+  .login-mode-segmented-bar {
+    margin-left: 18px !important;
+    margin-right: 18px !important;
+    width: calc(100% - 36px) !important;
   }
 
   .login-card-welcome-header {

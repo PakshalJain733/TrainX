@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Eye, EyeOff, X, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Lock, Eye, EyeOff, X, CheckCircle, AlertCircle, Shield } from "lucide-react";
 import { apiFetch } from '../../utils/api';
 import './ChangePasswordModal.css';
 

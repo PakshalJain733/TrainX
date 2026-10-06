@@ -807,3 +807,92 @@
   height: 14px;
   color: #4f46e5;
 }
+
+/* 5-Column Stats Grid */
+.att-stats-grid-5 {
+  grid-template-columns: repeat(5, 1fr) !important;
+}
+
+@media (max-width: 991px) {
+  .att-stats-grid-5 {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .att-stats-grid-5 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+.att-qr-card {
+  border-color: #bfdbfe;
+  background: #f0f9ff;
+}
+
+.att-qr-card .att-stat-val {
+  color: #0284c7;
+}
+
+.att-stat-active {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
+}
+
+/* Filter Pills Tab Bar */
+.att-roster-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f1f5f9;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.att-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.att-filter-pill:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.att-filter-pill.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.att-filter-pill-qr.active {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3);
+}
+
+.att-filter-pill-present.active {
+  background: #16a34a;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+}
+
+.att-filter-pill-absent.active {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+}
