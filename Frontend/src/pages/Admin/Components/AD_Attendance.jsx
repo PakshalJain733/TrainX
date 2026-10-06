@@ -760,29 +760,14 @@ export default function AdminAttendance() {
       {/* Student Roster Table Card */}
       <Card className="attendance-table-card">
         <CardHeader className="att-table-header">
+          {/* Subtitle */}
           <div>
             <CardTitle className="att-card-title">
               Student Attendance Roster — {currentBatchObj ? currentBatchObj.name : selectedBatchCode}
             </CardTitle>
             <p className="att-card-subtitle">
-              Session Date: {sessionDate} · Showing {rosterFilter === 'qr_scanned' ? 'QR Scanned Attendees' : rosterFilter === 'present' ? 'Present Students' : rosterFilter === 'absent' ? 'Absent Students' : 'All Students'} ({filteredStudents.length})
+              Session Date: {sessionDate} · Showing All Students ({students.length})
             </p>
-          </div>
-
-          {/* Roster Filter Tabs */}
-          <div className="att-roster-filter-pills">
-            <button className={`att-filter-pill ${rosterFilter === 'all' ? 'active' : ''}`} onClick={() => setRosterFilter('all')}>
-              All ({totalCount})
-            </button>
-            <button className={`att-filter-pill att-filter-pill-qr ${rosterFilter === 'qr_scanned' ? 'active' : ''}`} onClick={() => setRosterFilter('qr_scanned')}>
-              <QrCode size={13} /> QR Scanned ({qrScannedCount})
-            </button>
-            <button className={`att-filter-pill att-filter-pill-present ${rosterFilter === 'present' ? 'active' : ''}`} onClick={() => setRosterFilter('present')}>
-              Present ({presentCount})
-            </button>
-            <button className={`att-filter-pill att-filter-pill-absent ${rosterFilter === 'absent' ? 'active' : ''}`} onClick={() => setRosterFilter('absent')}>
-              Absent ({totalCount - presentCount})
-            </button>
           </div>
 
           <div className="att-bulk-actions">
