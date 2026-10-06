@@ -1,4 +1,4 @@
-  x`import { sendSuccess, sendError } from '../utils/response.js';
+import { sendSuccess, sendError } from '../utils/response.js';
 import { query, pool } from '../config/db.js';
 import { tableAvailabilityMap, inPlaceholders } from '../utils/tableAvailability.js';
 import { DEFAULTER_THRESHOLDS } from '../services/intervention.service.js';
