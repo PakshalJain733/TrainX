@@ -273,12 +273,6 @@ export async function initializeDatabase() {
       )
     `);
 
-    // Ensure columns for dynamic QR sessions
-    try { await conn.query(`ALTER TABLE attendance_sessions ADD COLUMN status VARCHAR(20) DEFAULT 'ACTIVE'`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE attendance_sessions ADD COLUMN current_qr_token VARCHAR(255) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE attendance_sessions ADD COLUMN token_expires_at DATETIME NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE attendance_sessions ADD COLUMN created_by INT NULL`); } catch (_) { }
-
     // 9b. Ensure Attendance Records Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS attendance (
@@ -299,9 +293,6 @@ export async function initializeDatabase() {
 
     try {
       await conn.query(`ALTER TABLE attendance ADD COLUMN session_id INT NULL`);
-    } catch (_) { }
-    try {
-      await conn.query(`ALTER TABLE attendance ADD CONSTRAINT unique_session_user UNIQUE (session_id, user_id)`);
     } catch (_) { }
 
     // 9c. Ensure Attendance Summary Table

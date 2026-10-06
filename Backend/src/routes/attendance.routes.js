@@ -11,13 +11,6 @@ import {
   markSelfAttendanceByCode,
   getLeaveRequests,
   updateLeaveRequestStatus,
-  createAttendanceSession,
-  getAttendanceSessionQr,
-  refreshAttendanceSessionQr,
-  closeAttendanceSession,
-  getAttendanceSessionStatus,
-  getActiveAttendanceSessions,
-  getAttendanceSessionsHistory,
 } from '../controllers/attendance.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -30,15 +23,6 @@ router.use(authenticateToken);
 
 // 0. Student mark self attendance present via QR scan or code
 router.post('/mark', markSelfAttendanceByCode);
-
-// Attendance Session Endpoints (Admin / Mentor QR Sessions)
-router.post('/sessions', authorizeRoles(ROLES.COORDINATOR, ROLES.MENTOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN), createAttendanceSession);
-router.get('/sessions/active', getActiveAttendanceSessions);
-router.get('/sessions/history', getAttendanceSessionsHistory);
-router.get('/sessions/:sessionId/qr', getAttendanceSessionQr);
-router.post('/sessions/:sessionId/refresh-qr', authorizeRoles(ROLES.COORDINATOR, ROLES.MENTOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN), refreshAttendanceSessionQr);
-router.post('/sessions/:sessionId/close', authorizeRoles(ROLES.COORDINATOR, ROLES.MENTOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN), closeAttendanceSession);
-router.get('/sessions/:sessionId/status', getAttendanceSessionStatus);
 
 // Leave Requests Routes
 router.get('/leave-requests', getLeaveRequests);

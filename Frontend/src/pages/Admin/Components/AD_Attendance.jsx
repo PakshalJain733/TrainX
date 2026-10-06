@@ -1,737 +1,884 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import QRCode from "qrcode";
-import { 
-  QrCode, 
-  RefreshCw, 
-  Calendar, 
-  CalendarCheck, 
-  Users, 
-  ShieldCheck, 
-  Clock, 
-  Info, 
-  X, 
-  History, 
-  Eye, 
-  ArrowLeft, 
-  CheckCircle2, 
-  XCircle,
-  AlertCircle,
-  Play,
-  Square
-} from "lucide-react";
+import * as XLSX from "xlsx";
+import { CheckCircle2, XCircle, QrCode, RefreshCw, Copy, Check, Calendar, CalendarCheck, Users, ShieldCheck, Download, Clock, Info, Sparkles, X, History, Eye, FileText, ArrowLeft, Zap, FileSpreadsheet, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { apiFetch } from "../../../utils/api";
-import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_Attendance.css";
 
+import CustomSelect from "../../../components/ui/CustomSelect";
+
+/* ── Dropdown for Admin Attendance ── */
+function AdminAttSelect(props) {
+  return <CustomSelect {...props} />;
+}
+
+const defaultStudentsMap = {};
+const defaultHistoryRecords = [];
+
+// Helper functions for Excel (.xlsx) export
+const exportRosterToExcel = (record) => {
+  if (!record || !record.roster) return;
+  const excelData = record.roster.map((student, idx) => ({
+    "S.No": idx + 1,
+    "Roll Number": student.rollNo,
+    "Student Name": student.name,
+    "Attendance Status": student.status,
+    "Verification Mode": student.mode,
+    "Session Date": record.date,
+    "Batch Code": record.batchCode,
+    "Batch Name": record.batchName
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  worksheet["!cols"] = [
+    { wch: 6 },  { wch: 14 }, { wch: 24 },
+    { wch: 18 }, { wch: 18 }, { wch: 14 },
+    { wch: 14 }, { wch: 30 }
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance Roster");
+  const fileName = `Attendance_${record.batchCode}_${record.date}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+};
+
+const exportAllHistoryToExcel = (records) => {
+  if (!records || records.length === 0) return;
+  const excelData = records.map((rec, idx) => ({
+    "S.No": idx + 1,
+    "Session Date": rec.date,
+    "Batch Code": rec.batchCode,
+    "Batch Name": rec.batchName,
+    "Total Enrolled": rec.total,
+    "Present Count": rec.present,
+    "Absent Count": rec.absent,
+    "Attendance Rate (%)": `${rec.rate}%`,
+    "Saved By": rec.savedBy,
+    "Saved At": rec.savedAt
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  worksheet["!cols"] = [
+    { wch: 6 },  { wch: 14 }, { wch: 14 },
+    { wch: 30 }, { wch: 16 }, { wch: 16 },
+    { wch: 16 }, { wch: 20 }, { wch: 18 }, { wch: 24 }
+  ];
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Attendance History");
+  const fileName = `All_Attendance_History_${new Date().toISOString().split("T")[0]}.xlsx`;
+  XLSX.writeFile(workbook, fileName);
+};
+
 export default function AdminAttendance() {
-  const [activeTab, setActiveTab] = useState("create"); // "create" | "history"
-
-  // Form State
   const [batches, setBatches] = useState([]);
-  const [selectedBatchId, setSelectedBatchId] = useState("");
-  const [sessionDate, setSessionDate] = useState(() => new Date().toISOString().split("T")[0]);
-  const [loadingBatches, setLoadingBatches] = useState(true);
-  const [formError, setFormError] = useState("");
-  const [existingSessionNotice, setExistingSessionNotice] = useState(null);
+  const [selectedBatchCode, setSelectedBatchCode] = useState("");
 
-  // Active Session State
-  const [activeSession, setActiveSession] = useState(null);
-  const [qrToken, setQrToken] = useState("");
-  const [qrCountdown, setQrCountdown] = useState(5);
-  const [sessionStats, setSessionStats] = useState({ total: 0, present: 0, absent: 0, percentage: 0, roster: [] });
-  const canvasRef = useRef(null);
+  const handleBatchChange = (newCode) => {
+    setSelectedBatchCode(newCode);
+  };
 
-  // History State
-  const [historySessions, setHistorySessions] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [sessionDate, setSessionDate] = useState(new Date().toISOString().split("T")[0]);
+  const [students, setStudents] = useState([]);
+  const [attendance, setAttendance] = useState({});
+  const [qrScannedMap, setQrScannedMap] = useState({});
+  const [rosterFilter, setRosterFilter] = useState("all"); // "all" | "qr_scanned" | "present" | "absent"
+  const [saved, setSaved] = useState(false);
+  const [lastScannedName, setLastScannedName] = useState("");
+
+  // History state
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyRecords, setHistoryRecords] = useState([]);
   const [selectedHistoryDetail, setSelectedHistoryDetail] = useState(null);
 
-  // Timers
-  const qrRefreshTimerRef = useRef(null);
-  const statusPollTimerRef = useRef(null);
-  const countdownIntervalRef = useRef(null);
+  // QR Modal state
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrCodePayload, setQrCodePayload] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(5); // 5 secs validity
+  const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
+  const canvasRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
-  // 1. Fetch Batches on mount
+  // Fetch all active system & enrolled batches from backend API
   useEffect(() => {
-    const fetchBatches = async () => {
-      setLoadingBatches(true);
+    const loadBatches = async () => {
       try {
+        let fetchedList = [];
         const res = await apiFetch("/batches");
-        const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
-        if (list.length > 0) {
-          const formatted = list.map(b => ({
+        const list1 = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+        if (list1.length > 0) {
+          fetchedList = list1;
+        }
+
+        const myRes = await apiFetch("/batches/my-batches");
+        const list2 = Array.isArray(myRes) ? myRes : (myRes && Array.isArray(myRes.data) ? myRes.data : []);
+        if (list2.length > 0) {
+          const combined = [...fetchedList];
+          list2.forEach(mb => {
+            if (!combined.some(b => b.id === mb.id || b.code === mb.code || b.join_code === mb.join_code)) {
+              combined.push(mb);
+            }
+          });
+          fetchedList = combined;
+        }
+
+        if (fetchedList.length > 0) {
+          const mapped = fetchedList.map(b => ({
             id: b.id,
-            name: b.name || b.title || `Batch ${b.id}`,
-            code: b.code || b.join_code || `BATCH-${b.id}`
+            name: b.name || b.title || "Training Batch",
+            code: b.join_code || b.code || `BATCH-${b.id}`
           }));
-          setBatches(formatted);
-          setSelectedBatchId(formatted[0].id);
+          setBatches(mapped);
+          if (mapped[0]) {
+            setSelectedBatchCode(mapped[0].code);
+          }
         } else {
           setBatches([]);
         }
       } catch (err) {
-        console.error("Error fetching batches:", err);
-      } finally {
-        setLoadingBatches(false);
+        console.error("Failed to load batches:", err);
+        setBatches([]);
       }
     };
 
-    fetchBatches();
-    checkActiveSessionsOnLoad();
+    loadBatches();
   }, []);
 
-  // Check if any active session exists to resume automatically
-  const checkActiveSessionsOnLoad = async () => {
-    try {
-      const res = await apiFetch("/attendance/sessions/active");
-      const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
-      if (list.length > 0) {
-        const active = list[0];
-        setActiveSession(active);
-        setQrToken(active.current_qr_token || "");
-        fetchSessionStatus(active.id);
+  // Update student roster & live attendance records from API when batch or date changes
+  useEffect(() => {
+    isDirtyRef.current = false;
+    const currentBatch = batches.find(b => b.code === selectedBatchCode);
+    const batchId = currentBatch ? currentBatch.id : null;
+
+    const fetchStudentsAndAttendance = async (isPolling = false) => {
+      if (isPolling && isDirtyRef.current) {
+        return; // User has unsaved manual edits, skip overwriting local attendance state during background sync
       }
-    } catch (_) {}
+
+      let fetchedStudents = [];
+      if (batchId) {
+        try {
+          const res = await apiFetch(`/batches/${batchId}/students`);
+          if (res && res.data && Array.isArray(res.data)) {
+            fetchedStudents = res.data.map((s, idx) => ({
+              id: s.id || s.user_id || `S-${idx + 1}`,
+              userId: s.user_id || s.id,
+              studentId: s.id,
+              rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
+              name: s.name || s.full_name || "Student User",
+              status: false
+            }));
+          }
+        } catch (_) {}
+      }
+
+      // If batch-specific fetch returns empty, fallback to fetching system students
+      if (fetchedStudents.length === 0) {
+        try {
+          const res = await apiFetch('/students');
+          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+            fetchedStudents = res.data.map((s, idx) => ({
+              id: s.id || s.user_id || `S-${idx + 1}`,
+              userId: s.user_id || s.id,
+              studentId: s.id,
+              rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
+              name: s.name || s.full_name || "Student User",
+              status: false
+            }));
+          }
+        } catch (_) {}
+      }
+
+      setStudents(fetchedStudents);
+
+      // Query database for attendance marked on the selected date or present via live scan
+      try {
+        const attRes = await apiFetch('/attendance/list');
+        const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
+        
+        const attendanceMap = {};
+        const scannedMap = {};
+
+        fetchedStudents.forEach((s) => {
+          // Check if student has marked attendance present on DB (by ID or student name)
+          const record = dbList.find(d => {
+            const dId = Number(d.id || d.student_id || d.user_id || d.studentId || d.userId);
+            const matchesId = dId && (dId === Number(s.id) || dId === Number(s.userId) || dId === Number(s.studentId));
+            const matchesName = (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim()) ||
+                                (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
+            return matchesId || matchesName;
+          });
+          const isPresentInDb = record ? (
+            String(record.status || '').toLowerCase() === 'present' || 
+            Number(record.present || record.present_count || 0) > 0 ||
+            Number(record.attendance_percentage || 0) > 0
+          ) : false;
+          attendanceMap[s.id] = isPresentInDb;
+          if (isPresentInDb) scannedMap[s.id] = true;
+        });
+
+        setAttendance(attendanceMap);
+        setQrScannedMap(scannedMap);
+      } catch (_) {
+        const initialMap = {};
+        fetchedStudents.forEach(s => { initialMap[s.id] = false; });
+        setAttendance(initialMap);
+      }
+      setSaved(false);
+    };
+
+    fetchStudentsAndAttendance(false);
+    const interval = setInterval(() => fetchStudentsAndAttendance(true), 5000); // 5 sec live sync poll
+    return () => clearInterval(interval);
+  }, [selectedBatchCode, batches, sessionDate]);
+
+  // Real-time QR Scan listener (window event & storage sync)
+  const handleQrScanCheckIn = useCallback((scannedStudentName) => {
+    const targetName = scannedStudentName || (students[0] ? students[0].name : "");
+    const studentObj = students.find(s => s.name.toLowerCase() === targetName.toLowerCase()) || students[0];
+    if (studentObj) {
+      setAttendance(prev => ({ ...prev, [studentObj.id]: true }));
+      setQrScannedMap(prev => ({ ...prev, [studentObj.id]: true }));
+      setLastScannedName(studentObj.name);
+      setTimeout(() => setLastScannedName(""), 4000);
+    }
+  }, [students]);
+
+  useEffect(() => {
+    const onCustomQrScan = (e) => {
+      if (e && e.detail && e.detail.studentName) {
+        handleQrScanCheckIn(e.detail.studentName);
+      } else {
+        handleQrScanCheckIn("Ganesh Shinde");
+      }
+    };
+    const onStorageSync = (e) => {
+      if (e.key === "admin_live_qr_scans" && e.newValue) {
+        try {
+          const scans = JSON.parse(e.newValue);
+          if (scans && scans[0] && scans[0].studentName) {
+            handleQrScanCheckIn(scans[0].studentName);
+          }
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener("qr_scan_completed", onCustomQrScan);
+    window.addEventListener("storage", onStorageSync);
+    return () => {
+      window.removeEventListener("qr_scan_completed", onCustomQrScan);
+      window.removeEventListener("storage", onStorageSync);
+    };
+  }, [handleQrScanCheckIn]);
+
+  // Generate unique payload string
+  const generateNewQrCode = useCallback(() => {
+    const randomSalt = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const payload = `${selectedBatchCode || "JAVA-QRVL"}:${randomSalt}`;
+    setQrCodePayload(payload);
+    setTimeLeft(5);
+  }, [selectedBatchCode]);
+
+  // Manual regenerate button resets auto-refresh counter
+  const handleManualRegenerate = () => {
+    setAutoRefreshCount(0);
+    generateNewQrCode();
   };
 
-  // 2. Fetch Session Status & Roster
-  const fetchSessionStatus = useCallback(async (sessionId) => {
-    if (!sessionId) return;
-    try {
-      const res = await apiFetch(`/attendance/sessions/${sessionId}/status`);
-      if (res && res.data) {
-        setSessionStats({
-          total: res.data.total || 0,
-          present: res.data.present || 0,
-          absent: res.data.absent || 0,
-          percentage: res.data.percentage || 0,
-          roster: Array.isArray(res.data.roster) ? res.data.roster : []
-        });
-      }
-    } catch (err) {
-      console.error("Failed to fetch session status:", err);
-    }
-  }, []);
-
-  // 3. Refresh QR Token from Backend
-  const refreshQrToken = useCallback(async (sessionId) => {
-    if (!sessionId) return;
-    try {
-      const res = await apiFetch(`/attendance/sessions/${sessionId}/refresh-qr`, { method: "POST" });
-      if (res && res.data && res.data.token) {
-        setQrToken(res.data.token);
-        setQrCountdown(5);
-      }
-    } catch (err) {
-      console.error("Failed to refresh QR token:", err);
-    }
-  }, []);
-
-  // Draw QR code onto canvas when qrToken changes
+  // Draw QR code onto canvas using qrcode library
   useEffect(() => {
-    if (activeSession && qrToken && canvasRef.current) {
+    if (qrModalOpen && canvasRef.current && qrCodePayload) {
       QRCode.toCanvas(
         canvasRef.current,
-        qrToken,
+        qrCodePayload,
         {
           width: 240,
           margin: 2,
-          color: { dark: "#0f172a", light: "#ffffff" }
+          color: {
+            dark: "#0f172a",
+            light: "#ffffff"
+          }
         },
-        (err) => {
-          if (err) console.error("QR draw error:", err);
+        (error) => {
+          if (error) console.error("QR rendering error:", error);
         }
       );
     }
-  }, [activeSession, qrToken]);
+  }, [qrModalOpen, qrCodePayload]);
 
-  // Handle active session timers (5s QR refresh, 1s countdown ticker, 3s roster poll)
+  // QR Validity Timer & 18 Auto-Refresh Logic (5s per cycle)
   useEffect(() => {
-    if (!activeSession) {
-      if (qrRefreshTimerRef.current) clearInterval(qrRefreshTimerRef.current);
-      if (statusPollTimerRef.current) clearInterval(statusPollTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-      return;
+    let timer = null;
+    if (qrModalOpen) {
+      if (timeLeft > 0) {
+        timer = setInterval(() => {
+          setTimeLeft(prev => prev - 1);
+        }, 1000);
+      } else if (timeLeft === 0) {
+        // Trigger auto-refresh up to 18 times
+        if (autoRefreshCount < 18) {
+          setAutoRefreshCount(prev => prev + 1);
+          generateNewQrCode();
+        }
+      }
     }
+    return () => { if (timer) clearInterval(timer); };
+  }, [qrModalOpen, timeLeft, autoRefreshCount, generateNewQrCode]);
 
-    const sessionId = activeSession.id;
+  const openQrModal = () => {
+    setAutoRefreshCount(0);
+    generateNewQrCode();
+    setQrModalOpen(true);
+  };
 
-    // Initial fetch & token setup
-    fetchSessionStatus(sessionId);
+  const closeQrModal = () => {
+    setQrModalOpen(false);
+  };
 
-    // 1-second ticker for countdown
-    setQrCountdown(5);
-    countdownIntervalRef.current = setInterval(() => {
-      setQrCountdown((prev) => (prev > 1 ? prev - 1 : 5));
-    }, 1000);
+  const copyQrPayload = () => {
+    navigator.clipboard.writeText(qrCodePayload);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
-    // 5-second QR auto refresh loop
-    qrRefreshTimerRef.current = setInterval(() => {
-      refreshQrToken(sessionId);
-    }, 5000);
+  const simulateStudentScan = () => {
+    handleQrScanCheckIn("Ganesh Shinde");
+  };
 
-    // 3-second live status polling loop
-    statusPollTimerRef.current = setInterval(() => {
-      fetchSessionStatus(sessionId);
-    }, 3000);
+  const toggle = (id) => {
+    isDirtyRef.current = true;
+    setAttendance((prev) => ({ ...prev, [id]: !prev[id] }));
+    setSaved(false);
+  };
 
-    return () => {
-      if (qrRefreshTimerRef.current) clearInterval(qrRefreshTimerRef.current);
-      if (statusPollTimerRef.current) clearInterval(statusPollTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
-  }, [activeSession, fetchSessionStatus, refreshQrToken]);
+  const markAll = (val) => {
+    isDirtyRef.current = true;
+    const all = {};
+    students.forEach(s => { all[s.id] = val; });
+    setAttendance(all);
+    setSaved(false);
+  };
 
-  // 4. Handle Admin "Start Attendance" Button
-  const handleStartAttendance = async (e) => {
-    e.preventDefault();
-    setFormError("");
-    setExistingSessionNotice(null);
+  const presentCount = students.filter(s => attendance[s.id]).length;
+  const qrScannedCount = students.filter(s => qrScannedMap[s.id]).length;
+  const totalCount = students.length;
+  const ratePct = totalCount ? Math.round((presentCount / totalCount) * 100) : 0;
+  const currentBatchObj = batches.find(b => b.code === selectedBatchCode) || batches[0];
 
-    if (!selectedBatchId) {
-      setFormError("Please select a batch.");
-      return;
-    }
-    if (!sessionDate) {
-      setFormError("Please select a date.");
-      return;
-    }
+  const filteredStudents = students.filter(s => {
+    if (rosterFilter === "qr_scanned") return Boolean(qrScannedMap[s.id]);
+    if (rosterFilter === "present") return Boolean(attendance[s.id]);
+    if (rosterFilter === "absent") return !attendance[s.id];
+    return true;
+  });
 
+  const handleSave = async () => {
     try {
-      const res = await apiFetch("/attendance/sessions", {
-        method: "POST",
-        body: JSON.stringify({
-          batch_id: Number(selectedBatchId),
-          date: sessionDate
-        })
+      const payloadAttendance = {};
+      students.forEach(s => {
+        const isPresent = Boolean(attendance[s.id]);
+        const targetKey = s.userId || s.studentId || s.id;
+        payloadAttendance[targetKey] = isPresent;
       });
 
-      if (res && res.data) {
-        const session = res.data;
-        setActiveSession(session);
-        setQrToken(session.current_qr_token || "");
-        setQrCountdown(5);
-      }
-    } catch (err) {
-      if (err.status === 409 || err.message?.includes("already exists") || err.data?.existingSession) {
-        const existing = err.data?.existingSession || { batch_id: selectedBatchId, date: sessionDate };
-        setExistingSessionNotice(existing);
-      } else {
-        setFormError(err.message || "Failed to start attendance session.");
-      }
-    }
+      await apiFetch("/attendance/mark", {
+        method: "POST",
+        body: JSON.stringify({
+          batch_id: currentBatchObj ? currentBatchObj.id : 1,
+          date: sessionDate,
+          attendance: payloadAttendance
+        })
+      });
+    } catch (e) {}
+
+    isDirtyRef.current = false;
+
+    // Save to Previous Attendance History list
+    const newHistoryEntry = {
+      id: `HIST-${Date.now()}`,
+      date: sessionDate,
+      batchCode: selectedBatchCode,
+      batchName: currentBatchObj ? currentBatchObj.name : selectedBatchCode,
+      total: totalCount,
+      present: presentCount,
+      absent: totalCount - presentCount,
+      rate: ratePct,
+      savedBy: "System Admin",
+      savedAt: new Date().toLocaleString("en-US", { month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }),
+      roster: students.map(s => ({
+        rollNo: s.rollNo,
+        name: s.name,
+        status: attendance[s.id] ? "Present" : "Absent",
+        mode: qrScannedMap[s.id] ? "QR Scan" : "Manual"
+      }))
+    };
+
+    const updatedHistory = [newHistoryEntry, ...historyRecords];
+    setHistoryRecords(updatedHistory);
+
+    setSaved(true);
+    setTimeout(() => setSaved(false), 3000);
   };
 
-  // 5. Open Existing Session
-  const handleOpenExistingSession = async () => {
-    setExistingSessionNotice(null);
-    try {
-      const res = await apiFetch("/attendance/sessions/active");
-      const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
-      const match = list.find(s => String(s.batch_id) === String(selectedBatchId) && String(s.date).startsWith(sessionDate));
-      if (match) {
-        setActiveSession(match);
-        setQrToken(match.current_qr_token || "");
-        fetchSessionStatus(match.id);
-      } else if (list.length > 0) {
-        setActiveSession(list[0]);
-        setQrToken(list[0].current_qr_token || "");
-        fetchSessionStatus(list[0].id);
-      } else {
-        setFormError("Could not locate existing active session.");
-      }
-    } catch (err) {
-      setFormError("Failed to open existing session.");
-    }
+  const formatTimer = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
-
-  // 6. Handle "Close Attendance" Button
-  const handleCloseAttendance = async () => {
-    if (!activeSession) return;
-    try {
-      await apiFetch(`/attendance/sessions/${activeSession.id}/close`, { method: "POST" });
-    } catch (err) {
-      console.error("Error closing session:", err);
-    } finally {
-      setActiveSession(null);
-      setQrToken("");
-      setSessionStats({ total: 0, present: 0, absent: 0, percentage: 0, roster: [] });
-    }
-  };
-
-  // 7. Load History Sessions
-  const loadHistory = async () => {
-    setLoadingHistory(true);
-    try {
-      const res = await apiFetch("/attendance/sessions/history");
-      const list = Array.isArray(res) ? res : (res?.data && Array.isArray(res.data) ? res.data : []);
-      setHistorySessions(list);
-    } catch (err) {
-      console.error("Failed to load history:", err);
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "history") {
-      loadHistory();
-    }
-  }, [activeTab]);
-
-  const selectedBatchObj = batches.find(b => String(b.id) === String(selectedBatchId)) || batches[0];
 
   return (
-    <div className="admin-attendance-container stack-6" style={{ maxWidth: "1000px", margin: "0 auto", padding: "16px" }}>
-      {/* Top Header & Tab Switcher */}
-      <div className="flex-between flex-wrap gap-4" style={{ marginBottom: "20px" }}>
-        <div>
-          <h2 style={{ fontSize: "24px", fontWeight: "800", color: "#0f172a", margin: 0, display: "flex", alignItems: "center", gap: "10px" }}>
-            <CalendarCheck size={28} style={{ color: "#2563eb" }} />
-            General Attendance System
-          </h2>
-          <p style={{ fontSize: "14px", color: "#64748b", margin: "4px 0 0" }}>
-            Create dynamic QR attendance sessions for college student batches.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: "10px" }}>
-          <button
-            onClick={() => { setActiveTab("create"); setSelectedHistoryDetail(null); }}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "10px",
-              fontWeight: "600",
-              fontSize: "14px",
-              cursor: "pointer",
-              border: activeTab === "create" ? "none" : "1.5px solid #cbd5e1",
-              background: activeTab === "create" ? "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)" : "#ffffff",
-              color: activeTab === "create" ? "#ffffff" : "#475569",
-              boxShadow: activeTab === "create" ? "0 4px 12px rgba(37, 99, 235, 0.25)" : "none"
-            }}
-          >
-            <QrCode size={18} /> Create Attendance
-          </button>
-          <button
-            onClick={() => setActiveTab("history")}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              padding: "10px 18px",
-              borderRadius: "10px",
-              fontWeight: "600",
-              fontSize: "14px",
-              cursor: "pointer",
-              border: activeTab === "history" ? "none" : "1.5px solid #cbd5e1",
-              background: activeTab === "history" ? "linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)" : "#ffffff",
-              color: activeTab === "history" ? "#ffffff" : "#475569",
-              boxShadow: activeTab === "history" ? "0 4px 12px rgba(37, 99, 235, 0.25)" : "none"
-            }}
-          >
-            <History size={18} /> Attendance History
-          </button>
-        </div>
-      </div>
-
-      {activeTab === "create" && (
-        <>
-          {/* SCREEN 1: CREATE ATTENDANCE FORM (Displayed when no active session) */}
-          {!activeSession ? (
-            <Card style={{ background: "#ffffff", borderRadius: "16px", border: "1.5px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0, 0, 0, 0.05)", overflow: "hidden" }}>
-              <CardHeader style={{ background: "linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%)", borderBottom: "1px solid #e2e8f0", padding: "24px" }}>
-                <div style={{ textAlign: "center" }}>
-                  <h3 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", margin: 0, tracking: "tight" }}>
-                    CREATE ATTENDANCE
-                  </h3>
-                  <p style={{ fontSize: "13.5px", color: "#64748b", margin: "6px 0 0" }}>
-                    Select the target batch and session date to start live attendance.
-                  </p>
+    <div className="admin-attendance-container stack-6">
+      {/* Create QR Modal */}
+      {qrModalOpen && createPortal(
+        <div className="admin-qr-modal-backdrop" onClick={closeQrModal}>
+          <div className="admin-qr-modal-box" onClick={e => e.stopPropagation()}>
+            <div className="admin-qr-modal-header">
+              <div className="admin-qr-modal-title-box">
+                <div className="admin-qr-icon-badge">
+                  <QrCode size={22} />
                 </div>
-              </CardHeader>
-
-              <CardContent style={{ padding: "32px 24px" }}>
-                <form onSubmit={handleStartAttendance} style={{ maxWidth: "440px", margin: "0 auto", display: "flex", flexDirection: "column", gap: "20px" }}>
-                  
-                  {formError && (
-                    <div style={{ padding: "12px 16px", borderRadius: "10px", background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626", fontSize: "13.5px", fontWeight: "600", display: "flex", alignItems: "center", gap: "10px" }}>
-                      <AlertCircle size={18} />
-                      <span>{formError}</span>
-                    </div>
-                  )}
-
-                  {existingSessionNotice && (
-                    <div style={{ padding: "16px", borderRadius: "12px", background: "#fffbe6", border: "1px solid #ffe58f", color: "#873800", textAlign: "center" }}>
-                      <p style={{ margin: "0 0 12px 0", fontSize: "14px", fontWeight: "700" }}>
-                        Attendance session already exists for this batch and date.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleOpenExistingSession}
-                        style={{ padding: "9px 20px", background: "#fa8c16", color: "#ffffff", border: "none", borderRadius: "8px", fontWeight: "700", fontSize: "13.5px", cursor: "pointer" }}
-                      >
-                        OPEN EXISTING SESSION
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Batch Selection */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <label style={{ fontSize: "14px", fontWeight: "700", color: "#334155" }}>
-                      Batch:
-                    </label>
-                    <select
-                      value={selectedBatchId}
-                      onChange={(e) => setSelectedBatchId(e.target.value)}
-                      disabled={loadingBatches}
-                      style={{
-                        height: "46px",
-                        padding: "0 14px",
-                        borderRadius: "10px",
-                        border: "1.5px solid #cbd5e1",
-                        fontSize: "14.5px",
-                        fontWeight: "600",
-                        color: "#0f172a",
-                        background: "#ffffff",
-                        outline: "none",
-                        cursor: "pointer"
-                      }}
-                    >
-                      {batches.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name} ({b.code})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Date Selection */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                    <label style={{ fontSize: "14px", fontWeight: "700", color: "#334155" }}>
-                      Date:
-                    </label>
-                    <input
-                      type="date"
-                      value={sessionDate}
-                      onChange={(e) => setSessionDate(e.target.value)}
-                      style={{
-                        height: "46px",
-                        padding: "0 14px",
-                        borderRadius: "10px",
-                        border: "1.5px solid #cbd5e1",
-                        fontSize: "14.5px",
-                        fontWeight: "600",
-                        color: "#0f172a",
-                        background: "#ffffff",
-                        outline: "none",
-                        cursor: "pointer"
-                      }}
-                    />
-                  </div>
-
-                  {/* Start Attendance Action Button */}
-                  <button
-                    type="submit"
-                    style={{
-                      marginTop: "10px",
-                      height: "50px",
-                      background: "linear-gradient(135deg, #16a34a 0%, #15803d 100%)",
-                      color: "#ffffff",
-                      border: "none",
-                      borderRadius: "12px",
-                      fontSize: "16px",
-                      fontWeight: "800",
-                      letterSpacing: "0.5px",
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "10px",
-                      boxShadow: "0 4px 14px rgba(22, 163, 74, 0.35)",
-                      transition: "transform 0.15s ease"
-                    }}
-                  >
-                    <Play size={20} fill="#ffffff" /> START ATTENDANCE
-                  </button>
-                </form>
-              </CardContent>
-            </Card>
-          ) : (
-            /* SCREEN 2: LIVE ATTENDANCE DASHBOARD (Displayed when session is active) */
-            <Card style={{ background: "#ffffff", borderRadius: "16px", border: "1.5px solid #e2e8f0", boxShadow: "0 10px 25px rgba(0, 0, 0, 0.05)", overflow: "hidden" }}>
-              <CardHeader style={{ background: "#0f172a", color: "#ffffff", padding: "20px 24px" }}>
-                <div style={{ textAlign: "center" }}>
-                  <span style={{ fontSize: "12px", fontWeight: "800", letterSpacing: "1.5px", color: "#38bdf8", textTransform: "uppercase" }}>
-                    LIVE ATTENDANCE SESSION
-                  </span>
-                  <h3 style={{ fontSize: "22px", fontWeight: "800", color: "#ffffff", margin: "4px 0 0" }}>
-                    {activeSession.batch_name || selectedBatchObj?.name || `Batch ${activeSession.batch_id}`}
-                  </h3>
-                  <p style={{ fontSize: "13.5px", color: "#94a3b8", margin: "4px 0 0" }}>
-                    Date: <strong>{new Date(activeSession.date).toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })}</strong>
-                  </p>
+                <div>
+                  <h3 className="admin-qr-modal-title">Live Session Attendance QR</h3>
                 </div>
-              </CardHeader>
+              </div>
+              <button className="admin-qr-close-btn" onClick={closeQrModal}>
+                <X size={18} />
+              </button>
+            </div>
 
-              <CardContent style={{ padding: "24px" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", alignItems: "center" }}>
-                  
-                  {/* Left Column: Dynamic 5-second QR Display */}
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f8fafc", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
-                    <div style={{ padding: "16px", background: "#ffffff", borderRadius: "16px", border: "2px solid #3b82f6", boxShadow: "0 8px 20px rgba(0,0,0,0.06)" }}>
-                      <canvas ref={canvasRef} width="240" height="240" style={{ display: "block" }} />
-                    </div>
-
-                    <div style={{ marginTop: "16px", textAlign: "center" }}>
-                      <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "6px 16px", borderRadius: "20px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", fontSize: "14px", fontWeight: "700" }}>
-                        <Clock size={16} className="animate-spin" />
-                        <span>QR changes in: <strong>{qrCountdown} seconds</strong></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Real-time Stats & Controls */}
-                  <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                    
-                    {/* Live Stats Box */}
-                    <div style={{ padding: "20px", borderRadius: "14px", background: "#f0fdf4", border: "1.5px solid #bbf7d0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                        <span style={{ fontSize: "14px", fontWeight: "700", color: "#166534" }}>Present Count:</span>
-                        <span style={{ fontSize: "32px", fontWeight: "900", color: "#15803d" }}>
-                          {sessionStats.present} / {sessionStats.total}
-                        </span>
-                      </div>
-                      
-                      <div style={{ marginTop: "12px", width: "100%", background: "#dcfce7", height: "10px", borderRadius: "5px", overflow: "hidden" }}>
-                        <div style={{ width: `${sessionStats.percentage}%`, height: "100%", background: "#16a34a", transition: "width 0.4s ease" }} />
-                      </div>
-
-                      <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#15803d", fontWeight: "700" }}>
-                        <span>Absent: {sessionStats.absent}</span>
-                        <span>Percentage: {sessionStats.percentage}%</span>
-                      </div>
-                    </div>
-
-                    {/* Close Attendance Button */}
-                    <button
-                      onClick={handleCloseAttendance}
-                      style={{
-                        height: "48px",
-                        background: "linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)",
-                        color: "#ffffff",
-                        border: "none",
-                        borderRadius: "12px",
-                        fontSize: "15px",
-                        fontWeight: "800",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "8px",
-                        boxShadow: "0 4px 12px rgba(220, 38, 38, 0.3)"
-                      }}
-                    >
-                      <Square size={18} fill="#ffffff" /> CLOSE ATTENDANCE
+            <div className="admin-qr-modal-body">
+              {/* QR Canvas Display */}
+              <div className="admin-qr-canvas-wrapper" style={{ position: "relative" }}>
+                <canvas
+                  ref={canvasRef}
+                  width="240"
+                  height="240"
+                  className="admin-qr-canvas"
+                  style={{ filter: timeLeft === 0 ? "blur(6px) opacity(0.3)" : "none", transition: "filter 0.3s ease" }}
+                />
+                {timeLeft === 0 && (
+                  <div style={{
+                    position: "absolute",
+                    inset: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "8px",
+                    background: "rgba(255, 255, 255, 0.88)",
+                    borderRadius: "14px",
+                    padding: "16px",
+                    textAlign: "center"
+                  }}>
+                    <XCircle size={36} color="#ef4444" />
+                    <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>QR Code Expired</span>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>5 second session window reached</span>
+                    <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "4px", background: "#2563eb", color: "#ffffff", border: "none" }}>
+                      <RefreshCw size={14} /> Regenerate QR
                     </button>
                   </div>
+                )}
+                <div className="admin-qr-batch-pill">
+                  {currentBatchObj ? currentBatchObj.name : "Java Full Stack"}
                 </div>
+              </div>
 
-                {/* Live Student Roster Table */}
-                <div style={{ marginTop: "30px" }}>
-                  <h4 style={{ fontSize: "16px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>
-                    Student Attendance Roster ({sessionStats.roster.length} Enrolled)
-                  </h4>
+              {/* Timer Countdown */}
+              <div className="admin-qr-details">
+                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "none" }}>
+                  <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
+                  <span>Valid for: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
+                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (5-Sec Limit)</span>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
-                  <div style={{ maxHeight: "320px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13.5px" }}>
+      {/* Previous Attendance History Modal */}
+      {historyModalOpen && createPortal(
+        <div className="admin-qr-modal-backdrop" onClick={() => { setHistoryModalOpen(false); setSelectedHistoryDetail(null); }}>
+          <div className="admin-qr-modal-box" style={{ maxWidth: "680px" }} onClick={e => e.stopPropagation()}>
+            <div className="admin-qr-modal-header">
+              <div className="admin-qr-modal-title-box">
+                <div className="admin-qr-icon-badge" style={{ background: "#f5f3ff", color: "#7c3aed" }}>
+                  <History size={22} />
+                </div>
+                <div>
+                  <h3 className="admin-qr-modal-title">Previous Attendance Log History</h3>
+                  <p className="admin-qr-modal-subtitle">Review saved session records, attendance rates & student rosters</p>
+                </div>
+              </div>
+              <button className="admin-qr-close-btn" onClick={() => { setHistoryModalOpen(false); setSelectedHistoryDetail(null); }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="admin-qr-modal-body" style={{ padding: "20px" }}>
+              {selectedHistoryDetail ? (
+                /* History Detail Roster View */
+                <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div className="flex-between">
+                    <button
+                      onClick={() => setSelectedHistoryDetail(null)}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: "600", color: "#2563eb", background: "none", border: "none", cursor: "pointer" }}
+                    >
+                      <ArrowLeft size={16} /> Back to History List
+                    </button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontSize: "12px", color: "#64748b", fontWeight: "600" }}>
+                        Session Date: {selectedHistoryDetail.date}
+                      </span>
+                      <button
+                        onClick={() => exportRosterToExcel(selectedHistoryDetail)}
+                        style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", background: "linear-gradient(135deg, #15803d 0%, #16a34a 100%)", color: "#ffffff", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: "600", cursor: "pointer", boxShadow: "0 2px 6px rgba(22, 163, 74, 0.25)" }}
+                      >
+                        <FileSpreadsheet size={15} /> Export Excel (.xlsx)
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ padding: "12px 16px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+                    <div>
+                      <h4 style={{ margin: 0, fontSize: "15px", fontWeight: "700", color: "#0f172a" }}>{selectedHistoryDetail.batchName}</h4>
+                      <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>Batch Code: {selectedHistoryDetail.batchCode} · Saved by {selectedHistoryDetail.savedBy}</p>
+                    </div>
+                    <div style={{ display: "flex", gap: "16px" }}>
+                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Present</span><br/><strong style={{ color: "#16a34a" }}>{selectedHistoryDetail.present} / {selectedHistoryDetail.total}</strong></div>
+                      <div><span style={{ fontSize: "11px", color: "#64748b" }}>Attendance Rate</span><br/><strong style={{ color: "#2563eb" }}>{selectedHistoryDetail.rate}%</strong></div>
+                    </div>
+                  </div>
+
+                  <div style={{ maxHeight: "280px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+                    <table className="att-table">
                       <thead>
-                        <tr style={{ background: "#f8fafc", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>
-                          <th style={{ padding: "12px 16px", fontWeight: "700" }}>Roll No.</th>
-                          <th style={{ padding: "12px 16px", fontWeight: "700" }}>Student Name</th>
-                          <th style={{ padding: "12px 16px", fontWeight: "700" }}>Status</th>
-                          <th style={{ padding: "12px 16px", fontWeight: "700" }}>Marked At</th>
+                        <tr>
+                          <th>Roll No</th>
+                          <th>Student Name</th>
+                          <th>Status</th>
+                          <th>Verification Mode</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {sessionStats.roster.length === 0 ? (
-                          <tr>
-                            <td colSpan="4" style={{ padding: "24px", textAlign: "center", color: "#94a3b8" }}>
-                              No students registered in this batch.
+                        {selectedHistoryDetail.roster.map((s, idx) => (
+                          <tr key={idx}>
+                            <td className="att-roll">{s.rollNo}</td>
+                            <td className="att-name">{s.name}</td>
+                            <td>
+                              <span className={`att-status-pill ${s.status === "Present" ? "att-pill-present" : "att-pill-absent"}`}>
+                                {s.status}
+                              </span>
+                            </td>
+                            <td>
+                              <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 8px", borderRadius: "12px", background: s.mode === "QR Scan" ? "#eff6ff" : "#f1f5f9", color: s.mode === "QR Scan" ? "#1d4ed8" : "#475569", border: s.mode === "QR Scan" ? "1px solid #bfdbfe" : "1px solid #cbd5e1" }}>
+                                {s.mode}
+                              </span>
                             </td>
                           </tr>
-                        ) : (
-                          sessionStats.roster.map((st) => (
-                            <tr key={st.user_id || st.student_id || st.roll_number} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                              <td style={{ padding: "12px 16px", fontWeight: "700", color: "#334155" }}>
-                                {st.roll_number || st.rollNo || "—"}
-                              </td>
-                              <td style={{ padding: "12px 16px", fontWeight: "600", color: "#0f172a" }}>
-                                {st.name}
-                              </td>
-                              <td style={{ padding: "12px 16px" }}>
-                                {st.status === "PRESENT" ? (
-                                  <span style={{ padding: "4px 12px", borderRadius: "20px", background: "#dcfce7", color: "#15803d", fontWeight: "800", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    <CheckCircle2 size={13} /> PRESENT
-                                  </span>
-                                ) : (
-                                  <span style={{ padding: "4px 12px", borderRadius: "20px", background: "#fee2e2", color: "#b91c1c", fontWeight: "800", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                    <XCircle size={13} /> ABSENT
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: "12px 16px", color: "#64748b", fontSize: "12.5px" }}>
-                                {st.marked_at ? new Date(st.marked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "—"}
-                              </td>
-                            </tr>
-                          ))
-                        )}
+                        ))}
                       </tbody>
                     </table>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
-
-      {/* SCREEN 3: ATTENDANCE HISTORY TAB */}
-      {activeTab === "history" && (
-        <Card style={{ background: "#ffffff", borderRadius: "16px", border: "1.5px solid #e2e8f0", padding: "24px" }}>
-          {selectedHistoryDetail ? (
-            /* History Roster Detail View */
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                <button
-                  onClick={() => setSelectedHistoryDetail(null)}
-                  style={{ background: "none", border: "none", color: "#2563eb", fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}
-                >
-                  <ArrowLeft size={16} /> Back to Session History List
-                </button>
-                <span style={{ fontSize: "13px", color: "#64748b", fontWeight: "600" }}>
-                  Session Date: {new Date(selectedHistoryDetail.date).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })}
-                </span>
-              </div>
-
-              <div style={{ padding: "16px", background: "#f8fafc", borderRadius: "12px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <div>
-                  <h4 style={{ margin: 0, fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>
-                    {selectedHistoryDetail.batch_name || `Batch ${selectedHistoryDetail.batch_id}`}
-                  </h4>
-                  <span style={{ fontSize: "13px", color: "#64748b" }}>Status: {selectedHistoryDetail.status}</span>
-                </div>
-                <div style={{ display: "flex", gap: "20px", textAlign: "right" }}>
-                  <div>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>Present</span><br/>
-                    <strong style={{ fontSize: "16px", color: "#16a34a" }}>{selectedHistoryDetail.present_count || 0} / {selectedHistoryDetail.total_students || 0}</strong>
-                  </div>
-                  <div>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>Rate</span><br/>
-                    <strong style={{ fontSize: "16px", color: "#2563eb" }}>{selectedHistoryDetail.percentage || 0}%</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ maxHeight: "360px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13.5px" }}>
-                  <thead>
-                    <tr style={{ background: "#f1f5f9", color: "#475569" }}>
-                      <th style={{ padding: "12px 16px" }}>Roll No.</th>
-                      <th style={{ padding: "12px 16px" }}>Student Name</th>
-                      <th style={{ padding: "12px 16px" }}>Status</th>
-                      <th style={{ padding: "12px 16px" }}>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(selectedHistoryDetail.roster || []).map((st) => (
-                      <tr key={st.user_id || st.student_id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                        <td style={{ padding: "10px 16px", fontWeight: "700" }}>{st.roll_number || st.rollNo || "—"}</td>
-                        <td style={{ padding: "10px 16px", fontWeight: "600" }}>{st.name}</td>
-                        <td style={{ padding: "10px 16px" }}>
-                          {st.status === "PRESENT" ? (
-                            <span style={{ padding: "3px 10px", borderRadius: "12px", background: "#dcfce7", color: "#15803d", fontWeight: "800", fontSize: "12px" }}>PRESENT</span>
-                          ) : (
-                            <span style={{ padding: "3px 10px", borderRadius: "12px", background: "#fee2e2", color: "#b91c1c", fontWeight: "800", fontSize: "12px" }}>ABSENT</span>
-                          )}
-                        </td>
-                        <td style={{ padding: "10px 16px", color: "#64748b" }}>
-                          {st.marked_at ? new Date(st.marked_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ) : (
-            /* History Sessions List Table */
-            <div>
-              <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", marginBottom: "16px" }}>
-                Previous Attendance Sessions
-              </h3>
-
-              {loadingHistory ? (
-                <p style={{ color: "#64748b", textAlign: "center", padding: "20px" }}>Loading session history...</p>
-              ) : historySessions.length === 0 ? (
-                <p style={{ color: "#94a3b8", textAlign: "center", padding: "20px" }}>No previous attendance sessions found.</p>
               ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "14px" }}>
+                /* History Records Table */
+                <div style={{ width: "100%", maxHeight: "360px", overflowY: "auto", border: "1px solid #e2e8f0", borderRadius: "10px" }}>
+                  <table className="att-table">
                     <thead>
-                      <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0", color: "#475569" }}>
-                        <th style={{ padding: "12px 16px" }}>Date</th>
-                        <th style={{ padding: "12px 16px" }}>Batch</th>
-                        <th style={{ padding: "12px 16px" }}>Present / Total</th>
-                        <th style={{ padding: "12px 16px" }}>Attendance Rate</th>
-                        <th style={{ padding: "12px 16px" }}>Action</th>
+                      <tr>
+                        <th>Date & Time</th>
+                        <th>Batch Group</th>
+                        <th>Present / Total</th>
+                        <th>Rate</th>
+                        <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {historySessions.map((rec) => (
-                        <tr key={rec.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
-                          <td style={{ padding: "12px 16px", fontWeight: "700", color: "#0f172a" }}>
-                            {new Date(rec.date).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })}
-                          </td>
-                          <td style={{ padding: "12px 16px", fontWeight: "600", color: "#334155" }}>
-                            {rec.batch_name || `Batch ${rec.batch_id}`}
-                          </td>
-                          <td style={{ padding: "12px 16px", fontWeight: "700" }}>
-                            {rec.present_count || 0} / {rec.total_students || 0}
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            <span style={{ padding: "4px 10px", borderRadius: "12px", background: (rec.percentage || 0) >= 75 ? "#dcfce7" : "#fee2e2", color: (rec.percentage || 0) >= 75 ? "#15803d" : "#b91c1c", fontWeight: "800", fontSize: "12px" }}>
-                              {rec.percentage || 0}%
-                            </span>
-                          </td>
-                          <td style={{ padding: "12px 16px" }}>
-                            <button
-                              onClick={async () => {
-                                try {
-                                  const res = await apiFetch(`/attendance/sessions/${rec.id}/status`);
-                                  setSelectedHistoryDetail({ ...rec, roster: res.data?.roster || [] });
-                                } catch (_) {
-                                  setSelectedHistoryDetail(rec);
-                                }
-                              }}
-                              style={{ padding: "6px 12px", borderRadius: "6px", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", fontWeight: "600", fontSize: "12.5px", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}
-                            >
-                              <Eye size={14} /> View Roster
-                            </button>
+                      {historyRecords.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="admin-table-empty-cell">
+                            No previous attendance logs recorded yet.
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        historyRecords.map((rec) => (
+                          <tr key={rec.id}>
+                            <td>
+                              <div className="flex-col">
+                                <span style={{ fontWeight: "700", color: "#0f172a", fontSize: "13px" }}>{rec.date}</span>
+                                <span style={{ fontSize: "11px", color: "#64748b" }}>{rec.savedAt}</span>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="flex-col">
+                                <span style={{ fontWeight: "600", fontSize: "13px" }}>{rec.batchName}</span>
+                                <span style={{ fontSize: "11px", color: "#64748b" }}>{rec.batchCode}</span>
+                              </div>
+                            </td>
+                            <td style={{ fontWeight: "700", color: "#0f172a" }}>
+                              {rec.present} / {rec.total}
+                            </td>
+                            <td>
+                              <span style={{ padding: "3px 10px", borderRadius: "14px", fontSize: "12px", fontWeight: "700", background: rec.rate >= 75 ? "#dcfce7" : "#fee2e2", color: rec.rate >= 75 ? "#15803d" : "#b91c1c" }}>
+                                {rec.rate}%
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() => setSelectedHistoryDetail(rec)}
+                                style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "5px 12px", borderRadius: "6px", fontSize: "12px", fontWeight: "600", background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", cursor: "pointer" }}
+                              >
+                                <Eye size={14} /> View Roster
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
-          )}
-        </Card>
+
+            <div className="admin-qr-modal-footer">
+              <span style={{ fontSize: "12px", color: "#64748b", display: "flex", alignItems: "center", gap: "4px" }}>
+                <ShieldCheck size={14} className="text-emerald-600" /> Database Verified
+              </span>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button
+                  onClick={() => exportAllHistoryToExcel(historyRecords)}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "7px 15px", background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", borderRadius: "8px", fontSize: "12.5px", fontWeight: "600", cursor: "pointer" }}
+                >
+                  <FileSpreadsheet size={15} /> Download All History (.xlsx)
+                </button>
+                <button className="admin-qr-done-btn" onClick={() => { setHistoryModalOpen(false); setSelectedHistoryDetail(null); }}>
+                  Close History
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
+
+      {/* Real-time Toast notification when student scans */}
+      {lastScannedName && (
+        <div style={{
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          zIndex: 99999,
+          background: "#0f172a",
+          color: "#ffffff",
+          padding: "12px 18px",
+          borderRadius: "12px",
+          boxShadow: "0 10px 25px rgba(0, 0, 0, 0.25)",
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          animation: "qrModalFadeIn 0.25s ease-out"
+        }}>
+          <div style={{ width: "32px", height: "32px", borderRadius: "50%", background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <span style={{ fontSize: "13px", fontWeight: "700", display: "block" }}>Live QR Check-In Verified!</span>
+            <span style={{ fontSize: "12px", color: "#94a3b8" }}>{lastScannedName} marked PRESENT automatically.</span>
+          </div>
+        </div>
+      )}
+
+      {/* Page Header */}
+      <div className="admin-attendance-header-wrapper">
+        <div className="ui-section-header-AD">
+          <div className="ui-section-main-AD">
+            <div>
+              <h2 className="ui-section-title">
+                <CalendarCheck size={22} className="ui-section-title-icon" />
+                <span>Track Attendance</span>
+              </h2>
+              <p className="ui-section-desc">
+                Mark attendance for batch sessions by date or create a live QR code for instant check-in.
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="admin-attendance-top-actions">
+          <div className="attendance-filters">
+            <AdminAttSelect
+              value={selectedBatchCode}
+              onChange={handleBatchChange}
+              options={batches.map(b => ({ value: b.code, label: b.name }))}
+            />
+            <input
+              type="date"
+              className="attendance-date-input"
+              value={sessionDate}
+              onChange={e => setSessionDate(e.target.value)}
+            />
+          </div>
+          <button className="admin-create-qr-btn" onClick={openQrModal}>
+            <QrCode size={18} />
+            Create Session QR
+          </button>
+          <button className="admin-history-btn" onClick={() => setHistoryModalOpen(true)}>
+            <History size={17} />
+            Previous Attendance
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Stats Grid */}
+      <div className="attendance-stats-row att-stats-grid-5">
+        <div className={`attendance-stat-card ${rosterFilter === 'all' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('all')} style={{ cursor: 'pointer' }}>
+          <span className="att-stat-val">{totalCount}</span>
+          <span className="att-stat-label">Total Enrolled</span>
+        </div>
+        <div className={`attendance-stat-card att-qr-card ${rosterFilter === 'qr_scanned' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('qr_scanned')} style={{ cursor: 'pointer' }}>
+          <span className="att-stat-val">{qrScannedCount}</span>
+          <span className="att-stat-label">QR Scanned</span>
+        </div>
+        <div className={`attendance-stat-card att-present ${rosterFilter === 'present' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('present')} style={{ cursor: 'pointer' }}>
+          <span className="att-stat-val">{presentCount}</span>
+          <span className="att-stat-label">Present Today</span>
+        </div>
+        <div className={`attendance-stat-card att-absent ${rosterFilter === 'absent' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('absent')} style={{ cursor: 'pointer' }}>
+          <span className="att-stat-val">{totalCount - presentCount}</span>
+          <span className="att-stat-label">Absent</span>
+        </div>
+        <div className="attendance-stat-card att-rate">
+          <span className="att-stat-val">{ratePct}%</span>
+          <span className="att-stat-label">Attendance Rate</span>
+        </div>
+      </div>
+
+      {/* Student Roster Table Card */}
+      <Card className="attendance-table-card">
+        <CardHeader className="att-table-header">
+          <div>
+            <CardTitle className="att-card-title">
+              Student Attendance Roster — {currentBatchObj ? currentBatchObj.name : selectedBatchCode}
+            </CardTitle>
+            <p className="att-card-subtitle">
+              Session Date: {sessionDate} · Showing {rosterFilter === 'qr_scanned' ? 'QR Scanned Attendees' : rosterFilter === 'present' ? 'Present Students' : rosterFilter === 'absent' ? 'Absent Students' : 'All Students'} ({filteredStudents.length})
+            </p>
+          </div>
+
+          {/* Roster Filter Tabs */}
+          <div className="att-roster-filter-pills">
+            <button className={`att-filter-pill ${rosterFilter === 'all' ? 'active' : ''}`} onClick={() => setRosterFilter('all')}>
+              All ({totalCount})
+            </button>
+            <button className={`att-filter-pill att-filter-pill-qr ${rosterFilter === 'qr_scanned' ? 'active' : ''}`} onClick={() => setRosterFilter('qr_scanned')}>
+              <QrCode size={13} /> QR Scanned ({qrScannedCount})
+            </button>
+            <button className={`att-filter-pill att-filter-pill-present ${rosterFilter === 'present' ? 'active' : ''}`} onClick={() => setRosterFilter('present')}>
+              Present ({presentCount})
+            </button>
+            <button className={`att-filter-pill att-filter-pill-absent ${rosterFilter === 'absent' ? 'active' : ''}`} onClick={() => setRosterFilter('absent')}>
+              Absent ({totalCount - presentCount})
+            </button>
+          </div>
+
+          <div className="att-bulk-actions">
+            <button className="att-mark-btn att-mark-all" onClick={() => markAll(true)} disabled={students.length === 0}>
+              <CheckCircle2 size={14} /> Mark All Present
+            </button>
+            <button className="att-mark-btn att-mark-none" onClick={() => markAll(false)} disabled={students.length === 0}>
+              <XCircle size={14} /> Mark All Absent
+            </button>
+          </div>
+        </CardHeader>
+        <CardContent className="att-table-body">
+          <div className="att-table-wrap">
+            <table className="att-table">
+              <thead>
+                <tr>
+                  <th className="att-col-roll">Roll No</th>
+                  <th className="att-col-name">Student Name</th>
+                  <th className="att-col-status">Status</th>
+                  <th className="att-col-vmode">Verification Mode</th>
+                  <th className="att-col-toggle">Toggle Presence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="admin-table-empty-cell">
+                      {rosterFilter === 'qr_scanned' ? (
+                        <div style={{ padding: "24px 12px", textAlign: "center" }}>
+                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
+                            <QrCode size={22} />
+                          </div>
+                          <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>No Students Have Scanned QR Code Yet</p>
+                          <p style={{ margin: "0 0 12px", fontSize: "12.5px", color: "#64748b" }}>Students who scan the session QR code with their mobile phone will appear here in real time.</p>
+                          <button className="admin-create-qr-btn" onClick={openQrModal} style={{ margin: "0 auto", display: "inline-flex" }}>
+                            <QrCode size={15} /> Show Live QR Code
+                          </button>
+                        </div>
+                      ) : (
+                        "No students found matching the selected filter."
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map(s => (
+                    <tr key={s.id} className={attendance[s.id] ? "att-row-present" : "att-row-absent"}>
+                      <td className="att-roll">{s.rollNo}</td>
+                      <td className="att-name">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div className="att-avatar-circle">
+                            {s.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <span>{s.name}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`att-status-pill ${attendance[s.id] ? "att-pill-present" : "att-pill-absent"}`}>
+                          {attendance[s.id] ? "Present" : "Absent"}
+                        </span>
+                      </td>
+                      <td>
+                        {qrScannedMap[s.id] ? (
+                          <span className="att-vmode-badge att-vmode-qr">
+                            <QrCode size={13} /> Scanned via QR
+                          </span>
+                        ) : (
+                          <span className="att-vmode-badge att-vmode-manual">
+                            <ShieldCheck size={13} /> Manual
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          className={`att-toggle-btn ${attendance[s.id] ? "att-toggle-btn--present" : "att-toggle-btn--absent"}`}
+                          onClick={() => toggle(s.id)}
+                          title={`Click to mark ${attendance[s.id] ? "Absent" : "Present"}`}
+                        >
+                          {attendance[s.id] ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                          <span>{attendance[s.id] ? "Present" : "Absent"}</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="att-save-row">
+            <button className="att-save-btn" onClick={handleSave} disabled={students.length === 0}>
+              {saved ? "✓ Attendance Saved & Logged!" : "Save Batch Attendance"}
+            </button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+

@@ -398,15 +398,11 @@ export const getStudentAttendance = async (req, res, next) => {
           `SELECT a.*, b.name AS batch_name, b.code AS batch_code
            FROM attendance a
            LEFT JOIN batches b ON a.batch_id = b.id
-           WHERE a.user_id = ? 
-              OR a.user_id IN (
-                SELECT id FROM users WHERE (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)
-              )
-              OR a.user_id IN (
-                SELECT id FROM students WHERE user_id = ? OR (email != '' AND LOWER(email) = LOWER(?))
-              )
+           WHERE a.user_id = ? OR a.user_id IN (
+             SELECT id FROM users WHERE (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)
+           )
            ORDER BY a.session_date DESC, a.id DESC`,
-          [userId, userEmail, userMobile, userId, userEmail]
+          [userId, userEmail, userMobile]
         );
         if (rows && rows.length > 0) {
           totalClasses = rows.length;
@@ -414,24 +410,9 @@ export const getStudentAttendance = async (req, res, next) => {
           absentClasses = rows.filter(r => String(r.status).toLowerCase() === 'absent').length;
 
           recentLogs = rows.map(r => {
-            let dateStr = 'Today';
-            let monthStr = new Date().toLocaleDateString('en-US', { month: 'long' });
-            if (r.session_date) {
-              const dStr = String(r.session_date).split('T')[0];
-              const parts = dStr.split('-');
-              if (parts.length === 3) {
-                const year = parseInt(parts[0], 10);
-                const monthIdx = parseInt(parts[1], 10) - 1;
-                const day = parseInt(parts[2], 10);
-                const dt = new Date(Date.UTC(year, monthIdx, day));
-                dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
-                monthStr = dt.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
-              } else {
-                const dt = new Date(r.session_date);
-                dateStr = dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-                monthStr = dt.toLocaleDateString('en-US', { month: 'long' });
-              }
-            }
+            const rawDate = r.session_date ? new Date(r.session_date) : new Date();
+            const dateStr = rawDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' });
+            const monthStr = rawDate.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' });
             return {
               id: r.id,
               date: dateStr,
