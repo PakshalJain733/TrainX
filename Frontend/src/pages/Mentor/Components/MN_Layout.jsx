@@ -291,7 +291,7 @@ export default function MentorLayout() {
     try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
     try { mentorProf = JSON.parse(sessionStorage.getItem("mentorProfile")) || {}; } catch { }
     const u = rawUser || {};
-    let name = mentorProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Faculty Mentor";
+    let name = mentorProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Mentor";
     let email = mentorProf.email || localUser.email || u.email || "mentor@pvppcoe.ac.in";
     return { ...localUser, ...u, name, email };
   };
@@ -424,8 +424,8 @@ export default function MentorLayout() {
                       {userInitials}
                     </div>
                     <div className="mentor-header__user-info">
-                      <span className="mentor-header__name">{user.name || "Faculty"}</span>
-                      <span className="mentor-header__role">{user.role || "Faculty"}</span>
+                      <span className="mentor-header__name">{user.name || "Mentor"}</span>
+                      <span className="mentor-header__role">{user.role || "Mentor"}</span>
                     </div>
                   </button>
 

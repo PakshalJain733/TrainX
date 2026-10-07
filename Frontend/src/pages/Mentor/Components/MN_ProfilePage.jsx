@@ -46,7 +46,7 @@ function MN_ProfilePage() {
   const resolveUser = () => {
     let localUser = {};
     try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-    let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile?.name || "Faculty Mentor";
+    let name = localUser.name || localUser.fullName || localUser.full_name || mentorProfile?.name || "Mentor";
     let email = localUser.email || mentorProfile?.email || "mentor@pvppcoe.ac.in";
     return { name, email, ...localUser };
   };
@@ -59,7 +59,7 @@ function MN_ProfilePage() {
     phone: initialUser.mobile_number || mentorProfile?.phone || "",
     department: initialUser.department || mentorProfile?.department || "Computer Engineering",
     specialization: mentorProfile?.specialization || "Full Stack Development",
-    role: "Faculty Mentor",
+    role: "Mentor",
     college: mentorProfile?.college || "P.V.P.P. College of Engineering",
     officeLocation: mentorProfile?.officeLocation || "Room 304, Block A",
     officeHours: mentorProfile?.officeHours || "Mon-Fri 10:00 AM - 5:00 PM",
@@ -230,7 +230,7 @@ function MN_ProfilePage() {
               <span>Mentor Profile & Settings</span>
             </h2>
             <p className="ui-section-desc">
-              Manage your faculty dossier, office availability, and notification settings.
+              Manage your mentor dossier, office availability, and notification settings.
             </p>
           </div>
         </div>
@@ -288,7 +288,7 @@ function MN_ProfilePage() {
           <div className="profile-academic-divider" />
 
           <div className="profile-academic-details">
-            <h4 className="profile-section-subtitle">Faculty Dossier</h4>
+            <h4 className="profile-section-subtitle">Mentor Dossier</h4>
 
             <div className="profile-detail-row">
               <Building size={16} className="profile-detail-icon" />

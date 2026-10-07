@@ -87,7 +87,7 @@ export default function CoordinatorOverview() {
           if (activeBatches.length > 0) {
             const mappedSessions = activeBatches.map((b) => ({
               id: b.id,
-              trainerName: b.trainer || b.mentorName || b.mentor_name || "Department Faculty",
+              trainerName: b.trainer || b.mentorName || b.mentor_name || "Department Mentor",
               topic: b.topic || `${b.name} - Core Module`,
               topicDetail: b.description || "Active training session topic assigned and managed by Admin.",
               batch: b.name || "CSE Batch",
@@ -178,7 +178,7 @@ export default function CoordinatorOverview() {
   const statsList = [
     { label: "Enrolled Students", value: `${studentCount}`, hint: `Active in ${dept}`, icon: GraduationCap },
     { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: `${mentorCount} Trainers`, hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Mentors", value: `${mentorCount} Trainers`, hint: "Assigned department mentors", icon: UserCheck },
     { label: "Attendance Rate", value: attendanceRate || "0%", hint: "Department average", icon: LineChart },
   ];
 

@@ -545,9 +545,9 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
               <UserCheck size={24} />
             </div>
             <div className="fs-portal-header-title-wrap">
-              <h2 className="fs-portal-header-title">Assign Faculty Mentor to Students</h2>
+              <h2 className="fs-portal-header-title">Assign Mentor to Students</h2>
               <p className="fs-portal-header-subtitle">
-                Multi-select student profiles via real-time roll number search and allocate to a faculty mentor
+                Multi-select student profiles via real-time roll number search and allocate to a mentor
               </p>
             </div>
           </div>
@@ -566,7 +566,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
           <div className="fs-portal-panel-sidebar">
             <h3 className="fs-portal-section-title">
               <UserCheck size={18} className="fs-portal-icon-blue" />
-              1. Select Faculty Mentor
+              1. Select Mentor
             </h3>
 
             {successMsg && (
@@ -577,12 +577,12 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
             )}
 
             <div className="fs-portal-field">
-              <label className="fs-portal-label">Faculty Mentor / Leader</label>
+              <label className="fs-portal-label">Mentor / Leader</label>
               <MuSelect
                 value={selectedMentor}
                 options={mentors.map(m => ({ value: m.name, label: `${m.name} (${m.department || 'Computer Science'})` }))}
                 onChange={val => setSelectedMentor(val)}
-                placeholder="-- Choose Faculty Mentor --"
+                placeholder="-- Choose Mentor --"
                 icon={UserCheck}
               />
             </div>
@@ -1985,7 +1985,7 @@ export default function ManageUsers() {
           {filteredMentors.length === 0 && (
             <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", background: "#fff", borderRadius: "14px", border: "1px solid #e2e8f0", marginTop: "12px", display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
               <Users size={36} color="#94a3b8" />
-              <div style={{ fontWeight: 700, color: "#334155" }}>No mentors or faculty match your search.</div>
+              <div style={{ fontWeight: 700, color: "#334155" }}>No mentors match your search.</div>
               <p style={{ margin: 0, fontSize: "12px" }}>Try updating your search query or click "+ Add User" to provision a new mentor.</p>
             </div>
           )}
