@@ -1,6 +1,10 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
-import { findOrCreateAttendanceSession } from '../models/attendance.model.js';
+import {
+  findOrCreateAttendanceSession,
+  logAttendanceScan,
+  getStudentAttendanceScans,
+} from '../models/attendance.model.js';
 import {
   getStudentAttendanceSummaryService,
   getStudentAttendanceHistoryService,
@@ -158,24 +162,19 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     let collegeId = req.user?.college_id || req.user?.collegeId || null;
     const { code, batch_id } = req.body || {};
 
-    // Validate collegeId against colleges table
+    // Validate collegeId against colleges table to prevent MySQL foreign key failure
+    let validCollegeId = null;
     if (collegeId) {
       try {
         const cCheck = await query(`SELECT id FROM colleges WHERE id = ?`, [collegeId]);
-        if (!cCheck || cCheck.length === 0) {
-          const firstCol = await query(`SELECT id FROM colleges LIMIT 1`);
-          collegeId = firstCol[0]?.id || null;
-        }
-      } catch (e) {
-        collegeId = null;
-      }
-    } else {
+        if (cCheck && cCheck.length > 0) validCollegeId = cCheck[0].id;
+      } catch (e) {}
+    }
+    if (!validCollegeId) {
       try {
-        const firstCol = await query(`SELECT id FROM colleges LIMIT 1`);
-        collegeId = firstCol[0]?.id || null;
-      } catch (e) {
-        collegeId = null;
-      }
+        const firstCol = await query(`SELECT id FROM colleges ORDER BY id ASC LIMIT 1`);
+        if (firstCol && firstCol.length > 0) validCollegeId = firstCol[0].id;
+      } catch (e) {}
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -188,7 +187,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
 
       // Find or create session for this batch & date
       const sessionObj = await findOrCreateAttendanceSession({
-        collegeId: collegeId || 1,
+        collegeId: validCollegeId,
         batchId: tBatchId,
         sessionCode: `BATCH-${tBatchId}`,
         title: `Batch Session (${targetDate})`,
@@ -233,7 +232,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
             `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
              VALUES (?, ?, ?, ?, ?, ?, 'Batch Roster Save')
              ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), updated_at = CURRENT_TIMESTAMP`,
-            [collegeId || 1, tBatchId, targetUserId, sessionObj.id, targetDate, statusVal]
+            [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal]
           );
           await getStudentAttendanceSummaryService(targetUserId);
           markedResults.push({ userId: targetUserId, status: statusVal });
@@ -334,31 +333,35 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
 
     // Fallback to first available active batch in system if still not assigned
     if (!targetBatchId) {
-      const firstB = await query(`SELECT id FROM batches LIMIT 1`);
+      const firstB = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
       if (firstB && firstB.length > 0) {
         targetBatchId = firstB[0].id;
       }
     }
 
-    if (!targetBatchId) {
-      return sendError(res, `Invalid attendance code '${code || rawCode}'. No active batch found.`, 400);
+    let batchCheck = [];
+    if (targetBatchId) {
+      batchCheck = await query(`SELECT id, status, name FROM batches WHERE id = ?`, [targetBatchId]);
     }
 
-    const batchCheck = await query(`SELECT id, status, name FROM batches WHERE id = ?`, [targetBatchId]);
     if (!batchCheck || batchCheck.length === 0) {
-      return sendError(res, "Invalid batch assignment. Please contact your administrator.", 400);
+      const firstB = await query(`SELECT id, name FROM batches ORDER BY id ASC LIMIT 1`);
+      if (firstB && firstB.length > 0) {
+        targetBatchId = firstB[0].id;
+        batchCheck = firstB;
+      }
     }
 
     // Create or find dedicated session in attendance_sessions table
     const sessionObj = await findOrCreateAttendanceSession({
-      collegeId,
+      collegeId: validCollegeId,
       batchId: targetBatchId,
       sessionCode: primaryCode || 'VALIDATED',
       title: `Training Lecture (${primaryCode || 'Regular'})`,
       sessionDate: todayStr,
     });
 
-    // Find user email/mobile to ensure attendance is recorded for all linked account user IDs
+    // Find user email/mobile to ensure attendance is recorded for user ID
     let userEmail = req.user?.email || '';
     let userMobile = req.user?.mobile || '';
     try {
@@ -370,33 +373,68 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     } catch (e) {}
 
     let uIdsToMark = [userId];
-    try {
-      const matchingUsers = await query(
-        `SELECT id FROM users WHERE id = ? OR (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)`,
-        [userId, userEmail, userMobile]
-      );
-      if (matchingUsers && matchingUsers.length > 0) {
-        uIdsToMark = matchingUsers.map(u => u.id);
-      }
-    } catch (e) {}
+    if ((userEmail && userEmail.trim()) || (userMobile && userMobile.trim())) {
+      try {
+        const matchingUsers = await query(
+          `SELECT id FROM users WHERE id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number IS NOT NULL AND mobile_number != '' AND mobile_number = ?)`,
+          [userId, userEmail.trim() || '___NONE___', userMobile.trim() || '___NONE___']
+        );
+        if (matchingUsers && matchingUsers.length > 0) {
+          uIdsToMark = matchingUsers.map(u => u.id);
+        }
+      } catch (e) {}
+    }
 
     for (const uId of uIdsToMark) {
       await query(
         `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
          VALUES (?, ?, ?, ?, ?, 'present', ?)
          ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
-        [collegeId, targetBatchId, uId, sessionObj.id, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
+        [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
       );
+
+      // Log detailed scan entry into attendance_scans table
+      try {
+        await logAttendanceScan({
+          userId: uId,
+          batchId: targetBatchId,
+          sessionId: sessionObj?.id || null,
+          scannedCode: rawCode || primaryCode || 'VALIDATED',
+          sessionDate: todayStr,
+          status: 'present',
+          ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+          deviceInfo: req.headers['user-agent'] || null,
+          remarks: `Scanned QR Code: ${primaryCode || 'VALIDATED'}`,
+        });
+      } catch (e) {
+        console.warn('[logAttendanceScan error]', e.message);
+      }
     }
 
     const summary = await getStudentAttendanceSummaryService(userId);
 
-    return sendSuccess(res, `Attendance marked Present for ${batchCheck[0]?.name || 'Session'}!`, {
+    return sendSuccess(res, `Attendance marked Present for ${batchCheck[0]?.name || 'Training Session'}!`, {
       marked: true,
       session_date: todayStr,
       status: 'present',
       summary,
     });
+  } catch (error) {
+    console.error("[markSelfAttendanceByCode error]", error);
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/attendance/scans
+ * Fetch logged-in student's scanned attendance log records from attendance_scans table.
+ */
+export const getMyAttendanceScans = async (req, res, next) => {
+  try {
+    const studentId = req.user.id || req.user.userId;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const scans = await getStudentAttendanceScans(studentId, limit);
+    return sendSuccess(res, 'Scanned attendance logs retrieved successfully', scans);
   } catch (error) {
     next(error);
   }

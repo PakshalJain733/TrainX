@@ -236,7 +236,7 @@ export default function Batches() {
             <div>
               <h2 className="coursework-header-title">{selectedBatch.title}</h2>
               <p className="coursework-header-subtitle">
-                {selectedBatch.code} · Instructor: {selectedBatch.trainer} · {selectedBatch.timing}
+                {selectedBatch.code} · Trainer: {selectedBatch.trainer} · {selectedBatch.timing}
               </p>
             </div>
           </div>

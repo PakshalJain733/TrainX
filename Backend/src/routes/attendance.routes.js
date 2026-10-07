@@ -3,6 +3,7 @@ import {
   getMyAttendanceSummary,
   getStudentAttendanceById,
   getStudentAttendanceHistory,
+  getMyAttendanceScans,
   getLowAttendanceStudents,
   getAllStudentsAttendance,
   getDepartmentSummary,
@@ -23,6 +24,7 @@ router.use(authenticateToken);
 
 // 0. Student mark self attendance present via QR scan or code
 router.post('/mark', markSelfAttendanceByCode);
+router.get('/scans', getMyAttendanceScans);
 
 // Leave Requests Routes
 router.get('/leave-requests', getLeaveRequests);

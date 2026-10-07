@@ -202,7 +202,7 @@ export default function CoordinatorBatches() {
             <tr>
               <th>Batch Details</th>
               <th>Enrolled</th>
-              <th>Assigned Mentor</th>
+              <th>Assigned Trainer</th>
               <th>Completion Progress</th>
               <th>Avg Attendance</th>
               <th>Status</th>
@@ -224,7 +224,7 @@ export default function CoordinatorBatches() {
                 </td>
                 <td>
                   <div className="coord-flex-cell-icon">
-                    <UserCheck size={14} color="#4f46e5" /> {b.mentor}
+                    <UserCheck size={14} color="#4f46e5" /> {b.trainer || b.mentor}
                   </div>
                 </td>
                 <td>

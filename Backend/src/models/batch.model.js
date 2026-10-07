@@ -257,10 +257,11 @@ export const createBatchTaskModel = async (taskData) => {
   try {
     const bId = parseInt(taskData.batch_id || taskData.batchId, 10);
     const testCasesJson = taskData.testCases || taskData.test_cases ? JSON.stringify(taskData.testCases || taskData.test_cases) : null;
+    const taskLang = taskData.language || 'Java';
     
     const res = await query(
-      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, test_cases)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, language, test_cases)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         bId,
         taskData.title,
@@ -269,6 +270,7 @@ export const createBatchTaskModel = async (taskData) => {
         parseInt(taskData.points || 100, 10),
         taskData.deadline || '',
         taskData.desc || taskData.description || '',
+        taskLang,
         testCasesJson
       ]
     );
@@ -288,6 +290,7 @@ export const createBatchTaskModel = async (taskData) => {
     points: parseInt(taskData.points || 100, 10),
     deadline: taskData.deadline || '',
     description: taskData.desc || taskData.description || '',
+    language: taskData.language || 'Java',
   };
 };
 
