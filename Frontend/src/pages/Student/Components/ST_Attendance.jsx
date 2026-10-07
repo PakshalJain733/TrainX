@@ -669,7 +669,7 @@ export default function Attendance() {
                   <th>Date</th>
                   <th>Session / Subject</th>
                   <th>Time Slot</th>
-                  <th>Faculty / Mentor</th>
+                  <th>Mentor</th>
                   <th>Status</th>
                 </tr>
               </thead>

@@ -1319,7 +1319,7 @@ export default function AdminUsers() {
           </div>
           <div className="admin-user-stat-info">
             <span className="admin-user-stat-num">{stats.mentors}</span>
-            <span className="admin-user-stat-lbl">Faculty & Mentors</span>
+            <span className="admin-user-stat-lbl">Mentors</span>
           </div>
         </div>
 

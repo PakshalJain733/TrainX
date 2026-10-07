@@ -187,7 +187,7 @@ export default function AD_ApproveUsers() {
             )}
           </div>
           <p className="approve-page-subtitle">
-            Review and approve newly registered students, faculty, and coordinators before granting them full access to the portal.
+            Review and approve newly registered students, mentors, and coordinators before granting them full access to the portal.
           </p>
         </div>
 
@@ -230,9 +230,9 @@ export default function AD_ApproveUsers() {
 
         <div className="approve-stat-card">
           <div>
-            <div className="approve-stat-lbl">Mentors & Faculty</div>
+            <div className="approve-stat-lbl">Mentors</div>
             <div className="approve-stat-val">{mentorCount}</div>
-            <div className="approve-stat-sub">Faculty / mentor requests</div>
+            <div className="approve-stat-sub">Mentor requests</div>
           </div>
           <div className="approve-stat-icon-wrap icon-wrap--purple">
             <Briefcase size={24} />
@@ -299,7 +299,7 @@ export default function AD_ApproveUsers() {
                 className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
                 onClick={() => setSelectedRole("mentor")}
               >
-                Mentors / Faculty ({mentorCount})
+                Mentors ({mentorCount})
               </button>
               <button
                 type="button"

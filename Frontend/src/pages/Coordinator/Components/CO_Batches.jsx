@@ -27,7 +27,7 @@ export default function CoordinatorBatches() {
           enrolledStudents: b.studentsCount || b.students || 0,
           progress: b.progressPct || 0,
           schedule: b.schedule || "Mon, Wed, Fri (02:00 PM - 04:00 PM)",
-          mentor: b.trainer || b.mentor || "Faculty Mentor",
+          mentor: b.trainer || b.mentor || "Mentor",
           status: b.status || "Active",
           avgAttendance: 100,
           avgQuizScore: 0,
@@ -58,7 +58,7 @@ export default function CoordinatorBatches() {
   // New batch form state
   const [newBatchName, setNewBatchName] = useState("");
   const [newBatchCode, setNewBatchCode] = useState("");
-  const [newMentor, setNewMentor] = useState(coordinatorMentors[0]?.name || "Faculty Mentor");
+  const [newMentor, setNewMentor] = useState(coordinatorMentors[0]?.name || "Mentor");
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [studentSearch, setStudentSearch] = useState("");
 

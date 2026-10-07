@@ -284,12 +284,12 @@ export default function CoordinatorMentors() {
       <div className="coord-mentor-grid">
         {loading ? (
           <div className="coord-grid-empty">
-            Loading assigned faculty & mentors...
+            Loading assigned mentors...
           </div>
         ) : filteredMentors.length === 0 ? (
           <div className="coord-grid-empty">
             <Users size={36} color="#94a3b8" />
-            <div className="coord-grid-empty-title">No matching mentors or faculty found.</div>
+            <div className="coord-grid-empty-title">No matching mentors found.</div>
             <p className="coord-grid-empty-sub">Try updating your search query or department filter.</p>
           </div>
         ) : (
