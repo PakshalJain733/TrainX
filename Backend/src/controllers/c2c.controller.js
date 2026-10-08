@@ -15,6 +15,7 @@ export const handleGoogleFormWebhook = async (req, res, next) => {
     
     // Extract secret from header, query param, or body
     const providedSecret =
+      req.headers['x-c2c-secret'] ||
       req.headers['x-c2c-webhook-secret'] ||
       req.headers['authorization']?.replace(/^Bearer\s+/i, '') ||
       req.query.secret ||

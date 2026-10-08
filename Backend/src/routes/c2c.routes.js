@@ -5,6 +5,8 @@ import {
   updateEnrollmentStatus,
 } from '../controllers/c2c.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
+import { authorizeRoles } from '../middleware/role.middleware.js';
+import { ROLES } from '../utils/constants.js';
 
 const router = Router();
 
@@ -12,9 +14,9 @@ const router = Router();
 router.post('/google-form/webhook', handleGoogleFormWebhook);
 router.post('/webhook', handleGoogleFormWebhook);
 
-// Admin-protected enrollment management routes
-router.get('/enrollments', authenticateToken, getEnrollments);
-router.patch('/enrollments/:id/status', authenticateToken, updateEnrollmentStatus);
-router.put('/enrollments/:id/status', authenticateToken, updateEnrollmentStatus);
+// Admin-protected enrollment management routes (ADMIN-ONLY)
+router.get('/enrollments', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN), getEnrollments);
+router.patch('/enrollments/:id/status', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN), updateEnrollmentStatus);
+router.put('/enrollments/:id/status', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN, ROLES.COLLEGE_ADMIN), updateEnrollmentStatus);
 
 export default router;
