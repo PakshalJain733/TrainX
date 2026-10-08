@@ -316,7 +316,31 @@ export async function initializeDatabase() {
       )
     `);
 
-    // 9d. Ensure Mentor Assignment Tables (mentor -> batch and mentor -> student)
+    // 9d. Ensure Attendance Scans Table (Stores every QR / code attendance scan)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS attendance_scans (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        batch_id INT NULL,
+        session_id INT NULL,
+        scanned_code VARCHAR(255) NOT NULL,
+        session_date DATE NOT NULL,
+        status ENUM('present', 'late', 'absent', 'rejected') NOT NULL DEFAULT 'present',
+        ip_address VARCHAR(100) NULL,
+        device_info VARCHAR(255) NULL,
+        location_lat DECIMAL(10,8) NULL,
+        location_lng DECIMAL(11,8) NULL,
+        remarks VARCHAR(255) NULL,
+        scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        INDEX idx_attendance_scans_user (user_id),
+        INDEX idx_attendance_scans_date (session_date),
+        INDEX idx_attendance_scans_code (scanned_code)
+      )
+    `);
+
+    // 9e. Ensure Mentor Assignment Tables (mentor -> batch and mentor -> student)
     await conn.query(`
       CREATE TABLE IF NOT EXISTS mentor_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,

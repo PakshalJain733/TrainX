@@ -47,6 +47,7 @@ async function ensureTables() {
         points INT DEFAULT 100,
         deadline VARCHAR(100) NULL,
         description TEXT NULL,
+        language VARCHAR(50) DEFAULT 'Java',
         test_cases TEXT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -67,6 +68,7 @@ async function ensureTables() {
     await safeAlter("ALTER TABLE batches ADD COLUMN description TEXT NULL");
     await safeAlter("ALTER TABLE batches ADD COLUMN date VARCHAR(100) NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN test_cases TEXT NULL");
+    await safeAlter("ALTER TABLE batch_tasks ADD COLUMN language VARCHAR(50) DEFAULT 'Java'");
 
     tablesInitialized = true;
   } catch (e) {
@@ -86,6 +88,7 @@ function parseTaskRecord(t) {
   }
   return {
     ...t,
+    language: t.language || 'Java',
     testCases: parsedTc,
     test_cases: parsedTc,
   };
@@ -407,7 +410,7 @@ export const createBatchTask = async (req, res, next) => {
   try {
     await ensureTables();
     const { id } = req.params;
-    const { title, topic, difficulty, points, deadline, desc, description, testCases, test_cases } = req.body;
+    const { title, topic, difficulty, points, deadline, desc, description, language, testCases, test_cases } = req.body;
 
     if (!title) {
       return sendError(res, 'Task title is required', 400);
@@ -418,13 +421,14 @@ export const createBatchTask = async (req, res, next) => {
     const taskDiff = difficulty || 'Medium';
     const taskPoints = points ? Number(points) : 100;
     const taskDeadline = deadline || '';
+    const taskLang = language || 'Java';
     const tcList = testCases || test_cases || [];
     const testCasesJson = typeof tcList === 'string' ? tcList : JSON.stringify(tcList);
 
     const result = await query(
-      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, test_cases)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, title.trim(), taskTopic, taskDiff, taskPoints, taskDeadline, taskDesc, testCasesJson]
+      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, language, test_cases)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, title.trim(), taskTopic, taskDiff, taskPoints, taskDeadline, taskDesc, taskLang, testCasesJson]
     );
 
     const [newTask] = await query('SELECT * FROM batch_tasks WHERE id = ?', [result.insertId]);

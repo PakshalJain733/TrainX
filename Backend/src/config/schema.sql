@@ -239,6 +239,30 @@ CREATE TABLE IF NOT EXISTS attendance_summary (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- 11d. Attendance Scans Table (Stores detailed logs of QR code / barcode / code attendance scans)
+CREATE TABLE IF NOT EXISTS attendance_scans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  batch_id INT NULL,
+  session_id INT NULL,
+  scanned_code VARCHAR(255) NOT NULL,
+  session_date DATE NOT NULL,
+  status ENUM('present', 'late', 'absent', 'rejected') NOT NULL DEFAULT 'present',
+  ip_address VARCHAR(100) NULL,
+  device_info VARCHAR(255) NULL,
+  location_lat DECIMAL(10,8) NULL,
+  location_lng DECIMAL(11,8) NULL,
+  remarks VARCHAR(255) NULL,
+  scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+  FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON DELETE SET NULL,
+  INDEX idx_user_scan (user_id),
+  INDEX idx_session_date (session_date),
+  INDEX idx_scanned_code (scanned_code)
+);
+
 
 -- 12. Practice Problems / Coding Tasks Table
 CREATE TABLE IF NOT EXISTS practice_problems (

@@ -154,6 +154,7 @@ export default function AdminBatches() {
     points: 100,
     deadline: "",
     desc: "",
+    language: "Java",
     testCases: [
       { input: "", expectedOutput: "", isHidden: false },
       { input: "", expectedOutput: "", isHidden: true },
@@ -401,6 +402,7 @@ export default function AdminBatches() {
       points: taskForm.points || 100,
       deadline: taskForm.deadline || "",
       description: taskForm.desc || "",
+      language: taskForm.language || "Java",
       testCases: taskForm.testCases || [],
     };
 
@@ -413,6 +415,7 @@ export default function AdminBatches() {
       points: 100,
       deadline: "",
       desc: "",
+      language: "Java",
       testCases: [
         { input: "", expectedOutput: "", isHidden: false },
         { input: "", expectedOutput: "", isHidden: true },
@@ -521,7 +524,7 @@ export default function AdminBatches() {
             <div>
               <div className="batch-view-tag" style={{ color: "#4f46e5", fontSize: "11px", fontWeight: "800", letterSpacing: "0.5px" }}>
                 <span>BATCH DASHBOARD</span>
-                <span className="batch-view-mentor" style={{ color: "#64748b", marginLeft: "8px", fontWeight: "600" }}>• Mentor: {selectedBatch.mentor}</span>
+                <span className="batch-view-mentor" style={{ color: "#64748b", marginLeft: "8px", fontWeight: "600" }}>• Trainer: {selectedBatch.trainer || selectedBatch.mentor || "Not Assigned"}</span>
               </div>
               <h1 style={{ fontSize: "22px", fontWeight: "800", margin: "2px 0 0 0", color: "#0f172a" }}>{selectedBatch.name}</h1>
             </div>
@@ -696,7 +699,28 @@ export default function AdminBatches() {
                     </div>
                   </div>
 
-                  <div className="form-row-3">
+                  <div className="form-row-4">
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Code size={14} color="#4f46e5" />
+                        <span>Coding Language *</span>
+                      </label>
+                      <AdminBatchSelect
+                        value={taskForm.language}
+                        onChange={(val) => setTaskForm((p) => ({ ...p, language: val }))}
+                        options={[
+                          { value: "Java", label: "Java" },
+                          { value: "Python", label: "Python" },
+                          { value: "C++", label: "C++" },
+                          { value: "C", label: "C" },
+                          { value: "JavaScript", label: "JavaScript" },
+                          { value: "TypeScript", label: "TypeScript" },
+                          { value: "Go", label: "Go" },
+                          { value: "SQL", label: "SQL" },
+                          { value: "Any Language", label: "Any Language" }
+                        ]}
+                      />
+                    </div>
                     <div className="form-group-admin">
                       <label className="add-task-label">
                         <Award size={14} color="#4f46e5" />
@@ -893,18 +917,35 @@ export default function AdminBatches() {
                       >
                         <div>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                fontWeight: "700",
-                                padding: "4px 10px",
-                                borderRadius: "9999px",
-                                background: t.difficulty === "Easy" ? "#dcfce7" : t.difficulty === "Hard" ? "#fee2e2" : "#fef3c7",
-                                color: t.difficulty === "Easy" ? "#166534" : t.difficulty === "Hard" ? "#991b1b" : "#92400e"
-                              }}
-                            >
-                              {t.difficulty || "Medium"}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                  padding: "4px 10px",
+                                  borderRadius: "9999px",
+                                  background: t.difficulty === "Easy" ? "#dcfce7" : t.difficulty === "Hard" ? "#fee2e2" : "#fef3c7",
+                                  color: t.difficulty === "Easy" ? "#166534" : t.difficulty === "Hard" ? "#991b1b" : "#92400e"
+                                }}
+                              >
+                                {t.difficulty || "Medium"}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                  padding: "4px 10px",
+                                  borderRadius: "9999px",
+                                  background: "#e0e7ff",
+                                  color: "#3730a3",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <Code size={12} /> {t.language || "Java"}
+                              </span>
+                            </div>
                             <span style={{ fontSize: "12px", fontWeight: "700", color: "#4f46e5", background: "#eef2ff", padding: "4px 10px", borderRadius: "9999px" }}>
                               +{t.points || 100} XP
                             </span>
@@ -1274,7 +1315,7 @@ export default function AdminBatches() {
                         {isInactive ? "Inactive" : "Active"}
                       </Badge>
                     </div>
-                    <p className="batch-mentor">Mentor: {b.mentor}</p>
+                    <p className="batch-mentor">Trainer: {b.trainer || b.mentor || "Not Assigned"}</p>
                   </div>
                 </CardHeader>
                 <CardContent className="batch-card-body">
