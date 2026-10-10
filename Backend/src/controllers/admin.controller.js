@@ -208,7 +208,13 @@ export const approveUserAdmin = async (req, res, next) => {
       }
     }
 
-    await updateUserModel(id, { is_active: 1 });
+    const updatePayload = { is_active: 1 };
+    const callerCollegeId = getCallerCollegeFilter(req);
+    if (!user.college_id && callerCollegeId) {
+      updatePayload.college_id = callerCollegeId;
+    }
+
+    await updateUserModel(id, updatePayload);
 
     if (user.email && user.email.includes('@')) {
       sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch(() => {});

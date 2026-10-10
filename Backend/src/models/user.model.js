@@ -634,7 +634,7 @@ const getValidCollegeId = async (collegeId) => {
   `;
     const params = [];
     if (collegeId) {
-      sql += ' AND u.college_id = ?';
+      sql += ' AND (u.college_id = ? OR u.college_id IS NULL)';
       params.push(collegeId);
     }
     sql += ' ORDER BY u.id DESC';
