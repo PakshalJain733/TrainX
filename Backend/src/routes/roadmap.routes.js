@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import {
   getRoadmapData,
+  getAllRoadmaps,
   generateRoadmap,
   updateMilestone,
   generateTopicQuiz,
+  generateMilestoneTheory,
 } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -14,6 +16,7 @@ router.use(authenticateToken);
 
 // Retrieve student active roadmap
 router.get('/', getRoadmapData);
+router.get('/all', getAllRoadmaps);
 router.get('/my-roadmap', getRoadmapData);
 router.get('/student/:id', getRoadmapData);
 
@@ -21,7 +24,8 @@ router.get('/student/:id', getRoadmapData);
 router.post('/generate', generateRoadmap);
 router.post('/student/:id/generate', generateRoadmap);
 
-// AI Topic 5-Question Quiz Generation
+// AI Theory & Quiz Generation
+router.post('/theory/generate', generateMilestoneTheory);
 router.post('/quiz/generate', generateTopicQuiz);
 
 // Milestone Item Status & Progress Update

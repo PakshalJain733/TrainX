@@ -274,6 +274,8 @@ function Register() {
 
   // College Email OTP verification (must pass before an account is created)
   const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
   const [emailOtp, setEmailOtp] = useState(["", "", "", "", "", ""]);
   const [resendIn, setResendIn] = useState(0);
   const emailOtpRefs = useRef([]);
@@ -402,8 +404,9 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    if (name === "email" && emailOtpSent) {
+    if (name === "email") {
       setEmailOtpSent(false);
+      setEmailVerified(false);
       setEmailOtp(["", "", "", "", "", ""]);
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -476,9 +479,15 @@ function Register() {
     return true;
   };
 
+  const isEmailValidForOtp = () => {
+    const email = (formData.email || "").trim();
+    return email.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const requestEmailOtp = async () => {
-    if (!isFormFullyFilled()) {
-      setErrorMsg("Please fill out all registration details before requesting OTP.");
+    const email = (formData.email || "").trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrorMsg("Please enter a valid email address before requesting OTP.");
       return;
     }
 
@@ -490,14 +499,14 @@ function Register() {
       const response = await fetch(`${getApiBaseUrl()}/auth/register/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email.trim(), name: formData.name, role }),
+        body: JSON.stringify({ email, name: formData.name || "", role }),
       });
       const data = await response.json();
       if (data.success) {
         setEmailOtpSent(true);
         setEmailOtp(["", "", "", "", "", ""]);
         setResendIn(60);
-        setSuccessMsg(`Verification code sent to ${formData.email.trim()}. Enter it below to create your account.`);
+        setSuccessMsg(`Verification code sent to ${email}. Enter it below to create your account.`);
         setTimeout(() => emailOtpRefs.current[0]?.focus(), 100);
       } else {
         setErrorMsg(data.message || "Could not send the verification code.");
@@ -510,11 +519,48 @@ function Register() {
     }
   };
 
+  const handleVerifyEmailOtp = async (codeOverride) => {
+    const code = codeOverride || emailOtp.join("");
+    if (!/^\d{6}$/.test(code)) {
+      setErrorMsg("Please enter the complete 6-digit verification code sent to your email.");
+      return;
+    }
+
+    setVerifyingEmailOtp(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/auth/register/verify-email-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email.trim(), otp: code }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEmailVerified(true);
+        setSuccessMsg("✅ College Email verified successfully! You can now complete your registration details.");
+        setErrorMsg("");
+      } else {
+        setErrorMsg(data.message || "Invalid or expired verification code.");
+      }
+    } catch (err) {
+      console.error("Registration OTP verify error:", err);
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
   const handleEmailOtpChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return;
     setEmailOtp((prev) => {
       const next = [...prev];
       next[index] = value;
+      const joined = next.join("");
+      if (joined.length === 6) {
+        handleVerifyEmailOtp(joined);
+      }
       return next;
     });
     if (value && index < 5) {
@@ -543,18 +589,17 @@ function Register() {
 
     if (!validateDetails()) return;
 
-    // Phase 1: send the code to the college email ONLY when user explicitly clicks Get OTP
-    if (role === "Student" && !emailOtpSent) {
-      setErrorMsg("Please click the 'Get OTP' button to receive the verification code on your email.");
+    // Email verification check for Student role
+    if (role === "Student" && !emailVerified) {
+      setErrorMsg("Please request and verify the 6-digit OTP sent to your college email before completing registration.");
       return;
     }
 
-    // Phase 2: verify 6-digit OTP code ONLY for Student role
     let otp = "";
     if (role === "Student") {
       otp = emailOtp.join("");
       if (!/^\d{6}$/.test(otp)) {
-        setErrorMsg("Please enter the 6-digit verification code from your email.");
+        setErrorMsg("Please enter and verify the 6-digit code sent to your email.");
         return;
       }
     }
@@ -841,77 +886,110 @@ function Register() {
                 </div>
 
                 {/* Row 2: College Email & Inline 6-Digit OTP Code */}
-                <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                    <div className="email-with-otp-row">
-                      <input
-                        type="email"
-                        name="email"
-                        autoComplete="email"
-                        required
-                        placeholder="name@college.edu"
-                        value={formData.email}
-                        onChange={handleChange}
-                      />
+                <div className="input-group" style={{ marginBottom: "11px" }}>
+                  {emailVerified ? (
+                    <div className="email-verified-badge-card">
+                      <span className="email-verified-badge-text" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ color: "#16a34a", display: "inline-flex" }}>{Icons.check}</span> College Email Verified: <strong>{formData.email}</strong>
+                      </span>
                       <button
                         type="button"
-                        className={`get-otp-inline-btn ${isFormFullyFilled() && !emailOtpSent ? "active" : ""}`}
-                        disabled={!isFormFullyFilled() || loading || resendIn > 0}
-                        onClick={requestEmailOtp}
+                        className="email-verified-change-btn"
+                        onClick={() => {
+                          setEmailVerified(false);
+                          setEmailOtpSent(false);
+                          setEmailOtp(["", "", "", "", "", ""]);
+                        }}
                       >
-                        {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
+                        Change Email
                       </button>
                     </div>
-                    {(() => {
-                      if (!formData.email || !formData.email.includes("@")) return null;
-                      const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
-                      const selectedCollege = Array.isArray(colleges) ? colleges.find(c => String(c.id) === String(formData.college_id)) : null;
-                      const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
-                      if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
-                        return (
-                          <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                            <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </div>
-
-                  {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
-                  {emailOtpSent && (
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <div className="label-with-resend-row">
-                        <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
-                        <button
-                          type="button"
-                          className="reg-resend-symbol-btn"
-                          disabled={resendIn > 0 || loading}
-                          onClick={requestEmailOtp}
-                          title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
-                        >
-                          {Icons.refresh}
-                          <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
-                        </button>
-                      </div>
-                      <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
-                        {emailOtp.map((digit, i) => (
+                  ) : (
+                    <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: 0 }}>
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <FieldLabel icon={Icons.email}>College Email</FieldLabel>
+                        <div className="email-with-otp-row">
                           <input
-                            key={i}
-                            ref={(el) => (emailOtpRefs.current[i] = el)}
-                            className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            maxLength={1}
-                            aria-label={`Digit ${i + 1}`}
-                            value={digit}
-                            onChange={(e) => handleEmailOtpChange(i, e.target.value)}
-                            onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
+                            type="email"
+                            name="email"
+                            autoComplete="email"
+                            required
+                            placeholder="name@college.edu"
+                            value={formData.email}
+                            onChange={handleChange}
                           />
-                        ))}
+                          <button
+                            type="button"
+                            className={`get-otp-inline-btn ${isEmailValidForOtp() && !emailOtpSent ? "active" : ""}`}
+                            disabled={!isEmailValidForOtp() || loading || resendIn > 0}
+                            onClick={requestEmailOtp}
+                          >
+                            {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
+                          </button>
+                        </div>
+                        {(() => {
+                          if (!formData.email || !formData.email.includes("@")) return null;
+                          const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
+                          const selectedCollege = Array.isArray(colleges) ? colleges.find(c => String(c.id) === String(formData.college_id)) : null;
+                          const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
+                          if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
+                            return (
+                              <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
+
+                      {/* Right Column: 6-Digit OTP Code beside Email Bar */}
+                      {emailOtpSent && (
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <div className="label-with-resend-row">
+                            <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <button
+                                type="button"
+                                className="reg-resend-symbol-btn"
+                                disabled={resendIn > 0 || loading}
+                                onClick={requestEmailOtp}
+                                title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
+                              >
+                                {Icons.refresh}
+                                <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div className="email-with-otp-row">
+                            <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste} style={{ flex: 1 }}>
+                              {emailOtp.map((digit, i) => (
+                                <input
+                                  key={i}
+                                  ref={(el) => (emailOtpRefs.current[i] = el)}
+                                  className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  autoComplete="one-time-code"
+                                  maxLength={1}
+                                  aria-label={`Digit ${i + 1}`}
+                                  value={digit}
+                                  onChange={(e) => handleEmailOtpChange(i, e.target.value)}
+                                  onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
+                                />
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              className="verify-email-otp-btn"
+                              disabled={emailOtp.join("").length !== 6 || verifyingEmailOtp}
+                              onClick={() => handleVerifyEmailOtp()}
+                            >
+                              {verifyingEmailOtp ? "Verifying..." : "Verify Code"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -963,16 +1041,14 @@ function Register() {
 
                   <div className="input-group">
                     <FieldLabel icon={Icons.division}>Division</FieldLabel>
-                    <RegSelect
+                    <input
+                      type="text"
+                      name="division"
+                      autoComplete="off"
+                      required
+                      placeholder="e.g. A, B, C"
                       value={formData.division}
-                      wrapperClass="reg-select"
-                      options={[
-                        { value: "A", label: "Division A" },
-                        { value: "B", label: "Division B" },
-                        { value: "C", label: "Division C" },
-                      ]}
-                      onChange={(val) => setFormData({ ...formData, division: val })}
-                      placeholder="Division"
+                      onChange={handleChange}
                     />
                   </div>
                 </div>
@@ -1115,8 +1191,8 @@ function Register() {
               </div>
             )}
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Registering..." : "Register"}
+            <button type="submit" disabled={loading || (role === "Student" && !emailVerified)}>
+              {loading ? "Registering..." : (role === "Student" && !emailVerified ? "Verify Email to Register" : "Register")}
             </button>
 
             <div className="links">

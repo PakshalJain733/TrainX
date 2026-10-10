@@ -1,4 +1,6 @@
 import { generateJSON, describeProvider } from './aiClient.js';
+import { searchYouTubeVideos } from '../services/youtube.service.js';
+
 
 export const processroadmapAI = async (inputData) => {
   const {
@@ -372,3 +374,235 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
 
   throw new Error(`Failed to generate 5 valid AI quiz questions for "${cleanTopic}". Please try again.`);
 };
+
+/**
+ * Generates deep technical theory for a milestone topic using AI
+ */
+export const generateMilestoneTheoryAI = async (milestoneTitle, targetRole = '') => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
+  const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
+
+  const prompt = `You are a Principal Curriculum Architect & Educator. Write a comprehensive, highly professional, detailed domain theory guide for the topic: "${cleanTitle}" in the context of "${cleanRole}".
+
+CRITICAL INSTRUCTIONS:
+1. Provide a deep, 3-4 sentence overview of "${cleanTitle}" tailored strictly to "${cleanRole}".
+2. Provide EXACTLY 3 to 4 detailed domain sections.
+   - ABSOLUTE RULE: DO NOT use generic section titles like "Concept 1", "Concept 2", "Concept 3", "Topic 1", or "Section A".
+   - EVERY section title MUST be a specific, meaningful subhead naming exact mechanisms, principles, frameworks, or workflows specific to "${cleanRole}".
+   - If "${cleanRole}" is a non-software role (e.g. Graphic Designer, HR Specialist, Accountant, Civil Engineer, Murti Making, Marketing, Legal, Doctor), write theory purely for that domain without software/coding concepts.
+3. For each section, provide:
+   - "title": Specific domain subhead name
+   - "explanation": 3-4 sentence deep explanation paragraph detailing core principles and execution lifecycle.
+   - "takeaway": Concrete industry takeaway or practical tip.
+4. Provide a practical code snippet OR structured domain case study workflow ("codeExample") for "${cleanTitle}".
+5. Provide 3-4 professional industry best practices ("bestPractices").
+
+Output ONLY valid JSON strictly matching this schema without markdown backticks:
+{
+  "title": "Comprehensive Theory & Domain Guide: ${cleanTitle}",
+  "overview": "Deep technical/domain overview paragraph...",
+  "sections": [
+    {
+      "title": "Specific Technical or Domain Subhead Name",
+      "explanation": "Detailed explanation paragraph...",
+      "takeaway": "Industry takeaway..."
+    }
+  ],
+  "codeExample": "// Real working code example OR Domain Workflow Case Study\\n...",
+  "bestPractices": [
+    "Industry best practice 1...",
+    "Industry best practice 2..."
+  ]
+}`;
+
+  try {
+    const parsed = await generateJSON(prompt, {
+      system: 'You are a Principal Technical Educator. Output valid JSON strictly matching the requested theory guide schema.',
+      temperature: 0.7,
+      maxTokens: 4000,
+      timeoutMs: 60000,
+    });
+
+    if (parsed && parsed.title && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn(`[AI Engine] Theory generation warning for "${cleanTitle}": ${err.message}. Using dynamic fallback.`);
+  }
+
+  return generateRoleSpecificTheoryFallback(cleanTitle, cleanRole);
+};
+
+function generateRoleSpecificTheoryFallback(cleanTitle, cleanRole) {
+  const lower = `${cleanTitle} ${cleanRole}`.toLowerCase();
+
+  let overview = "";
+  let sections = [];
+  let codeExample = "";
+
+  if (lower.includes("java") || lower.includes("oop") || lower.includes("backend")) {
+    overview = `${cleanTitle} forms a fundamental cornerstone in Java Enterprise Architecture and Object-Oriented System Design. Java code compiles into platform-independent bytecode executed by the Java Virtual Machine (JVM), enforcing strong type safety, encapsulation, and structured memory allocation.`;
+    sections = [
+      {
+        title: "JVM Memory Model: Heap vs Stack Allocation & Garbage Collection",
+        explanation: "Java manages execution across Stack frames and Heap regions. Local primitive variables and method references reside in short-lived Stack frames, while Object instances are instantiated dynamically on the Heap. The JVM Garbage Collector periodically identifies unreferenced heap objects and reclaims memory automatically.",
+        takeaway: "Minimize premature object creation inside high-frequency execution loops to reduce Garbage Collector pause times."
+      },
+      {
+        title: "Object Encapsulation, Abstraction & Polymorphism Mechanics",
+        explanation: "Encapsulation protects class member state using access modifiers and controlled accessor methods. Abstraction hides concrete implementation details behind interface contracts, enabling dynamic method dispatch and runtime polymorphism.",
+        takeaway: "Favor Interface-based programming and Composition over deep class inheritance hierarchies."
+      },
+      {
+        title: "Exception Hierarchy & Structured Error Recovery (Checked vs Unchecked)",
+        explanation: "Java enforces a strict Exception hierarchy. Checked exceptions represent recoverable conditions that must be handled at compile time, whereas Unchecked RuntimeExceptions represent programmer logic flaws or invalid state assertions.",
+        takeaway: "Catch specific exception types explicitly rather than swallowing generic Throwable or Exception objects."
+      }
+    ];
+    codeExample = `// Enterprise Java Pattern for: ${cleanTitle}
+public class ExecutionHandler {
+    private final String moduleName;
+
+    public ExecutionHandler(String moduleName) {
+        this.moduleName = moduleName;
+    }
+
+    public void executeProcess(int[] dataset) throws IllegalArgumentException {
+        if (dataset == null || dataset.length == 0) {
+            throw new IllegalArgumentException("Dataset cannot be null or empty.");
+        }
+        
+        int totalSum = 0;
+        for (int value : dataset) {
+            totalSum += value;
+        }
+        System.out.println("✅ Processed " + dataset.length + " elements for " + moduleName + ". Sum: " + totalSum);
+    }
+
+    public static void main(String[] args) {
+        ExecutionHandler handler = new ExecutionHandler("${cleanTitle}");
+        handler.executeProcess(new int[]{10, 20, 30, 40, 50});
+    }
+}`;
+  } else if (lower.includes("python") || lower.includes("ai") || lower.includes("data")) {
+    overview = `${cleanTitle} in Python provides high-level abstractions designed for rapid development, clean readability, and modular extensibility. Python code executes through the CPython Virtual Machine, translating dynamic syntax into bytecode instructions.`;
+    sections = [
+      {
+        title: "CPython Object Model, Mutability & Memory Allocation",
+        explanation: "In Python, all data structures are first-class objects. Types are strictly divided into Immutable (integers, strings, tuples) and Mutable (lists, dictionaries, sets). Modifying an immutable instance instantiates a distinct object in memory.",
+        takeaway: "Use tuple structures for fixed lookup tables to optimize memory allocation and iteration speed."
+      },
+      {
+        title: "List Comprehensions, Generator Expressions & Iteration Mechanics",
+        explanation: "Python list comprehensions and generator expressions evaluate sequence transformations at C-level speed inside CPython, bypassing interpreter loop overhead and reducing RAM consumption for large data pipelines.",
+        takeaway: "Prefer generator expressions over massive list comprehensions when streaming large data batches."
+      },
+      {
+        title: "Global Interpreter Lock (GIL) & Asynchronous Event Loops",
+        explanation: "CPython uses the Global Interpreter Lock (GIL) to prevent multiple native threads from executing bytecode simultaneously. For CPU-bound parallel workloads, multiprocessing or native C extensions bypass GIL bottlenecks.",
+        takeaway: "Utilize asyncio for non-blocking I/O operations and multiprocessing for CPU-intensive tasks."
+      }
+    ];
+    codeExample = `# Python Execution Module for: ${cleanTitle}
+from typing import List, Dict, Any
+
+def process_pipeline(data_batch: List[int]) -> Dict[str, Any]:
+    """Processes input dataset and computes summary metrics."""
+    if not data_batch:
+        raise ValueError("Data batch cannot be empty.")
+        
+    filtered = [x for x in data_batch if x > 0]
+    total_sum = sum(filtered)
+    
+    return {
+        "topic": "${cleanTitle}",
+        "count": len(filtered),
+        "total": total_sum,
+        "status": "SUCCESS"
+    }
+
+if __name__ == "__main__":
+    result = process_pipeline([10, 20, 30, 40, 50])
+    print(f"✅ Pipeline Result: {result}")
+`;
+  } else if (lower.includes("react") || lower.includes("frontend") || lower.includes("web") || lower.includes("html") || lower.includes("css")) {
+    overview = `${cleanTitle} in Modern Web Engineering is centered around declarative UI architecture, reactive state synchronization, Virtual DOM reconciliation, and component composition.`;
+    sections = [
+      {
+        title: "Virtual DOM Reconciliation & Fiber Diffing Algorithm",
+        explanation: "React maintains a dynamic Virtual DOM tree representation of the UI. When state updates occur, Fiber reconciliation computes minimal DOM mutations and efficiently patches dirty nodes in the browser DOM.",
+        takeaway: "Supply unique, stable keys when rendering dynamic element lists to optimize Fiber reconciliation."
+      },
+      {
+        title: "Component State Lifecycle & Hook Execution Mechanics",
+        explanation: "React Hooks (useState, useEffect, useMemo) allow functional components to manage local state, lifecycle subscriptions, and memoized compute caches cleanly without writing legacy ES6 class syntax.",
+        takeaway: "Maintain hook execution order by placing calls strictly at the top level of component functions."
+      },
+      {
+        title: "Unidirectional Data Flow & State Lifting Patterns",
+        explanation: "Data propagates strictly top-down from parent components to children via props. State updates trigger reactive re-render cycles, keeping user interfaces automatically synchronized with application data.",
+        takeaway: "Keep component state localized, lifting state up only when required by sibling components."
+      }
+    ];
+    codeExample = `// Modern Component Pattern for: ${cleanTitle}
+import React, { useState, useMemo } from 'react';
+
+export default function ModuleComponent() {
+  const [data, setData] = useState([10, 20, 30, 40, 50]);
+
+  const summary = useMemo(() => {
+    return data.reduce((acc, val) => acc + val, 0);
+  }, [data]);
+
+  return (
+    <div className="module-card">
+      <h3>${cleanTitle}</h3>
+      <p>Processed {data.length} items. Total: {summary}</p>
+    </div>
+  );
+}
+`;
+  } else {
+    overview = `${cleanTitle} represents a fundamental technical module in ${cleanRole}. Mastering this concept establishes strong domain fundamentals, operational mechanics, memory layout understanding, and production-grade implementation capabilities.`;
+    sections = [
+      {
+        title: "Foundational Execution Mechanics & Operational Model",
+        explanation: `Understand how ${cleanTitle} processes inputs, executes internal algorithms, manages memory scopes, and returns structured outputs within ${cleanRole} applications.`,
+        takeaway: "Follow modular design principles to build maintainable, scalable software solutions."
+      },
+      {
+        title: "State Scoping, Variable Lifecycles & Context Passing",
+        explanation: `Examine how variables pass across function boundaries, event loops, and execution contexts without introducing memory leaks, race conditions, or state pollution.`,
+        takeaway: "Keep variable boundaries tightly scoped to ensure predictable runtime execution."
+      },
+      {
+        title: "Diagnostic Workflows, Boundary Validations & Error Recovery",
+        explanation: `Implement comprehensive input validation assertions and error handling to ensure ${cleanTitle} recovers gracefully when handling unexpected or edge-case inputs.`,
+        takeaway: "Thoroughly test boundary conditions before releasing code to production environments."
+      }
+    ];
+    codeExample = `// Execution Pattern for: ${cleanTitle}
+function executeModule() {
+  console.log("Executing module for: ${cleanTitle}");
+  const dataset = [10, 20, 30, 40, 50];
+  const result = dataset.reduce((acc, x) => acc + x, 0);
+  console.log(\`✅ Result: Processed \${dataset.length} items. Total: \${result}\`);
+}
+
+executeModule();
+`;
+  }
+
+  return {
+    title: `Comprehensive Theory & Architectural Guide: ${cleanTitle}`,
+    overview,
+    sections,
+    codeExample,
+    bestPractices: [
+      `Write clean, self-documenting code with descriptive variable and method names.`,
+      `Implement robust input validation and handle specific exception types explicitly.`,
+      `Optimize runtime time and space complexity before releasing code.`,
+      `Consistently practice hands-on coding challenges after reviewing theoretical concepts.`
+    ]
+  };
+}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check } from "lucide-react";
+import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -24,6 +24,8 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   const [topicDate, setTopicDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [topicStatus, setTopicStatus] = useState("Scheduled");
   const [successMsg, setSuccessMsg] = useState("");
+  const [dailyTopicsList, setDailyTopicsList] = useState([]);
+  const [loadingTopics, setLoadingTopics] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -44,11 +46,6 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
           setBatches(formatted);
           if (formatted.length > 0) {
             setSelectedBatchId(formatted[0].id);
-            setCurrentTrainer(formatted[0].trainer);
-            setTopicTitle(formatted[0].topic);
-            setTopicDesc(formatted[0].description);
-            setTopicDate(formatted[0].date);
-            setTopicStatus(formatted[0].status);
           }
         } else {
           setBatches([]);
@@ -57,17 +54,46 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       .catch(() => setBatches([]));
   }, [isOpen]);
 
-  // Auto-fill trainer and today's topic when selected batch changes
+  // Fetch daily topics history whenever selectedBatchId changes
   useEffect(() => {
+    if (!selectedBatchId) return;
     const selected = batches.find(b => b.id === selectedBatchId);
     if (selected) {
       setCurrentTrainer(selected.trainer);
-      setTopicTitle(selected.topic || "");
-      setTopicDesc(selected.description || "");
-      setTopicDate(selected.date || new Date().toISOString().split("T")[0]);
-      setTopicStatus(selected.status || "Scheduled");
       setIsEditingTrainer(false);
     }
+
+    setLoadingTopics(true);
+    apiFetch(`/batches/${selectedBatchId}/daily-topics`)
+      .then((res) => {
+        const topics = res?.data || (Array.isArray(res) ? res : []);
+        const topicsArr = Array.isArray(topics) ? topics : [];
+        setDailyTopicsList(topicsArr);
+
+        const currentDate = topicDate || selected?.date || new Date().toISOString().split("T")[0];
+        const existing = topicsArr.find(t => t.topic_date === currentDate || t.date === currentDate);
+        if (existing) {
+          setTopicTitle(existing.topic || "");
+          setTopicDesc(existing.description || "");
+          setTopicStatus(existing.status || computeAutoStatus(currentDate));
+          if (existing.trainer) setCurrentTrainer(existing.trainer);
+        } else if (selected) {
+          setTopicTitle(selected.topic || "");
+          setTopicDesc(selected.description || "");
+          setTopicDate(selected.date || new Date().toISOString().split("T")[0]);
+          setTopicStatus(selected.status || "Scheduled");
+        }
+      })
+      .catch((err) => {
+        console.warn("[Fetch Daily Topics Error]", err);
+        setDailyTopicsList([]);
+        if (selected) {
+          setTopicTitle(selected.topic || "");
+          setTopicDesc(selected.description || "");
+          setTopicStatus(selected.status || "Scheduled");
+        }
+      })
+      .finally(() => setLoadingTopics(false));
   }, [selectedBatchId, batches]);
 
   if (!isOpen) return null;
@@ -83,7 +109,36 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
   const handleDateChange = (newDate) => {
     setTopicDate(newDate);
-    setTopicStatus(computeAutoStatus(newDate, topicStatus));
+
+    // Look up if topic exists for newDate in dailyTopicsList
+    const existing = dailyTopicsList.find(t => t.topic_date === newDate || t.date === newDate);
+    if (existing) {
+      setTopicTitle(existing.topic || "");
+      setTopicDesc(existing.description || "");
+      setTopicStatus(existing.status || computeAutoStatus(newDate));
+      if (existing.trainer) setCurrentTrainer(existing.trainer);
+    } else {
+      const selected = batches.find(b => b.id === selectedBatchId);
+      if (selected && selected.date === newDate) {
+        setTopicTitle(selected.topic || "");
+        setTopicDesc(selected.description || "");
+        setTopicStatus(selected.status || computeAutoStatus(newDate));
+      } else {
+        // Reset topic fields for new date entry
+        setTopicTitle("");
+        setTopicDesc("");
+        setTopicStatus(computeAutoStatus(newDate, "Scheduled"));
+      }
+    }
+  };
+
+  const handleSelectPreviousTopic = (tItem) => {
+    const itemDate = tItem.topic_date || tItem.date;
+    setTopicDate(itemDate);
+    setTopicTitle(tItem.topic || "");
+    setTopicDesc(tItem.description || "");
+    setTopicStatus(tItem.status || computeAutoStatus(itemDate));
+    if (tItem.trainer) setCurrentTrainer(tItem.trainer);
   };
 
   const trainersList = users.filter(u => {
@@ -97,7 +152,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
     const today = new Date().toISOString().split("T")[0];
     let updatedStatus = topicStatus;
-    
+
     if (topicDate === today && topicStatus === "Scheduled") {
       updatedStatus = "In Progress";
     } else if (!topicStatus) {
@@ -105,6 +160,47 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     }
 
     setTopicStatus(updatedStatus);
+
+    const payload = {
+      topic_date: topicDate,
+      topic: topicTitle,
+      description: topicDesc || "Daily curriculum topic",
+      status: updatedStatus,
+      trainer: currentTrainer,
+    };
+
+    try {
+      const res = await apiFetch(`/batches/${selectedBatchId}/daily-topics`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const updatedTopics = res?.data || [];
+      if (Array.isArray(updatedTopics) && updatedTopics.length > 0) {
+        setDailyTopicsList(updatedTopics);
+      } else {
+        setDailyTopicsList(prev => {
+          const filtered = prev.filter(t => (t.topic_date || t.date) !== topicDate);
+          return [{ ...payload, id: Date.now() }, ...filtered];
+        });
+      }
+    } catch (err) {
+      console.warn("[Save Daily Topic Error]", err);
+    }
+
+    try {
+      await apiFetch(`/batches/${selectedBatchId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          trainer: currentTrainer,
+          topic: topicTitle,
+          description: topicDesc || "Daily curriculum topic",
+          date: topicDate,
+          status: updatedStatus
+        })
+      });
+    } catch (err) {
+      console.warn("[DB Save Batch Topic Error]", err);
+    }
 
     setBatches(prevBatches =>
       prevBatches.map(b => {
@@ -122,24 +218,9 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       })
     );
 
-    try {
-      await apiFetch(`/batches/${selectedBatchId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          trainer: currentTrainer,
-          topic: topicTitle,
-          description: topicDesc || "Daily curriculum topic",
-          date: topicDate,
-          status: updatedStatus
-        })
-      });
-    } catch (err) {
-      console.warn("[DB Save Batch Topic Error]", err);
-    }
-
     const activeBatchObj = batches.find(b => b.id === selectedBatchId);
-    setSuccessMsg(`Topic & status saved to database for ${activeBatchObj?.name || 'batch'}!`);
-    setTimeout(() => setSuccessMsg(""), 3000);
+    setSuccessMsg(`Topic for ${topicDate} saved to database for ${activeBatchObj?.name || 'batch'}!`);
+    setTimeout(() => setSuccessMsg(""), 3500);
   };
 
   const handleQuickEditTopic = (batchItem) => {
@@ -301,7 +382,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
               </div>
 
               <button type="submit" className="btn-portal-submit fs-portal-submit-mt">
-                <BookOpenCheck size={18} /> Save Today's Taught Topic
+                <BookOpenCheck size={18} /> Save Taught Topic for {topicDate}
               </button>
             </form>
           </div>
@@ -318,6 +399,11 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
             <div className="fs-portal-batch-grid">
               {batches.map(item => {
                 const isSelected = item.id === selectedBatchId;
+                const displayTopic = isSelected ? (topicTitle || item.topic) : item.topic;
+                const displayDesc = isSelected ? (topicDesc || item.description) : item.description;
+                const displayStatus = isSelected ? topicStatus : item.status;
+                const displayTrainer = isSelected ? currentTrainer : item.trainer;
+
                 return (
                   <div
                     key={item.id}
@@ -330,25 +416,25 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                           {item.name}
                         </span>
                         <span style={{ fontSize: '11px', fontWeight: 800, padding: '3px 8px', borderRadius: '6px', background: '#f1f5f9', color: '#475569' }}>
-                          {item.status}
+                          {displayStatus}
                         </span>
                       </div>
 
                       <h4 className="fs-portal-batch-title">
-                        {item.topic}
+                        {displayTopic}
                       </h4>
 
                       <p className="fs-portal-batch-desc">
-                        {item.description}
+                        {displayDesc}
                       </p>
                     </div>
 
                     <div className="fs-portal-batch-footer">
                       <div className="fs-portal-trainer-info">
                         <div className="fs-portal-trainer-avatar">
-                          {(item.trainer || "T").charAt(0)}
+                          {(displayTrainer || "T").charAt(0)}
                         </div>
-                        <span className="fs-portal-trainer-name">{item.trainer}</span>
+                        <span className="fs-portal-trainer-name">{displayTrainer}</span>
                       </div>
                       <span className={isSelected ? "fs-portal-batch-status-active" : "fs-portal-batch-status-idle"}>
                         {isSelected ? "Active Batch ✓" : "Click to Edit"}
@@ -1776,27 +1862,71 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                {formData.role === "student" && (
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>Roll Number / ID</label>
-                      <input
-                        type="text"
-                        className="form-input-admin"
-                        value={formData.roll_number}
-                        onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
-                      />
+                {(formData.role === "student" || formData.role === "Student") && (
+                  <>
+                    <div className="form-row-2">
+                      <div className="form-group-admin">
+                        <label>Roll Number / ID</label>
+                        <input
+                          type="text"
+                          className="form-input-admin"
+                          placeholder="e.g. VU3F2425070"
+                          value={formData.roll_number}
+                          onChange={(e) => setFormData({ ...formData, roll_number: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group-admin">
+                        <label>Department</label>
+                        <input
+                          type="text"
+                          className="form-input-admin"
+                          placeholder="e.g. ECS"
+                          value={formData.department}
+                          onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                        />
+                      </div>
                     </div>
-                    <div className="form-group-admin">
-                      <label>Department</label>
-                      <input
-                        type="text"
-                        className="form-input-admin"
-                        value={formData.department}
-                        onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      />
+
+                    <div className="form-row-2">
+                      <div className="form-group-admin">
+                        <label>Academic Year</label>
+                        <AdminUserSelect
+                          value={formData.year}
+                          onChange={(val) => setFormData({ ...formData, year: val })}
+                          options={[
+                            { value: "FE", label: "FE" },
+                            { value: "SE", label: "SE" },
+                            { value: "TE", label: "TE" },
+                            { value: "BE", label: "BE" }
+                          ]}
+                          placeholder="Select year..."
+                        />
+                      </div>
+                      <div className="form-group-admin">
+                        <label>Division (Div)</label>
+                        <input
+                          type="text"
+                          className="form-input-admin"
+                          placeholder="e.g. A, B, C"
+                          value={formData.division}
+                          onChange={(e) => setFormData({ ...formData, division: e.target.value })}
+                        />
+                      </div>
                     </div>
-                  </div>
+
+                    <div className="form-row-2">
+                      <div className="form-group-admin">
+                        <label>Semester</label>
+                        <input
+                          type="text"
+                          className="form-input-admin"
+                          placeholder="e.g. Semester 5"
+                          value={formData.semester}
+                          onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
               <div className="modal-footer">

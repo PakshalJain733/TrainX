@@ -53,6 +53,21 @@ async function ensureTables() {
       )
     `);
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS batch_daily_topics (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        batch_id INT NOT NULL,
+        topic_date VARCHAR(50) NOT NULL,
+        topic VARCHAR(255) NOT NULL,
+        description TEXT NULL,
+        status VARCHAR(50) DEFAULT 'Scheduled',
+        trainer VARCHAR(100) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_batch_date (batch_id, topic_date)
+      )
+    `);
+
     // Safely add missing columns to pre-existing tables
     const safeAlter = async (colSql) => {
       try { await query(colSql); } catch (e) {}
@@ -76,7 +91,7 @@ async function ensureTables() {
   }
 }
 
-function parseTaskRecord(t) {
+function parseTaskRecord(t, isStudent = false) {
   if (!t) return t;
   let parsedTc = [];
   if (t.test_cases) {
@@ -85,6 +100,9 @@ function parseTaskRecord(t) {
     } catch (e) {
       parsedTc = [];
     }
+  }
+  if (isStudent && Array.isArray(parsedTc)) {
+    parsedTc = parsedTc.filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
   }
   return {
     ...t,
@@ -366,6 +384,7 @@ export const getBatchTasks = async (req, res, next) => {
     await ensureTables();
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
+    const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
 
     let dbTasks = await query(
       `SELECT * FROM batch_tasks WHERE batch_id = ? OR batch_id = ? OR batch_id = '0' ORDER BY id DESC`,
@@ -377,7 +396,7 @@ export const getBatchTasks = async (req, res, next) => {
       dbTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC`);
     }
 
-    const formatted = (dbTasks || []).map(parseTaskRecord);
+    const formatted = (dbTasks || []).map(t => parseTaskRecord(t, isStudent));
     return sendSuccess(res, 'Batch tasks retrieved', formatted);
   } catch (error) {
     next(error);
@@ -389,6 +408,7 @@ export const getTaskById = async (req, res, next) => {
     await ensureTables();
     const { taskId } = req.params;
     const cleanId = String(taskId).replace(/[^0-9]/g, '') || taskId;
+    const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
 
     const dbTasks = await query(
       `SELECT * FROM batch_tasks WHERE id = ? OR id = ? LIMIT 1`,
@@ -396,11 +416,11 @@ export const getTaskById = async (req, res, next) => {
     );
 
     if (dbTasks && dbTasks.length > 0) {
-      return sendSuccess(res, 'Task retrieved successfully', parseTaskRecord(dbTasks[0]));
+      return sendSuccess(res, 'Task retrieved successfully', parseTaskRecord(dbTasks[0], isStudent));
     }
 
     const allTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC LIMIT 1`);
-    return sendSuccess(res, 'Task retrieved successfully', parseTaskRecord(allTasks[0]) || null);
+    return sendSuccess(res, 'Task retrieved successfully', parseTaskRecord(allTasks[0], isStudent) || null);
   } catch (error) {
     next(error);
   }
@@ -530,5 +550,92 @@ export const getBatchById = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getBatchDailyTopics = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id } = req.params;
+    const cleanId = String(id).replace(/[^0-9]/g, '') || id;
+
+    let dbTopics = await query(
+      `SELECT * FROM batch_daily_topics WHERE batch_id = ? OR batch_id = ? ORDER BY topic_date DESC`,
+      [id, cleanId]
+    );
+
+    if (!dbTopics || dbTopics.length === 0) {
+      const [batchRow] = await query(`SELECT * FROM batches WHERE id = ? OR id = ? OR code = ? LIMIT 1`, [id, cleanId, id]);
+      if (batchRow && batchRow.topic) {
+        const defaultDate = batchRow.date || new Date().toISOString().split("T")[0];
+        try {
+          await query(
+            `INSERT INTO batch_daily_topics (batch_id, topic_date, topic, description, status, trainer)
+             VALUES (?, ?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE topic = VALUES(topic)`,
+            [batchRow.id, defaultDate, batchRow.topic, batchRow.description || '', batchRow.status || 'Scheduled', batchRow.trainer || null]
+          );
+          dbTopics = await query(
+            `SELECT * FROM batch_daily_topics WHERE batch_id = ? OR batch_id = ? ORDER BY topic_date DESC`,
+            [id, cleanId]
+          );
+        } catch (e) {
+          console.warn('[Auto-populate daily topic error]', e.message);
+        }
+      }
+    }
+
+    return sendSuccess(res, 'Batch daily topics retrieved successfully', dbTopics || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const saveBatchDailyTopic = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { id } = req.params;
+    const cleanId = String(id).replace(/[^0-9]/g, '') || id;
+    const { topic_date, topic, description, status, trainer } = req.body;
+
+    if (!topic_date || !topic) {
+      return sendError(res, 'Topic date and topic title are required', 400);
+    }
+
+    const tDate = String(topic_date).trim();
+    const tTopic = String(topic).trim();
+    const tDesc = description || '';
+    const tStatus = status || 'Scheduled';
+    const tTrainer = trainer || null;
+
+    const numericBatchId = parseInt(cleanId, 10) || id;
+
+    await query(
+      `INSERT INTO batch_daily_topics (batch_id, topic_date, topic, description, status, trainer)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE 
+         topic = VALUES(topic),
+         description = VALUES(description),
+         status = VALUES(status),
+         trainer = VALUES(trainer)`,
+      [numericBatchId, tDate, tTopic, tDesc, tStatus, tTrainer]
+    );
+
+    await query(
+      `UPDATE batches 
+       SET topic = ?, description = ?, date = ?, status = ?, trainer = COALESCE(?, trainer)
+       WHERE id = ? OR id = ? OR code = ?`,
+      [tTopic, tDesc, tDate, tStatus, tTrainer, id, numericBatchId, id]
+    );
+
+    const dbTopics = await query(
+      `SELECT * FROM batch_daily_topics WHERE batch_id = ? OR batch_id = ? ORDER BY topic_date DESC`,
+      [id, numericBatchId]
+    );
+
+    return sendSuccess(res, 'Daily topic saved successfully', dbTopics || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 

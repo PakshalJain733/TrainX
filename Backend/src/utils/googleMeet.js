@@ -1,4 +1,3 @@
-import { google } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -11,33 +10,57 @@ const __dirname = path.dirname(__filename);
 const CREDENTIALS_PATH = path.join(__dirname, '../../credentials.json');
 const TOKEN_PATH = path.join(__dirname, '../../token.json');
 
-let oAuth2Client;
+let oAuth2Client = null;
+let google = null;
 
-try {
-  if (fs.existsSync(CREDENTIALS_PATH)) {
-    const content = fs.readFileSync(CREDENTIALS_PATH);
-    const credentials = JSON.parse(content);
-    const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web;
-    oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris[0] || 'http://localhost:3000');
-    
-    if (fs.existsSync(TOKEN_PATH)) {
-      const token = fs.readFileSync(TOKEN_PATH);
-      oAuth2Client.setCredentials(JSON.parse(token));
-    }
+async function getGoogleApi() {
+  if (google) return google;
+  try {
+    const mod = await import('googleapis');
+    google = mod.google;
+    return google;
+  } catch (err) {
+    console.warn('[Google API Warning] googleapis package is not installed or available:', err.message);
+    return null;
   }
-} catch (error) {
-  console.warn('Google API Credentials not loaded:', error.message);
 }
+
+async function initOAuthClient() {
+  if (oAuth2Client) return oAuth2Client;
+  const g = await getGoogleApi();
+  if (!g) return null;
+  try {
+    if (fs.existsSync(CREDENTIALS_PATH)) {
+      const content = fs.readFileSync(CREDENTIALS_PATH);
+      const credentials = JSON.parse(content);
+      const { client_secret, client_id, redirect_uris } = credentials.installed || credentials.web;
+      oAuth2Client = new g.auth.OAuth2(client_id, client_secret, redirect_uris[0] || 'http://localhost:3000');
+      
+      if (fs.existsSync(TOKEN_PATH)) {
+        const token = fs.readFileSync(TOKEN_PATH);
+        oAuth2Client.setCredentials(JSON.parse(token));
+      }
+    }
+  } catch (error) {
+    console.warn('Google API Credentials not loaded:', error.message);
+  }
+  return oAuth2Client;
+}
+
+// Try initial load safely
+initOAuthClient().catch(() => {});
 
 /**
  * Generates a real Google Meet link using Google Calendar API
  */
 async function generateRealGoogleMeetLink(summary = 'Mentorship Meeting') {
-  if (!oAuth2Client || !fs.existsSync(TOKEN_PATH)) {
-    throw new Error('Google OAuth2 credentials not fully configured.');
+  const client = await initOAuthClient();
+  const g = await getGoogleApi();
+  if (!g || !client || !fs.existsSync(TOKEN_PATH)) {
+    throw new Error('Google OAuth2 credentials or googleapis package not fully configured.');
   }
 
-  const calendar = google.calendar({ version: 'v3', auth: oAuth2Client });
+  const calendar = g.calendar({ version: 'v3', auth: client });
   
   const event = {
     summary: summary,

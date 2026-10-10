@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Check, Users, UserPlus, UserCog, Search, ShieldCheck, ShieldAlert, UserCheck, GraduationCap, Mail, Building2, Calendar, Clock, CheckCircle2, XCircle, Phone, BookOpen, Key, KeyRound, Copy, ChevronDown, X, Sparkles, Trash2, Briefcase, BookOpenCheck, Zap, User, FileSpreadsheet, UploadCloud, Download, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Check, Users, UserPlus, UserCog, Search, ShieldCheck, ShieldAlert, UserCheck, GraduationCap, Mail, Building2, Calendar, Clock, CheckCircle2, XCircle, Phone, BookOpen, Key, KeyRound, Copy, ChevronDown, X, Sparkles, Trash2, Briefcase, BookOpenCheck, Zap, User, FileSpreadsheet, UploadCloud, Download, AlertCircle, Eye, EyeOff, History } from "lucide-react";
 import * as XLSX from 'xlsx';
 import EmptyState from '../../../components/ui/EmptyState';
 import CustomSelect from '../../../components/ui/CustomSelect';
@@ -88,19 +88,75 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   const [topicDate, setTopicDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [topicStatus, setTopicStatus] = useState("Completed");
   const [successMsg, setSuccessMsg] = useState("");
+  const [dailyTopicsList, setDailyTopicsList] = useState([]);
+  const [loadingTopics, setLoadingTopics] = useState(false);
 
-  // Auto-fill trainer and today's topic when selected batch changes
   useEffect(() => {
+    if (!isOpen) return;
+    apiFetch("/batches")
+      .then((res) => {
+        const list = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list) && list.length > 0) {
+          const formatted = list.map((b) => ({
+            id: b.id || b.batch_id,
+            name: b.name || b.batch_name || b.code,
+            label: `${b.name || b.batch_name || b.code}`,
+            trainer: b.trainer || b.mentor_name || "Unassigned",
+            topic: b.topic || "Daily Training Session",
+            description: b.description || "Curriculum topic",
+            date: b.date || new Date().toISOString().split("T")[0],
+            status: b.status || "Scheduled",
+          }));
+          setBatches(formatted);
+          if (formatted.length > 0) {
+            setSelectedBatchId(formatted[0].id);
+          }
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
+
+  // Fetch daily topics history whenever selectedBatchId changes
+  useEffect(() => {
+    if (!selectedBatchId) return;
     const selected = batches.find(b => b.id === selectedBatchId);
     if (selected) {
       setCurrentTrainer(selected.trainer);
-      setTopicTitle(selected.topic || "");
-      setTopicDesc(selected.description || "");
-      setTopicDate(selected.date || new Date().toISOString().split("T")[0]);
-      setTopicStatus(selected.status || "Scheduled");
       setIsEditingTrainer(false);
     }
-  }, [selectedBatchId]);
+
+    setLoadingTopics(true);
+    apiFetch(`/batches/${selectedBatchId}/daily-topics`)
+      .then((res) => {
+        const topics = res?.data || (Array.isArray(res) ? res : []);
+        const topicsArr = Array.isArray(topics) ? topics : [];
+        setDailyTopicsList(topicsArr);
+
+        const currentDate = topicDate || selected?.date || new Date().toISOString().split("T")[0];
+        const existing = topicsArr.find(t => t.topic_date === currentDate || t.date === currentDate);
+        if (existing) {
+          setTopicTitle(existing.topic || "");
+          setTopicDesc(existing.description || "");
+          setTopicStatus(existing.status || computeAutoStatus(currentDate));
+          if (existing.trainer) setCurrentTrainer(existing.trainer);
+        } else if (selected) {
+          setTopicTitle(selected.topic || "");
+          setTopicDesc(selected.description || "");
+          setTopicDate(selected.date || new Date().toISOString().split("T")[0]);
+          setTopicStatus(selected.status || "Scheduled");
+        }
+      })
+      .catch((err) => {
+        console.warn("[Fetch Daily Topics Error]", err);
+        setDailyTopicsList([]);
+        if (selected) {
+          setTopicTitle(selected.topic || "");
+          setTopicDesc(selected.description || "");
+          setTopicStatus(selected.status || "Scheduled");
+        }
+      })
+      .finally(() => setLoadingTopics(false));
+  }, [selectedBatchId, batches]);
 
   if (!isOpen) return null;
 
@@ -120,7 +176,36 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
 
   const handleDateChange = (newDate) => {
     setTopicDate(newDate);
-    setTopicStatus(computeAutoStatus(newDate, topicStatus));
+
+    // Look up if topic exists for newDate in dailyTopicsList
+    const existing = dailyTopicsList.find(t => t.topic_date === newDate || t.date === newDate);
+    if (existing) {
+      setTopicTitle(existing.topic || "");
+      setTopicDesc(existing.description || "");
+      setTopicStatus(existing.status || computeAutoStatus(newDate));
+      if (existing.trainer) setCurrentTrainer(existing.trainer);
+    } else {
+      const selected = batches.find(b => b.id === selectedBatchId);
+      if (selected && selected.date === newDate) {
+        setTopicTitle(selected.topic || "");
+        setTopicDesc(selected.description || "");
+        setTopicStatus(selected.status || computeAutoStatus(newDate));
+      } else {
+        // Reset topic fields for new date entry
+        setTopicTitle("");
+        setTopicDesc("");
+        setTopicStatus(computeAutoStatus(newDate, "Scheduled"));
+      }
+    }
+  };
+
+  const handleSelectPreviousTopic = (tItem) => {
+    const itemDate = tItem.topic_date || tItem.date;
+    setTopicDate(itemDate);
+    setTopicTitle(tItem.topic || "");
+    setTopicDesc(tItem.description || "");
+    setTopicStatus(tItem.status || computeAutoStatus(itemDate));
+    if (tItem.trainer) setCurrentTrainer(tItem.trainer);
   };
 
   const handleUpdateTopicSubmit = async (e) => {
@@ -130,7 +215,6 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     const today = new Date().toISOString().split("T")[0];
     let updatedStatus = topicStatus;
 
-    // When editing topic for today's date, automatically set status to In Progress if currently Scheduled
     if (topicDate === today && topicStatus === "Scheduled") {
       updatedStatus = "In Progress";
     } else if (!topicStatus) {
@@ -138,6 +222,47 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     }
 
     setTopicStatus(updatedStatus);
+
+    const payload = {
+      topic_date: topicDate,
+      topic: topicTitle,
+      description: topicDesc || "Daily curriculum topic",
+      status: updatedStatus,
+      trainer: currentTrainer,
+    };
+
+    try {
+      const res = await apiFetch(`/batches/${selectedBatchId}/daily-topics`, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      });
+      const updatedTopics = res?.data || [];
+      if (Array.isArray(updatedTopics) && updatedTopics.length > 0) {
+        setDailyTopicsList(updatedTopics);
+      } else {
+        setDailyTopicsList(prev => {
+          const filtered = prev.filter(t => (t.topic_date || t.date) !== topicDate);
+          return [{ ...payload, id: Date.now() }, ...filtered];
+        });
+      }
+    } catch (err) {
+      console.warn("[Save Daily Topic Error]", err);
+    }
+
+    try {
+      await apiFetch(`/batches/${selectedBatchId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          trainer: currentTrainer,
+          topic: topicTitle,
+          description: topicDesc || "Daily curriculum topic",
+          date: topicDate,
+          status: updatedStatus
+        })
+      });
+    } catch (err) {
+      console.warn("[DB Save Batch Topic Error]", err);
+    }
 
     setBatches(prevBatches =>
       prevBatches.map(b => {
@@ -155,25 +280,9 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       })
     );
 
-    // Save to Database via API
-    try {
-      await apiFetch(`/batches/${selectedBatchId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          trainer: currentTrainer,
-          topic: topicTitle,
-          description: topicDesc || "Daily curriculum topic",
-          date: topicDate,
-          status: updatedStatus
-        })
-      });
-    } catch (err) {
-      console.warn("[DB Save Batch Topic Error]", err);
-    }
-
     const activeBatchObj = batches.find(b => b.id === selectedBatchId);
-    setSuccessMsg(`Topic & status saved to database for ${activeBatchObj?.name || 'batch'}!`);
-    setTimeout(() => setSuccessMsg(""), 3000);
+    setSuccessMsg(`Topic for ${topicDate} saved to database for ${activeBatchObj?.name || 'batch'}!`);
+    setTimeout(() => setSuccessMsg(""), 3500);
   };
 
   const handleQuickEditTopic = (batchItem) => {
@@ -335,7 +444,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
               </div>
 
               <button type="submit" className="btn-portal-submit fs-portal-submit-mt">
-                <BookOpenCheck size={18} /> Save Today's Taught Topic
+                <BookOpenCheck size={18} /> Save Taught Topic for {topicDate}
               </button>
             </form>
           </div>
@@ -353,6 +462,10 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
             <div className="fs-portal-batch-grid">
               {batches.map(item => {
                 const isSelected = item.id === selectedBatchId;
+                const displayTopic = isSelected ? (topicTitle || item.topic) : item.topic;
+                const displayDesc = isSelected ? (topicDesc || item.description) : item.description;
+                const displayTrainer = isSelected ? currentTrainer : item.trainer;
+
                 return (
                   <div
                     key={item.id}
@@ -366,7 +479,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                         </span>
                         <select
                           className="fs-portal-select-small"
-                          value={item.status}
+                          value={isSelected ? topicStatus : item.status}
                           onChange={e => { e.stopPropagation(); handleStatusQuickChange(item.id, e.target.value); }}
                           onClick={e => e.stopPropagation()}
                         >
@@ -377,20 +490,20 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                       </div>
 
                       <h4 className="fs-portal-batch-title">
-                        {item.topic}
+                        {displayTopic}
                       </h4>
 
                       <p className="fs-portal-batch-desc">
-                        {item.description}
+                        {displayDesc}
                       </p>
                     </div>
 
                     <div className="fs-portal-batch-footer">
                       <div className="fs-portal-trainer-info">
                         <div className="fs-portal-trainer-avatar">
-                          {(item.trainer || "T").charAt(0)}
+                          {(displayTrainer || "T").charAt(0)}
                         </div>
-                        <span className="fs-portal-trainer-name">{item.trainer}</span>
+                        <span className="fs-portal-trainer-name">{displayTrainer}</span>
                       </div>
                       <span className={isSelected ? "fs-portal-batch-status-active" : "fs-portal-batch-status-idle"}>
                         {isSelected ? "Active Batch ✓" : "Click to Edit"}

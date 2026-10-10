@@ -41,14 +41,18 @@ export const getPracticeProblemsModel = async ({ collegeId = null, batchId = nul
 };
 
 // Get single problem by ID
-export const getPracticeProblemByIdModel = async (id) => {
+export const getPracticeProblemByIdModel = async (id, { forStudent = false } = {}) => {
   const numId = parseInt(id, 10);
   try {
     const rows = await query('SELECT * FROM practice_problems WHERE id = ?', [numId]);
     if (rows && rows.length > 0) {
       const r = rows[0];
-      const testCases = await query('SELECT input, expected_output, is_hidden FROM coding_test_cases WHERE problem_id = ?', [numId]);
+      let testCases = await query('SELECT input, expected_output, is_hidden FROM coding_test_cases WHERE problem_id = ?', [numId]);
       
+      if (forStudent && Array.isArray(testCases)) {
+        testCases = testCases.filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true'));
+      }
+
       let desc = r.description;
       if (!desc || desc === 'No problem description provided.') {
         desc = `Write a program to solve '${r.title}'. Read input from standard input and output the evaluated result.\n\nInput: Input data corresponding to ${r.category || 'DSA'} constraints.\nOutput: Computed solution for the problem statement.`;

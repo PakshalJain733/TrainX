@@ -16,9 +16,11 @@ import {
   getRegistrationOtpCooldown,
   saveRegistrationOtp,
   consumeRegistrationOtp,
+  verifyRegistrationOtpOnly,
   invalidateRegistrationOtps,
   updateUserTwoFactorSecret,
   resetUserTwoFactorSecret,
+  triggerUserTwoFactorReset,
   updateUserRememberMe,
   findCollegeByAdminEmail,
   findCollegeByEmailDomain,
@@ -163,11 +165,7 @@ const finalizePrimaryAuthentication = async (user) => {
     if (isBlank(secret)) {
       secret = speakeasy.generateSecret({ length: 20, name: `TrainingPortal (${user.email || user.name})` }).base32;
       try {
-        await updateUserModel(user.id, {
-          two_factor_secret: secret,
-          two_factor_reset: 1,
-          two_factor_enabled: 0
-        });
+        await triggerUserTwoFactorReset(user.id, secret);
       } catch (err) {
         console.warn('[Auth Service] 2FA auto-setup init error:', err.message);
       }
@@ -272,15 +270,18 @@ export const generateTotpSetup = async (accountLabel) => {
 
 export const verifyTotpToken = (secret, token) => {
   if (isBlank(secret) || isBlank(token)) return false;
-  const cleanToken = String(token).trim();
-  if (!/^\d{6}$/.test(cleanToken)) return false;
+  const cleanToken = String(token).replace(/\D/g, '').trim();
+  if (cleanToken.length !== 6) return false;
+
+  const cleanSecret = String(secret).replace(/[\s\=]+/g, '').toUpperCase();
+  if (!cleanSecret) return false;
 
   try {
     const verified = speakeasy.totp.verify({
-      secret: String(secret).trim(),
+      secret: cleanSecret,
       encoding: 'base32',
       token: cleanToken,
-      window: 6,
+      window: 8,
     });
     return Boolean(verified);
   } catch (err) {
@@ -334,6 +335,25 @@ export const sendRegistrationOtp = async (data = {}) => {
   }
 
   return { email, requiresEmailOtp: true };
+};
+
+export const checkRegistrationEmailOtp = async ({ email, otp }) => {
+  const cleanEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+  const cleanOtp = typeof otp === 'string' ? otp.trim() : '';
+  if (!cleanEmail || !cleanOtp) {
+    throw createAuthError('Email and the 6-digit verification code are required.', 400);
+  }
+  if (!/^\d{6}$/.test(cleanOtp)) {
+    throw createAuthError('Please enter a valid 6-digit verification code.', 400);
+  }
+  const result = await verifyRegistrationOtpOnly(cleanEmail, cleanOtp);
+  if (!result.ok) {
+    if (result.reason === 'expired') {
+      throw createAuthError('This verification code has expired. Please request a new code.', 400);
+    }
+    throw createAuthError('Incorrect verification code. Please check your email inbox.', 400);
+  }
+  return { verified: true, email: cleanEmail };
 };
 
 /**
@@ -631,9 +651,11 @@ export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = fals
     throw error;
   }
 
-  if (!hasTwoFactorAuthentication(user) || !verifyTotpToken(user.two_factor_secret, totpCode)) {
+  if (isBlank(user.two_factor_secret) || !verifyTotpToken(user.two_factor_secret, totpCode)) {
     throw createAuthError('Invalid Authenticator Code from Microsoft/Google Authenticator app.', 400);
   }
+
+  await enableTwoFactorForUser(user.id);
 
   if (preauthPayload) {
     consumePreauthToken(preauthPayload);

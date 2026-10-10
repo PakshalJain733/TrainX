@@ -340,7 +340,6 @@ function Login() {
         setTotpSetupData(data.data);
         setPreAuthToken(null);
         setStep("authenticator_setup");
-        setSuccessMsg("2FA Setup Re-triggered by Super Admin. Scan the QR code with Google/Microsoft Authenticator app to complete setup.");
         setOtp(["", "", "", "", "", ""]);
       } else if (data.success && data.data?.requiresTwoFactor) {
         // 2FA required — store pre-auth token only, NOT the final JWT
@@ -435,12 +434,33 @@ function Login() {
 
   const handleOtpChange = (e, index) => {
     const value = e.target.value;
-    if (!/^\d*$/.test(value)) return;
+    const digitsOnly = value.replace(/\D/g, "");
+    if (!digitsOnly) {
+      const newOtp = [...otp];
+      newOtp[index] = "";
+      setOtp(newOtp);
+      return;
+    }
+
+    if (digitsOnly.length > 1) {
+      const pastedDigits = digitsOnly.slice(0, 6).split("");
+      const newOtp = [...otp];
+      pastedDigits.forEach((d, i) => {
+        if (index + i < 6) {
+          newOtp[index + i] = d;
+        }
+      });
+      setOtp(newOtp);
+      const nextFocus = Math.min(index + pastedDigits.length, 5);
+      inputRefs.current[nextFocus]?.focus();
+      return;
+    }
+
     const newOtp = [...otp];
-    newOtp[index] = value.substring(value.length - 1);
+    newOtp[index] = digitsOnly;
     setOtp(newOtp);
 
-    if (value && index < 5) {
+    if (digitsOnly && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
   };
@@ -516,7 +536,7 @@ function Login() {
 
     try {
       const isAuthenticatorStep = step === "authenticator";
-      if (isAuthenticatorStep && !preAuthToken) {
+      if (isAuthenticatorStep && !preAuthToken && !email) {
         setErrorMsg("Your temporary authentication session expired. Please sign in again.");
         setLoading(false);
         return;
@@ -528,7 +548,7 @@ function Login() {
         ? `${API_BASE_URL}/verify-totp`
         : `${API_BASE_URL}/verify-otp`;
       const requestBody = isAuthenticatorStep
-        ? { preAuthToken, code: enteredOtp }
+        ? { preAuthToken, email, code: enteredOtp }
         : { identifier: email, otp: enteredOtp };
 
       const response = await fetch(endpoint, {
@@ -629,29 +649,33 @@ function Login() {
 
             <img src={Logo} alt="Logo" className="login-logo" />
 
-            <div className="login-card-welcome-header">
-              <p className="login-card-welcome-sub">Enter your credentials to access your account</p>
-            </div>
+            {step === "email" && authMode !== "forgot" && (
+              <>
+                <div className="login-card-welcome-header">
+                  <p className="login-card-welcome-sub">Enter your credentials to access your account</p>
+                </div>
 
-            {/* Segmented Auth Mode Switcher */}
-            <div className="login-mode-segmented-bar">
-              <button
-                type="button"
-                className={`login-mode-tab ${authMode === "password" ? "active" : ""}`}
-                onClick={() => handleModeSwitch("password")}
-              >
-                {Icons.lock}
-                <span>Password</span>
-              </button>
-              <button
-                type="button"
-                className={`login-mode-tab ${authMode === "otp" ? "active" : ""}`}
-                onClick={() => handleModeSwitch("otp")}
-              >
-                {Icons.email}
-                <span>Email code</span>
-              </button>
-            </div>
+                {/* Segmented Auth Mode Switcher */}
+                <div className="login-mode-segmented-bar">
+                  <button
+                    type="button"
+                    className={`login-mode-tab ${authMode === "password" ? "active" : ""}`}
+                    onClick={() => handleModeSwitch("password")}
+                  >
+                    {Icons.lock}
+                    <span>Password</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`login-mode-tab ${authMode === "otp" ? "active" : ""}`}
+                    onClick={() => handleModeSwitch("otp")}
+                  >
+                    {Icons.email}
+                    <span>Email code</span>
+                  </button>
+                </div>
+              </>
+            )}
 
             {errorMsg ? (
               <div className="auth-error-msg">{errorMsg}</div>

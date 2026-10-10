@@ -2,6 +2,7 @@ import { processroadmapAI } from '../ai/roadmap.ai.js';
 import {
   getRoadmapByStudentId,
   getRoadmapByStudentAndRole,
+  getAllRoadmapsByStudentId,
   getGlobalCachedRoadmap,
   saveRoadmap,
   updateMilestoneItemStatus,
@@ -10,11 +11,18 @@ import { query } from '../config/db.js';
 
 /**
  * Service: Fetch current student's active roadmap.
- * Auto-generates a personalized roadmap if none exists yet for the student.
  */
 export const fetchStudentRoadmap = async (studentId) => {
   const roadmap = await getRoadmapByStudentId(studentId);
   return roadmap || null;
+};
+
+/**
+ * Service: Fetch all saved roadmaps for a student
+ */
+export const fetchAllStudentRoadmaps = async (studentId) => {
+  const roadmaps = await getAllRoadmapsByStudentId(studentId);
+  return roadmaps || [];
 };
 
 /**
@@ -109,8 +117,15 @@ export const generateNewRoadmap = async (studentId, targetRole = '', signalData 
     // 2. Check if ANY student has previously generated this roadmap in the DB (Global Cache)
     const globalCached = await getGlobalCachedRoadmap(targetRole.trim());
     if (globalCached && globalCached.milestones && globalCached.milestones.length > 0) {
-      console.log(`[Roadmap Service] Global DB Cache Hit! Reusing DB stored roadmap for role: "${targetRole}" (No AI API call)`);
-      const savedData = await saveRoadmap(numericId, targetRole.trim(), targetRole.trim(), globalCached.milestones);
+      console.log(`[Roadmap Service] Global DB Cache Hit! Reusing DB stored roadmap content for role: "${targetRole}" for student #${numericId}`);
+      // Clean content reuse: reset status/progress for the new student so no progress bleed occurs
+      const freshMilestonesForStudent = globalCached.milestones.map((m, idx) => ({
+        ...m,
+        status: idx === 0 ? 'in-progress' : 'locked',
+        progress: 0,
+        completedTopics: [],
+      }));
+      const savedData = await saveRoadmap(numericId, targetRole.trim(), targetRole.trim(), freshMilestonesForStudent);
       return {
         ...savedData,
         aiSource: 'db-global-cache',
