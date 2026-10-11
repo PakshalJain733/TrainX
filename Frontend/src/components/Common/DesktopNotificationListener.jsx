@@ -68,8 +68,8 @@ export default function DesktopNotificationListener() {
     // Initial sync
     syncRoleNotifications();
 
-    // Poll every 30 seconds for background desktop notifications
-    const interval = setInterval(syncRoleNotifications, 30000);
+    // Poll every 8 seconds for real-time announcements & instant calls
+    const interval = setInterval(syncRoleNotifications, 8000);
 
     return () => {
       window.removeEventListener("new_broadcast_notification", handleNewBroadcast);

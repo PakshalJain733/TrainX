@@ -101,12 +101,14 @@ import CoordinatorLeaderboard from './pages/Coordinator/Components/CO_Leaderboar
 
 import ProtectedRoute from './components/Common/ProtectedRoute';
 import DesktopNotificationListener from './components/Common/DesktopNotificationListener';
+import MeetingReminderBanner from './components/Common/MeetingReminderBanner';
 
 function App() {
   return (
     <SystemMaintenanceProvider>
       <BrowserRouter>
         <DesktopNotificationListener />
+        <MeetingReminderBanner />
         <Routes>
           {/* Auth & Public Routes */}
           <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />
