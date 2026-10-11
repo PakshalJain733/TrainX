@@ -340,7 +340,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
 export const getStudentPracticeProblemById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const problem = await getPracticeProblemByIdModel(id);
+    const problem = await getPracticeProblemByIdModel(id, { forStudent: true });
     if (!problem) {
       return sendError(res, 'Practice problem not found', 404);
     }

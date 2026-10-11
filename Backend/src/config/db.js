@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import mysql from 'mysql2/promise';
 
 const dbHost = process.env.DB_HOST || 'localhost';

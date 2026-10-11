@@ -77,7 +77,7 @@ function getDynamicProblemDescription(title = "Coding Problem", topic = "Algorit
 
 function getDynamicSampleTestCases(title = "", existingCases = []) {
   if (existingCases && existingCases.length > 0) {
-    return existingCases;
+    return existingCases.filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
   }
   
   const lower = (title || "").toLowerCase();
@@ -225,7 +225,7 @@ export default function CodingPlatform() {
 
     // Use custom input if enabled, else the first visible (non-hidden) test case's input, or empty
     const sampleTc = (taskData?.testCases || taskData?.test_cases || [])
-      .find((tc) => !tc.is_hidden);
+      .find((tc) => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
     const stdin = useCustomInput ? customInput : (sampleTc?.input ?? "");
 
     try {
@@ -345,11 +345,12 @@ export default function CodingPlatform() {
 
       // Per-test-case breakdown
       const tcLines = (result.test_results || []).map((tc) => {
+        const isHidden = tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true';
         const icon = tc.passed ? "✅" : tc.timed_out ? "⏱️" : tc.not_evaluated ? "⏭️" : "❌";
-        let line = `  ${icon} Test ${tc.test_case_number}${tc.is_hidden ? " [Hidden]" : ""}${
+        let line = `  ${icon} Test ${tc.test_case_number}${isHidden ? " [Hidden]" : ""}${
           tc.passed ? " PASS" : tc.not_evaluated ? " Not evaluated" : tc.timed_out ? " TLE" : " FAIL"
         }`;
-        if (!tc.is_hidden && !tc.passed && !tc.not_evaluated && tc.actual_output !== undefined) {
+        if (!isHidden && !tc.passed && !tc.not_evaluated && tc.actual_output !== undefined) {
           line += `\n     Expected: ${String(tc.expected_output ?? "").trim() || "(empty)"}\n     Got:      ${String(tc.actual_output ?? "").trim() || "(empty)"}`;
           if (tc.stderr && tc.stderr.trim()) line += `\n     Stderr:   ${tc.stderr.trim().slice(0, 200)}`;
         }
@@ -557,7 +558,9 @@ export default function CodingPlatform() {
                       Sample Test Cases:
                     </p>
                     {testCasesList && testCasesList.length > 0 ? (
-                      testCasesList.filter(tc => !tc.is_hidden).map((tc, idx) => (
+                      testCasesList
+                        .filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'))
+                        .map((tc, idx) => (
                         <div key={idx} className="cp-test-case" style={{ marginBottom: "12px" }}>
                           <p className="cp-test-title">Example {idx + 1}:</p>
                           {tc.input ? <div className="cp-test-code">Input: {tc.input}</div> : null}

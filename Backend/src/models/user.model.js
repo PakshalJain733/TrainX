@@ -151,18 +151,19 @@ const getValidCollegeId = async (collegeId) => {
         `SELECT id, name, code, contact_email, admin_name, domain FROM colleges 
        WHERE (LOWER(status) = 'active' OR status IS NULL) AND (
          LOWER(domain) = ? OR 
+         LOWER(domain) = ? OR 
          LOWER(contact_email) LIKE ? OR 
          LOWER(code) = ?
        )
        ORDER BY id ASC LIMIT 1`,
-        [domain, `%@${domain}`, domain.split('.')[0]]
+        [domain, `@${domain}`, `%@${domain}`, domain.split('.')[0]]
       );
       if (rows && rows.length > 0) {
         return rows[0];
       }
 
-      const allColleges = await query(`SELECT id, name, code, contact_email, admin_name, domain FROM colleges ORDER BY id ASC LIMIT 2`);
-      if (allColleges && allColleges.length === 1) {
+      const allColleges = await query(`SELECT id, name, code, contact_email, admin_name, domain FROM colleges WHERE (LOWER(status) = 'active' OR status IS NULL) ORDER BY id ASC LIMIT 1`);
+      if (allColleges && allColleges.length > 0) {
         return allColleges[0];
       }
     } catch (err) {
@@ -532,6 +533,38 @@ const getValidCollegeId = async (collegeId) => {
     }
   };
 
+  export const verifyRegistrationOtpOnly = async (identifier, inputOtp) => {
+    const cleanEmail = normalizeOtpEmail(identifier);
+    const cleanOtp = String(inputOtp ?? '').trim();
+    if (!cleanEmail || !cleanOtp) return { ok: false, reason: 'not_found' };
+
+    try {
+      const rows = await query(
+        `SELECT id, otp, expires_at, attempts, (expires_at > NOW()) AS is_valid
+       FROM otps
+       WHERE email = ? AND purpose = ? AND consumed_at IS NULL
+       ORDER BY id DESC LIMIT 5`,
+        [cleanEmail, REGISTRATION_OTP_PURPOSE]
+      );
+
+      const live = (rows || []).filter((row) => Number(row.is_valid) === 1);
+      if (live.length === 0) {
+        const expired = (rows || []).some((row) => Number(row.is_valid) !== 1);
+        return { ok: false, reason: expired ? 'expired' : 'not_found' };
+      }
+
+      const target = live.find((row) => String(row.otp ?? '').trim() === cleanOtp);
+      if (!target) {
+        return { ok: false, reason: 'not_found' };
+      }
+
+      return { ok: true, otpId: target.id };
+    } catch (err) {
+      console.warn(`[AUTH] Registration OTP verify check error: ${err.message}`);
+      return { ok: false, reason: 'not_found' };
+    }
+  };
+
   export const invalidateRegistrationOtps = async (identifier) => {
     const cleanEmail = normalizeOtpEmail(identifier);
     if (!cleanEmail) return;
@@ -645,6 +678,9 @@ const getValidCollegeId = async (collegeId) => {
       password,
       password_hash,
       is_profile_updated,
+      two_factor_secret,
+      two_factor_enabled,
+      two_factor_reset,
     } = data;
 
     const rollVal = roll_number || rollNo || roll_no || null;
@@ -670,6 +706,22 @@ const getValidCollegeId = async (collegeId) => {
       'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password = COALESCE(?, password), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
       [nameVal, emailVal, phoneVal, passVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, isProfileUpdatedVal, numId]
     );
+
+    if (two_factor_secret !== undefined) {
+      try {
+        await query('UPDATE users SET two_factor_secret = ? WHERE id = ?', [two_factor_secret, numId]);
+      } catch (_) {}
+    }
+    if (two_factor_enabled !== undefined) {
+      try {
+        await query('UPDATE users SET two_factor_enabled = ? WHERE id = ?', [two_factor_enabled ? 1 : 0, numId]);
+      } catch (_) {}
+    }
+    if (two_factor_reset !== undefined) {
+      try {
+        await query('UPDATE users SET two_factor_reset = ? WHERE id = ?', [two_factor_reset ? 1 : 0, numId]);
+      } catch (_) {}
+    }
 
     if (
       rollVal !== undefined ||

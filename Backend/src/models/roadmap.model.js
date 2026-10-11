@@ -57,6 +57,44 @@ export const getRoadmapByStudentId = async (studentId) => {
 };
 
 /**
+ * Fetch all saved roadmaps for a student
+ */
+export const getAllRoadmapsByStudentId = async (studentId) => {
+  const sId = Number(studentId);
+
+  try {
+    const roadmaps = await query(
+      'SELECT * FROM roadmaps WHERE student_id = ? ORDER BY updated_at DESC',
+      [sId]
+    );
+
+    if (roadmaps && roadmaps.length > 0) {
+      const results = [];
+      for (const r of roadmaps) {
+        const items = await query(
+          'SELECT * FROM roadmap_items WHERE roadmap_id = ? ORDER BY sequence_order ASC',
+          [r.id]
+        );
+        results.push(formatRoadmapResult(r, items));
+      }
+      return results;
+    }
+  } catch (error) {
+    console.warn(`[Roadmap Model] DB lookup all warning: ${error.message}.`);
+  }
+
+  const mockList = [];
+  for (const [key, val] of mockRoadmaps.entries()) {
+    if (typeof key === 'string' && key.startsWith(`${sId}__`) && val && val.targetRole) {
+      mockList.push(val);
+    }
+  }
+  if (mockList.length > 0) return mockList;
+  const single = mockRoadmaps.get(sId);
+  return single ? [single] : [];
+};
+
+/**
  * Fetch a student's roadmap for a specific target role (preserves progress per topic)
  */
 export const getRoadmapByStudentAndRole = async (studentId, targetRole) => {
@@ -378,5 +416,84 @@ export const saveCachedTopicQuiz = async (topicTitle, quizData) => {
     console.log(`[Roadmap Model] Saved AI quiz for topic "${cleanTitle}" to database.`);
   } catch (err) {
     console.warn(`[Roadmap Model] Quiz DB cache save warning: ${err.message}`);
+  }
+};
+
+const globalTheoryCache = new Map();
+let isTheoryTableChecked = false;
+
+const ensureTheoryTable = async () => {
+  if (isTheoryTableChecked) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ai_milestone_theories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        theory_key VARCHAR(255) NOT NULL UNIQUE,
+        theory_json JSON NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    isTheoryTableChecked = true;
+  } catch (err) {
+    console.warn(`[Roadmap Model] Could not ensure ai_milestone_theories table: ${err.message}`);
+  }
+};
+
+/**
+ * Fetch cached AI theory guide for a milestone topic
+ */
+export const getCachedMilestoneTheory = async (milestoneTitle, targetRole = '') => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
+  const cleanRole = String(targetRole || '').trim().toLowerCase();
+  const key = `${cleanTitle}__${cleanRole}`;
+  if (!cleanTitle) return null;
+
+  if (globalTheoryCache.has(key)) {
+    return globalTheoryCache.get(key);
+  }
+
+  try {
+    await ensureTheoryTable();
+    const rows = await query(
+      'SELECT theory_json FROM ai_milestone_theories WHERE theory_key = ? LIMIT 1',
+      [key]
+    );
+    if (rows && rows.length > 0) {
+      const data = typeof rows[0].theory_json === 'string' ? JSON.parse(rows[0].theory_json) : rows[0].theory_json;
+      if (data && data.title && Array.isArray(data.sections)) {
+        globalTheoryCache.set(key, data);
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn(`[Roadmap Model] Theory DB cache lookup warning: ${err.message}`);
+  }
+
+  return null;
+};
+
+/**
+ * Save AI generated theory guide into DB and Memory Cache
+ */
+export const saveCachedMilestoneTheory = async (milestoneTitle, targetRole, theoryData) => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
+  const cleanRole = String(targetRole || '').trim().toLowerCase();
+  const key = `${cleanTitle}__${cleanRole}`;
+  if (!cleanTitle || !theoryData || !Array.isArray(theoryData.sections)) return;
+
+  globalTheoryCache.set(key, theoryData);
+
+  try {
+    await ensureTheoryTable();
+    const theoryJson = JSON.stringify(theoryData);
+    await query(
+      `INSERT INTO ai_milestone_theories (theory_key, theory_json, created_at)
+       VALUES (?, ?, NOW())
+       ON DUPLICATE KEY UPDATE theory_json = VALUES(theory_json)`,
+      [key, theoryJson]
+    );
+    console.log(`[Roadmap Model] Saved AI theory for "${cleanTitle}" to database.`);
+  } catch (err) {
+    console.warn(`[Roadmap Model] Theory DB cache save warning: ${err.message}`);
   }
 };

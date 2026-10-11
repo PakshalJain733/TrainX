@@ -13,6 +13,8 @@ import {
   createBatchTask,
   deleteBatchTask,
   getBatchById,
+  getBatchDailyTopics,
+  saveBatchDailyTopic,
 } from '../controllers/batch.controller.js';
 
 const router = Router();
@@ -23,6 +25,8 @@ router.post('/', createBatch);
 router.post('/join', joinBatch);
 router.get('/my-batches', getMyBatches);
 router.get('/:id/students', getBatchStudents);
+router.get('/:id/daily-topics', getBatchDailyTopics);
+router.post('/:id/daily-topics', saveBatchDailyTopic);
 router.get('/tasks/detail/:taskId', getTaskById);
 router.get('/:id/tasks', getBatchTasks);
 router.post('/:id/tasks', createBatchTask);

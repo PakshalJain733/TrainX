@@ -2,11 +2,17 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import {
   fetchStudentRoadmap,
   fetchStudentRoadmapByRole,
+  fetchAllStudentRoadmaps,
   generateNewRoadmap,
   updateMilestoneProgress,
 } from '../services/roadmap.service.js';
-import { generateTopicQuizAI } from '../ai/roadmap.ai.js';
-import { getCachedTopicQuiz, saveCachedTopicQuiz } from '../models/roadmap.model.js';
+import { generateTopicQuizAI, generateMilestoneTheoryAI } from '../ai/roadmap.ai.js';
+import {
+  getCachedTopicQuiz,
+  saveCachedTopicQuiz,
+  getCachedMilestoneTheory,
+  saveCachedMilestoneTheory,
+} from '../models/roadmap.model.js';
 
 /**
  * Controller: Get student's current active roadmap
@@ -27,6 +33,22 @@ export const getRoadmapData = async (req, res, next) => {
 
     const roadmap = await fetchStudentRoadmap(studentId);
     return sendSuccess(res, 'Roadmap retrieved successfully', roadmap);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Get all saved roadmaps for a student
+ */
+export const getAllRoadmaps = async (req, res, next) => {
+  try {
+    let studentId = req.params.id || req.user?.id || req.user?.userId || 1;
+    if (req.user && req.user.role === 'student') {
+      studentId = req.user.id || req.user.userId;
+    }
+    const roadmaps = await fetchAllStudentRoadmaps(studentId);
+    return sendSuccess(res, 'All student roadmaps retrieved', roadmaps);
   } catch (error) {
     next(error);
   }
@@ -118,6 +140,39 @@ export const generateTopicQuiz = async (req, res, next) => {
     await saveCachedTopicQuiz(cleanTopic, quiz);
 
     return sendSuccess(res, 'Topic quiz generated via AI and saved to DB', quiz);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Generate deep technical AI Theory guide for a milestone with DB caching
+ */
+export const generateMilestoneTheory = async (req, res, next) => {
+  try {
+    const { milestoneTitle, targetRole } = req.body || {};
+    if (!milestoneTitle || !String(milestoneTitle).trim()) {
+      return sendError(res, 'milestoneTitle is required', 400);
+    }
+
+    const cleanTitle = String(milestoneTitle).trim();
+    const cleanRole = String(targetRole || '').trim();
+
+    // 1. Check DB/Memory cache
+    const cachedTheory = await getCachedMilestoneTheory(cleanTitle, cleanRole);
+    if (cachedTheory && cachedTheory.title && Array.isArray(cachedTheory.sections) && cachedTheory.sections.length > 0) {
+      console.log(`[Theory Controller] DB Cache Hit for theory "${cleanTitle}". Returning stored theory.`);
+      return sendSuccess(res, 'Milestone theory retrieved from DB cache', cachedTheory);
+    }
+
+    // 2. Generate via AI
+    console.log(`[Theory Controller] Generating NEW AI theory for "${cleanTitle}"...`);
+    const theoryData = await generateMilestoneTheoryAI(cleanTitle, cleanRole);
+
+    // 3. Save to DB cache
+    await saveCachedMilestoneTheory(cleanTitle, cleanRole, theoryData);
+
+    return sendSuccess(res, 'Milestone theory generated via AI and saved to DB', theoryData);
   } catch (error) {
     next(error);
   }

@@ -1,4 +1,4 @@
-import { sendRegistrationOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
+import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
 
@@ -16,6 +16,15 @@ export const sendRegisterOtp = async (req, res, next) => {
   try {
     const result = await sendRegistrationOtp(req.body);
     return sendSuccess(res, 'Verification code sent to your college email.', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyRegisterEmailOtp = async (req, res, next) => {
+  try {
+    const result = await checkRegistrationEmailOtp(req.body);
+    return sendSuccess(res, 'College email verified successfully!', result);
   } catch (error) {
     next(error);
   }
@@ -79,8 +88,13 @@ export const verifyTotp = async (req, res, next) => {
     const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
 
     if (preAuthToken) {
-      const result = await verifyTotpAndLogin(preAuthToken, formattedCode, isRemember);
-      return sendSuccess(res, 'Authenticator verification successful', result);
+      try {
+        const result = await verifyTotpAndLogin(preAuthToken, formattedCode, isRemember);
+        return sendSuccess(res, 'Authenticator verification successful', result);
+      } catch (err) {
+        if (!identifier) throw err;
+        console.warn(`[TOTP] preAuthToken verification failed (${err.message}). Falling back to identifier verification.`);
+      }
     }
 
     if (!identifier) {
