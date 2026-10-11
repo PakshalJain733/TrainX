@@ -444,14 +444,17 @@ export default function StudentLayout() {
     }
   };
 
+  const isCodingPlatform = pathname.startsWith('/student/coding-platform');
+  const isFullScreenApp = interviewLive || isCodingPlatform;
+
   return (
-    <div className="student-layout">
+    <div className={`student-layout ${isFullScreenApp ? 'student-layout--fullscreen' : ''}`}>
       {mobileOpen && (
         <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar — hidden during live interview */}
-      {!interviewLive && (
+      {/* Sidebar — hidden during live interview or coding platform */}
+      {!isFullScreenApp && (
         <StudentSidebar
           collapsed={collapsed}
           mobileOpen={mobileOpen}
@@ -459,13 +462,13 @@ export default function StudentLayout() {
         />
       )}
 
-      <div className="student-content" style={interviewLive ? { marginLeft: 0, width: '100%', maxWidth: '100%' } : {}}>
-        <main className="student-main">
+      <div className="student-content" style={isFullScreenApp ? { marginLeft: 0, width: '100%', maxWidth: '100%', padding: 0 } : {}}>
+        <main className="student-main" style={isFullScreenApp ? { padding: 0, margin: 0 } : {}}>
           {/* ONE BIG ROUNDED CORNER CARD CONTAINING HEADER & CONTENT */}
-          <div className="student-page-card" style={interviewLive ? { borderRadius: 0, padding: 0, boxShadow: 'none', height: '100vh', overflow: 'auto' } : {}}>
+          <div className="student-page-card" style={isFullScreenApp ? { borderRadius: 0, padding: 0, boxShadow: 'none', height: '100vh', width: '100%', overflow: 'hidden' } : {}}>
 
-            {/* Header — hidden during live interview */}
-            {!interviewLive && (
+            {/* Header — hidden during live interview or coding platform */}
+            {!isFullScreenApp && (
               <header className="student-header">
                 <div className="student-header__left">
                   <button
@@ -585,7 +588,7 @@ export default function StudentLayout() {
             )}
 
             {/* Page Content Body */}
-            <div className="student-card-body" style={interviewLive ? { padding: 0, overflow: 'hidden' } : {}}>
+            <div className="student-card-body" style={isFullScreenApp ? { padding: 0, margin: 0, height: '100%', width: '100%', overflow: 'hidden' } : {}}>
               <Outlet />
             </div>
 

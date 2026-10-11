@@ -599,12 +599,14 @@ export default function AIInterview() {
     }
   }, [cameraState, enableCamera, stopCamera, triggerProctoringWarning]);
 
-  // Auto-start camera automatically as soon as interview page loads
+  // Auto-start camera ONLY when the interview becomes live (never on setup screen)
   useEffect(() => {
-    if ((phase === "setup" || phase === "live") && cameraState === "idle") {
+    if (phase === "live" && cameraState === "idle") {
       enableCamera();
+    } else if (phase !== "live" && cameraState === "on") {
+      stopCamera();
     }
-  }, [phase, cameraState, enableCamera]);
+  }, [phase, cameraState, enableCamera, stopCamera]);
 
   // Monitor camera off / disabled state during live interview
   useEffect(() => {
@@ -1051,27 +1053,24 @@ export default function AIInterview() {
     }
 
     const apiBase = getApiBaseUrl();
-    let base = apiBase.replace(/\/api\/v1\/?$/, "") || "";
-    if (!base.startsWith("http://") && !base.startsWith("https://")) {
-      if (typeof window !== "undefined") {
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        base = `${protocol}//${hostname}:5000`;
-      } else {
-        base = "http://localhost:5000";
-      }
+    let socketTarget = "/interviews";
+    if (apiBase && (apiBase.startsWith("http://") || apiBase.startsWith("https://"))) {
+      socketTarget = `${apiBase.replace(/\/api\/v1\/?$/, "")}/interviews`;
+    } else if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      socketTarget = `${window.location.protocol}//${window.location.hostname}:5000/interviews`;
     }
 
-    const socket = io(`${base}/interviews`, {
+    const socket = io(socketTarget, {
       auth: { token },
       query: { token },
       extraHeaders: {
         Authorization: `Bearer ${token}`
       },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 500,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
     });
     socketRef.current = socket;
 
@@ -1208,6 +1207,7 @@ export default function AIInterview() {
     setResult(null);
     setRemaining(INTERVIEW_SECONDS);
     setPhase("live");
+    enableCamera();
 
     // Request full screen when starting
     if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
@@ -1216,7 +1216,7 @@ export default function AIInterview() {
 
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
-  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart]);
+  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart, enableCamera]);
 
   // ─── Reset ───────────────────────────────────────────────────────────────────
   const resetInterview = useCallback(() => {
@@ -1341,13 +1341,15 @@ export default function AIInterview() {
               </div>
               <div className={`ai-meta-item ${cameraState === "denied" ? "ai-meta-warn" : ""}`}>
                 <div className="ai-meta-icon">
-                  {cameraState === "on" ? <Video size={18} /> : <CameraOff size={18} />}
+                  <Video size={18} />
                 </div>
                 <div>
                   <div className="ai-meta-val">
                     Camera {cameraState === "on" ? "Active" : cameraState === "denied" ? "Blocked" : "Standby"}
                   </div>
-                  <div className="ai-meta-lbl">Mandatory Proctoring Stream</div>
+                  <div className="ai-meta-lbl">
+                    {cameraState === "on" ? "Proctoring stream live" : "Starts on interview launch"}
+                  </div>
                 </div>
               </div>
               <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
@@ -1446,8 +1448,51 @@ export default function AIInterview() {
             )}
 
             {errorMsg && (
-              <div className="ai-error-banner">
-                <AlertTriangle size={15} /> {errorMsg}
+              <div className="ai-error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <AlertTriangle size={15} /> {errorMsg}
+                </span>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMsg("");
+                      startInterview();
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#2563eb",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      window.location.href = "/";
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#ef4444",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Log In Again
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1891,7 +1936,7 @@ export default function AIInterview() {
                           {/* AI Feedback */}
                           <div className={`ai-q-feedback-box score-tier-${itemTier}`}>
                             <div className="ai-q-sub-lbl">
-                              {score >= 7 ? "✅ AI Feedback" : score >= 4 ? "⚠️ AI Feedback" : "❌ Where You Went Wrong"}
+                              {score >= 7 ? "AI Feedback" : score >= 4 ? "Areas to Refine" : "Where You Went Wrong"}
                             </div>
                             <div className="ai-q-feedback-text">{item.feedback || item.f || "No feedback available."}</div>
                           </div>
@@ -1917,7 +1962,7 @@ export default function AIInterview() {
 
                             return (
                               <div className="ai-q-model-ans-box">
-                                <div className="ai-q-model-ans-lbl">💡 Key Concepts & Core Takeaways</div>
+                                <div className="ai-q-model-ans-lbl">Key Concepts & Core Takeaways</div>
                                 <div className="ai-q-model-ans-text">{cleanModelAns}</div>
                               </div>
                             );
@@ -1934,7 +1979,7 @@ export default function AIInterview() {
             <div className="ai-summary-3grid">
               {Array.isArray(result?.scorecard?.strengths) && result.scorecard.strengths.length > 0 && (
                 <div className="ai-summary-card ai-card-strengths">
-                  <div className="ai-summary-card-title">✅ Strengths</div>
+                  <div className="ai-summary-card-title">Strengths</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.strengths.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
@@ -1942,7 +1987,7 @@ export default function AIInterview() {
               )}
               {Array.isArray(result?.scorecard?.improvementAreas) && result.scorecard.improvementAreas.length > 0 && (
                 <div className="ai-summary-card ai-card-improve">
-                  <div className="ai-summary-card-title">❌ Areas to Improve</div>
+                  <div className="ai-summary-card-title">Areas to Improve</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.improvementAreas.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
@@ -1950,7 +1995,7 @@ export default function AIInterview() {
               )}
               {Array.isArray(result?.scorecard?.recommendedTopics) && result.scorecard.recommendedTopics.length > 0 && (
                 <div className="ai-summary-card ai-card-topics">
-                  <div className="ai-summary-card-title">📚 Study These Topics</div>
+                  <div className="ai-summary-card-title">Recommended Study Topics</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.recommendedTopics.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>

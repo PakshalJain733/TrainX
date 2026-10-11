@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
@@ -131,6 +131,38 @@ export default function CodingPlatform() {
   const [mobileView, setMobileView] = useState("problem");
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const user = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+
+  const getInitials = (name) => {
+    if (!name) return "ST";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
 
   useEffect(() => {
     const fetchTaskDetails = async () => {
@@ -444,36 +476,55 @@ export default function CodingPlatform() {
         {/* IDE Header */}
         <div className="cp-header">
           <div className="cp-header-left">
-            <Link to="/student/batches" className="cp-back-btn">
-              <ArrowLeft size={16} />
-              <span>Back</span>
-            </Link>
-            <h1 className="cp-task-title">
-              <Code2 size={18} />
-              <span className="cp-task-name">{taskData?.title || (taskId ? `Task ID: ${taskId.toUpperCase()}` : "Coding Task")}</span>
-              <span className="cp-task-badge">{taskData?.difficulty || taskData?.topic || "Assignment"}</span>
-            </h1>
+            <button 
+              type="button" 
+              onClick={() => {
+                if (window.history.length > 2) navigate(-1);
+                else navigate('/student/practice');
+              }} 
+              className="cp-back-btn"
+              title="Back to Problems"
+            >
+              <ArrowLeft size={15} />
+              <span>Problems</span>
+            </button>
+
+            <div className="cp-header-divider" />
+
+            <div className="cp-task-title-group">
+              <h1 className="cp-task-title">
+                {taskData?.title || (taskId ? `Task ${taskId.toUpperCase()}` : "Coding Problem")}
+              </h1>
+              {(() => {
+                const diffStr = String(taskData?.difficulty || taskData?.level || "Easy").toUpperCase();
+                const cls = diffStr.includes("HARD") ? "cp-badge-hard" : diffStr.includes("MED") ? "cp-badge-med" : "cp-badge-easy";
+                const label = diffStr.includes("HARD") ? "Hard" : diffStr.includes("MED") ? "Medium" : "Easy";
+                return <span className={`cp-task-badge ${cls}`}>{label}</span>;
+              })()}
+            </div>
+
+            <div className="cp-header-nav-group">
+              <button 
+                type="button"
+                className="cp-nav-btn" 
+                onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
+                disabled={currentTaskNum <= 1}
+                title="Previous Problem"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button 
+                type="button"
+                className="cp-nav-btn" 
+                onClick={() => navigate(`/student/coding-platform/task-${String(currentTaskNum + 1).padStart(2, '0')}`)}
+                title="Next Problem"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
           
           <div className="cp-header-right">
-            <div className="cp-header-actions-group">
-              <button 
-                className="cp-run-btn cp-nav-arrow-btn" 
-                onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
-                disabled={currentTaskNum <= 1}
-                title="Previous Task"
-              >
-                <ChevronLeft size={14} /> <span>Prev</span>
-              </button>
-              <button 
-                className="cp-run-btn cp-nav-arrow-btn" 
-                onClick={() => navigate(`/student/coding-platform/task-${String(currentTaskNum + 1).padStart(2, '0')}`)}
-                title="Next Task"
-              >
-                <span>Next</span> <ChevronRight size={14} />
-              </button>
-            </div>
-
             <StudentCpSelect
               value={selectedLang}
               options={[
@@ -487,16 +538,40 @@ export default function CodingPlatform() {
               onChange={(val) => setSelectedLang(val)}
             />
             
-            <button className="cp-run-btn" onClick={handleRun} disabled={isRunning || isSubmitting}>
-              {isRunning ? <span>Running...</span> : <><Play size={14} fill="currentColor" /> <span>Run</span></>}
+            <button type="button" className="cp-run-btn" onClick={handleRun} disabled={isRunning || isSubmitting}>
+              {isRunning ? <span>Running...</span> : <><Play size={13} fill="currentColor" /> <span>Run</span></>}
             </button>
-            <button className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting || isRunning}>
+            
+            <button type="button" className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting || isRunning}>
               {isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
-                <><CheckCircle2 size={15} /> <span>Submit</span></>
+                <><CheckCircle2 size={14} /> <span>Submit</span></>
               )}
             </button>
+
+            <div className="cp-header-divider" />
+
+            <button
+              type="button"
+              className="cp-fs-toggle-btn"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
+            >
+              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            </button>
+
+            {user?.name && (
+              <div className="cp-user-profile-badge" title={user.email || user.name}>
+                <div className="cp-user-avatar">
+                  {getInitials(user.name)}
+                </div>
+                <div className="cp-user-meta">
+                  <span className="cp-user-name">{user.name}</span>
+                  <span className="cp-user-role">STUDENT</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -544,42 +619,63 @@ export default function CodingPlatform() {
                 </div>
               ) : activeTab === 'description' ? (
                 <>
-                  <h3 className="cp-req-heading">
-                    {taskData?.title || "Problem Requirements"}
-                  </h3>
+                  <div className="cp-problem-header">
+                    <h2 className="cp-problem-main-title">
+                      {taskData?.title || "Problem Description"}
+                    </h2>
+                    <div className="cp-problem-meta-row">
+                      {(() => {
+                        const diffStr = String(taskData?.difficulty || taskData?.level || "Easy").toUpperCase();
+                        const cls = diffStr.includes("HARD") ? "cp-badge-hard" : diffStr.includes("MED") ? "cp-badge-med" : "cp-badge-easy";
+                        const label = diffStr.includes("HARD") ? "Hard" : diffStr.includes("MED") ? "Medium" : "Easy";
+                        return <span className={`cp-task-badge ${cls}`}>{label}</span>;
+                      })()}
+                      <span className="cp-meta-pill">Score: {taskData?.points || 100} pts</span>
+                      {taskData?.topic && <span className="cp-meta-pill">{taskData.topic}</span>}
+                    </div>
+                  </div>
+
                   <div className="cp-problem-desc">
                     <p style={{ whiteSpace: "pre-wrap" }}>
                       {taskData?.description || taskData?.desc || "Write a clean and optimized solution to solve this problem statement."}
                     </p>
                   </div>
                   
-                  <div style={{ marginTop: "20px" }}>
-                    <p className="cp-test-title" style={{ fontWeight: "600", color: "#0f172a", marginBottom: "8px" }}>
-                      Sample Test Cases:
-                    </p>
+                  <div className="cp-examples-container">
+                    <h4 className="cp-examples-title">Sample Test Cases</h4>
                     {testCasesList && testCasesList.length > 0 ? (
                       testCasesList
                         .filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'))
                         .map((tc, idx) => (
-                        <div key={idx} className="cp-test-case" style={{ marginBottom: "12px" }}>
-                          <p className="cp-test-title">Example {idx + 1}:</p>
-                          {tc.input ? <div className="cp-test-code">Input: {tc.input}</div> : null}
-                          {(tc.expected_output || tc.expectedOutput || tc.output) ? (
-                            <div className="cp-test-code">Output: {tc.expected_output || tc.expectedOutput || tc.output}</div>
-                          ) : null}
+                        <div key={idx} className="cp-example-card">
+                          <div className="cp-example-header">Example {idx + 1}</div>
+                          <div className="cp-example-body">
+                            {tc.input && (
+                              <div className="cp-example-row">
+                                <span className="cp-example-key">Input:</span>
+                                <span className="cp-example-code">{tc.input}</span>
+                              </div>
+                            )}
+                            {(tc.expected_output || tc.expectedOutput || tc.output) && (
+                              <div className="cp-example-row">
+                                <span className="cp-example-key">Output:</span>
+                                <span className="cp-example-code">{tc.expected_output || tc.expectedOutput || tc.output}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))
                     ) : (
-                      <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                      <p className="cp-no-examples">
                         No sample test cases specified for this task.
                       </p>
                     )}
                   </div>
 
                   {taskData?.deadline && (
-                    <div className="cp-test-case" style={{ marginTop: "16px" }}>
-                      <p className="cp-test-title">Submission Deadline:</p>
-                      <div className="cp-test-code">{taskData.deadline}</div>
+                    <div className="cp-deadline-notice">
+                      <span className="cp-deadline-label">Submission Deadline:</span>
+                      <span className="cp-deadline-val">{taskData.deadline}</span>
                     </div>
                   )}
                 </>
@@ -623,6 +719,16 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
+            <div className="cp-editor-topbar">
+              <div className="cp-editor-lang-tag">
+                <Code2 size={14} />
+                <span>Code Editor</span>
+              </div>
+              <div className="cp-editor-info-right">
+                <span className="cp-editor-shortcut-hint">Language: {selectedLang.toUpperCase()}</span>
+              </div>
+            </div>
+
             <div className="cp-editor-area">
               <div className="cp-line-numbers">
                 {lines.map(num => <div key={num}>{num}</div>)}
@@ -638,50 +744,53 @@ export default function CodingPlatform() {
             
             <div className="cp-console">
               <div className="cp-console-header">
-                <div className="cp-console-title" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Terminal size={14} />
-                    <span 
-                      onClick={() => setConsoleTab("output")} 
-                      style={{ cursor: "pointer", color: consoleTab === "output" ? "#0f172a" : "#64748b", borderBottom: consoleTab === "output" ? "2px solid #0f172a" : "2px solid transparent", paddingBottom: "2px" }}
-                    >
-                      Output
-                    </span>
-                    <span style={{ color: '#cbd5e1', margin: '0 4px' }}>|</span>
-                    <span 
-                      onClick={() => setConsoleTab("input")} 
-                      style={{ cursor: "pointer", color: consoleTab === "input" ? "#0f172a" : "#64748b", borderBottom: consoleTab === "input" ? "2px solid #0f172a" : "2px solid transparent", paddingBottom: "2px" }}
-                    >
-                      Custom Input
-                    </span>
-                  </div>
-                  {consoleStatus === "running" && <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>● Running...</span>}
-                  {consoleStatus === "success" && <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>● Success</span>}
-                  {consoleStatus === "error" && <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>● Failed</span>}
-                  {consoleStatus === "ce" && <span style={{ fontSize: 11, color: "#9333ea", fontWeight: 700 }}>● Compilation Error</span>}
-                  {consoleStatus === "tle" && <span style={{ fontSize: 11, color: "#d97706", fontWeight: 700 }}>● Time Limit Exceeded</span>}
+                <div className="cp-console-title">
+                  <button 
+                    type="button"
+                    className={`cp-console-tab-btn ${consoleTab === "output" ? "active" : ""}`}
+                    onClick={() => setConsoleTab("output")}
+                  >
+                    <Terminal size={13} />
+                    <span>Output</span>
+                  </button>
+                  <button 
+                    type="button"
+                    className={`cp-console-tab-btn ${consoleTab === "input" ? "active" : ""}`}
+                    onClick={() => setConsoleTab("input")}
+                  >
+                    <span>Custom Input</span>
+                  </button>
+
+                  {consoleStatus === "running" && <span className="cp-status-pill cp-status-running">● Running...</span>}
+                  {consoleStatus === "success" && <span className="cp-status-pill cp-status-success">● Accepted</span>}
+                  {consoleStatus === "error" && <span className="cp-status-pill cp-status-error">● Failed</span>}
+                  {consoleStatus === "ce" && <span className="cp-status-pill cp-status-ce">● Compilation Error</span>}
+                  {consoleStatus === "tle" && <span className="cp-status-pill cp-status-tle">● Time Limit Exceeded</span>}
                 </div>
                 <div className="cp-console-actions">
-                  <Layout size={14} style={{ cursor: "pointer" }} onClick={() => { setConsoleOutput(""); setConsoleStatus(""); }} title="Clear console" />
+                  <button
+                    type="button"
+                    className="cp-console-act-btn"
+                    onClick={() => { setConsoleOutput(""); setConsoleStatus(""); }}
+                    title="Clear console"
+                  >
+                    Clear
+                  </button>
                 </div>
               </div>
-              <div className={`cp-console-output ${consoleTab === "output" && !consoleOutput ? 'empty' : ''}`}
-                style={{
-                  borderTop: consoleStatus === "success" ? "2px solid #16a34a" :
-                             consoleStatus === "error" || consoleStatus === "ce" ? "2px solid #dc2626" :
-                             consoleStatus === "tle" ? "2px solid #d97706" : undefined,
-                  display: 'flex', flexDirection: 'column'
-                }}
-              >
+              <div className={`cp-console-output ${consoleTab === "output" && !consoleOutput ? 'empty' : ''}`}>
                 {consoleTab === "output" ? (
                   consoleOutput ? (
                     <pre className="cp-pre-output">{consoleOutput}</pre>
                   ) : (
-                    <span style={{ margin: 'auto' }}>Run your code to see output here.</span>
+                    <div className="cp-console-empty-prompt">
+                      <Terminal size={20} className="cp-prompt-icon" />
+                      <span>Run your code to test with sample inputs, or Submit to evaluate all test cases.</span>
+                    </div>
                   )
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px' }}>
-                    <label style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="cp-custom-input-box">
+                    <label className="cp-custom-input-label">
                       <input 
                         type="checkbox" 
                         checked={useCustomInput} 
@@ -692,12 +801,8 @@ export default function CodingPlatform() {
                     <textarea 
                       value={customInput}
                       onChange={(e) => setCustomInput(e.target.value)}
-                      placeholder="Type your custom input here..."
-                      style={{ 
-                        flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', 
-                        fontFamily: "'Fira Code', monospace", fontSize: '13px', resize: 'none',
-                        background: '#ffffff', color: '#0f172a', outline: 'none'
-                      }}
+                      placeholder="Type custom test input here..."
+                      className="cp-custom-textarea"
                     />
                   </div>
                 )}

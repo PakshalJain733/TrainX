@@ -21,7 +21,7 @@ const startServer = async () => {
 
     initInterviewSocket(server);
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`==================================================`);
       console.log(`🚀 Training Portal Backend Server running on port ${PORT}`);
       console.log(`📡 Environment: ${NODE_ENV}`);
