@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 import { io } from "socket.io-client";
 
-import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft } from "lucide-react";
+import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2 } from "lucide-react";
 import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
@@ -1845,18 +1845,32 @@ export default function AIInterview() {
 
             {/* ── HERO SCORECARD ── */}
             <div className="ai-report-hero">
-              <div className="ai-report-hero-bg" />
               <div className="ai-report-top-nav">
                 <button type="button" className="ai-back-nav-btn" onClick={resetInterview} title="Return to Interview Setup">
-                  <ArrowLeft size={16} /> Back to Setup
+                  <ArrowLeft size={15} /> Back to Setup
                 </button>
+                <div className="ai-report-date-badge">
+                  <Bot size={13} /> AI Proctored Session
+                </div>
               </div>
-              <div className="ai-report-label">Interview Report</div>
+
+              <div className="ai-report-label">
+                <Sparkles size={13} /> PERFORMANCE REPORT
+              </div>
               <h2 className="ai-report-title">AI Interview Completed</h2>
-              <p className="ai-report-meta">
-                {result?.durationSeconds ? `${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s` : ""}
-                {result?.questionsAnswered ? `  •  ${result.questionsAnswered} Question${result.questionsAnswered !== 1 ? "s" : ""} Answered` : ""}
-              </p>
+              
+              <div className="ai-report-meta-row">
+                {result?.durationSeconds ? (
+                  <span className="ai-report-meta-pill">
+                    <Timer size={13} /> {Math.floor(result.durationSeconds / 60)}m {result.durationSeconds % 60}s Duration
+                  </span>
+                ) : null}
+                {result?.questionsAnswered ? (
+                  <span className="ai-report-meta-pill">
+                    <CheckCircle2 size={13} /> {result.questionsAnswered} Question{result.questionsAnswered !== 1 ? "s" : ""} Evaluated
+                  </span>
+                ) : null}
+              </div>
 
               {/* Score ring */}
               <div className="ai-score-ring-wrap">
@@ -1868,26 +1882,33 @@ export default function AIInterview() {
                     <span className={`ai-score-percent-val score-tier-${scoreTier}`}>
                       {overallScore}%
                     </span>
+                    <span className="ai-score-ring-sub">OVERALL SCORE</span>
                   </div>
                 </div>
-                <span className="ai-score-grade-pill">
-                  {result?.scorecard?.grade ?? "N/A"}
+                <span className={`ai-score-grade-pill grade-tier-${scoreTier}`}>
+                  {result?.scorecard?.grade ?? (overallScore >= 70 ? "Good Performance" : overallScore >= 40 ? "Needs Refinement" : "Needs Improvement")}
                 </span>
               </div>
 
               {/* 4-metric breakdown */}
               <div className="ai-metrics-grid">
                 {[
-                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech" },
-                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm" },
-                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob" },
-                  { label: "Confidence Level", value: result?.scorecard?.confidence ?? (overallScore === 0 ? 0 : Math.min(100, Math.round((overallScore * 0.9) + 10))), type: "conf" },
-                ].map(({ label, value, type }) => (
+                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech", icon: Code2, desc: "Syntax & Core Knowledge" },
+                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm", icon: MessageSquare, desc: "Clarity & Articulation" },
+                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob", icon: BrainCircuit, desc: "Logic & Analytical Flow" },
+                  { label: "Confidence", value: result?.scorecard?.confidence ?? (overallScore === 0 ? 0 : Math.min(100, Math.round((overallScore * 0.9) + 10))), type: "conf", icon: Activity, desc: "Delivery & Assurance" },
+                ].map(({ label, value, type, icon: IconComp, desc }) => (
                   <div key={label} className={`ai-metric-card ai-metric-${type}`}>
-                    <div className="ai-metric-val">{value}%</div>
+                    <div className="ai-metric-card-top">
+                      <div className={`ai-metric-icon-wrap ai-metric-icon-${type}`}>
+                        <IconComp size={16} />
+                      </div>
+                      <span className="ai-metric-val">{value}%</span>
+                    </div>
                     <div className="ai-metric-label">{label}</div>
+                    <div className="ai-metric-sub">{desc}</div>
                     <div className="ai-metric-track">
-                      <div className="ai-metric-fill" style={{ width: `${value}%` }} />
+                      <div className="ai-metric-fill" style={{ width: `${Math.max(4, value)}%` }} />
                     </div>
                   </div>
                 ))}
