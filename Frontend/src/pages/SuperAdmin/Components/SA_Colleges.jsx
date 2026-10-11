@@ -327,23 +327,23 @@ export default function Colleges() {
   // If collegeId URL param is present, render College Departments view
   if (collegeId) {
     return (
-      <div className="space-y-6 text-slate-800">
+      <div className="college-depts-container">
         <div className="sa-page-header">
           <div>
             <div className="colleges-header-title-wrap mb-1">
               <button
                 onClick={() => navigate('/super-admin/colleges')}
-                className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition cursor-pointer"
+                className="colleges-back-btn"
                 title="Back to Colleges Directory"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <h2 className="colleges-header-title colleges-header-title-wrap m-0">
-                <GraduationCap className="w-5 h-5 text-indigo-600" />
+                <GraduationCap className="colleges-header-cap-icon" />
                 <span>{selectedCollege ? selectedCollege.name : "College Departments"}</span>
               </h2>
             </div>
-            <p className="text-xs text-slate-500 ml-9">
+            <p className="colleges-depts-subtitle">
               Managing departments inside {selectedCollege ? selectedCollege.name : "selected college"}
             </p>
           </div>
@@ -362,15 +362,15 @@ export default function Colleges() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="colleges-depts-grid">
           {filteredDepts.map((dept) => (
-            <div key={dept.id} className="sa-widget-card hover:border-indigo-300 transition college-dept-widget-card">
+            <div key={dept.id} className="sa-widget-card college-dept-widget-card">
               <div className="colleges-dept-card-header">
                 <div>
-                  <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 text-indigo-600 mb-1 border border-indigo-100">
+                  <span className="college-dept-code-badge">
                     {dept.code}
                   </span>
-                  <h3 className="font-bold text-slate-900 text-base">{dept.name}</h3>
+                  <h3 className="college-dept-card-title">{dept.name}</h3>
                 </div>
                 <ActionDropdown
                   onView={() => alert(`View ${dept.name}`)}
@@ -378,14 +378,14 @@ export default function Colleges() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100 text-center">
-                <div className="p-2 rounded-xl bg-slate-50">
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase">Active Students</p>
-                  <p className="font-bold text-slate-900 text-base mt-0.5">{dept.activeStudents || 120}</p>
+              <div className="college-dept-stats-row">
+                <div className="college-dept-stat-box">
+                  <p className="college-dept-stat-label">Active Students</p>
+                  <p className="college-dept-stat-num">{dept.activeStudents || 120}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50">
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase">Batches</p>
-                  <p className="font-bold text-slate-900 text-base mt-0.5">{dept.batchesCount || 4}</p>
+                <div className="college-dept-stat-box">
+                  <p className="college-dept-stat-label">Batches</p>
+                  <p className="college-dept-stat-num">{dept.batchesCount || 4}</p>
                 </div>
               </div>
             </div>
@@ -781,8 +781,8 @@ export default function Colleges() {
             </div>
 
             <div className="modal-body">
-              <p className="text-sm text-slate-600 m-0">
-                Are you sure you want to remove <strong className="text-slate-900">{deleteCollege.name}</strong>? All associated departments, batches, and student records will be archived.
+              <p className="colleges-delete-confirm-text">
+                Are you sure you want to remove <strong className="colleges-delete-confirm-name">{deleteCollege.name}</strong>? All associated departments, batches, and student records will be archived.
               </p>
             </div>
 

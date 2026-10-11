@@ -1059,11 +1059,29 @@ const initialMaintenanceConfig = {
 
 const SystemMaintenanceContext = createContext(null);
 
+const KEY_ALIASES = {
+  leaderboard: "studentLeaderboard",
+  attendance: "attendance",
+  roadmaps: "aiRoadmaps",
+  roadmap: "aiRoadmaps",
+  interview: "aiInterviews",
+  interviews: "aiInterviews",
+  quiz: "academicQuizzes",
+  quizzes: "academicQuizzes",
+  practice: "practiceCoding",
+  compiler: "codingCompiler",
+  "coding-platform": "codingCompiler",
+  progress: "skillGapAnalysis",
+  "ai-interview": "aiInterviews",
+};
+
 export function SystemMaintenanceProvider({ children }) {
-  // Always load from initialMaintenanceConfig merged with sessionStorage
+  // Always load from initialMaintenanceConfig merged with localStorage and sessionStorage
   const loadStoredConfig = () => {
     try {
-      const saved = sessionStorage.getItem("system_maintenance_config_v2");
+      const saved =
+        localStorage.getItem("system_maintenance_config_v2") ||
+        sessionStorage.getItem("system_maintenance_config_v2");
       if (saved) {
         const parsed = JSON.parse(saved);
         return {
@@ -1081,11 +1099,14 @@ export function SystemMaintenanceProvider({ children }) {
 
   const [config, setConfig] = useState(loadStoredConfig);
 
-  // Sync with SessionStorage & Backend Database
+  // Sync with localStorage, sessionStorage & Backend Database
   const saveConfig = (newConfig) => {
     setConfig(newConfig);
     try {
-      sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(newConfig));
+      const serialized = JSON.stringify(newConfig);
+      localStorage.setItem("system_maintenance_config_v2", serialized);
+      sessionStorage.setItem("system_maintenance_config_v2", serialized);
+      window.dispatchEvent(new CustomEvent("system_maintenance_changed", { detail: newConfig }));
     } catch (e) {}
 
     const token = getAuthToken() || '';
@@ -1104,9 +1125,8 @@ export function SystemMaintenanceProvider({ children }) {
     }).catch(err => console.warn('Failed to sync maintenance config to backend:', err));
   };
 
-  useEffect(() => {
+  const fetchServerConfig = () => {
     const token = getAuthToken() || '';
-    // Maintenance GET is public; prefer server truth over stale sessionStorage flags
     fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
@@ -1118,42 +1138,85 @@ export function SystemMaintenanceProvider({ children }) {
           serverData && typeof serverData === "object" && Object.keys(serverData).length > 0;
 
         if (hasServerConfig) {
-          setConfig(() => {
+          setConfig((prev) => {
             const updated = {
               ...initialMaintenanceConfig,
+              ...prev,
               ...serverData,
               modules: {
                 ...initialMaintenanceConfig.modules,
+                ...(prev.modules || {}),
                 ...(serverData.modules || {}),
               },
             };
             try {
-              sessionStorage.setItem("system_maintenance_config_v2", JSON.stringify(updated));
+              const serialized = JSON.stringify(updated);
+              localStorage.setItem("system_maintenance_config_v2", serialized);
+              sessionStorage.setItem("system_maintenance_config_v2", serialized);
             } catch (e) {}
             return updated;
           });
-          return;
         }
-
-        setConfig(initialMaintenanceConfig);
-        try {
-          sessionStorage.removeItem("system_maintenance_config_v2");
-        } catch (e) {}
       })
       .catch(() => {});
+  };
+
+  useEffect(() => {
+    fetchServerConfig();
+
+    // Cross-tab and same-tab listener
+    const handleStorageChange = (e) => {
+      if (e.key === "system_maintenance_config_v2" && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          setConfig(prev => ({
+            ...prev,
+            ...parsed,
+            modules: { ...prev.modules, ...(parsed.modules || {}) }
+          }));
+        } catch (_) {}
+      }
+    };
+
+    const handleCustomChange = (e) => {
+      if (e.detail) {
+        setConfig(e.detail);
+      }
+    };
+
+    const handleFocus = () => {
+      fetchServerConfig();
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("system_maintenance_changed", handleCustomChange);
+    window.addEventListener("focus", handleFocus);
+
+    // Poll server periodically every 15 seconds to sync switch state
+    const interval = setInterval(fetchServerConfig, 15000);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("system_maintenance_changed", handleCustomChange);
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(interval);
+    };
   }, []);
 
   // Module state checker helper
   const isModuleActive = (moduleKey) => {
     if (config.globalEmergencyMode) return false;
     if (!moduleKey) return true;
-    const mod = config.modules[moduleKey];
+    const resolvedKey = KEY_ALIASES[moduleKey] || moduleKey;
+    const mod = config.modules[resolvedKey] || config.modules[moduleKey];
     return mod ? Boolean(mod.active) : true;
   };
 
   // Get module configuration details for maintenance screen
   const getModuleConfig = (moduleKey) => {
-    if (!moduleKey || !config.modules[moduleKey]) {
+    const resolvedKey = KEY_ALIASES[moduleKey] || moduleKey;
+    const mod = config.modules[resolvedKey] || config.modules[moduleKey];
+    if (!mod) {
       return {
         key: moduleKey || 'system',
         name: "Module Maintenance",
@@ -1163,7 +1226,7 @@ export function SystemMaintenanceProvider({ children }) {
         updatedAt: "Active",
       };
     }
-    return config.modules[moduleKey];
+    return mod;
   };
 
   // Toggle single module ON/OFF

@@ -1,4 +1,5 @@
 import { sendSuccess, sendError } from '../utils/response.js';
+import { query } from '../config/db.js';
 import {
   getSharedContentByType,
   getAllSharedContent,
@@ -15,7 +16,13 @@ export const getSharedContent = async (req, res, next) => {
     const collegeId = getCollegeId(req);
 
     let items;
-    if (type) {
+    if (type === 'maintenance') {
+      const rows = await query(`SELECT * FROM shared_content WHERE type = 'maintenance' ORDER BY id DESC LIMIT 1`);
+      items = (rows || []).map(r => ({
+        ...r,
+        data: r.data_json ? JSON.parse(r.data_json) : null
+      }));
+    } else if (type) {
       items = await getSharedContentByType(type, collegeId);
     } else {
       items = await getAllSharedContent(collegeId);

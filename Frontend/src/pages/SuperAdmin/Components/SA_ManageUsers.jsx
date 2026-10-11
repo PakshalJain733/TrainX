@@ -16,22 +16,22 @@ function MuSelect(props) {
 
 /* ── Inline StatusBadge Helper ──────────────────────── */
 function StatusBadge({ status }) {
-  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  let modifier = '';
   if (status === 'Active' || status === 'Verified' || status === 'Available') {
-    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    modifier = 'manageusers-status--active';
   } else if (status === 'Inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+    modifier = 'manageusers-status--inactive';
   } else if (status === 'High' || status === 'In Progress') {
-    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    modifier = 'manageusers-status--progress';
   } else if (status === 'Busy' || status === 'Medium') {
-    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+    modifier = 'manageusers-status--warning';
   } else if (status === 'Near Completion') {
-    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+    modifier = 'manageusers-status--purple';
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+    <span className={`manageusers-status-badge ${modifier}`}>
+      <span className="manageusers-status-badge-dot"></span>
       {status}
     </span>
   );
@@ -1846,7 +1846,7 @@ export default function ManageUsers() {
                 {pendingUsersList.map((user) => (
                   <tr key={user.id} className="manageusers-tr">
                     <td className="manageusers-td">
-                      <div className="font-bold text-slate-900">{user.name}</div>
+                      <div className="manageusers-cell-title">{user.name}</div>
                       <div className="manageusers-contact-row mt-1">
                         <Mail size={14} className="manageusers-contact-icon" />
                         <span className="manageusers-contact-text">{user.email || user.mobile_number || 'N/A'}</span>
@@ -1928,7 +1928,7 @@ export default function ManageUsers() {
                     {filteredAdmins.map((req) => (
                       <tr key={req.id} className="manageusers-tr">
                         <td className="manageusers-td">
-                          <div className="font-bold text-slate-900">{req.name}</div>
+                          <div className="manageusers-cell-title">{req.name}</div>
                           <div className="manageusers-contact-row mt-1">
                             <Mail size={14} className="manageusers-contact-icon" />
                             <span className="manageusers-contact-text">{req.email}</span>
@@ -1940,7 +1940,7 @@ export default function ManageUsers() {
                             <span>{req.college}</span>
                           </div>
                         </td>
-                        <td className="manageusers-td font-medium text-slate-700">{req.designation}</td>
+                        <td className="manageusers-td manageusers-cell-text-slate">{req.designation}</td>
                         <td className="manageusers-td">
                           <div className="manageusers-contact-row">
                             <Calendar size={14} className="manageusers-contact-icon" />
@@ -2014,7 +2014,7 @@ export default function ManageUsers() {
               <tbody>
                 {filteredCoordinators.map((c) => (
                   <tr key={c.id} className="manageusers-tr">
-                    <td className="manageusers-td font-bold text-slate-900">
+                    <td className="manageusers-td manageusers-cell-title">
                       <div className="manageusers-user-flex">
                         <div className="manageusers-avatar">
                           {c.name.split(' ').map(n => n[0]).join('')}
@@ -2022,8 +2022,8 @@ export default function ManageUsers() {
                         <span>{c.name}</span>
                       </div>
                     </td>
-                    <td className="manageusers-td text-slate-600 font-medium">{c.college}</td>
-                    <td className="manageusers-td text-indigo-600 font-medium">{c.department}</td>
+                    <td className="manageusers-td manageusers-cell-text-muted">{c.college}</td>
+                    <td className="manageusers-td manageusers-dept-text">{c.department}</td>
                     <td className="manageusers-td">
                       <div className="manageusers-contact-box">
                         <div className="manageusers-contact-row">
@@ -2071,22 +2071,22 @@ export default function ManageUsers() {
               <tbody>
                 {filteredMentors.map((m) => (
                   <tr key={m.id} className="manageusers-tr">
-                    <td className="manageusers-td font-bold text-slate-900">
+                    <td className="manageusers-td manageusers-cell-title">
                       <div className="manageusers-user-flex">
                         <div className="manageusers-avatar manageusers-avatar--emerald">
                           {m.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
                           <div>{m.name}</div>
-                          <div className="text-xs text-slate-400 font-normal">{m.email}</div>
+                          <div className="manageusers-cell-email">{m.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="manageusers-td text-indigo-600 font-medium">{m.track}</td>
-                    <td className="manageusers-td text-slate-600 font-medium">{m.college}</td>
-                    <td className="manageusers-td text-slate-700 font-bold">{m.studentsAssigned} Students</td>
+                    <td className="manageusers-td manageusers-track-text">{m.track}</td>
+                    <td className="manageusers-td manageusers-cell-text-muted">{m.college}</td>
+                    <td className="manageusers-td manageusers-cell-text-bold">{m.studentsAssigned} Students</td>
                     <td className="manageusers-td-right">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                      <span className="manageusers-rating-pill">
                         ★ {m.rating}
                       </span>
                     </td>
@@ -2130,11 +2130,11 @@ export default function ManageUsers() {
                     </div>
                   </td>
                   <td className="manageusers-td">
-                    <div className="font-semibold text-slate-800">{s.rollNo}</div>
-                    <div className="text-[11px] text-slate-400 mt-0.5">{s.batch}</div>
+                    <div className="manageusers-cell-text-dark">{s.rollNo}</div>
+                    <div className="manageusers-cell-subtext">{s.batch}</div>
                   </td>
-                  <td className="manageusers-td font-medium text-slate-700">{s.college}</td>
-                  <td className="manageusers-td font-bold text-emerald-600">{s.attendance}</td>
+                  <td className="manageusers-td manageusers-cell-text-slate">{s.college}</td>
+                  <td className="manageusers-td manageusers-cell-attendance">{s.attendance}</td>
                   <td className="manageusers-td-right">
                     <RiskBadge risk={s.risk} />
                   </td>
@@ -2249,10 +2249,10 @@ export default function ManageUsers() {
               )}
 
               {/* Recent Active Codes List */}
-              <div className="flex flex-col gap-2.5 mt-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">Recently Issued Tokens</span>
-                  <span className="text-[11px] font-extrabold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{generatedCodesList.length} Active</span>
+              <div className="manageusers-tokens-container">
+                <div className="manageusers-tokens-header">
+                  <span className="manageusers-tokens-title">Recently Issued Tokens</span>
+                  <span className="manageusers-tokens-badge">{generatedCodesList.length} Active</span>
                 </div>
                 <div className="manageusers-token-list">
                   {generatedCodesList.map((c) => (

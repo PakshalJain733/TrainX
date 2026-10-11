@@ -359,3 +359,76 @@
   align-items: center;
   gap: 6px;
 }
+
+.perf-feat-users {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.perf-feat-metric {
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.perf-pass-rate {
+  color: #059669;
+  font-weight: 800;
+}
+
+.perf-score-bold {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.perf-students-count {
+  color: #475569;
+  font-weight: 500;
+}
+
+.perf-users-icon {
+  color: #94a3b8;
+}
+
+.perf-top-module-pill {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  background-color: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.perf-accuracy-badge {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 700;
+  background-color: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.perf-college-logo-selected {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+}
+
+.perf-college-name-selected {
+  color: #312e81 !important;
+  font-weight: 800 !important;
+}
+
+.perf-active-selection-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  background-color: #e0e7ff;
+  color: #4338ca;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 9999px;
+}
+
+

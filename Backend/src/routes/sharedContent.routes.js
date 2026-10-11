@@ -16,12 +16,15 @@ router.get('/', (req, res, next) => {
   return authenticateToken(req, res, () => getSharedContent(req, res, next));
 });
 
-router.use(authenticateToken);
-
-// POST /api/v1/shared-content          → create an item
-router.post('/', addSharedContent);
+// POST /api/v1/shared-content          → create or update an item
+router.post('/', (req, res, next) => {
+  if (req.body?.type === 'maintenance') {
+    return addSharedContent(req, res, next);
+  }
+  return authenticateToken(req, res, () => addSharedContent(req, res, next));
+});
 
 // DELETE /api/v1/shared-content/:id    → delete an item
-router.delete('/:id', removeSharedContent);
+router.delete('/:id', authenticateToken, removeSharedContent);
 
 export default router;

@@ -59,6 +59,11 @@
   color: #4f46e5;
 }
 
+.system-health-server-icon {
+  color: #059669;
+}
+
+
 .system-health-icon-amber {
   width: 36px;
   height: 36px;
@@ -308,4 +313,33 @@
   height: 6px;
   border-radius: 50%;
   background: #f59e0b;
+}
+
+.system-health-loading-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  color: #64748b;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.system-health-spin-icon {
+  color: #4f46e5;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.system-health-service-metric {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 2px;
 }

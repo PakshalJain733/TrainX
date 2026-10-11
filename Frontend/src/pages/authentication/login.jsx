@@ -5,6 +5,7 @@ import Logo from "../../assets/Logo2.png";
 import TrainXLogo from "../../assets/TrainX.png";
 import { getApiBaseUrl, getAuthToken } from "../../utils/api";
 import { dashboardPathForRole, roleFromAccessToken } from "../../utils/authRole";
+import { useSystemMaintenance } from "../../context/SystemMaintenanceContext";
 
 import "./login.css";
 
@@ -175,7 +176,33 @@ function Login() {
     return () => clearInterval(interval);
   }, [resendTimer]);
 
+  const { isModuleActive, getModuleConfig } = useSystemMaintenance();
+  const passwordActive = isModuleActive("loginWithPassword");
+  const otpActive = isModuleActive("loginWithOTP");
+  const registrationActive = isModuleActive("userRegistration");
+  const passwordResetActive = isModuleActive("passwordReset");
+
+  useEffect(() => {
+    if (!passwordActive && otpActive && authMode === "password") {
+      setAuthMode("otp");
+    } else if (!otpActive && passwordActive && authMode === "otp") {
+      setAuthMode("password");
+    }
+  }, [passwordActive, otpActive, authMode]);
+
   const handleModeSwitch = (mode) => {
+    if (mode === "password" && !passwordActive) {
+      setErrorMsg(getModuleConfig("loginWithPassword")?.message || "Password login is currently undergoing scheduled maintenance.");
+      return;
+    }
+    if (mode === "otp" && !otpActive) {
+      setErrorMsg(getModuleConfig("loginWithOTP")?.message || "Email OTP login is currently undergoing scheduled maintenance.");
+      return;
+    }
+    if (mode === "forgot" && !passwordResetActive) {
+      setErrorMsg(getModuleConfig("passwordReset")?.message || "Password recovery service is currently under maintenance.");
+      return;
+    }
     setAuthMode(mode);
     setErrorMsg("");
     setSuccessMsg("");
@@ -319,6 +346,10 @@ function Login() {
   // ── Password Login Handler ─────────────────────────
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
+    if (!passwordActive) {
+      setErrorMsg(getModuleConfig("loginWithPassword")?.message || "Password login is currently disabled for maintenance.");
+      return;
+    }
     if (!email || !password) return;
 
     persistRememberedIdentifier();
@@ -365,6 +396,10 @@ function Login() {
   // ── OTP Handlers ───────────────────────────────────
   const handleSendOtp = async (e) => {
     e.preventDefault();
+    if (!otpActive) {
+      setErrorMsg(getModuleConfig("loginWithOTP")?.message || "Email OTP delivery is currently disabled for maintenance.");
+      return;
+    }
     if (!email) return;
     persistRememberedIdentifier();
     rememberMeRef.current = rememberMe;

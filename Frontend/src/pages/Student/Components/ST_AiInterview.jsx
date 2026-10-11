@@ -9,6 +9,7 @@ import "../Styles/ST_AiInterview.css";
 
 import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 
 
 const INTERVIEW_SECONDS = 5 * 60; // 5 minutes
@@ -235,9 +236,13 @@ export default function AIInterview() {
   const cameraStreamRef = useRef(null);
   const videoRef = useRef(null);
 
+  // Maintenance & Feature switch
+  const { isModuleActive } = useSystemMaintenance();
+  const speechEnabled = isModuleActive("studentSpeechToText");
+
   // Speech recognition
   const SpeechRecognitionCtor =
-    typeof window !== "undefined"
+    typeof window !== "undefined" && speechEnabled
       ? window.SpeechRecognition || window.webkitSpeechRecognition
       : null;
 
@@ -1352,14 +1357,14 @@ export default function AIInterview() {
                   </div>
                 </div>
               </div>
-              <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
+              <div className={`ai-meta-item ${SpeechRecognitionCtor && speechEnabled ? "" : "ai-meta-warn"}`}>
                 <div className="ai-meta-icon"><Mic size={18} /></div>
                 <div>
                   <div className="ai-meta-val">
-                    Microphone {SpeechRecognitionCtor ? "Supported" : "Unavailable"}
+                    Microphone {!speechEnabled ? "Disabled by Admin" : SpeechRecognitionCtor ? "Supported" : "Unavailable"}
                   </div>
                   <div className="ai-meta-lbl">
-                    {SpeechRecognitionCtor ? "Voice-to-text ready" : "Typing fallback will be used"}
+                    {!speechEnabled ? "Admin policy: typing fallback active" : SpeechRecognitionCtor ? "Voice-to-text ready" : "Typing fallback will be used"}
                   </div>
                 </div>
               </div>

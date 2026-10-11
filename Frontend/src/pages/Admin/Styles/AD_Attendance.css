@@ -640,6 +640,19 @@
   justify-content: space-between;
 }
 
+.admin-qr-verified-text {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.admin-qr-verified-icon {
+  color: #059669;
+}
+
+
 .admin-qr-regen-btn {
   display: inline-flex;
   align-items: center;

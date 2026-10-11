@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
@@ -116,6 +117,7 @@ export default function CodingPlatform() {
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || [])
   } : null;
 
+  const { isModuleActive, getModuleConfig } = useSystemMaintenance();
   const [taskData, setTaskData] = useState(initialTask);
   const [loading, setLoading] = useState(!initialTask);
   const [notFound, setNotFound] = useState(false);
@@ -276,6 +278,11 @@ export default function CodingPlatform() {
   
   const handleRun = async () => {
     if (isRunning || isSubmitting) return;
+    if (!isModuleActive("codingCompiler")) {
+      setConsoleStatus("error");
+      setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution is currently undergoing maintenance."}`);
+      return;
+    }
     if (!code.trim()) {
       setConsoleOutput("⚠️  Write some code before running.");
       setConsoleStatus("error");
@@ -345,6 +352,11 @@ export default function CodingPlatform() {
 
   const handleSubmit = async () => {
     if (isSubmitting || isRunning) return;
+    if (!isModuleActive("codingCompiler")) {
+      setConsoleStatus("error");
+      setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution and Submission is currently undergoing maintenance."}`);
+      return;
+    }
     if (!code.trim()) {
       setConsoleOutput("⚠️  Write some code before submitting.");
       setConsoleStatus("error");
@@ -569,15 +581,29 @@ export default function CodingPlatform() {
               onChange={(val) => setSelectedLang(val)}
             />
             
-            <button type="button" className="cp-run-btn" onClick={handleRun} disabled={isRunning || isSubmitting}>
-              {isRunning ? <span>Running...</span> : <><Play size={13} fill="currentColor" /> <span>Run</span></>}
+            <button
+              type="button"
+              className={`cp-run-btn ${!isModuleActive("codingCompiler") ? 'cp-btn--off' : ''}`}
+              onClick={handleRun}
+              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting}
+              title={!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code"}
+              style={!isModuleActive("codingCompiler") ? { opacity: 0.55, cursor: "not-allowed", filter: "grayscale(0.6)" } : {}}
+            >
+              {isRunning ? <span>Running...</span> : <><Play size={13} fill="currentColor" /> <span>{isModuleActive("codingCompiler") ? "Run" : "Run (Off)"}</span></>}
             </button>
             
-            <button type="button" className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting || isRunning}>
+            <button
+              type="button"
+              className={`cp-submit-btn ${!isModuleActive("codingCompiler") ? 'cp-btn--off' : ''}`}
+              onClick={handleSubmit}
+              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning}
+              title={!isModuleActive("codingCompiler") ? "Code submission is currently disabled by administrator" : "Submit Code"}
+              style={!isModuleActive("codingCompiler") ? { opacity: 0.55, cursor: "not-allowed", filter: "grayscale(0.6)" } : {}}
+            >
               {isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
-                <><CheckCircle2 size={14} /> <span>Submit</span></>
+                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? "Submit" : "Submit (Off)"}</span></>
               )}
             </button>
 
