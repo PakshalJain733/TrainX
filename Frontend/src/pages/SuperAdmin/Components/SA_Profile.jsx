@@ -286,10 +286,10 @@ export default function SuperAdminProfile() {
             <h4 className="profile-section-subtitle">Account Overview</h4>
 
             <div className="profile-detail-row">
-              <ShieldCheck size={16} className="profile-detail-icon text-indigo-500" />
+              <ShieldCheck size={16} className="profile-detail-icon profile-icon-indigo" />
               <div>
                 <span className="profile-detail-label">Designation & Role</span>
-                <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.role}</p>
+                <p className="profile-detail-value profile-role-highlight">{form.role}</p>
               </div>
             </div>
 
@@ -329,7 +329,7 @@ export default function SuperAdminProfile() {
           <div className="profile-form-section">
             <div className="profile-section-heading profile-section-heading-flex">
               <div className="profile-heading-group">
-                <User size={18} className="profile-heading-icon text-indigo-500" />
+                <User size={18} className="profile-heading-icon profile-icon-indigo" />
                 <div>
                   <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
                   <p className="profile-heading-desc">Saved directly to your user account record in MySQL database.</p>
@@ -559,7 +559,7 @@ export default function SuperAdminProfile() {
                     />
                   ) : (
                     <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="text-slate-400" />
+                      <QrCode size={40} className="profile-2fa-qr-icon" />
                     </div>
                   )}
                   <p className="profile-2fa-qr-text">
@@ -582,7 +582,7 @@ export default function SuperAdminProfile() {
                         onClick={handleCopySecret}
                         className="profile-2fa-copy-btn"
                       >
-                        {copiedSecret ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        {copiedSecret ? <Check size={12} className="profile-copy-check-icon" /> : <Copy size={12} />}
                         {copiedSecret ? "Copied" : "Copy"}
                       </button>
                     </div>

@@ -10,22 +10,21 @@ function DeptSelect(props) {
   return <CustomSelect {...props} />;
 }
 function StatusBadge({ status }) {
-  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
-  if (status === 'Active' || status === 'Verified' || status === 'Available') {
-    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (status === 'Inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
-  } else if (status === 'High' || status === 'In Progress') {
-    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
-  } else if (status === 'Busy' || status === 'Medium') {
-    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
-  } else if (status === 'Near Completion') {
-    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+  const norm = String(status || '').toLowerCase();
+  let statusClass = 'dept-status-badge--default';
+  if (norm.includes('active') || norm.includes('verified') || norm.includes('available')) {
+    statusClass = 'dept-status-badge--active';
+  } else if (norm.includes('high') || norm.includes('progress')) {
+    statusClass = 'dept-status-badge--info';
+  } else if (norm.includes('busy') || norm.includes('medium')) {
+    statusClass = 'dept-status-badge--warning';
+  } else if (norm.includes('purple') || norm.includes('completion')) {
+    statusClass = 'dept-status-badge--purple';
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+    <span className={`dept-status-badge ${statusClass}`}>
+      <span className="dept-status-dot"></span>
       {status}
     </span>
   );
@@ -499,7 +498,7 @@ export default function Departments() {
               <div className="sa-modal-details-grid">
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Building2 size={13} className="text-indigo-500" />
+                    <Building2 size={13} className="sa-detail-label-icon" />
                     <span>Parent Institution</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewDept.collegeName || viewDept.college_name || (colleges[0] ? colleges[0].name : "")}</span>
@@ -507,25 +506,25 @@ export default function Departments() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <UserCheck size={13} className="text-indigo-500" />
+                    <UserCheck size={13} className="sa-detail-label-icon" />
                     <span>Head of Department</span>
                   </span>
-                  <span className="sa-modal-detail-value text-indigo-600">{viewDept.hodName || "Prof. Assigned HOD"}</span>
+                  <span className="sa-modal-detail-value sa-detail-hod-value">{viewDept.hodName || "Prof. Assigned HOD"}</span>
                 </div>
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Mail size={13} className="text-indigo-500" />
+                    <Mail size={13} className="sa-detail-label-icon" />
                     <span>HOD Contact Email</span>
                   </span>
-                  <span className="sa-modal-detail-value font-medium text-slate-700 dept-hod-email-value">
+                  <span className="sa-modal-detail-value dept-hod-email-value">
                     {viewDept.hodEmail || "hod@college.edu.in"}
                   </span>
                 </div>
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Layers size={13} className="text-indigo-500" />
+                    <Layers size={13} className="sa-detail-label-icon" />
                     <span>Active Batches</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewDept.batchesCount || 4} Batches</span>
@@ -533,7 +532,7 @@ export default function Departments() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Users size={13} className="text-indigo-500" />
+                    <Users size={13} className="sa-detail-label-icon" />
                     <span>Enrolled Students</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewDept.studentsCount || viewDept.activeStudents || 120} Students</span>
@@ -541,7 +540,7 @@ export default function Departments() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <ShieldCheck size={13} className="text-indigo-500" />
+                    <ShieldCheck size={13} className="sa-detail-label-icon" />
                     <span>Status</span>
                   </span>
                   <div className="mt-1">
@@ -674,8 +673,8 @@ export default function Departments() {
             </div>
 
             <div className="modal-body">
-              <p className="text-sm text-slate-600 m-0">
-                Are you sure you want to remove <strong className="text-slate-900">{deleteDept.name}</strong>? Associated batches and students will be unlinked.
+              <p className="dept-confirm-modal-desc">
+                Are you sure you want to remove <strong className="dept-confirm-modal-target">{deleteDept.name}</strong>? Associated batches and students will be unlinked.
               </p>
             </div>
 

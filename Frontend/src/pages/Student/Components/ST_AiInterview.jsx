@@ -4,11 +4,12 @@ import { createPortal } from "react-dom";
 import { io } from "socket.io-client";
 
 import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2 } from "lucide-react";
-import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getBackendOrigin, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
 import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 
 
 const INTERVIEW_SECONDS = 5 * 60; // 5 minutes
@@ -235,9 +236,13 @@ export default function AIInterview() {
   const cameraStreamRef = useRef(null);
   const videoRef = useRef(null);
 
+  // Maintenance & Feature switch
+  const { isModuleActive } = useSystemMaintenance();
+  const speechEnabled = isModuleActive("studentSpeechToText");
+
   // Speech recognition
   const SpeechRecognitionCtor =
-    typeof window !== "undefined"
+    typeof window !== "undefined" && speechEnabled
       ? window.SpeechRecognition || window.webkitSpeechRecognition
       : null;
 
@@ -1098,13 +1103,8 @@ export default function AIInterview() {
       return;
     }
 
-    const apiBase = getApiBaseUrl();
-    let socketTarget = "/interviews";
-    if (apiBase && (apiBase.startsWith("http://") || apiBase.startsWith("https://"))) {
-      socketTarget = `${apiBase.replace(/\/api\/v1\/?$/, "")}/interviews`;
-    } else if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-      socketTarget = `${window.location.protocol}//${window.location.hostname}:5000/interviews`;
-    }
+    const backendHost = getBackendOrigin();
+    const socketTarget = `${backendHost.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")}/interviews`;
 
     const socket = io(socketTarget, {
       auth: { token },
@@ -1116,7 +1116,7 @@ export default function AIInterview() {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      timeout: 10000,
+      timeout: 25000,
     });
     socketRef.current = socket;
 
@@ -1398,14 +1398,14 @@ export default function AIInterview() {
                   </div>
                 </div>
               </div>
-              <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
+              <div className={`ai-meta-item ${SpeechRecognitionCtor && speechEnabled ? "" : "ai-meta-warn"}`}>
                 <div className="ai-meta-icon"><Mic size={18} /></div>
                 <div>
                   <div className="ai-meta-val">
-                    Microphone {SpeechRecognitionCtor ? "Supported" : "Unavailable"}
+                    Microphone {!speechEnabled ? "Disabled by Admin" : SpeechRecognitionCtor ? "Supported" : "Unavailable"}
                   </div>
                   <div className="ai-meta-lbl">
-                    {SpeechRecognitionCtor ? "Voice-to-text ready" : "Typing fallback will be used"}
+                    {!speechEnabled ? "Admin policy: typing fallback active" : SpeechRecognitionCtor ? "Voice-to-text ready" : "Typing fallback will be used"}
                   </div>
                 </div>
               </div>

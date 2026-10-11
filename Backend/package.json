@@ -11,6 +11,7 @@
     "test": "echo 'No tests specified'",
     "import:c2c": "node scripts/import-c2c-2029.mjs",
     "verify:ai": "node scripts/verify_ai_key.mjs",
+    "db:migrate": "node scripts/migrate.js",
     "db:clear": "node scripts/clear_db.js"
   },
   "dependencies": {

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Sparkles, BookOpenCheck, Bot, LineChart, Trophy, CalendarCheck, FileCheck2, CalendarDays, Award, Code2, Terminal, BookOpen, Users, FileQuestion, HelpCircle, GraduationCap, Settings, UserCheck, UserCog, Bell, ChartBar, ChartLineIcon, ChartBarIncreasing, ChartBarIncreasingIcon, Briefcase, Target } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/ST_Sidebar.css";
@@ -24,26 +25,33 @@ function SidebarBrand({ collapsed, subtitle }) {
 }
 
 const primaryNavItems = [
-  { title: "Overview", url: "/student", icon: LayoutDashboard, exact: true },
-  { title: "Batches", url: "/student/batches", icon: Code2 },
-  { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck },
-  { title: "Practice", url: "/student/practice", icon: Terminal },
-  { title: "Quiz", url: "/student/quiz", icon: GraduationCap },
-  { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles },
-  { title: "AI Interview", url: "/student/ai-interview", icon: Bot },
-  { title: "Progress", url: "/student/progress", icon: LineChart },
-  { title: "Leaderboard", url: "/student/leaderboard", icon: Trophy },
-  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck },
-  { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2 },
-  // { title: "Mock Drives", url: "/student/mock-drives", icon: Briefcase },
+  { title: "Overview", url: "/student", icon: LayoutDashboard, exact: true, moduleKey: "studentDashboard" },
+  { title: "Batches", url: "/student/batches", icon: Code2, moduleKey: "studentBatches" },
+  { title: "Learning Content", url: "/student/learning", icon: BookOpenCheck, moduleKey: "learningContent" },
+  { title: "Practice", url: "/student/practice", icon: Terminal, moduleKey: "practiceCoding" },
+  { title: "Quiz", url: "/student/quiz", icon: GraduationCap, moduleKey: "academicQuizzes" },
+  { title: "AI Roadmap", url: "/student/roadmap", icon: Sparkles, moduleKey: "aiRoadmaps" },
+  { title: "AI Interview", url: "/student/ai-interview", icon: Bot, moduleKey: "aiInterviews" },
+  { title: "Progress", url: "/student/progress", icon: LineChart, moduleKey: "skillGapAnalysis" },
+  { title: "Leaderboard", url: "/student/leaderboard", icon: Trophy, moduleKey: "studentLeaderboard" },
+  { title: "Attendance", url: "/student/attendance", icon: CalendarCheck, moduleKey: "attendance" },
+  { title: "Weekly Reports", url: "/student/weekly-reports", icon: FileCheck2, moduleKey: "weeklyReports" },
 ];
 
 const footerNavItems = [
-  { title: "Support Tickets", url: "/student/help", icon: HelpCircle },
+  { title: "Support Tickets", url: "/student/help", icon: HelpCircle, moduleKey: "studentHelp" },
 ];
 
 export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
+  const { isModuleActive } = useSystemMaintenance();
+
+  const visiblePrimaryItems = primaryNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
+  const visibleFooterItems = footerNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
 
   const isActive = (url, exact) =>
     exact
@@ -81,14 +89,14 @@ export function StudentSidebar({ collapsed, mobileOpen, onClose }) {
       {/* Nav */}
       <div className="sidebar-content">
         <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
+          {visiblePrimaryItems.map(renderItem)}
         </ul>
       </div>
 
       {/* Pinned Bottom Account Section */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
+          {visibleFooterItems.map(renderItem)}
         </ul>
       </div>
     </aside>

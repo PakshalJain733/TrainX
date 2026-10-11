@@ -307,7 +307,7 @@ function MN_ProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <Users size={16} className="profile-detail-icon text-emerald-500" />
+              <Users size={16} className="profile-detail-icon profile-icon-emerald" />
               <div>
                 <span className="profile-detail-label">Assigned Scope</span>
                 <p className="profile-detail-value">{form.allocatedBatches} · {form.totalStudents}</p>
@@ -351,7 +351,7 @@ function MN_ProfilePage() {
             <div className="profile-form-section">
               <div className="profile-section-heading profile-section-heading-flex">
                 <div className="profile-heading-group">
-                  <User size={18} className="profile-heading-icon text-indigo-500" />
+                  <User size={18} className="profile-heading-icon profile-icon-indigo" />
                   <div>
                     <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
                     <p className="profile-heading-desc">Saved directly to your mentor profile in MySQL database.</p>
@@ -430,7 +430,7 @@ function MN_ProfilePage() {
 
             <div className="profile-form-section mt-6">
               <div className="profile-section-heading">
-                <Sparkles size={18} className="profile-heading-icon text-indigo-500" />
+                <Sparkles size={18} className="profile-heading-icon profile-icon-indigo" />
                 <div>
                   <h3 className="profile-heading-title">Specialization & Academic Governance</h3>
                   <p className="profile-heading-desc">Configure your primary domain expertise, department, employee ID, and office cabin location.</p>
@@ -578,7 +578,7 @@ function MN_ProfilePage() {
                     />
                   ) : (
                     <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="text-slate-400" />
+                      <QrCode size={40} className="profile-2fa-qr-icon" />
                     </div>
                   )}
                   <p className="profile-2fa-qr-text">
@@ -601,7 +601,7 @@ function MN_ProfilePage() {
                         onClick={handleCopySecret}
                         className="profile-2fa-copy-btn"
                       >
-                        {copiedSecret ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        {copiedSecret ? <Check size={12} className="profile-copy-check-icon" /> : <Copy size={12} />}
                         {copiedSecret ? "Copied" : "Copy"}
                       </button>
                     </div>

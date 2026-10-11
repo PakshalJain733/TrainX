@@ -201,15 +201,15 @@ export default function Overview() {
                 <CardDescription className="overview-card-desc">Assigned batch records returned by the mentor service</CardDescription>
               </div>
             </div>
-            <Link to="/mentor/batches" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+            <Link to="/mentor/batches" className="mn-view-all-link">
               View All <ChevronRight size={14} />
             </Link>
           </CardHeader>
-          <CardContent className="p-4 space-y-3">
+          <CardContent style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
             {batches.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
-                <Layers size={28} className="mx-auto text-indigo-400 mb-2 opacity-60" />
-                <p className="text-sm font-semibold">No records yet</p>
+              <div className="mn-empty-batches-state">
+                <Layers size={28} className="mn-empty-batches-icon" />
+                <p className="mn-empty-batches-text">No records yet</p>
               </div>
             ) : (
               batches.map((batch, index) => {
@@ -307,7 +307,7 @@ export default function Overview() {
           <CardHeader className="overview-card-header-between">
             <div className="overview-header-left">
               <div className="overview-header-icon-wrap overview-header-icon-wrap--trophy">
-                <CalendarCheck size={18} className="overview-header-icon text-indigo-600" />
+                <CalendarCheck size={18} className="overview-header-icon mn-calendar-check-icon" />
               </div>
               <div>
                 <CardTitle className="overview-card-title">Upcoming Sessions Timetable</CardTitle>
@@ -317,9 +317,9 @@ export default function Overview() {
           </CardHeader>
           <CardContent style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
             {loading ? (
-              <div className="py-8 text-center text-sm text-slate-500">Loading sessions...</div>
+              <div className="mn-sessions-loading">Loading sessions...</div>
             ) : sessionsList.length === 0 ? (
-              <div className="py-8 text-center text-sm text-slate-500">No sessions scheduled.</div>
+              <div className="mn-sessions-empty">No sessions scheduled.</div>
             ) : (
               sessionsList.map((session, index) => {
                 const title = asText(firstValue(session, ["title", "subject", "name"])) || "N/A";
@@ -331,21 +331,21 @@ export default function Overview() {
                 return (
                   <div
                     key={asText(firstValue(session, ["id", "sessionId", "session_id"])) || index}
-                    className="p-3.5 rounded-xl border border-slate-200/80 bg-white space-y-2.5"
+                    className="mn-session-card"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200/80 px-2 py-1 rounded-md uppercase tracking-wider">
+                    <div className="mn-session-header-row">
+                      <span className="mn-session-date-badge">
                         {date}
                       </span>
-                      <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-full">{status}</span>
+                      <span className="mn-session-status-badge">{status}</span>
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-900">{title}</h4>
-                      <p className="text-xs text-slate-500">{batch}</p>
+                      <h4 className="mn-session-title">{title}</h4>
+                      <p className="mn-session-batch">{batch}</p>
                     </div>
-                    <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-2 text-xs text-slate-600">
-                      <span className="flex items-center gap-1 font-semibold text-indigo-600"><Clock size={13} /> {time}</span>
-                      <span className="flex items-center gap-1 font-semibold"><MapPin size={13} className="text-slate-400" /> {room}</span>
+                    <div className="mn-session-footer-row">
+                      <span className="mn-session-time"><Clock size={13} /> {time}</span>
+                      <span className="mn-session-room"><MapPin size={13} className="mn-session-room-icon" /> {room}</span>
                     </div>
                   </div>
                 );

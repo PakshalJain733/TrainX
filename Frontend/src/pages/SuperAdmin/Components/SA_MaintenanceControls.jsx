@@ -107,12 +107,12 @@ function LivePreviewModal({ moduleData, onClose }) {
       <div className="mc-modal-card" onClick={(e) => e.stopPropagation()}>
         <div className="mc-modal-header">
           <div className="mc-modal-title">
-            <Eye size={18} className="text-indigo-600" />
+            <Eye size={18} className="mc-modal-title-icon" />
             <span>Simulated User Maintenance Screen</span>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+            className="mc-modal-close-btn"
           >
             <X size={18} />
           </button>
@@ -124,16 +124,16 @@ function LivePreviewModal({ moduleData, onClose }) {
               <Lock size={24} />
             </div>
             <div>
-              <span className="inline-block px-3 py-1 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800 border border-amber-300 uppercase tracking-wider mb-2">
+              <span className="mc-preview-badge">
                 Under Scheduled Maintenance
               </span>
-              <h3 className="font-extrabold text-slate-900 text-base">{moduleData.name}</h3>
-              <p className="text-xs text-amber-900 font-semibold mt-2 px-4 py-2 bg-amber-50 rounded-xl border border-amber-200">
+              <h3 className="mc-preview-name">{moduleData.name}</h3>
+              <p className="mc-preview-msg">
                 "{moduleData.message}"
               </p>
             </div>
-            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 mt-1">
-              <Info size={13} className="text-slate-400" />
+            <div className="mc-preview-target">
+              <Info size={13} style={{ color: "#94a3b8" }} />
               <span>Target Role Restricted: <strong>{moduleData.role}</strong></span>
             </div>
           </div>
@@ -306,7 +306,7 @@ export default function MaintenanceControls() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val text-emerald-600">{activeCount} Systems</h3>
+            <h3 className="sa-stats-val sa-stats-val--emerald">{activeCount} Systems</h3>
             <p className="sa-stats-change">
               <span className="sa-stats-change-text--up">
                 {((activeCount / totalModules) * 100).toFixed(0)}% Operational
@@ -461,12 +461,12 @@ export default function MaintenanceControls() {
 
                     <td className="maintenancecontrols-td">
                       {isCurrentlyActive ? (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 inline-flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                        <span className="mc-status-pill-online">
+                          <span className="mc-status-dot-online"></span> Online
                         </span>
                       ) : (
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 inline-flex items-center gap-1.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Maintenance
+                        <span className="mc-status-pill-maintenance">
+                          <span className="mc-status-dot-maintenance"></span> Maintenance
                         </span>
                       )}
                     </td>

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, UserCog, UserCheck, UserPlus, CalendarCheck, BookOpenCheck, GraduationCap, Terminal, LineChart, Trophy, FileCheck2, HelpCircle, Megaphone, Code2, AlertTriangle, AlertCircle, Briefcase, Award } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/AD_Sidebar.css";
@@ -24,29 +25,37 @@ function SidebarBrand({ collapsed, subtitle }) {
 }
 
 const primaryNavItems = [
-  { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
-  { title: "Manage Users", url: "/admin/users", icon: UserCog },
-  { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck },
-  { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase },
-  { title: "Batches", url: "/admin/batches", icon: Code2 },
-  { title: "Departments", url: "/admin/departments", icon: Briefcase },
-  { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },
-  { title: "Coding Practice", url: "/admin/practice", icon: Terminal },
-  { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap },
-  { title: "Student Progress", url: "/admin/progress", icon: LineChart },
-  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy },
-  { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck },
-  { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2 },
-  { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle },
+  { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true, moduleKey: "adminDashboard" },
+  { title: "Manage Users", url: "/admin/users", icon: UserCog, moduleKey: "manageUsers" },
+  { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck, moduleKey: "adminBulkUserImport" },
+  { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase, moduleKey: "adminC2C" },
+  { title: "Batches", url: "/admin/batches", icon: Code2, moduleKey: "adminBatches" },
+  { title: "Departments", url: "/admin/departments", icon: Briefcase, moduleKey: "adminDepartments" },
+  { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck, moduleKey: "adminLearningContent" },
+  { title: "Coding Practice", url: "/admin/practice", icon: Terminal, moduleKey: "adminPracticeProblems" },
+  { title: "Manage Quizzes", url: "/admin/quiz", icon: GraduationCap, moduleKey: "adminQuizzes" },
+  { title: "Student Progress", url: "/admin/progress", icon: LineChart, moduleKey: "adminProgress" },
+  { title: "Leaderboard", url: "/admin/leaderboard", icon: Trophy, moduleKey: "adminLeaderboard" },
+  { title: "Attendance", url: "/admin/attendance", icon: CalendarCheck, moduleKey: "adminAttendance" },
+  { title: "Weekly Reports", url: "/admin/weekly-reports", icon: FileCheck2, moduleKey: "adminWeeklyReports" },
+  { title: "Defaulters", url: "/admin/defaulters", icon: AlertTriangle, moduleKey: "defaulters" },
 ];
 
 const footerNavItems = [
-  { title: "Broadcast Notice", url: "/admin/broadcast", icon: Megaphone },
-  { title: "Support Tickets", url: "/admin/help", icon: HelpCircle },
+  { title: "Broadcast Notice", url: "/admin/broadcast", icon: Megaphone, moduleKey: "adminBroadcast" },
+  { title: "Support Tickets", url: "/admin/help", icon: HelpCircle, moduleKey: "adminHelp" },
 ];
 
 export function AdminSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
+  const { isModuleActive } = useSystemMaintenance();
+
+  const visiblePrimaryItems = primaryNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
+  const visibleFooterItems = footerNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
 
   const isActive = (url, exact) => {
     if (url === "/admin/trainings" && (pathname === "/admin/c2c" || pathname.startsWith("/admin/c2c/"))) return true;
@@ -86,14 +95,14 @@ export function AdminSidebar({ collapsed, mobileOpen, onClose }) {
       {/* Nav */}
       <div className="sidebar-content">
         <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
+          {visiblePrimaryItems.map(renderItem)}
         </ul>
       </div>
 
       {/* Pinned Bottom Support Section */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
+          {visibleFooterItems.map(renderItem)}
         </ul>
       </div>
     </aside>

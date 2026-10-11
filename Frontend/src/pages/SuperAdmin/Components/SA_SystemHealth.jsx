@@ -126,7 +126,7 @@ export default function SystemHealth() {
       {/* Real-Time Core Status Card */}
       <div className="sa-health-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "20px", marginBottom: "24px", boxShadow: "0 2px 8px rgba(0,0,0,0.02)" }}>
         <div className="sa-quick-header" style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-          <Server size={18} className="text-emerald-600" />
+          <Server size={18} className="system-health-server-icon" />
           <h4 className="sa-quick-title" style={{ fontSize: "16px", fontWeight: "700", margin: 0, color: "#0f172a" }}>Real-Time Core Status</h4>
         </div>
         <div className="sa-health-list" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -182,8 +182,8 @@ export default function SystemHealth() {
 
         <div className="system-health-table-wrap">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-12 text-slate-500 gap-2 font-semibold text-sm">
-              <RefreshCw size={24} className="animate-spin text-indigo-600" />
+            <div className="system-health-loading-box">
+              <RefreshCw size={24} className="system-health-spin-icon" />
               <span>Pinging live infrastructure microservices...</span>
             </div>
           ) : (
@@ -204,7 +204,7 @@ export default function SystemHealth() {
                     <td className="system-health-td">
                       <div className="system-health-service-name">{s.name}</div>
                       {s.metricDetails && (
-                        <div className="text-[11px] text-slate-400 font-medium mt-0.5">{s.metricDetails}</div>
+                        <div className="system-health-service-metric">{s.metricDetails}</div>
                       )}
                     </td>
                     <td className="system-health-td">

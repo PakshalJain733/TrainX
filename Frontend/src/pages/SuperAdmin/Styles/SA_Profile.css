@@ -932,3 +932,22 @@
   background: #4338ca;
 }
 
+.profile-2fa-qr-icon {
+  color: #94a3b8;
+}
+
+.profile-copy-check-icon {
+  color: #059669;
+}
+
+.profile-icon-indigo {
+  color: #4f46e5 !important;
+}
+
+.profile-role-highlight {
+  font-weight: 600 !important;
+  color: #4f46e5 !important;
+}
+
+
+

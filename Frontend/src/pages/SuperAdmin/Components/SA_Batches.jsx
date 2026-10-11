@@ -19,22 +19,22 @@ function BatchSelect(props) {
   return <CustomSelect {...props} />;
 }
 function StatusBadge({ status }) {
-  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  let modifier = '';
   if (status === 'Active' || status === 'active' || status === 'Verified' || status === 'Available') {
-    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    modifier = 'batch-status--active';
   } else if (status === 'Inactive' || status === 'inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-rose-50 text-rose-700 border-rose-200';
+    modifier = 'batch-status--inactive';
   } else if (status === 'High' || status === 'In Progress') {
-    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    modifier = 'batch-status--progress';
   } else if (status === 'Busy' || status === 'Medium') {
-    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+    modifier = 'batch-status--warning';
   } else if (status === 'Near Completion') {
-    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+    modifier = 'batch-status--purple';
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+    <span className={`batch-status-badge ${modifier}`}>
+      <span className="batch-status-badge-dot"></span>
       {status}
     </span>
   );
@@ -607,7 +607,7 @@ export default function Batches() {
                 </div>
                 <div>
                   <h2 className="modal-title">{viewBatch.name}</h2>
-                  <p className="modal-subtitle">Batch Code: <strong className="text-slate-700">{viewBatch.code || 'BCH-2026'}</strong></p>
+                  <p className="modal-subtitle">Batch Code: <strong className="sa-batch-code-highlight">{viewBatch.code || 'BCH-2026'}</strong></p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setViewBatch(null)}>
@@ -619,7 +619,7 @@ export default function Batches() {
               <div className="sa-modal-details-grid">
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Building2 size={13} className="text-indigo-500" />
+                    <Building2 size={13} className="sa-detail-label-icon" />
                     <span>Institution</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewBatch.collegeName || viewBatch.college || "Apex Tech"}</span>
@@ -627,15 +627,15 @@ export default function Batches() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <GraduationCap size={13} className="text-indigo-500" />
+                    <GraduationCap size={13} className="sa-detail-label-icon" />
                     <span>Department</span>
                   </span>
-                  <span className="sa-modal-detail-value text-indigo-600">{viewBatch.departmentName || viewBatch.department || "Computer Science"}</span>
+                  <span className="sa-modal-detail-value sa-detail-dept-value">{viewBatch.departmentName || viewBatch.department || "Computer Science"}</span>
                 </div>
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <UserCheck size={13} className="text-indigo-500" />
+                    <UserCheck size={13} className="sa-detail-label-icon" />
                     <span>Assigned Lead Mentor</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewBatch.trainer || 'Prof. Active Trainer'}</span>
@@ -643,17 +643,17 @@ export default function Batches() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Calendar size={13} className="text-indigo-500" />
+                    <Calendar size={13} className="sa-detail-label-icon" />
                     <span>Weekly Schedule</span>
                   </span>
-                  <span className="sa-modal-detail-value font-medium text-slate-700" style={{ fontSize: '12px' }}>
+                  <span className="sa-modal-detail-value sa-detail-schedule-value">
                     {viewBatch.schedule || 'Mon - Fri (10 AM)'}
                   </span>
                 </div>
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Users size={13} className="text-indigo-500" />
+                    <Users size={13} className="sa-detail-label-icon" />
                     <span>Enrolled Students</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewBatch.studentsCount !== undefined && viewBatch.studentsCount !== null ? viewBatch.studentsCount : (viewBatch.students !== undefined ? viewBatch.students : 0)} Students</span>
@@ -661,7 +661,7 @@ export default function Batches() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <ShieldCheck size={13} className="text-indigo-500" />
+                    <ShieldCheck size={13} className="sa-detail-label-icon" />
                     <span>Status</span>
                   </span>
                   <div className="mt-1">
@@ -840,8 +840,8 @@ export default function Batches() {
             </div>
 
             <div className="modal-body">
-              <p className="text-sm text-slate-600 m-0">
-                Are you sure you want to remove <strong className="text-slate-900">{deleteBatch.name}</strong>? This action cannot be undone.
+              <p className="batches-delete-confirm-text">
+                Are you sure you want to remove <strong className="batches-delete-confirm-name">{deleteBatch.name}</strong>? This action cannot be undone.
               </p>
             </div>
 

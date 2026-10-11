@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, Sparkles, Bot, AlertTriangle, CalendarCheck, Trophy,AlertCircle, BookOpenCheck, FileCheck2, HelpCircle, LineChart, Megaphone, GraduationCap, Code2, UserCog } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/MN_Sidebar.css";
@@ -24,27 +25,35 @@ function SidebarBrand({ collapsed, subtitle }) {
 }
 
 const primaryNavItems = [
-  { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true },
-  { title: "Students", url: "/mentor/students", icon: Users },
-  { title: "Batches", url: "/mentor/batches", icon: Code2 },
-  { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck },
-  { title: "Quizzes", url: "/mentor/quizzes", icon: GraduationCap },
-  { title: "Roadmaps", url: "/mentor/roadmaps", icon: Sparkles },
-  { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot },
-  { title: "Progress", url: "/mentor/performance", icon: LineChart },
-  { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle },
-  { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy },
-  { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck },
-  { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2 },
-  { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle },
+  { title: "Overview", url: "/mentor", icon: LayoutDashboard, exact: true, moduleKey: "mentorDashboard" },
+  { title: "Students", url: "/mentor/students", icon: Users, moduleKey: "mentorStudents" },
+  { title: "Batches", url: "/mentor/batches", icon: Code2, moduleKey: "mentorStudents" },
+  { title: "Study Material", url: "/mentor/study-material", icon: BookOpenCheck, moduleKey: "mentorStudyMaterial" },
+  { title: "Quizzes", url: "/mentor/quizzes", icon: GraduationCap, moduleKey: "mentorQuizzes" },
+  { title: "Roadmaps", url: "/mentor/roadmaps", icon: Sparkles, moduleKey: "mentorRoadmaps" },
+  { title: "AI Interviews", url: "/mentor/ai-interviews", icon: Bot, moduleKey: "mentorAIInterviews" },
+  { title: "Progress", url: "/mentor/performance", icon: LineChart, moduleKey: "mentorPerformance" },
+  { title: "Skill Gaps", url: "/mentor/skill-gaps", icon: AlertTriangle, moduleKey: "mentorSkillGaps" },
+  { title: "Leaderboard", url: "/mentor/leaderboard", icon: Trophy, moduleKey: "mentorLeaderboard" },
+  { title: "Attendance", url: "/mentor/attendance", icon: CalendarCheck, moduleKey: "mentorAttendance" },
+  { title: "Weekly Reports", url: "/mentor/weekly-reports", icon: FileCheck2, moduleKey: "mentorWeeklyReports" },
+  { title: "Defaulters", url: "/mentor/defaulters", icon: AlertCircle, moduleKey: "defaulters" },
 ];
 
 const footerNavItems = [
-  { title: "Support Ticket", url: "/mentor/help", icon: HelpCircle },
+  { title: "Support Ticket", url: "/mentor/help", icon: HelpCircle, moduleKey: "mentorHelp" },
 ];
 
 export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
+  const { isModuleActive } = useSystemMaintenance();
+
+  const visiblePrimaryItems = primaryNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
+  const visibleFooterItems = footerNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
 
   const isActive = (url, exact) =>
     exact
@@ -82,14 +91,14 @@ export function MentorSidebar({ collapsed, mobileOpen, onClose }) {
       {/* Nav */}
       <div className="sidebar-content">
         <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
+          {visiblePrimaryItems.map(renderItem)}
         </ul>
       </div>
 
       {/* Pinned Bottom */}
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
+          {visibleFooterItems.map(renderItem)}
         </ul>
       </div>
     </aside>

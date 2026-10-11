@@ -1,10 +1,12 @@
 import React, { useState } from "react";
 import { FileCheck2, ChevronDown, ChevronUp, Download, CheckCircle, AlertTriangle } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/ST_WeeklyReports.css"
 
 const reportsData = [];
 
 export default function WeeklyReports() {
+  const { isModuleActive } = useSystemMaintenance();
   const [openWeek, setOpenWeek] = useState("week-32");
 
   const toggleWeek = (id) => {
@@ -12,6 +14,10 @@ export default function WeeklyReports() {
   };
 
   const handleDownload = (reportTitle) => {
+    if (!isModuleActive("studentPdfDownloader")) {
+      alert("PDF download service is currently offline for maintenance.");
+      return;
+    }
     alert(`Downloading ${reportTitle} dossier summary (PDF)...`);
   };
 
@@ -165,9 +171,12 @@ export default function WeeklyReports() {
                   <button
                     className="weekly-download-btn"
                     onClick={() => handleDownload(report.title)}
+                    disabled={!isModuleActive("studentPdfDownloader")}
+                    style={!isModuleActive("studentPdfDownloader") ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+                    title={!isModuleActive("studentPdfDownloader") ? "PDF download disabled by administrator" : "Download report"}
                   >
                     <Download size={15} />
-                    Download report
+                    {isModuleActive("studentPdfDownloader") ? "Download report" : "Download (Disabled)"}
                   </button>
                 </div>
               )}

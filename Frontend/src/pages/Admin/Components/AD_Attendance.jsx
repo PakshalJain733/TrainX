@@ -629,8 +629,8 @@ export default function AdminAttendance() {
             </div>
 
             <div className="admin-qr-modal-footer">
-              <span style={{ fontSize: "12px", color: "#64748b", display: "flex", alignItems: "center", gap: "4px" }}>
-                <ShieldCheck size={14} className="text-emerald-600" /> Database Verified
+              <span className="admin-qr-verified-text">
+                <ShieldCheck size={14} className="admin-qr-verified-icon" /> Database Verified
               </span>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button

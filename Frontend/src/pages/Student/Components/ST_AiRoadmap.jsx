@@ -47,6 +47,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import apiFetch from "../../../utils/api";
 import "../Styles/ST_AiRoadmap.css";
 
@@ -713,6 +714,7 @@ const POPULAR_PRESETS = [
 ];
 
 export default function AIRoadmap() {
+  const { isModuleActive, getModuleConfig } = useSystemMaintenance();
   const [goalInput, setGoalInput] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -1073,6 +1075,11 @@ export default function AIRoadmap() {
   };
 
   const handleRunCompiler = async () => {
+    if (!isModuleActive("codingCompiler")) {
+      setCompilerStatus("error");
+      setCompilerOutput(`⚠️ Code Execution Sandbox is under scheduled maintenance:\n${getModuleConfig("codingCompiler")?.message || "Compiler feature disabled by Super Admin."}`);
+      return;
+    }
     setCompilerStatus("running");
     setCompilerOutput("Executing code...");
     const startTime = Date.now();

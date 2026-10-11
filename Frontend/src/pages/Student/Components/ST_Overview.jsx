@@ -7,6 +7,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS } from "../../../utils/sharedStore";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/ST_Overview.css";
 
 const API_BASE = getApiBaseUrl();
@@ -67,6 +68,7 @@ const defaultDashboardData = {
 };
 
 export default function Overview() {
+  const { isModuleActive } = useSystemMaintenance();
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
   const [myBatchesCount, setMyBatchesCount] = useState(0);
@@ -272,10 +274,30 @@ export default function Overview() {
   const leaderboardList = dashboard.leaderboard || [];
 
   const studentStats = [
-    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: Activity },
-    { label: "Active Batches", value: `${myBatchesCount} Active`, hint: "Assigned training batches", icon: Layers },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current batch rank", icon: Trophy },
-    { label: "Earned Points", value: "0 XP", hint: "Coding & quiz points", icon: Zap },
+    {
+      label: "Attendance Rate",
+      value: isModuleActive("attendance") ? `${Math.round(dashboard.attendanceSummary.percentage)}%` : "Offline",
+      hint: isModuleActive("attendance") ? "Active semester attendance" : "Module in maintenance",
+      icon: Activity
+    },
+    {
+      label: "Active Batches",
+      value: isModuleActive("studentBatches") ? `${myBatchesCount} Active` : "Offline",
+      hint: isModuleActive("studentBatches") ? "Assigned training batches" : "Module in maintenance",
+      icon: Layers
+    },
+    {
+      label: "Coding Rank",
+      value: isModuleActive("studentLeaderboard") ? `#${dashboard.codingProgress.currentRank}` : "Offline",
+      hint: isModuleActive("studentLeaderboard") ? "Current batch rank" : "Leaderboard in maintenance",
+      icon: Trophy
+    },
+    {
+      label: "Earned Points",
+      value: isModuleActive("practiceCoding") ? "0 XP" : "Offline",
+      hint: isModuleActive("practiceCoding") ? "Coding & quiz points" : "Practice in maintenance",
+      icon: Zap
+    },
   ];
 
   return (
@@ -372,8 +394,8 @@ export default function Overview() {
                 {upcoming.map((task, i) => (
                   <div key={i} className="overview-task-item">
                     <div>
-                      <h4 className="text-sm font-semibold">{task.title}</h4>
-                      <p className="text-xs text-slate-500">{task.dueDate}</p>
+                      <h4 className="overview-item-title">{task.title}</h4>
+                      <p className="overview-item-due">{task.dueDate}</p>
                     </div>
                     <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
                   </div>
@@ -395,12 +417,18 @@ export default function Overview() {
                 <CardDescription className="overview-card-desc">Top performers across all training batches</CardDescription>
               </div>
             </div>
-            <Link to="/student/leaderboard" className="overview-view-all-link">
-              View All <ChevronRight size={14} />
-            </Link>
+            {isModuleActive("studentLeaderboard") && (
+              <Link to="/student/leaderboard" className="overview-view-all-link">
+                View All <ChevronRight size={14} />
+              </Link>
+            )}
           </CardHeader>
           <CardContent style={{ padding: '20px 24px' }}>
-            {leaderboardList.length === 0 ? (
+            {!isModuleActive("studentLeaderboard") ? (
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#b45309', fontSize: '13px', background: '#fffbeb', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                Leaderboard rankings are currently undergoing maintenance by administrator policy.
+              </div>
+            ) : leaderboardList.length === 0 ? (
               <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
                 No active leaderboard scores recorded yet. Rankings will update automatically across all batches as students complete coding tasks and quizzes.
               </div>
