@@ -3,12 +3,10 @@
 .coding-platform-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px);
-  /* Adjust based on your header/layout height */
-  margin: -24px;
-  /* Negate padding from student-page-inner to go edge-to-edge if needed, or keep padding */
+  height: 100vh;
+  margin: 0;
+  padding: 0;
   background: #ffffff;
-  /* Light IDE background */
   color: #0f172a;
   overflow: hidden;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;

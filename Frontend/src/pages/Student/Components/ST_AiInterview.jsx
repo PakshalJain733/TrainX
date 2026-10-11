@@ -426,54 +426,92 @@ export default function AIInterview() {
       }
     }
 
-    const d = sessionData.details || {};
-    const sc = d.scorecard || {};
-    const overallScore = Number(sessionData.overall_score ?? d.overallScore ?? sc.overallScore ?? 0);
-    const technical = Number(d.technical ?? sc.technical ?? overallScore);
-    const communication = Number(d.communication ?? sc.communication ?? overallScore);
-    const problemSolving = Number(d.problemSolving ?? sc.problemSolving ?? overallScore);
+    let d = sessionData.details || {};
+    while (typeof d === "string") {
+      try { d = JSON.parse(d); } catch (e) { break; }
+    }
+    // Unwrap nested details if stored via REST wrapper
+    if (d && d.details && typeof d.details === "object") {
+      d = { ...d, ...d.details };
+    }
+
+    let sc = d?.scorecard || {};
+    while (typeof sc === "string") {
+      try { sc = JSON.parse(sc); } catch (e) { break; }
+    }
+
+    const parseNum = (val, fallback = 0) => {
+      if (typeof val === "number" && !isNaN(val)) return Math.round(val);
+      if (typeof val === "string") {
+        const n = parseFloat(val.replace(/[^0-9.-]/g, ""));
+        if (!isNaN(n)) return Math.round(n);
+      }
+      return Math.round(fallback);
+    };
+
+    const overallScore = parseNum(sessionData.overall_score ?? d.overallScore ?? sc.overallScore, 0);
+    const technical = parseNum(d.technical ?? sc.technical, overallScore);
+    const communication = parseNum(d.communication ?? sc.communication, overallScore);
+    const problemSolving = parseNum(d.problemSolving ?? sc.problemSolving, overallScore);
+    const defaultConf = overallScore === 0 ? 0 : Math.min(100, Math.round(overallScore * 0.9 + 10));
+    const confidence = parseNum(d.confidence ?? sc.confidence, defaultConf);
 
     const ensureArr = (val) => {
-      if (Array.isArray(val)) return val;
-      if (typeof val === 'string' && val.trim()) return [val.trim()];
+      if (Array.isArray(val) && val.length > 0) return val;
+      if (typeof val === "string" && val.trim()) return [val.trim()];
       return [];
     };
 
-    const strengths = ensureArr(d.strengths || sc.strengths || (sessionData.feedback || d.feedback ? [sessionData.feedback || d.feedback] : []));
-    const improvementAreas = ensureArr(d.weaknesses || d.improvementAreas || sc.improvementAreas || d.recommendations || []);
-    const recommendedTopics = ensureArr(d.skillGaps || d.recommendedTopics || sc.recommendedTopics || [sessionData.interview_type || "General Technical Practice"]);
-    const feedback = sessionData.feedback || d.feedback || sc.feedback || "Interview completed successfully.";
-    const readiness = d.readiness || sc.readiness || sessionData.grade || (overallScore >= 70 ? "Interview Ready" : "Practice Needed");
-    const grade = sessionData.grade || sc.grade || (overallScore >= 80 ? "Excellent" : overallScore >= 60 ? "Good" : "Needs Improvement");
+    const strengths = ensureArr(d.strengths || sc.strengths);
+    const improvementAreas = ensureArr(d.weaknesses || d.improvementAreas || sc.improvementAreas || d.recommendations);
+    const recommendedTopics = ensureArr(d.skillGaps || d.recommendedTopics || sc.recommendedTopics);
+    const feedback = sessionData.feedback || d.feedback || sc.feedback || (overallScore === 0 ? "No answer data evaluated." : "Interview completed.");
+    const readiness = d.readiness || sc.readiness || (overallScore >= 70 ? "Interview Ready" : overallScore >= 40 ? "Needs Practice" : "Not Ready");
+    const grade = sessionData.grade || sc.grade || d.grade || (overallScore >= 80 ? "Excellent" : overallScore >= 70 ? "Good" : "Needs Improvement");
 
     const scorecard = {
       overallScore,
       technical,
       communication,
       problemSolving,
-      strengths,
-      improvementAreas,
-      recommendedTopics,
+      confidence,
+      strengths: strengths.length > 0 ? strengths : (overallScore < 50 ? ["Attempted interview session"] : ["Conceptual clarity in core areas"]),
+      improvementAreas: improvementAreas.length > 0 ? improvementAreas : ["Review topic fundamentals", "Practice answering with concise technical precision"],
+      recommendedTopics: recommendedTopics.length > 0 ? recommendedTopics : [sessionData.interview_type || "Technical Fundamentals"],
       feedback,
       readiness,
       grade,
     };
 
-    let history = d.evaluationHistory || sc.evaluationHistory || [];
-    if (history.length === 0 && Array.isArray(d.questions)) {
+    let history = Array.isArray(d.evaluationHistory) && d.evaluationHistory.length > 0
+      ? d.evaluationHistory
+      : Array.isArray(sc.evaluationHistory) && sc.evaluationHistory.length > 0
+      ? sc.evaluationHistory
+      : [];
+
+    if (history.length === 0 && Array.isArray(d.questions) && d.questions.length > 0) {
       history = d.questions.map((q, idx) => ({
         question: q,
-        answer: Array.isArray(d.answers) ? d.answers[idx] : "",
-        score: Array.isArray(d.questionScores) ? d.questionScores[idx] : null,
-        feedback: Array.isArray(d.questionFeedbacks) ? d.questionFeedbacks[idx] : "Recorded answer.",
+        answer: Array.isArray(d.answers) ? (d.answers[idx] || "") : "",
+        score: Array.isArray(d.questionScores) ? (typeof d.questionScores[idx] === "number" ? d.questionScores[idx] : 0) : 0,
+        feedback: Array.isArray(d.questionFeedbacks) ? (d.questionFeedbacks[idx] || "Recorded answer.") : "Recorded answer.",
         modelAnswer: Array.isArray(d.modelAnswers) ? d.modelAnswers[idx] : null,
       }));
     }
 
+    // Clean and normalize history items
+    history = history.map((h, i) => ({
+      question: h.question || h.q || `Question ${i + 1}`,
+      answer: h.answer || h.a || "",
+      score: typeof h.score === "number" ? h.score : 0,
+      feedback: h.feedback || h.f || "No detailed feedback generated.",
+      modelAnswer: h.modelAnswer || h.ma || "",
+    }));
+
     setResult({
       scorecard,
-      questionsAnswered: d.questionsAnswered ?? history.length,
-      durationSeconds: d.durationSeconds ?? null,
+      questionsAnswered: d.questionsAnswered ?? (history.length || (overallScore > 0 ? 1 : 0)),
+      durationSeconds: d.durationSeconds ?? sessionData.duration_seconds ?? null,
       evaluationHistory: history,
     });
     setPhase("result");
@@ -897,6 +935,7 @@ export default function AIInterview() {
       completedRef.current = true;
       endRequestedRef.current = true;
       firstQuestionRef.current = false;
+      setIsEvaluating(false);
       stopTimer();
       stopRecognition();
       stopCamera();
@@ -918,38 +957,42 @@ export default function AIInterview() {
       setResult(finalResult);
       setPhase("result");
 
-      // Save via REST as fail-safe if needed, then refresh past interviews
-      const payloadDetails = {
-        role,
-        topic,
-        durationSeconds: finalResult.durationSeconds,
-        questionsAnswered: finalResult.questionsAnswered,
-        overallScore: finalResult.scorecard?.overallScore ?? 0,
-        technical: finalResult.scorecard?.technical ?? 0,
-        communication: finalResult.scorecard?.communication ?? 0,
-        problemSolving: finalResult.scorecard?.problemSolving ?? 0,
-        strengths: finalResult.scorecard?.strengths || [],
-        weaknesses: finalResult.scorecard?.improvementAreas || [],
-        skillGaps: finalResult.scorecard?.recommendedTopics || [],
-        feedback: finalResult.scorecard?.feedback || "",
-        readiness: finalResult.scorecard?.readiness || "Completed",
-        grade: finalResult.scorecard?.grade || "Average",
-        evaluationHistory: finalResult.evaluationHistory,
-        scorecard: finalResult.scorecard,
-      };
+      // Only save via REST if socket did not already save the session
+      if (!summary?.sessionId) {
+        const payloadDetails = {
+          role,
+          topic,
+          durationSeconds: finalResult.durationSeconds,
+          questionsAnswered: finalResult.questionsAnswered,
+          overallScore: finalResult.scorecard?.overallScore ?? 0,
+          technical: finalResult.scorecard?.technical ?? 0,
+          communication: finalResult.scorecard?.communication ?? 0,
+          problemSolving: finalResult.scorecard?.problemSolving ?? 0,
+          strengths: finalResult.scorecard?.strengths || [],
+          weaknesses: finalResult.scorecard?.improvementAreas || [],
+          skillGaps: finalResult.scorecard?.recommendedTopics || [],
+          feedback: finalResult.scorecard?.feedback || "",
+          readiness: finalResult.scorecard?.readiness || "Completed",
+          grade: finalResult.scorecard?.grade || "Average",
+          evaluationHistory: finalResult.evaluationHistory,
+          scorecard: finalResult.scorecard,
+        };
 
-      apiFetch("/interviews", {
-        method: "POST",
-        body: JSON.stringify({
-          details: payloadDetails,
-          interviewType: topic || role || "Technical Mock",
-          overallScore: payloadDetails.overallScore,
-          grade: payloadDetails.grade,
-          feedback: payloadDetails.feedback,
-        }),
-      })
-        .then(() => fetchPastInterviews())
-        .catch(() => fetchPastInterviews());
+        apiFetch("/interviews", {
+          method: "POST",
+          body: JSON.stringify({
+            details: payloadDetails,
+            interviewType: topic || role || "Technical Mock",
+            overallScore: payloadDetails.overallScore,
+            grade: payloadDetails.grade,
+            feedback: payloadDetails.feedback,
+          }),
+        })
+          .then(() => fetchPastInterviews())
+          .catch(() => fetchPastInterviews());
+      } else {
+        fetchPastInterviews();
+      }
 
       // Exit full screen when interview finishes
       if (typeof document !== "undefined" && document.fullscreenElement) {
@@ -969,11 +1012,14 @@ export default function AIInterview() {
 
     const socket = socketRef.current;
     if (socket && socket.connected && sessionIdRef.current) {
+      setIsEvaluating(true);
       socket.emit("interview:end", { sessionId: sessionIdRef.current });
-      // Timeout fallback if server doesn't respond
+      // Generous fallback timeout if network disconnects before complete arrives
       setTimeout(() => {
-        if (phaseRef.current !== "result") finishInterview(null);
-      }, 8000);
+        if (phaseRef.current !== "result" && !completedRef.current) {
+          finishInterview(null);
+        }
+      }, 25000);
     } else {
       finishInterview(null);
     }
@@ -1549,7 +1595,14 @@ export default function AIInterview() {
                   {item.feedback && (
                     <p className="past-item-feedback-snippet">{item.feedback}</p>
                   )}
-                  <button type="button" className="view-suggestions-btn">
+                  <button
+                    type="button"
+                    className="view-suggestions-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      viewPastResult(item);
+                    }}
+                  >
                     <Sparkles size={13} /> View Feedback
                   </button>
                 </div>
@@ -1929,7 +1982,7 @@ export default function AIInterview() {
             )}
 
             {/* ── PER-QUESTION BREAKDOWN ── */}
-            {result?.evaluationHistory && result.evaluationHistory.length > 0 && (
+            {result?.evaluationHistory && result.evaluationHistory.length > 0 ? (
               <div className="ai-q-breakdown-card">
                 <div className="ai-q-breakdown-title">Question-by-Question Breakdown</div>
                 <div className="ai-q-breakdown-list">
@@ -1997,6 +2050,15 @@ export default function AIInterview() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            ) : (
+              <div className="ai-q-breakdown-card">
+                <div className="ai-q-breakdown-title">Question-by-Question Breakdown</div>
+                <div style={{ padding: "28px 20px", textAlign: "center", color: "#64748b", fontSize: "0.95rem", background: "#f8fafc", borderRadius: "10px", margin: "14px 0" }}>
+                  {result?.questionsAnswered > 0 
+                    ? "Detailed individual question breakdown was not archived for this session."
+                    : "No questions were answered during this session. To get detailed question evaluations, complete questions during your live mock interview."}
                 </div>
               </div>
             )}
