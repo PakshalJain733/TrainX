@@ -7,6 +7,25 @@ export const getApiBaseUrl = () => {
   return "https://trainx-6w8m.onrender.com/api/v1";
 };
 
+export const getBackendOrigin = () => {
+  if (import.meta.env.VITE_SOCKET_URL) {
+    return import.meta.env.VITE_SOCKET_URL.replace(/\/$/, "");
+  }
+  if (import.meta.env.VITE_BACKEND_URL) {
+    return import.meta.env.VITE_BACKEND_URL.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
+  }
+  if (import.meta.env.VITE_API_URL && (import.meta.env.VITE_API_URL.startsWith("http://") || import.meta.env.VITE_API_URL.startsWith("https://"))) {
+    return import.meta.env.VITE_API_URL.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "");
+  }
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return `${window.location.protocol}//${host}:5000`;
+    }
+  }
+  return "https://trainx-6w8m.onrender.com";
+};
+
 // Read the auth token from whichever storage was used at login:
 //   sessionStorage → Remember Me was OFF (cleared when browser closes)
 //   localStorage   → Remember Me was ON  (persists across restarts)
