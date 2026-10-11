@@ -15,22 +15,20 @@ function CollegeSelect(props) {
 }
 
 function StatusBadge({ status }) {
-  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  let modifier = '';
   if (status === 'Active' || status === 'Verified' || status === 'Available') {
-    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (status === 'Inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+    modifier = 'badge-active';
   } else if (status === 'High' || status === 'In Progress') {
-    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    modifier = 'badge-progress';
   } else if (status === 'Busy' || status === 'Medium') {
-    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+    modifier = 'badge-warning';
   } else if (status === 'Near Completion') {
-    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+    modifier = 'badge-purple';
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+    <span className={`sa-college-badge ${modifier}`}>
+      <span className="sa-college-badge-dot"></span>
       {status}
     </span>
   );
@@ -332,7 +330,7 @@ export default function Colleges() {
       <div className="space-y-6 text-slate-800">
         <div className="sa-page-header">
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="colleges-header-title-wrap mb-1">
               <button
                 onClick={() => navigate('/super-admin/colleges')}
                 className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition cursor-pointer"
@@ -340,7 +338,7 @@ export default function Colleges() {
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2 m-0">
+              <h2 className="colleges-header-title colleges-header-title-wrap m-0">
                 <GraduationCap className="w-5 h-5 text-indigo-600" />
                 <span>{selectedCollege ? selectedCollege.name : "College Departments"}</span>
               </h2>
@@ -367,7 +365,7 @@ export default function Colleges() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredDepts.map((dept) => (
             <div key={dept.id} className="sa-widget-card hover:border-indigo-300 transition college-dept-widget-card">
-              <div className="flex items-start justify-between">
+              <div className="colleges-dept-card-header">
                 <div>
                   <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 text-indigo-600 mb-1 border border-indigo-100">
                     {dept.code}

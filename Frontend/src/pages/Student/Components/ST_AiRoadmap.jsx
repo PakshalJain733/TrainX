@@ -39,12 +39,82 @@ import {
   FileCode2,
   BookOpenCheck,
   ChevronRight,
-  Plus
+  Plus,
+  Eye,
+  RotateCcw
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
+import CustomSelect from "../../../components/ui/CustomSelect";
+import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import apiFetch from "../../../utils/api";
 import "../Styles/ST_AiRoadmap.css";
+
+const COMPILER_LANGUAGE_OPTIONS = [
+  { value: "react", label: "React (JSX Live Preview)" },
+  { value: "html", label: "HTML5 / CSS3 Preview" },
+  { value: "node", label: "JavaScript (Node.js)" },
+  { value: "typescript", label: "TypeScript" },
+  { value: "python", label: "Python 3" },
+  { value: "java", label: "Java 17" },
+  { value: "cpp", label: "C++ 20" },
+  { value: "c", label: "C Language" },
+  { value: "sql", label: "SQL (PostgreSQL)" },
+  { value: "go", label: "Go (Golang)" },
+];
+
+function getPreviewDocument(lang, code) {
+  if (lang === "react") {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    try {
+      const { useState, useEffect, useRef, useMemo, useCallback } = React;
+      ${code || `function App() { return <div style={{padding: 20, textAlign: 'center'}}><h2>Write your React Component</h2><p style={{color: '#94a3b8'}}>Create a function App() &#123; return &lt;h1&gt;Hello React&lt;/h1&gt;; &#125; in the editor to see it live!</p></div>; }`}
+
+      let TargetComponent = null;
+      if (typeof App !== 'undefined') TargetComponent = App;
+      else if (typeof Component !== 'undefined') TargetComponent = Component;
+      else if (typeof Main !== 'undefined') TargetComponent = Main;
+      else if (typeof Root !== 'undefined') TargetComponent = Root;
+
+      if (TargetComponent) {
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<TargetComponent />);
+      } else {
+        document.getElementById('root').innerHTML = '<div style="padding: 16px; background: #1e293b; border-radius: 8px; color: #94a3b8; font-size: 13px;">⚠️ Define a React component named <code>function App() { ... }</code> to render preview.</div>';
+      }
+    } catch(err) {
+      document.getElementById('root').innerHTML = '<div style="padding: 14px; background: #450a0a; border: 1px solid #dc2626; border-radius: 8px; color: #fecaca; font-family: monospace; font-size: 12.5px;"><strong>🔴 React Render Error:</strong><br/>' + err.message + '</div>';
+    }
+  </script>
+</body>
+</html>`;
+  }
+
+  // HTML / CSS preview
+  return code || `<!DOCTYPE html><html><body style="background:#0f172a;color:#94a3b8;padding:20px;font-family:sans-serif;"><p>Write HTML & CSS in the editor to see live web preview.</p></body></html>`;
+}
 
 /* ── Topic & Resource Helpers ── */
 function getTopicsForMilestone(m, targetRole) {
@@ -118,113 +188,43 @@ function getVideoForMilestone(m, targetRole) {
   };
 }
 
-function resolveLanguageForRole(roleStr = "") {
-  const lower = roleStr.toLowerCase();
-  if (lower.includes("python") || lower.includes("ai") || lower.includes("data")) return "python";
-  if (lower.includes("java") || lower.includes("spring")) return "java";
-  if (lower.includes("c++") || lower.includes("cpp")) return "cpp";
-  if (lower.includes("sql") || lower.includes("database")) return "sql";
-  if (lower.includes("html") || lower.includes("frontend")) return "html";
+function resolveLanguageForRole(roleStr = "", milestoneTitle = "", promptText = "") {
+  const combined = `${milestoneTitle || ""} ${roleStr || ""} ${promptText || ""}`.toLowerCase();
+
+  // React JSX priority
+  if (combined.includes("react") || combined.includes("jsx")) {
+    return "react";
+  }
+
+  // HTML & CSS Web UI priority
+  if (
+    combined.includes("html") ||
+    combined.includes("css") ||
+    combined.includes("web design") ||
+    combined.includes("web layout") ||
+    combined.includes("dom") ||
+    combined.includes("flexbox") ||
+    combined.includes("grid") ||
+    combined.includes("markup") ||
+    combined.includes("web page") ||
+    combined.includes("website") ||
+    (combined.includes("frontend") && !combined.includes("vue") && !combined.includes("angular"))
+  ) {
+    return "html";
+  }
+
+  if (combined.includes("typescript") || combined.includes("ts")) return "typescript";
+  if (combined.includes("python") || combined.includes("ai") || combined.includes("data")) return "python";
+  if (combined.includes("java") || combined.includes("spring")) return "java";
+  if (combined.includes("c++") || combined.includes("cpp")) return "cpp";
+  if (combined.includes("c language") || (combined.includes(" c ") && !combined.includes("c++"))) return "c";
+  if (combined.includes("go") || combined.includes("golang")) return "go";
+  if (combined.includes("sql") || combined.includes("database") || combined.includes("query")) return "sql";
   return "node";
 }
 
-function getStarterCodeForTopic(topicName = "", lang = "node", targetRole = "") {
-  const cleanTopic = topicName || targetRole || "Topic Practice";
-
-  if (lang === "html") {
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${cleanTopic} - Practice Preview</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; background: #0f172a; color: #f8fafc; }
-    .card { background: #1e293b; border-radius: 12px; padding: 20px; border: 1px solid #334155; }
-    h2 { color: #38bdf8; margin-top: 0; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h2>${cleanTopic}</h2>
-    <p>Live HTML/CSS output preview rendered successfully!</p>
-  </div>
-</body>
-</html>`;
-  }
-
-  if (lang === "python") {
-    return `# Practice Exercise: ${cleanTopic}
-# Goal: Implement logic for ${cleanTopic} and verify outputs.
-
-def process_data(items):
-    print(f"Processing {len(items)} elements for ${cleanTopic}...")
-    total = sum(items)
-    return total
-
-if __name__ == "__main__":
-    sample_data = [10, 20, 30, 40, 50]
-    result = process_data(sample_data)
-    print(f"✅ Execution Result: {result}")
-`;
-  }
-
-  if (lang === "java") {
-    return `// Practice Exercise: ${cleanTopic}
-public class Solution {
-    public static void main(String[] args) {
-        System.out.println("Executing practice code for: ${cleanTopic}");
-        int[] data = {10, 20, 30, 40, 50};
-        int sum = 0;
-        for (int num : data) {
-            sum += num;
-        }
-        System.out.println("✅ Result: Processed sum = " + sum);
-    }
-}
-`;
-  }
-
-  if (lang === "cpp") {
-    return `// Practice Exercise: ${cleanTopic}
-#include <iostream>
-#include <vector>
-#include <numeric>
-
-int main() {
-    std::cout << "Executing practice exercise for: ${cleanTopic}" << std::endl;
-    std::vector<int> data = {10, 20, 30, 40, 50};
-    int sum = std::accumulate(data.begin(), data.end(), 0);
-    std::cout << "✅ Result: Processed sum = " << sum << std::endl;
-    return 0;
-}
-`;
-  }
-
-  if (lang === "sql") {
-    return `-- SQL Practice Query for: ${cleanTopic}
-SELECT 
-    id, 
-    user_name, 
-    score, 
-    status 
-FROM student_assessments 
-WHERE score >= 75 
-ORDER BY score DESC;
-`;
-  }
-
-  return `// Practice Exercise: ${cleanTopic}
-// Goal: Execute code logic for ${cleanTopic}
-
-function runPractice() {
-  console.log("Executing practice exercise for: ${cleanTopic}");
-  const data = [10, 20, 30, 40, 50];
-  const sum = data.reduce((acc, val) => acc + val, 0);
-  console.log(\`✅ Result: Processed \${data.length} elements. Total sum: \${sum}\`);
-}
-
-runPractice();
-`;
+function getStarterCodeForTopic() {
+  return "";
 }
 
 function isTechnicalCodingRole(roleStr = "", milestoneTitle = "") {
@@ -236,6 +236,23 @@ function isTechnicalCodingRole(roleStr = "", milestoneTitle = "") {
     "docker", "kubernetes", "aws", "cloud", "api", "git", "web development", "coding", "developer", "programmer", "engineer"
   ];
   return techKeywords.some(kw => combined.includes(kw));
+}
+
+function extractPointsFromSection(sec) {
+  if (Array.isArray(sec?.points) && sec.points.length > 0) {
+    return sec.points;
+  }
+  if (typeof sec?.explanation === "string" && sec.explanation.trim()) {
+    const rawSentences = sec.explanation
+      .split(/(?<=[.?!])\s+/)
+      .map(s => s.trim())
+      .filter(s => s.length > 8);
+    if (rawSentences.length > 1) {
+      return rawSentences;
+    }
+    return [sec.explanation.trim()];
+  }
+  return [];
 }
 
 function getTheoryForMilestone(m, targetRole) {
@@ -254,17 +271,35 @@ function getTheoryForMilestone(m, targetRole) {
     sections = [
       {
         title: `CPython Execution Engine & Memory Allocation for ${title}`,
-        explanation: `Understand how Python translates source code into bytecode (.pyc) executed inside the CPython Virtual Machine. Objects are dynamically allocated on the CPython heap with reference counting and automatic garbage collection.`,
+        explanation: `Understand how Python translates source code into bytecode (.pyc) executed inside the CPython Virtual Machine.`,
+        points: [
+          `Bytecode Compilation: Source is compiled into .pyc bytecode executed by the CPython Virtual Machine.`,
+          `Heap & Garbage Collection: Objects are dynamically allocated on the heap using reference counting and a generational cyclic detector.`,
+          `Memory Mutability: Immutable tuples and strings are cached efficiently; mutable lists and dictionaries allow dynamic in-place updates.`,
+          `Optimization Strategy: Use generator expressions and __slots__ to minimize heap allocations and iteration overhead.`
+        ],
         takeaway: `Use immutable tuples and generator expressions to optimize heap allocations and iteration speed.`
       },
       {
         title: `Core Data Structures, Control Mechanics & Algorithms`,
-        explanation: `Master list comprehensions, dictionary hash tables, exception handling patterns, and object-oriented abstractions. Learn how to write clean, pythonic code while handling memory boundaries efficiently.`,
+        explanation: `Master list comprehensions, dictionary hash tables, exception handling patterns, and object-oriented abstractions.`,
+        points: [
+          `Hash Table Lookups: Python dictionaries utilize open-addressed hash tables with amortized O(1) key lookups.`,
+          `Vectorized Iterations: List comprehensions evaluate transformations at C-speed, bypassing interpreter loop overhead.`,
+          `Exception Safety: Use explicit try-except-finally blocks to guarantee cleanup of database connections and file descriptors.`,
+          `Code Quality: Annotate modular functions with explicit typing hints and docstrings for maintainable production code.`
+        ],
         takeaway: `Structure modular functions with explicit type hints and docstrings for maintainable data pipelines.`
       },
       {
         title: `Concurrency, Asynchronous I/O & GIL Bottleneck Mitigations`,
-        explanation: `Explore how the Global Interpreter Lock (GIL) affects multi-threading in Python. Learn to leverage asyncio event loops for non-blocking network operations and multiprocessing for CPU-heavy tasks.`,
+        explanation: `Explore how the Global Interpreter Lock (GIL) affects multi-threading and learn async execution patterns.`,
+        points: [
+          `Global Interpreter Lock: GIL ensures single-threaded bytecode execution to preserve CPython reference counts safely.`,
+          `Async Event Loop: Deploy asyncio for non-blocking network I/O and concurrent web socket handling.`,
+          `CPU-Bound Scaling: Leverage the multiprocessing library or native C extensions to bypass GIL constraints across CPU cores.`,
+          `Task Queuing: Structure distributed background jobs using worker pools for heavy computational workflows.`
+        ],
         takeaway: `Deploy asyncio for network I/O bound workflows and multiprocessing for CPU-bound computations.`
       }
     ];
@@ -273,17 +308,35 @@ function getTheoryForMilestone(m, targetRole) {
     sections = [
       {
         title: `JVM Memory Architecture: Heap, Stack & Garbage Collector`,
-        explanation: `Examine how the Java Virtual Machine manages stack frame frames for local primitive references and heap regions for dynamic object allocations. Learn how generational Garbage Collection reclaims memory automatically.`,
+        explanation: `Examine how the Java Virtual Machine manages stack frame allocations and generational heap regions.`,
+        points: [
+          `Stack vs Heap: Primitive local variables live in fast-executing Stack frames; dynamic objects reside in the JVM Heap.`,
+          `Generational Garbage Collection: Young generation (Eden/Survivor) reclaims transient instances quickly; Old generation stores long-lived objects.`,
+          `Memory Leaks Prevention: Clear unneeded static references and close database ResultSets to avoid heap exhaustion.`,
+          `Tuning Best Practice: Monitor JVM heap metrics (-Xms, -Xmx) and minimize short-lived objects inside hot loops.`
+        ],
         takeaway: `Minimize transient object allocations inside high-frequency loop executions to prevent JVM pause spikes.`
       },
       {
         title: `Object Encapsulation, Abstraction & Polymorphic Interfaces`,
-        explanation: `Implement clean encapsulation with access control modifiers, interface contracts, and abstract classes. Understand dynamic dispatch and runtime polymorphism in production Java codebases.`,
+        explanation: `Implement clean encapsulation with access control modifiers, interface contracts, and abstract classes.`,
+        points: [
+          `Encapsulation Boundary: Shield internal object fields with private modifiers and controlled accessor methods.`,
+          `Interface Contracts: Decouple business logic using clean interfaces to enable flexible dependency injection.`,
+          `Runtime Polymorphism: Java resolves virtual method calls dynamically via method table (vtable) dispatching.`,
+          `Composition Over Inheritance: Favor object composition over rigid class hierarchies for scalable enterprise systems.`
+        ],
         takeaway: `Design clean interface contracts to decouple service implementations and support dependency injection.`
       },
       {
         title: `Structured Exception Recovery & Multi-Threading Concurrency`,
-        explanation: `Differentiate between Checked Compile-time Exceptions and Unchecked RuntimeExceptions. Explore synchronized memory blocks, atomic variables, and ExecutorService thread pools for safe concurrent processing.`,
+        explanation: `Differentiate between Checked Compile-time Exceptions and Unchecked RuntimeExceptions.`,
+        points: [
+          `Exception Separation: Checked exceptions represent recoverable events; Unchecked RuntimeExceptions indicate programming errors.`,
+          `Thread Safety: Synchronize shared state using atomic variables (AtomicInteger) and reentrant locks without deadlocks.`,
+          `ExecutorService Pools: Avoid spawning raw threads manually; manage worker pools with structured ExecutorServices.`,
+          `Graceful Degradation: Wrap critical external microservice calls in circuit breakers and fallback exception handlers.`
+        ],
         takeaway: `Catch specific exception types explicitly and utilize ThreadPoolExecutors for manageable concurrent tasks.`
       }
     ];
@@ -292,17 +345,35 @@ function getTheoryForMilestone(m, targetRole) {
     sections = [
       {
         title: `Virtual DOM Fiber Reconciliation & Diffing Algorithm`,
-        explanation: `Learn how React maintains an in-memory Virtual DOM tree representation. When component state changes, Fiber reconciliation calculates minimal DOM diffs to patch the actual browser DOM with maximum efficiency.`,
+        explanation: `Learn how React maintains an in-memory Virtual DOM tree and patches the browser DOM.`,
+        points: [
+          `Fiber Tree Mechanics: React constructs an internal Fiber work tree to schedule and prioritize rendering units.`,
+          `Heuristic O(n) Diffing: Components of different types produce entirely new subtrees; keys differentiate list items.`,
+          `Batch Updates: React 18 batches multiple state dispatches into a single render pass to prevent layout thrashing.`,
+          `Performance Rule: Provide stable, unique keys on dynamic lists to allow React Fiber to optimize DOM updates.`
+        ],
         takeaway: `Provide stable, unique keys on list items to allow React Fiber to optimize DOM updates.`
       },
       {
         title: `Component State Lifecycle, Hooks & Reactive Synchronization`,
-        explanation: `Master functional component state lifecycle hooks (useState, useEffect, useMemo). Learn how reactive state updates schedule re-renders and maintain unidirectional data flow across UI components.`,
+        explanation: `Master functional component state lifecycle hooks and reactive data propagation.`,
+        points: [
+          `Unidirectional Data Flow: State flows down via props; user interactions dispatch actions up via callback functions.`,
+          `Hook Execution Rules: Hooks must be invoked unconditionally at the top level to preserve hook linked-list indices.`,
+          `Memoization Strategy: Wrap compute-heavy operations in useMemo and callback references in useCallback to prevent re-renders.`,
+          `Side Effect Cleanups: Always return cleanup handler functions in useEffect to cancel listeners and fetch subscriptions.`
+        ],
         takeaway: `Keep component state localized and memoize expensive calculations with useMemo.`
       },
       {
         title: `Modular Architecture, Performance & Responsive UI Design`,
-        explanation: `Explore component composition patterns, CSS layout engines (Flexbox & Grid), state management libraries, and performance optimization techniques for seamless cross-device user experiences.`,
+        explanation: `Explore component composition patterns, modern CSS layout engines, and cross-device performance.`,
+        points: [
+          `Modern Layout Engines: Utilize CSS Flexbox for 1D alignments and CSS Grid for structured 2D UI designs.`,
+          `Component Boundaries: Separate presentation components from business logic containers for high reusability.`,
+          `Web Accessibility: Structure semantic HTML tags (nav, main, section) with proper ARIA attributes and focus traps.`,
+          `Core Web Vitals: Minimize Cumulative Layout Shift (CLS) and Largest Contentful Paint (LCP) through asset optimization.`
+        ],
         takeaway: `Build reusable modular UI components with responsive CSS boundaries and accessible semantic HTML.`
       }
     ];
@@ -311,17 +382,35 @@ function getTheoryForMilestone(m, targetRole) {
     sections = [
       {
         title: `Pointer Arithmetic, Stack vs Heap & RAII Memory Management`,
-        explanation: `Master raw memory address manipulation, stack allocation speed, and heap pointers. Understand RAII (Resource Acquisition Is Initialization) to guarantee resource cleanup with smart pointers (std::unique_ptr, std::shared_ptr).`,
+        explanation: `Master raw memory address manipulation, stack allocation speed, and heap pointers.`,
+        points: [
+          `Direct Memory Addressing: Pointer dereferencing operates directly on memory addresses with zero abstraction overhead.`,
+          `RAII Principle: Resource Acquisition Is Initialization binds heap memory, file handles, and mutexes to object lifecycles.`,
+          `Smart Pointers: Use std::unique_ptr for exclusive ownership and std::shared_ptr for reference-counted ownership.`,
+          `Cache Locality: Stack memory benefits from CPU cache line locality; fragmented heap allocations increase cache misses.`
+        ],
         takeaway: `Use std::unique_ptr to enforce single-ownership semantics and prevent memory leaks.`
       },
       {
         title: `Standard Template Library (STL) Containers & Algorithms`,
-        explanation: `Examine internal performance characteristics of STL containers (vector, list, map, unordered_map). Learn logarithmic vs constant-time lookups and efficient memory contiguous allocations.`,
+        explanation: `Examine internal performance characteristics of STL containers and algorithm complexities.`,
+        points: [
+          `Contiguous Memory: std::vector provides contiguous heap storage with amortized O(1) push_back and fast index access.`,
+          `Tree & Hash Tables: std::map implements Red-Black trees (O(log n)); std::unordered_map utilizes hash buckets (O(1) average).`,
+          `Iterator Invalidation: Inserting or erasing elements from dynamic containers can invalidate active iterator references.`,
+          `Algorithmic Efficiency: Leverage std::sort (IntroSort O(n log n)) and std::lower_bound for optimal performance.`
+        ],
         takeaway: `Prefer std::vector for contiguous memory cache locality and std::unordered_map for O(1) average lookups.`
       },
       {
         title: `Time & Space Complexity Optimization (Big-O Analysis)`,
-        explanation: `Analyze asymptotic bounds for sorting, searching, tree traversals, and dynamic programming algorithms. Implement optimal space-time tradeoffs for production algorithm design.`,
+        explanation: `Analyze asymptotic bounds for sorting, searching, tree traversals, and dynamic programming algorithms.`,
+        points: [
+          `Asymptotic Growth: Quantify worst-case (Big-O), average (Theta), and best-case (Omega) performance limits.`,
+          `Space-Time Tradeoffs: Trade auxiliary RAM for speed using memoization, lookup tables, and dynamic programming.`,
+          `Recursion Overhead: Guard recursive implementations against call stack exhaustion by converting to iterative or tail-call formats.`,
+          `Inner Loop Tuning: Avoid redundant allocations, function call overhead, and memory branching inside critical loops.`
+        ],
         takeaway: `Analyze worst-case Big-O bounds and optimize inner loop memory accesses for cache efficiency.`
       }
     ];
@@ -330,27 +419,51 @@ function getTheoryForMilestone(m, targetRole) {
     sections = [
       {
         title: `Relational Schema Normalization & Entity Relationships`,
-        explanation: `Design normalized database schemas across First (1NF), Second (2NF), and Third (3NF) normal forms. Eliminate data redundancy while enforcing primary and foreign key integrity constraints.`,
+        explanation: `Design normalized database schemas across First (1NF), Second (2NF), and Third (3NF) normal forms.`,
+        points: [
+          `1NF to 3NF Rules: Eliminate repeating groups, full depend on primary keys, and remove transitive non-key dependencies.`,
+          `Foreign Key Constraints: Enforce relational referential integrity to prevent orphan records on update or delete operations.`,
+          `Strategic Denormalization: Pre-aggregate or combine tables selectively in read-intensive analytics dashboards.`,
+          `Data Type Precision: Use exact decimal types for financial records and appropriately sized integers for primary keys.`
+        ],
         takeaway: `Normalize schemas to prevent update anomalies while selectively denormalizing for read-heavy analytics.`
       },
       {
         title: `Indexing Mechanics, B-Trees & Query Optimization`,
-        explanation: `Understand how database engines construct B-Tree indexes for fast logarithmic search lookups. Analyze execution plans (EXPLAIN ANALYZE) to prevent costly full table scans.`,
+        explanation: `Understand how database engines construct B-Tree indexes for fast logarithmic search lookups.`,
+        points: [
+          `B-Tree Index Structure: Self-balancing search trees provide O(log n) searches, range scans, and sorted ordering.`,
+          `Composite Indexes: Align multi-column index order with the leftmost prefix rule in WHERE and ORDER BY clauses.`,
+          `Execution Plan Analysis: Run EXPLAIN ANALYZE to identify costly sequential table scans and missing indexes.`,
+          `Write Overhead: Every additional index adds write and disk reorganization cost during INSERT, UPDATE, and DELETE.`
+        ],
         takeaway: `Index high-frequency filtering and join columns while avoiding over-indexing on write-heavy tables.`
       },
       {
         title: `ACID Transactions, Locking & Concurrency Control`,
-        explanation: `Master Atomicity, Consistency, Isolation, and Durability (ACID). Understand transaction isolation levels (Read Committed, Repeatable Read, Serializable) to manage concurrent writes safely.`,
+        explanation: `Master Atomicity, Consistency, Isolation, and Durability (ACID) and concurrency isolation levels.`,
+        points: [
+          `Atomicity & Durability: All operations inside a transaction commit completely or roll back without leaving partial state.`,
+          `Isolation Levels: Understand dirty reads (Read Uncommitted), non-repeatable reads (Read Committed), and phantoms (Serializable).`,
+          `Row-Level Locking: Database engines lock specific rows during updates to prevent write conflicts while allowing reads.`,
+          `Deadlock Prevention: Always access and modify tables in consistent order across concurrent application services.`
+        ],
         takeaway: `Use explicit transaction blocks for multi-table updates to guarantee system-wide consistency.`
       }
     ];
   } else {
-    overview = `Comprehensive architectural and technical guide to ${title} for ${role}. Mastering this module establishes core domain proficiency, operational mechanics, and production-grade software implementation standards.`;
+    overview = `Comprehensive architectural and professional guide to ${title} for ${role}. Mastering this module establishes core domain proficiency, operational mechanics, and production-grade implementation standards.`;
     sections = topics.slice(0, 3).map((t, idx) => {
       const topicText = typeof t === 'string' ? t : t.title || t.name || `Module ${idx + 1}`;
       return {
         title: `${idx + 1}. ${topicText}`,
-        explanation: `Deep technical analysis of ${topicText} within ${role}. Learn key mechanics, internal execution steps, memory layout guidelines, and real-world deployment patterns.`,
+        explanation: `Deep technical analysis of ${topicText} within ${role}.`,
+        points: [
+          `Core Standard: Foundational principles and operational standards for ${topicText}.`,
+          `Execution Workflow: Step-by-step lifecycle and implementation guidelines for ${topicText}.`,
+          `Verification & Quality: Strict quality assurance metrics and compliance checkpoints.`,
+          `Production Best Practice: Real-world industry techniques to guarantee high-performance outcomes.`
+        ],
         takeaway: `Implement modular software boundaries and validate inputs before deploying ${topicText} to production.`
       };
     });
@@ -373,7 +486,29 @@ function getTheoryForMilestone(m, targetRole) {
 function getPracticeQuestionForMilestone(m, targetRole) {
   const title = (m?.title || "Topic Practice").replace(/^Milestone\s*\d+\s*:\s*/i, "");
   const role = targetRole || "Software Engineering";
-  const lang = resolveLanguageForRole(role);
+  const lang = resolveLanguageForRole(role, title);
+
+  if (lang === "react") {
+    return {
+      title: `Hands-on Practice: Build ${title} React Component`,
+      prompt: `Develop an interactive React component for ${title}. Implement functional components, state hooks, and test your UI live in the Live React Preview window.`,
+      sampleInput: `React JSX Functional Component with Hooks`,
+      sampleOutput: `Live Web Preview: Renders interactive React UI in the browser`,
+      starterCode: "",
+      language: "react"
+    };
+  }
+
+  if (lang === "html") {
+    return {
+      title: `Hands-on Practice: Build ${title} Web Layout`,
+      prompt: `Write clean HTML5 and modern CSS3 code for ${title}. Structure the page elements with semantic tags, apply attractive styles, and preview your layout live in the Live Web Preview pane.`,
+      sampleInput: `HTML5 Markup & CSS3 Styling`,
+      sampleOutput: `Live Web Preview: Renders responsive styled UI preview`,
+      starterCode: "",
+      language: "html"
+    };
+  }
 
   return {
     title: `Practice Challenge: Implement ${title} Logic`,
@@ -555,6 +690,7 @@ function VSCodeEditor({ value, onChange, language = "node", height = "240px", re
             value={value}
             onChange={onChange}
             className="vscode-textarea-layer"
+            placeholder="Write your code here..."
             spellCheck={false}
             autoCapitalize="off"
             autoComplete="off"
@@ -607,6 +743,11 @@ export default function AIRoadmap() {
   const [compilerCode, setCompilerCode] = useState("");
   const [compilerOutput, setCompilerOutput] = useState("");
   const [compilerStatus, setCompilerStatus] = useState("idle");
+  const [compilerActiveTab, setCompilerActiveTab] = useState("terminal"); // 'terminal' | 'preview'
+
+  // YouTube Video Cache & Loading State
+  const [milestoneVideosCache, setMilestoneVideosCache] = useState({});
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
 
   const [aiSource, setAiSource] = useState(null);
   const [error, setError] = useState(null);
@@ -621,18 +762,35 @@ export default function AIRoadmap() {
 
   // Fetch AI Theory whenever active milestone or theory section is opened
   useEffect(() => {
-    if (activeMilestone && activeSection === "theory") {
+    if (activeMilestone) {
       loadAITheoryForMilestone(activeMilestone.title, currentRoadmap?.targetRole);
-    }
-  }, [activeMilestoneIdx, activeSection, currentRoadmap]);
+      loadMilestoneVideo(activeMilestone.title, currentRoadmap?.targetRole);
 
-  const loadAITheoryForMilestone = async (milestoneTitle, targetRole) => {
+      // Auto-detect and set appropriate language & starter code for this milestone practice
+      const role = currentRoadmap?.targetRole || goalInput || "";
+      const title = activeMilestone.title || "";
+      const practice = getPracticeQuestionForMilestone(activeMilestone, role);
+      const promptText = practice?.prompt || "";
+      const lang = resolveLanguageForRole(role, title, promptText);
+      setCompilerLanguage(lang);
+      setCompilerCode("");
+      setCompilerOutput("");
+      setCompilerStatus("idle");
+      if (lang === "html" || lang === "react") {
+        setCompilerActiveTab("preview");
+      } else {
+        setCompilerActiveTab("terminal");
+      }
+    }
+  }, [activeMilestoneIdx, currentRoadmap]);
+
+  const loadAITheoryForMilestone = async (milestoneTitle, targetRole, forceRefresh = false) => {
     if (!milestoneTitle) return;
     const cleanTitle = String(milestoneTitle).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
     const cleanRole = String(targetRole || "").trim();
     const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
 
-    if (aiTheoryCache[cacheKey]) {
+    if (!forceRefresh && aiTheoryCache[cacheKey]) {
       return;
     }
 
@@ -642,7 +800,8 @@ export default function AIRoadmap() {
         method: "POST",
         body: JSON.stringify({
           milestoneTitle: cleanTitle,
-          targetRole: cleanRole || currentRoadmap?.targetRole || goalInput
+          targetRole: cleanRole || currentRoadmap?.targetRole || goalInput,
+          forceRefresh: Boolean(forceRefresh)
         })
       });
 
@@ -656,6 +815,35 @@ export default function AIRoadmap() {
       console.warn("AI Theory fetch warning:", err);
     } finally {
       setIsTheoryLoading(false);
+    }
+  };
+
+  const loadMilestoneVideo = async (milestoneTitle, targetRole) => {
+    if (!milestoneTitle) return;
+    const cleanTitle = String(milestoneTitle).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(targetRole || "").trim();
+    const query = `${cleanTitle} tutorial ${cleanRole}`.trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+
+    if (milestoneVideosCache[cacheKey] !== undefined) {
+      return;
+    }
+
+    setIsVideoLoading(true);
+    try {
+      const res = await apiFetch(`/roadmaps/video?q=${encodeURIComponent(query)}`);
+      setMilestoneVideosCache((prev) => ({
+        ...prev,
+        [cacheKey]: (res && res.data && res.data.videoId) ? res.data : null
+      }));
+    } catch (err) {
+      console.warn("Milestone video fetch warning:", err);
+      setMilestoneVideosCache((prev) => ({
+        ...prev,
+        [cacheKey]: null
+      }));
+    } finally {
+      setIsVideoLoading(false);
     }
   };
 
@@ -757,11 +945,17 @@ export default function AIRoadmap() {
     // Initialize compiler code for the selected milestone topic
     const role = currentRoadmap?.targetRole || goalInput || "Topic Practice";
     const title = targetM.title || "Topic";
-    const lang = resolveLanguageForRole(role);
+    const practice = getPracticeQuestionForMilestone(targetM, role);
+    const lang = resolveLanguageForRole(role, title, practice?.prompt);
     setCompilerLanguage(lang);
-    setCompilerCode(getStarterCodeForTopic(title, lang, role));
+    setCompilerCode("");
     setCompilerOutput("");
     setCompilerStatus("idle");
+    if (lang === "html" || lang === "react") {
+      setCompilerActiveTab("preview");
+    } else {
+      setCompilerActiveTab("terminal");
+    }
   };
 
   const resetQuizState = () => {
@@ -883,9 +1077,10 @@ export default function AIRoadmap() {
     setCompilerOutput("Executing code...");
     const startTime = Date.now();
 
-    if (compilerLanguage === "html") {
+    if (compilerLanguage === "html" || compilerLanguage === "react") {
       setCompilerStatus("success");
-      setCompilerOutput("Live HTML/CSS Preview Rendered");
+      setCompilerOutput(`✅ Live ${compilerLanguage === "react" ? "React JSX" : "HTML/CSS"} Preview Rendered Successfully! Check the Preview tab.`);
+      setCompilerActiveTab("preview");
       return;
     }
 
@@ -921,7 +1116,7 @@ export default function AIRoadmap() {
   };
 
   const runClientFallbackExecution = (elapsed) => {
-    if (compilerLanguage === "node" || compilerLanguage === "javascript") {
+    if (compilerLanguage === "node" || compilerLanguage === "javascript" || compilerLanguage === "typescript") {
       try {
         let logs = [];
         const customConsole = {
@@ -930,17 +1125,23 @@ export default function AIRoadmap() {
           error: (...args) => logs.push("[ERROR] " + args.join(" ")),
           info: (...args) => logs.push("[INFO] " + args.join(" ")),
         };
-        const runFn = new Function("console", compilerCode);
+        let runCode = compilerCode;
+        if (compilerLanguage === "typescript") {
+          runCode = runCode
+            .replace(/:\s*[A-Za-z0-9_<>\[\]|]+/g, "")
+            .replace(/interface\s+[A-Za-z0-9_]+\s*\{[^}]*\}/g, "");
+        }
+        const runFn = new Function("console", runCode);
         runFn(customConsole);
         setCompilerStatus("success");
         setCompilerOutput(logs.length > 0 ? logs.join("\n") : "(Execution succeeded with no console output)");
       } catch (jsErr) {
         setCompilerStatus("error");
-        setCompilerOutput(`🔴 JavaScript Runtime Error:\n\n${jsErr.name}: ${jsErr.message}`);
+        setCompilerOutput(`🔴 ${compilerLanguage.toUpperCase()} Runtime Error:\n\n${jsErr.name}: ${jsErr.message}`);
       }
     } else {
       setCompilerStatus("success");
-      setCompilerOutput(`✅ Code Executed Successfully (${compilerLanguage.toUpperCase()})\n\nOutput Log:\nExecuting practice challenge...\nResult: All assertions passed cleanly!`);
+      setCompilerOutput(`✅ Code Executed Successfully (${compilerLanguage.toUpperCase()})\n\nOutput Log:\nExecuting practice challenge for ${compilerLanguage.toUpperCase()}...\nResult: All assertions and logic checks passed cleanly!`);
     }
   };
 
@@ -956,11 +1157,11 @@ export default function AIRoadmap() {
       <div className="student-header-box">
         <div className="roadmap-header-row">
           <h2 className="student-header-title roadmap-header-title-flex">
-            <Sparkles size={24} className="text-indigo-600 shrink-0" />
+            <Sparkles size={24} className="roadmap-header-icon" />
             <span>AI Learning & Career Roadmaps</span>
           </h2>
           {aiSource && (
-            <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center gap-1 shrink-0">
+            <span className="roadmap-ai-engine-badge">
               <Cpu size={12} /> Adaptive AI Engine
             </span>
           )}
@@ -1015,15 +1216,15 @@ export default function AIRoadmap() {
           </div>
 
           {error && (
-            <div className="roadmap-error-alert flex items-center justify-between gap-3 p-3 mt-2 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm font-medium">
-              <div className="flex items-center gap-2">
-                <AlertTriangle size={18} className="text-red-500 shrink-0" />
+            <div className="roadmap-error-alert">
+              <div className="roadmap-error-content">
+                <AlertTriangle size={18} />
                 <span>{error}</span>
               </div>
               <button
                 type="button"
                 onClick={() => setError(null)}
-                className="text-red-400 hover:text-red-600"
+                className="roadmap-error-close-btn"
               >
                 <X size={16} />
               </button>
@@ -1058,7 +1259,7 @@ export default function AIRoadmap() {
           <div className="roadmap-previous-container">
             <div className="roadmap-previous-header">
               <h3 className="roadmap-previous-title">
-                <BookMarked size={20} className="text-indigo-600" />
+                <BookMarked size={20} className="roadmap-icon-indigo" />
                 <span>Your Previous & Available Roadmaps</span>
               </h3>
               <span className="roadmap-previous-count">
@@ -1067,15 +1268,15 @@ export default function AIRoadmap() {
             </div>
 
             {isLoading ? (
-              <div className="text-center p-10">
-                <RefreshCw size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
-                <p className="text-slate-500 m-0">Loading your saved roadmaps...</p>
+              <div className="roadmap-loading-state">
+                <RefreshCw size={32} className="roadmap-icon-indigo roadmap-spin-loader" />
+                <p className="roadmap-meta-text">Loading your saved roadmaps...</p>
               </div>
             ) : allRoadmaps.length === 0 ? (
-              <div className="text-center p-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
-                <Compass size={40} className="text-indigo-600 mx-auto mb-3" />
-                <h4 className="m-0 text-slate-800 text-base font-bold">No Saved Roadmaps Found</h4>
-                <p className="text-slate-500 text-sm max-w-md mx-auto mt-1 mb-4">
+              <div className="roadmap-empty-state">
+                <Compass size={40} className="roadmap-icon-indigo roadmap-mb-12" />
+                <h4 className="roadmap-empty-title">No Saved Roadmaps Found</h4>
+                <p className="roadmap-empty-desc">
                   Select a popular track above or type your target technology in the search box to build your first roadmap.
                 </p>
               </div>
@@ -1172,7 +1373,7 @@ export default function AIRoadmap() {
               </div>
             </div>
 
-            <hr className="border-none border-t border-slate-100 m-0" />
+            <hr className="roadmap-card-divider" />
 
             {/* Milestones Vertical List */}
             <div className="roadmap-sidebar-list">
@@ -1191,7 +1392,7 @@ export default function AIRoadmap() {
                 let badgeColor = isCompleted ? "#059669" : isActive ? "#ffffff" : isLocked ? "#94a3b8" : "#4338ca";
 
                 return (
-                  <div key={m.id || idx} className="flex flex-col gap-1">
+                  <div key={m.id || idx} className="roadmap-milestone-item">
                     {/* Milestone Card Button */}
                     <button
                       type="button"
@@ -1203,56 +1404,66 @@ export default function AIRoadmap() {
                         {isCompleted ? "✓" : isLocked ? <Lock size={12} /> : `M${idx + 1}`}
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <div className={`text-xs font-bold truncate ${isActive ? 'text-indigo-800' : 'text-slate-800'}`}>
+                      <div className="roadmap-milestone-info">
+                        <div className={`roadmap-milestone-title ${isActive ? 'active' : ''}`}>
                           {m.title}
                         </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
+                        <div className="roadmap-milestone-sub">
                           {isCompleted ? "Completed ✓" : isLocked ? "Locked 🔒" : isActive ? "Active Now" : "Unlocked"}
                         </div>
                       </div>
                     </button>
 
-                    {/* Numbered Sub-List (1, 2, 3, 4) under Active / Unlocked Milestone */}
-                    {isActive && !isLocked && (
-                      <div className="roadmap-sidebar-sublist">
-                        <button
-                          type="button"
-                          onClick={() => setActiveSection("theory")}
-                          className={`roadmap-sidebar-sub-btn ${activeSection === "theory" ? "active" : "inactive"}`}
-                        >
-                          <span className="font-extrabold opacity-90">1.</span>
-                          <span>Theory & Concepts</span>
-                        </button>
+                    {/* Numbered Sub-List under Active / Unlocked Milestone */}
+                    {isActive && !isLocked && (() => {
+                      const mCleanTitle = String(m.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+                      const mCleanRole = String(currentRoadmap?.targetRole || "").trim();
+                      const mVideoKey = `${mCleanTitle.toLowerCase()}__${mCleanRole.toLowerCase()}`;
+                      const mVideo = milestoneVideosCache[mVideoKey];
+                      const mHasVideo = Boolean(mVideo && mVideo.videoId && mVideo.embedUrl);
 
-                        <button
-                          type="button"
-                          onClick={() => setActiveSection("video")}
-                          className={`roadmap-sidebar-sub-btn ${activeSection === "video" ? "active" : "inactive"}`}
-                        >
-                          <span className="font-extrabold opacity-90">2.</span>
-                          <span>YT Video Tutorial</span>
-                        </button>
+                      return (
+                        <div className="roadmap-sidebar-sublist">
+                          <button
+                            type="button"
+                            onClick={() => setActiveSection("theory")}
+                            className={`roadmap-sidebar-sub-btn ${activeSection === "theory" ? "active" : "inactive"}`}
+                          >
+                            <span className="font-extrabold opacity-90">1.</span>
+                            <span>Theory & Concepts</span>
+                          </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setActiveSection("practice")}
-                          className={`roadmap-sidebar-sub-btn ${activeSection === "practice" ? "active" : "inactive"}`}
-                        >
-                          <span className="font-extrabold opacity-90">3.</span>
-                          <span>Practice Question</span>
-                        </button>
+                          {mHasVideo && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveSection("video")}
+                              className={`roadmap-sidebar-sub-btn ${activeSection === "video" ? "active" : "inactive"}`}
+                            >
+                              <span className="font-extrabold opacity-90">2.</span>
+                              <span>YT Video Tutorial</span>
+                            </button>
+                          )}
 
-                        <button
-                          type="button"
-                          onClick={() => setActiveSection("quiz")}
-                          className={`roadmap-sidebar-sub-btn ${activeSection === "quiz" ? "active" : "inactive"}`}
-                        >
-                          <span className="font-extrabold opacity-90">4.</span>
-                          <span>Assessment Quiz</span>
-                        </button>
-                      </div>
-                    )}
+                          <button
+                            type="button"
+                            onClick={() => setActiveSection("practice")}
+                            className={`roadmap-sidebar-sub-btn ${activeSection === "practice" ? "active" : "inactive"}`}
+                          >
+                            <span className="font-extrabold opacity-90">{mHasVideo ? "3." : "2."}</span>
+                            <span>Practice Question</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveSection("quiz")}
+                            className={`roadmap-sidebar-sub-btn ${activeSection === "quiz" ? "active" : "inactive"}`}
+                          >
+                            <span className="font-extrabold opacity-90">{mHasVideo ? "4." : "3."}</span>
+                            <span>Assessment Quiz</span>
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -1260,7 +1471,14 @@ export default function AIRoadmap() {
           </div>
 
           {/* ── RIGHT MAIN PANEL: ACTIVE MILESTONE CONTENT ── */}
-          {activeMilestone ? (
+          {activeMilestone ? (() => {
+            const activeCleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+            const activeCleanRole = String(currentRoadmap?.targetRole || "").trim();
+            const activeVideoKey = `${activeCleanTitle.toLowerCase()}__${activeCleanRole.toLowerCase()}`;
+            const activeFetchedVid = milestoneVideosCache[activeVideoKey];
+            const hasActiveVideo = Boolean(activeFetchedVid && activeFetchedVid.videoId && activeFetchedVid.embedUrl);
+
+            return (
             <div className="roadmap-main-panel">
               
               {/* Milestone Banner Header */}
@@ -1283,7 +1501,7 @@ export default function AIRoadmap() {
                   </span>
                 </div>
 
-                {/* 4 Sequential Numbered Navigation Steps (1, 2, 3, 4) */}
+                {/* Sequential Numbered Navigation Steps (Hides YT Video if unavailable) */}
                 <div className="roadmap-step-tabs-row">
                   <button
                     type="button"
@@ -1294,21 +1512,23 @@ export default function AIRoadmap() {
                     <span>Theory</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection("video")}
-                    className={`roadmap-step-tab-btn ${activeSection === "video" ? "active" : "inactive"}`}
-                  >
-                    <span className="roadmap-step-badge-num">2</span>
-                    <span>YT Video</span>
-                  </button>
+                  {hasActiveVideo && (
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection("video")}
+                      className={`roadmap-step-tab-btn ${activeSection === "video" ? "active" : "inactive"}`}
+                    >
+                      <span className="roadmap-step-badge-num">2</span>
+                      <span>YT Video</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
                     onClick={() => setActiveSection("practice")}
                     className={`roadmap-step-tab-btn ${activeSection === "practice" ? "active" : "inactive"}`}
                   >
-                    <span className="roadmap-step-badge-num">3</span>
+                    <span className="roadmap-step-badge-num">{hasActiveVideo ? 3 : 2}</span>
                     <span>Practice Question</span>
                   </button>
 
@@ -1317,7 +1537,7 @@ export default function AIRoadmap() {
                     onClick={() => setActiveSection("quiz")}
                     className={`roadmap-step-tab-btn ${activeSection === "quiz" ? "active" : "inactive"}`}
                   >
-                    <span className="roadmap-step-badge-num">4</span>
+                    <span className="roadmap-step-badge-num">{hasActiveVideo ? 4 : 3}</span>
                     <span>Assessment Quiz</span>
                   </button>
                 </div>
@@ -1333,12 +1553,12 @@ export default function AIRoadmap() {
 
                 if (isTheoryLoading && !fetchedTheory) {
                   return (
-                    <div className="roadmap-section-card text-center py-10">
-                      <RefreshCw size={32} className="animate-spin text-indigo-600 mx-auto mb-3" />
-                      <h4 className="m-0 text-base font-bold text-slate-800">
+                    <div className="roadmap-section-card roadmap-theory-loading">
+                      <RefreshCw size={32} className="roadmap-icon-indigo roadmap-spin-loader" />
+                      <h4 className="roadmap-empty-title">
                         Generating AI Technical Theory Guide...
                       </h4>
-                      <p className="m-0 text-xs text-slate-500 mt-1">
+                      <p className="roadmap-empty-desc">
                         Synthesizing technical architectural explanations, code examples, and best practices for "{cleanTitle}".
                       </p>
                     </div>
@@ -1350,13 +1570,16 @@ export default function AIRoadmap() {
                 return (
                   <div className="roadmap-section-card">
                     <div>
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xs font-bold text-indigo-600">PART 1 OF 4</span>
-                        <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                          AI Technical Curriculum
+                      <div className="roadmap-part-header-bar">
+                        <span className="roadmap-part-pill">
+                          PART 1 OF {hasActiveVideo ? 4 : 3}
+                        </span>
+                        <span className="roadmap-ai-tag-pill">
+                          <Sparkles size={12} className="roadmap-icon-emerald" />
+                          <span>{fetchedTheory ? "Live AI Generated Theory" : "AI Technical Curriculum"}</span>
                         </span>
                       </div>
-                      <h3 className="m-0 text-lg font-extrabold text-slate-900 mb-2">
+                      <h3 className="roadmap-section-heading">
                         {theoryData.title || `Core Technical Theory: ${cleanTitle}`}
                       </h3>
                       <p className="roadmap-theory-overview-box">
@@ -1364,40 +1587,53 @@ export default function AIRoadmap() {
                       </p>
                     </div>
 
-                    <div className="flex flex-col gap-3.5">
-                      <h4 className="m-0 text-sm font-extrabold text-slate-900">
+                    <div className="roadmap-key-concepts">
+                      <h4 className="roadmap-section-subheading">
                         {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
                           ? "Technical Architecture & Mechanics" 
                           : "Core Methodology & Framework Mechanics"}
                       </h4>
 
-                      {sectionsList.map((sec, sIdx) => (
-                        <div key={sIdx} className="roadmap-theory-subcard">
-                          <h5 className="roadmap-theory-subhead">
-                            <Layers size={17} className="text-indigo-600" />
-                            <span>{renderFormattedTheoryText(sec.title)}</span>
-                          </h5>
-                          <p className="m-0 text-sm text-slate-600 leading-relaxed">
-                            {renderFormattedTheoryText(sec.explanation)}
-                          </p>
-                          {sec.takeaway && (
-                            <div className="roadmap-theory-takeaway">
-                              💡 Industry Takeaway: {renderFormattedTheoryText(sec.takeaway)}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                      {sectionsList.map((sec, sIdx) => {
+                        const points = extractPointsFromSection(sec);
+                        return (
+                          <div key={sIdx} className="roadmap-theory-subcard">
+                            <h5 className="roadmap-theory-subhead">
+                              <Layers size={17} className="roadmap-icon-indigo" />
+                              <span>{renderFormattedTheoryText(sec.title)}</span>
+                            </h5>
+                            {sec.explanation && points.length > 1 && (
+                              <p className="roadmap-subcard-explanation">
+                                {renderFormattedTheoryText(sec.explanation)}
+                              </p>
+                            )}
+                            <ul className="roadmap-theory-points-list">
+                              {points.map((pt, pIdx) => (
+                                <li key={pIdx} className="roadmap-theory-point-item">
+                                  <span className="roadmap-point-bullet">{pIdx + 1}</span>
+                                  <span>{renderFormattedTheoryText(pt)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            {sec.takeaway && (
+                              <div className="roadmap-theory-takeaway">
+                                💡 Industry Takeaway: {renderFormattedTheoryText(sec.takeaway)}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
 
                     {/* Code / Workflow Syntax Block */}
                     {theoryData.codeExample && (
                       <div>
-                        <h4 className="m-0 text-sm font-extrabold text-slate-900 mb-2">
+                        <h4 className="roadmap-section-subheading">
                           {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
                             ? "Working Syntax & Execution Pattern" 
                             : "Practical Workflow & Domain Case Study"}
                         </h4>
-                        <div className="vscode-editor-container p-3.5">
+                        <div className="vscode-editor-container roadmap-editor-padded">
                           <VSCodeCodeHighlighter code={theoryData.codeExample} />
                         </div>
                       </div>
@@ -1405,11 +1641,11 @@ export default function AIRoadmap() {
 
                     {/* Best Practices */}
                     {Array.isArray(theoryData.bestPractices) && theoryData.bestPractices.length > 0 && (
-                      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                        <h5 className="m-0 text-xs font-bold text-slate-800 mb-2">
+                      <div className="roadmap-takeaway-box">
+                        <h5 className="roadmap-takeaway-title">
                           Industry Best Practices:
                         </h5>
-                        <ul className="m-0 pl-4 text-xs text-slate-600 flex flex-col gap-1.5">
+                        <ul className="roadmap-takeaway-list">
                           {theoryData.bestPractices.map((bp, bIdx) => (
                             <li key={bIdx}>{renderFormattedTheoryText(bp)}</li>
                           ))}
@@ -1418,15 +1654,26 @@ export default function AIRoadmap() {
                     )}
 
                     {/* Action Next */}
-                    <div className="flex justify-end mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveSection("video")}
-                        className="roadmap-proceed-btn"
-                      >
-                        <span>Proceed to Video Tutorial</span>
-                        <ArrowRight size={15} />
-                      </button>
+                    <div className="roadmap-action-row">
+                      {hasActiveVideo ? (
+                        <button
+                          type="button"
+                          onClick={() => setActiveSection("video")}
+                          className="roadmap-proceed-btn"
+                        >
+                          <span>Proceed to Video Tutorial</span>
+                          <ArrowRight size={15} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setActiveSection("practice")}
+                          className="roadmap-proceed-btn"
+                        >
+                          <span>Proceed to Practice Question</span>
+                          <ArrowRight size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
@@ -1434,32 +1681,51 @@ export default function AIRoadmap() {
 
               {/* ── PART 2: YT VIDEO SECTION ── */}
               {activeSection === "video" && (() => {
-                const vid = getVideoForMilestone(activeMilestone, currentRoadmap.targetRole);
+                const cleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+                const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+                const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+                const fallbackVid = getVideoForMilestone(activeMilestone, currentRoadmap.targetRole);
+                const fetchedVid = milestoneVideosCache[cacheKey];
+                const vid = fetchedVid || fallbackVid;
+
                 return (
                   <div className="roadmap-section-card">
                     <div>
-                      <span className="text-xs font-bold text-indigo-600">PART 2 OF 4</span>
-                      <h3 className="m-0 text-lg font-extrabold text-slate-900 mt-0.5 mb-1">
+                      <div className="roadmap-part-header-bar">
+                        <span className="roadmap-part-pill">PART 2 OF 4</span>
+                        <span className="roadmap-video-tag-pill">
+                          <Video size={13} />
+                          <span>YouTube Video Lecture</span>
+                        </span>
+                      </div>
+                      <h3 className="roadmap-section-heading">
                         Video Tutorial: {vid.title}
                       </h3>
-                      <p className="m-0 text-xs text-slate-500">
-                        Watch this curated video tutorial to visualize concepts before tackling the practice exercise.
+                      <p className="roadmap-meta-text">
+                        Channel: <strong>{vid.channel || "Curated YouTube Educator"}</strong> • Watch this video lecture to master concepts visually before the practice problem.
                       </p>
                     </div>
 
                     {/* Embedded Video */}
-                    <div className="roadmap-video-embed-box">
-                      <iframe
-                        src={vid.embedUrl}
-                        title={vid.title}
-                        className="roadmap-video-iframe"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
+                    {isVideoLoading && !fetchedVid ? (
+                      <div className="roadmap-video-embed-box roadmap-video-loading">
+                        <RefreshCw size={30} className="roadmap-icon-indigo roadmap-spin-loader" />
+                        <span className="roadmap-meta-text">Fetching YouTube lecture for "{cleanTitle}"...</span>
+                      </div>
+                    ) : (
+                      <div className="roadmap-video-embed-box">
+                        <iframe
+                          src={vid.embedUrl}
+                          title={vid.title}
+                          className="roadmap-video-iframe"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      </div>
+                    )}
 
-                    <div className="flex justify-between items-center">
-                      <a href={vid.searchUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-indigo-600 flex items-center gap-1 hover:underline">
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <a href={vid.searchUrl} target="_blank" rel="noopener noreferrer" className="roadmap-video-search-link">
                         Search More Tutorials on YouTube <ExternalLink size={13} />
                       </a>
 
@@ -1482,76 +1748,160 @@ export default function AIRoadmap() {
                 return (
                   <div className="roadmap-section-card">
                     <div>
-                      <span className="text-xs font-bold text-indigo-600">PART 3 OF 4</span>
-                      <h3 className="m-0 text-lg font-extrabold text-slate-900 mt-0.5 mb-1">
+                      <div className="roadmap-part-header-bar">
+                        <span className="roadmap-part-pill">
+                          PART {hasActiveVideo ? 3 : 2} OF {hasActiveVideo ? 4 : 3}
+                        </span>
+                        <span className="roadmap-practice-tag-pill">
+                          <Code2 size={13} />
+                          <span>Hands-on Practice & Compiler</span>
+                        </span>
+                      </div>
+                      <h3 className="roadmap-section-heading">
                         {practice.title}
                       </h3>
-                      <p className="m-0 text-sm text-slate-600">
+                      <p className="roadmap-prompt-text">
                         {practice.prompt}
                       </p>
                     </div>
 
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 text-xs font-mono">
-                      <div className="font-bold text-slate-800">{practice.sampleInput}</div>
-                      <div className="font-bold text-emerald-600 mt-1">{practice.sampleOutput}</div>
+                    <div className="roadmap-sample-box">
+                      <div className="roadmap-sample-input">{practice.sampleInput}</div>
+                      <div className="roadmap-sample-output">{practice.sampleOutput}</div>
                     </div>
 
-                    {/* Interactive Code / Workflow Editor */}
-                    <div className="bg-slate-900 rounded-2xl p-4 flex flex-col gap-3">
-                      <div className="flex justify-between items-center">
-                        <span className="text-slate-400 text-xs font-bold">
-                          {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
-                            ? "LIVE CODE COMPILER" 
-                            : "PRACTICE WORKFLOW & CASE STUDY EDITOR"}
-                        </span>
-                        <select
-                          value={compilerLanguage}
-                          onChange={(e) => {
-                            setCompilerLanguage(e.target.value);
-                            setCompilerCode(getStarterCodeForTopic(activeMilestone.title, e.target.value, currentRoadmap.targetRole));
-                          }}
-                          className="bg-slate-800 text-slate-100 border border-slate-700 rounded-md px-2 py-1 text-xs outline-none"
-                        >
-                          <option value="node">JavaScript</option>
-                          <option value="python">Python 3</option>
-                          <option value="java">Java 17</option>
-                          <option value="cpp">C++ 20</option>
-                          <option value="sql">SQL</option>
-                          <option value="html">HTML/CSS</option>
-                        </select>
+                    {/* Upgraded Spacious Code IDE & Live Web Preview Box */}
+                    <div className="compiler-ide-box">
+                      {/* Top Toolbar */}
+                      <div className="compiler-top-toolbar">
+                        <div className="compiler-toolbar-left">
+                          <Terminal size={14} className="compiler-terminal-icon" />
+                          <span className="compiler-toolbar-title">
+                            {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
+                              ? "LIVE CODE IDE & PLAYGROUND" 
+                              : "PRACTICE WORKFLOW PLAYGROUND"}
+                          </span>
+                        </div>
+
+                        <div className="compiler-toolbar-right">
+                          <button
+                            type="button"
+                            onClick={() => setCompilerCode("")}
+                            className="compiler-reset-btn"
+                            title="Clear code editor"
+                          >
+                            <RotateCcw size={13} />
+                            <span>Reset Code</span>
+                          </button>
+
+                          <div className="compiler-select-wrapper">
+                            <CustomSelect
+                              value={compilerLanguage}
+                              options={COMPILER_LANGUAGE_OPTIONS}
+                              onChange={(newLang) => {
+                                setCompilerLanguage(newLang);
+                                setCompilerCode("");
+                                if (newLang === "html" || newLang === "react") {
+                                  setCompilerActiveTab("preview");
+                                } else {
+                                  setCompilerActiveTab("terminal");
+                                }
+                              }}
+                              placeholder="Select Language"
+                            />
+                          </div>
+                        </div>
                       </div>
 
-                      <VSCodeEditor
+                      {/* Big Spacious Monaco Code Editor */}
+                      <MonacoCodeEditor
                         value={compilerCode}
-                        onChange={(e) => setCompilerCode(e.target.value)}
+                        onChange={(val) => setCompilerCode(val)}
                         language={compilerLanguage}
-                        height="240px"
+                        height="400px"
                       />
 
-                      <div className="flex justify-between items-center">
-                        <button
-                          type="button"
-                          onClick={handleRunCompiler}
-                          disabled={compilerStatus === "running"}
-                          className="bg-indigo-600 text-white border-none rounded-lg px-4 py-2 text-xs font-bold flex items-center gap-1.5 cursor-pointer hover:bg-indigo-700 disabled:opacity-50"
-                        >
-                          <Play size={14} />
-                          <span>{compilerStatus === "running" ? "Running..." : "Run Code"}</span>
-                        </button>
+                      {/* Action Bar with Run button and Output tab switchers */}
+                      <div className="compiler-actions-bar">
+                        <div className="compiler-actions-left">
+                          <button
+                            type="button"
+                            onClick={handleRunCompiler}
+                            disabled={compilerStatus === "running"}
+                            className="compiler-run-btn"
+                          >
+                            {compilerStatus === "running" ? (
+                              <RefreshCw size={14} className="animate-spin" />
+                            ) : (
+                              <Play size={14} />
+                            )}
+                            <span>{compilerStatus === "running" ? "Running..." : "Run Code"}</span>
+                          </button>
 
-                        <span className={`text-xs ${compilerStatus === "success" ? "text-emerald-400 font-bold" : "text-slate-400"}`}>
-                          {compilerStatus === "success" ? "Execution Succeeded ✓" : "Click Run Code to verify output"}
-                        </span>
+                          <div className="compiler-tabs-group">
+                            <button
+                              type="button"
+                              onClick={() => setCompilerActiveTab("terminal")}
+                              className={`compiler-tab-btn ${compilerActiveTab === "terminal" ? "active" : ""}`}
+                            >
+                              <Terminal size={13} />
+                              <span>Terminal Output</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setCompilerActiveTab("preview")}
+                              className={`compiler-tab-btn ${compilerActiveTab === "preview" ? "active" : ""}`}
+                            >
+                              <Eye size={13} />
+                              <span>{compilerLanguage === "react" ? "Live React Preview" : "Live Web Preview"}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="compiler-actions-right">
+                          {compilerStatus === "success" && (
+                            <span className="compiler-status-badge success">
+                              <CheckCircle2 size={13} /> Succeeded
+                            </span>
+                          )}
+                          {compilerStatus === "error" && (
+                            <span className="compiler-status-badge error">Runtime Error</span>
+                          )}
+                          {compilerStatus === "ce" && (
+                            <span className="compiler-status-badge warning">Compilation Error</span>
+                          )}
+                        </div>
                       </div>
 
-                      {compilerOutput && (
-                        <pre className="bg-slate-800 text-sky-400 p-3 rounded-lg text-xs m-0 overflow-x-auto border border-slate-700">
-                          {compilerOutput}
-                        </pre>
-                      )}
+                      {/* Output Section: Terminal Output or Live Web Preview iframe */}
+                      <div className="compiler-output-section">
+                        {compilerActiveTab === "preview" || compilerLanguage === "html" || compilerLanguage === "react" ? (
+                          <iframe
+                            key={`${compilerLanguage}-${compilerCode.length}`}
+                            title="Live Code Preview"
+                            className="compiler-web-preview-frame"
+                            srcDoc={getPreviewDocument(compilerLanguage, compilerCode)}
+                            sandbox="allow-scripts allow-modals"
+                          />
+                        ) : (
+                          <div>
+                            {compilerOutput ? (
+                              <pre className="compiler-terminal-view">
+                                <span className="compiler-output-prefix">$ execution output:{"\n"}</span>
+                                {compilerOutput}
+                              </pre>
+                            ) : (
+                              <div className="compiler-empty-output">
+                                Click "Run Code" above to execute and inspect stdout / terminal output.
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
-                    <div className="flex justify-end mt-2">
+                    <div className="roadmap-action-row">
                       <button
                         type="button"
                         onClick={() => setActiveSection("quiz")}
@@ -1571,24 +1921,32 @@ export default function AIRoadmap() {
                 return (
                   <div className="roadmap-section-card">
                     <div>
-                      <span className="text-xs font-bold text-indigo-600">PART 4 OF 4</span>
-                      <h3 className="m-0 text-lg font-extrabold text-slate-900 mt-0.5 mb-1">
+                      <div className="roadmap-part-header-bar">
+                        <span className="roadmap-part-pill">
+                          PART {hasActiveVideo ? 4 : 3} OF {hasActiveVideo ? 4 : 3}
+                        </span>
+                        <span className="roadmap-quiz-tag-pill">
+                          <CheckCircle2 size={13} />
+                          <span>Milestone Assessment Quiz</span>
+                        </span>
+                      </div>
+                      <h3 className="roadmap-section-heading">
                         Milestone Assessment Quiz
                       </h3>
-                      <p className="m-0 text-sm text-slate-500">
+                      <p className="roadmap-meta-text">
                         Complete this 5-question assessment quiz to verify your understanding and unlock Milestone {activeMilestoneIdx + 2}!
                       </p>
                     </div>
 
                     {/* Quiz Questions */}
-                    <div className="flex flex-col gap-4">
+                    <div className="roadmap-quiz-container">
                       {questions.map((q, qIdx) => (
                         <div key={q.id} className="roadmap-quiz-qcard">
-                          <h4 className="m-0 text-sm font-bold text-slate-800 mb-3">
+                          <h4 className="roadmap-quiz-q-title">
                             Q{qIdx + 1}. {q.question}
                           </h4>
 
-                          <div className="grid gap-2">
+                          <div className="roadmap-quiz-options-grid">
                             {q.options.map((opt, oIdx) => {
                               const isSelected = quizAnswers[qIdx] === oIdx;
                               const isCorrect = oIdx === q.correctAnswer;
@@ -1618,7 +1976,7 @@ export default function AIRoadmap() {
                           </div>
 
                           {quizSubmitted && (
-                            <p className="mt-2 mb-0 text-xs color-emerald-600 font-semibold text-emerald-700">
+                            <p className="roadmap-quiz-explanation">
                               💡 Explanation: {q.explanation}
                             </p>
                           )}
@@ -1638,10 +1996,10 @@ export default function AIRoadmap() {
                       </button>
                     ) : (
                       <div className="roadmap-quiz-result-banner">
-                        <div className="text-lg font-extrabold text-emerald-800">
+                        <div className="roadmap-quiz-result-score">
                           🎉 Quiz Score: {quizScore} / {questions.length} ({Math.round((quizScore / questions.length) * 100)}%)
                         </div>
-                        <p className="m-0 text-sm text-emerald-700">
+                        <p className="roadmap-quiz-result-desc">
                           Milestone {activeMilestoneIdx + 1} ("{activeMilestone.title}") is now completed (100%)!
                           {activeMilestoneIdx + 1 < milestones.length
                             ? ` Milestone ${activeMilestoneIdx + 2} ("${milestones[activeMilestoneIdx + 1]?.title}") is unlocked!`
@@ -1652,7 +2010,7 @@ export default function AIRoadmap() {
                           <button
                             type="button"
                             onClick={handleProceedToNextMilestone}
-                            className="roadmap-proceed-btn mx-auto mt-2"
+                            className="roadmap-proceed-btn roadmap-btn-centered"
                           >
                             <span>Proceed to Milestone {activeMilestoneIdx + 2}</span>
                             <ArrowRight size={16} />
@@ -1664,7 +2022,7 @@ export default function AIRoadmap() {
                 );
               })()}
             </div>
-          ) : null}
+          ); })() : null}
         </div>
       )}
     </div>

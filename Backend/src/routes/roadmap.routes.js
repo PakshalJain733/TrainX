@@ -6,10 +6,15 @@ import {
   updateMilestone,
   generateTopicQuiz,
   generateMilestoneTheory,
+  getMilestoneVideo,
 } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
+
+// Public educational endpoints (YouTube search & AI Theory Generation)
+router.get('/video', getMilestoneVideo);
+router.post('/theory/generate', generateMilestoneTheory);
 
 // Protect roadmap routes
 router.use(authenticateToken);
@@ -24,8 +29,7 @@ router.get('/student/:id', getRoadmapData);
 router.post('/generate', generateRoadmap);
 router.post('/student/:id/generate', generateRoadmap);
 
-// AI Theory & Quiz Generation
-router.post('/theory/generate', generateMilestoneTheory);
+// AI Quiz Generation
 router.post('/quiz/generate', generateTopicQuiz);
 
 // Milestone Item Status & Progress Update

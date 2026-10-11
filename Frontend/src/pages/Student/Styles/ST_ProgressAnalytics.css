@@ -658,3 +658,68 @@
   color: #15803d;
   margin: 0;
 }
+
+/* ── Dedicated Icon Utilities ── */
+.spa-icon-brain {
+  width: 24px;
+  height: 24px;
+  color: #4f46e5;
+}
+
+.spa-icon-sparkles {
+  width: 14px;
+  height: 14px;
+  color: #f59e0b;
+  fill: #fbbf24;
+}
+
+.spa-icon-spin {
+  width: 28px;
+  height: 28px;
+  color: #4f46e5;
+  animation: spaSpin 1s linear infinite;
+}
+
+@keyframes spaSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spa-icon-book {
+  width: 48px;
+  height: 48px;
+  color: #6366f1;
+  margin-bottom: 8px;
+}
+
+.spa-icon-alert {
+  width: 24px;
+  height: 24px;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.spa-icon-check {
+  width: 24px;
+  height: 24px;
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.spa-icon-search {
+  width: 14px;
+  height: 14px;
+  color: #94a3b8;
+}
+
+.spa-icon-trending-down {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+}
+
+.spa-icon-award {
+  width: 48px;
+  height: 48px;
+  color: #10b981;
+}

@@ -1469,7 +1469,7 @@ export default function AIInterview() {
       {phase === "setup" && pastInterviewsList && pastInterviewsList.length > 0 && (
         <div className="interview-practice-card past-interviews-card">
           <div className="past-interviews-header">
-            <Award size={18} className="text-indigo-600 shrink-0" />
+            <Award size={18} className="ai-icon-indigo" />
             <div>
               <h3 className="past-interviews-title">Stored Interview Evaluations & AI Suggestions</h3>
               <p className="past-interviews-subtitle">
@@ -1681,7 +1681,7 @@ export default function AIInterview() {
               {proctoringWarnings.length > 0 && (
                 <div className={`ai-proctoring-log-card ${isInterviewFlagged ? "flagged-border" : ""}`}>
                   <div className="proctoring-log-header">
-                    <ShieldAlert size={14} className="text-amber-500 shrink-0" />
+                    <ShieldAlert size={14} className="ai-icon-amber" />
                     <span>Proctoring Violations Log ({proctoringWarnings.length})</span>
                     {isInterviewFlagged && (
                       <span className="proctoring-flagged-tag">FLAGGED FOR REVIEW</span>

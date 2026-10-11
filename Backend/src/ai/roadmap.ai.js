@@ -385,14 +385,15 @@ export const generateMilestoneTheoryAI = async (milestoneTitle, targetRole = '')
   const prompt = `You are a Principal Curriculum Architect & Educator. Write a comprehensive, highly professional, detailed domain theory guide for the topic: "${cleanTitle}" in the context of "${cleanRole}".
 
 CRITICAL INSTRUCTIONS:
-1. Provide a deep, 3-4 sentence overview of "${cleanTitle}" tailored strictly to "${cleanRole}".
+1. Provide a clear, structured overview of "${cleanTitle}" tailored strictly to "${cleanRole}".
 2. Provide EXACTLY 3 to 4 detailed domain sections.
    - ABSOLUTE RULE: DO NOT use generic section titles like "Concept 1", "Concept 2", "Concept 3", "Topic 1", or "Section A".
    - EVERY section title MUST be a specific, meaningful subhead naming exact mechanisms, principles, frameworks, or workflows specific to "${cleanRole}".
    - If "${cleanRole}" is a non-software role (e.g. Graphic Designer, HR Specialist, Accountant, Civil Engineer, Murti Making, Marketing, Legal, Doctor), write theory purely for that domain without software/coding concepts.
 3. For each section, provide:
    - "title": Specific domain subhead name
-   - "explanation": 3-4 sentence deep explanation paragraph detailing core principles and execution lifecycle.
+   - "explanation": Brief high-level summary paragraph (1-2 sentences).
+   - "points": An array of EXACTLY 3 to 5 clear, highly structured, informative bullet points detailing step-by-step principles, operational mechanics, memory/runtime behavior, or domain execution steps.
    - "takeaway": Concrete industry takeaway or practical tip.
 4. Provide a practical code snippet OR structured domain case study workflow ("codeExample") for "${cleanTitle}".
 5. Provide 3-4 professional industry best practices ("bestPractices").
@@ -400,11 +401,17 @@ CRITICAL INSTRUCTIONS:
 Output ONLY valid JSON strictly matching this schema without markdown backticks:
 {
   "title": "Comprehensive Theory & Domain Guide: ${cleanTitle}",
-  "overview": "Deep technical/domain overview paragraph...",
+  "overview": "Deep technical/domain overview...",
   "sections": [
     {
       "title": "Specific Technical or Domain Subhead Name",
-      "explanation": "Detailed explanation paragraph...",
+      "explanation": "Brief overview...",
+      "points": [
+        "Core Principle: Clear explanation of foundational rule...",
+        "Execution Flow: Step-by-step operational mechanics...",
+        "Performance & Standards: Key optimization and best practice...",
+        "Industry Usage: Practical application in production..."
+      ],
       "takeaway": "Industry takeaway..."
     }
   ],

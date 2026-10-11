@@ -3,9 +3,9 @@ const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const DEFAULT_MODELS = {
-  groq: ['llama-3.1-8b-instant', 'deepseek-r1-distill-llama-70b'],
-  gemini: ['gemini-1.5-flash'],
-  nvidia: ['meta/llama-3.1-70b-instruct', 'nvidia/llama-3.1-nemotron-70b-instruct'],
+  groq: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'],
+  nvidia: ['mistralai/mistral-large-2-instruct', 'mistralai/mistral-7b-instruct-v0.3', 'meta/llama-3.2-11b-vision-instruct'],
+  gemini: ['gemini-1.5-flash', 'gemini-2.0-flash'],
 };
 
 const PLACEHOLDER_KEYS = new Set(['your_ai_api_key', 'your_api_key', 'changeme', '']);

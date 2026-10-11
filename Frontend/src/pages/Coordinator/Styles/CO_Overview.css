@@ -1124,4 +1124,29 @@
   min-width: 0;
 }
 
+/* ── Live Sessions Card Header Styles ── */
+.co-sessions-card {
+  margin-top: 16px;
+}
+
+.co-sessions-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.co-sessions-icon-wrap {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.co-pulse-icon {
+  animation: coPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes coPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 

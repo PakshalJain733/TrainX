@@ -1,0 +1,100 @@
+/* ==========================================================================
+   CO_QuizzesAndCodes.css
+   Dedicated Stylesheet for Coordinator Quizzes and Coding Challenges Portal
+   ========================================================================== */
+
+.coord-qnc-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+.coord-qnc-header {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+@media (min-width: 640px) {
+  .coord-qnc-header {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.coord-qnc-header-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.coord-qnc-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.025em;
+  margin: 0;
+  line-height: 1.25;
+}
+
+@media (min-width: 640px) {
+  .coord-qnc-title {
+    font-size: 28px;
+  }
+}
+
+.coord-qnc-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin-top: 6px;
+  max-width: 780px;
+  line-height: 1.5;
+}
+
+/* Tab Switcher Pills */
+.coord-qnc-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #f1f5f9;
+  padding: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+@media (min-width: 640px) {
+  .coord-qnc-switcher {
+    align-self: auto;
+  }
+}
+
+.coord-qnc-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: #475569;
+  transition: all 0.15s ease;
+}
+
+.coord-qnc-tab-btn:hover {
+  color: #0f172a;
+}
+
+.coord-qnc-tab-btn.active {
+  background-color: #ffffff;
+  color: #4f46e5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}

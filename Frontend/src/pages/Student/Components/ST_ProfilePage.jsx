@@ -19,7 +19,7 @@ function StudentProfSelect({ value, options = [], onChange, placeholder = 'Selec
     return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}${disabled ? ' opacity-75 cursor-not-allowed' : ''}`} ref={ref}>
+    <div className={`student-prof-select-wrap${isOpen ? ' student-prof-select-wrap--open' : ''}${disabled ? ' student-prof-select-wrap--disabled' : ''}`} ref={ref}>
       <button
         type="button"
         disabled={disabled}
@@ -500,12 +500,12 @@ export default function ProfilePage() {
 
       {/* First Time Login Alert Banner */}
       {!form.profileCompleted && (
-        <div className="p-4 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-amber-700 dark:text-amber-300">
-          <div className="flex items-center gap-3">
-            <AlertCircle size={22} className="text-amber-500 flex-shrink-0" />
+        <div className="profile-first-login-alert">
+          <div className="profile-first-login-content">
+            <AlertCircle size={22} className="profile-first-login-icon" />
             <div>
-              <h4 className="font-semibold text-base">First-Time Setup Required</h4>
-              <p className="text-sm opacity-90">Please update your Semester, Aggregate CGPA, Skills, and Target Goal below to generate your personalized AI Learning Roadmap.</p>
+              <h4 className="profile-first-login-title">First-Time Setup Required</h4>
+              <p className="profile-first-login-desc">Please update your Semester, Aggregate CGPA, Skills, and Target Goal below to generate your personalized AI Learning Roadmap.</p>
             </div>
           </div>
         </div>
@@ -554,7 +554,7 @@ export default function ProfilePage() {
             )}
 
             {(Boolean(form.cgpa && String(form.cgpa).trim()) || Boolean(form.semester && String(form.semester).trim())) && (
-              <div className="mt-3 flex items-center justify-center gap-2">
+              <div className="profile-badge-row">
                 {form.cgpa && String(form.cgpa).trim() !== "" && (
                   <Badge variant="success">CGPA: {form.cgpa} / 10</Badge>
                 )}
@@ -617,10 +617,10 @@ export default function ProfilePage() {
 
             {form.track && String(form.track).trim() !== "" && (
               <div className="profile-detail-row">
-                <Target size={16} className="profile-detail-icon text-indigo-500" />
+                <Target size={16} className="profile-detail-icon profile-icon-indigo" />
                 <div>
                   <span className="profile-detail-label">Target Career Goal</span>
-                  <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.track}</p>
+                  <p className="profile-detail-value profile-career-value">{form.track}</p>
                 </div>
               </div>
             )}
@@ -630,7 +630,7 @@ export default function ProfilePage() {
               <span className="profile-skills-title">My Skills</span>
               <div className="profile-skills-list">
                 {currentSkillsList.length === 0 ? (
-                  <span className="text-xs text-slate-400 italic">No skills selected yet.</span>
+                  <span className="profile-no-skills-msg">No skills selected yet.</span>
                 ) : (
                   currentSkillsList.map((skill, idx) => (
                     <span key={idx} className="profile-skill-chip">
@@ -713,7 +713,7 @@ export default function ProfilePage() {
           <div className="profile-form-section">
             <div className="profile-section-heading profile-section-heading-flex">
               <div className="profile-heading-group">
-                <User size={18} className="profile-heading-icon text-indigo-500" />
+                <User size={18} className="profile-heading-icon profile-icon-indigo" />
                 <div>
                   <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Academic Details" : "Personal & Academic Details"}</h3>
                   <p className="profile-heading-desc">Used for mentor notifications, personal contact, and training drive updates.</p>
@@ -922,7 +922,7 @@ export default function ProfilePage() {
               {/* SEARCHABLE CAREER TRACK INPUT */}
               <div className="profile-field profile-track-search-wrapper" ref={trackWrapperRef}>
                 <label className="profile-label">Target Career Track / Role Goal *</label>
-                <div className="flex items-center relative">
+                <div className="profile-track-search-box">
                   <Search
                     size={18}
                     className="profile-track-search-icon"
@@ -980,7 +980,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Section 2: Technical Skills & Soft Skills (Full Horizontal Width Below 5 Pairs) */}
-          <div className="profile-form-section mt-6 border-b-0 pb-0">
+          <div className="profile-form-section profile-form-section-skills">
             <div className="profile-field full-width">
                 <div className="profile-skills-card">
                   {/* Header */}
@@ -990,10 +990,10 @@ export default function ProfilePage() {
                         <Sparkles size={18} />
                       </div>
                       <div>
-                        <label className="profile-label m-0 text-sm font-bold text-slate-900">
+                        <label className="profile-label profile-skills-main-label">
                           Confirmed Technical & Soft Skills *
                         </label>
-                        <span className="text-xs text-slate-500 block">
+                        <span className="profile-skills-sublabel">
                           Add your core programming languages, frameworks, tools, and soft skills.
                         </span>
                       </div>
@@ -1032,7 +1032,7 @@ export default function ProfilePage() {
                     </div>
 
                     {currentSkillsList.length === 0 ? (
-                      <div className="text-xs text-slate-400 italic">
+                      <div className="profile-no-skills-msg">
                         No skills added yet. Click Edit Profile above to manage skills.
                       </div>
                     ) : (
@@ -1123,7 +1123,7 @@ export default function ProfilePage() {
                     />
                   ) : (
                     <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="text-slate-400" />
+                      <QrCode size={40} className="profile-icon-slate" />
                     </div>
                   )}
                   <p className="profile-2fa-qr-text">
@@ -1146,7 +1146,7 @@ export default function ProfilePage() {
                         onClick={handleCopySecret}
                         className="profile-2fa-copy-btn"
                       >
-                        {copiedSecret ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        {copiedSecret ? <Check size={12} className="profile-icon-emerald" /> : <Copy size={12} />}
                         {copiedSecret ? "Copied" : "Copy"}
                       </button>
                     </div>

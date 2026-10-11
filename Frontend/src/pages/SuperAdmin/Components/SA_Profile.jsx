@@ -232,8 +232,8 @@ export default function SuperAdminProfile() {
       )}
 
       {errorMessage && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-2.5 text-xs text-rose-700 font-semibold">
-          <AlertCircle size={16} className="text-rose-600 shrink-0" />
+        <div className="sa-profile-alert-error">
+          <AlertCircle size={16} />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -274,7 +274,7 @@ export default function SuperAdminProfile() {
               <strong>{form.role}</strong>
             </div>
 
-            <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            <div className="profile-badges-row">
               <Badge variant="success">Active Governance</Badge>
               <Badge variant="default">Super Admin</Badge>
             </div>

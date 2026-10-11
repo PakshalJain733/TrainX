@@ -3,9 +3,12 @@
 .coding-platform-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 80px); /* Adjust based on your header/layout height */
-  margin: -24px; /* Negate padding from student-page-inner to go edge-to-edge if needed, or keep padding */
-  background: #ffffff; /* Light IDE background */
+  height: calc(100vh - 80px);
+  /* Adjust based on your header/layout height */
+  margin: -24px;
+  /* Negate padding from student-page-inner to go edge-to-edge if needed, or keep padding */
+  background: #ffffff;
+  /* Light IDE background */
   color: #0f172a;
   overflow: hidden;
   font-family: 'Inter', sans-serif;
@@ -87,7 +90,8 @@
   cursor: pointer;
 }
 
-.cp-run-btn, .cp-submit-btn {
+.cp-run-btn,
+.cp-submit-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -213,6 +217,24 @@
   display: flex;
   padding: 16px;
   overflow: hidden;
+}
+
+.cp-editor-area--monaco {
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+.cp-preview-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #0f172a;
 }
 
 .cp-line-numbers {
@@ -402,7 +424,8 @@
     max-width: 110px;
   }
 
-  .cp-run-btn, .cp-submit-btn {
+  .cp-run-btn,
+  .cp-submit-btn {
     padding: 6px 10px;
     font-size: 12px;
   }
@@ -450,33 +473,255 @@
 }
 
 /* ── Student Coding Platform Custom Dropdown ── */
-.student-cp-select-wrap { position: relative; display: inline-block; width: 130px; box-sizing: border-box; }
-.student-cp-select-wrap--open { z-index: 999; }
-.student-cp-select-trigger {
-  display: flex; align-items: center; gap: 6px;
-  width: 100%; height: 32px; padding: 0 10px;
-  background: #1e293b; border: 1px solid #334155; border-radius: 6px;
-  color: #e2e8f0; font-size: 12.5px; font-weight: 600; cursor: pointer;
-  outline: none; transition: all 0.2s ease; box-sizing: border-box;
+.student-cp-select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 130px;
+  box-sizing: border-box;
 }
-.student-cp-select-trigger:hover { background: #334155; border-color: #475569; }
-.student-cp-select-trigger--open { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.2); }
-.student-cp-select-icon { width: 14px; height: 14px; color: #818cf8; flex-shrink: 0; }
-.student-cp-select-text { flex: 1; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f8fafc; font-size: 12px; font-weight: 600; }
-.student-cp-select-arrow { width: 13px; height: 13px; color: #94a3b8; flex-shrink: 0; transition: transform .2s ease, color .2s ease; }
-.student-cp-select-arrow--rotate { transform: rotate(180deg); color: #818cf8; }
-.student-cp-select-dropdown {
-  position: absolute; top: calc(100% + 4px); right: 0; min-width: 100%;
-  max-height: 180px; overflow-y: auto; background: #0f172a;
-  border: 1px solid #334155; border-radius: 8px;
-  box-shadow: 0 8px 24px -4px rgba(0,0,0,.5);
-  z-index: 99999; padding: 4px; box-sizing: border-box;
-  animation: studentCpSelectFadeIn 0.18s cubic-bezier(0.16,1,0.3,1) forwards;
-}
-@keyframes studentCpSelectFadeIn { from { opacity:0; transform:translateY(-6px) scale(.98); } to { opacity:1; transform:translateY(0) scale(1); } }
-.student-cp-select-option { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; border-radius: 5px; font-size: 12px; font-weight: 500; color: #cbd5e1; cursor: pointer; transition: background .15s ease, color .15s ease; user-select: none; }
-.student-cp-select-option:hover { background: #1e293b; color: #ffffff; }
-.student-cp-select-option--selected { background: #312e81; color: #818cf8; font-weight: 700; }
-.student-cp-select-option-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
-.student-cp-select-check { width: 13px; height: 13px; color: #818cf8; flex-shrink: 0; }
 
+.student-cp-select-wrap--open {
+  z-index: 999;
+}
+
+.student-cp-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  background: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #000000;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.student-cp-select-trigger--open {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, .2);
+}
+
+.student-cp-select-icon {
+  width: 14px;
+  height: 14px;
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.student-cp-select-text {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #f8fafc;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.student-cp-select-arrow {
+  width: 13px;
+  height: 13px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform .2s ease, color .2s ease;
+}
+
+.student-cp-select-arrow--rotate {
+  transform: rotate(180deg);
+  color: #818cf8;
+}
+
+.student-cp-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 100%;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, .5);
+  z-index: 99999;
+  padding: 4px;
+  box-sizing: border-box;
+  animation: studentCpSelectFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes studentCpSelectFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.student-cp-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #cbd5e1;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
+  user-select: none;
+}
+
+.student-cp-select-option:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.student-cp-select-option--selected {
+  background: #312e81;
+  color: #818cf8;
+  font-weight: 700;
+}
+
+.student-cp-select-option-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.student-cp-select-check {
+  width: 13px;
+  height: 13px;
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.student-cp-select-placeholder {
+  color: #94a3b8;
+}
+
+/* ── Console Tabs, Status, and Controls ── */
+.cp-editor-area--monaco {
+  padding: 0;
+  overflow: hidden;
+}
+
+.cp-console-title-group {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.cp-console-tab-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cp-console-tab-btn {
+  cursor: pointer;
+  color: #64748b;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 2px;
+  transition: all 0.15s ease;
+}
+
+.cp-console-tab-btn--active {
+  color: #0f172a;
+  border-bottom-color: #0f172a;
+}
+
+.cp-console-tab-divider {
+  color: #cbd5e1;
+  margin: 0 4px;
+}
+
+.cp-console-status {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cp-console-status--running {
+  color: #6366f1;
+}
+
+.cp-console-status--success {
+  color: #16a34a;
+}
+
+.cp-console-status--error {
+  color: #dc2626;
+}
+
+.cp-console-status--ce {
+  color: #9333ea;
+}
+
+.cp-console-status--tle {
+  color: #d97706;
+}
+
+.cp-console-action-icon {
+  cursor: pointer;
+}
+
+.cp-console-output-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-console-output-box--success {
+  border-top: 2px solid #16a34a;
+}
+
+.cp-console-output-box--error {
+  border-top: 2px solid #dc2626;
+}
+
+.cp-console-output-box--tle {
+  border-top: 2px solid #d97706;
+}
+
+.cp-console-empty-hint {
+  margin: auto;
+}
+
+.cp-custom-input-box {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 10px;
+}
+
+.cp-custom-input-label {
+  font-size: 13px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-custom-input-field {
+  flex: 1;
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-family: 'Fira Code', monospace;
+  font-size: 13px;
+  resize: none;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+}

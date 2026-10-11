@@ -1258,3 +1258,100 @@ input:checked + .profile-slider:before {
   background: #4338ca;
 }
 
+/* ── Clean Converted Profile Classes ── */
+.student-prof-select-wrap--disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.profile-first-login-alert {
+  padding: 16px;
+  margin-bottom: 24px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #b45309;
+}
+
+.profile-first-login-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-first-login-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.profile-first-login-title {
+  font-weight: 600;
+  font-size: 16px;
+  margin: 0 0 2px 0;
+}
+
+.profile-first-login-desc {
+  font-size: 14px;
+  opacity: 0.9;
+  margin: 0;
+}
+
+.profile-badge-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.profile-career-value {
+  font-weight: 600;
+  color: #4f46e5;
+}
+
+.profile-no-skills-msg {
+  font-size: 12px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.profile-icon-indigo {
+  color: #6366f1;
+}
+
+.profile-track-search-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.profile-form-section-skills {
+  margin-top: 24px;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.profile-skills-sublabel {
+  font-size: 12px;
+  color: #64748b;
+  display: block;
+}
+
+.profile-icon-slate {
+  color: #94a3b8;
+}
+
+.profile-icon-emerald {
+  color: #059669;
+}
+
+.profile-skills-main-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+

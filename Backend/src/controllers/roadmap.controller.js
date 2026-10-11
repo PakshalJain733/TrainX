@@ -13,6 +13,8 @@ import {
   getCachedMilestoneTheory,
   saveCachedMilestoneTheory,
 } from '../models/roadmap.model.js';
+import { searchYouTubeVideos } from '../services/youtube.service.js';
+
 
 /**
  * Controller: Get student's current active roadmap
@@ -150,7 +152,7 @@ export const generateTopicQuiz = async (req, res, next) => {
  */
 export const generateMilestoneTheory = async (req, res, next) => {
   try {
-    const { milestoneTitle, targetRole } = req.body || {};
+    const { milestoneTitle, targetRole, forceRefresh } = req.body || {};
     if (!milestoneTitle || !String(milestoneTitle).trim()) {
       return sendError(res, 'milestoneTitle is required', 400);
     }
@@ -158,15 +160,18 @@ export const generateMilestoneTheory = async (req, res, next) => {
     const cleanTitle = String(milestoneTitle).trim();
     const cleanRole = String(targetRole || '').trim();
 
-    // 1. Check DB/Memory cache
-    const cachedTheory = await getCachedMilestoneTheory(cleanTitle, cleanRole);
-    if (cachedTheory && cachedTheory.title && Array.isArray(cachedTheory.sections) && cachedTheory.sections.length > 0) {
-      console.log(`[Theory Controller] DB Cache Hit for theory "${cleanTitle}". Returning stored theory.`);
-      return sendSuccess(res, 'Milestone theory retrieved from DB cache', cachedTheory);
+    // 1. Check DB/Memory cache only if forceRefresh is not requested
+    if (!forceRefresh) {
+      const cachedTheory = await getCachedMilestoneTheory(cleanTitle, cleanRole);
+      const hasPoints = cachedTheory && Array.isArray(cachedTheory.sections) && cachedTheory.sections.some(s => Array.isArray(s.points) && s.points.length > 0);
+      if (cachedTheory && cachedTheory.title && hasPoints) {
+        console.log(`[Theory Controller] DB Cache Hit for theory "${cleanTitle}". Returning stored theory.`);
+        return sendSuccess(res, 'Milestone theory retrieved from DB cache', cachedTheory);
+      }
     }
 
     // 2. Generate via AI
-    console.log(`[Theory Controller] Generating NEW AI theory for "${cleanTitle}"...`);
+    console.log(`[Theory Controller] Generating NEW live AI theory for "${cleanTitle}" via Groq/NIM...`);
     const theoryData = await generateMilestoneTheoryAI(cleanTitle, cleanRole);
 
     // 3. Save to DB cache
@@ -177,3 +182,20 @@ export const generateMilestoneTheory = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Controller: Search YouTube video lectures for a milestone topic using YouTube API
+ */
+export const getMilestoneVideo = async (req, res, next) => {
+  try {
+    const q = req.query.q || req.query.query || '';
+    if (!q || !String(q).trim()) {
+      return sendError(res, 'Search query is required', 400);
+    }
+    const videos = await searchYouTubeVideos(String(q).trim(), 3);
+    return sendSuccess(res, 'Milestone YouTube video fetched', videos[0] || null);
+  } catch (error) {
+    next(error);
+  }
+};
+

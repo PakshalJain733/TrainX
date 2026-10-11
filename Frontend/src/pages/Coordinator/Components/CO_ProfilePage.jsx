@@ -273,7 +273,7 @@ export default function CoordinatorProfilePage() {
               <strong>{form.role}</strong>
             </div>
 
-            <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            <div className="profile-badges-wrap">
               <Badge variant="success">Active Coordinator</Badge>
               <Badge variant="default">{form.department || "Engineering"}</Badge>
             </div>
@@ -301,15 +301,15 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <ShieldCheck size={16} className="profile-detail-icon text-indigo-500" />
+              <ShieldCheck size={16} className="profile-detail-icon profile-icon-indigo" />
               <div>
                 <span className="profile-detail-label">Designation & Role</span>
-                <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.role}</p>
+                <p className="profile-detail-value profile-role-value">{form.role}</p>
               </div>
             </div>
 
             <div className="profile-detail-row">
-              <Users size={16} className="profile-detail-icon text-emerald-500" />
+              <Users size={16} className="profile-detail-icon profile-icon-emerald" />
               <div>
                 <span className="profile-detail-label">Managed Scope</span>
                 <p className="profile-detail-value">{form.managedBatches} · {form.totalStudents}</p>
@@ -317,7 +317,7 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <MapPin size={16} className="profile-detail-icon text-amber-500" />
+              <MapPin size={16} className="profile-detail-icon profile-icon-amber" />
               <div>
                 <span className="profile-detail-label">Office Location</span>
                 <p className="profile-detail-value">{form.officeLocation}</p>
@@ -325,7 +325,7 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <Clock size={16} className="profile-detail-icon text-purple-500" />
+              <Clock size={16} className="profile-detail-icon profile-icon-purple" />
               <div>
                 <span className="profile-detail-label">Office Hours</span>
                 <p className="profile-detail-value">{form.officeHours}</p>
@@ -353,7 +353,7 @@ export default function CoordinatorProfilePage() {
             <div className="profile-form-section">
               <div className="profile-section-heading profile-section-heading-flex">
                 <div className="profile-heading-group">
-                  <User size={18} className="profile-heading-icon text-indigo-500" />
+                  <User size={18} className="profile-heading-icon profile-icon-indigo" />
                   <div>
                     <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
                     <p className="profile-heading-desc">Saved directly to your coordinator profile in MySQL database.</p>
@@ -444,9 +444,9 @@ export default function CoordinatorProfilePage() {
             </div>
 
             {/* Section 2: Departmental & Role Governance (SHIFTED DOWN) */}
-            <div className="profile-form-section mt-6">
+            <div className="profile-form-section">
               <div className="profile-section-heading">
-                <Sparkles size={18} className="profile-heading-icon text-indigo-500" />
+                <Sparkles size={18} className="profile-heading-icon profile-icon-indigo" />
                 <div>
                   <h3 className="profile-heading-title">Departmental & Role Governance</h3>
                   <p className="profile-heading-desc">Enter your designation, department, employee ID, and office cabin location.</p>
@@ -570,7 +570,7 @@ export default function CoordinatorProfilePage() {
                     />
                   ) : (
                     <div className="profile-2fa-qr-placeholder">
-                      <QrCode size={40} className="text-slate-400" />
+                      <QrCode size={40} className="profile-icon-slate" />
                     </div>
                   )}
                   <p className="profile-2fa-qr-text">
@@ -593,7 +593,7 @@ export default function CoordinatorProfilePage() {
                         onClick={handleCopySecret}
                         className="profile-2fa-copy-btn"
                       >
-                        {copiedSecret ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                        {copiedSecret ? <Check size={12} className="profile-icon-emerald" /> : <Copy size={12} />}
                         {copiedSecret ? "Copied" : "Copy"}
                       </button>
                     </div>

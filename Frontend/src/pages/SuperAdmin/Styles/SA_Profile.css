@@ -53,6 +53,31 @@
   width: fit-content;
 }
 
+.sa-profile-alert-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff1f2;
+  border: 1.5px solid #fecdd3;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 13.5px;
+  color: #9f1239;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(244, 63, 94, 0.08);
+  animation: saProfileFadeIn 0.3s ease-out;
+  width: fit-content;
+}
+
+.profile-badges-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 @keyframes saProfileFadeIn {
   from { opacity: 0; transform: translateY(-6px); }
   to { opacity: 1; transform: translateY(0); }

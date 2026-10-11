@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
@@ -18,7 +19,7 @@ function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select.
     <div className={`student-cp-select-wrap${isOpen ? ' student-cp-select-wrap--open' : ''}`} ref={ref}>
       <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-cp-select-trigger${isOpen ? ' student-cp-select-trigger--open' : ''}`}>
         {Icon && <Icon className="student-cp-select-icon" />}
-        <span className="student-cp-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="student-cp-select-text">{selected ? selected.label : <span className="student-cp-select-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`student-cp-select-arrow${isOpen ? ' student-cp-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && (
@@ -623,65 +624,62 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
-            <div className="cp-editor-area">
-              <div className="cp-line-numbers">
-                {lines.map(num => <div key={num}>{num}</div>)}
-              </div>
-              <textarea
-                className="cp-textarea"
+            <div className="cp-editor-area cp-editor-area--monaco">
+              <MonacoCodeEditor
                 value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="// Write your solution code here..."
-                spellCheck={false}
+                onChange={(val) => setCode(val)}
+                language={selectedLang}
+                height="100%"
+                options={{
+                  fontSize: 13,
+                  padding: { top: 12, bottom: 12 }
+                }}
               />
             </div>
             
             <div className="cp-console">
               <div className="cp-console-header">
-                <div className="cp-console-title" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="cp-console-title cp-console-title-group">
+                  <div className="cp-console-tab-group">
                     <Terminal size={14} />
                     <span 
                       onClick={() => setConsoleTab("output")} 
-                      style={{ cursor: "pointer", color: consoleTab === "output" ? "#0f172a" : "#64748b", borderBottom: consoleTab === "output" ? "2px solid #0f172a" : "2px solid transparent", paddingBottom: "2px" }}
+                      className={`cp-console-tab-btn ${consoleTab === "output" ? "cp-console-tab-btn--active" : ""}`}
                     >
                       Output
                     </span>
-                    <span style={{ color: '#cbd5e1', margin: '0 4px' }}>|</span>
+                    <span className="cp-console-tab-divider">|</span>
                     <span 
                       onClick={() => setConsoleTab("input")} 
-                      style={{ cursor: "pointer", color: consoleTab === "input" ? "#0f172a" : "#64748b", borderBottom: consoleTab === "input" ? "2px solid #0f172a" : "2px solid transparent", paddingBottom: "2px" }}
+                      className={`cp-console-tab-btn ${consoleTab === "input" ? "cp-console-tab-btn--active" : ""}`}
                     >
                       Custom Input
                     </span>
                   </div>
-                  {consoleStatus === "running" && <span style={{ fontSize: 11, color: "#6366f1", fontWeight: 700 }}>● Running...</span>}
-                  {consoleStatus === "success" && <span style={{ fontSize: 11, color: "#16a34a", fontWeight: 700 }}>● Success</span>}
-                  {consoleStatus === "error" && <span style={{ fontSize: 11, color: "#dc2626", fontWeight: 700 }}>● Failed</span>}
-                  {consoleStatus === "ce" && <span style={{ fontSize: 11, color: "#9333ea", fontWeight: 700 }}>● Compilation Error</span>}
-                  {consoleStatus === "tle" && <span style={{ fontSize: 11, color: "#d97706", fontWeight: 700 }}>● Time Limit Exceeded</span>}
+                  {consoleStatus === "running" && <span className="cp-console-status cp-console-status--running">● Running...</span>}
+                  {consoleStatus === "success" && <span className="cp-console-status cp-console-status--success">● Success</span>}
+                  {consoleStatus === "error" && <span className="cp-console-status cp-console-status--error">● Failed</span>}
+                  {consoleStatus === "ce" && <span className="cp-console-status cp-console-status--ce">● Compilation Error</span>}
+                  {consoleStatus === "tle" && <span className="cp-console-status cp-console-status--tle">● Time Limit Exceeded</span>}
                 </div>
                 <div className="cp-console-actions">
-                  <Layout size={14} style={{ cursor: "pointer" }} onClick={() => { setConsoleOutput(""); setConsoleStatus(""); }} title="Clear console" />
+                  <Layout size={14} className="cp-console-action-icon" onClick={() => { setConsoleOutput(""); setConsoleStatus(""); }} title="Clear console" />
                 </div>
               </div>
-              <div className={`cp-console-output ${consoleTab === "output" && !consoleOutput ? 'empty' : ''}`}
-                style={{
-                  borderTop: consoleStatus === "success" ? "2px solid #16a34a" :
-                             consoleStatus === "error" || consoleStatus === "ce" ? "2px solid #dc2626" :
-                             consoleStatus === "tle" ? "2px solid #d97706" : undefined,
-                  display: 'flex', flexDirection: 'column'
-                }}
-              >
+              <div className={`cp-console-output cp-console-output-box ${consoleTab === "output" && !consoleOutput ? 'empty' : ''} ${
+                consoleStatus === "success" ? "cp-console-output-box--success" :
+                consoleStatus === "error" || consoleStatus === "ce" ? "cp-console-output-box--error" :
+                consoleStatus === "tle" ? "cp-console-output-box--tle" : ""
+              }`}>
                 {consoleTab === "output" ? (
                   consoleOutput ? (
                     <pre className="cp-pre-output">{consoleOutput}</pre>
                   ) : (
-                    <span style={{ margin: 'auto' }}>Run your code to see output here.</span>
+                    <span className="cp-console-empty-hint">Run your code to see output here.</span>
                   )
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px' }}>
-                    <label style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="cp-custom-input-box">
+                    <label className="cp-custom-input-label">
                       <input 
                         type="checkbox" 
                         checked={useCustomInput} 
@@ -693,11 +691,7 @@ export default function CodingPlatform() {
                       value={customInput}
                       onChange={(e) => setCustomInput(e.target.value)}
                       placeholder="Type your custom input here..."
-                      style={{ 
-                        flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', 
-                        fontFamily: "'Fira Code', monospace", fontSize: '13px', resize: 'none',
-                        background: '#ffffff', color: '#0f172a', outline: 'none'
-                      }}
+                      className="cp-custom-input-field"
                     />
                   </div>
                 )}

@@ -3419,6 +3419,16 @@
   gap: 6px;
 }
 
+.ai-icon-indigo {
+  color: #4f46e5;
+  flex-shrink: 0;
+}
+
+.ai-icon-amber {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
 
 
 

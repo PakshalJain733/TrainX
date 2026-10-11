@@ -622,7 +622,7 @@ export default function Attendance() {
         <CardHeader className="attendance-log-header">
           <div className="attendance-row-between flex-wrap gap-4">
             <div>
-              <CardTitle className="attendance-chart-title flex items-center gap-2">
+              <CardTitle className="attendance-chart-title">
                 <Calendar size={18} color="#4f46e5" /> Recent Attendance History Logs
               </CardTitle>
               <CardDescription>Date-wise session presence records retrieved live from database</CardDescription>
@@ -771,8 +771,8 @@ export default function Attendance() {
           <div className="attendance-leave-layout">
             <Card className="attendance-leave-form-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText size={18} className="text-indigo-600" /> Apply for Absence / Leave
+                <CardTitle className="attendance-chart-title">
+                  <FileText size={18} color="#4f46e5" /> Apply for Absence / Leave
                 </CardTitle>
                 <CardDescription>Submit formal leave request for mentor verification</CardDescription>
               </CardHeader>

@@ -230,11 +230,11 @@ export default function CoordinatorOverview() {
       </div>
 
       {/* Live Training Sessions Row */}
-      <Card className="overview-subcard mt-4">
-        <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
+      <Card className="overview-subcard co-sessions-card">
+        <CardHeader className="overview-card-header-between co-sessions-header">
           <div className="overview-header-left">
-            <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
-              <Activity size={18} className="overview-header-icon animate-pulse" />
+            <div className="overview-header-icon-wrap co-sessions-icon-wrap">
+              <Activity size={18} className="overview-header-icon co-pulse-icon" />
 
             </div>
             <div>

@@ -576,3 +576,33 @@
   background: #4338ca;
 }
 
+/* ── Clean Converted Mentor Profile Classes ── */
+.profile-badges-wrap {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.profile-icon-indigo {
+  color: #6366f1;
+}
+
+.profile-icon-emerald {
+  color: #10b981;
+}
+
+.profile-icon-purple {
+  color: #a855f7;
+}
+
+.profile-icon-blue {
+  color: #3b82f6;
+}
+
+.profile-icon-slate {
+  color: #94a3b8;
+}
+

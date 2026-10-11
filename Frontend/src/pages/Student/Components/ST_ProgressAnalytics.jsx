@@ -86,12 +86,12 @@ function SkillGapAnalyticsSection({ onClose }) {
       <div className="sg-header-bar">
         <div className="sg-title-group">
           <div className="sg-brain-badge">
-            <Brain className="w-6 h-6 text-indigo-600" />
+            <Brain className="spa-icon-brain" />
           </div>
           <div>
             <div className="sg-subtitle">
               <span>Real-Time AI Skill Engine</span>
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+              <Sparkles className="spa-icon-sparkles" />
             </div>
             <h3 className="sg-title">AI Performance & Weak Area Detection</h3>
             <p style={{ fontSize: "12px", color: "#64748b", margin: "2px 0 0 0" }}>
@@ -139,12 +139,12 @@ function SkillGapAnalyticsSection({ onClose }) {
       {/* Main Content View */}
       {loading ? (
         <div className="sg-loading-state">
-          <RefreshCw className="w-7 h-7 animate-spin text-indigo-600" />
+          <RefreshCw className="spa-icon-spin" />
           <span>Analyzing performance across Coding Practice Sums, Coding Tasks, Quizzes & AI Interviews...</span>
         </div>
       ) : allEvaluatedSkills.length === 0 ? (
         <div className="empty-state-box">
-          <BookOpen className="w-12 h-12 text-indigo-500 mb-2" />
+          <BookOpen className="spa-icon-book" />
           <h4>No Assessment Performance Data Found</h4>
           <p>Complete your first Quiz, Coding Problem, or AI Technical Interview to generate your personalized AI Skill Gap Analysis & Actionable Roadmap.</p>
         </div>
@@ -158,9 +158,9 @@ function SkillGapAnalyticsSection({ onClose }) {
           >
             <div className="banner-info">
               {(analysis?.weak_areas_count || 0) > 0 ? (
-                <AlertTriangle className="w-6 h-6 text-amber-600 flex-shrink-0" />
+                <AlertTriangle className="spa-icon-alert" />
               ) : (
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
+                <CheckCircle2 className="spa-icon-check" />
               )}
               <div>
                 <h4 className="banner-title">
@@ -207,7 +207,7 @@ function SkillGapAnalyticsSection({ onClose }) {
             </div>
 
             <div className="sg-search-box">
-              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <Search className="spa-icon-search" />
               <input
                 type="text"
                 placeholder="Filter by skill..."
@@ -261,7 +261,7 @@ function SkillGapAnalyticsSection({ onClose }) {
                   <div key={idx} className="weak-diagnosis-card">
                     <div className="diag-header">
                       <div className="diag-title-box">
-                        <TrendingDown className="w-5 h-5 text-red-500" />
+                        <TrendingDown className="spa-icon-trending-down" />
                         <div>
                           <h4 className="diag-skill-name">{item.skill}</h4>
                           <span className="diag-reason">{item.reason || `Calculated average score is ${item.score}%.`}</span>
@@ -285,7 +285,7 @@ function SkillGapAnalyticsSection({ onClose }) {
                 ))
               ) : (
                 <div className="empty-state-box">
-                  <Award className="w-12 h-12 text-emerald-500" />
+                  <Award className="spa-icon-award" />
                   <h4>No Weak Areas Detected!</h4>
                   <p>Great job! All your evaluated skill scores are above 60%.</p>
                 </div>
@@ -334,7 +334,7 @@ function SkillGapAnalyticsSection({ onClose }) {
                 ))
               ) : (
                 <div className="empty-state-box">
-                  <Award className="w-12 h-12 text-emerald-500" />
+                  <Award className="spa-icon-award" />
                   <h4>Roadmap Complete!</h4>
                   <p>No active weakness roadmaps required. You are on track across all domains.</p>
                 </div>

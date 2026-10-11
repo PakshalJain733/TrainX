@@ -363,17 +363,17 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             {upcoming.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
-                <BookOpen size={28} className="mx-auto text-slate-400 mb-2" />
-                <p className="text-sm">No pending deadlines for this week.</p>
+              <div className="overview-deadlines-empty">
+                <BookOpen size={28} className="overview-empty-icon" />
+                <p className="overview-empty-text">No pending deadlines for this week.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="overview-tasks-list">
                 {upcoming.map((task, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div key={i} className="overview-task-item">
                     <div>
-                      <h4 className="text-sm font-semibold">{task.title}</h4>
-                      <p className="text-xs text-slate-500">{task.dueDate}</p>
+                      <h4 className="overview-task-title">{task.title}</h4>
+                      <p className="overview-task-due">{task.dueDate}</p>
                     </div>
                     <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
                   </div>
@@ -388,14 +388,14 @@ export default function Overview() {
           <CardHeader className="overview-card-header-between">
             <div className="overview-header-left">
               <div className="overview-header-icon-wrap">
-                <Trophy size={18} className="overview-header-icon text-amber-500" />
+                <Trophy size={18} className="overview-header-icon overview-trophy-icon" />
               </div>
               <div>
                 <CardTitle className="overview-card-title">All Batches Leaderboard</CardTitle>
                 <CardDescription className="overview-card-desc">Top performers across all training batches</CardDescription>
               </div>
             </div>
-            <Link to="/student/leaderboard" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
+            <Link to="/student/leaderboard" className="overview-view-all-link">
               View All <ChevronRight size={14} />
             </Link>
           </CardHeader>
@@ -457,7 +457,7 @@ export default function Overview() {
                       >
                         {item.initials}
                       </div>
-                      <div className="flex-col">
+                      <div className="overview-student-info">
                         <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
                           {formatStudentName(item.name)}
                         </span>

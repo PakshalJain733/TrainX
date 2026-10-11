@@ -28,5 +28,8 @@
   "bugs": {
     "url": "https://github.com/PakshalJain733/CAMPUS-TRAINING-PORTAL/issues"
   },
-  "homepage": "https://github.com/PakshalJain733/CAMPUS-TRAINING-PORTAL#readme"
+  "homepage": "https://github.com/PakshalJain733/CAMPUS-TRAINING-PORTAL#readme",
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0"
+  }
 }

@@ -540,7 +540,7 @@ export default function Performance() {
         </div>
 
         {/* College-Wise Filter Dropdown */}
-        <div className="flex items-center gap-2">
+        <div className="perf-controls-group">
           <PerfSelect
             icon={Building2}
             value={selectedCollege}
@@ -550,7 +550,7 @@ export default function Performance() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="perf-controls-group">
           <button
             onClick={() => setActiveView('cards')}
             className={`manageusers-tab-btn ${activeView === 'cards' ? 'manageusers-tab-btn--active' : ''}`}
@@ -570,18 +570,18 @@ export default function Performance() {
 
       {/* Selected College Filter Active Indicator Banner */}
       {selectedCollege !== 'all' && (
-        <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl px-4 py-3 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-2.5">
+        <div className="perf-filter-banner">
+          <div className="perf-filter-info">
             <div className="sa-icon-badge sa-icon-badge--indigo perf-filter-badge">
               <Filter size={14} />
             </div>
-            <span className="text-xs font-semibold text-slate-700">
-              Filtered College View: <strong className="text-indigo-700 font-extrabold">{selectedCollege}</strong> Analytics
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
+              Filtered College View: <strong style={{ color: "#4338ca", fontWeight: 800 }}>{selectedCollege}</strong> Analytics
             </span>
           </div>
           <button
             onClick={() => setSelectedCollege('all')}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg transition-all"
+            className="perf-reset-btn"
           >
             <span>Reset to Platform Overview</span>
             <X size={13} />
@@ -690,7 +690,7 @@ export default function Performance() {
                   return (
                     <tr key={feat.id} className="batches-tr">
                       <td className="batches-td">
-                        <div className="flex items-center gap-3">
+                        <div className="perf-table-feature-cell">
                           <div className={`${feat.colorClass} perf-icon-badge-box`}>
                             <Icon size={18} />
                           </div>
@@ -728,7 +728,7 @@ export default function Performance() {
                         </div>
                       </td>
                       <td className="batches-td-right">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <span className="perf-trend-badge">
                           <ArrowUpRight size={13} /> {feat.trend}
                         </span>
                       </td>
@@ -795,7 +795,7 @@ export default function Performance() {
                       {c.readinessScore} / 100
                     </td>
                     <td className="batches-td text-slate-600 font-medium">
-                      <div className="flex items-center gap-1.5">
+                      <div className="perf-students-cell">
                         <Users size={13} className="text-slate-400" />
                         <span>{c.activeStudents.toLocaleString()} Students</span>
                       </div>

@@ -42,7 +42,11 @@ export const LANGUAGE_ALIASES = {
   python: 'python',
   node: 'node',
   javascript: 'node',
+  typescript: 'node',
+  ts: 'node',
   sql: 'sql',
+  go: 'go',
+  golang: 'go',
 };
 
 export const isLanguageSupported = (language) =>
@@ -55,6 +59,7 @@ const SOURCE_FILENAMES = {
   python: 'main.py',
   node: 'main.js',
   sql: 'main.sql',
+  go: 'main.go',
 };
 
 export function javaClassName(sourceCode) {
