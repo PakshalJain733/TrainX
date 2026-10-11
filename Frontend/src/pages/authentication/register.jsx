@@ -267,10 +267,53 @@ function Register() {
   const [totpSetupData, setTotpSetupData] = useState(null);
   const [showTotpSetup, setShowTotpSetup] = useState(false);
   const [showPendingApproval, setShowPendingApproval] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
   const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
   const totpInputRefs = useRef([]);
+
+  // Live polling for Admin approval while on the pending approval screen
+  useEffect(() => {
+    if (!showPendingApproval || isApproved) return undefined;
+
+    const emailToCheck = registeredEmail || formData.email?.trim() || totpSetupData?.user?.email;
+    if (!emailToCheck) return undefined;
+
+    const pollApproval = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/auth/registration-status?email=${encodeURIComponent(emailToCheck)}`);
+        const json = await res.json();
+        if (json.success && json.data?.isApproved) {
+          setIsApproved(true);
+        }
+      } catch (_) {
+        // silent polling fallback
+      }
+    };
+
+    pollApproval();
+    const interval = setInterval(pollApproval, 3000);
+    return () => clearInterval(interval);
+  }, [showPendingApproval, isApproved, registeredEmail, formData.email, totpSetupData]);
+
+  // Auto-redirect countdown when approval is confirmed
+  useEffect(() => {
+    if (!isApproved) return undefined;
+    const timer = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isApproved, navigate]);
 
   // College Email OTP verification (must pass before an account is created)
   const [emailOtpSent, setEmailOtpSent] = useState(false);
@@ -387,6 +430,7 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
+        setRegisteredEmail(emailToVerify);
         setShowTotpSetup(false);
         setShowPendingApproval(true);
         setErrorMsg("");
@@ -631,6 +675,7 @@ function Register() {
             navigate("/");
           }, 2500);
         } else {
+          setRegisteredEmail(formData.email.trim());
           setShowPendingApproval(true);
           setErrorMsg("");
           setSuccessMsg("");
@@ -692,39 +737,50 @@ function Register() {
         {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
-          <div className="pending-approval-card">
-            <div className="pending-approval-icon-wrapper">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
+          <div className={`pending-approval-card ${isApproved ? "approved" : ""}`}>
+            <div className={`pending-approval-icon-wrapper ${isApproved ? "approved" : ""}`}>
+              {isApproved ? (
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              ) : (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              )}
             </div>
 
-            <h3 className="pending-approval-title">
-              Registration & 2FA Setup Complete!
+            <h3 className={`pending-approval-title ${isApproved ? "approved" : ""}`}>
+              {isApproved ? "Registration Approved! 🎉" : "Registration & 2FA Setup Complete!"}
             </h3>
 
             <p className="pending-approval-subtitle">
-              Your registration details and Authenticator app (2FA) pairing have been successfully verified.
+              {isApproved
+                ? "Your account has been officially approved by the College Administrator. You can now log in!"
+                : "Your registration details and Authenticator app (2FA) pairing have been successfully verified."}
             </p>
 
-            <div className="pending-approval-box">
-              <div className="pending-approval-badge-row">
-                <span className="pending-approval-badge">
-                  Status: Pending Admin Approval
+            <div className={`pending-approval-box ${isApproved ? "approved" : ""}`}>
+              <div className={`pending-approval-badge-row ${isApproved ? "approved" : ""}`}>
+                <span className={`pending-approval-badge ${isApproved ? "approved" : ""}`}>
+                  {isApproved ? "Status: Approved" : "Status: Pending Admin Approval"}
                 </span>
               </div>
-              <p className="pending-approval-desc">
-                You can login only after an Administrator approves your account. Your registration is currently under review by college administration.
+              <p className={`pending-approval-desc ${isApproved ? "approved" : ""}`}>
+                {isApproved
+                  ? `Your account is active and verified! Redirecting to login screen automatically in ${redirectCountdown}s...`
+                  : "You can login only after an Administrator approves your account. Your registration is currently under review by college administration."}
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => navigate("/")}
-              className="login-send-otp-btn pending-approval-btn"
+              className={`login-send-otp-btn pending-approval-btn ${isApproved ? "approved" : ""}`}
             >
-              Return to Login Screen
+              {isApproved ? `Proceed to Login Screen (${redirectCountdown}s)` : "Return to Login Screen"}
             </button>
           </div>
         ) : showTotpSetup ? (

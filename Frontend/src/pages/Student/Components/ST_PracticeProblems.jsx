@@ -31,7 +31,7 @@ export default function PracticeProblems() {
           companies: p.tags ? (Array.isArray(p.tags) ? p.tags : p.tags.split(",").map(t => t.trim())) : ["TCS", "Infosys"],
           solutionAvailable: true,
           description: p.description || "No problem description provided.",
-          dueDate: p.due_date || p.dueDate || "N/A",
+          dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",
         }));
         setProblemsList(mapped);
       } catch (err) {
@@ -279,7 +279,7 @@ export default function PracticeProblems() {
                       </span>
                     </td>
                     <td>
-                      <span style={{ color: prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
+                      <span style={{ color: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
                         {prob.dueDate}
                       </span>
                     </td>

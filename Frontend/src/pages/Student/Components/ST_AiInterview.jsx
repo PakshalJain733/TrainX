@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 import { io } from "socket.io-client";
 
-import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft } from "lucide-react";
+import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2 } from "lucide-react";
 import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
@@ -599,12 +599,14 @@ export default function AIInterview() {
     }
   }, [cameraState, enableCamera, stopCamera, triggerProctoringWarning]);
 
-  // Auto-start camera automatically as soon as interview page loads
+  // Auto-start camera ONLY when the interview becomes live (never on setup screen)
   useEffect(() => {
-    if ((phase === "setup" || phase === "live") && cameraState === "idle") {
+    if (phase === "live" && cameraState === "idle") {
       enableCamera();
+    } else if (phase !== "live" && cameraState === "on") {
+      stopCamera();
     }
-  }, [phase, cameraState, enableCamera]);
+  }, [phase, cameraState, enableCamera, stopCamera]);
 
   // Monitor camera off / disabled state during live interview
   useEffect(() => {
@@ -1051,27 +1053,24 @@ export default function AIInterview() {
     }
 
     const apiBase = getApiBaseUrl();
-    let base = apiBase.replace(/\/api\/v1\/?$/, "") || "";
-    if (!base.startsWith("http://") && !base.startsWith("https://")) {
-      if (typeof window !== "undefined") {
-        const protocol = window.location.protocol;
-        const hostname = window.location.hostname;
-        base = `${protocol}//${hostname}:5000`;
-      } else {
-        base = "http://localhost:5000";
-      }
+    let socketTarget = "/interviews";
+    if (apiBase && (apiBase.startsWith("http://") || apiBase.startsWith("https://"))) {
+      socketTarget = `${apiBase.replace(/\/api\/v1\/?$/, "")}/interviews`;
+    } else if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+      socketTarget = `${window.location.protocol}//${window.location.hostname}:5000/interviews`;
     }
 
-    const socket = io(`${base}/interviews`, {
+    const socket = io(socketTarget, {
       auth: { token },
       query: { token },
       extraHeaders: {
         Authorization: `Bearer ${token}`
       },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       reconnection: true,
-      reconnectionAttempts: 15,
-      reconnectionDelay: 500,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 10000,
     });
     socketRef.current = socket;
 
@@ -1208,6 +1207,7 @@ export default function AIInterview() {
     setResult(null);
     setRemaining(INTERVIEW_SECONDS);
     setPhase("live");
+    enableCamera();
 
     // Request full screen when starting
     if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
@@ -1216,7 +1216,7 @@ export default function AIInterview() {
 
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
-  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart]);
+  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart, enableCamera]);
 
   // ─── Reset ───────────────────────────────────────────────────────────────────
   const resetInterview = useCallback(() => {
@@ -1341,13 +1341,15 @@ export default function AIInterview() {
               </div>
               <div className={`ai-meta-item ${cameraState === "denied" ? "ai-meta-warn" : ""}`}>
                 <div className="ai-meta-icon">
-                  {cameraState === "on" ? <Video size={18} /> : <CameraOff size={18} />}
+                  <Video size={18} />
                 </div>
                 <div>
                   <div className="ai-meta-val">
                     Camera {cameraState === "on" ? "Active" : cameraState === "denied" ? "Blocked" : "Standby"}
                   </div>
-                  <div className="ai-meta-lbl">Mandatory Proctoring Stream</div>
+                  <div className="ai-meta-lbl">
+                    {cameraState === "on" ? "Proctoring stream live" : "Starts on interview launch"}
+                  </div>
                 </div>
               </div>
               <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
@@ -1446,8 +1448,51 @@ export default function AIInterview() {
             )}
 
             {errorMsg && (
-              <div className="ai-error-banner">
-                <AlertTriangle size={15} /> {errorMsg}
+              <div className="ai-error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <AlertTriangle size={15} /> {errorMsg}
+                </span>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMsg("");
+                      startInterview();
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#2563eb",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      window.location.href = "/";
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#ef4444",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Log In Again
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1800,18 +1845,32 @@ export default function AIInterview() {
 
             {/* ── HERO SCORECARD ── */}
             <div className="ai-report-hero">
-              <div className="ai-report-hero-bg" />
               <div className="ai-report-top-nav">
                 <button type="button" className="ai-back-nav-btn" onClick={resetInterview} title="Return to Interview Setup">
-                  <ArrowLeft size={16} /> Back to Setup
+                  <ArrowLeft size={15} /> Back to Setup
                 </button>
+                <div className="ai-report-date-badge">
+                  <Bot size={13} /> AI Proctored Session
+                </div>
               </div>
-              <div className="ai-report-label">Interview Report</div>
+
+              <div className="ai-report-label">
+                <Sparkles size={13} /> PERFORMANCE REPORT
+              </div>
               <h2 className="ai-report-title">AI Interview Completed</h2>
-              <p className="ai-report-meta">
-                {result?.durationSeconds ? `${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s` : ""}
-                {result?.questionsAnswered ? `  •  ${result.questionsAnswered} Question${result.questionsAnswered !== 1 ? "s" : ""} Answered` : ""}
-              </p>
+              
+              <div className="ai-report-meta-row">
+                {result?.durationSeconds ? (
+                  <span className="ai-report-meta-pill">
+                    <Timer size={13} /> {Math.floor(result.durationSeconds / 60)}m {result.durationSeconds % 60}s Duration
+                  </span>
+                ) : null}
+                {result?.questionsAnswered ? (
+                  <span className="ai-report-meta-pill">
+                    <CheckCircle2 size={13} /> {result.questionsAnswered} Question{result.questionsAnswered !== 1 ? "s" : ""} Evaluated
+                  </span>
+                ) : null}
+              </div>
 
               {/* Score ring */}
               <div className="ai-score-ring-wrap">
@@ -1823,26 +1882,33 @@ export default function AIInterview() {
                     <span className={`ai-score-percent-val score-tier-${scoreTier}`}>
                       {overallScore}%
                     </span>
+                    <span className="ai-score-ring-sub">OVERALL SCORE</span>
                   </div>
                 </div>
-                <span className="ai-score-grade-pill">
-                  {result?.scorecard?.grade ?? "N/A"}
+                <span className={`ai-score-grade-pill grade-tier-${scoreTier}`}>
+                  {result?.scorecard?.grade ?? (overallScore >= 70 ? "Good Performance" : overallScore >= 40 ? "Needs Refinement" : "Needs Improvement")}
                 </span>
               </div>
 
               {/* 4-metric breakdown */}
               <div className="ai-metrics-grid">
                 {[
-                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech" },
-                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm" },
-                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob" },
-                  { label: "Confidence Level", value: result?.scorecard?.confidence ?? (overallScore === 0 ? 0 : Math.min(100, Math.round((overallScore * 0.9) + 10))), type: "conf" },
-                ].map(({ label, value, type }) => (
+                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech", icon: Code2, desc: "Syntax & Core Knowledge" },
+                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm", icon: MessageSquare, desc: "Clarity & Articulation" },
+                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob", icon: BrainCircuit, desc: "Logic & Analytical Flow" },
+                  { label: "Confidence", value: result?.scorecard?.confidence ?? (overallScore === 0 ? 0 : Math.min(100, Math.round((overallScore * 0.9) + 10))), type: "conf", icon: Activity, desc: "Delivery & Assurance" },
+                ].map(({ label, value, type, icon: IconComp, desc }) => (
                   <div key={label} className={`ai-metric-card ai-metric-${type}`}>
-                    <div className="ai-metric-val">{value}%</div>
+                    <div className="ai-metric-card-top">
+                      <div className={`ai-metric-icon-wrap ai-metric-icon-${type}`}>
+                        <IconComp size={16} />
+                      </div>
+                      <span className="ai-metric-val">{value}%</span>
+                    </div>
                     <div className="ai-metric-label">{label}</div>
+                    <div className="ai-metric-sub">{desc}</div>
                     <div className="ai-metric-track">
-                      <div className="ai-metric-fill" style={{ width: `${value}%` }} />
+                      <div className="ai-metric-fill" style={{ width: `${Math.max(4, value)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -1891,7 +1957,7 @@ export default function AIInterview() {
                           {/* AI Feedback */}
                           <div className={`ai-q-feedback-box score-tier-${itemTier}`}>
                             <div className="ai-q-sub-lbl">
-                              {score >= 7 ? "✅ AI Feedback" : score >= 4 ? "⚠️ AI Feedback" : "❌ Where You Went Wrong"}
+                              {score >= 7 ? "AI Feedback" : score >= 4 ? "Areas to Refine" : "Where You Went Wrong"}
                             </div>
                             <div className="ai-q-feedback-text">{item.feedback || item.f || "No feedback available."}</div>
                           </div>
@@ -1917,7 +1983,7 @@ export default function AIInterview() {
 
                             return (
                               <div className="ai-q-model-ans-box">
-                                <div className="ai-q-model-ans-lbl">💡 Key Concepts & Core Takeaways</div>
+                                <div className="ai-q-model-ans-lbl">Key Concepts & Core Takeaways</div>
                                 <div className="ai-q-model-ans-text">{cleanModelAns}</div>
                               </div>
                             );
@@ -1934,7 +2000,7 @@ export default function AIInterview() {
             <div className="ai-summary-3grid">
               {Array.isArray(result?.scorecard?.strengths) && result.scorecard.strengths.length > 0 && (
                 <div className="ai-summary-card ai-card-strengths">
-                  <div className="ai-summary-card-title">✅ Strengths</div>
+                  <div className="ai-summary-card-title">Strengths</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.strengths.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
@@ -1942,7 +2008,7 @@ export default function AIInterview() {
               )}
               {Array.isArray(result?.scorecard?.improvementAreas) && result.scorecard.improvementAreas.length > 0 && (
                 <div className="ai-summary-card ai-card-improve">
-                  <div className="ai-summary-card-title">❌ Areas to Improve</div>
+                  <div className="ai-summary-card-title">Areas to Improve</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.improvementAreas.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
@@ -1950,7 +2016,7 @@ export default function AIInterview() {
               )}
               {Array.isArray(result?.scorecard?.recommendedTopics) && result.scorecard.recommendedTopics.length > 0 && (
                 <div className="ai-summary-card ai-card-topics">
-                  <div className="ai-summary-card-title">📚 Study These Topics</div>
+                  <div className="ai-summary-card-title">Recommended Study Topics</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.recommendedTopics.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>

@@ -1,6 +1,6 @@
 import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { findUserById, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
+import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
   try {
@@ -234,5 +234,29 @@ export const registerInstitution = async (req, res) => {
   } catch (error) {
     console.error('Register Institution error:', error);
     return sendError(res, 'Failed to submit request', 500);
+  }
+};
+
+export const checkRegistrationStatus = async (req, res, next) => {
+  try {
+    const email = req.query.email || req.body.email;
+    if (!email) {
+      return sendError(res, 'Email is required to check registration status', 400);
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await findUserByEmailOrMobile(cleanEmail);
+    if (!user) {
+      return sendError(res, 'No registered account found for this email', 404);
+    }
+    const isApproved = user.is_active === 1 || user.is_active === true || user.is_active === '\x01';
+    return sendSuccess(res, 'Registration status retrieved successfully', {
+      email: user.email,
+      isApproved,
+      status: isApproved ? 'approved' : 'pending',
+      role: user.role,
+      name: user.name,
+    });
+  } catch (error) {
+    next(error);
   }
 };

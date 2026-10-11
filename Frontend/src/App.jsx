@@ -39,6 +39,8 @@ import AdminProfile from './pages/Admin/Components/AD_Profile';
 import AdminBroadcast from './pages/Admin/Components/AD_Broadcast';
 import AdminWeeklyReports from './pages/Admin/Components/AD_WeeklyReports';
 import AdminC2CEnrollments from './pages/Admin/Components/AD_C2CEnrollments';
+import AdminTrainings from './pages/Admin/Components/AD_Trainings';
+import TrainingRegistrationPage from './pages/Student/Components/TrainingRegistrationPage';
 import AdminApproveUsers from './pages/Admin/Components/AD_ApproveUsers';
 
 
@@ -106,9 +108,10 @@ function App() {
       <BrowserRouter>
         <DesktopNotificationListener />
         <Routes>
-          {/* Auth Routes */}
+          {/* Auth & Public Routes */}
           <Route path="/" element={<MaintenanceGuard moduleKey="loginWithPassword"><Login /></MaintenanceGuard>} />
           <Route path="/register" element={<MaintenanceGuard moduleKey="userRegistration"><Register /></MaintenanceGuard>} />
+          <Route path="/trainings/register" element={<TrainingRegistrationPage />} />
 
           {/* Student Workspace Routes */}
           <Route
@@ -157,7 +160,8 @@ function App() {
             <Route path="approve-users" element={<AdminApproveUsers />} />
             <Route path="batches" element={<AdminBatches />} />
             <Route path="departments" element={<AdminDepartmentsPage />} />
-            <Route path="c2c" element={<AdminC2CEnrollments />} />
+            <Route path="trainings" element={<AdminTrainings />} />
+            <Route path="c2c" element={<AdminTrainings />} />
             <Route path="attendance" element={<AdminAttendance />} />
             <Route path="learning" element={<AdminLearningContent />} />
             <Route path="quiz" element={<AdminQuizzes />} />

@@ -1,5 +1,16 @@
 import { query } from '../config/db.js';
 
+const formatDbDate = (val) => {
+  if (!val) return null;
+  if (val instanceof Date) {
+    const year = val.getFullYear();
+    const month = String(val.getMonth() + 1).padStart(2, '0');
+    const day = String(val.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return String(val).slice(0, 10);
+};
+
 // Get all practice problems
 export const getPracticeProblemsModel = async ({ collegeId = null, batchId = null, difficulty = null } = {}) => {
   try {
@@ -32,6 +43,8 @@ export const getPracticeProblemsModel = async ({ collegeId = null, batchId = nul
         ...r,
         tags: r.tags ? r.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         batch: r.batch_name || r.associated_batch_name || 'All Batches',
+        due_date: formatDbDate(r.due_date),
+        dueDate: formatDbDate(r.due_date),
       }));
     }
   } catch (error) {
@@ -64,6 +77,8 @@ export const getPracticeProblemByIdModel = async (id, { forStudent = false } = {
         tags: r.tags ? r.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
         batch: r.batch_name || 'All Batches',
         testCases: testCases || [],
+        due_date: formatDbDate(r.due_date),
+        dueDate: formatDbDate(r.due_date),
       };
     }
   } catch (error) {
@@ -74,7 +89,7 @@ export const getPracticeProblemByIdModel = async (id, { forStudent = false } = {
 
 // Create a new practice problem / coding task
 export const createPracticeProblemModel = async ({
-  college_id = 1,
+  college_id = null,
   batch_id = null,
   batch_name = 'All Batches',
   title,
@@ -87,8 +102,9 @@ export const createPracticeProblemModel = async ({
   sampleInput = '',
   sampleOutput = '',
   testCases = [],
+  due_date = null,
 }) => {
-  const cId = college_id ? parseInt(college_id, 10) : 1;
+  const cId = college_id ? parseInt(college_id, 10) : null;
   const tagsStr = Array.isArray(tags) ? tags.join(', ') : (tags || '');
 
   // Validate created_by foreign key against users table
@@ -119,9 +135,9 @@ export const createPracticeProblemModel = async ({
 
   const res = await query(
     `INSERT INTO practice_problems 
-      (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, created_by) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, validCreatedBy]
+      (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, due_date, created_by) 
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy]
   );
 
   if (res && res.insertId) {

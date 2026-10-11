@@ -205,19 +205,41 @@ export const getStudentDashboard = async (req, res, next) => {
     const currentStudentIdx = realLeaderboard.findIndex((s) => s.you);
     const currentRank = currentStudentIdx !== -1 ? `${realLeaderboard[currentStudentIdx].rank} / ${realLeaderboard.length}` : `1 / ${Math.max(1, realLeaderboard.length)}`;
 
-    // Fetch published study materials or tasks for upcomingDeadlines
+    // Fetch upcoming deadlines: prioritize practice problems and coding tasks
     let upcomingDeadlines = [];
     try {
-      const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
-      if (materials && materials.length > 0) {
-        upcomingDeadlines = materials.map(m => ({
-          title: m.title,
-          dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
-          status: 'Published',
+      const problemRows = await query(
+        `SELECT id, title, due_date, difficulty FROM practice_problems 
+         WHERE (college_id = ? OR college_id IS NULL)
+         ORDER BY (due_date IS NULL), due_date ASC, id DESC LIMIT 5`,
+        [collegeId]
+      );
+      if (problemRows && problemRows.length > 0) {
+        upcomingDeadlines = problemRows.map(p => ({
+          id: p.id,
+          title: p.title,
+          dueDate: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Deadline',
+          status: 'Pending',
+          type: 'Coding Practice',
         }));
       }
     } catch (e) {
-      console.warn('[getStudentDashboard materials query warning]', e.message);
+      console.warn('[getStudentDashboard practice problems deadlines warning]', e.message);
+    }
+
+    if (upcomingDeadlines.length === 0) {
+      try {
+        const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
+        if (materials && materials.length > 0) {
+          upcomingDeadlines = materials.map(m => ({
+            title: m.title,
+            dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
+            status: 'Published',
+          }));
+        }
+      } catch (e) {
+        console.warn('[getStudentDashboard materials query warning]', e.message);
+      }
     }
 
     let callerUser = await findUserById(callerId);
@@ -316,17 +338,37 @@ export const getStudentTrainingEnrollment = async (req, res, next) => {
 
 export const getStudentPracticeProblems = async (req, res, next) => {
   try {
+    const callerId = req.user?.userId || req.user?.id;
     const dbProblems = await getPracticeProblemsModel({
       collegeId: req.user?.collegeId || req.user?.college_id,
     });
+
+    let solvedIds = new Set();
+    if (callerId) {
+      try {
+        const solvedRows = await query(
+          `SELECT DISTINCT problem_id FROM coding_submissions WHERE student_id = ? AND status = 'Accepted'`,
+          [callerId]
+        );
+        if (Array.isArray(solvedRows)) {
+          solvedIds = new Set(solvedRows.map(r => Number(r.problem_id)));
+        }
+      } catch (e) { }
+    }
+
     if (dbProblems && dbProblems.length > 0) {
       const mapped = dbProblems.map((p) => ({
         id: p.id,
         title: p.title,
         category: p.category || 'General DSA',
+        topic: p.category || 'General DSA',
         difficulty: p.difficulty,
         points: p.points || 100,
-        solve_status: 'Unsolved',
+        due_date: p.due_date || p.dueDate || null,
+        dueDate: p.due_date || p.dueDate || null,
+        tags: p.tags || [],
+        description: p.description || '',
+        solve_status: solvedIds.has(Number(p.id)) ? 'Solved' : 'Unsolved',
       }));
       return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
     }

@@ -372,8 +372,8 @@ export default function Overview() {
                 {upcoming.map((task, i) => (
                   <div key={i} className="overview-task-item">
                     <div>
-                      <h4 className="overview-task-title">{task.title}</h4>
-                      <p className="overview-task-due">{task.dueDate}</p>
+                      <h4 className="text-sm font-semibold">{task.title}</h4>
+                      <p className="text-xs text-slate-500">{task.dueDate}</p>
                     </div>
                     <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
                   </div>

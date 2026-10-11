@@ -166,6 +166,7 @@ export default function AdminPracticeProblems() {
           difficulty: normDiff,
           xp: normXp,
           companies: normCompanies,
+          dueDate: p.dueDate || (p.due_date ? new Date(p.due_date).toISOString().slice(0, 10) : ""),
           timeLimit: p.timeLimit || "1.0s",
           memoryLimit: p.memoryLimit || "128 MB",
           description: p.description || "Solve the algorithmic coding challenge according to problem constraints.",
@@ -414,8 +415,8 @@ export default function AdminPracticeProblems() {
                       </Badge>
                     </td>
                     <td className="pp-table-td-center">
-                      <span className="pp-table-date">
-                        {p.dueDate ? new Date(p.dueDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : "No Deadline"}
+                      <span className="pp-table-date" style={{ color: p.dueDate ? "#ef4444" : "#94a3b8", fontWeight: p.dueDate ? 600 : 400 }}>
+                        {p.dueDate ? new Date(p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline"}
                       </span>
                     </td>
                     <td className="pp-table-td-center">

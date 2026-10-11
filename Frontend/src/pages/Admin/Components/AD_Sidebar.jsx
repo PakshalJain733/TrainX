@@ -27,7 +27,7 @@ const primaryNavItems = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Manage Users", url: "/admin/users", icon: UserCog },
   { title: "Approve Users", url: "/admin/approve-users", icon: UserCheck },
-  { title: "C2C Enrollments", url: "/admin/c2c", icon: Briefcase },
+  { title: "Trainings & Enrollments", url: "/admin/trainings", icon: Briefcase },
   { title: "Batches", url: "/admin/batches", icon: Code2 },
   { title: "Departments", url: "/admin/departments", icon: Briefcase },
   { title: "Manage Content", url: "/admin/learning", icon: BookOpenCheck },
@@ -48,10 +48,12 @@ const footerNavItems = [
 export function AdminSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
 
-  const isActive = (url, exact) =>
-    exact
+  const isActive = (url, exact) => {
+    if (url === "/admin/trainings" && (pathname === "/admin/c2c" || pathname.startsWith("/admin/c2c/"))) return true;
+    return exact
       ? pathname === url
       : pathname === url || pathname.startsWith(url + "/");
+  };
 
   const handleNavClick = () => {
     if (onClose) onClose();
