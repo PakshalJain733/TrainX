@@ -919,10 +919,13 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 38. Ensure C2C Enrollments Table
+    // 38. Ensure Training / C2C Enrollments Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS c2c_enrollments (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        training_id INT NULL,
+        training_code VARCHAR(100) NULL,
+        student_id INT NULL,
         response_id VARCHAR(150) NULL UNIQUE,
         full_name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NOT NULL,
@@ -937,6 +940,10 @@ export async function initializeDatabase() {
         amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0.00,
         balance DECIMAL(10,2) NOT NULL DEFAULT 3500.00,
         payment_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+        approval_status VARCHAR(50) NOT NULL DEFAULT 'Pending',
+        approved_at DATETIME NULL,
+        approved_by INT NULL,
+        rejection_reason TEXT NULL,
         utr_number VARCHAR(100) NULL,
         payment_date VARCHAR(100) NULL,
         payment_proof_url TEXT NULL,
@@ -944,11 +951,36 @@ export async function initializeDatabase() {
         raw_payload JSON NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_c2c_training (training_id),
         INDEX idx_c2c_email (email),
         INDEX idx_c2c_status (payment_status),
+        INDEX idx_c2c_approval (approval_status),
         INDEX idx_c2c_utr (utr_number)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
+
+    // Safe migration columns for existing databases
+    for (const col of [
+      'ALTER TABLE training_programs ADD COLUMN start_date DATE NULL',
+      'ALTER TABLE training_programs ADD COLUMN end_date DATE NULL',
+      'ALTER TABLE training_programs ADD COLUMN registration_open_date DATE NULL',
+      'ALTER TABLE training_programs ADD COLUMN registration_close_date DATE NULL',
+      'ALTER TABLE training_programs ADD COLUMN payment_instructions TEXT NULL',
+      'ALTER TABLE training_programs ADD COLUMN payment_qr_url TEXT NULL',
+      'ALTER TABLE training_programs ADD COLUMN eligibility_criteria TEXT NULL',
+      'ALTER TABLE training_programs ADD COLUMN restrictions JSON NULL',
+      'ALTER TABLE training_programs ADD COLUMN google_form_url VARCHAR(500) NULL',
+      'ALTER TABLE training_programs ADD COLUMN google_sheet_url VARCHAR(500) NULL',
+      'ALTER TABLE c2c_enrollments ADD COLUMN training_id INT NULL',
+      'ALTER TABLE c2c_enrollments ADD COLUMN training_code VARCHAR(100) NULL',
+      'ALTER TABLE c2c_enrollments ADD COLUMN student_id INT NULL',
+      "ALTER TABLE c2c_enrollments ADD COLUMN approval_status VARCHAR(50) NOT NULL DEFAULT 'Pending'",
+      'ALTER TABLE c2c_enrollments ADD COLUMN approved_at DATETIME NULL',
+      'ALTER TABLE c2c_enrollments ADD COLUMN approved_by INT NULL',
+      'ALTER TABLE c2c_enrollments ADD COLUMN rejection_reason TEXT NULL',
+    ]) {
+      try { await conn.query(col); } catch (_) {}
+    }
 
     // 38. Ensure Super Admin Account
     try {
