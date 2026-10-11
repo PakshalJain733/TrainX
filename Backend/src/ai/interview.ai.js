@@ -1,13 +1,13 @@
 import { generateText, generateJSON, describeProvider } from './aiClient.js';
 import { retrieveContext } from '../services/rag/rag.service.js';
 
-export async function callGemini(prompt, { temperature = 0.7, timeoutMs = 15000 } = {}) {
+export async function callGemini(prompt, { temperature = 0.7, timeoutMs = 20000, maxTokens = 450 } = {}) {
   try {
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('AI request timeout')), timeoutMs)
     );
     return await Promise.race([
-      generateText(prompt, { temperature, maxTokens: 2048 }),
+      generateText(prompt, { temperature, maxTokens }),
       timeoutPromise,
     ]);
   } catch (err) {
@@ -189,7 +189,7 @@ Respond ONLY with valid JSON:
   "hint": "Give a concise 60-90 second introduction covering your background, role focus, and a project you feel confident in."
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 2000 });
+  const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
   const parsed = parseAIJson(raw);
   if (parsed && parsed.question) {
     const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
@@ -278,7 +278,7 @@ Respond ONLY with valid JSON:
   "hint": "a one-line guiding hint"
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 2200 });
+  const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
   const parsed = parseAIJson(raw);
   if (parsed && parsed.question) {
     const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
@@ -304,7 +304,7 @@ Respond ONLY with valid JSON:
  */
 export const evaluateAnswer = async ({ role, topic, question, answer, owner, difficulty }) => {
   const knowledge = await buildKnowledgeContext(`${topic} ${question}`, owner);
-  const prompt = `You are an uncompromising senior technical interviewer evaluating a candidate's answer for role "${role}" (topic: "${topic}", difficulty: ${difficulty}).
+  const prompt = `You are a strict, top-tier technical interviewer (Staff Software Engineer level) evaluating a candidate's answer for role "${role}" (topic: "${topic}", difficulty: ${difficulty}).
 
 QUESTION ASKED:
 ${question}
@@ -315,22 +315,21 @@ ${answer || '(Candidate did not provide an answer)'}
 Reference knowledge context:
 ${knowledge || 'No reference knowledge provided.'}
 
-STRICT UNCOMPROMISING EVALUATION RULES:
-1. QUESTION ECHOING / CIRCULAR / VAGUE ANSWERS ARE FAILING (0-2 MARKS):
-   - Merely repeating words from the question (e.g. repeating "garbage collection in JavaScript") WITHOUT explaining the actual working mechanisms, algorithms, syntax, or concepts MUST BE SCORED 0 OR AT MOST 2 OUT OF 10.
-   - Do NOT give 6-10 marks for vague, circular, or hand-wavy filler sentences like "it takes default values and maintains it properly".
-
-2. STRICT ZERO SCORE FOR WRONG / FAKE / GIBBERISH / OFF-TOPIC ANSWERS:
-   - If the candidate's answer is wrong, factually incorrect, fake, off-topic, gibberish, filler text (e.g., "asdf", "test", "idk", "blah blah", random words), or fails to provide technically accurate facts:
-     YOU MUST SCORE 0 OUT OF 10.
-   - Do NOT award partial credit or participation points for word count alone if the technical content is wrong, fake, or vague!
-
-3. ACCURATE TECHNICAL ANSWERS ONLY:
-   - ONLY award good marks (7-10) if the candidate provided verified, precise, and correct technical facts directly answering "${question}".
-   - 0-2: Wrong, fake, gibberish, circular, question-echoing, or vague filler answer.
-   - 3-5: Partially correct attempt with noticeable technical gaps.
-   - 6-8: Solid, correct technical answer explaining core mechanisms.
-   - 9-10: Complete, precise, and highly accurate technical answer.
+STRICT, UNCOMPROMISING EVALUATION POLICY:
+1. IRRELEVANT, GIBBERISH, WRONG, OR EVASIVE ANSWERS MUST RECEIVE 0 OR 1/10:
+   - "I don't know", "I forgot", blank responses, personal remarks, chit-chat, or random filler: SCORE 0/10.
+   - Statements that are factually wrong, confusing fundamental concepts, or talking about an unrelated technology: SCORE 0 or 1/10.
+2. VAGUE, CIRCULAR, OR QUESTION-REPEATING ANSWERS MUST RECEIVE 1 OR 2/10:
+   - Repeating words from the question prompt or using generic buzzwords without explaining real implementation, syntax, or concepts: SCORE 1 or 2/10.
+   - Example: "it is used in website development to make components fast and easy" is marketing buzz, NOT an engineering answer: SCORE 1/10.
+3. SCORING RUBRIC (0-10):
+   - 0-2: Completely wrong, fake, gibberish, evasive, circular, or empty answer.
+   - 3-4: Very surface-level, significant technical gaps, or confused terminology.
+   - 5-6: Acceptable foundational answer covering basics with minor omissions.
+   - 7-8: Solid, technically accurate answer clearly explaining working mechanisms.
+   - 9-10: Complete, precise, in-depth architectural or engineering response.
+4. FEEDBACK:
+   - Must be a direct, sharp, professional 2-3 sentence technical critique explaining precisely WHAT was missing, WHAT was incorrect, and how to improve.
 
 Respond ONLY with valid JSON:
 {
@@ -343,13 +342,15 @@ Respond ONLY with valid JSON:
   "isCorrectDirection": true|false
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.2 });
+  const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 20000 });
   const parsed = parseAIJson(raw);
 
   if (parsed && typeof parsed.score === 'number') {
-    // Extra safety: force 0 scores if Gemini set score to 0 or marked non-directional
-    const isZero = parsed.score === 0 || (!parsed.isCorrectDirection && parsed.score <= 2);
-    let cleanModelAns = (parsed.modelAnswer || '').trim();
+    const isZero = parsed.score <= 1 || (!parsed.isCorrectDirection && parsed.score <= 2);
+    const rawModelAnswer = Array.isArray(parsed.modelAnswer)
+      ? parsed.modelAnswer.join('. ')
+      : String(parsed.modelAnswer || '');
+    let cleanModelAns = rawModelAnswer.trim();
     if (question && cleanModelAns.includes(question)) {
       cleanModelAns = cleanModelAns.replace(question, '').replace(/["“”'']/g, '').trim();
     }
@@ -361,11 +362,11 @@ Respond ONLY with valid JSON:
 
     return {
       source: 'ai-live',
-      score: isZero ? 0 : Math.min(10, Math.max(0, parsed.score)),
-      technical: isZero ? 0 : (parsed.technical ?? parsed.score),
-      communication: isZero ? 0 : (parsed.communication ?? parsed.score),
-      confidence: isZero ? 0 : (parsed.confidence ?? parsed.score),
-      feedback: parsed.feedback || (isZero ? "Incorrect or invalid answer. 0 marks awarded." : "Answer evaluated."),
+      score: Math.min(10, Math.max(0, parsed.score)),
+      technical: isZero ? Math.min(2, parsed.technical ?? parsed.score) : (parsed.technical ?? parsed.score),
+      communication: isZero ? Math.min(3, parsed.communication ?? parsed.score) : (parsed.communication ?? parsed.score),
+      confidence: isZero ? Math.min(2, parsed.confidence ?? parsed.score) : (parsed.confidence ?? parsed.score),
+      feedback: parsed.feedback || (isZero ? "Answer lacks required technical depth or is factually incorrect." : "Answer evaluated."),
       modelAnswer: cleanModelAns || `Core concepts in ${topic}, key principles, and practical application.`,
       isCorrectDirection: !isZero && Boolean(parsed.isCorrectDirection),
     };
@@ -390,14 +391,14 @@ Respond ONLY with valid JSON:
       technical: 0,
       communication: 0,
       confidence: 0,
-      feedback: 'Incorrect / Invalid Answer: No valid technical response was provided. 0 marks awarded.',
+      feedback: 'Incorrect / Incomplete: No valid technical response provided. 0 marks awarded.',
       modelAnswer: `Key concepts for "${question || topic}": Explain core architecture, exact execution mechanism, relevant methods/APIs, and production best practices.`,
       isCorrectDirection: false,
     };
   }
 
   // Build question stop-words to eliminate echo matching
-  const stopWords = new Set(['explain', 'what', 'how', 'does', 'difference', 'between', 'with', 'example', 'when', 'would', 'using', 'concept', 'about', 'tell', 'your', 'self', 'the', 'and', 'for', 'work', 'in', 'is', 'are', 'a', 'an']);
+  const stopWords = new Set(['explain', 'what', 'how', 'does', 'difference', 'between', 'with', 'example', 'when', 'would', 'using', 'concept', 'about', 'tell', 'your', 'self', 'the', 'and', 'for', 'work', 'in', 'is', 'are', 'a', 'an', 'to', 'of', 'it', 'used', 'make', 'fast', 'easy']);
   const questionWords = new Set(
     `${topic || ''} ${question || ''}`
       .toLowerCase()
@@ -406,39 +407,37 @@ Respond ONLY with valid JSON:
       .filter((w) => w.length >= 3)
   );
 
-  // Extract candidate answer words that are NOT merely repeating the question prompt
   const answerWords = cleanText.split(/\s+/).filter((w) => w.length >= 4 && !stopWords.has(w));
   const newTechnicalWords = answerWords.filter((w) => !questionWords.has(w));
 
-  // If candidate answer provides NO new technical terms outside the question prompt, score 0 or 1
-  if (newTechnicalWords.length < 2 && words.length < 25) {
-    const qSnippet = (question || topic || 'this question').trim();
+  const qSnippet = (question || topic || 'this question').trim();
+
+  // If candidate answer provides very few new technical terms outside the question prompt, score 1
+  if (newTechnicalWords.length < 3 || words.length < 15) {
     return {
       source: 'fallback',
-      score: 0,
-      technical: 0,
-      communication: 0,
-      confidence: 0,
-      feedback: `Incorrect / Vague Answer: The response for "${qSnippet}" merely repeated question terms without introducing valid technical explanation. 0 marks awarded.`,
+      score: 1,
+      technical: 1,
+      communication: 2,
+      confidence: 1,
+      feedback: `Vague / Superficial: The response for "${qSnippet}" lacked essential technical mechanics and specific terminology. 1 mark awarded.`,
       modelAnswer: `Key concepts for "${qSnippet}": Explain the core architecture, exact execution mechanism, relevant methods/APIs, and production best practices.`,
       isCorrectDirection: false,
     };
   }
 
-  const baseScore = newTechnicalWords.length >= 6 ? 7 : newTechnicalWords.length >= 3 ? 4 : 2;
-  const qSnippet = (question || topic || 'this question').trim();
+  // Only award solid marks if there is genuine length AND multiple domain keywords
+  const baseScore = newTechnicalWords.length >= 8 && words.length >= 30 ? 5 : newTechnicalWords.length >= 4 ? 3 : 2;
 
   return {
     source: 'fallback',
     score: baseScore,
     technical: baseScore,
-    communication: baseScore > 0 ? Math.min(10, baseScore + 1) : 0,
+    communication: Math.min(10, baseScore + 1),
     confidence: baseScore,
-    feedback: baseScore >= 7
-      ? `Solid response answering "${qSnippet}". The explanation introduces genuine technical terms and concepts well.`
-      : baseScore >= 4
-      ? `Partial answer for "${qSnippet}". Essential terms were mentioned but lacked full technical depth and exact mechanisms.`
-      : `Vague or incomplete answer for "${qSnippet}". The response lacks accurate technical details. ${baseScore} marks awarded.`,
+    feedback: baseScore >= 5
+      ? `Partially acceptable response for "${qSnippet}". Essential terms were mentioned, but deeper architectural explanation is needed.`
+      : `Incomplete answer for "${qSnippet}". The response lacks depth and accurate technical specifics. ${baseScore} marks awarded.`,
     modelAnswer: `Key concepts for "${qSnippet}": Explain the core architecture, exact execution mechanism, relevant methods/APIs, and production best practices.`,
     isCorrectDirection: baseScore >= 5,
   };
@@ -446,7 +445,7 @@ Respond ONLY with valid JSON:
 
 /**
  * Generate the final scorecard + improvement plan including Confidence Level.
- * Enforces zero overall score if candidate provided wrong/fake answers.
+ * Strictly reflects candidate answers and avoids grade inflation.
  */
 export const generateScorecard = async ({ role, topic, evaluationHistory }) => {
   if (!evaluationHistory || evaluationHistory.length === 0) {
@@ -459,90 +458,103 @@ export const generateScorecard = async ({ role, topic, evaluationHistory }) => {
       confidence: 0,
       confidenceLevel: 'Low Confidence (0%)',
       grade: 'Needs Improvement',
-      feedback: 'You did not answer any questions. Please participate to receive an evaluation.',
-      strengths: ['None'],
-      improvementAreas: ['Attempt all questions in the interview'],
+      feedback: 'You did not answer any questions in this interview session. Please participate to receive an evaluation.',
+      strengths: ['None - No questions attempted'],
+      improvementAreas: ['Attempt all technical questions in the mock interview'],
       recommendedTopics: [topic],
-      readiness: 'Not ready'
+      readiness: 'Not Ready - No evaluation data available.',
     };
   }
 
+  const avg = evaluationHistory.reduce((a, e) => a + (e.score || 0), 0) / evaluationHistory.length;
+  const trueOverall = Math.round(avg * 10);
+  const isFailing = trueOverall < 50;
+
   const transcript = evaluationHistory
-    .map((e, i) => `Q${i + 1} [${e.topic}]: ${e.question}\nA: ${e.answer}\nScore: ${e.score}/10\nConfidence: ${e.confidence ?? e.score}/10\nFeedback: ${e.feedback}`)
+    .map((e, i) => `Q${i + 1} [${e.topic || topic}]: ${e.question}\nA: ${e.answer || '(no answer)'}\nScore: ${e.score}/10\nFeedback: ${e.feedback}`)
     .join('\n\n');
 
-  const prompt = `You are a strict interview panel lead producing the final report for a mock interview for role "${role}" (scope "${topic}").
+  const prompt = `You are a strict technical interview panel lead producing the final performance scorecard for role "${role}" (scope: "${topic}").
 
 PER-QUESTION EVALUATIONS:
 ${transcript}
 
-STRICT SCORECARD MANDATE:
-- overallScore MUST be the exact average of individual question scores × 10.
-- If all or most question scores are 0 (due to wrong/fake/invalid answers), overallScore MUST BE 0%, technical MUST BE 0%, confidence MUST BE 0%, grade MUST BE "Needs Improvement", and strengths MUST BE ["None - Incorrect or invalid technical responses provided"].
-- Do NOT inflate scores or give courtesy marks for incorrect/fake answers.
+MANDATORY GRADING RULES:
+1. OVERALL SCORE STRICTNESS:
+   - The overall score MUST be exactly ${trueOverall}% (the mathematical average of question scores × 10). Do NOT inflate this score!
+2. HONEST EVALUATION:
+   - If the candidate scored poorly (<50%):
+     - Grade MUST BE "Needs Improvement".
+     - Strengths MUST NOT invent praise or claim they demonstrated mastery! If all answers were weak, strengths MUST be ["Attempted interview drill session"].
+     - Areas to improve MUST explicitly call out the specific technical shortcomings from the questions above.
+     - Feedback MUST be a direct, constructive 3-4 sentence critique explaining where they fell short and what must be studied.
+   - If candidate scored 70%+:
+     - Grade can be "Good" (70-84%) or "Excellent" (85%+).
 
 Compute the final scorecard and respond ONLY with valid JSON:
 {
-  "overallScore": <number 0-100>,
+  "overallScore": ${trueOverall},
   "technical": <number 0-100>,
   "problemSolving": <number 0-100>,
   "communication": <number 0-100>,
   "confidence": <number 0-100>,
   "confidenceLevel": "High Confidence|Moderate Confidence|Needs Work",
-  "grade": "Excellent|Good|Average|Needs Improvement",
-  "feedback": "overall 3-4 sentence evaluation, be specific about what went wrong",
+  "grade": "${isFailing ? 'Needs Improvement' : trueOverall >= 80 ? 'Excellent' : 'Good'}",
+  "feedback": "Honest 3-4 sentence technical assessment detailing performance and gaps",
   "strengths": ["...", "..."],
   "improvementAreas": ["...", "..."],
   "recommendedTopics": ["...", "..."],
-  "readiness": "Interview Readiness Summary text"
+  "readiness": "Specific readiness summary"
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.3 });
+  const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 25000 });
   const parsed = parseAIJson(raw);
 
   if (parsed && typeof parsed.overallScore === 'number') {
-    const avg = evaluationHistory.reduce((a, e) => a + (e.score || 0), 0) / evaluationHistory.length;
-    const isZeroAll = avg === 0;
     return {
       source: 'ai-live',
-      overallScore: isZeroAll ? 0 : parsed.overallScore,
-      technical: isZeroAll ? 0 : parsed.technical,
-      communication: isZeroAll ? 0 : parsed.communication,
-      problemSolving: isZeroAll ? 0 : parsed.problemSolving,
-      confidence: isZeroAll ? 0 : (typeof parsed.confidence === 'number' ? parsed.confidence : parsed.overallScore),
-      confidenceLevel: isZeroAll ? 'Low Confidence (0%)' : parsed.confidenceLevel,
-      grade: isZeroAll ? 'Needs Improvement' : parsed.grade,
-      strengths: isZeroAll ? ['None - Incorrect or invalid responses provided'] : parsed.strengths,
-      improvementAreas: parsed.improvementAreas || [topic],
-      recommendedTopics: parsed.recommendedTopics || [topic],
-      feedback: parsed.feedback,
-      readiness: isZeroAll ? 'Not Ready - 0% score awarded due to incorrect or fake answers.' : parsed.readiness,
+      overallScore: trueOverall,
+      technical: isFailing ? Math.min(trueOverall, parsed.technical ?? trueOverall) : (parsed.technical ?? trueOverall),
+      communication: isFailing ? Math.min(50, parsed.communication ?? trueOverall) : (parsed.communication ?? trueOverall),
+      problemSolving: isFailing ? Math.min(trueOverall, parsed.problemSolving ?? trueOverall) : (parsed.problemSolving ?? trueOverall),
+      confidence: isFailing ? Math.min(40, parsed.confidence ?? trueOverall) : (parsed.confidence ?? trueOverall),
+      confidenceLevel: trueOverall >= 75 ? 'High Confidence' : trueOverall >= 50 ? 'Moderate Confidence' : 'Needs Work (Low)',
+      grade: isFailing ? 'Needs Improvement' : (parsed.grade || (trueOverall >= 80 ? 'Excellent' : 'Good')),
+      strengths: isFailing
+        ? (trueOverall === 0 ? ['None - Answers provided were incorrect or invalid'] : ['Attempted interview drill session'])
+        : (parsed.strengths && parsed.strengths.length > 0 ? parsed.strengths : ['Solid foundational understanding']),
+      improvementAreas: parsed.improvementAreas || [`Review core principles in ${topic}`, 'Provide deeper technical explanations with syntax'],
+      recommendedTopics: parsed.recommendedTopics || [topic, 'System Design Basics', 'Data Structures & Algorithms'].slice(0, 3),
+      feedback: parsed.feedback || `Candidate scored ${trueOverall}%. Technical answers lacked required depth in ${topic}.`,
+      readiness: isFailing
+        ? `Not Interview Ready (${trueOverall}% score). Deep technical preparation required before attending live industry interviews.`
+        : (parsed.readiness || 'Ready for entry-level technical interviews. Continue practicing.'),
     };
   }
 
   // Fallback computed scorecard
-  const avg = evaluationHistory.reduce((a, e) => a + (e.score || 0), 0) / evaluationHistory.length;
-  const overallScore = Math.round(avg * 10);
-  const confidence = overallScore === 0 ? 0 : Math.min(100, Math.round((avg * 9) + 10));
-  const confidenceLevel = confidence >= 75 ? 'High Confidence' : confidence >= 50 ? 'Moderate Confidence' : 'Low Confidence (0%)';
-  const grade = avg >= 8 ? 'Excellent' : avg >= 6 ? 'Good' : avg >= 4 ? 'Average' : 'Needs Improvement';
-
   return {
     source: 'fallback',
-    overallScore,
-    technical: overallScore,
-    communication: overallScore === 0 ? 0 : Math.min(100, overallScore + 5),
-    problemSolving: overallScore === 0 ? 0 : Math.max(0, overallScore - 5),
-    confidence,
-    confidenceLevel,
-    grade,
-    feedback: overallScore === 0
-      ? `Evaluation Failed: All ${evaluationHistory.length} answers provided were incorrect or invalid. 0 marks awarded.`
-      : `You answered ${evaluationHistory.length} question${evaluationHistory.length !== 1 ? 's' : ''} with an average score of ${avg.toFixed(1)}/10. ${grade === 'Excellent' ? 'Outstanding performance!' : grade === 'Good' ? 'Good performance overall.' : 'Keep practising to improve your technical depth.'}`,
-    strengths: overallScore === 0 ? ['None - Incorrect or invalid technical responses provided'] : avg >= 5 ? ['Attempted questions', 'Shows foundational understanding'] : ['Participated in interview'],
-    improvementAreas: overallScore === 0 ? [`Study core concepts in ${topic}`, 'Provide accurate technical explanations', 'Avoid entering fake or random answers'] : avg < 7 ? ['Provide more detailed technical explanations', 'Use concrete examples'] : ['Deepen knowledge in advanced topics'],
+    overallScore: trueOverall,
+    technical: trueOverall,
+    communication: trueOverall === 0 ? 0 : Math.min(100, trueOverall + 5),
+    problemSolving: trueOverall === 0 ? 0 : Math.max(0, trueOverall - 5),
+    confidence: trueOverall === 0 ? 0 : Math.min(100, Math.round((avg * 9) + 5)),
+    confidenceLevel: trueOverall >= 75 ? 'High Confidence' : trueOverall >= 50 ? 'Moderate Confidence' : 'Needs Work (Low)',
+    grade: isFailing ? 'Needs Improvement' : trueOverall >= 80 ? 'Excellent' : 'Good',
+    feedback: isFailing
+      ? `Performance Assessment: You answered ${evaluationHistory.length} question${evaluationHistory.length !== 1 ? 's' : ''} with an average score of ${avg.toFixed(1)}/10 (${trueOverall}% overall). Answers lacked technical precision and depth. Significant study of ${topic} fundamentals is required.`
+      : `Performance Assessment: You answered ${evaluationHistory.length} question${evaluationHistory.length !== 1 ? 's' : ''} with an average score of ${avg.toFixed(1)}/10. Solid demonstration of technical knowledge in ${topic}.`,
+    strengths: isFailing
+      ? (trueOverall === 0 ? ['None - Answers provided were incorrect or invalid'] : ['Attempted interview session'])
+      : ['Good conceptual clarity', 'Appropriate technical vocabulary'],
+    improvementAreas: isFailing
+      ? [`Master fundamental syntax and mechanics in ${topic}`, 'Explain execution flow and core principles clearly', 'Avoid vague or circular responses']
+      : ['Deepen knowledge in edge cases and performance optimization'],
     recommendedTopics: [topic, 'System Design Basics', 'Data Structures & Algorithms'].slice(0, 3),
-    readiness: overallScore === 0 ? 'Not Ready - 0% score awarded due to incorrect or fake answers.' : avg >= 7 ? 'You appear ready for entry-level interviews. Keep practising!' : 'Continue studying and mock interviews before applying.',
+    readiness: isFailing
+      ? `Not Interview Ready (${trueOverall}% score). Continue thorough revision and mock practice before company drives.`
+      : 'Interview Ready for entry-level positions.',
   };
 };
 

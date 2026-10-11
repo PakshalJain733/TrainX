@@ -3,8 +3,8 @@ const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const DEFAULT_MODELS = {
-  groq: ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'],
-  nvidia: ['mistralai/mistral-large-2-instruct', 'mistralai/mistral-7b-instruct-v0.3', 'meta/llama-3.2-11b-vision-instruct'],
+  groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  nvidia: ['meta/llama-3.2-11b-vision-instruct', 'nvidia/nemotron-3.5-lightning-30b-a3b'],
   gemini: ['gemini-1.5-flash', 'gemini-2.0-flash'],
 };
 

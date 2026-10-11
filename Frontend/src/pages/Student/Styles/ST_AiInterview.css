@@ -3407,34 +3407,6 @@
 }
 
 /* Back navigation button in Hero Scorecard */
-.ai-report-top-nav {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.ai-back-nav-btn {
-  background: rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(8px);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  padding: 6px 14px;
-  font-size: 12.5px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.ai-back-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.35);
-  transform: translateY(-1px);
-}
-
 /* Topic Alignment Mismatch Banner & Pill Actions */
 .ai-mismatch-banner {
   background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
