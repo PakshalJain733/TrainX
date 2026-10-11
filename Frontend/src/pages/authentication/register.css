@@ -2060,6 +2060,58 @@
   font-weight: 700;
 }
 
+/* ── Approved Green Status State ── */
+.pending-approval-icon-wrapper.approved {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 2px solid #86efac;
+  box-shadow: 0 4px 18px rgba(22, 163, 74, 0.25);
+  animation: pulseGreen 2s infinite ease-in-out;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(22, 163, 74, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
+.pending-approval-title.approved {
+  color: #065f46;
+}
+
+.pending-approval-box.approved {
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+}
+
+.pending-approval-badge-row.approved {
+  color: #15803d;
+}
+
+.pending-approval-badge.approved {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pending-approval-desc.approved {
+  color: #166534;
+}
+
+.pending-approval-btn.approved {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pending-approval-btn.approved:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+
 /* ── Email Verification Badge & Button ── */
 .email-verified-badge-card {
   display: flex;
