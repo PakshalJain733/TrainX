@@ -207,7 +207,7 @@ export default function CodingPlatform() {
             topic: p.category || "General DSA",
             difficulty: p.difficulty || "Medium",
             points: p.points || 100,
-            deadline: "",
+            deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
             description: getDynamicProblemDescription(p.title, p.category, p.description),
             testCases: getDynamicSampleTestCases(p.title, rawCases),
           });
@@ -216,6 +216,36 @@ export default function CodingPlatform() {
 
         if (initialTask) {
           setTaskData(initialTask);
+          return;
+        }
+
+        // Built-in standard problem fallback for seamless direct navigation
+        const defaultProblems = {
+          "1": {
+            id: "1",
+            title: "Return First Element",
+            topic: "Array Basics",
+            difficulty: "Easy",
+            points: 100,
+            deadline: "",
+            description: getDynamicProblemDescription("Return First Element", "Array Basics", "Write a program that returns the first element of a given array.\n\nInput Format:\n- Line 1: An integer n (length of array).\n- Line 2: n space-separated integers.\n\nOutput Format:\n- A single integer representing the first element."),
+            testCases: getDynamicSampleTestCases("Return First Element", []),
+          },
+          "2": {
+            id: "2",
+            title: "Multiply Two Numbers",
+            topic: "Math & Logic",
+            difficulty: "Easy",
+            points: 100,
+            deadline: "",
+            description: getDynamicProblemDescription("Multiply Two Numbers", "Math", "Write a program that takes two integers as input and prints their product.\n\nInput Format:\n- A single line containing two space-separated integers A and B.\n\nOutput Format:\n- Print the product of A and B as a single integer."),
+            testCases: getDynamicSampleTestCases("Multiply Two Numbers", []),
+          }
+        };
+
+        const fallbackKey = String(numeric || "1");
+        if (defaultProblems[fallbackKey]) {
+          setTaskData(defaultProblems[fallbackKey]);
           return;
         }
 

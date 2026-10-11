@@ -590,6 +590,8 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       tags = '',
       companies = '',
       description = '',
+      dueDate = '',
+      due_date = '',
       points = 100,
       xp = 50,
       sampleInput = '',
@@ -601,7 +603,22 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       return sendError(res, 'Problem title is required', 400);
     }
 
-    const collegeId = getCallerCollegeFilter(req) || 1;
+    const callerCollege = getCallerCollegeFilter(req);
+    const collegeId = callerCollege || req.body.college_id || req.body.collegeId || null;
+
+    const rawDueDate = dueDate || due_date;
+    let normalizedDueDate = null;
+    if (rawDueDate && String(rawDueDate).trim()) {
+      try {
+        const d = new Date(rawDueDate);
+        if (!isNaN(d.getTime())) {
+          normalizedDueDate = d.toISOString().slice(0, 10);
+        }
+      } catch {
+        normalizedDueDate = null;
+      }
+    }
+
     const newProblem = await createPracticeProblemModel({
       college_id: collegeId,
       batch_id,
@@ -616,6 +633,7 @@ export const createAdminPracticeProblem = async (req, res, next) => {
       sampleInput,
       sampleOutput,
       testCases,
+      due_date: normalizedDueDate,
     });
 
     return sendSuccess(res, 'Coding problem created successfully', newProblem, 201);

@@ -593,13 +593,7 @@
 }
 
 .ai-welcome-landing-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 82% 14%, rgba(124, 140, 255, 0.16) 0%, transparent 55%),
-    radial-gradient(circle at 14% 92%, rgba(59, 73, 198, 0.2) 0%, transparent 55%);
-  pointer-events: none;
+  display: none;
 }
 
 .ai-welcome-content {
@@ -620,14 +614,14 @@
 .ai-welcome-title {
   font-size: 24px;
   font-weight: 800;
-  color: #ffffff;
+  color: #0f172a;
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .ai-welcome-desc {
   font-size: 14.5px;
-  color: rgba(255, 255, 255, 0.72);
+  color: #475569;
   line-height: 1.6;
   margin: 0;
   max-width: 720px;
@@ -649,8 +643,8 @@
 }
 
 .ai-meta-item {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 16px 14px;
   display: flex;
@@ -661,16 +655,16 @@
 }
 
 .ai-meta-item:hover {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.1);
+  border-color: #cbd5e1;
+  background: #f1f5f9;
 }
 
 .ai-meta-icon {
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #c7ccff;
+  background: #eff6ff;
+  color: #2563eb;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -680,12 +674,12 @@
 .ai-meta-val {
   font-size: 13.5px;
   font-weight: 700;
-  color: #ffffff;
+  color: #0f172a;
 }
 
 .ai-meta-lbl {
   font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.6);
+  color: #64748b;
   margin-top: 2px;
 }
 
@@ -1655,55 +1649,78 @@
 }
 
 .ai-report-hero {
-  background: linear-gradient(135deg, #1d2342 0%, #2b355f 100%);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
   border-radius: 16px;
-  padding: 30px 32px 34px;
-  color: #ffffff;
+  padding: 32px 32px 36px;
+  color: #0f172a;
   text-align: center;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 12px 32px -14px rgba(23, 29, 62, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
 }
 
 .ai-report-hero-bg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    radial-gradient(circle at 78% 18%, rgba(124, 140, 255, 0.18) 0%, transparent 55%),
-    radial-gradient(circle at 16% 90%, rgba(59, 73, 198, 0.22) 0%, transparent 55%);
-  pointer-events: none;
+  display: none;
+}
+
+.ai-report-top-nav {
+  display: flex;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.ai-back-nav-btn {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.ai-back-nav-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
 }
 
 .ai-report-label {
   position: relative;
   z-index: 1;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 1.6px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
+  color: #2563eb;
   margin-bottom: 6px;
 }
 
 .ai-report-title {
   position: relative;
   z-index: 1;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.02em;
+  color: #0f172a;
   margin: 0 0 6px;
 }
 
 .ai-report-meta {
   position: relative;
   z-index: 1;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
+  color: #64748b;
+  font-size: 13.5px;
   margin: 0 0 28px;
+  font-weight: 500;
 }
 
 .ai-score-ring-wrap {
@@ -1717,34 +1734,39 @@
 }
 
 .ai-score-ring-outer {
-  width: 128px;
-  height: 128px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: conic-gradient(var(--score-color, #2f9e6e) var(--score-deg, 0deg), rgba(255, 255, 255, 0.12) 0deg);
-  box-shadow: 0 10px 28px -10px color-mix(in srgb, var(--score-color, #2f9e6e) 60%, transparent);
+  background: conic-gradient(var(--score-color, #2f9e6e) var(--score-deg, 0deg), #e2e8f0 0deg);
+  box-shadow: 0 8px 24px -6px rgba(47, 158, 110, 0.25);
 }
 
 .ai-score-ring-inner {
-  width: 102px;
-  height: 102px;
+  width: 104px;
+  height: 104px;
   border-radius: 50%;
-  background: #1d2342;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .ai-score-percent-val {
-  font-size: 28px;
+  font-size: 30px;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
+  color: #0f172a;
 }
+
+.ai-score-percent-val.score-tier-pass { color: #16a34a; }
+.ai-score-percent-val.score-tier-warn { color: #d97706; }
+.ai-score-percent-val.score-tier-fail { color: #dc2626; }
 
 .ai-score-grade-pill {
   font-size: 12px;
@@ -1752,10 +1774,78 @@
   letter-spacing: 0.3px;
   padding: 5px 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.92);
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
 }
+
+/* 4-metric breakdown cards on report hero */
+.ai-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+  margin-top: 10px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 860px) {
+  .ai-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.ai-metric-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.ai-metric-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.ai-metric-val {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.ai-metric-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.ai-metric-track {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.ai-metric-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2563eb;
+  transition: width 0.4s ease;
+}
+
+.ai-metric-tech .ai-metric-fill { background: #2563eb; }
+.ai-metric-comm .ai-metric-fill { background: #10b981; }
+.ai-metric-prob .ai-metric-fill { background: #8b5cf6; }
+.ai-metric-conf .ai-metric-fill { background: #f59e0b; }
 
 /* Scorecard metric styles are defined in the "Hero Scorecard Metrics" section below */
 

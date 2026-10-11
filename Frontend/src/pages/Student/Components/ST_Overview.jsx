@@ -370,10 +370,22 @@ export default function Overview() {
             ) : (
               <div className="space-y-3">
                 {upcoming.map((task, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div 
+                    key={i} 
+                    className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800 hover:border-indigo-200 hover:shadow-xs transition-all cursor-pointer"
+                    onClick={() => {
+                      if (task.id) {
+                        navigate(`/student/coding-platform/task-${String(task.id).padStart(2, '0')}`);
+                      } else {
+                        navigate('/student/practice-problems');
+                      }
+                    }}
+                  >
                     <div>
-                      <h4 className="text-sm font-semibold">{task.title}</h4>
-                      <p className="text-xs text-slate-500">{task.dueDate}</p>
+                      <h4 className="text-sm font-semibold text-slate-800 dark:text-white hover:text-indigo-600">{task.title}</h4>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                        <Clock size={11} className="text-slate-400" /> {task.dueDate}
+                      </p>
                     </div>
                     <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
                   </div>

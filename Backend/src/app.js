@@ -191,6 +191,7 @@ app.use('/api/v1/mock-drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
 app.use('/api/v1/secure-codes', secureCodeRoutes);
+app.use('/api/v1/code', codingRoutes);
 app.use('/api/v1/coding', codingRoutes);
 app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
 app.use('/api/v1/mentor', mentorRoutes);
