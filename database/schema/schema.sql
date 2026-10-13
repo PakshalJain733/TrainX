@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   mobile_number VARCHAR(15) UNIQUE,
+  password_hash VARCHAR(255) NULL,
   role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
   college_id INT NULL,
   is_active BOOLEAN DEFAULT TRUE,

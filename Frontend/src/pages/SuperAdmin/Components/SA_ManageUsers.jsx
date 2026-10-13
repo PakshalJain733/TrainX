@@ -1248,8 +1248,12 @@ export default function ManageUsers() {
     apiFetch('/admin/pending-users')
       .then(res => {
         if (res && res.data && Array.isArray(res.data)) {
-          setPendingUsersList(res.data);
-          setPendingUsersCount(res.data.length);
+          const adminOnly = res.data.filter(u => {
+            const r = String(u.role || '').toLowerCase();
+            return r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin');
+          });
+          setPendingUsersList(adminOnly);
+          setPendingUsersCount(adminOnly.length);
         }
       })
       .catch(() => {});
@@ -1726,15 +1730,6 @@ export default function ManageUsers() {
         <div className="sa-header-actions">
           <button
             type="button"
-            onClick={() => navigate('/super-admin/approve-users')}
-            className="manageusers-btn-secondary"
-            style={{ background: "#ecfdf5", color: "#047857", borderColor: "#a7f3d0", fontWeight: 700 }}
-          >
-            <UserCheck size={16} />
-            <span>Approve Registrations {pendingUsersCount > 0 && `(${pendingUsersCount})`}</span>
-          </button>
-          <button
-            type="button"
             onClick={() => {
               setGeneratedCode(null);
               setIsGenerateCodeModalOpen(true);
@@ -1816,6 +1811,16 @@ export default function ManageUsers() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1825,7 +1830,7 @@ export default function ManageUsers() {
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb' }}>
             <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Clock size={18} color="#d97706" />
-              <span>Pending User Registrations Awaiting Approval ({pendingUsersList.length})</span>
+              <span>Pending Admin Registrations Awaiting Approval ({pendingUsersList.length})</span>
             </h3>
             <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
               Action Required

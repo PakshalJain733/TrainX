@@ -75,7 +75,6 @@ const SAFE_USER_FIELDS = [
   'gender',
   'city',
   'emergency_contact',
-  'linkedin_url',
   'target_track',
   'two_factor_enabled',
   'two_factor_reset',
@@ -243,8 +242,8 @@ const getValidCollegeId = async (collegeId) => {
     const validCollegeId = await getValidCollegeId(college_id);
     const activeValue = is_active === false || is_active === 0 || String(is_active).toLowerCase() === 'false' ? 0 : 1;
     const res = await query(
-      'INSERT INTO users (name, email, mobile_number, role, college_id, password, password_hash, two_factor_secret, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [name, normalizedEmail, normalizedMobile, role, validCollegeId, hashedPassword, hashedPassword, normalizedSecret, activeValue]
+      'INSERT INTO users (name, email, mobile_number, role, college_id, password_hash, two_factor_secret, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [name, normalizedEmail, normalizedMobile, role, validCollegeId, hashedPassword, normalizedSecret, activeValue]
     );
     if (res && res.insertId) {
       return {
@@ -270,10 +269,8 @@ const getValidCollegeId = async (collegeId) => {
     if (updateData.mobile_number !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.mobile_number || null); }
     if (updateData.phone !== undefined) { fields.push('mobile_number = ?'); values.push(updateData.phone || null); }
     if (updateData.password !== undefined || updateData.password_hash !== undefined) {
-      const passwordValue = updateData.password !== undefined ? updateData.password : updateData.password_hash;
+      const passwordValue = updateData.password_hash !== undefined ? updateData.password_hash : updateData.password;
       const hashedPassword = await hashPasswordValue(passwordValue);
-      fields.push('password = ?');
-      values.push(hashedPassword);
       fields.push('password_hash = ?');
       values.push(hashedPassword);
     }
@@ -590,7 +587,6 @@ const getValidCollegeId = async (collegeId) => {
            COALESCE(s.gender, u.gender) as gender,
            COALESCE(s.city, u.city) as city,
            COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
-           COALESCE(s.linkedin_url, u.linkedin_url) as linkedin_url,
            COALESCE(s.target_track, u.target_track) as target_track,
            COALESCE(s.is_profile_updated, u.is_profile_updated, 0) as is_profile_updated
     FROM users u
@@ -625,7 +621,6 @@ const getValidCollegeId = async (collegeId) => {
            COALESCE(s.gender, u.gender) as gender,
            COALESCE(s.city, u.city) as city,
            COALESCE(s.emergency_contact, u.emergency_contact) as emergency_contact,
-           COALESCE(s.linkedin_url, u.linkedin_url) as linkedin_url,
            COALESCE(s.target_track, u.target_track) as target_track
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
@@ -671,8 +666,6 @@ const getValidCollegeId = async (collegeId) => {
       city,
       emergency_contact,
       guardianContact,
-      linkedin_url,
-      linkedinUrl,
       target_track,
       track,
       password,
@@ -692,7 +685,6 @@ const getValidCollegeId = async (collegeId) => {
     const genderVal = gender !== undefined ? gender : null;
     const cityVal = city !== undefined ? city : null;
     const emergencyVal = emergency_contact !== undefined ? emergency_contact : (guardianContact !== undefined ? guardianContact : null);
-    const linkedinVal = linkedin_url !== undefined ? linkedin_url : (linkedinUrl !== undefined ? linkedinUrl : null);
     const trackVal = target_track !== undefined ? target_track : (track !== undefined ? track : null);
     const nameVal = name || null;
     const emailVal = email || null;
@@ -703,8 +695,8 @@ const getValidCollegeId = async (collegeId) => {
     const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : 1;
 
     await query(
-      'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password = COALESCE(?, password), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), linkedin_url = COALESCE(?, linkedin_url), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
-      [nameVal, emailVal, phoneVal, passVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, linkedinVal, trackVal, isProfileUpdatedVal, numId]
+      'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',
+      [nameVal, emailVal, phoneVal, passVal, roleVal, validCollegeId, isActiveVal, genderVal, cityVal, emergencyVal, trackVal, isProfileUpdatedVal, numId]
     );
 
     if (two_factor_secret !== undefined) {
@@ -736,7 +728,6 @@ const getValidCollegeId = async (collegeId) => {
       genderVal !== null ||
       cityVal !== null ||
       emergencyVal !== null ||
-      linkedinVal !== null ||
       trackVal !== null ||
       is_profile_updated !== undefined
     ) {
@@ -757,7 +748,6 @@ const getValidCollegeId = async (collegeId) => {
           gender = COALESCE(?, gender),
           city = COALESCE(?, city),
           emergency_contact = COALESCE(?, emergency_contact),
-          linkedin_url = COALESCE(?, linkedin_url),
           target_track = COALESCE(?, target_track),
           is_profile_updated = COALESCE(?, is_profile_updated)
          WHERE user_id = ?`,
@@ -775,7 +765,6 @@ const getValidCollegeId = async (collegeId) => {
             genderVal,
             cityVal,
             emergencyVal,
-            linkedinVal,
             trackVal,
             isProfileUpdatedVal,
             numId,
@@ -784,9 +773,9 @@ const getValidCollegeId = async (collegeId) => {
       } else {
         await query(
           `INSERT INTO students 
-          (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, linkedin_url, target_track) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', linkedinVal || '', trackVal || '']
+          (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
         );
       }
     }
@@ -797,7 +786,6 @@ const getValidCollegeId = async (collegeId) => {
       gender: genderVal,
       city: cityVal,
       emergency_contact: emergencyVal,
-      linkedin_url: linkedinVal,
       target_track: trackVal,
     };
   };

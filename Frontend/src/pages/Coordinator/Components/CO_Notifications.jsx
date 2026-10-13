@@ -103,8 +103,9 @@ export default function CoordinatorNotifications() {
           <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em', color: '#6366f1', textTransform: 'uppercase' }}>
             ACTIVITY LOG & ALERTS
           </span>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0 0', letterSpacing: '-0.02em' }}>
-            Notifications
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0 0', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Bell size={24} className="ui-section-title-icon" />
+            <span>Notifications</span>
           </h2>
           <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
             Stay updated with milestone progression, mentor scorecard dossiers, mock interview drill alerts, and system announcements.

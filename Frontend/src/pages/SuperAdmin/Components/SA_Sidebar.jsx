@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, SlidersHorizontal, Activity, HelpCircle, FileCheck2 } from "lucide-react";
+import { LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, FileCheck2 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/SA_Sidebar.css";
@@ -27,6 +27,7 @@ const primaryNavItems = [
   { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
   { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
   { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
+  { title: "Approve Registration", url: "/super-admin/approve-users", icon: UserCheck },
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },
 ];

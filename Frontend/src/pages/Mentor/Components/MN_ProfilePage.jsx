@@ -227,6 +227,7 @@ function MN_ProfilePage() {
         <div className="ui-section-main">
           <div>
             <h2 className="ui-section-title">
+              <User size={22} className="ui-section-title-icon" />
               <span>Mentor Profile & Settings</span>
             </h2>
             <p className="ui-section-desc">

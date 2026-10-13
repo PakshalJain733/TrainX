@@ -1206,7 +1206,7 @@ export const getMentorProfile = async (req, res, next) => {
 
     const rows = await query(
       `SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.gender, u.city,
-              u.target_track, u.linkedin_url, u.is_active, u.created_at,
+              u.target_track, u.is_active, u.created_at,
               c.id AS college_id, c.name AS college_name, c.code AS college_code,
               (SELECT COUNT(*) FROM mentor_student_assignments msa WHERE msa.mentor_id = u.id) AS assigned_students,
               (SELECT COUNT(DISTINCT COALESCE(msa.batch_id, s.batch_id))
@@ -1269,7 +1269,6 @@ export const getMentorProfile = async (req, res, next) => {
       city: row.city || null,
       targetTrack: row.target_track || null,
       specialization: row.target_track || null,
-      linkedinUrl: row.linkedin_url || null,
       isActive: row.is_active === null || row.is_active === undefined ? null : Boolean(row.is_active),
       joinedAt: row.created_at || null,
       college: row.college_name || null,

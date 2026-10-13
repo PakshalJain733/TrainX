@@ -159,8 +159,9 @@ export default function Help() {
   return (
     <div className="help-page-wrapper">
       <div style={{ marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
-          Help & Support
+        <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: "10px" }}>
+          <HelpCircle size={24} className="ui-section-title-icon" />
+          <span>Help & Support</span>
         </h2>
         <p style={{ color: "#64748b", fontSize: "0.95rem", margin: "4px 0 0 0" }}>
           Find answers to common questions or reach out to our support team.

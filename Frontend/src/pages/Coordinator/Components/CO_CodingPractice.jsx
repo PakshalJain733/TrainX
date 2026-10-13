@@ -293,8 +293,9 @@ export default function CodingPractice() {
       {/* Header Banner */}
       <div className="coord-cp-header">
         <div className="coord-cp-header-info">
-          <h1 className="coord-cp-title">
-            Coding Practice & Assignment Governance
+          <h1 className="coord-cp-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Terminal size={24} className="ui-section-title-icon" />
+            <span>Coding Practice & Assignment Governance</span>
           </h1>
           <p className="coord-cp-subtitle">
             Create coding problems, manage test cases, assign practice tracks to departments/batches, and track real-time student submissions & performance.
@@ -373,6 +374,16 @@ export default function CodingPractice() {
                 onChange={(e) => setProblemSearch(e.target.value)}
                 className="coord-cp-search-input"
               />
+              {problemSearch && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setProblemSearch("")}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className="coord-cp-filter-controls">
@@ -645,6 +656,16 @@ export default function CodingPractice() {
                 onChange={(e) => setSubmissionSearch(e.target.value)}
                 className="coord-cp-search-input"
               />
+              {submissionSearch && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setSubmissionSearch("")}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className="coord-cp-filter-controls">

@@ -31,13 +31,13 @@ const getBrevoClient = () => {
  */
 export const isEmailSystemDisabled = async () => {
   try {
-    const rows = await query(`SELECT data_json FROM shared_content WHERE type = 'maintenance' ORDER BY id DESC LIMIT 1`);
-    if (rows && rows.length > 0) {
-      const config = JSON.parse(rows[0].data_json || '{}');
-      if (config.globalEmergencyMode) return true;
-      if (config.modules) {
-        if (config.modules.emailSystem && config.modules.emailSystem.active === false) return true;
-      }
+    const emergencyRow = await query(`SELECT is_active FROM feature_switches WHERE feature_key = '__global_emergency_mode' LIMIT 1`);
+    if (emergencyRow && emergencyRow.length > 0 && Boolean(emergencyRow[0].is_active)) {
+      return true;
+    }
+    const emailRow = await query(`SELECT is_active FROM feature_switches WHERE feature_key = 'emailSystem' LIMIT 1`);
+    if (emailRow && emailRow.length > 0) {
+      return emailRow[0].is_active === 0 || emailRow[0].is_active === false;
     }
   } catch (e) {}
   return false;

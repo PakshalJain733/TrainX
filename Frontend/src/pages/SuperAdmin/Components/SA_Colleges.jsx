@@ -359,6 +359,16 @@ export default function Colleges() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="sa-search-input"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchQuery("")}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -425,6 +435,16 @@ export default function Colleges() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <CollegeSelect

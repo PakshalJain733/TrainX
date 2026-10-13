@@ -201,7 +201,6 @@ export default function ProfilePage() {
       gender: sp.gender || u.gender || "",
       city: sp.city || u.city || "",
       guardianContact: sp.emergency_contact || u.emergency_contact || "",
-      linkedinUrl: sp.linkedin_url || u.linkedin_url || "",
       semester: sp.semester || u.semester || "",
       cgpa: sp.cgpa || u.cgpa || "",
       skills: sp.skills || u.skills || "",
@@ -286,7 +285,6 @@ export default function ProfilePage() {
             gender: sp.gender || user.gender || prev.gender,
             city: sp.city || user.city || prev.city,
             guardianContact: sp.emergency_contact || user.emergency_contact || prev.guardianContact,
-            linkedinUrl: sp.linkedin_url || user.linkedin_url || prev.linkedinUrl,
             track: sp.target_track || user.target_track || prev.track,
             notifMilestones: sp.notif_milestones !== undefined ? Boolean(sp.notif_milestones) : prev.notifMilestones,
             notifWeeklyReport: sp.notif_weekly_report !== undefined ? Boolean(sp.notif_weekly_report) : prev.notifWeeklyReport,
@@ -444,7 +442,6 @@ export default function ProfilePage() {
         gender: form.gender,
         city: form.city,
         emergency_contact: form.guardianContact,
-        linkedin_url: form.linkedinUrl,
         target_track: form.track,
         is_profile_updated: true,
         notif_milestones: form.notifMilestones,
@@ -493,6 +490,7 @@ export default function ProfilePage() {
     <div className="student-page-inner profile-container">
       <div className="student-header-box">
         <h2 className="student-header-title">
+          <User size={24} style={{ color: "var(--primary-color, #4f46e5)", flexShrink: 0, marginRight: "10px" }} />
           <span>My Academic Profile & Onboarding Settings</span>
         </h2>
         <p className="student-header-desc">Update your semester, aggregate CGPA, technical skills, and target career goal.</p>

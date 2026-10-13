@@ -266,6 +266,16 @@ export default function Students() {
             onChange={(event) => setSearch(event.target.value)}
             className="mentor-search-input"
           />
+          {search && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 

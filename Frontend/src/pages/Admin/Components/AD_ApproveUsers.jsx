@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { UserCheck, Check, Search, CheckCircle2, XCircle, Clock, GraduationCap, Briefcase, Users, RefreshCw, AlertCircle, Mail, Phone, LayoutGrid, List, Eye, X, Sparkles, Copy, Building2, Calendar, UserCog, ShieldCheck } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_ApproveUsers.css";
 
 export default function AD_ApproveUsers() {
+  const location = useLocation();
+  let storedUser = null;
+  try {
+    const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (raw) storedUser = JSON.parse(raw);
+  } catch (e) {
+    storedUser = null;
+  }
+  const isSuperAdmin =
+    location.pathname.toLowerCase().includes("/super-admin") ||
+    location.pathname.toLowerCase().includes("/superadmin") ||
+    String(storedUser?.role || "").toLowerCase().includes("super");
+
   const [pendingUsers, setPendingUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,12 +33,21 @@ export default function AD_ApproveUsers() {
     try {
       const res = await apiFetch("/admin/pending-users");
       if (res && res.data && Array.isArray(res.data)) {
-        // College Admins approve Students, Mentors, and Coordinators (not Admins)
-        const nonAdminPending = res.data.filter(u => {
-          const r = String(u.role || '').toLowerCase();
-          return !r.includes('admin');
-        });
-        setPendingUsers(nonAdminPending);
+        if (isSuperAdmin) {
+          // Super Admin ONLY approves Admin roles (college_admin, admin)
+          const adminPending = res.data.filter((u) => {
+            const r = String(u.role || "").toLowerCase();
+            return (r === "college_admin" || r === "admin" || r.includes("admin")) && !r.includes("super");
+          });
+          setPendingUsers(adminPending);
+        } else {
+          // College Admins approve Students, Mentors, and Coordinators (not Admins)
+          const nonAdminPending = res.data.filter((u) => {
+            const r = String(u.role || "").toLowerCase();
+            return !r.includes("admin") && !r.includes("super");
+          });
+          setPendingUsers(nonAdminPending);
+        }
       } else {
         setPendingUsers([]);
       }
@@ -106,12 +129,18 @@ export default function AD_ApproveUsers() {
   // Filtered List
   const filteredUsers = pendingUsers.filter((u) => {
     const roleLower = String(u.role || "").toLowerCase();
-    let matchesRole = false;
-    if (selectedRole === "all") matchesRole = true;
-    else if (selectedRole === "student") matchesRole = roleLower === "student";
-    else if (selectedRole === "mentor") matchesRole = roleLower === "mentor" || roleLower === "faculty";
-    else if (selectedRole === "coordinator") matchesRole = roleLower === "coordinator";
-    else matchesRole = roleLower === selectedRole.toLowerCase();
+    let matchesRole = true;
+    if (!isSuperAdmin && selectedRole !== "all") {
+      if (selectedRole === "student") {
+        matchesRole = roleLower === "student";
+      } else if (selectedRole === "mentor") {
+        matchesRole = roleLower === "mentor" || roleLower === "faculty";
+      } else if (selectedRole === "coordinator") {
+        matchesRole = roleLower === "coordinator";
+      } else {
+        matchesRole = roleLower === selectedRole.toLowerCase();
+      }
+    }
 
     const q = searchTerm.trim().toLowerCase();
     const matchesSearch =
@@ -119,6 +148,8 @@ export default function AD_ApproveUsers() {
       (u.name && u.name.toLowerCase().includes(q)) ||
       (u.email && u.email.toLowerCase().includes(q)) ||
       (u.mobile_number && String(u.mobile_number).includes(q)) ||
+      (u.college_name && u.college_name.toLowerCase().includes(q)) ||
+      (u.college && u.college.toLowerCase().includes(q)) ||
       (u.department && u.department.toLowerCase().includes(q)) ||
       (u.roll_number && String(u.roll_number).toLowerCase().includes(q));
 
@@ -133,7 +164,16 @@ export default function AD_ApproveUsers() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Counts
+  // Super Admin counts
+  const collegeAdminCount = pendingUsers.filter((u) => {
+    const r = String(u.role || "").toLowerCase();
+    return r === "college_admin" || r === "admin" || r.includes("admin");
+  }).length;
+  const collegesRepresentedCount = new Set(
+    pendingUsers.map((u) => u.college_name || u.college || "General")
+  ).size;
+
+  // College Admin counts
   const studentCount = pendingUsers.filter((u) => String(u.role).toLowerCase() === "student").length;
   const mentorCount = pendingUsers.filter(
     (u) => String(u.role).toLowerCase() === "mentor" || String(u.role).toLowerCase() === "faculty"
@@ -179,6 +219,7 @@ export default function AD_ApproveUsers() {
       <div className="approve-text-header">
         <div>
           <div className="approve-title-row">
+            <UserCheck size={24} className="ui-section-title-icon" />
             <h1 className="approve-page-title">Pending Registrations</h1>
             {pendingUsers.length > 0 && (
               <span className="approve-count-badge">
@@ -187,7 +228,9 @@ export default function AD_ApproveUsers() {
             )}
           </div>
           <p className="approve-page-subtitle">
-            Review and approve newly registered students, mentors, and coordinators before granting them full access to the portal.
+            {isSuperAdmin
+              ? "Review and approve newly registered college admins, department heads, and institutional representatives before granting them portal access."
+              : "Review and approve newly registered students, mentors, and coordinators before granting them full access to the portal."}
           </p>
         </div>
 
@@ -210,45 +253,75 @@ export default function AD_ApproveUsers() {
           <div>
             <div className="approve-stat-lbl">Total Pending</div>
             <div className="approve-stat-val">{pendingUsers.length}</div>
-            <div className="approve-stat-sub">Awaiting admin review</div>
+            <div className="approve-stat-sub">
+              {isSuperAdmin ? "Awaiting Super Admin review" : "Awaiting admin review"}
+            </div>
           </div>
           <div className="approve-stat-icon-wrap icon-wrap--amber">
             <Clock size={24} />
           </div>
         </div>
 
-        <div className="approve-stat-card">
-          <div>
-            <div className="approve-stat-lbl">Students</div>
-            <div className="approve-stat-val">{studentCount}</div>
-            <div className="approve-stat-sub">Registered student accounts</div>
-          </div>
-          <div className="approve-stat-icon-wrap icon-wrap--blue">
-            <GraduationCap size={24} />
-          </div>
-        </div>
+        {isSuperAdmin ? (
+          <>
+            <div className="approve-stat-card">
+              <div>
+                <div className="approve-stat-lbl">Admin Accounts</div>
+                <div className="approve-stat-val">{collegeAdminCount}</div>
+                <div className="approve-stat-sub">Campus administrative accounts</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--blue">
+                <Building2 size={24} />
+              </div>
+            </div>
 
-        <div className="approve-stat-card">
-          <div>
-            <div className="approve-stat-lbl">Mentors</div>
-            <div className="approve-stat-val">{mentorCount}</div>
-            <div className="approve-stat-sub">Mentor requests</div>
-          </div>
-          <div className="approve-stat-icon-wrap icon-wrap--purple">
-            <Briefcase size={24} />
-          </div>
-        </div>
+            <div className="approve-stat-card">
+              <div>
+                <div className="approve-stat-lbl">Institutions</div>
+                <div className="approve-stat-val">{collegesRepresentedCount}</div>
+                <div className="approve-stat-sub">Colleges requesting access</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--emerald">
+                <ShieldCheck size={24} />
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="approve-stat-card">
+              <div>
+                <div className="approve-stat-lbl">Students</div>
+                <div className="approve-stat-val">{studentCount}</div>
+                <div className="approve-stat-sub">Registered student accounts</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--blue">
+                <GraduationCap size={24} />
+              </div>
+            </div>
 
-        <div className="approve-stat-card">
-          <div>
-            <div className="approve-stat-lbl">Coordinators</div>
-            <div className="approve-stat-val">{coordCount}</div>
-            <div className="approve-stat-sub">Department coordinator requests</div>
-          </div>
-          <div className="approve-stat-icon-wrap icon-wrap--emerald">
-            <ShieldCheck size={24} />
-          </div>
-        </div>
+            <div className="approve-stat-card">
+              <div>
+                <div className="approve-stat-lbl">Mentors</div>
+                <div className="approve-stat-val">{mentorCount}</div>
+                <div className="approve-stat-sub">Mentor requests</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--purple">
+                <Briefcase size={24} />
+              </div>
+            </div>
+
+            <div className="approve-stat-card">
+              <div>
+                <div className="approve-stat-lbl">Coordinators</div>
+                <div className="approve-stat-val">{coordCount}</div>
+                <div className="approve-stat-sub">Department coordinator requests</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--emerald">
+                <ShieldCheck size={24} />
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Toolbar & Filters Card */}
@@ -278,37 +351,39 @@ export default function AD_ApproveUsers() {
               )}
             </div>
 
-            {/* Role Filter Tabs */}
-            <div className="approve-tabs-wrap">
-              <button
-                type="button"
-                className={`approve-tab-btn ${selectedRole === "all" ? "active" : ""}`}
-                onClick={() => setSelectedRole("all")}
-              >
-                All Requests ({pendingUsers.length})
-              </button>
-              <button
-                type="button"
-                className={`approve-tab-btn ${selectedRole === "student" ? "active" : ""}`}
-                onClick={() => setSelectedRole("student")}
-              >
-                Students ({studentCount})
-              </button>
-              <button
-                type="button"
-                className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
-                onClick={() => setSelectedRole("mentor")}
-              >
-                Mentors ({mentorCount})
-              </button>
-              <button
-                type="button"
-                className={`approve-tab-btn ${selectedRole === "coordinator" ? "active" : ""}`}
-                onClick={() => setSelectedRole("coordinator")}
-              >
-                Coordinators ({coordCount})
-              </button>
-            </div>
+            {/* Role Filter Tabs - Only shown for College Admin to filter student/mentor/coordinator */}
+            {!isSuperAdmin && (
+              <div className="approve-tabs-wrap">
+                <button
+                  type="button"
+                  className={`approve-tab-btn ${selectedRole === "all" ? "active" : ""}`}
+                  onClick={() => setSelectedRole("all")}
+                >
+                  All Requests ({pendingUsers.length})
+                </button>
+                <button
+                  type="button"
+                  className={`approve-tab-btn ${selectedRole === "student" ? "active" : ""}`}
+                  onClick={() => setSelectedRole("student")}
+                >
+                  Students ({studentCount})
+                </button>
+                <button
+                  type="button"
+                  className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
+                  onClick={() => setSelectedRole("mentor")}
+                >
+                  Mentors ({mentorCount})
+                </button>
+                <button
+                  type="button"
+                  className={`approve-tab-btn ${selectedRole === "coordinator" ? "active" : ""}`}
+                  onClick={() => setSelectedRole("coordinator")}
+                >
+                  Coordinators ({coordCount})
+                </button>
+              </div>
+            )}
           </div>
 
           {/* View Switcher */}
@@ -383,7 +458,15 @@ export default function AD_ApproveUsers() {
             let roleBadgeBg = "#dbeafe";
             let roleBadgeColor = "#1d4ed8";
 
-            if (roleStr.includes("mentor") || roleStr.includes("faculty")) {
+            if (roleStr.includes("admin")) {
+              avatarClass = "user-avatar--admin";
+              roleBadgeBg = "#ede9fe";
+              roleBadgeColor = "#6d28d9";
+            } else if (roleStr.includes("hod")) {
+              avatarClass = "user-avatar--hod";
+              roleBadgeBg = "#e0f2fe";
+              roleBadgeColor = "#0369a1";
+            } else if (roleStr.includes("mentor") || roleStr.includes("faculty")) {
               avatarClass = "user-avatar--mentor";
               roleBadgeBg = "#ede9fe";
               roleBadgeColor = "#6d28d9";
@@ -495,8 +578,22 @@ export default function AD_ApproveUsers() {
                       </div>
                     )}
 
+                    {(u.college_name || u.college) && (
+                      <div className="user-info-item">
+                        <Building2 size={14} className="user-info-icon" />
+                        <span className="user-info-val" style={{ fontWeight: 600 }}>{u.college_name || u.college}</span>
+                      </div>
+                    )}
+
+                    {u.department && (
+                      <div className="user-info-item">
+                        <GraduationCap size={14} className="user-info-icon" />
+                        <span className="user-info-val">{u.department}</span>
+                      </div>
+                    )}
+
                     {/* Academic Chips */}
-                    {(u.year || u.division || u.semester || u.roll_number) && (
+                    {!isSuperAdmin && (u.year || u.division || u.semester || u.roll_number) && (
                       <div className="user-card-academics">
                         {u.year && <span className="academic-chip">Yr: {u.year}</span>}
                         {u.semester && <span className="academic-chip">Sem: {u.semester}</span>}
@@ -555,7 +652,7 @@ export default function AD_ApproveUsers() {
                 <tr>
                   <th>User Details</th>
                   <th>Contact Info</th>
-                  <th>Department & Academics</th>
+                  <th>{isSuperAdmin ? "College & Department" : "Department & Academics"}</th>
                   <th>Registered On</th>
                   <th>Status</th>
                   <th style={{ textAlign: "right" }}>Actions</th>
@@ -567,7 +664,11 @@ export default function AD_ApproveUsers() {
                   const roleStr = String(u.role || "").toLowerCase();
 
                   let avatarClass = "user-avatar--student";
-                  if (roleStr.includes("mentor") || roleStr.includes("faculty")) {
+                  if (roleStr.includes("admin")) {
+                    avatarClass = "user-avatar--admin";
+                  } else if (roleStr.includes("hod")) {
+                    avatarClass = "user-avatar--hod";
+                  } else if (roleStr.includes("mentor") || roleStr.includes("faculty")) {
                     avatarClass = "user-avatar--mentor";
                   } else if (roleStr.includes("coordinator")) {
                     avatarClass = "user-avatar--coordinator";
@@ -602,22 +703,32 @@ export default function AD_ApproveUsers() {
                         )}
                       </td>
 
-                      {/* Academics */}
+                      {/* Academics or College */}
                       <td>
                         <div style={{ fontSize: "13.5px", fontWeight: "600", color: "#1e293b" }}>
-                          {u.department || "N/A"}
+                          {isSuperAdmin
+                            ? (u.college_name || u.college || "Campus Admin")
+                            : (u.department || "N/A")}
                         </div>
-                        {(u.year || u.division || u.semester || u.roll_number) && (
-                          <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
-                            {[
-                              u.year ? `Yr ${u.year}` : null,
-                              u.semester ? `Sem ${u.semester}` : null,
-                              u.division ? `Div ${u.division}` : null,
-                              u.roll_number ? `Roll ${u.roll_number}` : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </div>
+                        {isSuperAdmin ? (
+                          u.department && (
+                            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                              {u.department}
+                            </div>
+                          )
+                        ) : (
+                          (u.year || u.division || u.semester || u.roll_number) && (
+                            <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                              {[
+                                u.year ? `Yr ${u.year}` : null,
+                                u.semester ? `Sem ${u.semester}` : null,
+                                u.division ? `Div ${u.division}` : null,
+                                u.roll_number ? `Roll ${u.roll_number}` : null,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </div>
+                          )
                         )}
                       </td>
 
@@ -776,30 +887,47 @@ export default function AD_ApproveUsers() {
                   <div className="modal-info-val">{selectedUserModal.mobile_number || "Not provided"}</div>
                 </div>
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Department</div>
-                  <div className="modal-info-val">{selectedUserModal.department || "N/A"}</div>
-                </div>
+                {(selectedUserModal.college_name || selectedUserModal.college) && (
+                  <div className="modal-info-block">
+                    <div className="modal-info-lbl">College / Institution</div>
+                    <div className="modal-info-val">{selectedUserModal.college_name || selectedUserModal.college}</div>
+                  </div>
+                )}
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Academic Year</div>
-                  <div className="modal-info-val">{selectedUserModal.year || "N/A"}</div>
-                </div>
+                {selectedUserModal.department && (
+                  <div className="modal-info-block">
+                    <div className="modal-info-lbl">Department</div>
+                    <div className="modal-info-val">{selectedUserModal.department}</div>
+                  </div>
+                )}
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Current Semester</div>
-                  <div className="modal-info-val">{selectedUserModal.semester || "N/A"}</div>
-                </div>
+                {selectedUserModal.year && (
+                  <div className="modal-info-block">
+                    <div className="modal-info-lbl">Academic Year</div>
+                    <div className="modal-info-val">{selectedUserModal.year}</div>
+                  </div>
+                )}
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Division</div>
-                  <div className="modal-info-val">{selectedUserModal.division || "N/A"}</div>
-                </div>
+                {selectedUserModal.semester && (
+                  <div className="modal-info-block">
+                    <div className="modal-info-lbl">Current Semester</div>
+                    <div className="modal-info-val">{selectedUserModal.semester}</div>
+                  </div>
+                )}
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Roll Number</div>
-                  <div className="modal-info-val">{selectedUserModal.roll_number || "N/A"}</div>
-                </div>
+                {selectedUserModal.division && (
+                  <div className="modal-info-block">
+                    <div className="modal-info-lbl">Division</div>
+                    <div className="modal-info-val">{selectedUserModal.division}</div>
+                  </div>
+                )}
+
+                {selectedUserModal.roll_number && (
+                  <div className="modal-info-block">
+                    <div className="modal-info-lbl">Roll Number</div>
+                    <div className="modal-info-val">{selectedUserModal.roll_number}</div>
+                  </div>
+                )}
 
                 <div className="modal-info-block">
                   <div className="modal-info-lbl">Registered On</div>

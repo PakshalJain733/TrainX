@@ -20,7 +20,6 @@ import {
   X,
   FileSpreadsheet,
 } from "lucide-react";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_Trainings.css";
@@ -471,12 +470,18 @@ export default function AdminTrainings() {
           </div>
         </div>
       ) : (
-        <SectionHeader
-          icon={Briefcase}
-          title="Training Management & Enrollments"
-          description="Manage multiple training programs, configure fees and registration links, verify payments, and review student approvals."
-          action={
-            <div className="trainings-header-actions">
+        <div className="ui-section-header-AD">
+          <div className="ui-section-main-AD">
+            <div>
+              <h2 className="ui-section-title">
+                <Briefcase size={22} className="ui-section-title-icon" />
+                <span>Training Management & Enrollments</span>
+              </h2>
+              <p className="ui-section-desc">
+                Manage multiple training programs, configure fees and registration links, verify payments, and review student approvals.
+              </p>
+            </div>
+            <div className="ui-section-action trainings-header-actions">
               <button
                 type="button"
                 className="trainings-btn-primary"
@@ -493,8 +498,8 @@ export default function AdminTrainings() {
                 <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Refresh
               </button>
             </div>
-          }
-        />
+          </div>
+        </div>
       )}
 
       {error && (
@@ -572,6 +577,16 @@ export default function AdminTrainings() {
                 value={programSearch}
                 onChange={(e) => setProgramSearch(e.target.value)}
               />
+              {programSearch && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setProgramSearch("")}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className="trainings-filters">
@@ -807,6 +822,16 @@ export default function AdminTrainings() {
                 value={studentSearch}
                 onChange={(e) => setStudentSearch(e.target.value)}
               />
+              {studentSearch && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setStudentSearch("")}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className="trainings-filters">
@@ -1196,7 +1221,7 @@ export default function AdminTrainings() {
 
                 <div className="form-row-grid-2">
                   <div className="form-group">
-                    <label className="form-label">Payment QR Image URL (Optional)</label>
+                    <label className="form-label">Payment QR Image URL</label>
                     <input
                       type="url"
                       className="form-input"
@@ -1206,7 +1231,7 @@ export default function AdminTrainings() {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Linked Google Sheet URL (Optional)</label>
+                    <label className="form-label">Linked Google Sheet URL</label>
                     <input
                       type="url"
                       className="form-input"
