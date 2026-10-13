@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { io } from "socket.io-client";
 
 import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2 } from "lucide-react";
-import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getBackendOrigin, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
 import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
@@ -1103,13 +1103,8 @@ export default function AIInterview() {
       return;
     }
 
-    const apiBase = getApiBaseUrl();
-    let socketTarget = "/interviews";
-    if (apiBase && (apiBase.startsWith("http://") || apiBase.startsWith("https://"))) {
-      socketTarget = `${apiBase.replace(/\/api\/v1\/?$/, "")}/interviews`;
-    } else if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
-      socketTarget = `${window.location.protocol}//${window.location.hostname}:5000/interviews`;
-    }
+    const backendHost = getBackendOrigin();
+    const socketTarget = `${backendHost.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")}/interviews`;
 
     const socket = io(socketTarget, {
       auth: { token },
@@ -1121,7 +1116,7 @@ export default function AIInterview() {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      timeout: 10000,
+      timeout: 25000,
     });
     socketRef.current = socket;
 

@@ -11,6 +11,22 @@ export async function initializeDatabase() {
     const dbSsl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
     const connectTimeout = parseInt(process.env.DB_CONNECT_TIMEOUT || '15000', 10);
 
+    // 0. Connect to MySQL server first to ensure database exists (zero-touch VPS setup)
+    try {
+      const adminConn = await mysql.createConnection({
+        host: dbHost,
+        port: dbPort,
+        user: dbUser,
+        password: dbPassword,
+        ...(dbSsl ? { ssl: dbSsl } : {}),
+        connectTimeout: connectTimeout,
+      });
+      await adminConn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+      await adminConn.end();
+    } catch (dbCreateErr) {
+      console.warn('[DB Init] Note on CREATE DATABASE check:', dbCreateErr.message);
+    }
+
     const conn = await mysql.createConnection({
       host: dbHost,
       port: dbPort,
@@ -905,7 +921,38 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 37. Ensure Trainings Table
+    // 37. Ensure Training Programs Table (Multi-Training system)
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS training_programs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        college_id INT NULL DEFAULT 1,
+        name VARCHAR(255) NOT NULL,
+        code VARCHAR(50) NOT NULL,
+        short_name VARCHAR(100) NULL,
+        placement_season_year INT NULL,
+        graduation_year INT NULL,
+        description TEXT NULL,
+        fee_amount INT DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'Open',
+        upi_id VARCHAR(128) NULL,
+        upi_payee_name VARCHAR(128) NULL,
+        start_date DATE NULL,
+        end_date DATE NULL,
+        registration_open_date DATE NULL,
+        registration_close_date DATE NULL,
+        payment_instructions TEXT NULL,
+        payment_qr_url TEXT NULL,
+        eligibility_criteria TEXT NULL,
+        restrictions JSON NULL,
+        google_form_url VARCHAR(500) NULL,
+        google_sheet_url VARCHAR(500) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uniq_prog_code (code)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 38. Ensure Trainings Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS trainings (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -916,7 +963,7 @@ export async function initializeDatabase() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 38. Ensure Training / C2C Enrollments Table
+    // 39. Ensure Training / C2C Enrollments Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS c2c_enrollments (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -979,7 +1026,72 @@ export async function initializeDatabase() {
       try { await conn.query(col); } catch (_) { }
     }
 
-    // 38. Ensure Super Admin Account
+    // ─── Essential Core Seed Data ───────────────────────────────────────────
+    // A. Ensure default College
+    let defaultCollegeId = 1;
+    try {
+      const [colls] = await conn.query(`SELECT id FROM colleges WHERE code = 'VPPCOE' OR id = 1 LIMIT 1`);
+      if (!colls || colls.length === 0) {
+        const [ins] = await conn.query(`
+          INSERT INTO colleges (name, code, location, city, type, status)
+          VALUES ('Vasantdada Patil Pratishthan College of Engineering', 'VPPCOE', 'Main Campus', 'Mumbai', 'Autonomous', 'Active')
+        `);
+        defaultCollegeId = ins.insertId;
+        console.log(`[DB Init] Seeded default College (ID: ${defaultCollegeId})`);
+      } else {
+        defaultCollegeId = colls[0].id;
+      }
+    } catch (e) {
+      console.warn('[DB Init] College seed notice:', e.message);
+    }
+
+    // B. Ensure default Department
+    let defaultDeptId = 1;
+    try {
+      const [depts] = await conn.query(`SELECT id FROM departments WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
+      if (!depts || depts.length === 0) {
+        const [ins] = await conn.query(`
+          INSERT INTO departments (college_id, name, code, status)
+          VALUES (?, 'Computer Engineering', 'CE', 'Active')
+        `, [defaultCollegeId]);
+        defaultDeptId = ins.insertId;
+        console.log(`[DB Init] Seeded default Department (ID: ${defaultDeptId})`);
+      } else {
+        defaultDeptId = depts[0].id;
+      }
+    } catch (e) {
+      console.warn('[DB Init] Department seed notice:', e.message);
+    }
+
+    // C. Ensure default Batch
+    try {
+      const [batches] = await conn.query(`SELECT id FROM batches WHERE college_id = ? LIMIT 1`, [defaultCollegeId]);
+      if (!batches || batches.length === 0) {
+        await conn.query(`
+          INSERT INTO batches (college_id, department_id, name, status, year, division)
+          VALUES (?, ?, 'Batch A', 'active', 'TE', 'A')
+        `, [defaultCollegeId, defaultDeptId]);
+        console.log('[DB Init] Seeded default Batch for College');
+      }
+    } catch (e) {
+      console.warn('[DB Init] Batch seed notice:', e.message);
+    }
+
+    // D. Ensure default C2C 2026 Training Program exists
+    try {
+      const [existingProg] = await conn.query(`SELECT id FROM training_programs WHERE code = 'C2C 2026' OR id = 4 LIMIT 1`);
+      if (!existingProg || existingProg.length === 0) {
+        await conn.query(`
+          INSERT INTO training_programs (id, college_id, name, code, short_name, fee_amount, status, start_date, end_date, registration_open_date, registration_close_date, description)
+          VALUES (4, 1, 'Campus to Corporate Training 2026', 'C2C 2026', 'C2C', 3500, 'Open', '2026-07-01', '2026-12-31', '2026-06-01', '2026-07-15', 'Flagship comprehensive placement preparation program covering Full Stack, Aptitude, System Design, and Mock Drives.')
+        `);
+        console.log('[DB Init] Seeded initial C2C 2026 training program');
+      }
+    } catch (e) {
+      console.warn('[DB Init] Training program seed notice:', e.message);
+    }
+
+    // E. Ensure Super Admin Account
     try {
       const superEmail = process.env.SUPER_ADMIN_EMAIL || 'super.admin0987@gmail.com';
       const superPass = process.env.SUPER_ADMIN_PASSWORD;
@@ -1000,7 +1112,7 @@ export async function initializeDatabase() {
       console.warn('[DB Init] Super Admin seed notice:', e.message);
     }
 
-    console.log('[DB Init] All database tables (including secure_codes) successfully created and verified!');
+    console.log('[DB Init] All database tables and core seed data successfully verified!');
 
     await conn.end();
     return true;

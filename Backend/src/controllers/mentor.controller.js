@@ -1371,15 +1371,23 @@ export const createLiveSession = async (req, res, next) => {
       const collegeId = mentorRow?.college_id || null;
       const mentorName = mentorRow?.name || 'Mentor';
 
-      const broadcastMsg = notes 
-        ? `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})\n\nNotes: ${notes}`
-        : `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})`;
+      const isScheduled = finalTime && !finalTime.toLowerCase().includes("immediate") && !finalTime.toLowerCase().includes("now");
+      const notifTitle = isScheduled 
+        ? `📅 Meeting Scheduled: ${finalTitle} at ${finalTime}`
+        : `Meeting Call: ${finalTitle}`;
+
+      const broadcastMsg = isScheduled
+        ? `You have a scheduled mentorship meeting on ${finalDate} at ${finalTime}.\nMeeting Link: ${finalLink}${notes ? `\n\nNotes: ${notes}` : ''}`
+        : (notes 
+            ? `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})\n\nNotes: ${notes}`
+            : `Meeting Link: ${finalLink} (${finalDate} @ ${finalTime})`);
+
       await query(
         `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by, created_by_name, sender_role)
          VALUES (?, ?, ?, ?, 'Urgent', ?, ?, 'Mentor')`,
         [
           collegeId,
-          `Meeting Call: ${finalTitle}`,
+          notifTitle,
           broadcastMsg,
           studentName || batchLabel || 'All Batches',
           mentorId,

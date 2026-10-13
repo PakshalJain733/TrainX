@@ -51,6 +51,8 @@ export default function Students() {
   const [activeCallSession, setActiveCallSession] = useState(null);
   const [isSubmittingMeet, setIsSubmittingMeet] = useState(false);
 
+  const [meetingMode, setMeetingMode] = useState("instant"); // "instant" or "scheduled"
+
   const [meetForm, setMeetForm] = useState({
     title: "",
     subject: "1-on-1 Mentorship",
@@ -88,11 +90,56 @@ export default function Students() {
   const GOOGLE_CALENDAR_API_KEY = import.meta.env.VITE_GOOGLE_CALENDAR_API_KEY || "AIzaSyBw0r80ZCZQzNzoVrSU3jwhBkn9t3WRK9M";
 
   const generateGoogleMeetLink = () => {
-    return ""; // The backend will generate the real Google Meet link
+    return "https://meet.google.com/new";
+  };
+
+  // Helper to build a Google Calendar Event creation link prefilled with Meet details
+  const buildGoogleCalendarInviteLink = (title, dateStr, timeStr, durationStr, notesStr) => {
+    try {
+      const summary = encodeURIComponent(title || "1-on-1 Mentorship Meeting");
+      const details = encodeURIComponent(
+        `${notesStr ? `${notesStr}\n\n` : ""}Video Room: https://meet.google.com/new\nOrganized via Campus Training Portal`
+      );
+      
+      // Calculate start and end in YYYYMMDDTHHmmSS format
+      let startH = 20, startM = 0;
+      if (timeStr) {
+        const clean = timeStr.trim().toUpperCase();
+        const match = clean.match(/(\d+):?(\d+)?\s*(AM|PM)?/);
+        if (match) {
+          let h = parseInt(match[1], 10);
+          const m = match[2] ? parseInt(match[2], 10) : 0;
+          const ampm = match[3];
+          if (ampm === "PM" && h < 12) h += 12;
+          if (ampm === "AM" && h === 12) h = 0;
+          startH = h;
+          startM = m;
+        }
+      }
+      
+      const pad = (n) => String(n).padStart(2, "0");
+      const baseDate = dateStr ? dateStr.replace(/-/g, "") : new Date().toISOString().slice(0, 10).replace(/-/g, "");
+      const startIso = `${baseDate}T${pad(startH)}${pad(startM)}00`;
+      
+      let durMinutes = 30;
+      if (durationStr && durationStr.includes("15")) durMinutes = 15;
+      else if (durationStr && durationStr.includes("45")) durMinutes = 45;
+      else if (durationStr && durationStr.includes("60")) durMinutes = 60;
+      
+      let endM = startM + durMinutes;
+      let endH = startH + Math.floor(endM / 60);
+      endM = endM % 60;
+      const endIso = `${baseDate}T${pad(endH)}${pad(endM)}00`;
+
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${summary}&dates=${startIso}/${endIso}&details=${details}&location=Google%20Meet&add=meet`;
+    } catch (_) {
+      return "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Mentorship%20Meeting";
+    }
   };
 
   const openCallModalForStudent = (student) => {
     setSelectedStudentForMeet(student);
+    setMeetingMode("instant");
     const generatedLink = generateGoogleMeetLink();
 
     setMeetForm({
@@ -141,9 +188,20 @@ export default function Students() {
           ? `1-on-1 Call with ${meetForm.studentName}`
           : "Batch Mentorship & Sync Call");
 
-    const timeToSend = meetForm.time && meetForm.time.trim() ? meetForm.time.trim() : "Immediate / Now";
+    const isScheduledTime = meetingMode === "scheduled" || Boolean(
+      meetForm.time && 
+      meetForm.time.trim() && 
+      !meetForm.time.toLowerCase().includes("now") && 
+      !meetForm.time.toLowerCase().includes("immediate")
+    );
+
+    const timeToSend = isScheduledTime
+      ? (meetForm.time && meetForm.time.trim() ? meetForm.time.trim() : "08:00 PM")
+      : "Immediate / Now";
 
     try {
+      const targetMeetLink = meetForm.meetingLink || "https://meet.google.com/new";
+
       const payload = {
         title: titleToSend,
         subject: meetForm.subject || "1-on-1 Mentorship",
@@ -153,8 +211,9 @@ export default function Students() {
         date: meetForm.date || new Date().toISOString().split("T")[0],
         time: timeToSend,
         duration: meetForm.duration || "30 mins",
-        meetingLink: meetForm.meetingLink,
+        meetingLink: targetMeetLink,
         notes: meetForm.notes || "",
+        isScheduled: isScheduledTime,
       };
 
       await apiFetch("/mentor/live-sessions", {
@@ -162,15 +221,35 @@ export default function Students() {
         body: JSON.stringify(payload),
       });
 
+      // If scheduled: generate a Google Calendar invite with Meet link pre-configured!
+      if (isScheduledTime) {
+        const calLink = buildGoogleCalendarInviteLink(
+          titleToSend,
+          meetForm.date,
+          timeToSend,
+          meetForm.duration,
+          meetForm.notes
+        );
+        // Prompt/open Google Calendar invite
+        window.open(calLink, "_blank", "noopener,noreferrer");
+      } else {
+        // Immediate call: open live Google Meet room right now
+        window.open(targetMeetLink, "_blank", "noopener,noreferrer");
+      }
+
       const callDetails = {
         ...meetForm,
         title: titleToSend,
         time: timeToSend,
+        meetingLink: targetMeetLink,
         createdTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
       setActiveCallSession(callDetails);
-      setMeetingSuccess(`Meeting successfully created and saved! Invitation sent to ${meetForm.studentName}.`);
+      const successMsg = isScheduledTime
+        ? `Meeting scheduled for ${meetForm.date} at ${timeToSend}! Google Calendar invite created and student notified.`
+        : `Immediate meeting successfully created and launched! Invitation sent to ${meetForm.studentName}.`;
+      setMeetingSuccess(successMsg);
       setShowMeetModal(false);
       setTimeout(() => setMeetingSuccess(null), 8000);
     } catch (err) {
@@ -212,40 +291,6 @@ export default function Students() {
           <span>Call Student Meeting</span>
         </button>
       </div>
-
-      {/* Active Call Banner */}
-      {activeCallSession && (
-        <div className="mentor-active-call-banner">
-          <div className="mentor-call-info">
-            <span className="mentor-live-pulse-dot" />
-            <div>
-              <div className="mentor-call-title">
-                Active Meeting: <strong>{activeCallSession.title}</strong> ({activeCallSession.studentName})
-              </div>
-              <div className="mentor-call-sub">
-                Room ready • Meeting link generated at {activeCallSession.createdTime}
-              </div>
-            </div>
-          </div>
-          <div className="mentor-call-actions">
-            <a
-              href={activeCallSession.meetingLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mentor-call-join-btn"
-            >
-              <ExternalLink size={14} />
-              <span>Launch Video Room</span>
-            </a>
-            <button
-              className="mentor-call-dismiss-btn"
-              onClick={() => setActiveCallSession(null)}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Success Notification */}
       {meetingSuccess && (
@@ -372,6 +417,32 @@ export default function Students() {
             </div>
 
             <form onSubmit={handleCreateMeeting} className="mentor-meet-form">
+              {/* Meeting Mode Switcher */}
+              <div className="mentor-meet-mode-selector">
+                <button
+                  type="button"
+                  className={`mentor-mode-btn ${meetingMode === "instant" ? "active" : ""}`}
+                  onClick={() => {
+                    setMeetingMode("instant");
+                    setMeetForm({ ...meetForm, time: "Now / Immediate" });
+                  }}
+                >
+                  <Video size={15} />
+                  <span>⚡ Instant Call (Now)</span>
+                </button>
+                <button
+                  type="button"
+                  className={`mentor-mode-btn ${meetingMode === "scheduled" ? "active" : ""}`}
+                  onClick={() => {
+                    setMeetingMode("scheduled");
+                    setMeetForm({ ...meetForm, time: "08:00 PM" });
+                  }}
+                >
+                  <Calendar size={15} />
+                  <span>📅 Schedule for Later</span>
+                </button>
+              </div>
+
               <div className="mentor-meet-field">
                 <label>Recipient / Target Student *</label>
                 <CustomSelect
@@ -433,52 +504,41 @@ export default function Students() {
                 </div>
               </div>
 
-              <div className="mentor-meet-grid-2">
-                <div className="mentor-meet-field">
-                  <label>Scheduled Date</label>
-                  <input
-                    type="date"
-                    value={meetForm.date}
-                    onChange={(e) => setMeetForm({ ...meetForm, date: e.target.value })}
-                    className="mentor-meet-input"
-                  />
-                </div>
+              {meetingMode === "scheduled" && (
+                <div className="mentor-meet-grid-2">
+                  <div className="mentor-meet-field">
+                    <label>Scheduled Date</label>
+                    <input
+                      type="date"
+                      value={meetForm.date}
+                      onChange={(e) => setMeetForm({ ...meetForm, date: e.target.value })}
+                      className="mentor-meet-input"
+                    />
+                  </div>
 
-                <div className="mentor-meet-field">
-                  <label>Time Slot</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Immediate / Now or 04:00 PM"
-                    value={meetForm.time}
-                    onChange={(e) => setMeetForm({ ...meetForm, time: e.target.value })}
-                    className="mentor-meet-input"
-                  />
+                  <div className="mentor-meet-field">
+                    <label>Time Slot (e.g. 08:00 PM)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 08:00 PM"
+                      value={meetForm.time}
+                      onChange={(e) => setMeetForm({ ...meetForm, time: e.target.value })}
+                      className="mentor-meet-input"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="mentor-meet-field">
-                <label>Google Meet Room Link (Auto-Generated via Google API)</label>
-                <div className="mentor-meet-link-wrap">
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://meet.google.com/xxx-yyyy-zzz"
-                    value={meetForm.meetingLink}
-                    onChange={(e) => setMeetForm({ ...meetForm, meetingLink: e.target.value })}
-                    className="mentor-meet-input"
-                  />
-                  <button
-                    type="button"
-                    className="mentor-btn-regen-link"
-                    onClick={() => {
-                      setMeetForm({ ...meetForm, meetingLink: generateGoogleMeetLink() });
-                    }}
-                    title="Generate new Google Meet room link"
-                  >
-                    <Sparkles size={14} />
-                    <span>Auto Meet</span>
-                  </button>
-                </div>
+                <label>Google Meet Room Link</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://meet.google.com/new or paste existing meeting link"
+                  value={meetForm.meetingLink}
+                  onChange={(e) => setMeetForm({ ...meetForm, meetingLink: e.target.value })}
+                  className="mentor-meet-input"
+                />
               </div>
 
               <div className="mentor-meet-field">
@@ -506,7 +566,13 @@ export default function Students() {
                   className="mentor-btn-submit-meet"
                 >
                   <Send size={15} />
-                  <span>{isSubmittingMeet ? "Calling Meeting..." : "Call Meeting & Send Invite"}</span>
+                  <span>
+                    {isSubmittingMeet 
+                      ? "Processing..." 
+                      : (meetingMode === "scheduled"
+                          ? `Schedule & Sync Calendar (${meetForm.time || "08:00 PM"})`
+                          : "Launch Instant Meeting Now")}
+                  </span>
                 </button>
               </div>
             </form>

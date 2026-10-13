@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Megaphone, X, Bell, ChevronRight } from "lucide-react";
+import { Megaphone, X, Bell, ChevronRight, Video } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./BroadcastToast.css";
 
@@ -58,13 +58,48 @@ export default function BroadcastToast() {
     }
   };
 
+  const isMeetingCall = Boolean(
+    (toast.title && (toast.title.toLowerCase().includes("meeting call") || toast.title.toLowerCase().includes("meeting scheduled") || toast.title.toLowerCase().includes("meeting"))) ||
+    (toast.desc && (toast.desc.includes("meet.google.com") || toast.desc.includes("scheduled mentorship meeting")))
+  );
+
+  const isScheduledMeeting = Boolean(
+    (toast.title && toast.title.toLowerCase().includes("scheduled")) ||
+    (toast.desc && toast.desc.toLowerCase().includes("scheduled mentorship meeting"))
+  );
+
+  // Extract any meet link if present
+  let meetUrl = null;
+  if (isMeetingCall && toast.desc) {
+    const match = toast.desc.match(/https?:\/\/[^\s)]+/);
+    if (match) meetUrl = match[0];
+  }
+
+  const handleJoinCall = (e) => {
+    e.stopPropagation();
+    if (meetUrl) {
+      window.open(meetUrl, "_blank", "noopener,noreferrer");
+      setToast(null);
+    } else {
+      handleToastClick();
+    }
+  };
+
   return createPortal(
     <div className="broadcast-toast-container" role="alert" aria-live="assertive">
-      <div className="broadcast-toast-card">
+      <div className={`broadcast-toast-card ${isMeetingCall ? "broadcast-toast-meeting-card" : ""}`}>
         <div className="broadcast-toast-header">
-          <div className="broadcast-toast-badge">
-            <Megaphone size={14} className="broadcast-toast-icon" />
-            <span>New Broadcast Notice</span>
+          <div className={`broadcast-toast-badge ${isMeetingCall ? "broadcast-badge-meeting" : ""}`}>
+            {isMeetingCall ? (
+              <Video size={14} className="broadcast-toast-icon" />
+            ) : (
+              <Megaphone size={14} className="broadcast-toast-icon" />
+            )}
+            <span>
+              {isScheduledMeeting 
+                ? "Scheduled Meeting Alert" 
+                : (isMeetingCall ? "Incoming Mentor Call" : "New Broadcast Notice")}
+            </span>
           </div>
           <button 
             className="broadcast-toast-close"
@@ -85,12 +120,25 @@ export default function BroadcastToast() {
           </p>
 
           <div className="broadcast-toast-footer">
-            {toast.priority && (
-              <span className="broadcast-priority-tag">{toast.priority}</span>
+            {isMeetingCall && meetUrl ? (
+              <button
+                type="button"
+                className="broadcast-join-meeting-btn"
+                onClick={handleJoinCall}
+              >
+                <Video size={14} />
+                <span>Join Meeting Now</span>
+              </button>
+            ) : (
+              <>
+                {toast.priority && (
+                  <span className="broadcast-priority-tag">{toast.priority}</span>
+                )}
+                <span className="broadcast-view-link">
+                  View Notice <ChevronRight size={14} />
+                </span>
+              </>
             )}
-            <span className="broadcast-view-link">
-              View Notice <ChevronRight size={14} />
-            </span>
           </div>
         </div>
       </div>
