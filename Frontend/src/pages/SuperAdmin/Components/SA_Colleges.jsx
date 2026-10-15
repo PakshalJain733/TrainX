@@ -5,7 +5,8 @@ import EmptyState from '../../../components/ui/EmptyState';
 import { collegeAPI, departmentAPI } from '../../../services/api';
 import { apiFetch } from '../../../utils/api';
 import { EVENTS } from '../../../utils/sharedStore';
-import { Plus, Search, Filter, Building2, MapPin, Mail, Users, X, ArrowLeft, GraduationCap, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, ChevronDown, Check } from "lucide-react";
+import { Plus, Search, Filter, Building2, MapPin, Mail, Users, X, ArrowLeft, GraduationCap, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, ChevronDown, Check, AlertCircle } from "lucide-react";
+import { validateCollegeForm } from '../../../utils/collegeValidation.js';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Colleges.css";
 
@@ -181,6 +182,8 @@ export default function Colleges() {
   const [viewCollegeModal, setViewCollegeModal] = useState(null);
   const [editCollege, setEditCollege] = useState(null);
   const [deleteCollege, setDeleteCollege] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
 
   const handleTrigger2FAForCollegeAdmin = async (college) => {
     const adminEmail = college.adminEmail || college.contact_email || college.email;
@@ -266,17 +269,23 @@ export default function Colleges() {
 
   const handleAddCollege = async (e) => {
     e.preventDefault();
-    if (!collegeForm.name || !collegeForm.code || !collegeForm.location) return;
+    const validation = validateCollegeForm(collegeForm);
+    if (!validation.isValid) {
+      setFormErrors(validation.errors);
+      return;
+    }
+    setFormErrors({});
+
     try {
       const created = await collegeAPI.createCollege({
-        name: collegeForm.name,
-        code: collegeForm.code,
-        location: collegeForm.location,
-        city: collegeForm.location,
-        contactEmail: collegeForm.adminEmail,
-        adminName: collegeForm.adminName,
-        adminEmail: collegeForm.adminEmail,
-        domain: collegeForm.domain,
+        name: collegeForm.name.trim(),
+        code: collegeForm.code.trim().toUpperCase(),
+        location: collegeForm.location.trim(),
+        city: collegeForm.location.trim(),
+        contactEmail: collegeForm.adminEmail.trim().toLowerCase(),
+        adminName: collegeForm.adminName.trim(),
+        adminEmail: collegeForm.adminEmail.trim().toLowerCase(),
+        domain: collegeForm.domain.trim().toLowerCase(),
       });
       if (created) {
         setColleges([created, ...colleges.filter(c => c.id !== created.id)]);
@@ -289,7 +298,7 @@ export default function Colleges() {
       setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', domain: '', departmentsCount: 0, studentsCount: 0 });
     } catch (err) {
       console.error("Failed to save college to backend:", err);
-      alert(err.message || "Failed to save college. The college code might already exist. Please enter a unique college code.");
+      setFormErrors(prev => ({ ...prev, _general: err.message || "Failed to save college. The college code might already exist. Please enter a unique college code." }));
       collegeAPI.getColleges().then(data => setColleges(Array.isArray(data) ? data : colleges)).catch(() => {});
     }
   };
@@ -408,7 +417,7 @@ export default function Colleges() {
           </h2>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>
         </div>
-        <button onClick={() => setIsAddCollegeModalOpen(true)} className="sa-btn-primary">
+        <button onClick={() => { setFormErrors({}); setIsAddCollegeModalOpen(true); }} className="sa-btn-primary">
           <Plus size={16} />
           <span>Add New College</span>
         </button>
@@ -504,7 +513,7 @@ export default function Colleges() {
                     <td className="colleges-td-right">
                       <ActionDropdown
                         onView={() => navigate(`/super-admin/colleges/${college.id}`)}
-                        onEdit={() => setEditCollege(college)}
+                        onEdit={() => { setEditErrors({}); setEditCollege(college); }}
                         onDelete={() => setDeleteCollege(college)}
                         customActions={[
                           {
@@ -542,30 +551,55 @@ export default function Colleges() {
               </button>
             </div>
 
-            <form onSubmit={handleAddCollege}>
+            <form onSubmit={handleAddCollege} noValidate>
               <div className="modal-body">
+                {formErrors._general && (
+                  <div className="modal-form-alert-banner">
+                    <AlertCircle size={16} />
+                    <span>{formErrors._general}</span>
+                  </div>
+                )}
+
                 <div className="form-row-2">
                   <div className="form-group-admin">
                     <label>College Full Name *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${formErrors.name ? 'form-input-error' : ''}`}
                       placeholder="Apex Institute of Technology"
                       value={collegeForm.name}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, name: e.target.value });
+                        if (formErrors.name) setFormErrors({ ...formErrors, name: null });
+                      }}
                     />
+                    {formErrors.name && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.name}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
                     <label>Short Code *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${formErrors.code ? 'form-input-error' : ''}`}
                       placeholder="AIT-2026"
                       value={collegeForm.code}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, code: e.target.value.toUpperCase() });
+                        if (formErrors.code) setFormErrors({ ...formErrors, code: null });
+                      }}
                     />
+                    {formErrors.code && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.code}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -575,44 +609,91 @@ export default function Colleges() {
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${formErrors.location ? 'form-input-error' : ''}`}
                       placeholder="Mumbai Campus"
                       value={collegeForm.location}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, location: e.target.value });
+                        if (formErrors.location) setFormErrors({ ...formErrors, location: null });
+                      }}
                     />
+                    {formErrors.location && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.location}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Email Domain</label>
+                    <label>Email Domain *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
-                      placeholder="institution.edu"
+                      required
+                      className={`form-input-admin ${formErrors.domain ? 'form-input-error' : ''}`}
+                      placeholder="pvppcoe.ac.in"
                       value={collegeForm.domain}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, domain: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, domain: e.target.value });
+                        if (formErrors.domain) setFormErrors({ ...formErrors, domain: null });
+                      }}
                     />
+                    {formErrors.domain && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.domain}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>College Administrator Name</label>
+                    <label>College Administrator Name *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${formErrors.adminName ? 'form-input-error' : ''}`}
                       placeholder="Dr. Verma"
                       value={collegeForm.adminName}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, adminName: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, adminName: e.target.value });
+                        if (formErrors.adminName) setFormErrors({ ...formErrors, adminName: null });
+                      }}
                     />
+                    {formErrors.adminName && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.adminName}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Admin Email</label>
+                    <label>Admin Email *</label>
                     <input
                       type="email"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${formErrors.adminEmail ? 'form-input-error' : ''}`}
                       placeholder="admin@institution.edu"
                       value={collegeForm.adminEmail}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, adminEmail: e.target.value })}
+                      onChange={(e) => {
+                        const email = e.target.value;
+                        let autoDomain = collegeForm.domain;
+                        if (!autoDomain && email.includes('@')) {
+                          const parts = email.split('@');
+                          if (parts[1] && parts[1].includes('.')) {
+                            autoDomain = parts[1].toLowerCase();
+                          }
+                        }
+                        setCollegeForm({ ...collegeForm, adminEmail: email, domain: autoDomain });
+                        if (formErrors.adminEmail) setFormErrors({ ...formErrors, adminEmail: null });
+                      }}
                     />
+                    {formErrors.adminEmail && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.adminEmail}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -649,47 +730,84 @@ export default function Colleges() {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
+              const validation = validateCollegeForm({
+                name: editCollege.name,
+                code: editCollege.code,
+                location: editCollege.location,
+                domain: editCollege.domain,
+                adminName: editCollege.adminName,
+                adminEmail: editCollege.adminEmail,
+              });
+              if (!validation.isValid) {
+                setEditErrors(validation.errors);
+                return;
+              }
+              setEditErrors({});
               try {
                 const updated = await collegeAPI.updateCollege(editCollege.id, {
-                  name: editCollege.name,
-                  code: editCollege.code,
-                  location: editCollege.location,
-                  city: editCollege.location,
+                  name: editCollege.name.trim(),
+                  code: editCollege.code.trim().toUpperCase(),
+                  location: editCollege.location.trim(),
+                  city: editCollege.location.trim(),
                   status: editCollege.status,
-                  contactEmail: editCollege.adminEmail,
-                  adminName: editCollege.adminName,
-                  domain: editCollege.domain,
+                  contactEmail: editCollege.adminEmail.trim().toLowerCase(),
+                  adminName: editCollege.adminName.trim(),
+                  domain: editCollege.domain ? editCollege.domain.trim().toLowerCase() : '',
                 });
                 if (updated) {
                   setColleges(colleges.map(c => c.id === editCollege.id ? { ...c, ...updated, adminEmail: updated.contact_email || editCollege.adminEmail, domain: updated.domain || editCollege.domain } : c));
                 }
+                setEditCollege(null);
               } catch (err) {
                 console.error("Failed to update college:", err);
-                alert(err.message || "Failed to update college details.");
+                setEditErrors(prev => ({ ...prev, _general: err.message || "Failed to update college details." }));
               }
-              setEditCollege(null);
-            }}>
+            }} noValidate>
               <div className="modal-body">
+                {editErrors._general && (
+                  <div className="modal-form-alert-banner">
+                    <AlertCircle size={16} />
+                    <span>{editErrors._general}</span>
+                  </div>
+                )}
                 <div className="form-row-2">
                   <div className="form-group-admin">
                     <label>College Name *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${editErrors.name ? 'form-input-error' : ''}`}
                       value={editCollege.name}
-                      onChange={(e) => setEditCollege({ ...editCollege, name: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, name: e.target.value });
+                        if (editErrors.name) setEditErrors({ ...editErrors, name: null });
+                      }}
                     />
+                    {editErrors.name && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.name}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
                     <label>Short Code *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${editErrors.code ? 'form-input-error' : ''}`}
                       value={editCollege.code || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, code: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, code: e.target.value.toUpperCase() });
+                        if (editErrors.code) setEditErrors({ ...editErrors, code: null });
+                      }}
                     />
+                    {editErrors.code && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.code}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -699,41 +817,80 @@ export default function Colleges() {
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${editErrors.location ? 'form-input-error' : ''}`}
                       value={editCollege.location || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, location: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, location: e.target.value });
+                        if (editErrors.location) setEditErrors({ ...editErrors, location: null });
+                      }}
                     />
+                    {editErrors.location && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.location}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Email Domain</label>
+                    <label>Email Domain *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${editErrors.domain ? 'form-input-error' : ''}`}
                       placeholder="pvppcoe.ac.in"
                       value={editCollege.domain || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, domain: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, domain: e.target.value });
+                        if (editErrors.domain) setEditErrors({ ...editErrors, domain: null });
+                      }}
                     />
+                    {editErrors.domain && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.domain}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Administrator Name</label>
+                    <label>College Administrator Name *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${editErrors.adminName ? 'form-input-error' : ''}`}
                       value={editCollege.adminName || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, adminName: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, adminName: e.target.value });
+                        if (editErrors.adminName) setEditErrors({ ...editErrors, adminName: null });
+                      }}
                     />
+                    {editErrors.adminName && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.adminName}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Admin Email</label>
+                    <label>Admin Email *</label>
                     <input
                       type="email"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${editErrors.adminEmail ? 'form-input-error' : ''}`}
                       value={editCollege.adminEmail || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, adminEmail: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, adminEmail: e.target.value });
+                        if (editErrors.adminEmail) setEditErrors({ ...editErrors, adminEmail: null });
+                      }}
                     />
+                    {editErrors.adminEmail && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.adminEmail}
+                      </span>
+                    )}
                   </div>
                 </div>
 

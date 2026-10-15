@@ -1,5 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
+import { validateCollegeForm } from '../utils/collegeValidation.js';
 
 let tablesInitialized = false;
 async function ensureCollegeTable() {
@@ -101,11 +102,26 @@ export const createCollege = async (req, res, next) => {
   try {
     await ensureCollegeTable();
     const { name, code, location, city, type, contactEmail, contactPhone, adminName, adminEmail, domain } = req.body;
-    if (!name || !code) {
-      return sendError(res, 'College Name and Code are required', 400);
-    }
     const cleanName = String(name || '').trim();
-    const cleanCode = String(code || '').trim();
+    const cleanCode = String(code || '').trim().toUpperCase();
+    const cleanLocation = String(location || city || '').trim();
+    const cleanAdminName = String(adminName || '').trim();
+    const cleanAdminEmail = String(adminEmail || contactEmail || '').trim();
+    const cleanDomain = String(domain || '').trim().toLowerCase();
+
+    const validation = validateCollegeForm({
+      name: cleanName,
+      code: cleanCode,
+      location: cleanLocation,
+      domain: cleanDomain,
+      adminName: cleanAdminName,
+      adminEmail: cleanAdminEmail,
+    });
+
+    if (!validation.isValid) {
+      const firstErrorMessage = Object.values(validation.errors)[0];
+      return sendError(res, firstErrorMessage, 400);
+    }
 
     // Check if college code already exists
     const existingCode = await query('SELECT id, name FROM colleges WHERE LOWER(code) = LOWER(?) LIMIT 1', [cleanCode]);
@@ -117,8 +133,8 @@ export const createCollege = async (req, res, next) => {
       );
     }
 
-    const finalEmail = String(contactEmail || adminEmail || `admin@${cleanCode.toLowerCase()}.edu.in`).trim();
-    const finalAdminName = String(adminName || '').trim();
+    const finalEmail = cleanAdminEmail;
+    const finalAdminName = cleanAdminName;
 
     let derivedDomain = (domain || '').trim().toLowerCase();
     if (!derivedDomain && finalEmail.includes('@')) {
