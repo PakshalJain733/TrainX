@@ -367,3 +367,14 @@ CREATE TABLE IF NOT EXISTS skill_gap_analysis (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE KEY unique_user_skill_gap (user_id)
 );
+
+-- 19. Feature Switches & Maintenance Controls Table
+CREATE TABLE IF NOT EXISTS feature_switches (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  feature_key VARCHAR(100) NOT NULL UNIQUE,
+  feature_name VARCHAR(255) NOT NULL,
+  category VARCHAR(100) DEFAULT 'General',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  notice_message TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);

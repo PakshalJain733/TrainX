@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
-import { Wrench, ShieldAlert, Clock, Sparkles, ArrowLeft, Headphones, RefreshCw, ShieldCheck, HelpCircle } from "lucide-react";
+import { Wrench, ShieldAlert, Clock, Sparkles, ArrowLeft, Headphones, Info, HelpCircle } from "lucide-react";
 import { useSystemMaintenance } from "../../context/SystemMaintenanceContext";
 import logoImg from "../../assets/Logo.png";
 import trainXImg from "../../assets/TrainX.png";
@@ -8,7 +8,6 @@ import "./MaintenanceGuard.css";
 
 export default function MaintenanceGuard({ moduleKey, children }) {
   const { isModuleActive, getModuleConfig } = useSystemMaintenance();
-  const [checking, setChecking] = useState(false);
 
   const active = isModuleActive(moduleKey);
 
@@ -34,13 +33,6 @@ export default function MaintenanceGuard({ moduleKey, children }) {
   } catch (e) {
     homeRoute = "/";
   }
-
-  const handleRefreshStatus = () => {
-    setChecking(true);
-    setTimeout(() => {
-      window.location.reload();
-    }, 700);
-  };
 
   return (
     <div className="mg-wrapper">
@@ -91,22 +83,26 @@ export default function MaintenanceGuard({ moduleKey, children }) {
           </span>
         </div>
 
-        {/* Super Admin Notice Card */}
-        <div className="mg-notice-card">
-          <div className="mg-notice-header">
-            <span className="mg-notice-label">
-              <ShieldCheck size={14} color="#2563eb" />
-              Super Admin Notice
-            </span>
-            <span className="mg-notice-time">
-              <Clock size={13} />
-              {moduleConfig.updatedAt || "Active"}
-            </span>
+        {/* Notice Card - only displayed if notice message is present */}
+        {moduleConfig.message && (
+          <div className="mg-notice-card">
+            <div className="mg-notice-header">
+              <span className="mg-notice-label">
+                <Info size={14} color="#2563eb" />
+                Notice
+              </span>
+              {moduleConfig.updatedAt && (
+                <span className="mg-notice-time">
+                  <Clock size={12} />
+                  {moduleConfig.updatedAt}
+                </span>
+              )}
+            </div>
+            <p className="mg-notice-text">
+              {moduleConfig.message}
+            </p>
           </div>
-          <p className="mg-notice-text">
-            "{moduleConfig.message || "This section is currently undergoing scheduled platform upgrades by the engineering team."}"
-          </p>
-        </div>
+        )}
 
         {/* Actions Row */}
         <div className="mg-actions-row">
@@ -114,17 +110,6 @@ export default function MaintenanceGuard({ moduleKey, children }) {
             <ArrowLeft size={16} />
             <span>Return Home</span>
           </Link>
-
-          <button
-            type="button"
-            onClick={handleRefreshStatus}
-            className="mg-btn-refresh"
-            disabled={checking}
-            title="Check if maintenance has concluded"
-          >
-            <RefreshCw size={16} className={checking ? "animate-spin" : ""} />
-            <span>{checking ? "Checking..." : "Check Status"}</span>
-          </button>
 
           <a
             href="mailto:support@acadnexus.edu.in"

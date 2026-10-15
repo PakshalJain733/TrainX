@@ -1,12 +1,34 @@
 import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 
+let isTableInitialized = false;
+const ensureTableExists = async () => {
+  if (isTableInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS feature_switches (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        feature_key VARCHAR(100) NOT NULL UNIQUE,
+        feature_name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'General',
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        notice_message TEXT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+    isTableInitialized = true;
+  } catch (err) {
+    console.warn('[FeatureSwitches] Table check warning:', err.message);
+  }
+};
+
 /**
  * GET /api/v1/feature-switches
  * Retrieves all feature switch states directly from the database
  */
 export const getFeatureSwitches = async (req, res, next) => {
   try {
+    await ensureTableExists();
     const rows = await query(`SELECT feature_key, feature_name, category, is_active, notice_message FROM feature_switches`);
     const switches = {};
     const messages = {};
@@ -40,6 +62,7 @@ export const getFeatureSwitches = async (req, res, next) => {
  */
 export const toggleFeatureSwitch = async (req, res, next) => {
   try {
+    await ensureTableExists();
     const { feature_key, is_active, notice_message, feature_name, category } = req.body;
     if (!feature_key) {
       return sendError(res, 'feature_key is required', 400);
