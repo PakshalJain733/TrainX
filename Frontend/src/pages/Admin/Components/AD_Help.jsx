@@ -147,6 +147,16 @@ export default function AdminHelp() {
             onChange={(e) => setSearch(e.target.value)}
             className="admin-search-input"
           />
+          {search && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="admin-status-tabs">

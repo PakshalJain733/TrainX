@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck, Code, Target, Sparkles, ClipboardCheck, CalendarCheck, Building2, Search, Activity, Zap, Users, ChevronDown, Check, X, Filter } from "lucide-react";
+import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck, Code, Target, Sparkles, ClipboardCheck, CalendarCheck, Building2, Search, Activity, Zap, Users, ChevronDown, Check, X, Filter, LineChart } from "lucide-react";
 import { collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Performance.css";
@@ -449,7 +449,8 @@ export default function Performance() {
       <div className="performance-header-wrap">
         <div>
           <h2 className="performance-header-title">
-          <span>Platform Performance &amp; Analytics</span>
+            <LineChart size={24} style={{ color: "var(--primary-color, #4f46e5)", flexShrink: 0 }} />
+            <span>Platform Performance &amp; Analytics</span>
           </h2>
           <p className="performance-header-subtitle">
             Cross-feature student engagement, completion rates, and institutional benchmarks

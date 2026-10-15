@@ -3,7 +3,6 @@ import { createPortal } from "react-dom";
 import { Check, Code, Plus, Edit, Trash2, ListChecks, Send, Eye, CheckCircle2, XCircle, Clock, Award, Search, Filter, X, FileCode, FileCode2, Layers, ChevronRight, TrendingUp, Terminal, Sparkles, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { SectionHeader } from "../../../components/ui/SectionHeader";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, addSharedCodingTask, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_PracticeProblems.css";
@@ -312,23 +311,31 @@ export default function AdminPracticeProblems() {
 
   return (
     <div className="admin-page-inner admin-users-container">
-      <SectionHeader
-        icon={Terminal}
-        title="Coding Practice Management"
-        description="Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts."
-        action={
-          <button
-            className="admin-btn-add"
-            onClick={() => {
-              setNewProb(emptyProbState);
-              setFormTestCase({ input: "", output: "", isHidden: false });
-              setShowAddModal(true);
-            }}
-          >
-            <Plus size={16} /> Add Coding Problem
-          </button>
-        }
-      />
+      <div className="ui-section-header-AD">
+        <div className="ui-section-main-AD">
+          <div>
+            <h2 className="ui-section-title">
+              <Terminal size={22} className="ui-section-title-icon" />
+              <span>Coding Practice Management</span>
+            </h2>
+            <p className="ui-section-desc">
+              Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts.
+            </p>
+          </div>
+          <div className="ui-section-action">
+            <button
+              className="admin-btn-add"
+              onClick={() => {
+                setNewProb(emptyProbState);
+                setFormTestCase({ input: "", output: "", isHidden: false });
+                setShowAddModal(true);
+              }}
+            >
+              <Plus size={16} /> Add Coding Problem
+            </button>
+          </div>
+        </div>
+      </div>
 
 
       {/* Workspace Tabs */}
@@ -367,6 +374,16 @@ export default function AdminPracticeProblems() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
+              {searchTerm && (
+                <button
+                  type="button"
+                  className="search-clear-btn"
+                  onClick={() => setSearchTerm("")}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
             <div className="admin-users-filters">

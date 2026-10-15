@@ -105,7 +105,8 @@ export default function Notifications() {
       <div className="student-header-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 className="student-header-title">
-          <span>Notifications</span>
+            <Bell size={24} style={{ color: "var(--primary-color, #4f46e5)", flexShrink: 0, marginRight: "10px" }} />
+            <span>Notifications</span>
           </h2>
           <p className="student-header-desc">Stay updated with milestone progression, mentor scorecard dossiers, mock interview drill alerts, and system announcements.</p>
         </div>

@@ -7,11 +7,11 @@ const initialMaintenanceConfig = {
     // 1. Auth & Security
     loginWithPassword: {
       key: "loginWithPassword",
-      name: "Password Login System",
+      name: "Password & OTP Login System",
       category: "Auth & Security",
       active: true,
       role: "All Roles",
-      description: "Standard login authentication via registered email/username and secure password hashing",
+      description: "Standard login authentication via registered email/otp and secure password hashing",
       message: "Password authentication is undergoing routine security upgrades.",
       updatedAt: "Just now",
     },
@@ -1054,6 +1054,172 @@ const initialMaintenanceConfig = {
       message: "Data backup exporter is under maintenance.",
       updatedAt: "Just now",
     },
+    adminWeeklyReports: {
+      key: "adminWeeklyReports",
+      name: "College-Wide Weekly Mentor Governance Audit Tab",
+      category: "College Admin",
+      active: true,
+      role: "College Admin",
+      description: "Reviewing weekly batch progress, syllabus coverage audits, and mentor attendance tracking",
+      message: "Weekly reports audit is under maintenance.",
+      updatedAt: "Just now",
+    },
+    adminLeaderboard: {
+      key: "adminLeaderboard",
+      name: "College-Wide Student & Batch Leaderboard Tab",
+      category: "College Admin",
+      active: true,
+      role: "College Admin",
+      description: "Displaying campus rankings, coding points, quiz achievements, and top performers",
+      message: "College leaderboard is under maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 5b. Coordinator Missing Features
+    coordinatorPlacement: {
+      key: "coordinatorPlacement",
+      name: "Coordinator Campus Placement Drives & Company Mapping Tab",
+      category: "Coordinator Features",
+      active: true,
+      role: "Coordinator",
+      description: "Coordinating recruitment drives, eligible student shortlists, and placement interview schedules",
+      message: "Placement coordination is under maintenance.",
+      updatedAt: "Just now",
+    },
+    coordinatorNotifications: {
+      key: "coordinatorNotifications",
+      name: "Department Notifications Center & Notice Broadcast Tab",
+      category: "Coordinator Features",
+      active: true,
+      role: "Coordinator",
+      description: "Department alert dispatches, real-time student notifications, and academic deadline broadcasts",
+      message: "Department notifications center is under maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 5c. Public Training Registration Feature
+    trainingRegistration: {
+      key: "trainingRegistration",
+      name: "Public Training & Corporate Course Registration Portal",
+      category: "Auth & Security",
+      active: true,
+      role: "All Roles",
+      description: "Public landing and registration portal for students and corporate trainees enrolling in campus training programs",
+      message: "Training registration portal is currently undergoing scheduled maintenance.",
+      updatedAt: "Just now",
+    },
+
+    // 6. Super Admin Workspace Features (Global Enterprise Governance)
+    superAdminOverview: {
+      key: "superAdminOverview",
+      name: "Super Admin Global Overview & Platform Analytics Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Global system metrics, active institutions, total enrolled students, and enterprise KPI overview",
+      message: "Super Admin Overview is undergoing platform upgrades.",
+      updatedAt: "Just now",
+    },
+    superAdminColleges: {
+      key: "superAdminColleges",
+      name: "Multi-College Directory & Institutional Management Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Onboarding campus colleges, configuring departments, and managing institutional representatives",
+      message: "College Management portal is undergoing maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminBatches: {
+      key: "superAdminBatches",
+      name: "Global Batch Setup & Curriculum Master Governance Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "System-wide batch creation, cross-college academic calendars, and multi-tenant cohort tracking",
+      message: "Global Batch Management is under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminUsers: {
+      key: "superAdminUsers",
+      name: "Global User Management & Token Invitation Generator Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Provisioning campus administrator accounts, role modifications, and issuing invitation registration tokens",
+      message: "Global User Management is under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminApproveUsers: {
+      key: "superAdminApproveUsers",
+      name: "Admin Account Registration Approval Queue Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Reviewing and approving newly registered college admins, department heads, and institutional representatives",
+      message: "Admin Registration Approval queue is currently under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminFeatureSwitches: {
+      key: "superAdminFeatureSwitches",
+      name: "System Feature Switches & Maintenance Controls Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Granular master switches to toggle individual sub-features, maintenance notices, and emergency lockouts",
+      message: "Feature Switches panel is undergoing maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminTickets: {
+      key: "superAdminTickets",
+      name: "Global System Support Ticket Desk & Escalations Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Reviewing and resolving cross-campus support tickets, bug escalations, and administrator assistance inquiries",
+      message: "Global Ticket Desk is under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminSystemHealth: {
+      key: "superAdminSystemHealth",
+      name: "Server Infrastructure, DB & API Telemetry Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Real-time CPU/memory loads, database connection latency, API response times, and automated health checks",
+      message: "System Health Telemetry is under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminPerformance: {
+      key: "superAdminPerformance",
+      name: "Cross-Institution Coding & AI Performance Benchmarks Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Aggregated performance metrics across coding compiler, AI mock interviews, and skill-gap readiness across colleges",
+      message: "Performance Benchmarking is under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminBroadcast: {
+      key: "superAdminBroadcast",
+      name: "System-Wide Emergency Notice Broadcast Alert System",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Publishing urgent cross-campus announcements, security alerts, and system-wide emergency notices",
+      message: "Global Broadcast System is under maintenance.",
+      updatedAt: "Just now",
+    },
+    superAdminProfile: {
+      key: "superAdminProfile",
+      name: "Super Admin Master Profile & Security Controls Tab",
+      category: "Super Admin",
+      active: true,
+      role: "Super Admin",
+      description: "Master administrative profile, Two-Factor Authentication credentials, security keys, and access logs",
+      message: "Super Admin Profile is undergoing maintenance.",
+      updatedAt: "Just now",
+    },
   },
 };
 
@@ -1073,39 +1239,91 @@ const KEY_ALIASES = {
   "coding-platform": "codingCompiler",
   progress: "skillGapAnalysis",
   "ai-interview": "aiInterviews",
+  adminC2C: "adminC2CEnrollments",
+  adminWeeklyReports: "adminWeeklyReports",
+  adminLeaderboard: "adminLeaderboard",
+  coordinatorPlacement: "coordinatorPlacement",
+  coordinatorNotifications: "coordinatorNotifications",
+  superAdminMaintenance: "superAdminFeatureSwitches",
+  superAdminFeatureSwitches: "superAdminFeatureSwitches",
 };
 
+const SWITCH_STORAGE_KEY = "system_switch_states";
+
+// Merges only switch booleans and messages into code-defined initialMaintenanceConfig.
+// Never caches or overrides module definitions, names, or descriptions from code!
+function applySwitchState(baseConfig, savedState) {
+  if (!savedState || typeof savedState !== "object") return baseConfig;
+  const switches = savedState.switches || {};
+  const messages = savedState.messages || {};
+  const emergency = typeof savedState.emergency === "boolean"
+    ? savedState.emergency
+    : (typeof savedState.globalEmergencyMode === "boolean" ? savedState.globalEmergencyMode : baseConfig.globalEmergencyMode);
+
+  const nextModules = { ...baseConfig.modules };
+  Object.keys(nextModules).forEach((k) => {
+    const sw = switches[k];
+    const msg = messages[k];
+    if (typeof sw === "boolean" || msg !== undefined) {
+      nextModules[k] = {
+        ...nextModules[k],
+        ...(typeof sw === "boolean" ? { active: sw } : {}),
+        ...(msg !== undefined ? { message: msg } : {}),
+      };
+    }
+  });
+
+  return {
+    ...baseConfig,
+    globalEmergencyMode: emergency,
+    modules: nextModules,
+  };
+}
+
+// Extracts only boolean switch states and custom messages (never module titles/descriptions)
+function extractSwitchState(cfg) {
+  const switches = {};
+  const messages = {};
+  if (cfg && cfg.modules) {
+    Object.keys(cfg.modules).forEach((k) => {
+      const m = cfg.modules[k];
+      if (m) {
+        switches[k] = Boolean(m.active);
+        if (m.message) {
+          messages[k] = m.message;
+        }
+      }
+    });
+  }
+  return {
+    emergency: Boolean(cfg?.globalEmergencyMode),
+    switches,
+    messages,
+  };
+}
+
 export function SystemMaintenanceProvider({ children }) {
-  // Always load from initialMaintenanceConfig merged with localStorage and sessionStorage
-  const loadStoredConfig = () => {
+  // Driven directly by code definition in initialMaintenanceConfig,
+  // overlaid with active switch states from storage (zero cached module objects).
+  const [config, setConfig] = useState(() => {
     try {
-      const saved =
-        localStorage.getItem("system_maintenance_config_v2") ||
-        sessionStorage.getItem("system_maintenance_config_v2");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...initialMaintenanceConfig,
-          ...parsed,
-          modules: {
-            ...initialMaintenanceConfig.modules,
-            ...(parsed.modules || {}),
-          },
-        };
+      const raw = localStorage.getItem(SWITCH_STORAGE_KEY) || sessionStorage.getItem(SWITCH_STORAGE_KEY);
+      if (raw) {
+        return applySwitchState(initialMaintenanceConfig, JSON.parse(raw));
       }
     } catch (e) {}
     return initialMaintenanceConfig;
-  };
+  });
 
-  const [config, setConfig] = useState(loadStoredConfig);
-
-  // Sync with localStorage, sessionStorage & Backend Database
+  // Sync with runtime state, localStorage, cross-tab events & backend database
   const saveConfig = (newConfig) => {
     setConfig(newConfig);
+    const switchState = extractSwitchState(newConfig);
+
     try {
-      const serialized = JSON.stringify(newConfig);
-      localStorage.setItem("system_maintenance_config_v2", serialized);
-      sessionStorage.setItem("system_maintenance_config_v2", serialized);
+      const serialized = JSON.stringify(switchState);
+      localStorage.setItem(SWITCH_STORAGE_KEY, serialized);
+      sessionStorage.setItem(SWITCH_STORAGE_KEY, serialized);
       window.dispatchEvent(new CustomEvent("system_maintenance_changed", { detail: newConfig }));
     } catch (e) {}
 
@@ -1119,87 +1337,84 @@ export function SystemMaintenanceProvider({ children }) {
       body: JSON.stringify({
         type: 'maintenance',
         title: 'System Maintenance Configuration',
-        data: newConfig,
+        data: {
+          ...switchState,
+          globalEmergencyMode: newConfig.globalEmergencyMode,
+          modules: newConfig.modules,
+        },
         status: 'Active'
       })
     }).catch(err => console.warn('Failed to sync maintenance config to backend:', err));
   };
 
-  const fetchServerConfig = () => {
-    const token = getAuthToken() || '';
-    fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-      .then((res) => res.json())
-      .then((json) => {
-        const item = json?.data?.[0];
-        const serverData = item?.data;
-        const hasServerConfig =
-          serverData && typeof serverData === "object" && Object.keys(serverData).length > 0;
-
-        if (hasServerConfig) {
-          setConfig((prev) => {
-            const updated = {
-              ...initialMaintenanceConfig,
-              ...prev,
-              ...serverData,
-              modules: {
-                ...initialMaintenanceConfig.modules,
-                ...(prev.modules || {}),
-                ...(serverData.modules || {}),
-              },
-            };
-            try {
-              const serialized = JSON.stringify(updated);
-              localStorage.setItem("system_maintenance_config_v2", serialized);
-              sessionStorage.setItem("system_maintenance_config_v2", serialized);
-            } catch (e) {}
-            return updated;
-          });
-        }
-      })
-      .catch(() => {});
-  };
-
   useEffect(() => {
+    // 1. Fetch backend state directly from database table feature_switches
+    const fetchServerConfig = () => {
+      const token = getAuthToken() || '';
+      fetch(`${getApiBaseUrl()}/feature-switches`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => res.json())
+        .then((json) => {
+          const serverData = json?.data;
+          if (serverData && typeof serverData === "object" && serverData.switches) {
+            setConfig((prev) => {
+              const updated = applySwitchState(prev, serverData);
+              try {
+                const switchState = extractSwitchState(updated);
+                localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+              } catch (e) {}
+              return updated;
+            });
+          }
+        })
+        .catch(() => {
+          // Fallback to shared-content endpoint if needed
+          fetch(`${getApiBaseUrl()}/shared-content?type=maintenance`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          })
+            .then((res) => res.json())
+            .then((json) => {
+              const serverData = json?.data?.[0]?.data;
+              if (serverData && typeof serverData === "object") {
+                setConfig((prev) => {
+                  const updated = applySwitchState(prev, serverData);
+                  try {
+                    const switchState = extractSwitchState(updated);
+                    localStorage.setItem(SWITCH_STORAGE_KEY, JSON.stringify(switchState));
+                  } catch (e) {}
+                  return updated;
+                });
+              }
+            })
+            .catch(() => {});
+        });
+    };
+
     fetchServerConfig();
 
-    // Cross-tab and same-tab listener
+    // 2. Cross-tab real-time sync via storage event
     const handleStorageChange = (e) => {
-      if (e.key === "system_maintenance_config_v2" && e.newValue) {
+      if (e.key === SWITCH_STORAGE_KEY && e.newValue) {
         try {
           const parsed = JSON.parse(e.newValue);
-          setConfig(prev => ({
-            ...prev,
-            ...parsed,
-            modules: { ...prev.modules, ...(parsed.modules || {}) }
-          }));
+          setConfig((prev) => applySwitchState(prev, parsed));
         } catch (_) {}
       }
     };
 
+    // 3. Intra-window custom event listener
     const handleCustomChange = (e) => {
       if (e.detail) {
         setConfig(e.detail);
       }
     };
 
-    const handleFocus = () => {
-      fetchServerConfig();
-    };
-
     window.addEventListener("storage", handleStorageChange);
     window.addEventListener("system_maintenance_changed", handleCustomChange);
-    window.addEventListener("focus", handleFocus);
-
-    // Poll server periodically every 15 seconds to sync switch state
-    const interval = setInterval(fetchServerConfig, 15000);
-
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("system_maintenance_changed", handleCustomChange);
-      window.removeEventListener("focus", handleFocus);
-      clearInterval(interval);
     };
   }, []);
 
@@ -1229,16 +1444,17 @@ export function SystemMaintenanceProvider({ children }) {
     return mod;
   };
 
-  // Toggle single module ON/OFF
+  // Toggle single module ON (true in DB) or OFF (false in DB)
   const toggleModule = (moduleKey) => {
-    const mod = config.modules[moduleKey];
+    const resolvedKey = KEY_ALIASES[moduleKey] || moduleKey;
+    const mod = config.modules[resolvedKey] || config.modules[moduleKey];
     if (!mod) return;
-    const nextActive = !mod.active;
+    const nextActive = !mod.active; // true if was false, false if was true
     const nextConfig = {
       ...config,
       modules: {
         ...config.modules,
-        [moduleKey]: {
+        [resolvedKey]: {
           ...mod,
           active: nextActive,
           updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -1246,17 +1462,38 @@ export function SystemMaintenanceProvider({ children }) {
       },
     };
     saveConfig(nextConfig);
+
+    // Save directly to MySQL database table feature_switches:
+    // When ON -> is_active = true (1) in database
+    // When OFF -> is_active = false (0) in database
+    try {
+      const token = getAuthToken() || '';
+      fetch(`${getApiBaseUrl()}/feature-switches/toggle`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          feature_key: resolvedKey,
+          is_active: nextActive, // true or false in database
+          feature_name: mod.name,
+          category: mod.category,
+        })
+      }).catch(err => console.warn('Failed to sync feature switch to DB:', err));
+    } catch (_) {}
   };
 
-  // Update maintenance message for a module
+  // Update maintenance message for a module in database
   const updateModuleMessage = (moduleKey, message) => {
-    const mod = config.modules[moduleKey];
+    const resolvedKey = KEY_ALIASES[moduleKey] || moduleKey;
+    const mod = config.modules[resolvedKey] || config.modules[moduleKey];
     if (!mod) return;
     const nextConfig = {
       ...config,
       modules: {
         ...config.modules,
-        [moduleKey]: {
+        [resolvedKey]: {
           ...mod,
           message,
           updatedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -1264,23 +1501,50 @@ export function SystemMaintenanceProvider({ children }) {
       },
     };
     saveConfig(nextConfig);
+
+    try {
+      const token = getAuthToken() || '';
+      fetch(`${getApiBaseUrl()}/feature-switches/notice`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          feature_key: resolvedKey,
+          notice_message: message,
+        })
+      }).catch(() => {});
+    } catch (_) {}
   };
 
-  // Master Global Emergency Maintenance Switch
+  // Master Global Emergency Maintenance Switch in database
   const toggleGlobalEmergencyMode = () => {
+    const nextEmergency = !config.globalEmergencyMode;
     saveConfig({
       ...config,
-      globalEmergencyMode: !config.globalEmergencyMode,
+      globalEmergencyMode: nextEmergency,
     });
+
+    try {
+      const token = getAuthToken() || '';
+      fetch(`${getApiBaseUrl()}/feature-switches/emergency`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ globalEmergencyMode: nextEmergency })
+      }).catch(() => {});
+    } catch (_) {}
   };
 
-  // Turn all modules ON
+  // Turn all modules ON (is_active = true / 1 in database)
   const turnAllModulesOn = () => {
-    const updatedModules = { ...initialMaintenanceConfig.modules };
+    const updatedModules = { ...config.modules };
     Object.keys(updatedModules).forEach((k) => {
       updatedModules[k] = {
         ...updatedModules[k],
-        ...(config.modules[k] || {}),
         active: true,
         updatedAt: "Just now",
       };
@@ -1290,11 +1554,37 @@ export function SystemMaintenanceProvider({ children }) {
       globalEmergencyMode: false,
       modules: updatedModules,
     });
+
+    try {
+      const token = getAuthToken() || '';
+      fetch(`${getApiBaseUrl()}/feature-switches/restore-all`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+      }).catch(() => {});
+    } catch (_) {}
   };
 
   // Reset to initial full list
   const resetToFullDefault = () => {
+    try {
+      localStorage.removeItem(SWITCH_STORAGE_KEY);
+      sessionStorage.removeItem(SWITCH_STORAGE_KEY);
+    } catch (e) {}
     saveConfig(initialMaintenanceConfig);
+
+    try {
+      const token = getAuthToken() || '';
+      fetch(`${getApiBaseUrl()}/feature-switches/restore-all`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+      }).catch(() => {});
+    } catch (_) {}
   };
 
   return (

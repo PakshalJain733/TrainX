@@ -207,6 +207,7 @@ export default function AdminProfile() {
         <div className="ui-section-main-AD">
           <div>
             <h2 className="ui-section-title">
+              <User size={22} className="ui-section-title-icon" />
               <span>My Profile & Settings</span>
             </h2>
             <p className="ui-section-desc">

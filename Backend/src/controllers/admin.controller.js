@@ -75,8 +75,6 @@ const pickUserUpdateFields = (body = {}) => {
     'city',
     'emergency_contact',
     'guardianContact',
-    'linkedin_url',
-    'linkedinUrl',
     'target_track',
     'track',
     'is_active',

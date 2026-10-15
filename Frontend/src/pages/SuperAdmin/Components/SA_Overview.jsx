@@ -23,7 +23,7 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
       iconBg: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
       iconColor: '#4338ca',
       iconBorder: '#c7d2fe',
-      iconShadow: '0 4px 12px rgba(79, 70, 229, 0.15)',
+      iconShadow: '0 4px 12px rgba(79, 70, 229, 0.12)',
       pillBg: '#eef2ff',
       pillColor: '#3730a3',
       pillBorder: '#c7d2fe',
@@ -34,7 +34,7 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
       iconBg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
       iconColor: '#047857',
       iconBorder: '#a7f3d0',
-      iconShadow: '0 4px 12px rgba(16, 185, 129, 0.15)',
+      iconShadow: '0 4px 12px rgba(16, 185, 129, 0.12)',
       pillBg: '#ecfdf5',
       pillColor: '#065f46',
       pillBorder: '#a7f3d0',
@@ -45,7 +45,7 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
       iconBg: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
       iconColor: '#6d28d9',
       iconBorder: '#ddd6fe',
-      iconShadow: '0 4px 12px rgba(124, 58, 237, 0.15)',
+      iconShadow: '0 4px 12px rgba(124, 58, 237, 0.12)',
       pillBg: '#f3e8ff',
       pillColor: '#5b21b6',
       pillBorder: '#ddd6fe',
@@ -56,7 +56,7 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
       iconBg: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
       iconColor: '#0369a1',
       iconBorder: '#7dd3fc',
-      iconShadow: '0 4px 12px rgba(14, 165, 233, 0.15)',
+      iconShadow: '0 4px 12px rgba(14, 165, 233, 0.12)',
       pillBg: '#e0f2fe',
       pillColor: '#075985',
       pillBorder: '#7dd3fc',
@@ -96,7 +96,7 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
               {value}
             </span>
           ) : (
-            <h3 className="sa-pro-card-value">{value}</h3>
+            <p className="sa-pro-card-value">{value}</p>
           )}
         </div>
 
@@ -255,7 +255,7 @@ export default function Overview() {
       id: 1,
       label: "Total Partner Colleges",
       value: loadingStats ? "..." : liveMetrics.collegesCount.toString(),
-      change: `${liveMetrics.collegesCount} Registered Institutions`,
+      change: "Verified Institutions",
       trend: "up",
       icon: "Building2",
       theme: "indigo"
@@ -273,7 +273,7 @@ export default function Overview() {
       id: 3,
       label: "Departments Covered",
       value: loadingStats ? "..." : liveMetrics.departmentsCount.toString(),
-      change: `${liveMetrics.departmentsCount} Academic Tracks`,
+      change: "Academic Tracks",
       trend: "up",
       icon: "GraduationCap",
       theme: "purple"
@@ -282,7 +282,7 @@ export default function Overview() {
       id: 4,
       label: "Security & Key Access",
       value: "Protected",
-      change: "100% RBAC Policy Enforced",
+      change: "RBAC Policy Enforced",
       trend: "up",
       icon: "ShieldCheck",
       theme: "sky"

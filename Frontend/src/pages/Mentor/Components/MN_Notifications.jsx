@@ -103,7 +103,8 @@ export default function MentorNotifications() {
             MENTOR ACTIVITY LOG & ALERTS
           </span>
           <h2 className="mn-notif-header-title">
-            Mentor Notifications
+            <Bell size={22} className="ui-section-title-icon" />
+            <span>Mentor Notifications</span>
           </h2>
           <p className="mn-notif-header-subtitle">
             Stay updated with batch progress, evaluation requests, student submissions, and institutional announcements.

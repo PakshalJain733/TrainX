@@ -238,6 +238,7 @@ export default function MaintenanceControls() {
     { id: "Mentor Features", label: "Mentor Workspace", count: modulesList.filter(m => m.category === "Mentor Features").length },
     { id: "Coordinator Features", label: "Coordinator Faculty", count: modulesList.filter(m => m.category === "Coordinator Features").length },
     { id: "College Admin", label: "College Admin", count: modulesList.filter(m => m.category === "College Admin").length },
+    { id: "Super Admin", label: "Super Admin", count: modulesList.filter(m => m.category === "Super Admin").length },
   ];
 
   return (

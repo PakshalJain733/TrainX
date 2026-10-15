@@ -215,6 +215,7 @@ export default function SuperAdminProfile() {
         <div className="ui-section-main">
           <div>
             <h2 className="ui-section-title">
+              <User size={22} className="ui-section-title-icon" />
               <span>Super Admin Profile & Security</span>
             </h2>
             <p className="ui-section-desc">

@@ -329,6 +329,16 @@ export default function Departments() {
             onChange={(e) => setSearch(e.target.value)}
             className="sa-search-input"
           />
+          {search && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 

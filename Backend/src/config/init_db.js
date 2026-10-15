@@ -117,14 +117,12 @@ export async function initializeDatabase() {
         name VARCHAR(255) NOT NULL,
         email VARCHAR(255) NULL UNIQUE,
         mobile_number VARCHAR(20),
-        password VARCHAR(255) NULL,
         password_hash VARCHAR(255) NULL,
         role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
         college_id INT DEFAULT 1,
         gender VARCHAR(50) NULL,
         city VARCHAR(100) NULL,
         emergency_contact VARCHAR(50) NULL,
-        linkedin_url VARCHAR(255) NULL,
         target_track VARCHAR(150) NULL,
         two_factor_secret VARCHAR(255) NULL,
         two_factor_enabled BOOLEAN DEFAULT FALSE,
@@ -137,7 +135,7 @@ export async function initializeDatabase() {
     `);
 
     try { await conn.query(`ALTER TABLE users MODIFY COLUMN email VARCHAR(255) NULL UNIQUE`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN password VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users DROP COLUMN password`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN password_hash VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_secret VARCHAR(255) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN two_factor_enabled BOOLEAN DEFAULT FALSE`); } catch (_) { }
@@ -147,7 +145,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE users ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users DROP COLUMN linkedin_url`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
 
@@ -188,7 +186,6 @@ export async function initializeDatabase() {
         gender VARCHAR(50) NULL,
         city VARCHAR(100) NULL,
         emergency_contact VARCHAR(50) NULL,
-        linkedin_url VARCHAR(255) NULL,
         target_track VARCHAR(150) NULL,
         is_profile_updated BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -202,7 +199,7 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE students ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
-    try { await conn.query(`ALTER TABLE students ADD COLUMN linkedin_url VARCHAR(255) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE students DROP COLUMN linkedin_url`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
 
@@ -1026,7 +1023,7 @@ export async function initializeDatabase() {
       'ALTER TABLE c2c_enrollments ADD COLUMN approved_by INT NULL',
       'ALTER TABLE c2c_enrollments ADD COLUMN rejection_reason TEXT NULL',
     ]) {
-      try { await conn.query(col); } catch (_) {}
+      try { await conn.query(col); } catch (_) { }
     }
 
     // ─── Essential Core Seed Data ───────────────────────────────────────────
@@ -1102,12 +1099,12 @@ export async function initializeDatabase() {
       const [superUsers] = await conn.query(`SELECT id FROM users WHERE email = ?`, [superEmail]);
       if (!superUsers || superUsers.length === 0) {
         await conn.query(
-          `INSERT INTO users (name, email, mobile_number, password, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, ?, 'super_admin', NULL, 1)`,
-          [superEmail, superPasswordHash, superPasswordHash]
+          `INSERT INTO users (name, email, mobile_number, password_hash, role, college_id, is_active) VALUES ('Super Admin', ?, '9876543210', ?, 'super_admin', NULL, 1)`,
+          [superEmail, superPasswordHash]
         );
         console.log(`[DB Init] Seeded Super Admin account for ${superEmail}`);
       } else if (superPasswordHash) {
-        await conn.query(`UPDATE users SET role = 'super_admin', password = ?, password_hash = ? WHERE email = ?`, [superPasswordHash, superPasswordHash, superEmail]);
+        await conn.query(`UPDATE users SET role = 'super_admin', password_hash = ? WHERE email = ?`, [superPasswordHash, superEmail]);
       } else {
         await conn.query(`UPDATE users SET role = 'super_admin' WHERE email = ?`, [superEmail]);
       }

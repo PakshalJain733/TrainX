@@ -79,26 +79,19 @@ const hasTwoFactorAuthentication = (user) => {
 const verifyStoredPassword = async (user, password) => {
   if (!user || typeof password !== 'string' || password.length === 0) return false;
 
-  const candidates = [...new Set([user.password_hash, user.password]
-    .filter((value) => !isBlank(value))
-    .map((value) => String(value)))];
-  let matchedLegacyPassword = false;
+  const candidate = user.password_hash;
+  if (!candidate || isBlank(candidate)) return false;
 
-  for (const candidate of candidates) {
-    if (BCRYPT_HASH_PATTERN.test(candidate)) {
-      try {
-        if (await bcrypt.compare(password, candidate)) return true;
-      } catch {
-        continue;
-      }
-    } else if (candidate === password) {
-      matchedLegacyPassword = true;
-    }
-  }
-
-  if (matchedLegacyPassword) {
+  if (BCRYPT_HASH_PATTERN.test(candidate)) {
     try {
-      await updateUser(user.id, { password });
+      if (await bcrypt.compare(password, candidate)) return true;
+    } catch {
+      return false;
+    }
+  } else if (candidate === password) {
+    try {
+      const passHash = await bcrypt.hash(password, 12);
+      await updateUser(user.id, { password_hash: passHash });
     } catch {
       console.warn('[AUTH] Legacy password migration could not be persisted.');
     }
@@ -314,7 +307,7 @@ export const sendRegistrationOtp = async (data = {}) => {
   }
 
   const existingUser = await findUserByEmailOrMobile(email);
-  if (existingUser && existingUser.password && existingUser.password.trim().length > 0) {
+  if (existingUser && existingUser.password_hash && existingUser.password_hash.trim().length > 0) {
     throw createAuthError('An account already exists for this email. Please log in instead.', 409);
   }
 
@@ -415,7 +408,7 @@ export const registerUser = async (data) => {
   }
 
   if (existingUser) {
-    if (existingUser.password && existingUser.password.trim().length > 0) {
+    if (existingUser.password_hash && existingUser.password_hash.trim().length > 0) {
       throw createAuthError('User with this email or mobile number already exists and has completed registration. Please log in.', 409);
     }
 
@@ -943,7 +936,7 @@ export const loginWithPassword = async (identifier, password, rememberMe = false
   if ((isSuperAdminMatch || user.role === 'super_admin') && !isValid) {
     try {
       const passHash = await bcrypt.hash(cleanPassword, 12);
-      await updateUser(user.id, { password_hash: passHash, password: passHash, role: 'super_admin', is_active: 1 });
+      await updateUser(user.id, { password_hash: passHash, role: 'super_admin', is_active: 1 });
     } catch (_) {}
   }
 
