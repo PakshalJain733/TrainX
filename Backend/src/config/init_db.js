@@ -502,6 +502,19 @@ export async function initializeDatabase() {
       )
     `);
 
+    // 14b. Ensure Feature Switches & Maintenance Controls Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS feature_switches (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        feature_key VARCHAR(100) NOT NULL UNIQUE,
+        feature_name VARCHAR(255) NOT NULL,
+        category VARCHAR(100) DEFAULT 'General',
+        is_active TINYINT(1) NOT NULL DEFAULT 1,
+        notice_message TEXT NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
     // 15. Ensure Leave Requests Table
     await conn.query(`
       CREATE TABLE IF NOT EXISTS leave_requests (
