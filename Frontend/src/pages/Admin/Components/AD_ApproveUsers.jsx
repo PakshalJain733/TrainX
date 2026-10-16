@@ -33,21 +33,8 @@ export default function AD_ApproveUsers() {
     try {
       const res = await apiFetch("/admin/pending-users");
       if (res && res.data && Array.isArray(res.data)) {
-        if (isSuperAdmin) {
-          // Super Admin ONLY approves Admin roles (college_admin, admin)
-          const adminPending = res.data.filter((u) => {
-            const r = String(u.role || "").toLowerCase();
-            return (r === "college_admin" || r === "admin" || r.includes("admin")) && !r.includes("super");
-          });
-          setPendingUsers(adminPending);
-        } else {
-          // College Admins approve Students, Mentors, and Coordinators (not Admins)
-          const nonAdminPending = res.data.filter((u) => {
-            const r = String(u.role || "").toLowerCase();
-            return !r.includes("admin") && !r.includes("super");
-          });
-          setPendingUsers(nonAdminPending);
-        }
+        // Both Super Admin and College Admin receive their respective pending users directly from the backend API
+        setPendingUsers(res.data);
       } else {
         setPendingUsers([]);
       }
@@ -130,13 +117,15 @@ export default function AD_ApproveUsers() {
   const filteredUsers = pendingUsers.filter((u) => {
     const roleLower = String(u.role || "").toLowerCase();
     let matchesRole = true;
-    if (!isSuperAdmin && selectedRole !== "all") {
-      if (selectedRole === "student") {
-        matchesRole = roleLower === "student";
+    if (selectedRole !== "all") {
+      if (selectedRole === "admin") {
+        matchesRole = roleLower === "college_admin" || roleLower === "admin" || roleLower.includes("admin");
+      } else if (selectedRole === "student") {
+        matchesRole = roleLower.includes("student");
       } else if (selectedRole === "mentor") {
-        matchesRole = roleLower === "mentor" || roleLower === "faculty";
+        matchesRole = roleLower.includes("mentor") || roleLower.includes("faculty");
       } else if (selectedRole === "coordinator") {
-        matchesRole = roleLower === "coordinator";
+        matchesRole = roleLower.includes("coordinator");
       } else {
         matchesRole = roleLower === selectedRole.toLowerCase();
       }
@@ -277,6 +266,17 @@ export default function AD_ApproveUsers() {
 
             <div className="approve-stat-card">
               <div>
+                <div className="approve-stat-lbl">Students &amp; Faculty</div>
+                <div className="approve-stat-val">{studentCount + mentorCount}</div>
+                <div className="approve-stat-sub">Student &amp; Faculty applicants</div>
+              </div>
+              <div className="approve-stat-icon-wrap icon-wrap--purple">
+                <GraduationCap size={24} />
+              </div>
+            </div>
+
+            <div className="approve-stat-card">
+              <div>
                 <div className="approve-stat-lbl">Institutions</div>
                 <div className="approve-stat-val">{collegesRepresentedCount}</div>
                 <div className="approve-stat-sub">Colleges requesting access</div>
@@ -351,39 +351,46 @@ export default function AD_ApproveUsers() {
               )}
             </div>
 
-            {/* Role Filter Tabs - Only shown for College Admin to filter student/mentor/coordinator */}
-            {!isSuperAdmin && (
-              <div className="approve-tabs-wrap">
+            {/* Role Filter Tabs */}
+            <div className="approve-tabs-wrap">
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "all" ? "active" : ""}`}
+                onClick={() => setSelectedRole("all")}
+              >
+                All Requests ({pendingUsers.length})
+              </button>
+              {isSuperAdmin && (
                 <button
                   type="button"
-                  className={`approve-tab-btn ${selectedRole === "all" ? "active" : ""}`}
-                  onClick={() => setSelectedRole("all")}
+                  className={`approve-tab-btn ${selectedRole === "admin" ? "active" : ""}`}
+                  onClick={() => setSelectedRole("admin")}
                 >
-                  All Requests ({pendingUsers.length})
+                  Admins ({collegeAdminCount})
                 </button>
-                <button
-                  type="button"
-                  className={`approve-tab-btn ${selectedRole === "student" ? "active" : ""}`}
-                  onClick={() => setSelectedRole("student")}
-                >
-                  Students ({studentCount})
-                </button>
-                <button
-                  type="button"
-                  className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
-                  onClick={() => setSelectedRole("mentor")}
-                >
-                  Mentors ({mentorCount})
-                </button>
-                <button
-                  type="button"
-                  className={`approve-tab-btn ${selectedRole === "coordinator" ? "active" : ""}`}
-                  onClick={() => setSelectedRole("coordinator")}
-                >
-                  Coordinators ({coordCount})
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "student" ? "active" : ""}`}
+                onClick={() => setSelectedRole("student")}
+              >
+                Students ({studentCount})
+              </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "mentor" ? "active" : ""}`}
+                onClick={() => setSelectedRole("mentor")}
+              >
+                Mentors ({mentorCount})
+              </button>
+              <button
+                type="button"
+                className={`approve-tab-btn ${selectedRole === "coordinator" ? "active" : ""}`}
+                onClick={() => setSelectedRole("coordinator")}
+              >
+                Coordinators ({coordCount})
+              </button>
+            </div>
           </div>
 
           {/* View Switcher */}

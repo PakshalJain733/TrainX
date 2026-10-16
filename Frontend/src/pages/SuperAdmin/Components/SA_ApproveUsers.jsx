@@ -22,12 +22,11 @@ export default function SuperAdminApproveUsers() {
     try {
       const res = await apiFetch("/admin/pending-users");
       if (res && res.data && Array.isArray(res.data)) {
-        // Super Admin ONLY reviews and approves Admin roles
-        const adminPending = res.data.filter((u) => {
+        const adminOnly = res.data.filter((u) => {
           const r = String(u.role || "").toLowerCase();
-          return (r === "college_admin" || r === "admin" || r.includes("admin")) && !r.includes("super");
+          return (r === "college_admin" || r === "admin" || r === "hod" || r.includes("admin")) && !r.includes("super");
         });
-        setPendingUsers(adminPending);
+        setPendingUsers(adminOnly);
       } else {
         setPendingUsers([]);
       }
@@ -106,6 +105,16 @@ export default function SuperAdminApproveUsers() {
     }
   };
 
+  // Role Counts (Admin only for Super Admin)
+  const collegeAdminCount = pendingUsers.filter((u) => {
+    const r = String(u.role || "").toLowerCase();
+    return r === "college_admin" || r === "admin" || r === "hod" || r.includes("admin");
+  }).length;
+
+  const collegesRepresentedCount = new Set(
+    pendingUsers.map((u) => u.college_name || u.college || "General")
+  ).size;
+
   // Filtered List based on Search Query
   const filteredUsers = pendingUsers.filter((u) => {
     const q = searchTerm.trim().toLowerCase();
@@ -116,7 +125,8 @@ export default function SuperAdminApproveUsers() {
       (u.mobile_number && String(u.mobile_number).includes(q)) ||
       (u.college_name && u.college_name.toLowerCase().includes(q)) ||
       (u.college && u.college.toLowerCase().includes(q)) ||
-      (u.department && u.department.toLowerCase().includes(q))
+      (u.department && u.department.toLowerCase().includes(q)) ||
+      (u.role && u.role.toLowerCase().includes(q))
     );
   });
 
@@ -127,35 +137,11 @@ export default function SuperAdminApproveUsers() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const collegeAdminCount = pendingUsers.length;
-  const collegesRepresentedCount = new Set(
-    pendingUsers.map((u) => u.college_name || u.college || "General")
-  ).size;
-
   return (
     <div className="sa-approve-container">
       {/* Floating Toast Notification */}
       {toastMessage && (
-        <div
-          style={{
-            position: "fixed",
-            top: "24px",
-            right: "24px",
-            zIndex: 9999,
-            padding: "14px 22px",
-            borderRadius: "14px",
-            background: toastMessage.type === "error" ? "#fff1f2" : toastMessage.type === "info" ? "#eff6ff" : "#ecfdf5",
-            border: `1.5px solid ${toastMessage.type === "error" ? "#fecdd3" : toastMessage.type === "info" ? "#bfdbfe" : "#a7f3d0"}`,
-            color: toastMessage.type === "error" ? "#be123c" : toastMessage.type === "info" ? "#1d4ed8" : "#047857",
-            fontWeight: "700",
-            fontSize: "14px",
-            boxShadow: "0 15px 30px -5px rgba(0, 0, 0, 0.12)",
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            animation: "saApproveFadeIn 0.25s ease-out",
-          }}
-        >
+        <div className={`sa-approve-toast ${toastMessage.type === "error" ? "error" : toastMessage.type === "info" ? "info" : "success"}`}>
           {toastMessage.type === "error" ? (
             <AlertCircle size={20} />
           ) : toastMessage.type === "info" ? (
@@ -171,7 +157,7 @@ export default function SuperAdminApproveUsers() {
       <div className="sa-approve-header">
         <div>
           <div className="sa-approve-title-row">
-            <UserCheck size={24} style={{ color: "#2563eb" }} />
+            <UserCheck size={24} className="sa-approve-title-icon" />
             <h1 className="sa-approve-page-title">Pending Registrations</h1>
             {pendingUsers.length > 0 && (
               <span className="sa-approve-count-badge">
@@ -197,7 +183,7 @@ export default function SuperAdminApproveUsers() {
         </div>
       </div>
 
-      {/* Metric Cards Grid */}
+      {/* Metric Cards Grid - 3 Core Cards for Admin Approvals */}
       <div className="sa-approve-stats-grid">
         <div className="sa-approve-stat-card">
           <div>
@@ -278,18 +264,9 @@ export default function SuperAdminApproveUsers() {
 
       {/* Content Area */}
       {loading ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "20px" }}>
+        <div className="sa-approve-skeleton-grid">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              style={{
-                background: "#ffffff",
-                borderRadius: "16px",
-                height: "220px",
-                border: "1px solid #e2e8f0",
-                animation: "pulse 1.5s infinite",
-              }}
-            />
+            <div key={i} className="sa-approve-skeleton-card" />
           ))}
         </div>
       ) : filteredUsers.length === 0 ? (
@@ -331,11 +308,11 @@ export default function SuperAdminApproveUsers() {
                         title="Click to copy email"
                       >
                         <Mail size={13} />
-                        <span style={{ textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                        <span className="sa-approve-email-text">
                           {u.email}
                         </span>
                         {copiedId === u.id && (
-                          <span style={{ color: "#16a34a", fontSize: "11px", fontWeight: "700" }}>
+                          <span className="sa-approve-copied-tag">
                             Copied!
                           </span>
                         )}
@@ -347,7 +324,7 @@ export default function SuperAdminApproveUsers() {
                     {(u.college_name || u.college) && (
                       <div className="sa-approve-detail-row">
                         <Building2 size={15} className="sa-approve-detail-icon" />
-                        <span style={{ fontWeight: 600 }}>{u.college_name || u.college}</span>
+                        <span className="sa-approve-highlight-text">{u.college_name || u.college}</span>
                       </div>
                     )}
                     {u.department && (
@@ -416,7 +393,7 @@ export default function SuperAdminApproveUsers() {
                   <th>Contact Info</th>
                   <th>College & Department</th>
                   <th>Registered On</th>
-                  <th style={{ textAlign: "right" }}>Actions</th>
+                  <th className="sa-approve-th-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -425,43 +402,43 @@ export default function SuperAdminApproveUsers() {
                   return (
                     <tr key={u.id}>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <div className="sa-approve-avatar" style={{ width: "38px", height: "38px", fontSize: "13px" }}>
+                        <div className="sa-approve-table-user-wrap">
+                          <div className="sa-approve-avatar sa-approve-avatar-sm">
                             {getInitials(u.name)}
                           </div>
                           <div>
-                            <div style={{ fontWeight: "700", color: "#0f172a" }}>{u.name}</div>
-                            <span className="sa-approve-role-badge" style={{ marginTop: "2px", display: "inline-block" }}>
+                            <div className="sa-approve-table-user-name">{u.name}</div>
+                            <span className="sa-approve-role-badge sa-approve-role-badge-table">
                               {u.role || "Admin"}
                             </span>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <div style={{ fontSize: "13px", color: "#334155" }}>{u.email}</div>
+                        <div className="sa-approve-table-email">{u.email}</div>
                         {u.mobile_number && (
-                          <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                          <div className="sa-approve-table-subtext">
                             {u.mobile_number}
                           </div>
                         )}
                       </td>
                       <td>
-                        <div style={{ fontSize: "13.5px", fontWeight: "600", color: "#1e293b" }}>
+                        <div className="sa-approve-table-college">
                           {u.college_name || u.college || "Campus Admin"}
                         </div>
                         {u.department && (
-                          <div style={{ fontSize: "12px", color: "#64748b", marginTop: "2px" }}>
+                          <div className="sa-approve-table-subtext">
                             {u.department}
                           </div>
                         )}
                       </td>
                       <td>
-                        <div style={{ fontSize: "13px", color: "#64748b" }}>
+                        <div className="sa-approve-table-date">
                           {u.created_at ? new Date(u.created_at).toLocaleDateString() : "Recently"}
                         </div>
                       </td>
-                      <td style={{ textAlign: "right" }}>
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                      <td className="sa-approve-td-actions">
+                        <div className="sa-approve-table-actions-wrap">
                           <button
                             type="button"
                             className="sa-approve-btn-view"
@@ -510,7 +487,7 @@ export default function SuperAdminApproveUsers() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="sa-approve-modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div className="sa-approve-modal-user-info">
                 <div className="sa-approve-avatar">
                   {getInitials(selectedUserModal.name)}
                 </div>
@@ -535,7 +512,7 @@ export default function SuperAdminApproveUsers() {
               <div className="sa-approve-modal-grid">
                 <div className="sa-approve-modal-field">
                   <div className="sa-approve-modal-field-lbl">Email Address</div>
-                  <div className="sa-approve-modal-field-val" style={{ wordBreak: "break-all" }}>
+                  <div className="sa-approve-modal-field-val sa-approve-break-word">
                     {selectedUserModal.email}
                   </div>
                 </div>
@@ -548,7 +525,7 @@ export default function SuperAdminApproveUsers() {
                 </div>
 
                 {(selectedUserModal.college_name || selectedUserModal.college) && (
-                  <div className="sa-approve-modal-field" style={{ gridColumn: "span 2" }}>
+                  <div className="sa-approve-modal-field sa-approve-col-span-2">
                     <div className="sa-approve-modal-field-lbl">College / Institution</div>
                     <div className="sa-approve-modal-field-val">
                       {selectedUserModal.college_name || selectedUserModal.college}
@@ -557,7 +534,7 @@ export default function SuperAdminApproveUsers() {
                 )}
 
                 {selectedUserModal.department && (
-                  <div className="sa-approve-modal-field" style={{ gridColumn: "span 2" }}>
+                  <div className="sa-approve-modal-field sa-approve-col-span-2">
                     <div className="sa-approve-modal-field-lbl">Department</div>
                     <div className="sa-approve-modal-field-val">
                       {selectedUserModal.department}
@@ -576,7 +553,7 @@ export default function SuperAdminApproveUsers() {
 
                 <div className="sa-approve-modal-field">
                   <div className="sa-approve-modal-field-lbl">Verification Status</div>
-                  <div className="sa-approve-modal-field-val" style={{ color: "#d97706" }}>
+                  <div className="sa-approve-modal-field-val sa-approve-status-pending">
                     Pending Approval
                   </div>
                 </div>

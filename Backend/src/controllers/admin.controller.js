@@ -151,12 +151,12 @@ export const getAdminPendingUsers = async (req, res, next) => {
 
     let users = await getPendingUsersModel(collegeId);
 
-    // Super Admin ONLY receives approval requests for Admin roles
-    // College Admins ONLY receive approval requests for non-Admin users (Students, Mentors, Coordinators) belonging to their college
+    // Super Admin exclusively reviews and approves Admin accounts (College Admins, Department Admins, HODs)
+    // College Admins review and approve non-Admin users (Students, Mentors, Coordinators) belonging to their college
     if (req.user?.role === ROLES.SUPER_ADMIN) {
       users = users.filter((u) => {
         const r = String(u.role || '').toLowerCase();
-        return r === 'college_admin' || r === 'admin' || r === 'hod';
+        return (r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin')) && r !== 'super_admin';
       });
     } else {
       users = users.filter((u) => {

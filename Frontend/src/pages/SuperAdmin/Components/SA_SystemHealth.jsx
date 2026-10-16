@@ -144,16 +144,23 @@ export default function SystemHealth() {
         try {
           const histRes = await apiFetch('/admin/system-health/history');
           if (histRes && histRes.data && Array.isArray(histRes.data.history) && isMountedRef.current) {
-            // Normalize history items for recharts
-            const normalized = histRes.data.history.map(item => ({
-              ...item,
-              timeLabel: item.timeLabel || item.timestamp || '',
-              cpuUsage: item.cpuPercent ?? item.cpuUsage ?? 0,
-              memoryUsage: item.memoryPercent ?? item.memoryUsage ?? 0,
-              avgLatency: item.avgLatencyMs ?? item.avgLatency ?? 0,
-              reqCount: item.requestCount ?? item.reqCount ?? 0,
-              errorRate: item.errorRatePercent ?? item.errorRate ?? 0,
-            }));
+            // Normalize history items for recharts using the client browser's local timezone
+            const normalized = histRes.data.history.map(item => {
+              const d = new Date(item.timestamp || item.isoTime || Date.now());
+              const timeLabel = !isNaN(d.getTime())
+                ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                : (item.timeLabel || '');
+
+              return {
+                ...item,
+                timeLabel,
+                cpuUsage: item.cpuPercent ?? item.cpuUsage ?? 0,
+                memoryUsage: item.memoryPercent ?? item.memoryUsage ?? 0,
+                avgLatency: item.avgLatencyMs ?? item.avgLatency ?? 0,
+                reqCount: item.requestCount ?? item.reqCount ?? 0,
+                errorRate: item.errorRatePercent ?? item.errorRate ?? 0,
+              };
+            });
             setHistoryData(normalized);
           }
         } catch (hErr) {
