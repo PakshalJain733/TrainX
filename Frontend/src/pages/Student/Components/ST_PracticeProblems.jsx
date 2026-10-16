@@ -28,7 +28,7 @@ export default function PracticeProblems() {
           acceptance: "65.0%",
           points: p.points || 100,
           solved: p.solve_status === "Solved",
-          companies: p.tags ? (Array.isArray(p.tags) ? p.tags : p.tags.split(",").map(t => t.trim())) : ["TCS", "Infosys"],
+          companies: p.tags ? (Array.isArray(p.tags) ? p.tags : (typeof p.tags === "string" ? p.tags.split(",").map(t => t.trim()) : [])) : ["TCS", "Infosys"],
           solutionAvailable: true,
           description: p.description || "No problem description provided.",
           dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",

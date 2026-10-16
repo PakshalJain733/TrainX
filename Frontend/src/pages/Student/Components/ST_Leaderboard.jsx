@@ -201,7 +201,7 @@ export default function Leaderboard() {
               currentList.map((st, idx) => {
                 const rawName = st.name || st.username || st.student_name || st.batch_name || "Student";
                 const displayName = activeTab === "batches" ? rawName : formatStudentName(rawName, st.email);
-                const displayInitials = st.initials || displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) || "ST";
+                const displayInitials = st.initials || (typeof displayName === "string" ? displayName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2) : "ST") || "ST";
                 const displayScore = st.score !== undefined ? st.score : (st.overall_score !== undefined ? st.overall_score : (st.xp || 0));
                 const displaySub = activeTab === "batches"
                   ? `${st.students || st.student_count || 0} Enrolled Students`

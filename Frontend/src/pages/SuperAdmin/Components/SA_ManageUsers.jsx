@@ -17,22 +17,25 @@ function MuSelect(props) {
 /* ── Inline StatusBadge Helper ──────────────────────── */
 function StatusBadge({ status }) {
   let modifier = '';
-  if (status === 'Active' || status === 'Verified' || status === 'Available') {
+  const normalized = (status || '').toLowerCase();
+  if (normalized === 'active' || normalized === 'verified' || normalized === 'approved' || normalized === 'available') {
     modifier = 'manageusers-status--active';
-  } else if (status === 'Inactive' || status === 'Disabled') {
+  } else if (normalized === 'inactive' || normalized === 'disabled' || normalized === 'rejected') {
     modifier = 'manageusers-status--inactive';
-  } else if (status === 'High' || status === 'In Progress') {
-    modifier = 'manageusers-status--progress';
-  } else if (status === 'Busy' || status === 'Medium') {
+  } else if (normalized === 'high' || normalized === 'in progress' || normalized === 'pending') {
     modifier = 'manageusers-status--warning';
-  } else if (status === 'Near Completion') {
+  } else if (normalized === 'busy' || normalized === 'medium') {
+    modifier = 'manageusers-status--warning';
+  } else if (normalized === 'near completion') {
     modifier = 'manageusers-status--purple';
   }
+
+  const displayStatus = status === 'Verified' ? 'Approved' : status;
 
   return (
     <span className={`manageusers-status-badge ${modifier}`}>
       <span className="manageusers-status-badge-dot"></span>
-      {status}
+      {displayStatus}
     </span>
   );
 }
@@ -97,7 +100,11 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       .then((res) => {
         const list = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(list) && list.length > 0) {
-          const formatted = list.map((b) => ({
+          const activeOnly = list.filter((b) => {
+            const st = String(b.status || "").toLowerCase().trim();
+            return st === "active";
+          });
+          const formatted = activeOnly.map((b) => ({
             id: b.id || b.batch_id,
             name: b.name || b.batch_name || b.code,
             label: `${b.name || b.batch_name || b.code}`,
@@ -105,15 +112,23 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
             topic: b.topic || "Daily Training Session",
             description: b.description || "Curriculum topic",
             date: b.date || new Date().toISOString().split("T")[0],
-            status: b.status || "Scheduled",
+            status: b.status || "Active",
           }));
           setBatches(formatted);
           if (formatted.length > 0) {
             setSelectedBatchId(formatted[0].id);
+          } else {
+            setSelectedBatchId("");
           }
+        } else {
+          setBatches([]);
+          setSelectedBatchId("");
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        setBatches([]);
+        setSelectedBatchId("");
+      });
   }, [isOpen]);
 
   // Fetch daily topics history whenever selectedBatchId changes
@@ -297,7 +312,11 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   };
 
   const handleStatusQuickChange = async (batchId, newStatus) => {
-    setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: newStatus } : b));
+    setBatches(prev =>
+      prev
+        .map(b => b.id === batchId ? { ...b, status: newStatus } : b)
+        .filter(b => String(b.status || "").toLowerCase().trim() === "active")
+    );
     try {
       await apiFetch(`/batches/${batchId}`, {
         method: "PUT",
@@ -460,7 +479,12 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
             </div>
 
             <div className="fs-portal-batch-grid">
-              {batches.map(item => {
+              {batches.length === 0 ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", color: "#64748b", width: "100%", gridColumn: "1 / -1", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                  No active batches available.
+                </div>
+              ) : (
+                batches.map(item => {
                 const isSelected = item.id === selectedBatchId;
                 const displayTopic = isSelected ? (topicTitle || item.topic) : item.topic;
                 const displayDesc = isSelected ? (topicDesc || item.description) : item.description;
@@ -511,7 +535,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         </div>
@@ -1298,14 +1322,14 @@ export default function ManageUsers() {
           if (dbAdmins.length > 0) {
             setAdminRequests(dbAdmins.map(u => ({
               id: u.id,
-              name: u.name || 'College Admin',
-              adminName: u.name || 'College Admin',
+              name: u.name || 'Admin',
+              adminName: u.name || 'Admin',
               email: u.email,
               phone: u.mobile_number || u.phone || '',
-              college: u.college_name || u.college || 'Partner Institution',
-              designation: 'Institutional Admin',
-              date: u.created_at ? u.created_at.split('T')[0] : '2026-09-20',
-              status: u.is_active ? 'Verified' : 'Pending'
+              college: u.college_name || u.college || 'Direct / Institutional',
+              designation: u.designation || (u.role === 'hod' ? 'Head of Department' : u.role === 'college_admin' ? 'College Admin' : 'Institutional Admin'),
+              date: u.created_at ? (typeof u.created_at === 'string' ? u.created_at.split('T')[0] : new Date(u.created_at).toISOString().split('T')[0]) : new Date().toISOString().split('T')[0],
+              status: u.is_active ? 'Approved' : 'Pending'
             })));
           }
 
@@ -1374,13 +1398,13 @@ export default function ManageUsers() {
     try {
       const res = await apiFetch(`/admin/users/${id}/approve`, { method: "PATCH" });
       if (res && (res.success || !res.error)) {
-        setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+        setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Approved' } : r));
         setPendingUsersList((prev) => prev.filter((u) => u.id !== id));
       } else {
         alert(res?.error || "Failed to verify admin account");
       }
     } catch (err) {
-      setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Verified' } : r));
+      setAdminRequests(adminRequests.map((r) => r.id === id ? { ...r, status: 'Approved' } : r));
     }
   };
 
@@ -1412,6 +1436,26 @@ export default function ManageUsers() {
     } catch (err) {
       console.error('Trigger 2FA error:', err);
       alert(err?.message || 'Failed to trigger two-step verification.');
+    }
+  };
+
+  const handleDeleteAdmin = async (userId, userName) => {
+    if (!window.confirm(`Are you sure you want to permanently delete admin account "${userName}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const res = await apiFetch(`/admin/users/${userId}`, {
+        method: 'DELETE',
+      });
+      if (res && (res.success || !res.error)) {
+        alert(res?.message || `Admin account "${userName}" deleted successfully.`);
+        setAdminRequests((prev) => prev.filter((r) => r.id !== userId));
+      } else {
+        alert(res?.error || res?.message || 'Failed to delete admin account.');
+      }
+    } catch (err) {
+      console.error('Delete admin error:', err);
+      alert(err?.message || 'Failed to delete admin account.');
     }
   };
 
@@ -1840,7 +1884,7 @@ export default function ManageUsers() {
             <table className="manageusers-table">
               <thead>
                 <tr className="manageusers-thead-row">
-                  <th className="manageusers-th">Applicant Name &amp; Contact</th>
+                  <th className="manageusers-th">Admin Name &amp; Contact</th>
                   <th className="manageusers-th">Requested Role</th>
                   <th className="manageusers-th">College / Dept</th>
                   <th className="manageusers-th">Status</th>
@@ -1921,12 +1965,12 @@ export default function ManageUsers() {
                 <table className="manageusers-table">
                   <thead>
                     <tr className="manageusers-thead-row">
-                      <th className="manageusers-th">Applicant Name</th>
+                      <th className="manageusers-th">Admin Details</th>
                       <th className="manageusers-th">Institution / College</th>
                       <th className="manageusers-th">Designation</th>
                       <th className="manageusers-th">Requested On</th>
                       <th className="manageusers-th">Status</th>
-                      <th className="manageusers-th-right">Governance Actions</th>
+                      <th className="manageusers-th-center">Governance Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1955,43 +1999,58 @@ export default function ManageUsers() {
                         <td className="manageusers-td">
                           <StatusBadge status={req.status} />
                         </td>
-                        <td className="manageusers-td-right">
-                          {req.status === 'Pending' ? (
-                            <div className="manageusers-actions-row">
-                              <button
-                                type="button"
-                                onClick={() => handleVerifyAdmin(req.id)}
-                                className="manageusers-btn-verify"
-                              >
-                                <CheckCircle2 size={15} />
-                                <span>Verify Access</span>
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleRejectAdmin(req.id)}
-                                className="manageusers-btn-reject"
-                              >
-                                <XCircle size={15} />
-                                <span>Reject</span>
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="manageusers-actions-row">
-                              <span className="manageusers-badge-approved">
-                                <CheckCircle2 size={14} /> Approved
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => handleTrigger2FA(req.id, req.name)}
-                                className="manageusers-btn-retrigger-2fa"
-                                title="Re-trigger 2-Step Verification setup for this Admin"
-                              >
-                                <ShieldAlert size={13} />
-                                <span>Re-trigger 2FA</span>
-                              </button>
-                            </div>
-                          )}
-                        </td>
+                          <td className="manageusers-td-center">
+                            {req.status === 'Pending' ? (
+                              <div className="manageusers-actions-row">
+                                <button
+                                  type="button"
+                                  onClick={() => handleVerifyAdmin(req.id)}
+                                  className="manageusers-btn-verify"
+                                >
+                                  <CheckCircle2 size={15} />
+                                  <span>Verify Access</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRejectAdmin(req.id)}
+                                  className="manageusers-btn-reject"
+                                >
+                                  <XCircle size={15} />
+                                  <span>Reject</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAdmin(req.id, req.name)}
+                                  className="manageusers-btn-delete-admin"
+                                  title="Delete this Admin account"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="manageusers-actions-row">
+                                <button
+                                  type="button"
+                                  onClick={() => handleTrigger2FA(req.id, req.name)}
+                                  className="manageusers-btn-retrigger-2fa"
+                                  title="Re-trigger 2-Step Verification setup for this Admin"
+                                >
+                                  <ShieldAlert size={13} />
+                                  <span>Re-trigger 2FA</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteAdmin(req.id, req.name)}
+                                  className="manageusers-btn-delete-admin"
+                                  title="Delete this Admin account"
+                                >
+                                  <Trash2 size={13} />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            )}
+                          </td>
                       </tr>
                     ))}
                   </tbody>

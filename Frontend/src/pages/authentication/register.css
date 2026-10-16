@@ -1849,39 +1849,50 @@
 .login-otp-inputs-compact {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
 }
 
+.input-group input.login-otp-digit-input-compact,
 .login-otp-digit-input-compact {
-  flex: 1;
-  min-width: 0;
-  height: 40px;
-  padding: 0;
-  border: 1.5px solid #94a3b8;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 800;
-  font-family: inherit;
-  text-align: center;
-  color: #1e293b;
-  background: #f8fafc;
-  outline: none;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
+  flex: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  font-family: inherit !important;
+  text-align: center !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  background: #ffffff !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+  line-height: 40px !important;
+  caret-color: #2563eb !important;
 }
 
+.input-group input.login-otp-digit-input-compact:focus,
 .login-otp-digit-input-compact:focus {
-  border-color: #2563eb;
-  background: #ffffff;
-  color: #1e40af;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  border-color: #2563eb !important;
+  background: #ffffff !important;
+  color: #1e40af !important;
+  -webkit-text-fill-color: #1e40af !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16) !important;
 }
 
+.input-group input.login-otp-digit-input-compact.filled,
 .login-otp-digit-input-compact.filled {
-  border-color: #2563eb;
-  background: #f0f6ff;
-  color: #1d4ed8;
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  -webkit-text-fill-color: #1d4ed8 !important;
+  font-weight: 800 !important;
 }
 
 /* ── Label with Small Resend Symbol Button ── */
@@ -1975,6 +1986,14 @@
 
 .get-otp-inline-btn:disabled:not(.active) {
   opacity: 0.7;
+}
+
+.get-otp-inline-btn.sent {
+  background: #ecfdf5;
+  color: #059669;
+  border-color: #a7f3d0;
+  cursor: default;
+  opacity: 1 !important;
 }
 
 /* ── Pending Admin Approval Screen ── */

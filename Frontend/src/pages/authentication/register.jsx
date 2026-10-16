@@ -626,6 +626,7 @@ function Register() {
     e.preventDefault();
     setEmailOtp(pasted.split(""));
     emailOtpRefs.current[5]?.focus();
+    handleVerifyEmailOtp(pasted);
   };
 
   const handleSubmit = async (e) => {
@@ -974,14 +975,16 @@ function Register() {
                             value={formData.email}
                             onChange={handleChange}
                           />
-                          <button
-                            type="button"
-                            className={`get-otp-inline-btn ${isEmailValidForOtp() && !emailOtpSent ? "active" : ""}`}
-                            disabled={!isEmailValidForOtp() || loading || resendIn > 0}
-                            onClick={requestEmailOtp}
-                          >
-                            {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
-                          </button>
+                          {!emailOtpSent && (
+                            <button
+                              type="button"
+                              className={`get-otp-inline-btn ${isEmailValidForOtp() ? "active" : ""}`}
+                              disabled={!isEmailValidForOtp() || loading}
+                              onClick={requestEmailOtp}
+                            >
+                              {loading ? "Sending..." : "Get OTP"}
+                            </button>
+                          )}
                         </div>
                         {(() => {
                           if (!formData.email || !formData.email.includes("@")) return null;
@@ -1005,10 +1008,13 @@ function Register() {
                           <div className="label-with-resend-row">
                             <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
                             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              {verifyingEmailOtp && (
+                                <span style={{ fontSize: "11px", color: "#2563eb", fontWeight: 600 }}>Verifying...</span>
+                              )}
                               <button
                                 type="button"
                                 className="reg-resend-symbol-btn"
-                                disabled={resendIn > 0 || loading}
+                                disabled={resendIn > 0 || loading || verifyingEmailOtp}
                                 onClick={requestEmailOtp}
                                 title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
                               >
@@ -1030,19 +1036,12 @@ function Register() {
                                   maxLength={1}
                                   aria-label={`Digit ${i + 1}`}
                                   value={digit}
+                                  disabled={verifyingEmailOtp}
                                   onChange={(e) => handleEmailOtpChange(i, e.target.value)}
                                   onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
                                 />
                               ))}
                             </div>
-                            <button
-                              type="button"
-                              className="verify-email-otp-btn"
-                              disabled={emailOtp.join("").length !== 6 || verifyingEmailOtp}
-                              onClick={() => handleVerifyEmailOtp()}
-                            >
-                              {verifyingEmailOtp ? "Verifying..." : "Verify Code"}
-                            </button>
                           </div>
                         </div>
                       )}

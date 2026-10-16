@@ -508,7 +508,7 @@ export default function AdminLayout() {
                     <div className="admin-header__avatar" aria-label={`User profile ${user.name}`}>
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                      ) : user.name ? (
+                      ) : typeof user?.name === "string" && user.name.trim() ? (
                         user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                       ) : (
                         "AD"
@@ -527,7 +527,7 @@ export default function AdminLayout() {
                           <div className="admin-header__profile-avatar">
                             {user.avatar ? (
                               <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                            ) : user.name ? (
+                            ) : typeof user?.name === "string" && user.name.trim() ? (
                               user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                             ) : (
                               "AD"

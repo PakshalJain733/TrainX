@@ -23,7 +23,7 @@ function getAuthHeaders() {
 }
 
 const getInitials = (name) => {
-  if (!name || name.trim().length === 0) return "?";
+  if (!name || typeof name !== "string" || name.trim().length === 0) return "?";
   const parts = name.trim().split(" ");
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -35,7 +35,11 @@ const getStoredUserName = () => {
   try {
     const u = JSON.parse(sessionStorage.getItem("user") || "{}");
     if (!u) return "Student";
-    return u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+    return (typeof u.name === "string" && u.name) ||
+      (typeof u.fullName === "string" && u.fullName) ||
+      (typeof u.full_name === "string" && u.full_name) ||
+      (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
+      "Student";
   } catch { return "Student"; }
 };
 
@@ -111,7 +115,11 @@ export default function Overview() {
           const u = res.data;
           const student = u.studentProfile || {};
 
-          let resolvedName = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+          let resolvedName = (typeof u.name === "string" && u.name) ||
+            (typeof u.fullName === "string" && u.fullName) ||
+            (typeof u.full_name === "string" && u.full_name) ||
+            (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
+            "Student";
           const dept = student.department || u.department || u.dept || "";
           const sem = student.semester || u.semester || u.sem || u.current_semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";

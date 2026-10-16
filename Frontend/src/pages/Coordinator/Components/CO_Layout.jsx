@@ -349,7 +349,7 @@ export default function CoordinatorLayout() {
   }, [pathname]);
 
   const getInitials = (name) => {
-    if (!name) return "DC";
+    if (!name || typeof name !== "string") return "DC";
     const parts = name.trim().split(" ");
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();

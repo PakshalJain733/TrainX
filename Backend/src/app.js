@@ -26,6 +26,8 @@ import coordinatorRoutes from './routes/coordinator.routes.js';
 import superadminRoutes from './routes/superadmin.routes.js';
 import c2cRoutes from './routes/c2c.routes.js';
 import featureSwitchRoutes from './routes/featureSwitch.routes.js';
+import systemHealthRoutes from './routes/systemHealth.routes.js';
+import { apiMetricsMiddleware } from './services/systemMetrics.service.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
@@ -97,6 +99,7 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(apiMetricsMiddleware);
 
 // Serve uploaded files statically with path resolution fallback
 const uploadPaths = [
@@ -156,14 +159,15 @@ app.get('/uploads/:filename', handleUploadsFile);
 app.get('/api/v1/uploads/:filename', handleUploadsFile);
 app.get('/api/uploads/:filename', handleUploadsFile);
 
-// Health Check Endpoint (Section 28)
-app.get('/api/v1/health', (req, res) => {
-  return sendSuccess(res, 'Training Portal API is running', {
-    status: 'healthy',
-    database: 'connected',
-    timestamp: new Date().toISOString(),
-  });
-});
+// Mount Health & System Monitoring Routes
+app.use('/api/v1/health', systemHealthRoutes);
+app.use('/api/health', systemHealthRoutes);
+app.use('/api/v1/admin/system-health', systemHealthRoutes);
+app.use('/api/admin/system-health', systemHealthRoutes);
+app.use('/api/v1/system/health', systemHealthRoutes);
+app.use('/api/v1/system-health', systemHealthRoutes);
+app.use('/api/v1/system', systemHealthRoutes);
+app.use('/api/system/health', systemHealthRoutes);
 
 // Mount Module Routes under /api/v1 (Section 11)
 app.use('/api/v1/auth', authRoutes);

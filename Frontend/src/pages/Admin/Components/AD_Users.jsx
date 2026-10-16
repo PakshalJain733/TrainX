@@ -33,7 +33,11 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
       .then((res) => {
         const list = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(list) && list.length > 0) {
-          const formatted = list.map((b) => ({
+          const activeOnly = list.filter((b) => {
+            const st = String(b.status || "").toLowerCase().trim();
+            return st === "active";
+          });
+          const formatted = activeOnly.map((b) => ({
             id: b.id || b.batch_id,
             name: b.name || b.batch_name || b.code,
             label: `${b.name || b.batch_name || b.code}`,
@@ -41,17 +45,23 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
             topic: b.topic || "Daily Training Session",
             description: b.description || "Curriculum topic",
             date: b.date || new Date().toISOString().split("T")[0],
-            status: b.status || "Scheduled",
+            status: b.status || "Active",
           }));
           setBatches(formatted);
           if (formatted.length > 0) {
             setSelectedBatchId(formatted[0].id);
+          } else {
+            setSelectedBatchId("");
           }
         } else {
           setBatches([]);
+          setSelectedBatchId("");
         }
       })
-      .catch(() => setBatches([]));
+      .catch(() => {
+        setBatches([]);
+        setSelectedBatchId("");
+      });
   }, [isOpen]);
 
   // Fetch daily topics history whenever selectedBatchId changes
@@ -235,7 +245,11 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
   };
 
   const handleStatusQuickChange = async (batchId, newStatus) => {
-    setBatches(prev => prev.map(b => b.id === batchId ? { ...b, status: newStatus } : b));
+    setBatches(prev =>
+      prev
+        .map(b => b.id === batchId ? { ...b, status: newStatus } : b)
+        .filter(b => String(b.status || "").toLowerCase().trim() === "active")
+    );
     try {
       await apiFetch(`/batches/${batchId}`, {
         method: "PUT",
@@ -397,7 +411,12 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
             </div>
 
             <div className="fs-portal-batch-grid">
-              {batches.map(item => {
+              {batches.length === 0 ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", color: "#64748b", width: "100%", gridColumn: "1 / -1", background: "#f8fafc", borderRadius: "10px", border: "1px dashed #cbd5e1" }}>
+                  No active batches available.
+                </div>
+              ) : (
+                batches.map(item => {
                 const isSelected = item.id === selectedBatchId;
                 const displayTopic = isSelected ? (topicTitle || item.topic) : item.topic;
                 const displayDesc = isSelected ? (topicDesc || item.description) : item.description;
@@ -442,7 +461,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
         </div>

@@ -156,20 +156,26 @@ export default function Overview() {
     const loadUser = async () => {
       try {
         const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
-        const name = stored.name || stored.fullName || stored.email?.split('@')[0] || "Super Admin";
+        const name = (typeof stored.name === 'string' && stored.name) ||
+          (typeof stored.fullName === 'string' && stored.fullName) ||
+          (typeof stored.email === 'string' && stored.email.includes('@') ? stored.email.split('@')[0] : "") ||
+          "Super Admin";
         setUserName(name);
         setUserEmail(stored.email || "");
         setUserRole(stored.role || "Super Admin");
-        setUserInitials(name ? name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
+        setUserInitials(typeof name === 'string' && name.trim() ? name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
 
         const res = await apiFetch('/auth/me');
         if (res && res.data) {
           const u = res.data;
-          const apiName = u.name || u.fullName || u.email?.split('@')[0] || name;
+          const apiName = (typeof u.name === 'string' && u.name) ||
+            (typeof u.fullName === 'string' && u.fullName) ||
+            (typeof u.email === 'string' && u.email.includes('@') ? u.email.split('@')[0] : "") ||
+            name;
           setUserName(apiName);
           setUserEmail(u.email || stored.email || "");
           setUserRole(u.role || stored.role || "Super Admin");
-          setUserInitials(apiName ? apiName.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
+          setUserInitials(typeof apiName === 'string' && apiName.trim() ? apiName.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
         }
       } catch (e) { }
     };

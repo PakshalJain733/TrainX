@@ -106,6 +106,15 @@ function getDynamicSampleTestCases(title = "", existingCases = []) {
   return [];
 }
 
+const STARTER_TEMPLATES = {
+  python: `# Write your Python solution here\nimport sys\n\ndef main():\n    # Read input from standard input\n    # lines = sys.stdin.read().splitlines()\n    pass\n\nif __name__ == '__main__':\n    main()\n`,
+  node: `// Write your JavaScript (Node.js) solution here\nconst fs = require('fs');\n\nfunction main() {\n    // const input = fs.readFileSync(0, 'utf-8').trim();\n}\n\nmain();\n`,
+  cpp: `// Write your C++ solution here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    \n    return 0;\n}\n`,
+  c: `// Write your C solution here\n#include <stdio.h>\n\nint main() {\n    return 0;\n}\n`,
+  java: `// Write your Java solution here\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n`,
+  sql: `-- Write your SQL query here\nSELECT * FROM solution;\n`
+};
+
 export default function CodingPlatform() {
   const { taskId } = useParams();
   const location = useLocation();
@@ -121,7 +130,8 @@ export default function CodingPlatform() {
   const [taskData, setTaskData] = useState(initialTask);
   const [loading, setLoading] = useState(!initialTask);
   const [notFound, setNotFound] = useState(false);
-  const [code, setCode] = useState("");
+  const [selectedLang, setSelectedLang] = useState("java");
+  const [code, setCode] = useState(() => STARTER_TEMPLATES.java || "");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("");
   const [consoleTab, setConsoleTab] = useState("output");
@@ -129,7 +139,6 @@ export default function CodingPlatform() {
   const [useCustomInput, setUseCustomInput] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("python");
   const [activeTab, setActiveTab] = useState("description");
   const [mobileView, setMobileView] = useState("problem");
   const [submissions, setSubmissions] = useState([]);
@@ -161,7 +170,7 @@ export default function CodingPlatform() {
   })();
 
   const getInitials = (name) => {
-    if (!name) return "ST";
+    if (!name || typeof name !== "string") return "ST";
     const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
     return name.slice(0, 2).toUpperCase();
@@ -270,11 +279,23 @@ export default function CodingPlatform() {
     }
   }, [taskId]);
 
-  // Line numbers array
-  const lineCount = code.split('\n').length;
+  // Line numbers array (safely guarded against any non-string values)
+  const safeCode = typeof code === "string" ? code : String(code ?? "");
+  const lineCount = safeCode.split('\n').length;
   const lines = Array.from({ length: Math.max(15, lineCount) }, (_, i) => i + 1);
 
   const currentTaskNum = taskId ? parseInt(taskId.replace(/[^0-9]/g, '')) || 1 : 1;
+
+  const handleLanguageChange = (newLang) => {
+    setSelectedLang(newLang);
+    setCode((prevCode) => {
+      const prev = typeof prevCode === "string" ? prevCode : "";
+      if (!prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim())) {
+        return STARTER_TEMPLATES[newLang] || "";
+      }
+      return prev;
+    });
+  };
   
   const handleRun = async () => {
     if (isRunning || isSubmitting) return;
@@ -283,7 +304,8 @@ export default function CodingPlatform() {
       setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution is currently undergoing maintenance."}`);
       return;
     }
-    if (!code.trim()) {
+    const currentCode = (typeof code === "string" ? code : String(code ?? "")).trim();
+    if (!currentCode) {
       setConsoleOutput("⚠️  Write some code before running.");
       setConsoleStatus("error");
       return;
@@ -302,7 +324,7 @@ export default function CodingPlatform() {
       const res = await fetch(`${API_BASE}/code/run`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ language: selectedLang, code, stdin }),
+        body: JSON.stringify({ language: selectedLang, code: typeof code === "string" ? code : String(code ?? ""), stdin }),
       });
       const data = await res.json();
 
@@ -357,7 +379,8 @@ export default function CodingPlatform() {
       setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution and Submission is currently undergoing maintenance."}`);
       return;
     }
-    if (!code.trim()) {
+    const currentCode = (typeof code === "string" ? code : String(code ?? "")).trim();
+    if (!currentCode) {
       setConsoleOutput("⚠️  Write some code before submitting.");
       setConsoleStatus("error");
       return;
@@ -578,7 +601,7 @@ export default function CodingPlatform() {
                 { value: "c", label: "C (C11)" },
                 { value: "sql", label: "SQL (SQLite3)" },
               ]}
-              onChange={(val) => setSelectedLang(val)}
+              onChange={handleLanguageChange}
             />
             
             <button
@@ -776,14 +799,13 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
-            <div className="cp-editor-area">
-              <div className="cp-line-numbers">
-                {lines.map(num => <div key={num}>{num}</div>)}
-              </div>
-              <textarea
-                className="cp-textarea"
-                value={code}
-                onChange={(val) => setCode(val)}
+            <div className="cp-editor-area cp-editor-area--monaco">
+              <MonacoCodeEditor
+                value={typeof code === "string" ? code : String(code ?? "")}
+                onChange={(val) => {
+                  const strVal = typeof val === "string" ? val : (val?.target?.value ?? "");
+                  setCode(strVal);
+                }}
                 language={selectedLang}
                 height="100%"
                 options={{

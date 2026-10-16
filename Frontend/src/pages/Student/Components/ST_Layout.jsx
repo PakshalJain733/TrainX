@@ -277,8 +277,12 @@ export default function StudentLayout() {
 
   const resolveUser = (rawUser) => {
     const u = rawUser || {};
-    let name = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
-    let email = u.email || "";
+    let name = (typeof u.name === "string" && u.name) ||
+      (typeof u.fullName === "string" && u.fullName) ||
+      (typeof u.full_name === "string" && u.full_name) ||
+      (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
+      "Student";
+    let email = typeof u.email === "string" ? u.email : "";
     return { ...u, name, email };
   };
 
@@ -527,7 +531,7 @@ export default function StudentLayout() {
                         {avatarUrl ? (
                           <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
                         ) : (
-                          user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
+                          typeof user?.name === "string" && user.name.trim() ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
                         )}
                       </div>
                       <div className="student-header__user-info">
@@ -541,7 +545,7 @@ export default function StudentLayout() {
                         <div className="student-header__profile-dropdown">
                           <div className="student-header__profile-top">
                             <div className="student-header__profile-avatar">
-                              {user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
+                              {typeof user?.name === "string" && user.name.trim() ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
                             </div>
                             <div className="student-header__profile-info">
                               <span className="student-header__profile-name">{user.name || "Ganesh Shinde"}</span>

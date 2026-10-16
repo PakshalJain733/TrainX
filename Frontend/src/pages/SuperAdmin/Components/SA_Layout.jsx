@@ -324,9 +324,9 @@ export default function SuperAdminLayout() {
   const loadProfile = () => {
     try {
       const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
-      const name = stored.name || stored.email || "Super Admin";
-      const initials = name
-        ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+      const name = (typeof stored.name === 'string' && stored.name) || (typeof stored.email === 'string' && stored.email) || "Super Admin";
+      const initials = typeof name === 'string' && name.trim()
+        ? name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
         : "SA";
       return {
         name,
@@ -351,13 +351,15 @@ export default function SuperAdminLayout() {
       if (res.ok) {
         const data = await res.json();
         if (data.user) {
-          const name = data.user.name || data.user.email || "Super Admin";
-          const initials = name
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .substring(0, 2)
-            .toUpperCase();
+          const name = (typeof data.user.name === 'string' && data.user.name) || (typeof data.user.email === 'string' && data.user.email) || "Super Admin";
+          const initials = typeof name === 'string' && name.trim()
+            ? name.trim()
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase()
+            : "SA";
           setUserProfile({
             name,
             email: data.user.email || "admin@trainingportal.com",
