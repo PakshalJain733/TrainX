@@ -14,7 +14,7 @@ import CoordinatorPlacement from "./CO_Placement";
 import "../Styles/CO_Assessments.css";
 
 import { assessmentAPI, batchAPI } from "../../../services/api";
-import { EVENTS, addSharedQuiz, getSharedQuizzes } from "../../../utils/sharedStore";
+import { EVENTS, getSharedQuizzes } from "../../../utils/sharedStore";
 
 export default function CoordinatorAssessments() {
   const location = useLocation();
@@ -58,17 +58,22 @@ export default function CoordinatorAssessments() {
       const data = await assessmentAPI.getAssessments();
       const shared = await getSharedQuizzes([]);
       const dbAssessments = Array.isArray(data) ? data : [];
-      const combined = [...dbAssessments, ...shared.map(s => ({
-        id: s.id,
-        title: s.title,
-        batch: s.batch_name || s.data?.batch || "All Batches",
-        type: s.data?.subject || "MCQ Quiz",
-        dueDate: "2026-09-30",
-        submissions: "0 / 120",
-        avgScore: "--",
-        passRate: "--",
-        status: s.status || "Active",
-      }))];
+      const existingIds = new Set(dbAssessments.map(a => String(a.id)));
+      const existingTitles = new Set(dbAssessments.map(a => (a.title || "").trim().toLowerCase()));
+      const sharedMapped = shared
+        .filter(s => !existingIds.has(String(s.id)) && !existingTitles.has((s.title || "").trim().toLowerCase()))
+        .map(s => ({
+          id: s.id,
+          title: s.title,
+          batch: s.batch_name || s.data?.batch || "All Batches",
+          type: s.data?.subject || "MCQ Quiz",
+          dueDate: "2026-09-30",
+          submissions: "0 / 120",
+          avgScore: "--",
+          passRate: "--",
+          status: s.status || "Active",
+        }));
+      const combined = [...dbAssessments, ...sharedMapped];
       if (combined.length > 0) {
         setAssessments(combined);
       }
@@ -122,12 +127,6 @@ export default function CoordinatorAssessments() {
     };
 
     try {
-      await addSharedQuiz({
-        title: title.trim(),
-        batch: batch,
-        category: type,
-        description: `Quiz for ${batch}`,
-      });
       await assessmentAPI.createAssessment({
         title: title.trim(),
         batch_id: selectedBatchObj ? selectedBatchObj.id : null,

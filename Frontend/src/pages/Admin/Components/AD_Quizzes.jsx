@@ -4,7 +4,7 @@ import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, 
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
-import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
+import { getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/AD_Quizzes.css";
 
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -246,9 +246,10 @@ export default function AdminQuizzes() {
         list = data.data.map(mapAssessment);
       }
       const shared = await getSharedQuizzes([]);
-      const existingIds = new Set(list.map(q => q.id));
+      const existingIds = new Set(list.map(q => String(q.id)));
+      const existingTitles = new Set(list.map(q => (q.title || "").trim().toLowerCase()));
       const sharedItems = shared
-        .filter(s => !existingIds.has(s.id))
+        .filter(s => !existingIds.has(String(s.id)) && !existingTitles.has((s.title || "").trim().toLowerCase()))
         .map(s => ({
           id: s.id,
           title: s.title,
@@ -265,7 +266,14 @@ export default function AdminQuizzes() {
       console.error("Failed to load quizzes:", err);
       const shared = await getSharedQuizzes([]);
       if (shared.length > 0) {
-        setQuizzes(shared.map(s => ({
+        const seenTitles = new Set();
+        const uniqueShared = shared.filter(s => {
+          const t = (s.title || "").trim().toLowerCase();
+          if (seenTitles.has(t)) return false;
+          seenTitles.add(t);
+          return true;
+        });
+        setQuizzes(uniqueShared.map(s => ({
           id: s.id,
           title: s.title,
           batch: s.batch_name || s.data?.batch || "All Batches",
@@ -301,17 +309,7 @@ export default function AdminQuizzes() {
     const selectedBatchObj = availableBatches.find(b => b.name === batch);
     const batchId = selectedBatchObj ? selectedBatchObj.id : null;
 
-    // Broadcast to DB-backed shared store across all dashboards
-    await addSharedQuiz({
-      title: title.trim(),
-      batch: batch,
-      questionsCount: questionsList.length,
-      questions: questionsList,
-      duration_minutes: parseInt(timeLimit, 10) || 15,
-      description: `${quizType} quiz for ${batch}`,
-    });
-
-    // 1. Create the assessment
+    // 1. Create the assessment in database
     const assessRes = await fetch(`${API_BASE}/assessments`, {
       method: "POST",
       headers: getAuthHeaders(),

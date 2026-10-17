@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, Users, Trophy, BarChart2, FileCheck2, ChevronLeft, Zap, ChevronDown, Check, UploadCloud, FileSpreadsheet, FileText, Copy, Download, FileCheck } from "lucide-react";
 import * as XLSX from "xlsx";
-import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
+import { getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/MN_Quizzes.css";
 
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -351,9 +351,10 @@ export default function MentorQuizzes() {
       let list = [];
       if (d.success && Array.isArray(d.data)) list = d.data.map(mapAssessment);
       const shared = await getSharedQuizzes([]);
-      const existingIds = new Set(list.map(q => q.id));
+      const existingIds = new Set(list.map(q => String(q.id)));
+      const existingTitles = new Set(list.map(q => (q.title || "").trim().toLowerCase()));
       const sharedItems = shared
-        .filter(s => !existingIds.has(s.id))
+        .filter(s => !existingIds.has(String(s.id)) && !existingTitles.has((s.title || "").trim().toLowerCase()))
         .map(s => ({
           id: s.id,
           title: s.title,
@@ -370,7 +371,14 @@ export default function MentorQuizzes() {
     } catch {
       const shared = await getSharedQuizzes([]);
       if (shared.length > 0) {
-        setQuizzes(shared.map(s => ({
+        const seenTitles = new Set();
+        const uniqueShared = shared.filter(s => {
+          const t = (s.title || "").trim().toLowerCase();
+          if (seenTitles.has(t)) return false;
+          seenTitles.add(t);
+          return true;
+        });
+        setQuizzes(uniqueShared.map(s => ({
           id: s.id,
           title: s.title,
           batch: s.batch_name || s.data?.batch || "All Batches",
@@ -404,16 +412,6 @@ export default function MentorQuizzes() {
     const qCount = questionsList.length;
     const marks = parseInt(totalMarks) || qCount * 10;
     const pass = parseInt(passMarks) || Math.round(marks * 0.6);
-
-    await addSharedQuiz({
-      title: title.trim(),
-      batch: batch,
-      questionsCount: qCount,
-      questions: questionsList,
-      description: `${quizType} quiz for ${batch}`,
-      duration: `${durationMins} mins`,
-      totalMarks: marks
-    });
 
     const res = await fetch(`${API_BASE}/assessments`, {
       method: "POST", headers: getAuthHeaders(),

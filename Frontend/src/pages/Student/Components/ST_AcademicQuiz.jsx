@@ -93,8 +93,9 @@ async function fetchApiQuizzes() {
 
     const shared = await getSharedQuizzes([]);
     const existingIds = new Set(dbList.map(q => String(q.id)));
+    const existingTitles = new Set(dbList.map(q => (q.title || "").trim().toLowerCase()));
     const sharedMapped = shared
-      .filter(s => !existingIds.has(String(s.id)))
+      .filter(s => !existingIds.has(String(s.id)) && !existingTitles.has((s.title || "").trim().toLowerCase()))
       .map(s => ({
         id: s.id,
         title: s.title,
@@ -116,7 +117,14 @@ async function fetchApiQuizzes() {
   } catch (err) {
     console.error("Failed to load API quizzes:", err);
     const shared = await getSharedQuizzes([]);
-    return shared.map(s => ({
+    const seenTitles = new Set();
+    const uniqueShared = shared.filter(s => {
+      const t = (s.title || "").trim().toLowerCase();
+      if (seenTitles.has(t)) return false;
+      seenTitles.add(t);
+      return true;
+    });
+    return uniqueShared.map(s => ({
       id: s.id,
       title: s.title,
       subject: s.data?.subject || s.subject || "Custom Quiz",
