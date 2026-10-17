@@ -318,10 +318,11 @@ function Login() {
     );
 
     if (isUpdatedOnServer || isUpdatedInStorage) {
-      if (userKey) sessionStorage.setItem(`profile_updated_${userKey}`, "true");
+      if (userKey) {
+        sessionStorage.setItem(`profile_updated_${userKey}`, "true");
+        localStorage.setItem(`profile_updated_${userKey}`, "true");
+      }
       sessionStorage.removeItem("showFirstLoginAlert");
-    } else {
-      sessionStorage.setItem("showFirstLoginAlert", "true");
     }
 
     navigate(dashboardPathForRole(mergedUser.role));

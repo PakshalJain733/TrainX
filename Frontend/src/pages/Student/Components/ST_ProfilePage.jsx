@@ -460,6 +460,7 @@ export default function ProfilePage() {
         const userKey = u.id || u.email || res.data.id || res.data.email;
         if (userKey) {
           sessionStorage.setItem(`profile_updated_${userKey}`, "true");
+          localStorage.setItem(`profile_updated_${userKey}`, "true");
         }
         sessionStorage.removeItem("showFirstLoginAlert");
         sessionStorage.removeItem("st_first_login_dismissed");
