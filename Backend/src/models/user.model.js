@@ -194,11 +194,15 @@ const getValidCollegeId = async (collegeId) => {
       }
 
       if (depts && depts.length > 0) {
-        return depts.map((d) => ({
-          value: d.name,
-          label: d.code && d.code.toLowerCase() !== d.name.toLowerCase() ? `${d.name} (${d.code})` : d.name,
-          code: d.code || d.name,
-        }));
+        return depts.map((d) => {
+          const shortCode = (d.code && d.code.trim()) || (d.name && d.name.trim());
+          return {
+            value: shortCode,
+            label: shortCode,
+            code: shortCode,
+            fullName: d.name,
+          };
+        });
       }
 
       return [
