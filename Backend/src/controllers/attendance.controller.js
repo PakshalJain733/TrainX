@@ -494,7 +494,15 @@ export const getLeaveRequests = async (req, res, next) => {
  */
 export const createLeaveRequest = async (req, res, next) => {
   try {
-    const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+    let collegeId = req.user?.college_id || req.user?.collegeId || null;
+    if (collegeId) {
+      try {
+        const colExists = await query('SELECT id FROM colleges WHERE id = ? LIMIT 1', [collegeId]);
+        if (!colExists || colExists.length === 0) collegeId = null;
+      } catch (_) {
+        collegeId = null;
+      }
+    }
     const userId = req.user?.id || req.user?.userId || 1;
     const {
       studentName,

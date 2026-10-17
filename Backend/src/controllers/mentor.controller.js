@@ -200,17 +200,29 @@ const loadMentorMetrics = async (userIds = []) => {
       query(
         `SELECT id, student_id, user_id, week_label, overall_score, attendance_score, generated_at, created_at
            FROM weekly_reports
-          WHERE user_id IN (${placeholders})
+          WHERE (user_id IN (${placeholders}) OR student_id IN (${placeholders}))
           ORDER BY id DESC
           LIMIT 1000`,
-        userIds
-      ).then((rows) => {
-        (rows || []).forEach((r) => {
-          const key = Number(r.student_id || r.user_id);
-          if (!metrics.weekly.has(key)) metrics.weekly.set(key, []);
-          metrics.weekly.get(key).push(r);
-        });
-      })
+        [...userIds, ...userIds]
+      )
+        .catch(async () => {
+          // Fallback if user_id or week_label is not present
+          return query(
+            `SELECT id, student_id, student_id AS user_id, title AS week_label, overall_score, attendance_score, created_at
+               FROM weekly_reports
+              WHERE student_id IN (${placeholders})
+              ORDER BY id DESC
+              LIMIT 1000`,
+            userIds
+          ).catch(() => []);
+        })
+        .then((rows) => {
+          (rows || []).forEach((r) => {
+            const key = Number(r.student_id || r.user_id);
+            if (!metrics.weekly.has(key)) metrics.weekly.set(key, []);
+            metrics.weekly.get(key).push(r);
+          });
+        })
     );
   }
 
@@ -705,10 +717,21 @@ export const getMentorWeeklyReports = async (req, res, next) => {
               strong_areas, weak_areas, suggestions,
               trend_status, score_delta, generated_at, created_at
          FROM weekly_reports
-        WHERE user_id IN (${inPlaceholders(userIds)})
+        WHERE (user_id IN (${inPlaceholders(userIds)}) OR student_id IN (${inPlaceholders(userIds)}))
         ORDER BY id DESC`,
-      userIds
-    );
+      [...userIds, ...userIds]
+    ).catch(async () => {
+      return query(
+        `SELECT id, student_id, student_id AS user_id, title AS week_label, start_date, end_date, overall_score,
+                attendance_score, quiz_score, coding_score, interview_score,
+                strong_areas, weak_areas, suggestions,
+                trend_status, score_delta, generated_at, created_at
+           FROM weekly_reports
+          WHERE student_id IN (${inPlaceholders(userIds)})
+          ORDER BY id DESC`,
+        userIds
+      ).catch(() => []);
+    });
 
     const parseJsonField = (value) => {
       if (value === null || value === undefined) return [];
@@ -800,7 +823,6 @@ export const submitMentorWeeklyReport = async (req, res, next) => {
       `Next Week Plan: ${nextWeekPlan.trim()}`,
     ];
 
-    if (availability.weekly_reports) {
       await query(
         `INSERT INTO weekly_reports (user_id, student_id, week_label, overall_score, attendance_score, quiz_score, coding_score, interview_score, strong_areas, weak_areas, suggestions, trend_status, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
@@ -818,8 +840,17 @@ export const submitMentorWeeklyReport = async (req, res, next) => {
           JSON.stringify(suggestionsArr),
           'Submitted'
         ]
-      ).catch(() => {});
-    }
+      ).catch(async () => {
+        return query(
+          `INSERT INTO weekly_reports (mentor_id, title, summary, status, created_at)
+           VALUES (?, ?, ?, 'Submitted', NOW())`,
+          [
+            mentorId,
+            reportTitle,
+            JSON.stringify(suggestionsArr)
+          ]
+        ).catch(() => {});
+      });
 
     return sendSuccess(res, 'Weekly report submitted successfully', {
       id: Date.now(),

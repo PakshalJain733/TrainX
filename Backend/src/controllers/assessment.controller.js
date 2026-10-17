@@ -540,15 +540,29 @@ export const submitAssessment = async (req, res, next) => {
 
     try {
       if (attemptId && attemptId !== 'attempts') {
-        await query(
-          `UPDATE assessment_attempts SET marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
-          [marksObtained, totalMarks, percentage, correctCount, status, attemptId]
-        );
+        try {
+          await query(
+            `UPDATE assessment_attempts SET marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
+            [marksObtained, totalMarks, percentage, correctCount, status, attemptId]
+          );
+        } catch (_) {
+          await query(
+            `UPDATE assessment_attempts SET score = ?, percentage = ?, correct_answers = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
+            [marksObtained, percentage, correctCount, status, attemptId]
+          );
+        }
       } else if (targetAssessmentId) {
-        await query(
-          `INSERT INTO assessment_attempts (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount, status]
-        );
+        try {
+          await query(
+            `INSERT INTO assessment_attempts (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount, status]
+          );
+        } catch (_) {
+          await query(
+            `INSERT INTO assessment_attempts (assessment_id, user_id, score, percentage, correct_answers, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+            [targetAssessmentId, userId, marksObtained, percentage, correctCount, status]
+          );
+        }
       }
     } catch (e) {
       console.warn('[DB submitAssessment update fallback]', e.message);

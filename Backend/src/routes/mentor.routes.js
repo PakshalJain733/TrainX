@@ -38,6 +38,7 @@ router.get('/overview', mentorOnly, getMentorOverview);
 router.get('/batches', mentorOnly, getMentorBatches);
 router.get('/leaderboard', mentorOnly, getMentorLeaderboard);
 router.get('/defaulters', mentorOnly, getMentorDefaulters);
+router.get('/students', mentorOnly, getMentorStudentsPerformance);
 router.get('/students/performance', mentorOnly, getMentorStudentsPerformance);
 router.get('/weekly-reports', mentorOnly, getMentorWeeklyReports);
 router.post('/weekly-reports', mentorOnly, submitMentorWeeklyReport);

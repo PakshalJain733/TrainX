@@ -88,14 +88,38 @@ async function main() {
   await testEndpoint('Mentor Batches', `${BASE_URL}/mentor/batches`, { headers: mAuth }, 200);
   await testEndpoint('Mentor Students', `${BASE_URL}/mentor/students`, { headers: mAuth }, 200);
   await testEndpoint('Mentor Study Materials', `${BASE_URL}/mentor/materials`, { headers: mAuth }, 200);
+  await testEndpoint('Mentor Weekly Reports GET', `${BASE_URL}/mentor/weekly-reports`, { headers: mAuth }, 200);
+  await testEndpoint('Mentor Weekly Report POST', `${BASE_URL}/mentor/weekly-reports`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...mAuth },
+    body: JSON.stringify({
+      batchName: 'Computer Engineering - Batch A',
+      weekTitle: 'Week 4 - Comprehensive Review',
+      topicsCovered: 'Data Structures and Algorithms with Graph Theory',
+      attendanceNotes: 'Full attendance recorded with 92% active participation',
+      defaulterNotes: 'No critical defaulters flagged during this review week',
+      keyAchievements: 'Milestone 2 completed successfully by all teams',
+      nextWeekPlan: 'Start System Architecture & Performance Profiling'
+    })
+  }, 200);
 
   console.log('\n--- 5. STUDENT OPERATIONS ---');
   await testEndpoint('Student Profile /me', `${BASE_URL}/students/me`, { headers: sAuth }, [200, 404]);
   await testEndpoint('Student Practice Problems', `${BASE_URL}/practice-problems`, { headers: sAuth }, 200);
+  await testEndpoint('Student Practice Problems (via /student)', `${BASE_URL}/student/practice-problems`, { headers: sAuth }, 200);
   await testEndpoint('Student Available Assessments', `${BASE_URL}/assessments/available`, { headers: sAuth }, 200);
   await testEndpoint('Student Attendance Summary', `${BASE_URL}/attendance/summary`, { headers: sAuth }, 200);
   await testEndpoint('Student Attendance Scans', `${BASE_URL}/attendance/scans`, { headers: sAuth }, 200);
   await testEndpoint('Student Shared Content', `${BASE_URL}/shared-content`, { headers: sAuth }, 200);
+  await testEndpoint('Student Leave Application', `${BASE_URL}/attendance/leave-requests`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...sAuth },
+    body: JSON.stringify({
+      category: 'Medical Leave Application',
+      reason: 'Automated E2E test verification',
+      days: 1
+    })
+  }, 201);
 
   console.log('\n--- 6. SECURITY & AUTHORIZATION GUARDS ---');
   await testEndpoint('Student denied Super Admin Users', `${BASE_URL}/admin/users`, { headers: sAuth }, 403);
