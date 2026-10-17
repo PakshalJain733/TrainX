@@ -459,8 +459,19 @@ export const submitAssessment = async (req, res, next) => {
     const { answers = [] } = req.body;
 
     let targetAssessmentId = assessmentId;
-    if (targetAssessmentId === 'attempts' && attemptId) {
+    if ((!targetAssessmentId || targetAssessmentId === 'attempts') && attemptId) {
       targetAssessmentId = req.body.assessment_id || req.query.assessment_id || null;
+      if (!targetAssessmentId) {
+        try {
+          const attemptRows = await query(
+            `SELECT assessment_id FROM assessment_attempts WHERE id = ? LIMIT 1`,
+            [attemptId]
+          );
+          if (attemptRows && attemptRows.length > 0 && attemptRows[0].assessment_id) {
+            targetAssessmentId = attemptRows[0].assessment_id;
+          }
+        } catch (_) {}
+      }
     }
 
     // 1. Fetch questions for this assessment
@@ -602,17 +613,27 @@ export const startAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId || req.user?.id || 1;
+    let attemptId = Date.now();
 
     try {
-      await query(
+      const insertResult = await query(
         `INSERT INTO assessment_attempts (assessment_id, user_id, status, started_at) VALUES (?, ?, 'in_progress', NOW())`,
         [id, userId]
       );
+      if (insertResult && insertResult.insertId) {
+        attemptId = insertResult.insertId;
+      }
     } catch (e) {
       console.warn('[DB startAssessment fallback]', e.message);
     }
 
-    return sendSuccess(res, 'Assessment started successfully', { assessment_id: id, status: 'in_progress' });
+    return sendSuccess(res, 'Assessment started successfully', {
+      assessment_id: id,
+      status: 'in_progress',
+      attemptId,
+      attempt_id: attemptId,
+      attempt: { id: attemptId, assessment_id: id, status: 'in_progress' }
+    });
   } catch (error) {
     next(error);
   }

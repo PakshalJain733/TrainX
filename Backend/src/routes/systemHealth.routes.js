@@ -18,11 +18,24 @@ router.get('/live', getLivenessProbe);
 // Readiness probe: confirms the application can serve requests, including DB connectivity
 router.get('/ready', getReadinessProbe);
 
-// ── Protected Administrative System Health Endpoints ──
-// Strictly secured with existing authentication and Super Admin role authorization middleware.
-// Students, Mentors, and Coordinators are prevented from accessing detailed system metrics.
-router.get('/', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN), getDetailedSystemHealth);
-router.get('/health', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN), getDetailedSystemHealth);
+// Root health endpoint: If called by authenticated Super Admin, provides detailed system metrics.
+// If unauthenticated or standard monitoring probe (Render, uptime check), returns readiness probe.
+const handleRootHealth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    return authenticateToken(req, res, () => {
+      if (req.user && req.user.role === ROLES.SUPER_ADMIN) {
+        return getDetailedSystemHealth(req, res, next);
+      }
+      return getReadinessProbe(req, res, next);
+    });
+  }
+  return getReadinessProbe(req, res, next);
+};
+
+router.get('/', handleRootHealth);
+router.get('/health', handleRootHealth);
+router.get('/detailed', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN), getDetailedSystemHealth);
 router.get('/history', authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN), getSystemHealthHistory);
 
 export default router;

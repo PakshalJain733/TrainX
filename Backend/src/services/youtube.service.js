@@ -108,6 +108,8 @@ export const searchYouTubeVideos = async (query, maxResults = 3) => {
     }
   }
 
-  // Return empty list if no genuine YouTube video could be fetched
-  return [];
+  // Return curated educational video tutorial as fallback
+  const fallback = resolveFallbackVideo(query);
+  return fallback ? [fallback] : [];
 };
+

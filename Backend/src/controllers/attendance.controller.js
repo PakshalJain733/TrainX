@@ -450,10 +450,18 @@ export const getLeaveRequests = async (req, res, next) => {
     let leaves = [];
     try {
       leaves = await query(
-        `SELECT l.*, u.name as student_name, u.email, s.roll_number, s.department
+        `SELECT l.*, 
+                COALESCE(u.name, 'Student') as student_name, 
+                COALESCE(u.name, 'Student') as studentName, 
+                u.email, 
+                COALESCE(s.roll_number, 'N/A') as roll_number, 
+                COALESCE(s.roll_number, 'N/A') as rollNo, 
+                s.department,
+                COALESCE(b.name, 'All Batches') as batch
          FROM leave_requests l
          LEFT JOIN users u ON l.user_id = u.id
          LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN batches b ON s.batch_id = b.id
          WHERE l.college_id = ? OR l.college_id IS NULL
          ORDER BY l.id DESC`,
         [collegeId]
@@ -461,7 +469,73 @@ export const getLeaveRequests = async (req, res, next) => {
     } catch (e) {
       console.warn('[DB getLeaveRequests fallback]', e.message);
     }
-    return sendSuccess(res, 'Leave requests retrieved successfully', leaves || []);
+
+    const formatted = (leaves || []).map((r) => ({
+      ...r,
+      studentName: r.studentName || r.student_name || 'Student',
+      rollNo: r.rollNo || r.roll_number || 'N/A',
+      batch: r.batch || 'All Batches',
+      requestType: r.category || r.title || 'General Leave',
+      category: r.category || r.title || 'General Leave',
+      reason: r.reason || r.remarks || '',
+      date: r.start_date ? new Date(r.start_date).toISOString().split('T')[0] : (r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+      status: r.status || 'Pending',
+    }));
+
+    return sendSuccess(res, 'Leave requests retrieved successfully', formatted);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/attendance/leave-requests
+ * Create a new leave / absence request
+ */
+export const createLeaveRequest = async (req, res, next) => {
+  try {
+    const collegeId = req.user?.college_id || req.user?.collegeId || 1;
+    const userId = req.user?.id || req.user?.userId || 1;
+    const {
+      studentName,
+      title,
+      category = 'Medical Leave Application',
+      reason = '',
+      date,
+      startDate,
+      endDate,
+      days = 1,
+    } = req.body || {};
+
+    const reqTitle = title || category || 'Leave Application';
+    const reqStartDate = startDate || date || new Date().toISOString().split('T')[0];
+    const reqEndDate = endDate || reqStartDate;
+
+    let insertId = Date.now();
+    try {
+      const insertResult = await query(
+        `INSERT INTO leave_requests (user_id, college_id, title, category, status, days, start_date, end_date, reason)
+         VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)`,
+        [userId, collegeId, reqTitle, category, days, reqStartDate, reqEndDate, reason]
+      );
+      if (insertResult && insertResult.insertId) {
+        insertId = insertResult.insertId;
+      }
+    } catch (e) {
+      console.warn('[DB createLeaveRequest fallback]', e.message);
+    }
+
+    const created = {
+      id: insertId,
+      studentName: studentName || req.user?.name || 'Student',
+      category,
+      requestType: category,
+      reason,
+      date: reqStartDate,
+      status: 'Pending',
+    };
+
+    return sendSuccess(res, 'Leave request created successfully', created, 201);
   } catch (error) {
     next(error);
   }
@@ -488,3 +562,22 @@ export const updateLeaveRequestStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * DELETE /api/v1/attendance/leave-requests/:id
+ * Remove leave request from database
+ */
+export const deleteLeaveRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    try {
+      await query(`DELETE FROM leave_requests WHERE id = ?`, [id]);
+    } catch (e) {
+      console.warn('[DB deleteLeaveRequest fallback]', e.message);
+    }
+    return sendSuccess(res, 'Leave request removed successfully', { id });
+  } catch (error) {
+    next(error);
+  }
+};
+

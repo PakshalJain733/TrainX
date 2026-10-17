@@ -32,8 +32,7 @@ const router = Router();
 router.use(authenticateToken);
 
 // Mentor-scoped data: students, batches and analytics are always resolved from
-// `mentor_student_assignments` for the authenticated mentor.
-const mentorOnly = authorizeRoles(ROLES.MENTOR);
+const mentorOnly = authorizeRoles(ROLES.MENTOR, ROLES.SUPER_ADMIN);
 
 router.get('/overview', mentorOnly, getMentorOverview);
 router.get('/batches', mentorOnly, getMentorBatches);

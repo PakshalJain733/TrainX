@@ -67,7 +67,7 @@ export const createDepartment = async (req, res, next) => {
     if (!name || !code) {
       return sendError(res, 'Department Name and Code are required', 400);
     }
-    const cId = collegeId || college_id || 1;
+    const cId = collegeId || college_id || req.user?.college_id || req.user?.collegeId || 1;
     const hName = hodName || hod_name || 'Dr. Department HOD';
     const hEmail = hodEmail || hod_email || `hod.${code.toLowerCase()}@college.edu.in`;
 
