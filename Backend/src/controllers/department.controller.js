@@ -29,21 +29,28 @@ export const getDepartments = async (req, res, next) => {
     const { collegeId, college_id } = req.query;
     const cid = collegeId || college_id;
 
-    let sql = 'SELECT * FROM departments WHERE 1=1';
+    let sql = `
+      SELECT d.*, c.name AS college_name, c.code AS college_code
+      FROM departments d
+      LEFT JOIN colleges c ON d.college_id = c.id
+      WHERE 1=1
+    `;
     const params = [];
 
     if (cid && cid !== 'all') {
-      sql += ' AND (college_id = ? OR college_id IS NULL)';
+      sql += ' AND (d.college_id = ? OR d.college_id IS NULL)';
       params.push(cid);
     }
 
-    sql += ' ORDER BY id DESC';
+    sql += ' ORDER BY d.id DESC';
 
     const dbDepts = await query(sql, params);
     const formatted = (dbDepts || []).map((d) => ({
       ...d,
       collegeId: d.collegeId || d.college_id || 1,
       college_id: d.college_id || d.collegeId || 1,
+      collegeName: d.college_name || d.collegeName || '',
+      college_name: d.college_name || d.collegeName || '',
       hodName: d.hodName || d.hod_name || '',
       hodEmail: d.hodEmail || d.hod_email || '',
     }));
@@ -60,7 +67,7 @@ export const createDepartment = async (req, res, next) => {
     if (!name || !code) {
       return sendError(res, 'Department Name and Code are required', 400);
     }
-    const cId = collegeId || college_id || 1;
+    const cId = collegeId || college_id || req.user?.college_id || req.user?.collegeId || 1;
     const hName = hodName || hod_name || 'Dr. Department HOD';
     const hEmail = hodEmail || hod_email || `hod.${code.toLowerCase()}@college.edu.in`;
 

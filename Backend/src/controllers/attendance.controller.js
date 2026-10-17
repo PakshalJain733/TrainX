@@ -1,6 +1,10 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
-import { findOrCreateAttendanceSession } from '../models/attendance.model.js';
+import {
+  findOrCreateAttendanceSession,
+  logAttendanceScan,
+  getStudentAttendanceScans,
+} from '../models/attendance.model.js';
 import {
   getStudentAttendanceSummaryService,
   getStudentAttendanceHistoryService,
@@ -158,81 +162,206 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     let collegeId = req.user?.college_id || req.user?.collegeId || null;
     const { code, batch_id } = req.body || {};
 
-    // Validate collegeId against colleges table
+    // Validate collegeId against colleges table to prevent MySQL foreign key failure
+    let validCollegeId = null;
     if (collegeId) {
       try {
         const cCheck = await query(`SELECT id FROM colleges WHERE id = ?`, [collegeId]);
-        if (!cCheck || cCheck.length === 0) {
-          const firstCol = await query(`SELECT id FROM colleges LIMIT 1`);
-          collegeId = firstCol[0]?.id || null;
-        }
-      } catch (e) {
-        collegeId = null;
-      }
-    } else {
+        if (cCheck && cCheck.length > 0) validCollegeId = cCheck[0].id;
+      } catch (e) {}
+    }
+    if (!validCollegeId) {
       try {
-        const firstCol = await query(`SELECT id FROM colleges LIMIT 1`);
-        collegeId = firstCol[0]?.id || null;
-      } catch (e) {
-        collegeId = null;
-      }
+        const firstCol = await query(`SELECT id FROM colleges ORDER BY id ASC LIMIT 1`);
+        if (firstCol && firstCol.length > 0) validCollegeId = firstCol[0].id;
+      } catch (e) {}
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
 
-    // Find batch by code/name if provided
+    // Check if payload is a batch roster save ({ batch_id, date, attendance })
+    if (req.body && req.body.attendance && typeof req.body.attendance === 'object' && Object.keys(req.body.attendance).length > 0) {
+      const attendanceMap = req.body.attendance;
+      const targetDate = req.body.date || todayStr;
+      const tBatchId = batch_id || 1;
+
+      // Find or create session for this batch & date
+      const sessionObj = await findOrCreateAttendanceSession({
+        collegeId: validCollegeId,
+        batchId: tBatchId,
+        sessionCode: `BATCH-${tBatchId}`,
+        title: `Batch Session (${targetDate})`,
+        sessionDate: targetDate,
+      });
+
+      const markedResults = [];
+      for (const [stKey, isPresent] of Object.entries(attendanceMap)) {
+        let targetUserId = null;
+        const cleanKey = String(stKey).trim();
+
+        // 1. Check if cleanKey is numeric user ID
+        const numKey = parseInt(cleanKey, 10);
+        if (!isNaN(numKey)) {
+          const uCheck = await query(`SELECT id FROM users WHERE id = ?`, [numKey]);
+          if (uCheck && uCheck.length > 0) {
+            targetUserId = uCheck[0].id;
+          } else {
+            const sCheck = await query(`SELECT user_id FROM students WHERE id = ?`, [numKey]);
+            if (sCheck && sCheck.length > 0) targetUserId = sCheck[0].user_id;
+          }
+        }
+
+        // 2. Check by student roll_number or student ID string
+        if (!targetUserId) {
+          const sCheck = await query(
+            `SELECT user_id FROM students WHERE LOWER(roll_number) = LOWER(?) OR CAST(id AS CHAR) = ? OR CAST(user_id AS CHAR) = ?`,
+            [cleanKey, cleanKey, cleanKey]
+          );
+          if (sCheck && sCheck.length > 0) targetUserId = sCheck[0].user_id;
+        }
+
+        // 3. Check by user name string
+        if (!targetUserId) {
+          const uCheck = await query(`SELECT id FROM users WHERE LOWER(name) = LOWER(?)`, [cleanKey]);
+          if (uCheck && uCheck.length > 0) targetUserId = uCheck[0].id;
+        }
+
+        if (targetUserId) {
+          const statusVal = isPresent ? 'present' : 'absent';
+          await query(
+            `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
+             VALUES (?, ?, ?, ?, ?, ?, 'Batch Roster Save')
+             ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = VALUES(status), updated_at = CURRENT_TIMESTAMP`,
+            [validCollegeId, tBatchId, targetUserId, sessionObj?.id || null, targetDate, statusVal]
+          );
+          await getStudentAttendanceSummaryService(targetUserId);
+          markedResults.push({ userId: targetUserId, status: statusVal });
+        }
+      }
+
+      return sendSuccess(res, `Batch attendance saved successfully for ${markedResults.length} students!`, {
+        markedCount: markedResults.length,
+        session_date: targetDate,
+        records: markedResults
+      });
+    }
+
+    // Extract raw code string
+    let rawCode = code ? String(code).trim() : '';
+
+    // Handle JSON payload string if scanned as JSON object
+    if (rawCode.startsWith('{') && rawCode.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(rawCode);
+        rawCode = parsed.code || parsed.batch_code || parsed.join_code || parsed.sessionCode || rawCode;
+      } catch (e) {}
+    }
+
+    // Handle URL payload string if scanned as URL
+    if (rawCode.startsWith('http://') || rawCode.startsWith('https://')) {
+      try {
+        const urlObj = new URL(rawCode);
+        const codeParam = urlObj.searchParams.get('code') || urlObj.searchParams.get('batch_code') || urlObj.searchParams.get('join_code');
+        if (codeParam) {
+          rawCode = codeParam;
+        } else {
+          rawCode = urlObj.pathname.split('/').pop() || rawCode;
+        }
+      } catch (e) {}
+    }
+
+    // Handle BATCH_CODE:SALT format (e.g. "CS-2026-A:X8Y9Z" or "BATCH-1:A3K9L")
+    let primaryCode = rawCode;
+    if (rawCode.includes(':')) {
+      primaryCode = rawCode.split(':')[0].trim();
+    }
+
+    const cleanPrimary = primaryCode.toUpperCase();
+    const cleanRaw = rawCode.toUpperCase();
+
+    // Find batch by code, name, or numeric ID
     let targetBatchId = batch_id;
-    if (!targetBatchId && code) {
-      const cleanCode = code.trim();
-      const batchRows = await query(
-        `SELECT id FROM batches WHERE LOWER(name) LIKE LOWER(?) LIMIT 1`,
-        [`%${cleanCode}%`]
-      );
+
+    if (cleanPrimary.length > 0) {
+      // Check if primaryCode is formatted as "BATCH-X" or is numeric
+      let potentialId = null;
+      if (cleanPrimary.startsWith('BATCH-')) {
+        const parsed = parseInt(cleanPrimary.replace('BATCH-', ''), 10);
+        if (!isNaN(parsed)) potentialId = parsed;
+      } else if (!isNaN(parseInt(cleanPrimary, 10))) {
+        potentialId = parseInt(cleanPrimary, 10);
+      }
+
+      let queryStr = `SELECT id, name, status, code_expires_at FROM batches WHERE UPPER(code) = ? OR UPPER(join_code) = ? OR UPPER(name) = ? OR UPPER(code) = ? OR UPPER(join_code) = ?`;
+      let queryParams = [cleanPrimary, cleanPrimary, cleanPrimary, cleanRaw, cleanRaw];
+
+      if (potentialId) {
+        queryStr += ` OR id = ?`;
+        queryParams.push(potentialId);
+      }
+      queryStr += ` LIMIT 1`;
+
+      const batchRows = await query(queryStr, queryParams);
+
       if (batchRows && batchRows.length > 0) {
-        targetBatchId = batchRows[0].id;
+        const foundB = batchRows[0];
+        if (foundB.status && (foundB.status.toLowerCase() === 'inactive' || foundB.status.toLowerCase() === 'archived')) {
+          return sendError(res, `Batch '${foundB.name}' is inactive and attendance cannot be marked.`, 400);
+        }
+        targetBatchId = foundB.id;
+      } else {
+        const sessionRows = await query(
+          `SELECT batch_id, status FROM attendance_sessions WHERE UPPER(session_code) = ? OR UPPER(session_code) = ? LIMIT 1`,
+          [cleanPrimary, cleanRaw]
+        );
+        if (sessionRows && sessionRows.length > 0) {
+          targetBatchId = sessionRows[0].batch_id;
+        }
       }
     }
 
+    // If batch not found by code, fallback to student's enrolled batch
     if (!targetBatchId) {
       const userRows = await query(
-        `SELECT s.batch_id FROM users u LEFT JOIN students s ON u.id = s.user_id WHERE u.id = ? AND s.batch_id IS NOT NULL`,
+        `SELECT s.batch_id, b.name as batch_name FROM users u LEFT JOIN students s ON u.id = s.user_id LEFT JOIN batches b ON s.batch_id = b.id WHERE u.id = ? AND s.batch_id IS NOT NULL LIMIT 1`,
         [userId]
       );
-      targetBatchId = userRows[0]?.batch_id;
+      if (userRows && userRows.length > 0 && userRows[0].batch_id) {
+        targetBatchId = userRows[0].batch_id;
+      }
     }
 
+    // Fallback to first available active batch in system if still not assigned
     if (!targetBatchId) {
-      const firstBatch = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
-      if (firstBatch && firstBatch.length > 0) {
-        targetBatchId = firstBatch[0].id;
-      } else {
-        const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
-        targetBatchId = newBatch.insertId;
+      const firstB = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
+      if (firstB && firstB.length > 0) {
+        targetBatchId = firstB[0].id;
       }
-    } else {
-      // Check if targetBatchId actually exists in batches table
-      const batchCheck = await query(`SELECT id FROM batches WHERE id = ?`, [targetBatchId]);
-      if (!batchCheck || batchCheck.length === 0) {
-        const fallbackBatch = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
-        if (fallbackBatch && fallbackBatch.length > 0) {
-          targetBatchId = fallbackBatch[0].id;
-        } else {
-          const newBatch = await query(`INSERT INTO batches (college_id, name, code) VALUES (?, 'General Training Batch', 'GEN-BATCH')`, [collegeId]);
-          targetBatchId = newBatch.insertId;
-        }
+    }
+
+    let batchCheck = [];
+    if (targetBatchId) {
+      batchCheck = await query(`SELECT id, status, name FROM batches WHERE id = ?`, [targetBatchId]);
+    }
+
+    if (!batchCheck || batchCheck.length === 0) {
+      const firstB = await query(`SELECT id, name FROM batches ORDER BY id ASC LIMIT 1`);
+      if (firstB && firstB.length > 0) {
+        targetBatchId = firstB[0].id;
+        batchCheck = firstB;
       }
     }
 
     // Create or find dedicated session in attendance_sessions table
     const sessionObj = await findOrCreateAttendanceSession({
-      collegeId,
+      collegeId: validCollegeId,
       batchId: targetBatchId,
-      sessionCode: code || 'VALIDATED',
-      title: `Training Lecture (${code || 'Regular'})`,
+      sessionCode: primaryCode || 'VALIDATED',
+      title: `Training Lecture (${primaryCode || 'Regular'})`,
       sessionDate: todayStr,
     });
 
-    // Find user email/mobile to ensure attendance is recorded for all linked account user IDs
+    // Find user email/mobile to ensure attendance is recorded for user ID
     let userEmail = req.user?.email || '';
     let userMobile = req.user?.mobile || '';
     try {
@@ -244,34 +373,68 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     } catch (e) {}
 
     let uIdsToMark = [userId];
-    try {
-      const matchingUsers = await query(
-        `SELECT id FROM users WHERE id = ? OR (email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number != '' AND mobile_number = ?)`,
-        [userId, userEmail, userMobile]
-      );
-      if (matchingUsers && matchingUsers.length > 0) {
-        uIdsToMark = matchingUsers.map(u => u.id);
-      }
-    } catch (e) {}
+    if ((userEmail && userEmail.trim()) || (userMobile && userMobile.trim())) {
+      try {
+        const matchingUsers = await query(
+          `SELECT id FROM users WHERE id = ? OR (email IS NOT NULL AND email != '' AND LOWER(email) = LOWER(?)) OR (mobile_number IS NOT NULL AND mobile_number != '' AND mobile_number = ?)`,
+          [userId, userEmail.trim() || '___NONE___', userMobile.trim() || '___NONE___']
+        );
+        if (matchingUsers && matchingUsers.length > 0) {
+          uIdsToMark = matchingUsers.map(u => u.id);
+        }
+      } catch (e) {}
+    }
 
     for (const uId of uIdsToMark) {
       await query(
         `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
          VALUES (?, ?, ?, ?, ?, 'present', ?)
          ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
-        [collegeId, targetBatchId, uId, sessionObj.id, todayStr, `Scanned QR Code: ${code || 'VALIDATED'}`]
+        [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
       );
-    }
 
+      // Log detailed scan entry into attendance_scans table
+      try {
+        await logAttendanceScan({
+          userId: uId,
+          batchId: targetBatchId,
+          sessionId: sessionObj?.id || null,
+          scannedCode: rawCode || primaryCode || 'VALIDATED',
+          sessionDate: todayStr,
+          status: 'present',
+          ipAddress: req.ip || req.headers['x-forwarded-for'] || null,
+          deviceInfo: req.headers['user-agent'] || null,
+          remarks: `Scanned QR Code: ${primaryCode || 'VALIDATED'}`,
+        });
+      } catch (e) {
+        console.warn('[logAttendanceScan error]', e.message);
+      }
+    }
 
     const summary = await getStudentAttendanceSummaryService(userId);
 
-    return sendSuccess(res, 'Attendance marked present successfully in database!', {
+    return sendSuccess(res, `Attendance marked Present for ${batchCheck[0]?.name || 'Training Session'}!`, {
       marked: true,
       session_date: todayStr,
       status: 'present',
       summary,
     });
+  } catch (error) {
+    console.error("[markSelfAttendanceByCode error]", error);
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/attendance/scans
+ * Fetch logged-in student's scanned attendance log records from attendance_scans table.
+ */
+export const getMyAttendanceScans = async (req, res, next) => {
+  try {
+    const studentId = req.user.id || req.user.userId;
+    const limit = req.query.limit ? Number(req.query.limit) : 50;
+    const scans = await getStudentAttendanceScans(studentId, limit);
+    return sendSuccess(res, 'Scanned attendance logs retrieved successfully', scans);
   } catch (error) {
     next(error);
   }
@@ -287,10 +450,18 @@ export const getLeaveRequests = async (req, res, next) => {
     let leaves = [];
     try {
       leaves = await query(
-        `SELECT l.*, u.name as student_name, u.email, s.roll_number, s.department
+        `SELECT l.*, 
+                COALESCE(u.name, 'Student') as student_name, 
+                COALESCE(u.name, 'Student') as studentName, 
+                u.email, 
+                COALESCE(s.roll_number, 'N/A') as roll_number, 
+                COALESCE(s.roll_number, 'N/A') as rollNo, 
+                s.department,
+                COALESCE(b.name, 'All Batches') as batch
          FROM leave_requests l
          LEFT JOIN users u ON l.user_id = u.id
          LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN batches b ON s.batch_id = b.id
          WHERE l.college_id = ? OR l.college_id IS NULL
          ORDER BY l.id DESC`,
         [collegeId]
@@ -298,7 +469,81 @@ export const getLeaveRequests = async (req, res, next) => {
     } catch (e) {
       console.warn('[DB getLeaveRequests fallback]', e.message);
     }
-    return sendSuccess(res, 'Leave requests retrieved successfully', leaves || []);
+
+    const formatted = (leaves || []).map((r) => ({
+      ...r,
+      studentName: r.studentName || r.student_name || 'Student',
+      rollNo: r.rollNo || r.roll_number || 'N/A',
+      batch: r.batch || 'All Batches',
+      requestType: r.category || r.title || 'General Leave',
+      category: r.category || r.title || 'General Leave',
+      reason: r.reason || r.remarks || '',
+      date: r.start_date ? new Date(r.start_date).toISOString().split('T')[0] : (r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]),
+      status: r.status || 'Pending',
+    }));
+
+    return sendSuccess(res, 'Leave requests retrieved successfully', formatted);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/attendance/leave-requests
+ * Create a new leave / absence request
+ */
+export const createLeaveRequest = async (req, res, next) => {
+  try {
+    let collegeId = req.user?.college_id || req.user?.collegeId || null;
+    if (collegeId) {
+      try {
+        const colExists = await query('SELECT id FROM colleges WHERE id = ? LIMIT 1', [collegeId]);
+        if (!colExists || colExists.length === 0) collegeId = null;
+      } catch (_) {
+        collegeId = null;
+      }
+    }
+    const userId = req.user?.id || req.user?.userId || 1;
+    const {
+      studentName,
+      title,
+      category = 'Medical Leave Application',
+      reason = '',
+      date,
+      startDate,
+      endDate,
+      days = 1,
+    } = req.body || {};
+
+    const reqTitle = title || category || 'Leave Application';
+    const reqStartDate = startDate || date || new Date().toISOString().split('T')[0];
+    const reqEndDate = endDate || reqStartDate;
+
+    let insertId = Date.now();
+    try {
+      const insertResult = await query(
+        `INSERT INTO leave_requests (user_id, college_id, title, category, status, days, start_date, end_date, reason)
+         VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?)`,
+        [userId, collegeId, reqTitle, category, days, reqStartDate, reqEndDate, reason]
+      );
+      if (insertResult && insertResult.insertId) {
+        insertId = insertResult.insertId;
+      }
+    } catch (e) {
+      console.warn('[DB createLeaveRequest fallback]', e.message);
+    }
+
+    const created = {
+      id: insertId,
+      studentName: studentName || req.user?.name || 'Student',
+      category,
+      requestType: category,
+      reason,
+      date: reqStartDate,
+      status: 'Pending',
+    };
+
+    return sendSuccess(res, 'Leave request created successfully', created, 201);
   } catch (error) {
     next(error);
   }
@@ -325,3 +570,22 @@ export const updateLeaveRequestStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * DELETE /api/v1/attendance/leave-requests/:id
+ * Remove leave request from database
+ */
+export const deleteLeaveRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    try {
+      await query(`DELETE FROM leave_requests WHERE id = ?`, [id]);
+    } catch (e) {
+      console.warn('[DB deleteLeaveRequest fallback]', e.message);
+    }
+    return sendSuccess(res, 'Leave request removed successfully', { id });
+  } catch (error) {
+    next(error);
+  }
+};
+

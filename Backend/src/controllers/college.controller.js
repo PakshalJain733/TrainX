@@ -1,5 +1,6 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
+import { validateCollegeForm } from '../utils/collegeValidation.js';
 
 let tablesInitialized = false;
 async function ensureCollegeTable() {
@@ -42,16 +43,50 @@ async function ensureCollegeTable() {
 export const getColleges = async (req, res, next) => {
   try {
     await ensureCollegeTable();
-    const dbColleges = await query(`
+    const userRole = (req.user?.role || '').toLowerCase();
+    const userEmail = (req.user?.email || '').toLowerCase().trim();
+    const userCollegeId = req.user?.college_id || req.user?.collegeId;
+
+    let sql = `
       SELECT 
         c.*,
         c.contact_email AS adminEmail,
         c.admin_name AS adminName,
         (SELECT COUNT(*) FROM departments d WHERE d.college_id = c.id) AS department_count,
         (SELECT COUNT(*) FROM users u WHERE u.college_id = c.id AND u.role = 'student') AS student_count
-      FROM colleges c 
-      ORDER BY c.id DESC
-    `);
+      FROM colleges c
+    `;
+    let params = [];
+
+    // Filter colleges for College Admin users so they only see their assigned college
+    if (userRole && !userRole.includes('super')) {
+      const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1] : '';
+      sql += ` WHERE LOWER(c.contact_email) = ? OR c.id = ? OR (c.domain IS NOT NULL AND c.domain != '' AND LOWER(c.domain) = ?)`;
+      params = [userEmail, userCollegeId || -1, emailDomain];
+    }
+
+    sql += ` ORDER BY c.id DESC`;
+
+    let dbColleges = await query(sql, params);
+
+    // Fallback: If no direct match found for non-superadmin, query all and match by email/domain/college_id
+    if (userRole && !userRole.includes('super') && (!dbColleges || dbColleges.length === 0)) {
+      const allCols = await query(`
+        SELECT c.*, c.contact_email AS adminEmail, c.admin_name AS adminName,
+        (SELECT COUNT(*) FROM departments d WHERE d.college_id = c.id) AS department_count,
+        (SELECT COUNT(*) FROM users u WHERE u.college_id = c.id AND u.role = 'student') AS student_count
+        FROM colleges c ORDER BY c.id DESC
+      `);
+      const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1] : '';
+      const matched = (allCols || []).filter(c => 
+        String(c.id) === String(userCollegeId) ||
+        (c.contact_email && c.contact_email.toLowerCase() === userEmail) ||
+        (c.admin_name && c.admin_name.toLowerCase().includes(userEmail.split('@')[0])) ||
+        (c.domain && emailDomain && emailDomain.endsWith(c.domain.toLowerCase().replace(/^@/, '')))
+      );
+      dbColleges = matched.length > 0 ? matched : [];
+    }
+
     const formatted = (dbColleges || []).map((c) => ({
       ...c,
       adminEmail: c.adminEmail || c.contact_email || '',
@@ -67,11 +102,26 @@ export const createCollege = async (req, res, next) => {
   try {
     await ensureCollegeTable();
     const { name, code, location, city, type, contactEmail, contactPhone, adminName, adminEmail, domain } = req.body;
-    if (!name || !code) {
-      return sendError(res, 'College Name and Code are required', 400);
-    }
     const cleanName = String(name || '').trim();
-    const cleanCode = String(code || '').trim();
+    const cleanCode = String(code || '').trim().toUpperCase();
+    const cleanLocation = String(location || city || '').trim();
+    const cleanAdminName = String(adminName || '').trim();
+    const cleanAdminEmail = String(adminEmail || contactEmail || '').trim();
+    const cleanDomain = String(domain || '').trim().toLowerCase();
+
+    const validation = validateCollegeForm({
+      name: cleanName,
+      code: cleanCode,
+      location: cleanLocation,
+      domain: cleanDomain,
+      adminName: cleanAdminName,
+      adminEmail: cleanAdminEmail,
+    });
+
+    if (!validation.isValid) {
+      const firstErrorMessage = Object.values(validation.errors)[0];
+      return sendError(res, firstErrorMessage, 400);
+    }
 
     // Check if college code already exists
     const existingCode = await query('SELECT id, name FROM colleges WHERE LOWER(code) = LOWER(?) LIMIT 1', [cleanCode]);
@@ -83,8 +133,8 @@ export const createCollege = async (req, res, next) => {
       );
     }
 
-    const finalEmail = String(contactEmail || adminEmail || `admin@${cleanCode.toLowerCase()}.edu.in`).trim();
-    const finalAdminName = String(adminName || '').trim();
+    const finalEmail = cleanAdminEmail;
+    const finalAdminName = cleanAdminName;
 
     let derivedDomain = (domain || '').trim().toLowerCase();
     if (!derivedDomain && finalEmail.includes('@')) {

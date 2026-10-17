@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import {
-  ArrowLeft, Play, CheckCircle2, Terminal, Code2, 
-  FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight
-} from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
 function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -20,12 +20,12 @@ function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select.
     <div className={`student-cp-select-wrap${isOpen ? ' student-cp-select-wrap--open' : ''}`} ref={ref}>
       <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-cp-select-trigger${isOpen ? ' student-cp-select-trigger--open' : ''}`}>
         {Icon && <Icon className="student-cp-select-icon" />}
-        <span className="student-cp-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="student-cp-select-text">{selected ? selected.label : <span className="student-cp-select-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`student-cp-select-arrow${isOpen ? ' student-cp-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && (
         <div className="student-cp-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-cp-select-option${isSel ? ' student-cp-select-option--selected' : ''}`}>
@@ -79,7 +79,7 @@ function getDynamicProblemDescription(title = "Coding Problem", topic = "Algorit
 
 function getDynamicSampleTestCases(title = "", existingCases = []) {
   if (existingCases && existingCases.length > 0) {
-    return existingCases;
+    return existingCases.filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
   }
   
   const lower = (title || "").toLowerCase();
@@ -106,6 +106,15 @@ function getDynamicSampleTestCases(title = "", existingCases = []) {
   return [];
 }
 
+const STARTER_TEMPLATES = {
+  python: `# Write your Python solution here\nimport sys\n\ndef main():\n    # Read input from standard input\n    # lines = sys.stdin.read().splitlines()\n    pass\n\nif __name__ == '__main__':\n    main()\n`,
+  node: `// Write your JavaScript (Node.js) solution here\nconst fs = require('fs');\n\nfunction main() {\n    // const input = fs.readFileSync(0, 'utf-8').trim();\n}\n\nmain();\n`,
+  cpp: `// Write your C++ solution here\n#include <iostream>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    \n    return 0;\n}\n`,
+  c: `// Write your C solution here\n#include <stdio.h>\n\nint main() {\n    return 0;\n}\n`,
+  java: `// Write your Java solution here\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n`,
+  sql: `-- Write your SQL query here\nSELECT * FROM solution;\n`
+};
+
 export default function CodingPlatform() {
   const { taskId } = useParams();
   const location = useLocation();
@@ -117,10 +126,12 @@ export default function CodingPlatform() {
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || [])
   } : null;
 
+  const { isModuleActive, getModuleConfig } = useSystemMaintenance();
   const [taskData, setTaskData] = useState(initialTask);
   const [loading, setLoading] = useState(!initialTask);
   const [notFound, setNotFound] = useState(false);
-  const [code, setCode] = useState("");
+  const [selectedLang, setSelectedLang] = useState("java");
+  const [code, setCode] = useState(() => STARTER_TEMPLATES.java || "");
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("");
   const [consoleTab, setConsoleTab] = useState("output");
@@ -128,11 +139,42 @@ export default function CodingPlatform() {
   const [useCustomInput, setUseCustomInput] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("python");
   const [activeTab, setActiveTab] = useState("description");
   const [mobileView, setMobileView] = useState("problem");
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen?.().catch(() => {});
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener("fullscreenchange", handleFsChange);
+    return () => document.removeEventListener("fullscreenchange", handleFsChange);
+  }, []);
+
+  const user = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  })();
+
+  const getInitials = (name) => {
+    if (!name || typeof name !== "string") return "ST";
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length > 1) return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
 
   useEffect(() => {
     const fetchTaskDetails = async () => {
@@ -177,7 +219,7 @@ export default function CodingPlatform() {
             topic: p.category || "General DSA",
             difficulty: p.difficulty || "Medium",
             points: p.points || 100,
-            deadline: "",
+            deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
             description: getDynamicProblemDescription(p.title, p.category, p.description),
             testCases: getDynamicSampleTestCases(p.title, rawCases),
           });
@@ -186,6 +228,36 @@ export default function CodingPlatform() {
 
         if (initialTask) {
           setTaskData(initialTask);
+          return;
+        }
+
+        // Built-in standard problem fallback for seamless direct navigation
+        const defaultProblems = {
+          "1": {
+            id: "1",
+            title: "Return First Element",
+            topic: "Array Basics",
+            difficulty: "Easy",
+            points: 100,
+            deadline: "",
+            description: getDynamicProblemDescription("Return First Element", "Array Basics", "Write a program that returns the first element of a given array.\n\nInput Format:\n- Line 1: An integer n (length of array).\n- Line 2: n space-separated integers.\n\nOutput Format:\n- A single integer representing the first element."),
+            testCases: getDynamicSampleTestCases("Return First Element", []),
+          },
+          "2": {
+            id: "2",
+            title: "Multiply Two Numbers",
+            topic: "Math & Logic",
+            difficulty: "Easy",
+            points: 100,
+            deadline: "",
+            description: getDynamicProblemDescription("Multiply Two Numbers", "Math", "Write a program that takes two integers as input and prints their product.\n\nInput Format:\n- A single line containing two space-separated integers A and B.\n\nOutput Format:\n- Print the product of A and B as a single integer."),
+            testCases: getDynamicSampleTestCases("Multiply Two Numbers", []),
+          }
+        };
+
+        const fallbackKey = String(numeric || "1");
+        if (defaultProblems[fallbackKey]) {
+          setTaskData(defaultProblems[fallbackKey]);
           return;
         }
 
@@ -207,15 +279,33 @@ export default function CodingPlatform() {
     }
   }, [taskId]);
 
-  // Line numbers array
-  const lineCount = code.split('\n').length;
+  // Line numbers array (safely guarded against any non-string values)
+  const safeCode = typeof code === "string" ? code : String(code ?? "");
+  const lineCount = safeCode.split('\n').length;
   const lines = Array.from({ length: Math.max(15, lineCount) }, (_, i) => i + 1);
 
   const currentTaskNum = taskId ? parseInt(taskId.replace(/[^0-9]/g, '')) || 1 : 1;
+
+  const handleLanguageChange = (newLang) => {
+    setSelectedLang(newLang);
+    setCode((prevCode) => {
+      const prev = typeof prevCode === "string" ? prevCode : "";
+      if (!prev.trim() || Object.values(STARTER_TEMPLATES).some((t) => t.trim() === prev.trim())) {
+        return STARTER_TEMPLATES[newLang] || "";
+      }
+      return prev;
+    });
+  };
   
   const handleRun = async () => {
     if (isRunning || isSubmitting) return;
-    if (!code.trim()) {
+    if (!isModuleActive("codingCompiler")) {
+      setConsoleStatus("error");
+      setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution is currently undergoing maintenance."}`);
+      return;
+    }
+    const currentCode = (typeof code === "string" ? code : String(code ?? "")).trim();
+    if (!currentCode) {
       setConsoleOutput("⚠️  Write some code before running.");
       setConsoleStatus("error");
       return;
@@ -227,14 +317,14 @@ export default function CodingPlatform() {
 
     // Use custom input if enabled, else the first visible (non-hidden) test case's input, or empty
     const sampleTc = (taskData?.testCases || taskData?.test_cases || [])
-      .find((tc) => !tc.is_hidden);
+      .find((tc) => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'));
     const stdin = useCustomInput ? customInput : (sampleTc?.input ?? "");
 
     try {
       const res = await fetch(`${API_BASE}/code/run`, {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ language: selectedLang, code, stdin }),
+        body: JSON.stringify({ language: selectedLang, code: typeof code === "string" ? code : String(code ?? ""), stdin }),
       });
       const data = await res.json();
 
@@ -284,7 +374,13 @@ export default function CodingPlatform() {
 
   const handleSubmit = async () => {
     if (isSubmitting || isRunning) return;
-    if (!code.trim()) {
+    if (!isModuleActive("codingCompiler")) {
+      setConsoleStatus("error");
+      setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution and Submission is currently undergoing maintenance."}`);
+      return;
+    }
+    const currentCode = (typeof code === "string" ? code : String(code ?? "")).trim();
+    if (!currentCode) {
       setConsoleOutput("⚠️  Write some code before submitting.");
       setConsoleStatus("error");
       return;
@@ -347,11 +443,12 @@ export default function CodingPlatform() {
 
       // Per-test-case breakdown
       const tcLines = (result.test_results || []).map((tc) => {
+        const isHidden = tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true';
         const icon = tc.passed ? "✅" : tc.timed_out ? "⏱️" : tc.not_evaluated ? "⏭️" : "❌";
-        let line = `  ${icon} Test ${tc.test_case_number}${tc.is_hidden ? " [Hidden]" : ""}${
+        let line = `  ${icon} Test ${tc.test_case_number}${isHidden ? " [Hidden]" : ""}${
           tc.passed ? " PASS" : tc.not_evaluated ? " Not evaluated" : tc.timed_out ? " TLE" : " FAIL"
         }`;
-        if (!tc.is_hidden && !tc.passed && !tc.not_evaluated && tc.actual_output !== undefined) {
+        if (!isHidden && !tc.passed && !tc.not_evaluated && tc.actual_output !== undefined) {
           line += `\n     Expected: ${String(tc.expected_output ?? "").trim() || "(empty)"}\n     Got:      ${String(tc.actual_output ?? "").trim() || "(empty)"}`;
           if (tc.stderr && tc.stderr.trim()) line += `\n     Stderr:   ${tc.stderr.trim().slice(0, 200)}`;
         }
@@ -445,36 +542,55 @@ export default function CodingPlatform() {
         {/* IDE Header */}
         <div className="cp-header">
           <div className="cp-header-left">
-            <Link to="/student/batches" className="cp-back-btn">
-              <ArrowLeft size={16} />
-              <span>Back</span>
-            </Link>
-            <h1 className="cp-task-title">
-              <Code2 size={18} />
-              <span className="cp-task-name">{taskData?.title || (taskId ? `Task ID: ${taskId.toUpperCase()}` : "Coding Task")}</span>
-              <span className="cp-task-badge">{taskData?.difficulty || taskData?.topic || "Assignment"}</span>
-            </h1>
+            <button 
+              type="button" 
+              onClick={() => {
+                if (window.history.length > 2) navigate(-1);
+                else navigate('/student/practice');
+              }} 
+              className="cp-back-btn"
+              title="Back to Problems"
+            >
+              <ArrowLeft size={15} />
+              <span>Problems</span>
+            </button>
+
+            <div className="cp-header-divider" />
+
+            <div className="cp-task-title-group">
+              <h1 className="cp-task-title">
+                {taskData?.title || (taskId ? `Task ${taskId.toUpperCase()}` : "Coding Problem")}
+              </h1>
+              {(() => {
+                const diffStr = String(taskData?.difficulty || taskData?.level || "Easy").toUpperCase();
+                const cls = diffStr.includes("HARD") ? "cp-badge-hard" : diffStr.includes("MED") ? "cp-badge-med" : "cp-badge-easy";
+                const label = diffStr.includes("HARD") ? "Hard" : diffStr.includes("MED") ? "Medium" : "Easy";
+                return <span className={`cp-task-badge ${cls}`}>{label}</span>;
+              })()}
+            </div>
+
+            <div className="cp-header-nav-group">
+              <button 
+                type="button"
+                className="cp-nav-btn" 
+                onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
+                disabled={currentTaskNum <= 1}
+                title="Previous Problem"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button 
+                type="button"
+                className="cp-nav-btn" 
+                onClick={() => navigate(`/student/coding-platform/task-${String(currentTaskNum + 1).padStart(2, '0')}`)}
+                title="Next Problem"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
           </div>
           
           <div className="cp-header-right">
-            <div className="cp-header-actions-group">
-              <button 
-                className="cp-run-btn cp-nav-arrow-btn" 
-                onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
-                disabled={currentTaskNum <= 1}
-                title="Previous Task"
-              >
-                <ChevronLeft size={14} /> <span>Prev</span>
-              </button>
-              <button 
-                className="cp-run-btn cp-nav-arrow-btn" 
-                onClick={() => navigate(`/student/coding-platform/task-${String(currentTaskNum + 1).padStart(2, '0')}`)}
-                title="Next Task"
-              >
-                <span>Next</span> <ChevronRight size={14} />
-              </button>
-            </div>
-
             <StudentCpSelect
               value={selectedLang}
               options={[
@@ -485,19 +601,57 @@ export default function CodingPlatform() {
                 { value: "c", label: "C (C11)" },
                 { value: "sql", label: "SQL (SQLite3)" },
               ]}
-              onChange={(val) => setSelectedLang(val)}
+              onChange={handleLanguageChange}
             />
             
-            <button className="cp-run-btn" onClick={handleRun} disabled={isRunning || isSubmitting}>
-              {isRunning ? <span>Running...</span> : <><Play size={14} fill="currentColor" /> <span>Run</span></>}
+            <button
+              type="button"
+              className={`cp-run-btn ${!isModuleActive("codingCompiler") ? 'cp-btn--off' : ''}`}
+              onClick={handleRun}
+              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting}
+              title={!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code"}
+              style={!isModuleActive("codingCompiler") ? { opacity: 0.55, cursor: "not-allowed", filter: "grayscale(0.6)" } : {}}
+            >
+              {isRunning ? <span>Running...</span> : <><Play size={13} fill="currentColor" /> <span>{isModuleActive("codingCompiler") ? "Run" : "Run (Off)"}</span></>}
             </button>
-            <button className="cp-submit-btn" onClick={handleSubmit} disabled={isSubmitting || isRunning}>
+            
+            <button
+              type="button"
+              className={`cp-submit-btn ${!isModuleActive("codingCompiler") ? 'cp-btn--off' : ''}`}
+              onClick={handleSubmit}
+              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning}
+              title={!isModuleActive("codingCompiler") ? "Code submission is currently disabled by administrator" : "Submit Code"}
+              style={!isModuleActive("codingCompiler") ? { opacity: 0.55, cursor: "not-allowed", filter: "grayscale(0.6)" } : {}}
+            >
               {isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
-                <><CheckCircle2 size={15} /> <span>Submit</span></>
+                <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? "Submit" : "Submit (Off)"}</span></>
               )}
             </button>
+
+            <div className="cp-header-divider" />
+
+            <button
+              type="button"
+              className="cp-fs-toggle-btn"
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Exit Full Screen" : "Full Screen"}
+            >
+              {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            </button>
+
+            {user?.name && (
+              <div className="cp-user-profile-badge" title={user.email || user.name}>
+                <div className="cp-user-avatar">
+                  {getInitials(user.name)}
+                </div>
+                <div className="cp-user-meta">
+                  <span className="cp-user-name">{user.name}</span>
+                  <span className="cp-user-role">STUDENT</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -545,40 +699,63 @@ export default function CodingPlatform() {
                 </div>
               ) : activeTab === 'description' ? (
                 <>
-                  <h3 className="cp-req-heading">
-                    {taskData?.title || "Problem Requirements"}
-                  </h3>
+                  <div className="cp-problem-header">
+                    <h2 className="cp-problem-main-title">
+                      {taskData?.title || "Problem Description"}
+                    </h2>
+                    <div className="cp-problem-meta-row">
+                      {(() => {
+                        const diffStr = String(taskData?.difficulty || taskData?.level || "Easy").toUpperCase();
+                        const cls = diffStr.includes("HARD") ? "cp-badge-hard" : diffStr.includes("MED") ? "cp-badge-med" : "cp-badge-easy";
+                        const label = diffStr.includes("HARD") ? "Hard" : diffStr.includes("MED") ? "Medium" : "Easy";
+                        return <span className={`cp-task-badge ${cls}`}>{label}</span>;
+                      })()}
+                      <span className="cp-meta-pill">Score: {taskData?.points || 100} pts</span>
+                      {taskData?.topic && <span className="cp-meta-pill">{taskData.topic}</span>}
+                    </div>
+                  </div>
+
                   <div className="cp-problem-desc">
                     <p style={{ whiteSpace: "pre-wrap" }}>
                       {taskData?.description || taskData?.desc || "Write a clean and optimized solution to solve this problem statement."}
                     </p>
                   </div>
                   
-                  <div style={{ marginTop: "20px" }}>
-                    <p className="cp-test-title" style={{ fontWeight: "600", color: "#0f172a", marginBottom: "8px" }}>
-                      Sample Test Cases:
-                    </p>
+                  <div className="cp-examples-container">
+                    <h4 className="cp-examples-title">Sample Test Cases</h4>
                     {testCasesList && testCasesList.length > 0 ? (
-                      testCasesList.filter(tc => !tc.is_hidden).map((tc, idx) => (
-                        <div key={idx} className="cp-test-case" style={{ marginBottom: "12px" }}>
-                          <p className="cp-test-title">Example {idx + 1}:</p>
-                          {tc.input ? <div className="cp-test-code">Input: {tc.input}</div> : null}
-                          {(tc.expected_output || tc.expectedOutput || tc.output) ? (
-                            <div className="cp-test-code">Output: {tc.expected_output || tc.expectedOutput || tc.output}</div>
-                          ) : null}
+                      testCasesList
+                        .filter(tc => !(tc.is_hidden === true || tc.is_hidden === 1 || String(tc.is_hidden).toLowerCase() === 'true' || tc.isHidden === true || String(tc.isHidden) === 'true'))
+                        .map((tc, idx) => (
+                        <div key={idx} className="cp-example-card">
+                          <div className="cp-example-header">Example {idx + 1}</div>
+                          <div className="cp-example-body">
+                            {tc.input && (
+                              <div className="cp-example-row">
+                                <span className="cp-example-key">Input:</span>
+                                <span className="cp-example-code">{tc.input}</span>
+                              </div>
+                            )}
+                            {(tc.expected_output || tc.expectedOutput || tc.output) && (
+                              <div className="cp-example-row">
+                                <span className="cp-example-key">Output:</span>
+                                <span className="cp-example-code">{tc.expected_output || tc.expectedOutput || tc.output}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))
                     ) : (
-                      <p style={{ fontSize: "13px", color: "#64748b", margin: 0 }}>
+                      <p className="cp-no-examples">
                         No sample test cases specified for this task.
                       </p>
                     )}
                   </div>
 
                   {taskData?.deadline && (
-                    <div className="cp-test-case" style={{ marginTop: "16px" }}>
-                      <p className="cp-test-title">Submission Deadline:</p>
-                      <div className="cp-test-code">{taskData.deadline}</div>
+                    <div className="cp-deadline-notice">
+                      <span className="cp-deadline-label">Submission Deadline:</span>
+                      <span className="cp-deadline-val">{taskData.deadline}</span>
                     </div>
                   )}
                 </>
@@ -622,16 +799,19 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
-            <div className="cp-editor-area">
-              <div className="cp-line-numbers">
-                {lines.map(num => <div key={num}>{num}</div>)}
-              </div>
-              <textarea
-                className="cp-textarea"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="// Write your solution code here..."
-                spellCheck={false}
+            <div className="cp-editor-area cp-editor-area--monaco">
+              <MonacoCodeEditor
+                value={typeof code === "string" ? code : String(code ?? "")}
+                onChange={(val) => {
+                  const strVal = typeof val === "string" ? val : (val?.target?.value ?? "");
+                  setCode(strVal);
+                }}
+                language={selectedLang}
+                height="100%"
+                options={{
+                  fontSize: 13,
+                  padding: { top: 12, bottom: 12 }
+                }}
               />
             </div>
             
@@ -679,8 +859,8 @@ export default function CodingPlatform() {
                     <span style={{ margin: 'auto' }}>Run your code to see output here.</span>
                   )
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '10px' }}>
-                    <label style={{ fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="cp-custom-input-box">
+                    <label className="cp-custom-input-label">
                       <input 
                         type="checkbox" 
                         checked={useCustomInput} 

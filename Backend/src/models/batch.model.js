@@ -236,13 +236,15 @@ export const getStudentBatchesModel = async (userId) => {
 // Get all enrolled students for a specific batch
 export const getBatchStudentsModel = async (batchId) => {
   try {
+    const bId = parseInt(batchId, 10);
     const rows = await query(
-      `SELECT s.id, s.user_id, u.name, u.email, s.roll_number, s.department, s.year, s.division, s.cgpa
-       FROM students s
-       JOIN users u ON s.user_id = u.id
-       WHERE s.batch_id = ?
+      `SELECT DISTINCT u.id, s.id AS student_id, s.user_id, u.name, u.email, s.roll_number, s.department, s.year, s.division, s.cgpa
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN student_batches sb ON sb.user_id = u.id
+       WHERE (sb.batch_id = ? OR s.batch_id = ?) AND u.role = 'student'
        ORDER BY u.name ASC`,
-      [parseInt(batchId, 10)]
+      [bId, bId]
     );
     return rows || [];
   } catch (error) {
@@ -255,10 +257,11 @@ export const createBatchTaskModel = async (taskData) => {
   try {
     const bId = parseInt(taskData.batch_id || taskData.batchId, 10);
     const testCasesJson = taskData.testCases || taskData.test_cases ? JSON.stringify(taskData.testCases || taskData.test_cases) : null;
+    const taskLang = taskData.language || 'Java';
     
     const res = await query(
-      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, test_cases)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO batch_tasks (batch_id, title, topic, difficulty, points, deadline, description, language, test_cases)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         bId,
         taskData.title,
@@ -267,6 +270,7 @@ export const createBatchTaskModel = async (taskData) => {
         parseInt(taskData.points || 100, 10),
         taskData.deadline || '',
         taskData.desc || taskData.description || '',
+        taskLang,
         testCasesJson
       ]
     );
@@ -286,6 +290,7 @@ export const createBatchTaskModel = async (taskData) => {
     points: parseInt(taskData.points || 100, 10),
     deadline: taskData.deadline || '',
     description: taskData.desc || taskData.description || '',
+    language: taskData.language || 'Java',
   };
 };
 

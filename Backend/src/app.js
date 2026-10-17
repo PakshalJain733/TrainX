@@ -24,25 +24,35 @@ import codingSubmissionRoutes from './routes/codingSubmission.routes.js';
 import mentorRoutes from './routes/mentor.routes.js';
 import coordinatorRoutes from './routes/coordinator.routes.js';
 import superadminRoutes from './routes/superadmin.routes.js';
+import c2cRoutes from './routes/c2c.routes.js';
+import featureSwitchRoutes from './routes/featureSwitch.routes.js';
+import systemHealthRoutes from './routes/systemHealth.routes.js';
+import { apiMetricsMiddleware } from './services/systemMetrics.service.js';
 
 import { errorHandler } from './middleware/error.middleware.js';
 import { sendSuccess, sendError } from './utils/response.js';
-import { config } from './config/env.js';
 import { pool } from './config/db.js';
 
 import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+
+const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+const nodeEnv = process.env.NODE_ENV || 'development';
 
 // Production-safe CORS: allow the configured frontend origin(s) plus local dev
 const allowedOrigins = new Set(
   [
-    config.frontendUrl,
-    process.env.FRONTEND_URL,
+    frontendUrl,
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
-    config.nodeEnv === 'production' ? '' : 'http://localhost:5500',
+    nodeEnv === 'production' ? '' : 'http://localhost:5500',
   ]
     .filter(Boolean)
     .filter((o) => typeof o === 'string')
@@ -84,29 +94,88 @@ app.use(
       return cb(null, false);
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token', 'x-c2c-webhook-secret'],
   })
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(apiMetricsMiddleware);
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+// Serve uploaded files statically with path resolution fallback
+const uploadPaths = [
+  path.resolve(process.cwd(), 'uploads'),
+  path.resolve(__dirname, '../uploads'),
+  path.resolve(__dirname, '../../uploads'),
+];
 
-// Health Check Endpoint (Section 28)
-app.get('/api/v1/health', (req, res) => {
-  return sendSuccess(res, 'Training Portal API is running', {
-    status: 'healthy',
-    database: 'connected',
-    timestamp: new Date().toISOString(),
-  });
+const handleUploadsFile = (req, res, next) => {
+  const filename = req.params.filename || req.params[0];
+  if (!filename) return next();
+
+  for (const uploadDir of uploadPaths) {
+    const fullPath = path.join(uploadDir, filename);
+    if (fs.existsSync(fullPath) && fs.statSync(fullPath).isFile()) {
+      return res.sendFile(fullPath);
+    }
+  }
+
+  // If file not found on disk, return a clean HTML notice page instead of JSON 404
+  res.status(200).send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <title>Document File Notice</title>
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; }
+        .card { background: #1e293b; border: 1.5px solid #334155; border-radius: 16px; padding: 32px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); }
+        .icon { width: 56px; height: 56px; border-radius: 50%; background: #312e81; color: #818cf8; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px auto; font-size: 24px; font-weight: bold; }
+        h2 { font-size: 20px; margin: 0 0 8px 0; color: #ffffff; }
+        p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; }
+        .badge { display: inline-block; background: #334155; color: #cbd5e1; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 8px; word-break: break-all; }
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="icon">📄</div>
+        <h2>Document Unavailable</h2>
+        <p>The uploaded file is not stored on local disk or has been replaced. Please re-upload the document or select an active file.</p>
+        <div class="badge">${filename}</div>
+      </div>
+    </body>
+    </html>
+  `);
+};
+
+uploadPaths.forEach((p) => {
+  if (fs.existsSync(p)) {
+    app.use('/uploads', express.static(p));
+    app.use('/api/v1/uploads', express.static(p));
+    app.use('/api/uploads', express.static(p));
+  }
 });
+
+app.get('/uploads/:filename', handleUploadsFile);
+app.get('/api/v1/uploads/:filename', handleUploadsFile);
+app.get('/api/uploads/:filename', handleUploadsFile);
+
+// Mount Health & System Monitoring Routes
+app.use('/api/v1/health', systemHealthRoutes);
+app.use('/api/health', systemHealthRoutes);
+app.use('/api/v1/admin/system-health', systemHealthRoutes);
+app.use('/api/admin/system-health', systemHealthRoutes);
+app.use('/api/v1/system/health', systemHealthRoutes);
+app.use('/api/v1/system-health', systemHealthRoutes);
+app.use('/api/v1/system', systemHealthRoutes);
+app.use('/api/system/health', systemHealthRoutes);
 
 // Mount Module Routes under /api/v1 (Section 11)
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1', authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
+app.use('/api/v1/practice-problems', studentRoutes);
+app.use('/api/practice-problems', studentRoutes);
 app.use('/api/v1/users', studentRoutes);
 app.use('/api/v1/coordinator/students', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
@@ -129,11 +198,16 @@ app.use('/api/v1/mock-drives', driveRoutes);
 app.use('/api/v1/reports', reportRoutes);
 app.use('/api/v1/shared-content', sharedContentRoutes);
 app.use('/api/v1/secure-codes', secureCodeRoutes);
+app.use('/api/v1/code', codingRoutes);
 app.use('/api/v1/coding', codingRoutes);
 app.use('/api/v1/coding-submissions', codingSubmissionRoutes);
 app.use('/api/v1/mentor', mentorRoutes);
 app.use('/api/v1/coordinator', coordinatorRoutes);
 app.use('/api/v1/superadmin', superadminRoutes);
+app.use('/api/v1/c2c', c2cRoutes);
+app.use('/api/v1/admin/c2c', c2cRoutes);
+app.use('/api/v1/feature-switches', featureSwitchRoutes);
+app.use('/api/v1/maintenance', featureSwitchRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {

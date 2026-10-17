@@ -23,6 +23,12 @@ const router = Router();
 router.use(authenticateToken);
 router.use(authorizeRoles(ROLES.COORDINATOR, ROLES.COLLEGE_ADMIN, ROLES.SUPER_ADMIN));
 
+import {
+  getAdminPracticeProblems,
+  createAdminPracticeProblem,
+  deleteAdminPracticeProblem,
+} from '../controllers/admin.controller.js';
+
 router.get('/overview', getCoordinatorOverview);
 router.get('/batches', getCoordinatorBatches);
 router.get('/students', getCoordinatorStudents);
@@ -36,5 +42,8 @@ router.get('/weekly-reports', getCoordinatorWeeklyReports);
 router.get('/live-sessions', getCoordinatorLiveSessions);
 router.post('/live-sessions', createCoordinatorLiveSession);
 router.get('/notifications', getCoordinatorNotifications);
+router.get('/practice-problems', getAdminPracticeProblems);
+router.post('/practice-problems', createAdminPracticeProblem);
+router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 
 export default router;

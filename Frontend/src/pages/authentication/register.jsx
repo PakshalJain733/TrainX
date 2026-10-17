@@ -11,7 +11,8 @@ import "./register.css";
 function RegSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -26,7 +27,7 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
       </button>
       {isOpen && (
         <div className="reg-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`}>
@@ -177,6 +178,7 @@ function Register() {
     roll_number: "",
     department: "",
     year: "",
+    division: "",
     password: "",
     confirm_password: "",
     secure_code: "",
@@ -185,18 +187,30 @@ function Register() {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
-  const [deptOptions, setDeptOptions] = useState([
-    { value: "COMPS", label: "COMPS" },
-    { value: "IT", label: "IT" },
-    { value: "AIML", label: "AIML" },
-    { value: "ECS", label: "ECS" },
-    { value: "MTRX", label: "MTRX" },
-    { value: "EXTC", label: "EXTC" },
-  ]);
+  const [colleges, setColleges] = useState([]);
+  const [deptOptions, setDeptOptions] = useState([]);
+
+  useEffect(() => {
+    fetch(`${getApiBaseUrl()}/colleges`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && Array.isArray(data.data)) {
+          setColleges(data.data);
+        } else if (Array.isArray(data)) {
+          setColleges(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not load colleges for domain validation:", err);
+      });
+  }, []);
 
   useEffect(() => {
     const email = (formData.email || "").trim();
-    if (!email.includes("@") || email.split("@")[1].length < 3) return;
+    if (!email.includes("@") || email.split("@")[1].length < 3) {
+      setDeptOptions([]);
+      return;
+    }
 
     const timer = setTimeout(async () => {
       try {
@@ -222,9 +236,30 @@ function Register() {
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setFormData((prev) => ({ ...prev, email: emailParam }));
-      setSuccessMsg("Pre-registered email detected. Complete your profile details and set a password.");
+    const nameParam = searchParams.get("name");
+    const roleParam = searchParams.get("role");
+    const mobileParam = searchParams.get("mobile_number") || searchParams.get("phone") || searchParams.get("mobile");
+    const rollParam = searchParams.get("roll_number") || searchParams.get("roll_id") || searchParams.get("college_id");
+    const deptParam = searchParams.get("department") || searchParams.get("dept");
+    const yearParam = searchParams.get("year");
+    const divParam = searchParams.get("division") || searchParams.get("div");
+
+    if (emailParam || nameParam) {
+      if (roleParam) {
+        const formattedRole = roleParam.charAt(0).toUpperCase() + roleParam.slice(1).toLowerCase();
+        setRole(formattedRole);
+      }
+      setFormData((prev) => ({
+        ...prev,
+        name: nameParam || prev.name,
+        email: emailParam || prev.email,
+        mobile_number: mobileParam || prev.mobile_number,
+        roll_number: rollParam || prev.roll_number,
+        department: deptParam || prev.department,
+        year: yearParam || prev.year,
+        division: divParam || prev.division,
+      }));
+      setSuccessMsg("Pre-registered account loaded! Your details added by Administrator are pre-filled below. Create a password to complete registration.");
     }
   }, [searchParams]);
 
@@ -232,13 +267,58 @@ function Register() {
   const [totpSetupData, setTotpSetupData] = useState(null);
   const [showTotpSetup, setShowTotpSetup] = useState(false);
   const [showPendingApproval, setShowPendingApproval] = useState(false);
+  const [isApproved, setIsApproved] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
+  const [redirectCountdown, setRedirectCountdown] = useState(5);
   const [totpCode, setTotpCode] = useState(["", "", "", "", "", ""]);
   const [copiedSecret, setCopiedSecret] = useState(false);
   const [totpTab, setTotpTab] = useState("qr"); // 'qr' | 'manual'
   const totpInputRefs = useRef([]);
 
+  // Live polling for Admin approval while on the pending approval screen
+  useEffect(() => {
+    if (!showPendingApproval || isApproved) return undefined;
+
+    const emailToCheck = registeredEmail || formData.email?.trim() || totpSetupData?.user?.email;
+    if (!emailToCheck) return undefined;
+
+    const pollApproval = async () => {
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/auth/registration-status?email=${encodeURIComponent(emailToCheck)}`);
+        const json = await res.json();
+        if (json.success && json.data?.isApproved) {
+          setIsApproved(true);
+        }
+      } catch (_) {
+        // silent polling fallback
+      }
+    };
+
+    pollApproval();
+    const interval = setInterval(pollApproval, 3000);
+    return () => clearInterval(interval);
+  }, [showPendingApproval, isApproved, registeredEmail, formData.email, totpSetupData]);
+
+  // Auto-redirect countdown when approval is confirmed
+  useEffect(() => {
+    if (!isApproved) return undefined;
+    const timer = setInterval(() => {
+      setRedirectCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          navigate("/");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [isApproved, navigate]);
+
   // College Email OTP verification (must pass before an account is created)
   const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verifyingEmailOtp, setVerifyingEmailOtp] = useState(false);
   const [emailOtp, setEmailOtp] = useState(["", "", "", "", "", ""]);
   const [resendIn, setResendIn] = useState(0);
   const emailOtpRefs = useRef([]);
@@ -350,6 +430,7 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
+        setRegisteredEmail(emailToVerify);
         setShowTotpSetup(false);
         setShowPendingApproval(true);
         setErrorMsg("");
@@ -367,6 +448,11 @@ function Register() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === "email") {
+      setEmailOtpSent(false);
+      setEmailVerified(false);
+      setEmailOtp(["", "", "", "", "", ""]);
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -425,9 +511,10 @@ function Register() {
     if (role === "Student") {
       const roll = (formData.roll_number || "").trim();
       const mobile = (formData.mobile_number || "").trim();
-      const dept = formData.department || "";
       const yr = formData.year || "";
-      if (!roll || !mobile || !dept || !yr) return false;
+      const div = formData.division || "";
+      if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
+      if (deptOptions.length > 0 && !formData.department) return false;
     } else if (role !== "Admin") {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
@@ -436,8 +523,17 @@ function Register() {
     return true;
   };
 
+  const isEmailValidForOtp = () => {
+    const email = (formData.email || "").trim();
+    return email.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
   const requestEmailOtp = async () => {
-    if (!validateDetails()) return;
+    const email = (formData.email || "").trim();
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrorMsg("Please enter a valid email address before requesting OTP.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg("");
@@ -447,14 +543,14 @@ function Register() {
       const response = await fetch(`${getApiBaseUrl()}/auth/register/send-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email.trim(), name: formData.name, role }),
+        body: JSON.stringify({ email, name: formData.name || "", role }),
       });
       const data = await response.json();
       if (data.success) {
         setEmailOtpSent(true);
         setEmailOtp(["", "", "", "", "", ""]);
         setResendIn(60);
-        setSuccessMsg(`Verification code sent to ${formData.email.trim()}. Enter it below to create your account.`);
+        setSuccessMsg(`Verification code sent to ${email}. Enter it below to create your account.`);
         setTimeout(() => emailOtpRefs.current[0]?.focus(), 100);
       } else {
         setErrorMsg(data.message || "Could not send the verification code.");
@@ -467,11 +563,48 @@ function Register() {
     }
   };
 
+  const handleVerifyEmailOtp = async (codeOverride) => {
+    const code = codeOverride || emailOtp.join("");
+    if (!/^\d{6}$/.test(code)) {
+      setErrorMsg("Please enter the complete 6-digit verification code sent to your email.");
+      return;
+    }
+
+    setVerifyingEmailOtp(true);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/auth/register/verify-email-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: formData.email.trim(), otp: code }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEmailVerified(true);
+        setSuccessMsg("✅ College Email verified successfully! You can now complete your registration details.");
+        setErrorMsg("");
+      } else {
+        setErrorMsg(data.message || "Invalid or expired verification code.");
+      }
+    } catch (err) {
+      console.error("Registration OTP verify error:", err);
+      setErrorMsg("Unable to connect to server. Please check your connection and try again.");
+    } finally {
+      setVerifyingEmailOtp(false);
+    }
+  };
+
   const handleEmailOtpChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return;
     setEmailOtp((prev) => {
       const next = [...prev];
       next[index] = value;
+      const joined = next.join("");
+      if (joined.length === 6) {
+        handleVerifyEmailOtp(joined);
+      }
       return next;
     });
     if (value && index < 5) {
@@ -493,6 +626,7 @@ function Register() {
     e.preventDefault();
     setEmailOtp(pasted.split(""));
     emailOtpRefs.current[5]?.focus();
+    handleVerifyEmailOtp(pasted);
   };
 
   const handleSubmit = async (e) => {
@@ -500,17 +634,17 @@ function Register() {
 
     if (!validateDetails()) return;
 
-    // Phase 1: send the code to the college email ONLY for Student role
-    if (role === "Student" && !emailOtpSent) {
-      return requestEmailOtp();
+    // Email verification check for Student role
+    if (role === "Student" && !emailVerified) {
+      setErrorMsg("Please request and verify the 6-digit OTP sent to your college email before completing registration.");
+      return;
     }
 
-    // Phase 2: verify 6-digit OTP code ONLY for Student role
     let otp = "";
     if (role === "Student") {
       otp = emailOtp.join("");
       if (!/^\d{6}$/.test(otp)) {
-        setErrorMsg("Please enter the 6-digit verification code from your email.");
+        setErrorMsg("Please enter and verify the 6-digit code sent to your email.");
         return;
       }
     }
@@ -542,14 +676,10 @@ function Register() {
             navigate("/");
           }, 2500);
         } else {
-          setSuccessMsg("Account created successfully! Redirecting to login...");
-          if (data.data?.token) {
-            sessionStorage.setItem("token", data.data.token);
-            sessionStorage.setItem("user", JSON.stringify(data.data.user));
-          }
-          setTimeout(() => {
-            navigate("/");
-          }, 1500);
+          setRegisteredEmail(formData.email.trim());
+          setShowPendingApproval(true);
+          setErrorMsg("");
+          setSuccessMsg("");
         }
       } else {
         setErrorMsg(data.message || "Registration failed");
@@ -608,68 +738,50 @@ function Register() {
         {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
-          <div className="pending-approval-card" style={{ textAlign: "center", padding: "20px 10px" }}>
-            <div style={{
-              width: "64px",
-              height: "64px",
-              borderRadius: "50%",
-              background: "#fef3c7",
-              color: "#d97706",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 16px auto",
-              border: "2px solid #fde68a",
-              boxShadow: "0 4px 14px rgba(217, 119, 6, 0.15)"
-            }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
+          <div className={`pending-approval-card ${isApproved ? "approved" : ""}`}>
+            <div className={`pending-approval-icon-wrapper ${isApproved ? "approved" : ""}`}>
+              {isApproved ? (
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                  <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+              ) : (
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              )}
             </div>
 
-            <h3 style={{ fontSize: "19px", fontWeight: "800", color: "#0f172a", margin: "0 0 8px 0" }}>
-              Registration & 2FA Setup Complete!
+            <h3 className={`pending-approval-title ${isApproved ? "approved" : ""}`}>
+              {isApproved ? "Registration Approved! 🎉" : "Registration & 2FA Setup Complete!"}
             </h3>
 
-            <p style={{ fontSize: "13.5px", color: "#64748b", lineHeight: "1.5", margin: "0 0 18px 0" }}>
-              Your college email address and Google Authenticator setup have been successfully verified.
+            <p className="pending-approval-subtitle">
+              {isApproved
+                ? "Your account has been officially approved by the College Administrator. You can now log in!"
+                : "Your registration details and Authenticator app (2FA) pairing have been successfully verified."}
             </p>
 
-            <div style={{
-              background: "#fffbeb",
-              border: "1.5px solid #fde68a",
-              borderRadius: "12px",
-              padding: "14px 18px",
-              marginBottom: "22px",
-              textAlign: "left"
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#b45309", fontWeight: "700", fontSize: "13px", marginBottom: "4px" }}>
-                <span style={{ display: "inline-flex", padding: "3px 8px", borderRadius: "9999px", background: "#fef3c7", color: "#d97706", fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>
-                  Status: Pending Admin Approval
+            <div className={`pending-approval-box ${isApproved ? "approved" : ""}`}>
+              <div className={`pending-approval-badge-row ${isApproved ? "approved" : ""}`}>
+                <span className={`pending-approval-badge ${isApproved ? "approved" : ""}`}>
+                  {isApproved ? "Status: Approved" : "Status: Pending Admin Approval"}
                 </span>
               </div>
-              <p style={{ fontSize: "12.5px", color: "#92400e", margin: "6px 0 0 0", lineHeight: "1.5" }}>
-                Your registration is currently under review. An Administrator must approve your account before you can log in to the TrainX Portal.
+              <p className={`pending-approval-desc ${isApproved ? "approved" : ""}`}>
+                {isApproved
+                  ? `Your account is active and verified! Redirecting to login screen automatically in ${redirectCountdown}s...`
+                  : "You can login only after an Administrator approves your account. Your registration is currently under review by college administration."}
               </p>
             </div>
 
             <button
               type="button"
-              onClick={() => navigate("/login")}
-              className="login-send-otp-btn"
-              style={{
-                width: "100%",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-                padding: "12px",
-                fontSize: "14px",
-                fontWeight: "700"
-              }}
+              onClick={() => navigate("/")}
+              className={`login-send-otp-btn pending-approval-btn ${isApproved ? "approved" : ""}`}
             >
-              Return to Login Screen
+              {isApproved ? `Proceed to Login Screen (${redirectCountdown}s)` : "Return to Login Screen"}
             </button>
           </div>
         ) : showTotpSetup ? (
@@ -677,7 +789,7 @@ function Register() {
             <div className="totp-header">
               <h3 className="totp-title">Pair Authenticator App</h3>
               <p className="totp-subtitle">
-                Scan QR Code using Google or Microsoft Authenticator.
+                Scan QR Code using Authenticator App.
               </p>
             </div>
 
@@ -831,69 +943,114 @@ function Register() {
                 </div>
 
                 {/* Row 2: College Email & Inline 6-Digit OTP Code */}
-                <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: "11px" }}>
-                  <div className="input-group" style={{ marginBottom: 0 }}>
-                    <FieldLabel icon={Icons.email}>College Email</FieldLabel>
-                    <div className="email-with-otp-row">
-                      <input
-                        type="email"
-                        name="email"
-                        autoComplete="email"
-                        required
-                        placeholder="user@pvppcoe.ac.in"
-                        value={formData.email}
-                        onChange={handleChange}
-                      />
+                <div className="input-group" style={{ marginBottom: "11px" }}>
+                  {emailVerified ? (
+                    <div className="email-verified-badge-card">
+                      <span className="email-verified-badge-text" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ color: "#16a34a", display: "inline-flex" }}>{Icons.check}</span> College Email Verified: <strong>{formData.email}</strong>
+                      </span>
                       <button
                         type="button"
-                        className={`get-otp-inline-btn ${isFormFullyFilled() && !emailOtpSent ? "active" : ""}`}
-                        disabled={!isFormFullyFilled() || loading || resendIn > 0}
-                        onClick={requestEmailOtp}
+                        className="email-verified-change-btn"
+                        onClick={() => {
+                          setEmailVerified(false);
+                          setEmailOtpSent(false);
+                          setEmailOtp(["", "", "", "", "", ""]);
+                        }}
                       >
-                        {loading ? "Sending..." : emailOtpSent ? (resendIn > 0 ? `${resendIn}s` : "Resend") : "Get OTP"}
+                        Change Email
                       </button>
                     </div>
-                  </div>
-
-                  {/* Right Column: 6-Digit OTP Code beside Email Bar with Small Resend Symbol */}
-                  {emailOtpSent && (
-                    <div className="input-group" style={{ marginBottom: 0 }}>
-                      <div className="label-with-resend-row">
-                        <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
-                        <button
-                          type="button"
-                          className="reg-resend-symbol-btn"
-                          disabled={resendIn > 0 || loading}
-                          onClick={requestEmailOtp}
-                          title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
-                        >
-                          {Icons.refresh}
-                          <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
-                        </button>
-                      </div>
-                      <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste}>
-                        {emailOtp.map((digit, i) => (
+                  ) : (
+                    <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: 0 }}>
+                      <div className="input-group" style={{ marginBottom: 0 }}>
+                        <FieldLabel icon={Icons.email}>College Email</FieldLabel>
+                        <div className="email-with-otp-row">
                           <input
-                            key={i}
-                            ref={(el) => (emailOtpRefs.current[i] = el)}
-                            className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
-                            type="text"
-                            inputMode="numeric"
-                            autoComplete="one-time-code"
-                            maxLength={1}
-                            aria-label={`Digit ${i + 1}`}
-                            value={digit}
-                            onChange={(e) => handleEmailOtpChange(i, e.target.value)}
-                            onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
+                            type="email"
+                            name="email"
+                            autoComplete="email"
+                            required
+                            placeholder="name@college.edu"
+                            value={formData.email}
+                            onChange={handleChange}
                           />
-                        ))}
+                          {!emailOtpSent && (
+                            <button
+                              type="button"
+                              className={`get-otp-inline-btn ${isEmailValidForOtp() ? "active" : ""}`}
+                              disabled={!isEmailValidForOtp() || loading}
+                              onClick={requestEmailOtp}
+                            >
+                              {loading ? "Sending..." : "Get OTP"}
+                            </button>
+                          )}
+                        </div>
+                        {(() => {
+                          if (!formData.email || !formData.email.includes("@")) return null;
+                          const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
+                          const selectedCollege = Array.isArray(colleges) ? colleges.find(c => String(c.id) === String(formData.college_id)) : null;
+                          const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
+                          if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
+                            return (
+                              <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+                                <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
+
+                      {/* Right Column: 6-Digit OTP Code beside Email Bar */}
+                      {emailOtpSent && (
+                        <div className="input-group" style={{ marginBottom: 0 }}>
+                          <div className="label-with-resend-row">
+                            <FieldLabel icon={Icons.shield}>Enter 6-Digit Code</FieldLabel>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              {verifyingEmailOtp && (
+                                <span style={{ fontSize: "11px", color: "#2563eb", fontWeight: 600 }}>Verifying...</span>
+                              )}
+                              <button
+                                type="button"
+                                className="reg-resend-symbol-btn"
+                                disabled={resendIn > 0 || loading || verifyingEmailOtp}
+                                onClick={requestEmailOtp}
+                                title={resendIn > 0 ? `Resend available in ${resendIn}s` : "Resend OTP"}
+                              >
+                                {Icons.refresh}
+                                <span>{resendIn > 0 ? `${resendIn}s` : "Resend"}</span>
+                              </button>
+                            </div>
+                          </div>
+                          <div className="email-with-otp-row">
+                            <div className="login-otp-inputs-compact" onPaste={handleEmailOtpPaste} style={{ flex: 1 }}>
+                              {emailOtp.map((digit, i) => (
+                                <input
+                                  key={i}
+                                  ref={(el) => (emailOtpRefs.current[i] = el)}
+                                  className={`login-otp-digit-input-compact ${digit ? "filled" : ""}`}
+                                  type="text"
+                                  inputMode="numeric"
+                                  autoComplete="one-time-code"
+                                  maxLength={1}
+                                  aria-label={`Digit ${i + 1}`}
+                                  value={digit}
+                                  disabled={verifyingEmailOtp}
+                                  onChange={(e) => handleEmailOtpChange(i, e.target.value)}
+                                  onKeyDown={(e) => handleEmailOtpKeyDown(i, e)}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
-                {/* Row 3: Mobile Number | Department | Year */}
-                <div className="form-grid-3">
+                {/* Row 3: Mobile Number | Department | Year | Division */}
+                <div className={deptOptions.length > 0 ? "form-grid-4" : "form-grid-3"}>
                   <div className="input-group">
                     <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
                     <input
@@ -908,16 +1065,18 @@ function Register() {
                     />
                   </div>
 
-                  <div className="input-group">
-                    <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
-                    <RegSelect
-                      value={formData.department}
-                      wrapperClass="reg-select"
-                      options={deptOptions}
-                      onChange={(val) => setFormData({ ...formData, department: val })}
-                      placeholder="Select Dept"
-                    />
-                  </div>
+                  {deptOptions.length > 0 && (
+                    <div className="input-group">
+                      <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
+                      <RegSelect
+                        value={formData.department}
+                        wrapperClass="reg-select"
+                        options={deptOptions}
+                        onChange={(val) => setFormData({ ...formData, department: val })}
+                        placeholder="Select Dept"
+                      />
+                    </div>
+                  )}
 
                   <div className="input-group">
                     <FieldLabel icon={Icons.year}>Year</FieldLabel>
@@ -932,6 +1091,19 @@ function Register() {
                       ]}
                       onChange={(val) => setFormData({ ...formData, year: val })}
                       placeholder="Year"
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.division}>Division</FieldLabel>
+                    <input
+                      type="text"
+                      name="division"
+                      autoComplete="off"
+                      required
+                      placeholder="e.g. A, B, C"
+                      value={formData.division}
+                      onChange={handleChange}
                     />
                   </div>
                 </div>
@@ -1074,8 +1246,8 @@ function Register() {
               </div>
             )}
 
-            <button type="submit" disabled={loading}>
-              {loading ? "Registering..." : "Register"}
+            <button type="submit" disabled={loading || (role === "Student" && !emailVerified)}>
+              {loading ? "Registering..." : (role === "Student" && !emailVerified ? "Verify Email to Register" : "Register")}
             </button>
 
             <div className="links">
@@ -1207,9 +1379,7 @@ function Register() {
                 </div>
 
                 <div className="sa-modal-footer">
-                  <button type="button" className="btn-modal-cancel" onClick={() => setIsRequestDemoOpen(false)}>
-                    Cancel
-                  </button>
+
                   <button type="submit" className="btn-modal-submit">
                     Submit Access Request
                   </button>

@@ -1,11 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, EVENTS } from "../../../utils/sharedStore";
-import {
-  Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy,
-  BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight,
-  Bookmark, Sliders, ExternalLink, Cpu, Terminal
-} from "lucide-react";
+import { Code2, Search, Filter, CheckCircle2, Circle, Flame, Trophy, BookOpen, Sparkles, ChevronRight, Play, Award, ArrowUpRight, Bookmark, Sliders, ExternalLink, Cpu, Terminal, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -23,62 +19,26 @@ export default function PracticeProblems() {
     const loadProblems = async () => {
       try {
         const res = await apiFetch("/student/practice-problems");
-        let apiItems = [];
-        if (res.data && res.data.length > 0) {
-          apiItems = res.data.map((p) => ({
-            id: p.id,
-            title: p.title,
-            topic: p.category || "General DSA",
-            difficulty: p.difficulty,
-            acceptance: "65.0%",
-            points: p.points || 100,
-            solved: p.solve_status === "Solved",
-            companies: ["TCS", "Infosys"],
-            solutionAvailable: true,
-            description: p.description || "No problem description provided.", dueDate: p.due_date || p.dueDate || "N/A",
-          }));
-        }
-        const shared = await getSharedCodingTasks([]);
-        const mappedShared = shared.map((s) => ({
-          id: s.id,
-          title: s.title,
-          topic: s.data?.category || s.category || s.topic || "General DSA",
-          difficulty: s.data?.difficulty || s.difficulty || "Medium",
-          acceptance: "70.0%",
-          points: s.data?.points || s.points || 100,
-          solved: false,
-          companies: ["Core Tech"],
+        const rawList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const mapped = rawList.map((p) => ({
+          id: p.id,
+          title: p.title,
+          topic: p.category || "General DSA",
+          difficulty: p.difficulty || "Medium",
+          acceptance: "65.0%",
+          points: p.points || 100,
+          solved: p.solve_status === "Solved",
+          companies: p.tags ? (Array.isArray(p.tags) ? p.tags : (typeof p.tags === "string" ? p.tags.split(",").map(t => t.trim()) : [])) : ["TCS", "Infosys"],
           solutionAvailable: true,
-          description: s.data?.description || s.description || "No problem description provided.", dueDate: s.data?.due_date || s.due_date || s.dueDate || "N/A",
+          description: p.description || "No problem description provided.",
+          dueDate: (p.due_date || p.dueDate) ? new Date(p.due_date || p.dueDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "No Deadline",
         }));
-        const existingIds = new Set(apiItems.map((i) => i.id));
-        const uniqueShared = mappedShared.filter((s) => !existingIds.has(s.id));
-        setProblemsList([...uniqueShared, ...apiItems]);
-      } catch {
-        const shared = await getSharedCodingTasks([]);
-        if (shared.length > 0) {
-          setProblemsList(
-            shared.map((s) => ({
-              id: s.id,
-              title: s.title,
-              topic: s.data?.category || s.category || s.topic || "General DSA",
-              difficulty: s.data?.difficulty || s.difficulty || "Medium",
-              acceptance: "70.0%",
-              points: s.data?.points || s.points || 100,
-              solved: false,
-              companies: ["Core Tech"],
-              solutionAvailable: true,
-              dueDate: s.data?.due_date || s.due_date || s.dueDate || "N/A"
-            }))
-          );
-        }
+        setProblemsList(mapped);
+      } catch (err) {
+        console.error("Failed to load student practice problems from DB:", err);
       }
     };
-
     loadProblems();
-    const handleUpdate = () => loadProblems();
-    window.addEventListener(EVENTS.CODING_UPDATED, handleUpdate);
-    return () => window.removeEventListener(EVENTS.CODING_UPDATED, handleUpdate);
   }, []);
   const [selectedTopic, setSelectedTopic] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -232,6 +192,16 @@ export default function PracticeProblems() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchTerm("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="filters-row">
@@ -319,7 +289,7 @@ export default function PracticeProblems() {
                       </span>
                     </td>
                     <td>
-                      <span style={{ color: prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
+                      <span style={{ color: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? '#ef4444' : '#94a3b8', fontWeight: prob.dueDate && prob.dueDate !== 'No Deadline' && prob.dueDate !== 'N/A' ? 600 : 400, fontSize: '13px' }}>
                         {prob.dueDate}
                       </span>
                     </td>

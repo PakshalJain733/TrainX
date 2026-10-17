@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Lock, Eye, EyeOff, X, CheckCircle, AlertCircle, Shield } from 'lucide-react';
+import { Lock, Eye, EyeOff, X, CheckCircle, AlertCircle, Shield } from "lucide-react";
 import { apiFetch } from '../../utils/api';
+import { useSystemMaintenance } from '../../context/SystemMaintenanceContext';
 import './ChangePasswordModal.css';
 
-export default function ChangePasswordModal({ isOpen, onClose }) {
+export default function ChangePasswordModal({ isOpen = true, onClose }) {
+  const { isModuleActive, getModuleConfig } = useSystemMaintenance();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,6 +25,11 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (!isModuleActive("passwordReset")) {
+      setError(getModuleConfig("passwordReset")?.message || "Password recovery & modification is currently paused for maintenance.");
+      return;
+    }
 
     if (newPassword.length < 6) {
       setError('New password must be at least 6 characters long.');
@@ -80,6 +87,13 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
         </div>
 
         <form onSubmit={handleSubmit} className="cp-modal-body">
+          {!isModuleActive("passwordReset") && (
+            <div className="cp-modal-alert cp-modal-alert--error">
+              <AlertCircle size={18} />
+              <span>Password updates & recovery are currently turned off by administrator policy.</span>
+            </div>
+          )}
+
           {error && (
             <div className="cp-modal-alert cp-modal-alert--error">
               <AlertCircle size={18} />
@@ -163,8 +177,13 @@ export default function ChangePasswordModal({ isOpen, onClose }) {
             <button type="button" className="cp-btn-cancel" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="cp-btn-submit" disabled={loading}>
-              {loading ? 'Updating Password...' : 'Update Password'}
+            <button
+              type="submit"
+              className="cp-btn-submit"
+              disabled={loading || !isModuleActive("passwordReset")}
+              style={!isModuleActive("passwordReset") ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+            >
+              {!isModuleActive("passwordReset") ? 'Disabled by Admin' : loading ? 'Updating Password...' : 'Update Password'}
             </button>
           </div>
         </form>

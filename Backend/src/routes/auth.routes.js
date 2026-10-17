@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterOtp, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail , registerInstitution } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -10,7 +10,9 @@ const router = Router();
 // The legacy unauthenticated POST /register is intentionally gone so the
 // email verification cannot be bypassed.
 router.get('/departments-by-email', getDepartmentsByEmail);
+router.get('/registration-status', checkRegistrationStatus);
 router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOtp);
+router.post('/register/verify-email-otp', validateRequestBody(['email', 'otp']), verifyRegisterEmailOtp);
 router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
 
 // OTP, TOTP & Password Login flows
@@ -34,3 +36,5 @@ router.post('/setup-2fa', authenticateToken, setup2FA);
 router.post('/verify-2fa', authenticateToken, verify2FA);
 
 export default router;
+
+router.post('/register-institution', registerInstitution);

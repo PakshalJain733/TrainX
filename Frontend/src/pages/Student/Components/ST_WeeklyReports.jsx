@@ -1,17 +1,12 @@
 import React, { useState } from "react";
-import {
-  FileCheck2,
-  ChevronDown,
-  ChevronUp,
-  Download,
-  CheckCircle,
-  AlertTriangle,
-} from "lucide-react";
+import { FileCheck2, ChevronDown, ChevronUp, Download, CheckCircle, AlertTriangle } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/ST_WeeklyReports.css"
 
 const reportsData = [];
 
 export default function WeeklyReports() {
+  const { isModuleActive } = useSystemMaintenance();
   const [openWeek, setOpenWeek] = useState("week-32");
 
   const toggleWeek = (id) => {
@@ -19,6 +14,10 @@ export default function WeeklyReports() {
   };
 
   const handleDownload = (reportTitle) => {
+    if (!isModuleActive("studentPdfDownloader")) {
+      alert("PDF download service is currently offline for maintenance.");
+      return;
+    }
     alert(`Downloading ${reportTitle} dossier summary (PDF)...`);
   };
 
@@ -41,7 +40,7 @@ export default function WeeklyReports() {
       {/* Reviewer / Current Status Banner */}
       <div className="weekly-status-banner">
         <div className="weekly-status-header">
-          <FileCheck2 size={20} className="text-blue-600" />
+          <FileCheck2 size={20} className="weekly-status-icon" />
           <span>Current status</span>
         </div>
         <p className="weekly-status-desc">
@@ -59,7 +58,7 @@ export default function WeeklyReports() {
       <div className="weekly-reports-list">
         {reportsData.length === 0 ? (
           <div className="admin-empty-state-card" style={{ padding: '40px', textAlign: 'center', background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-            <FileCheck2 size={36} className="text-slate-400" style={{ margin: '0 auto 16px' }} />
+            <FileCheck2 size={36} className="weekly-empty-icon" />
             <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1e293b', marginBottom: '8px' }}>No weekly reports available</h3>
             <p style={{ color: '#64748b' }}>Your weekly performance reports will appear here once generated.</p>
           </div>
@@ -172,9 +171,12 @@ export default function WeeklyReports() {
                   <button
                     className="weekly-download-btn"
                     onClick={() => handleDownload(report.title)}
+                    disabled={!isModuleActive("studentPdfDownloader")}
+                    style={!isModuleActive("studentPdfDownloader") ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+                    title={!isModuleActive("studentPdfDownloader") ? "PDF download disabled by administrator" : "Download report"}
                   >
                     <Download size={15} />
-                    Download report
+                    {isModuleActive("studentPdfDownloader") ? "Download report" : "Download (Disabled)"}
                   </button>
                 </div>
               )}

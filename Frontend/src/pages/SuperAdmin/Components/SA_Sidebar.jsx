@@ -1,18 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Building2,
-  Briefcase,
-  Code2,
-  Users,
-  UserCog,
-  UserCheck,
-  LineChart,
-  SlidersHorizontal,
-  Activity,
-  HelpCircle,
-  FileCheck2,
-} from "lucide-react";
+import { LayoutDashboard, Building2, Briefcase, Code2, Users, UserCog, UserCheck, SlidersHorizontal, Activity, HelpCircle, FileCheck2 } from "lucide-react";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/SA_Sidebar.css";
@@ -29,7 +16,7 @@ function SidebarBrand({ collapsed, subtitle }) {
             <span className="brand-name1">Train</span>
             <img src={trainXImg} alt="X" className="brand-x-img-sa" />
           </div>
-          <span className="sidebar-brand-sub">{subtitle || "Super Admin"}</span>
+          <span className="sidebar-brand-sub">{subtitle || "Training Portal"}</span>
         </div>
       )}
     </div>
@@ -39,17 +26,13 @@ function SidebarBrand({ collapsed, subtitle }) {
 const primaryNavItems = [
   { title: "Overview", url: "/super-admin", icon: LayoutDashboard, exact: true },
   { title: "Colleges", url: "/super-admin/colleges", icon: Building2 },
-  { title: "Departments", url: "/super-admin/departments", icon: Briefcase },
-  { title: "Batches", url: "/super-admin/batches", icon: Code2 },
   { title: "Manage Users", url: "/super-admin/users", icon: UserCog },
-  { title: "Approve Users", url: "/super-admin/approve-users", icon: UserCheck },
-
+  { title: "Approve Registration", url: "/super-admin/approve-users", icon: UserCheck },
   { title: "Feature Switches", url: "/super-admin/maintenance", icon: SlidersHorizontal },
   { title: "System Health", url: "/super-admin/health", icon: Activity },
 ];
 
 const footerNavItems = [
-  { title: "View Profile", url: "/super-admin/profile", icon: UserCog },
   { title: "Support Tickets", url: "/super-admin/tickets", icon: HelpCircle },
 ];
 

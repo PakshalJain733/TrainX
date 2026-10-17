@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiFetch } from '../../../utils/api';
-import { Layers, Plus, Code2 } from 'lucide-react';
+import { Layers, Plus, Code2 } from "lucide-react";
 
 import "../Styles/MN_Batches.css";
 
@@ -53,7 +53,7 @@ export default function Batches() {
     apiFetch("/mentor/batches")
       .then((res) => {
         if (!mounted) return;
-        const list = res?.data || (Array.isArray(res) ? res : []);
+        const list = getBatches(res);
         setBatches(list);
       })
       .catch(() => {
@@ -68,6 +68,8 @@ export default function Batches() {
       mounted = false;
     };
   }, []);
+
+  const safeBatches = Array.isArray(batches) ? batches : [];
 
   return (
     <div className="mentor-batches-container">
@@ -86,7 +88,7 @@ export default function Batches() {
           <Layers size={28} />
           <p className="mentor-batch-empty-title">Loading assigned batches...</p>
         </div>
-      ) : batches.length === 0 ? (
+      ) : safeBatches.length === 0 ? (
         <div className="mentor-batch-empty">
           <Layers size={28} />
           <p className="mentor-batch-empty-title">No records yet</p>
@@ -94,7 +96,7 @@ export default function Batches() {
         </div>
       ) : (
         <div className="mentor-batches-grid">
-          {batches.map((batch, index) => {
+          {safeBatches.map((batch, index) => {
             const code = textValue(firstValue(batch, ["code", "batchCode", "batch_code", "programCode"])) || "N/A";
             const name = textValue(firstValue(batch, ["name", "batchName", "batch_name"])) || "N/A";
             const college = textValue(firstValue(batch, ["college", "collegeName", "college_name", "institution"])) || "N/A";

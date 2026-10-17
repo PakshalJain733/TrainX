@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import "./CustomSelect.css";
 
 export default function CustomSelect({
@@ -19,8 +19,9 @@ export default function CustomSelect({
   const dropdownRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Normalize options array
-  const normalizedOptions = options.map((opt) =>
+  // Normalize options array safely
+  const safeOptions = Array.isArray(options) ? options : [];
+  const normalizedOptions = safeOptions.map((opt) =>
     typeof opt === "string" ? { value: opt, label: opt } : opt
   );
 

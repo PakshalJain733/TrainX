@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Layers, Code2, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Sparkles } from 'lucide-react';
+import { Layers, Code2, Search, Plus, Users, Calendar, GraduationCap, Building2, RefreshCw, X, UserCheck, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Sparkles } from "lucide-react";
 import { batchAPI, collegeAPI, departmentAPI } from '../../../services/api';
 import { EVENTS } from '../../../utils/sharedStore';
 import "../Styles/SA_Batches.css";
@@ -19,22 +19,22 @@ function BatchSelect(props) {
   return <CustomSelect {...props} />;
 }
 function StatusBadge({ status }) {
-  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  let modifier = '';
   if (status === 'Active' || status === 'active' || status === 'Verified' || status === 'Available') {
-    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    modifier = 'batch-status--active';
   } else if (status === 'Inactive' || status === 'inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-rose-50 text-rose-700 border-rose-200';
+    modifier = 'batch-status--inactive';
   } else if (status === 'High' || status === 'In Progress') {
-    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    modifier = 'batch-status--progress';
   } else if (status === 'Busy' || status === 'Medium') {
-    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+    modifier = 'batch-status--warning';
   } else if (status === 'Near Completion') {
-    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+    modifier = 'batch-status--purple';
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+    <span className={`batch-status-badge ${modifier}`}>
+      <span className="batch-status-badge-dot"></span>
       {status}
     </span>
   );
@@ -320,9 +320,9 @@ export default function Batches() {
       {/* Header Bar */}
       <div className="batches-header-wrap">
         <div>
-          <h2 className="batches-header-title">
-            <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
-            <span>Training Batches & Batches</span>
+          <h2 className="batches-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span>Training Batches</span>
           </h2>
           <p className="batches-header-subtitle">Monitor batch timelines, completion progress, and assigned mentors</p>
         </div>
@@ -344,13 +344,21 @@ export default function Batches() {
           <Search className="sa-search-icon" size={16} />
           <input
             type="text"
-
             placeholder="Search batch name, code, or college..."
-
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="sa-search-input"
           />
+          {search && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="batches-select-group">
@@ -586,9 +594,6 @@ export default function Batches() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit">
                   Create Batch
                 </button>
@@ -610,7 +615,7 @@ export default function Batches() {
                 </div>
                 <div>
                   <h2 className="modal-title">{viewBatch.name}</h2>
-                  <p className="modal-subtitle">Batch Code: <strong className="text-slate-700">{viewBatch.code || 'BCH-2026'}</strong></p>
+                  <p className="modal-subtitle">Batch Code: <strong className="sa-batch-code-highlight">{viewBatch.code || 'BCH-2026'}</strong></p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setViewBatch(null)}>
@@ -622,7 +627,7 @@ export default function Batches() {
               <div className="sa-modal-details-grid">
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Building2 size={13} className="text-indigo-500" />
+                    <Building2 size={13} className="sa-detail-label-icon" />
                     <span>Institution</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewBatch.collegeName || viewBatch.college || "Apex Tech"}</span>
@@ -630,15 +635,15 @@ export default function Batches() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <GraduationCap size={13} className="text-indigo-500" />
+                    <GraduationCap size={13} className="sa-detail-label-icon" />
                     <span>Department</span>
                   </span>
-                  <span className="sa-modal-detail-value text-indigo-600">{viewBatch.departmentName || viewBatch.department || "Computer Science"}</span>
+                  <span className="sa-modal-detail-value sa-detail-dept-value">{viewBatch.departmentName || viewBatch.department || "Computer Science"}</span>
                 </div>
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <UserCheck size={13} className="text-indigo-500" />
+                    <UserCheck size={13} className="sa-detail-label-icon" />
                     <span>Assigned Lead Mentor</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewBatch.trainer || 'Prof. Active Trainer'}</span>
@@ -646,17 +651,17 @@ export default function Batches() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Calendar size={13} className="text-indigo-500" />
+                    <Calendar size={13} className="sa-detail-label-icon" />
                     <span>Weekly Schedule</span>
                   </span>
-                  <span className="sa-modal-detail-value font-medium text-slate-700" style={{ fontSize: '12px' }}>
+                  <span className="sa-modal-detail-value sa-detail-schedule-value">
                     {viewBatch.schedule || 'Mon - Fri (10 AM)'}
                   </span>
                 </div>
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <Users size={13} className="text-indigo-500" />
+                    <Users size={13} className="sa-detail-label-icon" />
                     <span>Enrolled Students</span>
                   </span>
                   <span className="sa-modal-detail-value">{viewBatch.studentsCount !== undefined && viewBatch.studentsCount !== null ? viewBatch.studentsCount : (viewBatch.students !== undefined ? viewBatch.students : 0)} Students</span>
@@ -664,7 +669,7 @@ export default function Batches() {
 
                 <div className="sa-modal-detail-item">
                   <span className="sa-modal-detail-label">
-                    <ShieldCheck size={13} className="text-indigo-500" />
+                    <ShieldCheck size={13} className="sa-detail-label-icon" />
                     <span>Status</span>
                   </span>
                   <div className="mt-1">
@@ -810,9 +815,9 @@ export default function Batches() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setEditBatch(null)}>
-                  Cancel
-                </button>
+
+
+
                 <button type="submit" className="btn-modal-submit">
                   Save Changes
                 </button>
@@ -843,15 +848,12 @@ export default function Batches() {
             </div>
 
             <div className="modal-body">
-              <p className="text-sm text-slate-600 m-0">
-                Are you sure you want to remove <strong className="text-slate-900">{deleteBatch.name}</strong>? This action cannot be undone.
+              <p className="batches-delete-confirm-text">
+                Are you sure you want to remove <strong className="batches-delete-confirm-name">{deleteBatch.name}</strong>? This action cannot be undone.
               </p>
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setDeleteBatch(null)}>
-                Cancel
-              </button>
               <button
                 type="button"
                 className="manageusers-btn-reject modal-btn-confirm-delete"

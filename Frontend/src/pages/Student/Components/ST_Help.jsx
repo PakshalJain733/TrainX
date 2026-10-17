@@ -1,25 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import {
-  HelpCircle,
-  MessageCircle,
-  Phone,
-  Search,
-  Plus,
-  ChevronDown,
-  Check,
-  Sparkles,
-  Ticket,
-  FileText,
-  Download,
-  ThumbsUp,
-  ThumbsDown,
-  X,
-  Send,
-  ShieldAlert,
-  Clock,
-  CheckCircle2,
-  AlertCircle
-} from "lucide-react";
+import { Check, HelpCircle, MessageCircle, Phone, Search, Plus, ChevronDown, Sparkles, Ticket, FileText, Download, ThumbsUp, ThumbsDown, X, Send, ShieldAlert, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/ST_Help.css";
 
@@ -27,7 +7,8 @@ import "../Styles/ST_Help.css";
 function StudentHelpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = React.useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -42,7 +23,7 @@ function StudentHelpSelect({ value, options = [], onChange, placeholder = 'Selec
       </button>
       {isOpen && (
         <div className="student-help-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-help-select-option${isSel ? ' student-help-select-option--selected' : ''}`}>
@@ -141,9 +122,8 @@ export default function Help() {
     setLoadingTickets(true);
     try {
       const res = await apiFetch('/student/support/tickets');
-      if (res && res.success && Array.isArray(res.data)) {
-        setTickets(res.data);
-      }
+      const rawData = Array.isArray(res) ? res : Array.isArray(res?.data) ? res.data : (res?.data?.tickets || []);
+      setTickets(rawData);
     } catch (err) {
       console.error('[Help.jsx fetchTickets error]', err);
     } finally {
@@ -176,7 +156,7 @@ export default function Help() {
         method: 'POST',
         body: JSON.stringify(newTicket)
       });
-      if (res && res.success) {
+      if (res && (res.success || res.data || res.id)) {
         setNewTicket({ subject: "", category: "Academics & Labs", priority: "Normal", description: "" });
         setIsTicketModalOpen(false);
         setActiveTab("tickets");

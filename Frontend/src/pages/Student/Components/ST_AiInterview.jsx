@@ -3,35 +3,13 @@ import { createPortal } from "react-dom";
 
 import { io } from "socket.io-client";
 
-import {
-  Bot,
-  Camera,
-  CameraOff,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  Send,
-  Timer,
-  Award,
-  Sparkles,
-  RotateCcw,
-  Play,
-  Video,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  ShieldAlert,
-  Eye,
-  UserX,
-  Users,
-  Flag,
-} from "lucide-react";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2 } from "lucide-react";
+import { apiFetch, getApiBaseUrl, getBackendOrigin, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
 import aiInterviewerRef from "../../../assets/images/ai-interviewer-reference.png";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 
 
 const INTERVIEW_SECONDS = 5 * 60; // 5 minutes
@@ -47,81 +25,224 @@ const ROLE_OPTIONS = [
   "DevOps Trainee",
 ];
 
+const ROLE_TOPIC_MAP = {
+  "Data Analyst": {
+    keywords: [
+      "sql", "database", "databases", "python", "data analytics", "analytics",
+      "pandas", "numpy", "tableau", "powerbi", "power bi", "excel",
+      "statistics", "visualization", "bigquery", "data engineering", "dsa",
+      "data structures", "algorithms"
+    ],
+    recommendedTopics: ["SQL / Databases", "Python", "Data Structures & Algorithms"],
+    description: "Data Analyst roles focus on SQL, Python, Statistics, Data Visualization (Tableau/PowerBI), and Excel rather than Web UI or JavaScript application development.",
+    suggestedRoles: ["Full Stack Developer", "Backend Developer", "Frontend Developer"],
+  },
+  "Frontend Developer": {
+    keywords: [
+      "javascript", "js", "react", "html", "css", "typescript", "ts", "frontend",
+      "web", "vue", "angular", "nextjs", "next.js", "tailwind", "ui", "ux",
+      "browser", "dom", "dsa", "data structures", "algorithms"
+    ],
+    recommendedTopics: ["JavaScript", "React", "Data Structures & Algorithms"],
+    description: "Frontend Developer roles focus on JavaScript, React, TypeScript, HTML/CSS, and Web Performance.",
+    suggestedRoles: ["Full Stack Developer", "Software Engineer Intern"],
+  },
+  "Backend Developer": {
+    keywords: [
+      "node", "nodejs", "node.js", "express", "java", "python", "sql", "database",
+      "databases", "mongodb", "postgres", "mysql", "redis", "system design",
+      "rest", "api", "microservices", "dsa", "data structures", "algorithms",
+      "c++", "cpp", "go", "golang", "django", "fastapi", "spring", "springboot"
+    ],
+    recommendedTopics: ["Node.js", "Java", "SQL / Databases", "System Design Basics", "Data Structures & Algorithms", "Python"],
+    description: "Backend Developer roles focus on Node.js, Java, Python, SQL/Databases, System Design, and REST APIs.",
+    suggestedRoles: ["Full Stack Developer", "Software Engineer Intern"],
+  },
+  "Full Stack Developer": {
+    keywords: [
+      "javascript", "js", "react", "node", "nodejs", "node.js", "python", "java",
+      "sql", "database", "databases", "fullstack", "full stack", "dsa",
+      "data structures", "algorithms", "system design", "html", "css", "express", "mongodb"
+    ],
+    recommendedTopics: ["JavaScript", "React", "Node.js", "SQL / Databases", "Data Structures & Algorithms", "Python", "Java", "System Design Basics"],
+    description: "Full Stack roles cover both Frontend (JS/React) and Backend (Node/Java/SQL).",
+    suggestedRoles: ["Backend Developer", "Frontend Developer"],
+  },
+  "QA / Testing Engineer": {
+    keywords: [
+      "testing", "qa", "selenium", "cypress", "junit", "testng", "automation",
+      "api testing", "postman", "jest", "unit testing", "playwright", "cucumber",
+      "pytest", "python", "java", "javascript", "sql", "database"
+    ],
+    recommendedTopics: ["Java", "Python", "SQL / Databases", "JavaScript"],
+    description: "QA & Testing roles focus on Automation Testing (Selenium/Cypress), Unit/API Testing, Python/Java, and SQL.",
+    suggestedRoles: ["Software Engineer Intern"],
+  },
+  "DevOps Trainee": {
+    keywords: [
+      "devops", "docker", "kubernetes", "k8s", "ci/cd", "cicd", "jenkins",
+      "linux", "bash", "shell", "aws", "cloud", "terraform", "ansible", "git",
+      "python", "system design", "sql"
+    ],
+    recommendedTopics: ["System Design Basics", "Python", "SQL / Databases"],
+    description: "DevOps roles focus on Docker, Kubernetes, Linux/Shell, CI/CD, Infrastructure & Cloud Services.",
+    suggestedRoles: ["Backend Developer"],
+  },
+  "Software Engineer Intern": {
+    keywords: [
+      "dsa", "data structures", "algorithms", "java", "python", "c++", "cpp",
+      "javascript", "sql", "database", "databases", "oops", "object oriented",
+      "react", "node", "system design"
+    ],
+    recommendedTopics: ["Data Structures & Algorithms", "Java", "Python", "JavaScript", "SQL / Databases", "React", "Node.js", "System Design Basics"],
+    description: "Software Engineer Intern roles cover Core CS (DSA, OOP, System Design, SQL, Programming Languages).",
+    suggestedRoles: ["Full Stack Developer", "Backend Developer"],
+  },
+};
+
+function checkRoleTopicCompatibility(selectedRole, selectedTopic, customTopicText = "") {
+  if (!selectedRole) return { isMismatch: false };
+  const roleInfo = ROLE_TOPIC_MAP[selectedRole];
+  if (!roleInfo) return { isMismatch: false };
+
+  const effectiveTopic = (selectedTopic === "Other / Custom Topic..." || selectedTopic === "Custom Topic")
+    ? (customTopicText ? customTopicText.trim() : "")
+    : selectedTopic;
+
+  if (!effectiveTopic) return { isMismatch: false, effectiveTopic: "" };
+
+  // 1. Direct match with recommended topics for the selected role
+  const isDirectlyRecommended = roleInfo.recommendedTopics.some(
+    (rt) => rt.toLowerCase() === effectiveTopic.toLowerCase()
+  );
+  if (isDirectlyRecommended) {
+    return { isMismatch: false, effectiveTopic };
+  }
+
+  // 2. Strict word boundary regex matching for custom topics / keywords
+  const topicLower = effectiveTopic.toLowerCase();
+
+  const hasKeywordMatch = roleInfo.keywords.some((kw) => {
+    const kwLower = kw.toLowerCase();
+    const escaped = kwLower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`(?:^|[^a-z0-9])${escaped}(?:$|[^a-z0-9])`, "i");
+    return regex.test(topicLower);
+  });
+
+  if (!hasKeywordMatch) {
+    return {
+      isMismatch: true,
+      role: selectedRole,
+      topic: effectiveTopic,
+      description: roleInfo.description,
+      recommendedTopics: roleInfo.recommendedTopics,
+      suggestedRoles: roleInfo.suggestedRoles,
+      reason: `'${effectiveTopic}' is not a valid interview topic for a '${selectedRole}' role.`
+    };
+  }
+
+  return { isMismatch: false, effectiveTopic };
+}
+
 export default function AIInterview() {
   const [answer, setAnswer] = useState("");
   const [isEvaluating, setIsEvaluating] = useState(false);
   const recognitionRef = useRef(null);
-  
+
   // Speech & Interview State
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(true);
 
-const TOPIC_OPTIONS = [
-  "JavaScript",
-  "Python",
-  "SQL / Databases",
-  "Data Structures & Algorithms",
-  "React",
-  "Node.js",
-  "Java",
-  "System Design Basics",
-];
+  const TOPIC_OPTIONS = [
+    "JavaScript",
+    "Python",
+    "SQL / Databases",
+    "Data Structures & Algorithms",
+    "React",
+    "Node.js",
+    "Java",
+    "System Design Basics",
+  ];
 
-const fmtTime = (totalSeconds) => {
-  const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
-  const s = (totalSeconds % 60).toString().padStart(2, "0");
-  return `${m}:${s}`;
-};
+  const fmtTime = (totalSeconds) => {
+    const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+    const s = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  };
 
-function pickVoice() {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-  const voices = window.speechSynthesis.getVoices();
-  return (
-    voices.find(
-      (v) =>
-        v.lang.startsWith("en") &&
-        (v.name.includes("Natural") ||
-          v.name.includes("Google") ||
-          v.name.includes("Microsoft") ||
-          v.name.includes("Samantha") ||
-          v.name.includes("Zira"))
-    ) ||
-    voices.find((v) => v.lang.startsWith("en")) ||
-    null
-  );
-}
-
-function speakNow(text, onEnd) {
-  if (!text || typeof window === "undefined" || !window.speechSynthesis) {
-    onEnd && onEnd();
-    return;
+  function pickVoice() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return null;
+    const voices = window.speechSynthesis.getVoices();
+    return (
+      voices.find(
+        (v) =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Natural") ||
+            v.name.includes("Google") ||
+            v.name.includes("Microsoft") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Zira"))
+      ) ||
+      voices.find((v) => v.lang.startsWith("en")) ||
+      null
+    );
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.rate = 0.92;
-  utterance.pitch = 1.0;
-  const voice = pickVoice();
-  if (voice) utterance.voice = voice;
-  utterance.onend = () => onEnd && onEnd();
-  utterance.onerror = () => onEnd && onEnd();
-  window.speechSynthesis.speak(utterance);
-}
 
-function getToken() {
-  return sessionStorage.getItem("token") || sessionStorage.getItem("token") || "";
-}
+  function speakNow(text, onEnd) {
+    if (!text || typeof window === "undefined" || !window.speechSynthesis) {
+      onEnd && onEnd();
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.92;
+    utterance.pitch = 1.0;
+    const voice = pickVoice();
+    if (voice) utterance.voice = voice;
+    utterance.onend = () => onEnd && onEnd();
+    utterance.onerror = () => onEnd && onEnd();
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function getToken() {
+    let token = getAuthToken();
+    if (!token) {
+      try {
+        const uSession = JSON.parse(
+          sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+        );
+        token =
+          uSession.token ||
+          uSession.authToken ||
+          uSession.auth_token ||
+          uSession.accessToken ||
+          uSession.jwt;
+      } catch (e) { }
+    }
+    if (!token) return "";
+    return String(token).replace(/^Bearer\s+/i, "").trim();
+  }
 
   const [phase, setPhase] = useState("setup"); // setup | live | result
   const [role, setRole] = useState(ROLE_OPTIONS[0]);
   const [topic, setTopic] = useState(TOPIC_OPTIONS[0]);
+  const [customTopic, setCustomTopic] = useState("");
+
+  const compatibility = useCallback(() => {
+    return checkRoleTopicCompatibility(role, topic, customTopic);
+  }, [role, topic, customTopic])();
 
   // Camera
   const [cameraState, setCameraState] = useState("idle"); // idle | on | denied | unsupported
   const cameraStreamRef = useRef(null);
   const videoRef = useRef(null);
 
+  // Maintenance & Feature switch
+  const { isModuleActive } = useSystemMaintenance();
+  const speechEnabled = isModuleActive("studentSpeechToText");
+
   // Speech recognition
   const SpeechRecognitionCtor =
-    typeof window !== "undefined"
+    typeof window !== "undefined" && speechEnabled
       ? window.SpeechRecognition || window.webkitSpeechRecognition
       : null;
 
@@ -136,6 +257,7 @@ function getToken() {
   const [conversation, setConversation] = useState([]);
   const conversationEndRef = useRef(null);
   const sessionIdRef = useRef(null);
+  const existingAnswerRef = useRef("");
 
   // Timer — only starts after first question arrives
   const [remaining, setRemaining] = useState(INTERVIEW_SECONDS);
@@ -151,18 +273,21 @@ function getToken() {
   const [overallScorecard, setOverallScorecard] = useState(null);
   const [pastInterviewsList, setPastInterviewsList] = useState([]);
 
-  useEffect(() => {
-    // Fetch user past interview evaluations
+  const fetchPastInterviews = useCallback(() => {
     apiFetch("/interviews/history")
       .then((res) => {
         if (res && res.data && Array.isArray(res.data)) {
-          setPastInterviewsList(res.data);
+          setPastInterviewsList(res.data.slice(0, 10));
         } else {
           setPastInterviewsList([]);
         }
       })
       .catch(() => setPastInterviewsList([]));
   }, []);
+
+  useEffect(() => {
+    fetchPastInterviews();
+  }, [fetchPastInterviews]);
 
   const voiceEnabledRef = useRef(true); // kept in sync for use inside socket callbacks
 
@@ -184,6 +309,8 @@ function getToken() {
   const [activeProctoringModal, setActiveProctoringModal] = useState(null);
   const [isInterviewFlagged, setIsInterviewFlagged] = useState(false);
   const lastWarningTimeRef = useRef(0);
+  const livePhaseStartTimeRef = useRef(0);
+  const lastWarningTypeTimestampRef = useRef({});
   const proctoringCanvasRef = useRef(null);
   const hasCameraBeenTurnedOnRef = useRef(false);
   const consecutiveViolationsRef = useRef({ noFace: 0, device: 0, lookingAway: 0 });
@@ -195,6 +322,19 @@ function getToken() {
   }, [cameraState]);
 
   const triggerProctoringWarning = useCallback((type = "SUSPICIOUS_BEHAVIOR", customMsg = "") => {
+    const nowMs = Date.now();
+
+    // 5-second startup grace period: no false-positive warnings during initial stream setup
+    if (nowMs - livePhaseStartTimeRef.current < 5000) {
+      return;
+    }
+
+    const lastTimeMs = lastWarningTypeTimestampRef.current[type] || 0;
+    if (nowMs - lastTimeMs < 6000) {
+      return;
+    }
+    lastWarningTypeTimestampRef.current[type] = nowMs;
+
     const timestamp = new Date().toLocaleTimeString();
     const defaultMsgs = {
       MULTIPLE_PERSONS: "Multiple persons / background occupants detected in camera feed!",
@@ -272,36 +412,106 @@ function getToken() {
     setActiveProctoringModal(null);
   }, []);
 
-  const viewPastResult = useCallback((pastSession) => {
+  const viewPastResult = useCallback(async (pastSession) => {
     if (!pastSession) return;
-    const d = pastSession.details || {};
-    const scorecard = {
-      overallScore: pastSession.overall_score || d.overallScore || 0,
-      technical: d.technical || 80,
-      communication: d.communication || 85,
-      problemSolving: d.problemSolving || 80,
-      strengths: d.strengths || (d.feedback ? [d.feedback] : ["Good technical understanding"]),
-      improvementAreas: d.weaknesses || d.recommendations || d.improvementAreas || ["Review edge cases and error handling"],
-      recommendedTopics: d.skillGaps || d.recommendedTopics || [pastSession.interview_type || "General Practice"],
-      feedback: d.feedback || pastSession.feedback || "Stored evaluation report.",
-      readiness: d.readiness || pastSession.grade || "Interview Ready",
-      grade: pastSession.grade || "Good",
+    let sessionData = pastSession;
+    if (pastSession.id) {
+      try {
+        const res = await apiFetch(`/interviews/${pastSession.id}`);
+        if (res && res.data) {
+          sessionData = res.data;
+        }
+      } catch (err) {
+        console.warn("Could not fetch interview details by ID:", err);
+      }
+    }
+
+    let d = sessionData.details || {};
+    while (typeof d === "string") {
+      try { d = JSON.parse(d); } catch (e) { break; }
+    }
+    // Unwrap nested details if stored via REST wrapper
+    if (d && d.details && typeof d.details === "object") {
+      d = { ...d, ...d.details };
+    }
+
+    let sc = d?.scorecard || {};
+    while (typeof sc === "string") {
+      try { sc = JSON.parse(sc); } catch (e) { break; }
+    }
+
+    const parseNum = (val, fallback = 0) => {
+      if (typeof val === "number" && !isNaN(val)) return Math.round(val);
+      if (typeof val === "string") {
+        const n = parseFloat(val.replace(/[^0-9.-]/g, ""));
+        if (!isNaN(n)) return Math.round(n);
+      }
+      return Math.round(fallback);
     };
 
-    let history = d.evaluationHistory || [];
-    if (history.length === 0 && d.questions && Array.isArray(d.questions)) {
+    const overallScore = parseNum(sessionData.overall_score ?? d.overallScore ?? sc.overallScore, 0);
+    const technical = parseNum(d.technical ?? sc.technical, overallScore);
+    const communication = parseNum(d.communication ?? sc.communication, overallScore);
+    const problemSolving = parseNum(d.problemSolving ?? sc.problemSolving, overallScore);
+    const defaultConf = overallScore === 0 ? 0 : Math.min(100, Math.round(overallScore * 0.9 + 10));
+    const confidence = parseNum(d.confidence ?? sc.confidence, defaultConf);
+
+    const ensureArr = (val) => {
+      if (Array.isArray(val) && val.length > 0) return val;
+      if (typeof val === "string" && val.trim()) return [val.trim()];
+      return [];
+    };
+
+    const strengths = ensureArr(d.strengths || sc.strengths);
+    const improvementAreas = ensureArr(d.weaknesses || d.improvementAreas || sc.improvementAreas || d.recommendations);
+    const recommendedTopics = ensureArr(d.skillGaps || d.recommendedTopics || sc.recommendedTopics);
+    const feedback = sessionData.feedback || d.feedback || sc.feedback || (overallScore === 0 ? "No answer data evaluated." : "Interview completed.");
+    const readiness = d.readiness || sc.readiness || (overallScore >= 70 ? "Interview Ready" : overallScore >= 40 ? "Needs Practice" : "Not Ready");
+    const grade = sessionData.grade || sc.grade || d.grade || (overallScore >= 80 ? "Excellent" : overallScore >= 70 ? "Good" : "Needs Improvement");
+
+    const scorecard = {
+      overallScore,
+      technical,
+      communication,
+      problemSolving,
+      confidence,
+      strengths: strengths.length > 0 ? strengths : (overallScore < 50 ? ["Attempted interview session"] : ["Conceptual clarity in core areas"]),
+      improvementAreas: improvementAreas.length > 0 ? improvementAreas : ["Review topic fundamentals", "Practice answering with concise technical precision"],
+      recommendedTopics: recommendedTopics.length > 0 ? recommendedTopics : [sessionData.interview_type || "Technical Fundamentals"],
+      feedback,
+      readiness,
+      grade,
+    };
+
+    let history = Array.isArray(d.evaluationHistory) && d.evaluationHistory.length > 0
+      ? d.evaluationHistory
+      : Array.isArray(sc.evaluationHistory) && sc.evaluationHistory.length > 0
+      ? sc.evaluationHistory
+      : [];
+
+    if (history.length === 0 && Array.isArray(d.questions) && d.questions.length > 0) {
       history = d.questions.map((q, idx) => ({
         question: q,
-        answer: d.answers ? d.answers[idx] : "",
-        score: d.questionScores ? d.questionScores[idx] : 7,
-        feedback: "Stored assessment feedback.",
+        answer: Array.isArray(d.answers) ? (d.answers[idx] || "") : "",
+        score: Array.isArray(d.questionScores) ? (typeof d.questionScores[idx] === "number" ? d.questionScores[idx] : 0) : 0,
+        feedback: Array.isArray(d.questionFeedbacks) ? (d.questionFeedbacks[idx] || "Recorded answer.") : "Recorded answer.",
+        modelAnswer: Array.isArray(d.modelAnswers) ? d.modelAnswers[idx] : null,
       }));
     }
 
+    // Clean and normalize history items
+    history = history.map((h, i) => ({
+      question: h.question || h.q || `Question ${i + 1}`,
+      answer: h.answer || h.a || "",
+      score: typeof h.score === "number" ? h.score : 0,
+      feedback: h.feedback || h.f || "No detailed feedback generated.",
+      modelAnswer: h.modelAnswer || h.ma || "",
+    }));
+
     setResult({
       scorecard,
-      questionsAnswered: d.questionsAnswered || history.length || 5,
-      durationSeconds: d.durationSeconds || 300,
+      questionsAnswered: d.questionsAnswered ?? (history.length || (overallScore > 0 ? 1 : 0)),
+      durationSeconds: d.durationSeconds ?? sessionData.duration_seconds ?? null,
       evaluationHistory: history,
     });
     setPhase("result");
@@ -310,14 +520,14 @@ function getToken() {
   const studentName =
     typeof window !== "undefined"
       ? (() => {
-          try {
-            return JSON.parse(
-              sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
-            )?.name || "";
-          } catch {
-            return "";
-          }
-        })()
+        try {
+          return JSON.parse(
+            sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+          )?.name || "";
+        } catch {
+          return "";
+        }
+      })()
       : "";
 
   // Keep refs in sync with state
@@ -381,7 +591,7 @@ function getToken() {
     if (question?.question) speakQuestion(question.question);
   }, [question, speakQuestion]);
 
-    // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
+  // ─── Camera & Webcam Mic ──────────────────────────────────────────────────
   const [camMicOn, setCamMicOn] = useState(false);
 
   const stopCamera = useCallback(() => {
@@ -408,7 +618,7 @@ function getToken() {
       setCameraState("on");
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
+        videoRef.current.play().catch(() => { });
       }
     } catch {
       setCameraState("denied");
@@ -432,19 +642,30 @@ function getToken() {
     }
   }, [cameraState, enableCamera, stopCamera, triggerProctoringWarning]);
 
-  // Monitor camera off / disabled state during live interview (ONLY if candidate previously turned camera ON!)
+  // Auto-start camera ONLY when the interview becomes live (never on setup screen)
+  useEffect(() => {
+    if (phase === "live" && cameraState === "idle") {
+      enableCamera();
+    } else if (phase !== "live" && cameraState === "on") {
+      stopCamera();
+    }
+  }, [phase, cameraState, enableCamera, stopCamera]);
+
+  // Monitor camera off / disabled state during live interview
   useEffect(() => {
     if (phase !== "live") return;
+    const now = Date.now();
+    if (now - livePhaseStartTimeRef.current < 6000) return;
+
     if (
-      hasCameraBeenTurnedOnRef.current &&
-      (cameraState === "idle" || cameraState === "denied" || cameraState === "unsupported")
+      (cameraState === "idle" || cameraState === "denied" || cameraState === "unsupported") &&
+      hasCameraBeenTurnedOnRef.current
     ) {
-      const now = Date.now();
-      if (now - lastWarningTimeRef.current > 4000) {
+      if (now - lastWarningTimeRef.current > 20000) {
         lastWarningTimeRef.current = now;
         triggerProctoringWarning(
-          "CAMERA_OFF",
-          "Camera turned off or disabled during live interview!"
+          "NO_FACE",
+          "Mandatory camera feed interrupted or disabled during live interview!"
         );
       }
     }
@@ -482,14 +703,15 @@ function getToken() {
   useEffect(() => {
     if (cameraState === "on" && cameraStreamRef.current && videoRef.current) {
       videoRef.current.srcObject = cameraStreamRef.current;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.play().catch(() => { });
     }
   }, [cameraState, phase]);
 
-  // Real-Time Camera Proctoring & Anti-Cheating Monitor
+  // Real-Time Camera Proctoring & Gaze / Device Detection Monitor
   useEffect(() => {
     if (cameraState !== "on" || phase !== "live") return;
 
+    // 400ms sampling interval for smooth, accurate, non-erratic proctoring
     const intervalId = setInterval(() => {
       if (!videoRef.current || videoRef.current.readyState < 2) return;
 
@@ -500,16 +722,19 @@ function getToken() {
         const canvas = proctoringCanvasRef.current;
         canvas.width = 160;
         canvas.height = 120;
-        const ctx = canvas.getContext("2d");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
         if (!ctx) return;
 
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
         const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const data = frameData.data;
 
-        let leftSum = 0, centerSum = 0, rightSum = 0;
-        let bottomSum = 0, topSum = 0;
         let totalSum = 0;
+        let skinPixels = 0;
+        let topSkinPixels = 0;
+        let bottomSkinPixels = 0;
+        let activeScreenGlowPixels = 0;
+        let roiPixelCount = 0;
         const pixelCount = data.length / 4;
 
         for (let i = 0; i < data.length; i += 4) {
@@ -524,66 +749,91 @@ function getToken() {
           const x = pixelIndex % 160;
           const y = Math.floor(pixelIndex / 160);
 
-          if (x < 50) leftSum += brightness;
-          else if (x > 110) rightSum += brightness;
-          else centerSum += brightness;
+          // Active central region where candidate's face & eyes/head appear
+          if (x >= 20 && x <= 140 && y >= 10 && y <= 110) {
+            roiPixelCount++;
 
-          if (y < 45) topSum += brightness;
-          else if (y > 75) bottomSum += brightness;
+            // 1. Strict human skin tone detection
+            const isSkin = r > 50 && g > 30 && b > 20 && r > g && r > b && (r - g) >= 8;
+            if (isSkin) {
+              skinPixels++;
+              if (y < 65) topSkinPixels++;
+              else bottomSkinPixels++;
+            }
+
+            // 2. Mobile Phone Screen Glow / Active Electronic Display:
+            // High-luminance screen light (r,g,b > 210) in front of face
+            if (r > 210 && g > 210 && b > 210) {
+              activeScreenGlowPixels++;
+            }
+          }
         }
 
         const avgBrightness = totalSum / pixelCount;
-        const leftAvg = leftSum / (50 * 120);
-        const rightAvg = rightSum / (50 * 120);
-        const bottomAvg = bottomSum / (160 * 45);
-
+        const skinRatio = roiPixelCount > 0 ? skinPixels / roiPixelCount : 0;
+        const screenGlowRatio = roiPixelCount > 0 ? activeScreenGlowPixels / roiPixelCount : 0;
         const now = Date.now();
 
-        // 1. Camera covered or dark check (pitch dark / covered lens: avgBrightness < 6 for 4 consecutive checks)
-        if (avgBrightness < 6) {
-          consecutiveViolationsRef.current.noFace += 1;
-          if (consecutiveViolationsRef.current.noFace >= 4) {
-            if (now - lastWarningTimeRef.current > 12000) {
-              lastWarningTimeRef.current = now;
-              consecutiveViolationsRef.current.noFace = 0;
-              triggerProctoringWarning("NO_FACE", "Face not detected in camera view! Please stay visible in front of camera.");
-            }
-          }
-        } else {
-          consecutiveViolationsRef.current.noFace = 0;
-        }
+        // 10-second startup grace period (gives user time to settle in before any checks activate)
+        if (now - livePhaseStartTimeRef.current < 10000) return;
 
-        // 2. Mobile Phone / Flash specular reflection check (avgBrightness > 215 & bottomAvg > 240 for 4 consecutive checks)
-        if (avgBrightness > 215 && bottomAvg > 240) {
-          consecutiveViolationsRef.current.device += 1;
-          if (consecutiveViolationsRef.current.device >= 4) {
-            if (now - lastWarningTimeRef.current > 12000) {
-              lastWarningTimeRef.current = now;
-              consecutiveViolationsRef.current.device = 0;
-              triggerProctoringWarning("DEVICE_DETECTED", "Mobile phone or copying device glare detected in camera frame!");
-            }
-          }
-        } else {
-          consecutiveViolationsRef.current.device = 0;
-        }
+        // Enforce 8 seconds cooldown between consecutive warnings
+        if (now - lastWarningTimeRef.current < 8000) return;
 
-        // 3. Looking away check (extreme head turn sustained for 5 consecutive checks)
-        if (Math.abs(leftAvg - rightAvg) > 75) {
+        // ─── CHECK A: Eye Gaze / Head Turned Away continuously (LOOKING_AWAY) ───
+        const isLookingAway = skinRatio > 0.06 && (topSkinPixels < 5 || bottomSkinPixels / (topSkinPixels + 1) > 5.0);
+
+        if (isLookingAway) {
           consecutiveViolationsRef.current.lookingAway += 1;
-          if (consecutiveViolationsRef.current.lookingAway >= 5) {
-            if (now - lastWarningTimeRef.current > 12000) {
-              lastWarningTimeRef.current = now;
-              consecutiveViolationsRef.current.lookingAway = 0;
-              triggerProctoringWarning("LOOKING_AWAY", "Candidate looking away from screen for prolonged duration!");
-            }
+          if (consecutiveViolationsRef.current.lookingAway >= 9) { // 9 ticks x 400ms = 3.6s continuous looking away
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.lookingAway = 0;
+            triggerProctoringWarning(
+              "LOOKING_AWAY",
+              "Candidate continuously looking away from camera screen!"
+            );
           }
         } else {
-          consecutiveViolationsRef.current.lookingAway = 0;
+          consecutiveViolationsRef.current.lookingAway = Math.max(0, consecutiveViolationsRef.current.lookingAway - 1);
+        }
+
+        // ─── CHECK B: Electronic Device / Active Screen Glow (DEVICE_DETECTED) ───
+        const isDeviceInView = screenGlowRatio > 0.15;
+
+        if (isDeviceInView) {
+          consecutiveViolationsRef.current.device += 1;
+          if (consecutiveViolationsRef.current.device >= 7) { // 7 ticks x 400ms = 2.8s continuous device display
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.device = 0;
+            triggerProctoringWarning(
+              "DEVICE_DETECTED",
+              "Mobile phone or electronic copying device detected in camera frame!"
+            );
+          }
+        } else {
+          consecutiveViolationsRef.current.device = Math.max(0, consecutiveViolationsRef.current.device - 1);
+        }
+
+        // ─── CHECK C: Face Covered / No Face in View (NO_FACE) ───
+        const isFaceObscured = (skinRatio < 0.025 && !isDeviceInView) || avgBrightness < 4;
+
+        if (isFaceObscured) {
+          consecutiveViolationsRef.current.noFace += 1;
+          if (consecutiveViolationsRef.current.noFace >= 10) { // 10 ticks x 400ms = 4.0s continuous no-face
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.noFace = 0;
+            triggerProctoringWarning(
+              "NO_FACE",
+              "Face not detected in camera view! Please look at the camera."
+            );
+          }
+        } else {
+          consecutiveViolationsRef.current.noFace = Math.max(0, consecutiveViolationsRef.current.noFace - 1);
         }
       } catch (e) {
         console.warn("Proctoring frame warning:", e);
       }
-    }, 2000);
+    }, 400);
 
     return () => clearInterval(intervalId);
   }, [cameraState, phase, triggerProctoringWarning]);
@@ -608,18 +858,22 @@ function getToken() {
       return;
     }
     stopSpeaking(); // stop TTS before listening
+    existingAnswerRef.current = answer; // Preserve existing typed/spoken text
     const recognition = new SpeechRecognitionCtor();
     recognitionRef.current = recognition;
     recognition.lang = "en-IN";
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
     recognition.onresult = (event) => {
       let transcript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = 0; i < event.results.length; i++) {
         transcript += event.results[i][0].transcript;
       }
-      setAnswer(transcript);
+      const base = existingAnswerRef.current ? existingAnswerRef.current.trim() : "";
+      const cleanTranscript = transcript.trim();
+      const fullText = base ? (cleanTranscript ? `${base} ${cleanTranscript}` : base) : cleanTranscript;
+      setAnswer(fullText);
     };
     recognition.onend = () => setIsRecording(false);
     recognition.onerror = (event) => {
@@ -630,7 +884,7 @@ function getToken() {
     };
     setIsRecording(true);
     try { recognition.start(); } catch { setIsRecording(false); }
-  }, [SpeechRecognitionCtor, stopSpeaking]);
+  }, [SpeechRecognitionCtor, stopSpeaking, answer]);
 
   const toggleRecording = useCallback(() => {
     if (isRecording) stopRecognition();
@@ -671,7 +925,7 @@ function getToken() {
         if (endInterviewRef.current) endInterviewRef.current();
       }
     }, 1000);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stopTimer]);
 
   // ─── Finish interview ────────────────────────────────────────────────────────
@@ -681,6 +935,7 @@ function getToken() {
       completedRef.current = true;
       endRequestedRef.current = true;
       firstQuestionRef.current = false;
+      setIsEvaluating(false);
       stopTimer();
       stopRecognition();
       stopCamera();
@@ -693,20 +948,58 @@ function getToken() {
       }
       setSocketConnected(false);
       const { scorecard, evaluationHistory, durationSeconds, questionsAnswered } = summary || {};
-      setResult({
+      const finalResult = {
         scorecard: scorecard || null,
         questionsAnswered: questionsAnswered ?? (evaluationHistory?.length ?? 0),
         durationSeconds: durationSeconds ?? Math.round((Date.now() - (timerStartRef.current ?? Date.now())) / 1000),
         evaluationHistory: evaluationHistory || [],
-      });
+      };
+      setResult(finalResult);
       setPhase("result");
-      
+
+      // Only save via REST if socket did not already save the session
+      if (!summary?.sessionId) {
+        const payloadDetails = {
+          role,
+          topic,
+          durationSeconds: finalResult.durationSeconds,
+          questionsAnswered: finalResult.questionsAnswered,
+          overallScore: finalResult.scorecard?.overallScore ?? 0,
+          technical: finalResult.scorecard?.technical ?? 0,
+          communication: finalResult.scorecard?.communication ?? 0,
+          problemSolving: finalResult.scorecard?.problemSolving ?? 0,
+          strengths: finalResult.scorecard?.strengths || [],
+          weaknesses: finalResult.scorecard?.improvementAreas || [],
+          skillGaps: finalResult.scorecard?.recommendedTopics || [],
+          feedback: finalResult.scorecard?.feedback || "",
+          readiness: finalResult.scorecard?.readiness || "Completed",
+          grade: finalResult.scorecard?.grade || "Average",
+          evaluationHistory: finalResult.evaluationHistory,
+          scorecard: finalResult.scorecard,
+        };
+
+        apiFetch("/interviews", {
+          method: "POST",
+          body: JSON.stringify({
+            details: payloadDetails,
+            interviewType: topic || role || "Technical Mock",
+            overallScore: payloadDetails.overallScore,
+            grade: payloadDetails.grade,
+            feedback: payloadDetails.feedback,
+          }),
+        })
+          .then(() => fetchPastInterviews())
+          .catch(() => fetchPastInterviews());
+      } else {
+        fetchPastInterviews();
+      }
+
       // Exit full screen when interview finishes
       if (typeof document !== "undefined" && document.fullscreenElement) {
         document.exitFullscreen().catch((err) => console.log(err));
       }
     },
-    [stopTimer, stopRecognition, stopCamera, stopSpeaking]
+    [stopTimer, stopRecognition, stopCamera, stopSpeaking, role, topic, fetchPastInterviews]
   );
 
   // ─── End interview ───────────────────────────────────────────────────────────
@@ -719,11 +1012,14 @@ function getToken() {
 
     const socket = socketRef.current;
     if (socket && socket.connected && sessionIdRef.current) {
+      setIsEvaluating(true);
       socket.emit("interview:end", { sessionId: sessionIdRef.current });
-      // Timeout fallback if server doesn't respond
+      // Generous fallback timeout if network disconnects before complete arrives
       setTimeout(() => {
-        if (phaseRef.current !== "result") finishInterview(null);
-      }, 8000);
+        if (phaseRef.current !== "result" && !completedRef.current) {
+          finishInterview(null);
+        }
+      }, 25000);
     } else {
       finishInterview(null);
     }
@@ -768,6 +1064,8 @@ function getToken() {
     };
   }, [triggerProctoringWarning]);
 
+
+
   // ─── Send Answer ─────────────────────────────────────────────────────────────
   const sendAnswer = useCallback(() => {
     const trimmed = answer.trim();
@@ -805,13 +1103,20 @@ function getToken() {
       return;
     }
 
-    const apiBase = getApiBaseUrl();
-    const base = apiBase.replace(/\/api\/v1\/?$/, "") || "";
+    const backendHost = getBackendOrigin();
+    const socketTarget = `${backendHost.replace(/\/api\/v1\/?$/, "").replace(/\/$/, "")}/interviews`;
 
-    const socket = io(`${base}/interviews`, {
+    const socket = io(socketTarget, {
       auth: { token },
+      query: { token },
+      extraHeaders: {
+        Authorization: `Bearer ${token}`
+      },
       transports: ["polling", "websocket"],
-      reconnection: false, // we handle reconnection manually
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 25000,
     });
     socketRef.current = socket;
 
@@ -822,8 +1127,8 @@ function getToken() {
 
     socket.on("disconnect", (reason) => {
       setSocketConnected(false);
-      if (!completedRef.current && !endRequestedRef.current) {
-        setErrorMsg(`Connection lost (${reason}). Your answers so far are preserved.`);
+      if (!completedRef.current && !endRequestedRef.current && reason !== "io client disconnect") {
+        setErrorMsg(`Network connection interrupted (${reason}). Reconnecting...`);
       }
     });
 
@@ -853,16 +1158,23 @@ function getToken() {
         startTimer();
       }
 
-      setQuestion(q);
+      // Clean plain-text question (strip any backticks or code fences for clear voice readout)
+      const cleanText = String(q?.question || "")
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/`/g, "")
+        .trim();
+      const sanitizedQ = { ...q, question: cleanText };
+
+      setQuestion(sanitizedQ);
       setAnswer("");
       setConversation((prev) => [
         ...prev,
-        { type: "q", index: q.index, text: q.question, topic: q.topic },
+        { type: "q", index: q.index, text: cleanText, topic: q.topic },
       ]);
 
       // Auto-speak the question
       if (voiceEnabledRef.current) {
-        speakQuestion(q.question);
+        speakQuestion(cleanText);
       }
     });
 
@@ -888,15 +1200,19 @@ function getToken() {
     });
 
     // Tell server to start
+    const effectiveTopic = (topic === "Other / Custom Topic..." || topic === "Custom Topic")
+      ? (customTopic.trim() || "General Technical")
+      : topic;
+
     const sessionId = `student-${Date.now()}`;
     socket.emit("interview:start", {
       sessionId,
       role,
-      topic,
+      topic: effectiveTopic,
       difficulty: "Medium",
-      totalQuestions: 12,
+      totalQuestions: 10,
     });
-  }, [role, topic, startTimer, speakQuestion, finishInterview]);
+  }, [role, topic, customTopic, startTimer, speakQuestion, finishInterview]);
 
   // ─── Start Interview ─────────────────────────────────────────────────────────
   const startInterview = useCallback(() => {
@@ -904,7 +1220,22 @@ function getToken() {
       setErrorMsg("Please choose a target role to begin.");
       return;
     }
-    // Reset all state
+
+    if ((topic === "Other / Custom Topic..." || topic === "Custom Topic") && !customTopic.trim()) {
+      setErrorMsg("Please type your custom interview topic (e.g. Docker, Next.js, System Architecture).");
+      return;
+    }
+
+    if (compatibility.isMismatch) {
+      setErrorMsg(`Domain Mismatch Blocked: Topic '${compatibility.topic}' does not match target role '${role}'. Please select a recommended topic for ${role} above.`);
+      return;
+    }
+
+    // Reset all state & initialize startup grace period
+    const startNow = Date.now();
+    livePhaseStartTimeRef.current = startNow;
+    lastWarningTimeRef.current = startNow + 5000;
+    consecutiveViolationsRef.current = { noFace: 0, device: 0, lookingAway: 0 };
     completedRef.current = false;
     endRequestedRef.current = false;
     firstQuestionRef.current = false;
@@ -922,15 +1253,16 @@ function getToken() {
     setResult(null);
     setRemaining(INTERVIEW_SECONDS);
     setPhase("live");
-    
+    enableCamera();
+
     // Request full screen when starting
     if (typeof document !== "undefined" && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch((err) => console.log(err));
     }
-    
+
     // Connect socket — must happen after phase change so UI renders
     setTimeout(() => connectAndStart(), 50);
-  }, [role, stopTimer, connectAndStart]);
+  }, [role, topic, customTopic, compatibility, stopTimer, connectAndStart, enableCamera]);
 
   // ─── Reset ───────────────────────────────────────────────────────────────────
   const resetInterview = useCallback(() => {
@@ -959,13 +1291,36 @@ function getToken() {
     setRemaining(INTERVIEW_SECONDS);
     setWarningShown(false);
     setPhase("setup");
-    
+    fetchPastInterviews();
+
     // Exit full screen if resetting
     if (typeof document !== "undefined" && document.fullscreenElement) {
       document.exitFullscreen().catch((err) => console.log(err));
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stopTimer, stopRecognition, stopCamera, stopSpeaking]);
+  }, [stopTimer, stopRecognition, stopCamera, stopSpeaking, fetchPastInterviews]);
+
+  // ─── Escape Key & Fullscreen Exit Handler (Stop & Return to Setup Screen) ─
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && phaseRef.current === "live") {
+        e.preventDefault();
+        resetInterview();
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (typeof document !== "undefined" && !document.fullscreenElement && phaseRef.current === "live") {
+        resetInterview();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [resetInterview]);
 
   // ─── Cleanup on unmount ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -993,15 +1348,17 @@ function getToken() {
   // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="ai-interview-page stack-6">
-      <div className="student-header-box">
-        <h2 className="student-header-title">
-          <Bot size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
-          <span>Live AI Interview Simulation</span>
-        </h2>
-        <p className="student-header-desc">
-          5-minute voice-driven technical interview with real-time AI questions, speech recognition and instant evaluation.
-        </p>
-      </div>
+      {phase === "setup" && (
+        <div className="student-header-box">
+          <h2 className="student-header-title">
+            <Bot size={24} style={{ color: "#2563eb", flexShrink: 0, marginRight: "10px" }} />
+            <span>Live AI Interview Simulation</span>
+          </h2>
+          <p className="student-header-desc">
+            5-minute voice-driven technical interview with real-time AI questions, speech recognition and instant evaluation.
+          </p>
+        </div>
+      )}
 
       {/* ─── SETUP PHASE ─────────────────────────────────────────────────────── */}
       {phase === "setup" && (
@@ -1030,23 +1387,25 @@ function getToken() {
               </div>
               <div className={`ai-meta-item ${cameraState === "denied" ? "ai-meta-warn" : ""}`}>
                 <div className="ai-meta-icon">
-                  {cameraState === "on" ? <Video size={18} /> : <CameraOff size={18} />}
+                  <Video size={18} />
                 </div>
                 <div>
                   <div className="ai-meta-val">
                     Camera {cameraState === "on" ? "Active" : cameraState === "denied" ? "Blocked" : "Standby"}
                   </div>
-                  <div className="ai-meta-lbl">Optional video preview</div>
+                  <div className="ai-meta-lbl">
+                    {cameraState === "on" ? "Proctoring stream live" : "Starts on interview launch"}
+                  </div>
                 </div>
               </div>
-              <div className={`ai-meta-item ${SpeechRecognitionCtor ? "" : "ai-meta-warn"}`}>
+              <div className={`ai-meta-item ${SpeechRecognitionCtor && speechEnabled ? "" : "ai-meta-warn"}`}>
                 <div className="ai-meta-icon"><Mic size={18} /></div>
                 <div>
                   <div className="ai-meta-val">
-                    Microphone {SpeechRecognitionCtor ? "Supported" : "Unavailable"}
+                    Microphone {!speechEnabled ? "Disabled by Admin" : SpeechRecognitionCtor ? "Supported" : "Unavailable"}
                   </div>
                   <div className="ai-meta-lbl">
-                    {SpeechRecognitionCtor ? "Voice-to-text ready" : "Typing fallback will be used"}
+                    {!speechEnabled ? "Admin policy: typing fallback active" : SpeechRecognitionCtor ? "Voice-to-text ready" : "Typing fallback will be used"}
                   </div>
                 </div>
               </div>
@@ -1067,25 +1426,130 @@ function getToken() {
                 <CustomSelect
                   value={topic}
                   onChange={(val) => setTopic(val)}
-                  options={TOPIC_OPTIONS}
+                  options={[...TOPIC_OPTIONS, "Other / Custom Topic..."]}
                   placeholder="Select Interview Topic"
                 />
               </div>
+              {(topic === "Other / Custom Topic..." || topic === "Custom Topic") && (
+                <div className="ai-setup-field" style={{ width: "100%" }}>
+                  <span>Type Custom Interview Topic</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Docker, Next.js, System Architecture, WebSockets, Go..."
+                    value={customTopic}
+                    onChange={(e) => setCustomTopic(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: "8px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "14px",
+                      outline: "none",
+                      backgroundColor: "#fff",
+                      color: "#1e293b",
+                      marginTop: "4px",
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
+            {compatibility.isMismatch && (
+              <div className="ai-mismatch-banner">
+                <div className="ai-mismatch-header">
+                  <Sparkles size={18} className="ai-mismatch-icon" />
+                  <div>
+                    <h4 className="ai-mismatch-title">
+                      Topic Alignment Notice: <strong>{compatibility.role}</strong> vs <strong>{compatibility.topic}</strong>
+                    </h4>
+                    <p className="ai-mismatch-desc">
+                      {compatibility.reason} {compatibility.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ai-mismatch-actions">
+                  <span className="ai-mismatch-recommend-label">Recommended Topics for {compatibility.role}:</span>
+                  <div className="ai-mismatch-pills">
+                    {compatibility.recommendedTopics?.map((recTop) => (
+                      <button
+                        key={recTop}
+                        type="button"
+                        className="ai-recommend-pill-btn"
+                        onClick={() => {
+                          setTopic(recTop);
+                          setCustomTopic("");
+                          setErrorMsg("");
+                        }}
+                      >
+                        <Sparkles size={12} /> Switch Topic to <strong>{recTop}</strong>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="ai-mismatch-blocked-notice">
+                    <span>Select a recommended topic above to unlock interview start for <strong>{compatibility.role}</strong>.</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {errorMsg && (
-              <div className="ai-error-banner">
-                <AlertTriangle size={15} /> {errorMsg}
+              <div className="ai-error-banner" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                  <AlertTriangle size={15} /> {errorMsg}
+                </span>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setErrorMsg("");
+                      startInterview();
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#2563eb",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      localStorage.clear();
+                      sessionStorage.clear();
+                      window.location.href = "/";
+                    }}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#ef4444",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: "600",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Log In Again
+                  </button>
+                </div>
               </div>
             )}
 
             <div className="ai-setup-buttons">
               <button
                 type="button"
-                className="ai-start-interview-btn"
+                className={`ai-start-interview-btn ${compatibility.isMismatch ? "ai-start-btn-disabled" : ""}`}
                 onClick={startInterview}
+                disabled={compatibility.isMismatch}
               >
-                <Play size={18} fill="currentColor" /> Start Interview
+                <Play size={18} fill="currentColor" /> {compatibility.isMismatch ? "Select Matching Topic to Start" : "Start Interview"}
               </button>
             </div>
           </div>
@@ -1096,7 +1560,7 @@ function getToken() {
       {phase === "setup" && pastInterviewsList && pastInterviewsList.length > 0 && (
         <div className="interview-practice-card past-interviews-card">
           <div className="past-interviews-header">
-            <Award size={18} className="text-indigo-600 shrink-0" />
+            <Award size={18} className="ai-icon-indigo" />
             <div>
               <h3 className="past-interviews-title">Stored Interview Evaluations & AI Suggestions</h3>
               <p className="past-interviews-subtitle">
@@ -1106,7 +1570,7 @@ function getToken() {
           </div>
 
           <div className="past-interviews-grid">
-            {pastInterviewsList.map((item) => {
+            {pastInterviewsList.slice(0, 10).map((item) => {
               const score = item.overall_score || 0;
               const dateStr = item.conducted_date ? new Date(item.conducted_date).toLocaleDateString() : (item.created_at ? new Date(item.created_at).toLocaleDateString() : "Recent");
               return (
@@ -1126,7 +1590,14 @@ function getToken() {
                   {item.feedback && (
                     <p className="past-item-feedback-snippet">{item.feedback}</p>
                   )}
-                  <button type="button" className="view-suggestions-btn">
+                  <button
+                    type="button"
+                    className="view-suggestions-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      viewPastResult(item);
+                    }}
+                  >
                     <Sparkles size={13} /> View Feedback
                   </button>
                 </div>
@@ -1232,39 +1703,40 @@ function getToken() {
             {/* ── LEFT COLUMN: Webcam + AI status ── */}
             <div className="ai-left-column">
               <div className={`ai-camera-panel ${cameraState === "on" ? "" : "ai-camera-off-panel"}`}>
+                <div className="ai-camera-top-overlay">
+                  <span className="ai-cam-live-indicator">
+                    <span className={`ai-live-dot ${cameraState === "on" ? "green" : "red"}`} />
+                    LIVE PROCTORING STREAM
+                  </span>
+                </div>
 
                 {cameraState === "on" ? (
                   <video ref={videoRef} className="ai-camera-video" autoPlay playsInline muted />
                 ) : (
                   <div className="ai-camera-placeholder">
-                    {cameraState === "denied" ? (
-                      <>
-                        <XCircle size={32} />
-                        <span>Camera permission denied</span>
-                      </>
-                    ) : cameraState === "unsupported" ? (
-                      <>
-                        <XCircle size={32} />
-                        <span>Camera not supported</span>
-                      </>
-                    ) : (
-                      <>
-                        <Video size={32} />
-                        <span>Camera Off</span>
-                      </>
-                    )}
+                    <div className="ai-cam-placeholder-graphic">
+                      <Video size={32} />
+                      <div className="ai-cam-pulse-ring" />
+                    </div>
+                    <div className="ai-cam-placeholder-title">
+                      {cameraState === "denied"
+                        ? "Camera Permission Denied"
+                        : cameraState === "unsupported"
+                          ? "Camera Unsupported"
+                          : "Initializing HD Proctoring Camera..."}
+                    </div>
+                    <div className="ai-cam-placeholder-sub">
+                      {cameraState === "denied"
+                        ? "Please allow camera access in your browser to enable live AI proctoring."
+                        : "Video proctoring feed active."}
+                    </div>
                   </div>
                 )}
                 <div className="ai-camera-controls-bar">
-                  <button
-                    type="button"
-                    className={`ai-cam-ctrl-btn ${cameraState === "on" ? "active" : ""}`}
-                    onClick={toggleCamera}
-                    title={cameraState === "on" ? "Turn Camera Off" : "Turn Camera On"}
-                  >
-                    {cameraState === "on" ? <Camera size={14} /> : <CameraOff size={14} />}
-                    <span>{cameraState === "on" ? "Camera ON" : "Camera OFF"}</span>
-                  </button>
+                  <div className="ai-cam-live-status-pill">
+                    <span className={`ai-live-dot ${cameraState === "on" ? "green" : "red"}`} />
+                    <span>{cameraState === "on" ? "AI Proctoring Active" : "Camera Initializing..."}</span>
+                  </div>
                 </div>
               </div>
 
@@ -1278,9 +1750,9 @@ function getToken() {
                   <div className="ai-status-name">AI Interviewer</div>
                   <div className="ai-status-state">
                     {isEvaluating ? <span className="ai-state-thinking"><Loader2 size={10} className="ai-spin" /> Thinking...</span>
-                    : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
-                    : question ? <span className="ai-state-listening">Listening for answer</span>
-                    : <span>Starting interview...</span>}
+                      : isAiSpeaking ? <span className="ai-state-speaking">Speaking...</span>
+                        : question ? <span className="ai-state-listening">Listening for answer</span>
+                          : <span>Starting interview...</span>}
                   </div>
                 </div>
                 <button
@@ -1307,7 +1779,7 @@ function getToken() {
               {proctoringWarnings.length > 0 && (
                 <div className={`ai-proctoring-log-card ${isInterviewFlagged ? "flagged-border" : ""}`}>
                   <div className="proctoring-log-header">
-                    <ShieldAlert size={14} className="text-amber-500 shrink-0" />
+                    <ShieldAlert size={14} className="ai-icon-amber" />
                     <span>Proctoring Violations Log ({proctoringWarnings.length})</span>
                     {isInterviewFlagged && (
                       <span className="proctoring-flagged-tag">FLAGGED FOR REVIEW</span>
@@ -1375,8 +1847,8 @@ function getToken() {
                     !question
                       ? "Waiting for the AI question..."
                       : SpeechRecognitionCtor
-                      ? "Speak via mic or type your answer here..."
-                      : "Type your answer here..."
+                        ? "Speak via mic or type your answer here..."
+                        : "Type your answer here..."
                   }
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
@@ -1426,13 +1898,32 @@ function getToken() {
 
             {/* ── HERO SCORECARD ── */}
             <div className="ai-report-hero">
-              <div className="ai-report-hero-bg" />
-              <div className="ai-report-label">Interview Report</div>
+              <div className="ai-report-top-nav">
+                <button type="button" className="ai-back-nav-btn" onClick={resetInterview} title="Return to Interview Setup">
+                  <ArrowLeft size={15} /> Back to Setup
+                </button>
+                <div className="ai-report-date-badge">
+                  <Bot size={13} /> AI Proctored Session
+                </div>
+              </div>
+
+              <div className="ai-report-label">
+                <Sparkles size={13} /> PERFORMANCE REPORT
+              </div>
               <h2 className="ai-report-title">AI Interview Completed</h2>
-              <p className="ai-report-meta">
-                {result?.durationSeconds ? `${Math.floor(result.durationSeconds / 60)}m ${result.durationSeconds % 60}s` : ""}
-                {result?.questionsAnswered ? `  •  ${result.questionsAnswered} Question${result.questionsAnswered !== 1 ? "s" : ""} Answered` : ""}
-              </p>
+              
+              <div className="ai-report-meta-row">
+                {result?.durationSeconds ? (
+                  <span className="ai-report-meta-pill">
+                    <Timer size={13} /> {Math.floor(result.durationSeconds / 60)}m {result.durationSeconds % 60}s Duration
+                  </span>
+                ) : null}
+                {result?.questionsAnswered ? (
+                  <span className="ai-report-meta-pill">
+                    <CheckCircle2 size={13} /> {result.questionsAnswered} Question{result.questionsAnswered !== 1 ? "s" : ""} Evaluated
+                  </span>
+                ) : null}
+              </div>
 
               {/* Score ring */}
               <div className="ai-score-ring-wrap">
@@ -1444,25 +1935,33 @@ function getToken() {
                     <span className={`ai-score-percent-val score-tier-${scoreTier}`}>
                       {overallScore}%
                     </span>
+                    <span className="ai-score-ring-sub">OVERALL SCORE</span>
                   </div>
                 </div>
-                <span className="ai-score-grade-pill">
-                  {result?.scorecard?.grade ?? "N/A"}
+                <span className={`ai-score-grade-pill grade-tier-${scoreTier}`}>
+                  {result?.scorecard?.grade ?? (overallScore >= 70 ? "Good Performance" : overallScore >= 40 ? "Needs Refinement" : "Needs Improvement")}
                 </span>
               </div>
 
-              {/* 3-metric breakdown */}
+              {/* 4-metric breakdown */}
               <div className="ai-metrics-grid">
                 {[
-                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech" },
-                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm" },
-                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob" },
-                ].map(({ label, value, type }) => (
+                  { label: "Technical", value: result?.scorecard?.technical ?? 0, type: "tech", icon: Code2, desc: "Syntax & Core Knowledge" },
+                  { label: "Communication", value: result?.scorecard?.communication ?? 0, type: "comm", icon: MessageSquare, desc: "Clarity & Articulation" },
+                  { label: "Problem Solving", value: result?.scorecard?.problemSolving ?? 0, type: "prob", icon: BrainCircuit, desc: "Logic & Analytical Flow" },
+                  { label: "Confidence", value: result?.scorecard?.confidence ?? (overallScore === 0 ? 0 : Math.min(100, Math.round((overallScore * 0.9) + 10))), type: "conf", icon: Activity, desc: "Delivery & Assurance" },
+                ].map(({ label, value, type, icon: IconComp, desc }) => (
                   <div key={label} className={`ai-metric-card ai-metric-${type}`}>
-                    <div className="ai-metric-val">{value}%</div>
+                    <div className="ai-metric-card-top">
+                      <div className={`ai-metric-icon-wrap ai-metric-icon-${type}`}>
+                        <IconComp size={16} />
+                      </div>
+                      <span className="ai-metric-val">{value}%</span>
+                    </div>
                     <div className="ai-metric-label">{label}</div>
+                    <div className="ai-metric-sub">{desc}</div>
                     <div className="ai-metric-track">
-                      <div className="ai-metric-fill" style={{ width: `${value}%` }} />
+                      <div className="ai-metric-fill" style={{ width: `${Math.max(4, value)}%` }} />
                     </div>
                   </div>
                 ))}
@@ -1478,7 +1977,7 @@ function getToken() {
             )}
 
             {/* ── PER-QUESTION BREAKDOWN ── */}
-            {result?.evaluationHistory && result.evaluationHistory.length > 0 && (
+            {result?.evaluationHistory && result.evaluationHistory.length > 0 ? (
               <div className="ai-q-breakdown-card">
                 <div className="ai-q-breakdown-title">Question-by-Question Breakdown</div>
                 <div className="ai-q-breakdown-list">
@@ -1511,47 +2010,75 @@ function getToken() {
                           {/* AI Feedback */}
                           <div className={`ai-q-feedback-box score-tier-${itemTier}`}>
                             <div className="ai-q-sub-lbl">
-                              {score >= 7 ? "✅ AI Feedback" : score >= 4 ? "⚠️ AI Feedback" : "❌ Where You Went Wrong"}
+                              {score >= 7 ? "AI Feedback" : score >= 4 ? "Areas to Refine" : "Where You Went Wrong"}
                             </div>
                             <div className="ai-q-feedback-text">{item.feedback || item.f || "No feedback available."}</div>
                           </div>
 
-                          {/* Model answer */}
-                          {item.modelAnswer && item.modelAnswer !== "AI evaluation unavailable. Review the topic independently." && (
-                            <div className="ai-q-model-ans-box">
-                              <div className="ai-q-model-ans-lbl">💡 Model Answer</div>
-                              <div className="ai-q-model-ans-text">{item.modelAnswer}</div>
-                            </div>
-                          )}
+                          {/* Key concepts & takeaways */}
+                          {(() => {
+                            const rawModelAns = item.modelAnswer || item.ma || "";
+                            const questionText = item.question || item.q || "";
+                            if (!rawModelAns || rawModelAns === "AI evaluation unavailable. Review the topic independently.") return null;
+
+                            let cleanModelAns = rawModelAns;
+                            if (questionText && cleanModelAns.includes(questionText)) {
+                              cleanModelAns = cleanModelAns.replace(questionText, "").replace(/["“”'']/g, "").trim();
+                            }
+                            cleanModelAns = cleanModelAns
+                              .replace(/^a\s+(proper|technical|correct|gold-standard)\s+answer\s+to\s+.*?\s+covering/i, "Key concepts:")
+                              .replace(/^a\s+(proper|technical|correct|gold-standard)\s+response\s+should\s+explain/i, "Key concepts:")
+                              .replace(/^a\s+proper\s+technical\s+answer\s+to\b/i, "Key concepts:")
+                              .replace(/^covering\s+core\s+concepts\s+in\s+/i, "Key concepts in ")
+                              .trim();
+
+                            if (!cleanModelAns || cleanModelAns.length < 10 || /^key concepts:?$/i.test(cleanModelAns)) return null;
+
+                            return (
+                              <div className="ai-q-model-ans-box">
+                                <div className="ai-q-model-ans-lbl">Key Concepts & Core Takeaways</div>
+                                <div className="ai-q-model-ans-text">{cleanModelAns}</div>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
                   })}
                 </div>
               </div>
+            ) : (
+              <div className="ai-q-breakdown-card">
+                <div className="ai-q-breakdown-title">Question-by-Question Breakdown</div>
+                <div style={{ padding: "28px 20px", textAlign: "center", color: "#64748b", fontSize: "0.95rem", background: "#f8fafc", borderRadius: "10px", margin: "14px 0" }}>
+                  {result?.questionsAnswered > 0 
+                    ? "Detailed individual question breakdown was not archived for this session."
+                    : "No questions were answered during this session. To get detailed question evaluations, complete questions during your live mock interview."}
+                </div>
+              </div>
             )}
 
             {/* ── STRENGTHS + IMPROVE + TOPICS ── */}
             <div className="ai-summary-3grid">
-              {result?.scorecard?.strengths?.length > 0 && (
+              {Array.isArray(result?.scorecard?.strengths) && result.scorecard.strengths.length > 0 && (
                 <div className="ai-summary-card ai-card-strengths">
-                  <div className="ai-summary-card-title">✅ Strengths</div>
+                  <div className="ai-summary-card-title">Strengths</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.strengths.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
                 </div>
               )}
-              {result?.scorecard?.improvementAreas?.length > 0 && (
+              {Array.isArray(result?.scorecard?.improvementAreas) && result.scorecard.improvementAreas.length > 0 && (
                 <div className="ai-summary-card ai-card-improve">
-                  <div className="ai-summary-card-title">❌ Areas to Improve</div>
+                  <div className="ai-summary-card-title">Areas to Improve</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.improvementAreas.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>
                 </div>
               )}
-              {result?.scorecard?.recommendedTopics?.length > 0 && (
+              {Array.isArray(result?.scorecard?.recommendedTopics) && result.scorecard.recommendedTopics.length > 0 && (
                 <div className="ai-summary-card ai-card-topics">
-                  <div className="ai-summary-card-title">📚 Study These Topics</div>
+                  <div className="ai-summary-card-title">Recommended Study Topics</div>
                   <ul className="ai-summary-card-list">
                     {result.scorecard.recommendedTopics.map((s, i) => <li key={i}>{s}</li>)}
                   </ul>

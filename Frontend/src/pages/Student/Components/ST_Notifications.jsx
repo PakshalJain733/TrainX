@@ -1,23 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Bell,
-  CheckCheck,
-  Sparkles,
-  Award,
-  Bot,
-  Terminal,
-  CalendarCheck,
-  Clock,
-  Trash2,
-  Filter,
-  ExternalLink,
-  Info,
-  CheckCircle2,
-} from "lucide-react";
+import { Bell, CheckCheck, Sparkles, Award, Bot, Terminal, CalendarCheck, Clock, Trash2, Filter, ExternalLink, Info, CheckCircle2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 import "../Styles/ST_Notifications.css";
 
 const defaultNotifications = [];
@@ -118,7 +105,8 @@ export default function Notifications() {
       <div className="student-header-box" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <h2 className="student-header-title">
-          <span>Notifications</span>
+            <Bell size={24} style={{ color: "var(--primary-color, #4f46e5)", flexShrink: 0, marginRight: "10px" }} />
+            <span>Notifications</span>
           </h2>
           <p className="student-header-desc">Stay updated with milestone progression, mentor scorecard dossiers, mock interview drill alerts, and system announcements.</p>
         </div>
@@ -149,6 +137,8 @@ export default function Notifications() {
           );
         })}
       </div>
+
+      <DesktopNotificationToggle />
 
       {/* Notifications List Card */}
       <div className="notif-list-container">

@@ -609,3 +609,85 @@ export const getSuperAdminDashboardSummary = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get all support tickets (especially escalated ones) for Super Admin
+ */
+export const getSuperAdminSupportTickets = async (req, res, next) => {
+  try {
+    let tickets = [];
+    try {
+      const sql = `
+        SELECT st.*, 
+               COALESCE(u.name, 'Student/User') AS requesterName, 
+               u.email AS requesterEmail, 
+               u.role AS requesterRole, 
+               COALESCE(s.department, 'General') AS requesterBatch, 
+               s.roll_number AS requesterRollNo,
+               eb.name AS escalatedByName
+        FROM support_tickets st
+        LEFT JOIN users u ON st.user_id = u.id
+        LEFT JOIN students s ON u.id = s.user_id
+        LEFT JOIN users eb ON st.escalated_by = eb.id
+        ORDER BY st.is_escalated DESC, st.id DESC
+      `;
+      tickets = await query(sql);
+    } catch (e) {
+      console.warn('[DB getSuperAdminSupportTickets fallback]', e.message);
+    }
+
+    const formatted = (tickets || []).map(t => ({
+      id: `TICK-${t.id}`,
+      dbId: t.id,
+      title: t.subject,
+      category: t.category || 'Technical',
+      priority: t.priority || 'Medium',
+      status: t.status || 'Open',
+      description: t.description || '',
+      requesterName: t.requesterName || 'Student/User',
+      requesterEmail: t.requesterEmail || '',
+      role: t.requesterRole || 'STUDENT',
+      batch: t.requesterBatch || t.requesterDept || 'General',
+      time: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Just now',
+      resolutionNote: t.resolution_note || '',
+      isEscalated: Boolean(t.is_escalated),
+      escalationReason: t.escalation_reason || '',
+      escalatedByName: t.escalatedByName || '',
+      escalatedAt: t.escalated_at || null,
+    }));
+
+    return sendSuccess(res, 'Super Admin support tickets retrieved successfully', formatted);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Super Admin resolve/update ticket
+ */
+export const updateSuperAdminSupportTicket = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status, resolutionNote } = req.body;
+    const cleanId = String(id).replace('TICK-', '');
+
+    try {
+      await query(
+        `UPDATE support_tickets 
+         SET status = ?, resolution_note = ? 
+         WHERE id = ?`,
+        [status || 'Resolved', resolutionNote || '', cleanId]
+      );
+    } catch (e) {
+      console.warn('[DB updateSuperAdminSupportTicket fallback]', e.message);
+    }
+
+    return sendSuccess(res, 'Support ticket updated by Super Admin successfully', {
+      id: `TICK-${cleanId}`,
+      status,
+      resolutionNote
+    });
+  } catch (error) {
+    next(error);
+  }
+};

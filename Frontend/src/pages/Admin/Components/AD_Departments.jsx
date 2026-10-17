@@ -1,0 +1,711 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { GraduationCap, Search, Plus, Building2, Briefcase, RefreshCw, X, ChevronDown, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, Check, Mail, UserCheck, Layers, Users } from "lucide-react";
+import { departmentAPI, collegeAPI } from '../../../services/api';
+import CustomSelect from '../../../components/ui/CustomSelect';
+import "../Styles/AD_Departments.css";
+
+/* ── Inline dropdown for Departments ── */
+function DeptSelect(props) {
+  return <CustomSelect {...props} />;
+}
+function StatusBadge({ status }) {
+  const norm = String(status || '').toLowerCase();
+  let statusClass = 'dept-status-badge--default';
+  if (norm.includes('active') || norm.includes('verified') || norm.includes('available')) {
+    statusClass = 'dept-status-badge--active';
+  } else if (norm.includes('high') || norm.includes('progress')) {
+    statusClass = 'dept-status-badge--info';
+  } else if (norm.includes('busy') || norm.includes('medium')) {
+    statusClass = 'dept-status-badge--warning';
+  } else if (norm.includes('purple') || norm.includes('completion')) {
+    statusClass = 'dept-status-badge--purple';
+  }
+
+  return (
+    <span className={`dept-status-badge ${statusClass}`}>
+      <span className="dept-status-dot"></span>
+      {status}
+    </span>
+  );
+}
+
+function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = [] }) {
+  const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, right: 0 });
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  const toggleDropdown = () => {
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setCoords({
+        top: rect.bottom + 4,
+        right: window.innerWidth - rect.right,
+      });
+    }
+    setOpen(!open);
+  };
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        buttonRef.current && !buttonRef.current.contains(event.target) &&
+        menuRef.current && !menuRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function handleScrollOrResize() {
+      if (open && buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setCoords({
+          top: rect.bottom + 4,
+          right: window.innerWidth - rect.right,
+        });
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    window.addEventListener('scroll', handleScrollOrResize, true);
+    window.addEventListener('resize', handleScrollOrResize);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('scroll', handleScrollOrResize, true);
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [open]);
+
+  return (
+    <div className="action-dropdown-container">
+      <button
+        ref={buttonRef}
+        type="button"
+        onClick={toggleDropdown}
+        className={`action-dropdown-trigger ${open ? 'open' : ''}`}
+        title="Actions"
+      >
+        <MoreVertical size={16} />
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="action-dropdown-menu action-dropdown-portal"
+          style={{
+            top: `${coords.top}px`,
+            right: `${coords.right}px`,
+          }}
+        >
+          {onView && (
+            <button
+              type="button"
+              onClick={() => { onView(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              <Eye className="action-dropdown-icon" />
+              <span>View Details</span>
+            </button>
+          )}
+
+          {onVerify && (
+            <button
+              type="button"
+              onClick={() => { onVerify(); setOpen(false); }}
+              className="action-dropdown-item action-dropdown-item--verify"
+            >
+              <ShieldCheck className="action-dropdown-icon" />
+              <span>Verify Access</span>
+            </button>
+          )}
+
+          {onEdit && (
+            <button
+              type="button"
+              onClick={() => { onEdit(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              <Edit2 className="action-dropdown-icon" />
+              <span>Edit Record</span>
+            </button>
+          )}
+
+          {Array.isArray(customActions) && customActions.map((action, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => { action.onClick(); setOpen(false); }}
+              className="action-dropdown-item"
+            >
+              {action.icon && <action.icon className="action-dropdown-icon" />}
+              <span>{action.label}</span>
+            </button>
+          ))}
+
+          {onDelete && (
+            <>
+              <div className="action-dropdown-divider" />
+              <button
+                type="button"
+                onClick={() => { onDelete(); setOpen(false); }}
+                className="action-dropdown-item action-dropdown-item--danger"
+              >
+                <Trash2 className="action-dropdown-icon" />
+                <span>Remove Record</span>
+              </button>
+            </>
+          )}
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}
+
+export default function Departments() {
+  const [departments, setDepartments] = useState([]);
+  const [colleges, setColleges] = useState([]);
+  const [selectedCollegeId, setSelectedCollegeId] = useState('all');
+  const [search, setSearch] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  // New Department Form State
+  const [deptForm, setDeptForm] = useState({
+    name: '',
+    code: '',
+    collegeId: '',
+    hodName: '',
+    hodEmail: '',
+  });
+  const [viewDept, setViewDept] = useState(null);
+  const [editDept, setEditDept] = useState(null);
+  const [deleteDept, setDeleteDept] = useState(null);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [collegesData, deptsData] = await Promise.all([
+        collegeAPI.getColleges().catch(() => []),
+        departmentAPI.getDepartments(selectedCollegeId === 'all' ? null : selectedCollegeId).catch(() => []),
+      ]);
+
+      const rawUser = sessionStorage.getItem("user") || sessionStorage.getItem("authUser") || "{}";
+      let currentUser = {};
+      try { currentUser = JSON.parse(rawUser); } catch (_) {}
+
+      let rawColleges = Array.isArray(collegesData) ? collegesData : [];
+      const userRole = (currentUser.role || "").toLowerCase();
+
+      if (userRole && !userRole.includes("super")) {
+        const userEmail = (currentUser.email || "").toLowerCase().trim();
+        const emailDomain = userEmail.includes("@") ? userEmail.split("@")[1] : "";
+        const matched = rawColleges.filter((c) => {
+          const colEmail = (c.contact_email || c.adminEmail || c.contactEmail || "").toLowerCase();
+          const colDomain = (c.domain || "").toLowerCase().replace(/^@/, "");
+          return (
+            String(c.id) === String(currentUser.college_id || currentUser.collegeId) ||
+            colEmail === userEmail ||
+            (emailDomain && colDomain && emailDomain.endsWith(colDomain))
+          );
+        });
+        if (matched.length > 0) rawColleges = matched;
+      }
+
+      setColleges(rawColleges);
+      if (rawColleges.length > 0) {
+        setDeptForm(prev => ({ ...prev, collegeId: prev.collegeId || rawColleges[0].id }));
+      }
+      setDepartments(Array.isArray(deptsData) ? deptsData : []);
+    } catch (err) {
+      console.warn("API load failed, fallback state maintained.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, [selectedCollegeId]);
+
+  const filtered = departments.filter((d) => {
+    const matchesSearch =
+      (d.name && d.name.toLowerCase().includes(search.toLowerCase())) ||
+      (d.code && d.code.toLowerCase().includes(search.toLowerCase())) ||
+      (d.collegeName && d.collegeName.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesCollege =
+      selectedCollegeId === 'all' ||
+      String(d.collegeId || d.college_id) === String(selectedCollegeId);
+
+    return matchesSearch && matchesCollege;
+  });
+
+  const handleAddDepartment = async (e) => {
+    e.preventDefault();
+    if (!deptForm.name || !deptForm.code) return;
+
+    const selectedColId = deptForm.collegeId || (colleges[0] ? colleges[0].id : 1);
+
+    const payload = {
+      name: deptForm.name,
+      code: deptForm.code,
+      collegeId: selectedColId,
+      college_id: selectedColId,
+      hodName: deptForm.hodName || "Dr. Department HOD",
+      hodEmail: deptForm.hodEmail || `hod.${deptForm.code.toLowerCase()}@college.edu.in`,
+    };
+
+    try {
+      const created = await departmentAPI.createDepartment(payload);
+      if (created) {
+        setDepartments([created, ...departments.filter(d => d.id !== created.id)]);
+      } else {
+        loadData();
+      }
+    } catch (err) {
+      console.error("Failed to save department to database:", err);
+      loadData();
+    }
+
+    setIsAddModalOpen(false);
+    setDeptForm({ name: '', code: '', collegeId: '', hodName: '', hodEmail: '' });
+  };
+
+  const handleDelete = async (id) => {
+    try {
+      await departmentAPI.deleteDepartment(id);
+    } catch (err) {
+      // Fallback
+    }
+    setDepartments(departments.filter((d) => d.id !== id));
+  };
+
+  return (
+    <div className="departments-page-wrap">
+      {/* Page Header */}
+      <div className="departments-header-wrap">
+        <div>
+          <h2 className="departments-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Briefcase size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span>Academic Departments</span>
+          </h2>
+          <p className="departments-header-subtitle">Manage academic streams and HOD allocations across partner institutions</p>
+        </div>
+
+        <div className="departments-actions-wrap">
+          <button
+            onClick={loadData}
+            className="dept-btn-icon"
+            title="Refresh Data"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => {
+              if (colleges.length > 0 && !deptForm.collegeId) {
+                setDeptForm(prev => ({ ...prev, collegeId: colleges[0].id }));
+              }
+              setIsAddModalOpen(true);
+            }}
+            className="sa-btn-primary"
+          >
+            <Plus size={16} />
+            <span>Add Department</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="departments-filter-card">
+        <div className="sa-search-wrap dept-search-box">
+          <Search className="sa-search-icon" size={16} />
+          <input
+            type="text"
+            placeholder="Search department or code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="sa-search-input"
+          />
+          {search && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Department Cards Grid */}
+      <div className="departments-grid">
+        {Array.isArray(filtered) && filtered.map((dept) => (
+          <div key={dept.id} className="dept-card">
+            <div>
+              <div className="dept-card-top">
+                <div>
+                  <div className="dept-badge-row">
+                    <span className="dept-code-tag">{dept.code}</span>
+                    <span className="dept-college-tag">
+                      <Building2 size={12} />
+                      <span>{dept.collegeName || dept.college_name || (colleges[0] ? colleges[0].name : "")}</span>
+                    </span>
+                  </div>
+                  <h3 className="dept-name">{dept.name}</h3>
+                  {dept.hodName && (
+                    <p className="dept-hod-info">
+                      <span>HOD:</span>
+                      <strong className="dept-hod-name">{dept.hodName}</strong>
+                    </p>
+                  )}
+                </div>
+                <ActionDropdown
+                  onView={() => setViewDept(dept)}
+                  onEdit={() => setEditDept(dept)}
+                  onDelete={() => setDeleteDept(dept)}
+                />
+              </div>
+            </div>
+
+            {/* Metric Pills */}
+            <div className="dept-stats-row">
+              <div className="dept-stat-pill">
+                <div className="dept-stat-val">{dept.studentsCount || dept.activeStudents || 120}</div>
+                <div className="dept-stat-lbl">Students</div>
+              </div>
+              <div className="dept-stat-pill">
+                <div className="dept-stat-val">{dept.batchesCount || 4}</div>
+                <div className="dept-stat-lbl">Batches</div>
+              </div>
+              <div className="dept-stat-pill">
+                <StatusBadge status={dept.status || "Active"} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add Department Modal */}
+      {isAddModalOpen && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddModalOpen(false); }}>
+          <div className="modal-dialog dept-modal-520">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <GraduationCap size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Add Academic Department</h2>
+                  <p className="modal-subtitle">Create a new department under a college.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsAddModalOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddDepartment}>
+              <div className="modal-body">
+                <div className="form-group-admin">
+                  <label>College *</label>
+                  <DeptSelect
+                    value={deptForm.collegeId}
+                    options={(Array.isArray(colleges) ? colleges : []).map((c) => ({
+                      value: c.id,
+                      label: `${c.name} (${c.code})`
+                    }))}
+                    onChange={(val) => setDeptForm({ ...deptForm, collegeId: val })}
+                    placeholder="Select College Institution"
+                  />
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Department Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. Computer Science"
+                      value={deptForm.name}
+                      onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Department Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      placeholder="e.g. CSE"
+                      value={deptForm.code}
+                      onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>HOD Name</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      placeholder="Dr. K. R. Sharma"
+                      value={deptForm.hodName}
+                      onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>HOD Email</label>
+                    <input
+                      type="email"
+                      className="form-input-admin"
+                      placeholder="hod.cse@college.edu.in"
+                      value={deptForm.hodEmail}
+                      onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+
+                <button type="submit" className="btn-modal-submit">
+                  Save Department
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* View Department Modal */}
+      {viewDept && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewDept(null); }}>
+          <div className="modal-dialog dept-modal-540">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Eye size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">{viewDept.name} ({viewDept.code || 'DEPT'})</h2>
+                  <p className="modal-subtitle">Academic Department Overview</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setViewDept(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="sa-modal-details-grid">
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Building2 size={13} className="sa-detail-label-icon" />
+                    <span>Parent Institution</span>
+                  </span>
+                  <span className="sa-modal-detail-value">{viewDept.collegeName || viewDept.college_name || (colleges[0] ? colleges[0].name : "")}</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <UserCheck size={13} className="sa-detail-label-icon" />
+                    <span>Head of Department</span>
+                  </span>
+                  <span className="sa-modal-detail-value sa-detail-hod-value">{viewDept.hodName || "Prof. Assigned HOD"}</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Mail size={13} className="sa-detail-label-icon" />
+                    <span>HOD Contact Email</span>
+                  </span>
+                  <span className="sa-modal-detail-value dept-hod-email-value">
+                    {viewDept.hodEmail || "hod@college.edu.in"}
+                  </span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Layers size={13} className="sa-detail-label-icon" />
+                    <span>Active Batches</span>
+                  </span>
+                  <span className="sa-modal-detail-value">{viewDept.batchesCount || 4} Batches</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Users size={13} className="sa-detail-label-icon" />
+                    <span>Enrolled Students</span>
+                  </span>
+                  <span className="sa-modal-detail-value">{viewDept.studentsCount || viewDept.activeStudents || 120} Students</span>
+                </div>
+
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <ShieldCheck size={13} className="sa-detail-label-icon" />
+                    <span>Status</span>
+                  </span>
+                  <div className="mt-1">
+                    <StatusBadge status={viewDept.status || 'Active'} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn-modal-cancel" onClick={() => setViewDept(null)}>
+                Close
+              </button>
+              <button
+                type="button"
+                className="sa-btn-primary"
+                onClick={() => {
+                  setEditDept(viewDept);
+                  setViewDept(null);
+                }}
+              >
+                <Edit2 size={15} />
+                <span>Edit Department</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit Department Modal */}
+      {editDept && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditDept(null); }}>
+          <div className="modal-dialog dept-modal-520">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Edit2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Edit Department</h2>
+                  <p className="modal-subtitle">Update department details and HOD allocation</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setEditDept(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              setDepartments(departments.map(d => d.id === editDept.id ? editDept : d));
+              setEditDept(null);
+            }}>
+              <div className="modal-body">
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>Department Name *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editDept.name}
+                      onChange={(e) => setEditDept({ ...editDept, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Department Code *</label>
+                    <input
+                      type="text"
+                      required
+                      className="form-input-admin"
+                      value={editDept.code || ''}
+                      onChange={(e) => setEditDept({ ...editDept, code: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-row-2">
+                  <div className="form-group-admin">
+                    <label>HOD Name</label>
+                    <input
+                      type="text"
+                      className="form-input-admin"
+                      value={editDept.hodName || ''}
+                      onChange={(e) => setEditDept({ ...editDept, hodName: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>HOD Email</label>
+                    <input
+                      type="email"
+                      className="form-input-admin"
+                      value={editDept.hodEmail || ''}
+                      onChange={(e) => setEditDept({ ...editDept, hodEmail: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+
+                <button type="submit" className="btn-modal-submit">
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteDept && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDeleteDept(null); }}>
+          <div className="modal-dialog dept-modal-440">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap dept-delete-modal-icon">
+                  <Trash2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Remove Department</h2>
+                  <p className="modal-subtitle">Confirm department deletion</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setDeleteDept(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <p className="dept-confirm-modal-desc">
+                Are you sure you want to remove <strong className="dept-confirm-modal-target">{deleteDept.name}</strong>? Associated batches and students will be unlinked.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+
+              <button
+                type="button"
+                className="manageusers-btn-reject dept-btn-delete-confirm"
+                onClick={() => {
+                  handleDelete(deleteDept.id);
+                  setDeleteDept(null);
+                }}
+              >
+                <Trash2 size={15} />
+                <span>Confirm Remove</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  );
+}

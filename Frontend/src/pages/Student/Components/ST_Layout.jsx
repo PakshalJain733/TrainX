@@ -1,19 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User } from "lucide-react";
 import { StudentSidebar } from "./ST_Sidebar";
+import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/ST_Layout.css";
 
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
+import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 
-function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState("all");
-  const [expandedId, setExpandedId] = useState(null);
 
   const autoCloseTimerRef = useRef(null);
 
@@ -123,7 +125,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -142,7 +144,8 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
             </div>
           </div>
         </div>
-        <div className="notif-header-actions-right">
+        <div className="notif-header-actions-right" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <DesktopNotificationToggle compact />
           <button
             className="notif-mark-read-btn"
             onClick={handleMarkAllRead}
@@ -170,7 +173,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
         </button>
       </div>
 
-      {/* List */}
+      {/* List - Small Form Preview Cards */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
           <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
@@ -178,14 +181,14 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           </div>
         ) : (
           visibleNotifications.slice(0, 5).map((n) => {
-            const isExpanded = expandedId === n.id;
             return (
               <div
                 key={n.id}
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
-                  setExpandedId(isExpanded ? null : n.id);
+                  if (onClose) onClose();
+                  if (onSelectNotification) onSelectNotification(n);
                 }}
               >
                 {getIcon(n)}
@@ -199,21 +202,6 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
-
-                  {isExpanded && (
-                    <div className="notif-expanded-desc">
-                      {(n.target || n.created_by_name || n.priority) && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px', fontSize: '11px', fontWeight: '700' }}>
-                          {n.target && <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px' }}>🎯 For: {n.target}</span>}
-                          {n.created_by_name && <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '2px 8px', borderRadius: '6px' }}>👤 By: {n.created_by_name}</span>}
-                          {n.priority && <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px' }}>⚡ {n.priority}</span>}
-                        </div>
-                      )}
-                      <div>
-                        {n.message || (n.desc ? n.desc.replace('...', ' regarding upcoming schedule.') : "No details available.")}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <button
@@ -253,59 +241,14 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   );
 }
 
-const defaultNotificationsList = [
-  {
-    id: 1,
-    title: "Meeting Regarding Quasar 5.0 Problem Statements",
-    desc: "A mandatory meeting for all Quasar 5.0 participants is scheduled for today at 3:00 PM in Seminar Hall 2.",
-    time: "9/26/2026, 1:37:42 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All CSE & IT Batches",
-    priority: "Urgent Notice",
-    created_by_name: "Coordinator Shinde"
-  },
-  {
-    id: 2,
-    title: "Holiday Announcement",
-    desc: "The campus will remain closed on Friday for the upcoming holiday. Online learning resources remain available.",
-    time: "9/26/2026, 1:30:00 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All Students & Faculty",
-    priority: "General Announcement",
-    created_by_name: "Admin Office"
-  },
-  {
-    id: 3,
-    title: "IA-2 Quiz Rescheduled to Friday 10:00 AM",
-    desc: "The Internal Assessment 2 quiz has been rescheduled to Friday 10:00 AM. Please review your module roadmaps.",
-    time: "9/25/2026, 8:56:20 PM",
-    unread: true,
-    type: "quiz",
-    target: "TE Computer Batches",
-    priority: "Academic Notice",
-    created_by_name: "Prof. Verma"
-  },
-  {
-    id: 4,
-    title: "Goldman Sachs Placement Drive Registration Live",
-    desc: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through placement tab.",
-    time: "9/25/2026, 6:15:00 PM",
-    unread: false,
-    type: "calendar",
-    target: "BE All Branches",
-    priority: "Placement Alert",
-    created_by_name: "Placement Cell"
-  }
-];
+const defaultNotificationsList = [];
 
 export default function StudentLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [selectedNotifModal, setSelectedNotifModal] = useState(null);
   const [interviewLive, setInterviewLive] = useState(false);
   const headerRightRef = useRef(null);
 
@@ -323,7 +266,7 @@ export default function StudentLayout() {
   // Hide sidebar & header when AI Interview goes live
   useEffect(() => {
     const onLive = () => setInterviewLive(true);
-    const onEnd  = () => setInterviewLive(false);
+    const onEnd = () => setInterviewLive(false);
     window.addEventListener('interviewLive', onLive);
     window.addEventListener('interviewEnded', onEnd);
     return () => {
@@ -334,8 +277,12 @@ export default function StudentLayout() {
 
   const resolveUser = (rawUser) => {
     const u = rawUser || {};
-    let name = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
-    let email = u.email || "";
+    let name = (typeof u.name === "string" && u.name) ||
+      (typeof u.fullName === "string" && u.fullName) ||
+      (typeof u.full_name === "string" && u.full_name) ||
+      (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
+      "Student";
+    let email = typeof u.email === "string" ? u.email : "";
     return { ...u, name, email };
   };
 
@@ -346,40 +293,27 @@ export default function StudentLayout() {
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
 
   const [notifications, setNotifications] = useState(defaultNotificationsList);
+  const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
     apiFetch("/student/notifications")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
-        }
+        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+        setNotifications(serverItems);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const [showFirstLoginFlash, setShowFirstLoginFlash] = useState(false);
@@ -411,7 +345,7 @@ export default function StudentLayout() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -438,7 +372,7 @@ export default function StudentLayout() {
             }
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     };
     window.addEventListener("userProfileUpdated", handleUpdate);
     window.addEventListener("storage", handleUpdate);
@@ -450,7 +384,38 @@ export default function StudentLayout() {
 
   useEffect(() => {
     const handleNewNotif = () => {
-      setHasUnreadNotif(true);
+      apiFetch("/student/notifications")
+        .then((res) => {
+          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
+            const serverItems = res.data.map((b) => ({
+              id: b.id || `notif-${Math.random()}`,
+              title: b.title || "Announcement",
+              desc: b.message || b.desc || b.description || "",
+              message: b.message || b.desc || "",
+              time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+              unread: b.unread !== undefined ? Boolean(b.unread) : true,
+              type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+              target: b.target || "All Batches",
+              priority: b.priority || "General Notice",
+              created_by_name: b.created_by_name || "Admin",
+            }));
+
+            setNotifications((prev) => {
+              const combined = [...serverItems, ...prev];
+              const unique = [];
+              const seenTitles = new Set();
+              for (const item of combined) {
+                const key = item.title.trim().toLowerCase();
+                if (!seenTitles.has(key)) {
+                  seenTitles.add(key);
+                  unique.push(item);
+                }
+              }
+              return unique;
+            });
+          }
+        })
+        .catch(() => { });
     };
     window.addEventListener("new_broadcast_notification", handleNewNotif);
     return () => window.removeEventListener("new_broadcast_notification", handleNewNotif);
@@ -475,38 +440,6 @@ export default function StudentLayout() {
     return dept;
   };
 
-  const getPageTitle = (path) => {
-    if (path === "/student" || path === "/student/") return "Overview";
-    if (path.startsWith("/student/roadmap")) return "AI Career Roadmap";
-    if (path.startsWith("/student/learning")) return "Learning Content";
-    if (path.startsWith("/student/ai-interview")) return "AI Mock Interview";
-    if (path.startsWith("/student/progress")) return "Progress & Skill Radar";
-    if (path.startsWith("/student/leaderboard")) return "Leaderboard";
-    if (path.startsWith("/student/weekly-reports")) return "Weekly Reports";
-    if (path.startsWith("/student/academic")) return "Academic";
-    if (path.startsWith("/student/attendance")) return "Attendance";
-    if (path.startsWith("/student/assessment")) return "Assessments";
-    if (path.startsWith("/student/performance")) return "Performance";
-    if (path.startsWith("/student/certificates")) return "Certificates";
-    if (path.startsWith("/student/timetable")) return "Timetable";
-    if (path.startsWith("/student/compiler")) return "Compiler / Code Editor";
-    if (path.startsWith("/student/quiz")) return "Quiz";
-    if (path.startsWith("/student/batches")) return "Batches";
-    if (path.startsWith("/student/practice")) return "Practice Problems";
-    if (path.startsWith("/student/notes")) return "Study Notes & Resources";
-    if (path.startsWith("/student/coding-exam")) return "Coding Exam";
-    if (path.startsWith("/student/exam-type-select")) return "Select Exam Type";
-    if (path.startsWith("/student/mcq-exam")) return "MCQ Test";
-    if (path.startsWith("/student/notifications")) return "Notifications";
-    if (path.startsWith("/student/profile")) return "Profile";
-    if (path.startsWith("/student/settings")) return "Settings";
-    if (path.startsWith("/student/help")) return "Help & Support";
-    if (path.startsWith("/student/coding-platform")) return "Coding Platform";
-    return "Dashboard";
-  };
-
-  const pageTitle = getPageTitle(pathname);
-
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
       setMobileOpen((o) => !o);
@@ -515,14 +448,17 @@ export default function StudentLayout() {
     }
   };
 
+  const isCodingPlatform = pathname.startsWith('/student/coding-platform');
+  const isFullScreenApp = interviewLive || isCodingPlatform;
+
   return (
-    <div className="student-layout">
+    <div className={`student-layout ${isFullScreenApp ? 'student-layout--fullscreen' : ''}`}>
       {mobileOpen && (
         <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar — hidden during live interview */}
-      {!interviewLive && (
+      {/* Sidebar — hidden during live interview or coding platform */}
+      {!isFullScreenApp && (
         <StudentSidebar
           collapsed={collapsed}
           mobileOpen={mobileOpen}
@@ -530,135 +466,133 @@ export default function StudentLayout() {
         />
       )}
 
-      <div className="student-content" style={interviewLive ? { marginLeft: 0, width: '100%', maxWidth: '100%' } : {}}>
-        <main className="student-main">
+      <div className="student-content" style={isFullScreenApp ? { marginLeft: 0, width: '100%', maxWidth: '100%', padding: 0 } : {}}>
+        <main className="student-main" style={isFullScreenApp ? { padding: 0, margin: 0 } : {}}>
           {/* ONE BIG ROUNDED CORNER CARD CONTAINING HEADER & CONTENT */}
-          <div className="student-page-card" style={interviewLive ? { borderRadius: 0, padding: 0, boxShadow: 'none', height: '100vh', overflow: 'auto' } : {}}>
+          <div className="student-page-card" style={isFullScreenApp ? { borderRadius: 0, padding: 0, boxShadow: 'none', height: '100vh', width: '100%', overflow: 'hidden' } : {}}>
 
-            {/* Header — hidden during live interview */}
-            {!interviewLive && (
-            <header className="student-header">
-              <div className="student-header__left">
-                <button
-                  className="student-header__sidebar-toggle"
-                  onClick={toggleSidebar}
-                  aria-label="Toggle sidebar"
-                  title="Toggle sidebar"
-                >
-                  <PanelLeft size={20} />
-                </button>
-
-                <div className="student-breadcrumb">
-                  <span className="student-breadcrumb-active">{pageTitle}</span>
-                </div>
-
-
-              </div>
-
-              <div className="student-header__right" ref={headerRightRef}>
-
-
-                {/* Notification Bell Dropdown Wrap */}
-                <div className="student-header__notif-wrap">
+            {/* Header — hidden during live interview or coding platform */}
+            {!isFullScreenApp && (
+              <header className="student-header">
+                <div className="student-header__left">
                   <button
-                    className="student-header__icon-btn"
-                    aria-label="Notifications"
-                    onClick={() => {
-                      setProfileOpen(false);
-                      setNotifOpen((o) => !o);
-                    }}
-                    title="Notifications"
+                    className="student-header__sidebar-toggle"
+                    onClick={toggleSidebar}
+                    aria-label="Toggle sidebar"
+                    title="Toggle sidebar"
                   >
-                    <Bell size={21} className="student-header__bell-icon" />
-                    {hasUnreadNotif && <span className="student-header__notification-dot"></span>}
+                    <PanelLeft size={20} />
                   </button>
 
-                  {notifOpen && (
-                    <NotificationDropdown
-                      onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
-                      onOpenViewAll={() => setFullNotifOpen(true)}
-                      notifications={notifications}
-                      setNotifications={setNotifications}
-                    />
-                  )}
+                  <GlobalHeaderSearch role="student" />
                 </div>
 
-                {/* Profile section with dropdown */}
-                <div className="student-header__user-wrap">
-                  <button
-                    className="student-header__user"
-                    onClick={() => {
-                      setNotifOpen(false);
-                      setProfileOpen((o) => !o);
-                    }}
-                    aria-label="User menu"
-                  >
-                    <div className="student-header__user-info">
-                      <span className="student-header__name">{user.name}</span>
-                    </div>
-                    <div className="student-header__avatar" aria-label={`User profile ${user.name}`}>
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                      ) : (
-                        user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
-                      )}
-                    </div>
-                  </button>
+                <div className="student-header__right" ref={headerRightRef}>
 
-                  {profileOpen && (
-                    <>
-                      <div className="student-header__profile-dropdown">
-                        <div className="student-header__profile-top">
-                          <div className="student-header__profile-avatar">
-                            {user.name ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
-                          </div>
-                          <div className="student-header__profile-info">
-                            <span className="student-header__profile-name">{user.name || "Ganesh Shinde"}</span>
-                            <span className="student-header__profile-sub">{user.email || "ganesh.shinde@student.pvppcoe.ac.in"}</span>
-                          </div>
-                        </div>
-                        <div className="student-header__profile-divider" />
-                        <button
-                          className="student-header__profile-item"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            navigate("/student/profile");
-                          }}
-                        >
-                          <User size={15} />
-                          View Profile
-                        </button>
-                        <button
-                          className="student-header__profile-item"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            setIsChangePasswordOpen(true);
-                          }}
-                        >
-                          <Key size={15} />
-                          Change Password
-                        </button>
-                        <button
-                          className="student-header__profile-item student-header__profile-item--danger"
-                          onClick={() => {
-                            setProfileOpen(false);
-                            navigate("/");
-                          }}
-                        >
-                          <LogOut size={15} />
-                          Logout
-                        </button>
+
+                  {/* Notification Bell Dropdown Wrap */}
+                  <div className="student-header__notif-wrap">
+                    <button
+                      className="student-header__icon-btn"
+                      aria-label="Notifications"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setNotifOpen((o) => !o);
+                      }}
+                      title="Notifications"
+                    >
+                      <Bell size={21} className="student-header__bell-icon" />
+                      {hasUnreadNotif && <span className="student-header__notification-dot"></span>}
+                    </button>
+
+                    {notifOpen && (
+                      <NotificationDropdown
+                        onClose={() => setNotifOpen(false)}
+                        onUnreadChange={() => { }}
+                        onOpenViewAll={() => setFullNotifOpen(true)}
+                        notifications={notifications}
+                        setNotifications={setNotifications}
+                        onSelectNotification={(n) => setSelectedNotifModal(n)}
+                      />
+                    )}
+                  </div>
+
+                  {/* Profile section with dropdown */}
+                  <div className="student-header__user-wrap">
+                    <button
+                      className="student-header__user"
+                      onClick={() => {
+                        setNotifOpen(false);
+                        setProfileOpen((o) => !o);
+                      }}
+                      aria-label="User menu"
+                    >
+                      <div className="student-header__avatar" aria-label={`User profile ${user.name}`}>
+                        {avatarUrl ? (
+                          <img src={avatarUrl} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                        ) : (
+                          typeof user?.name === "string" && user.name.trim() ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"
+                        )}
                       </div>
-                    </>
-                  )}
+                      <div className="student-header__user-info">
+                        <span className="student-header__name">{user.name || "Student"}</span>
+                        <span className="student-header__role">{user.role || "Student"}</span>
+                      </div>
+                    </button>
+
+                    {profileOpen && (
+                      <>
+                        <div className="student-header__profile-dropdown">
+                          <div className="student-header__profile-top">
+                            <div className="student-header__profile-avatar">
+                              {typeof user?.name === "string" && user.name.trim() ? user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2) : "GS"}
+                            </div>
+                            <div className="student-header__profile-info">
+                              <span className="student-header__profile-name">{user.name || "Ganesh Shinde"}</span>
+                              <span className="student-header__profile-sub">{user.email || "ganesh.shinde@student.pvppcoe.ac.in"}</span>
+                            </div>
+                          </div>
+                          <div className="student-header__profile-divider" />
+                          <button
+                            className="student-header__profile-item"
+                            onClick={() => {
+                              setProfileOpen(false);
+                              navigate("/student/profile");
+                            }}
+                          >
+                            <User size={15} />
+                            View Profile
+                          </button>
+                          <button
+                            className="student-header__profile-item"
+                            onClick={() => {
+                              setProfileOpen(false);
+                              setIsChangePasswordOpen(true);
+                            }}
+                          >
+                            <Key size={15} />
+                            Change Password
+                          </button>
+                          <button
+                            className="student-header__profile-item student-header__profile-item--danger"
+                            onClick={() => {
+                              setProfileOpen(false);
+                              navigate("/");
+                            }}
+                          >
+                            <LogOut size={15} />
+                            Logout
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </header>
+              </header>
             )}
 
             {/* Page Content Body */}
-            <div className="student-card-body" style={interviewLive ? { padding: '20px 24px' } : {}}>
+            <div className="student-card-body" style={isFullScreenApp ? { padding: 0, margin: 0, height: '100%', width: '100%', overflow: 'hidden' } : {}}>
               <Outlet />
             </div>
 
@@ -717,6 +651,13 @@ export default function StudentLayout() {
           </div>
         </div>
       )}
+      <NotificationDetailModal
+        notification={selectedNotifModal}
+        onClose={() => setSelectedNotifModal(null)}
+        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
+        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onNavigate={(path) => navigate(path)}
+      />
     </div>
   );
 }

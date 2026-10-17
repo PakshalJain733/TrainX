@@ -1,5 +1,7 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { getAuthToken } from "../../utils/api";
+import { roleFromAccessToken, getRoleFlags } from "../../utils/authRole";
 
 export default function ProtectedRoute({ allowedRoles = [], children }) {
   const location = useLocation();
@@ -8,59 +10,80 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     typeof window !== "undefined" &&
     ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
 
-  // 1. Retrieve auth token
-  let token =
-    sessionStorage.getItem("token") ||
-    sessionStorage.getItem("token") ||
-    sessionStorage.getItem("authToken") ||
-    sessionStorage.getItem("auth_token");
+  let token = getAuthToken();
 
   // 2. Retrieve user object
   let user = null;
   try {
-    const rawUser = sessionStorage.getItem("user") || sessionStorage.getItem("user");
+    const rawUser = sessionStorage.getItem("user") || localStorage.getItem("user");
     if (rawUser) user = JSON.parse(rawUser);
   } catch (e) {
     user = null;
   }
 
-  // Localhost Developer Mode: Allow direct URL navigation (e.g. localhost:5173/student)
-  if (isLocalhost && (!token || !user || !user.role)) {
+  // Localhost Developer Mode: Allow direct URL navigation (e.g. localhost:5173/admin, /coordinator, /mentor)
+  if (isLocalhost) {
     const currentPath = location.pathname.toLowerCase();
-    let devRole = "student";
-    let devName = "Local Student";
+    let targetRole = null;
+    let devName = null;
 
     if (currentPath.includes("/super-admin") || currentPath.includes("/superadmin")) {
-      devRole = "superadmin";
+      targetRole = "superadmin";
       devName = "Local Super Admin";
     } else if (currentPath.includes("/coordinator")) {
-      devRole = "coordinator";
+      targetRole = "coordinator";
       devName = "Local Coordinator";
     } else if (currentPath.includes("/admin")) {
-      devRole = "college_admin";
+      targetRole = "college_admin";
       devName = "Local Admin";
     } else if (currentPath.includes("/mentor")) {
-      devRole = "mentor";
+      targetRole = "mentor";
       devName = "Local Mentor";
+    } else if (currentPath.includes("/student")) {
+      targetRole = "student";
+      devName = "Local Student";
     }
 
-    const mockDevUser = {
-      id: 99999,
-      name: devName,
-      email: `${devRole}@localhost.dev`,
-      role: devRole,
-      college_id: 1,
-      is_profile_updated: true,
-      profileCompleted: true,
-    };
+    const userRoleStr = user?.role ? String(user.role).toLowerCase() : "";
+    const isMatchingRole =
+      !targetRole ||
+      userRoleStr.includes("super") ||
+      (targetRole === "college_admin" && (userRoleStr.includes("admin") || userRoleStr.includes("college_admin") || userRoleStr.includes("hod"))) ||
+      (targetRole === "coordinator" && userRoleStr.includes("coordinator")) ||
+      (targetRole === "mentor" && (userRoleStr.includes("mentor") || userRoleStr.includes("faculty"))) ||
+      (targetRole === "student" && (userRoleStr.includes("student") || userRoleStr === "user"));
 
-    token = "mock_localhost_dev_token";
-    user = mockDevUser;
+    if (targetRole && (!isMatchingRole || !token || !user || !user.role)) {
+      const mockDevUser = {
+        id: 99999,
+        name: devName || "Local User",
+        email: `${targetRole}@localhost.dev`,
+        role: targetRole,
+        college_id: 1,
+        is_profile_updated: true,
+        profileCompleted: true,
+      };
 
-    try {
-      sessionStorage.setItem("token", token);
-      sessionStorage.setItem("user", JSON.stringify(mockDevUser));
-    } catch (_) {}
+      token = "mock_localhost_dev_token";
+      user = mockDevUser;
+
+      try {
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("authToken", token);
+        sessionStorage.setItem("role", targetRole);
+        sessionStorage.setItem("user", JSON.stringify(mockDevUser));
+      } catch (_) {}
+    }
+  }
+
+  if (token && (!user || !user.role)) {
+    const jwtRole = roleFromAccessToken(token);
+    if (jwtRole) {
+      user = { ...(user || {}), role: jwtRole };
+      try {
+        sessionStorage.setItem("user", JSON.stringify(user));
+      } catch (_) {}
+    }
   }
 
   // In Deployed / Production environment: if unauthenticated, redirect to login page
@@ -68,20 +91,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  const userRole = String(user.role).toLowerCase();
-
-  // Determine user role flags
-  const isSuperAdmin =
-    userRole.includes("superadmin") ||
-    userRole.includes("super admin") ||
-    userRole.includes("super_admin") ||
-    userRole.includes("super");
-  const isAdmin =
-    (userRole.includes("admin") || userRole.includes("college_admin") || userRole.includes("hod")) &&
-    !isSuperAdmin;
-  const isCoordinator = userRole.includes("coordinator");
-  const isMentor = userRole.includes("mentor") || userRole.includes("faculty");
-  const isStudent = userRole.includes("student") || userRole === "user";
+  const { userRole, isSuperAdmin, isAdmin, isCoordinator, isMentor, isStudent } = getRoleFlags(user.role);
 
   // Check if role is authorized
   let isAllowed = false;

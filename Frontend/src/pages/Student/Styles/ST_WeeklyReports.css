@@ -449,3 +449,13 @@
   margin: 0;
   max-width: 420px;
 }
+
+.weekly-status-icon {
+  color: #2563eb;
+}
+
+.weekly-empty-icon {
+  color: #94a3b8;
+  margin: 0 auto 16px auto;
+  display: block;
+}

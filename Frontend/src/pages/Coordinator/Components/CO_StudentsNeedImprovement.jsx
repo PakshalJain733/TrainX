@@ -1,21 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  AlertTriangle,
-  Search,
-  ShieldAlert,
-  Sparkles,
-  RefreshCw,
-  SlidersHorizontal,
-  X,
-  PlusCircle,
-  TrendingUp,
-  TrendingDown,
-  Eye,
-  BarChart3,
-  BrainCircuit,
-  CheckCircle,
-  Filter,
-} from "lucide-react";
+import { AlertTriangle, Search, ShieldAlert, Sparkles, RefreshCw, SlidersHorizontal, X, PlusCircle, TrendingUp, TrendingDown, Eye, BarChart3, BrainCircuit, CheckCircle, Filter } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/CO_CodingPerformance.css";

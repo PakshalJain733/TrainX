@@ -1,23 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import {
-  Search,
-  BookOpen,
-  FileText,
-  Video,
-  Sparkles,
-  Plus,
-  Trash2,
-  X,
-  Link as LinkIcon,
-  UploadCloud,
-  ExternalLink,
-  Download,
-  Eye,
-  ChevronDown,
-  Check,
-  BookOpenCheck,
-} from "lucide-react";
+import { Check, Search, BookOpen, FileText, Video, Sparkles, Plus, Trash2, X, Link as LinkIcon, UploadCloud, ExternalLink, Download, Eye, ChevronDown, BookOpenCheck } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS, addSharedLearningContent, getSharedLearningContent } from "../../../utils/sharedStore";
@@ -28,7 +11,8 @@ function AdminLcSelect({ value, options = [], onChange, placeholder = 'Select...
   const [isOpen, setIsOpen] = useState(false);
   const [dropUp, setDropUp] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
 
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
@@ -60,7 +44,7 @@ function AdminLcSelect({ value, options = [], onChange, placeholder = 'Select...
       </button>
       {isOpen && (
         <div className={`admin-lc-select-dropdown${dropUp ? ' admin-lc-select-dropdown--up' : ''}`}>
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-lc-select-option${isSel ? ' admin-lc-select-option--selected' : ''}`}>
@@ -265,15 +249,85 @@ export default function AdminLearningContent() {
   };
 
   
-  const handleDownloadDocument = (item) => {
-    let targetUrl = item.file_url || item.link || "";
-    if (!targetUrl || targetUrl === "#") {
-      alert("No downloadable document file attached to this resource.");
+  const resolveUrl = (rawUrl) => {
+    if (!rawUrl || rawUrl === "#") return null;
+    if (
+      rawUrl.startsWith("http://") ||
+      rawUrl.startsWith("https://") ||
+      rawUrl.startsWith("blob:") ||
+      rawUrl.startsWith("data:")
+    ) {
+      return rawUrl;
+    }
+    const normalizedPath = rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`;
+    const apiBase = getApiBaseUrl();
+    const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin;
+    const backendHost = (origin.includes(":5173") || origin.includes(":3000")) ? "http://localhost:5000" : origin;
+    return `${backendHost}${normalizedPath}`;
+  };
+
+  const getEmbedVideoUrl = (url) => {
+    if (!url) return null;
+    if (url.includes("youtube.com/watch?v=")) {
+      const videoId = url.split("v=")[1]?.split("&")[0];
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    }
+    if (url.includes("youtu.be/")) {
+      const videoId = url.split("youtu.be/")[1]?.split("?")[0];
+      return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+    }
+    if (url.includes("vimeo.com/")) {
+      const videoId = url.split("vimeo.com/")[1]?.split("?")[0];
+      return `https://player.vimeo.com/video/${videoId}?autoplay=1`;
+    }
+    return url;
+  };
+
+  const handleOpenLink = (item) => {
+    let targetUrl = resolveUrl(item.link || item.file_url);
+    if (!targetUrl) {
+      alert("No valid web link found for this item.");
       return;
     }
-    if (!targetUrl.startsWith("http") && !targetUrl.startsWith("blob:") && !targetUrl.startsWith("data:")) {
-      const normalizedPath = targetUrl.startsWith("/") ? targetUrl : `/${targetUrl}`;
-      targetUrl = `http://localhost:5000${normalizedPath}`;
+    if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+      targetUrl = `https://${targetUrl}`;
+    }
+    window.open(targetUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleOpenVideo = (item) => {
+    const videoUrl = resolveUrl(item.link || item.file_url);
+    if (!videoUrl) {
+      alert("No video source found for this item.");
+      return;
+    }
+    setViewingDocument({
+      type: "video",
+      title: item.title,
+      url: videoUrl,
+      originalItem: item,
+    });
+  };
+
+  const handleViewDocument = (item) => {
+    const docUrl = resolveUrl(item.file_url || item.link);
+    if (!docUrl) {
+      alert("No viewable document file attached to this resource.");
+      return;
+    }
+    setViewingDocument({
+      type: "document",
+      title: item.title,
+      url: docUrl,
+      originalItem: item,
+    });
+  };
+
+  const handleDownloadDocument = (item) => {
+    let targetUrl = resolveUrl(item.file_url || item.link);
+    if (!targetUrl) {
+      alert("No downloadable document file attached to this resource.");
+      return;
     }
 
     const a = document.createElement("a");
@@ -324,27 +378,34 @@ export default function AdminLearningContent() {
 
       {/* Add Content Modal / Flash Screen */}
       {showForm && createPortal(
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
-          <div className="modal-dialog">
-            <div className="modal-header">
-              <div className="modal-header-left">
-                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+        <div 
+          className="sa-modal-overlay" 
+          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'fadeIn 0.2s ease-out' }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}
+        >
+          <div 
+            className="sa-modal-dialog" 
+            style={{ background: '#ffffff', width: '100%', maxWidth: '540px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 48px)' }}
+          >
+            <div className="sa-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', background: '#ffffff' }}>
+              <div className="sa-modal-header-left" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div className="sa-modal-icon-wrap" style={{ background: '#e0e7ff', color: '#4f46e5', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <BookOpen size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Upload Learning Content</h2>
-                  <p className="modal-subtitle">Publish videos, documents, web links, or study notes for student batches.</p>
+                  <h2 className="sa-modal-title" style={{ fontSize: '18px', fontWeight: 600, color: '#0f172a', margin: '0 0 4px 0' }}>Upload Learning Content</h2>
+                  <p className="sa-modal-subtitle" style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.4 }}>Publish videos, documents, web links, or study notes for student batches.</p>
                 </div>
               </div>
-              <button className="modal-close-btn" onClick={() => setShowForm(false)} title="Close Modal">
-                <X size={18} />
+              <button type="button" className="sa-modal-close" onClick={() => setShowForm(false)} title="Close Modal" style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleAdd}>
-              <div className="modal-body">
-                <div className="form-group-admin">
-                  <label>Content Title *</label>
+            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="sa-modal-body" style={{ overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Content Title *</label>
                   <input
                     className="form-input-admin"
                     value={newTitle}
@@ -355,8 +416,8 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-group-admin" style={{ marginTop: "12px" }}>
-                  <label>Description (Optional)</label>
+                <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Description (Optional)</label>
                   <textarea
                     className="form-input-admin form-textarea-admin"
                     rows={3}
@@ -366,9 +427,9 @@ export default function AdminLearningContent() {
                   />
                 </div>
 
-                <div className="form-row-2">
-                  <div className="form-group-admin">
-                    <label>Resource Type</label>
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Resource Type</label>
                     <AdminLcSelect
                       value={newType}
                       onChange={setNewType}
@@ -380,8 +441,8 @@ export default function AdminLearningContent() {
                       ]}
                     />
                   </div>
-                  <div className="form-group-admin">
-                    <label>Target Batch / Batch</label>
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155' }}>Target Batch / Batch</label>
                     <AdminLcSelect
                       value={newBatch}
                       onChange={setNewBatch}
@@ -396,42 +457,65 @@ export default function AdminLearningContent() {
                   </div>
                 </div>
 
-                {/* Clean, Full-Width Upload Document & Resource Link inputs */}
-                <div className="form-group-admin" style={{ marginTop: "12px" }}>
-                  <label>Upload Document / File {newType !== "Link" ? "*" : "(Optional)"}</label>
-                  <input
-                    type="file"
-                    className="form-input-admin"
-                    style={{ padding: "8px 12px", height: "auto", cursor: "pointer" }}
-                    onChange={e => setSelectedFile(e.target.files[0] || null)}
-                    required={newType !== "Link" && !resourceLink}
-                  />
-                  {selectedFile && (
-                    <span className="form-hint" style={{ color: "#059669", fontWeight: "600", marginTop: "4px", display: "block" }}>
-                      ✓ Selected File: {selectedFile.name}
-                    </span>
-                  )}
-                </div>
+                {/* Side-by-Side Upload Document & Resource Link inputs */}
+                <div className="form-row-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>Upload Document / File {newType !== "Link" ? "*" : ""}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: '#64748b' }}>(PDF, PPT)</span>
+                    </label>
+                    <input
+                      type="file"
+                      accept=".pdf,.ppt,.pptx"
+                      className="form-input-admin"
+                      style={{ padding: "8px 12px", height: "42px", boxSizing: "border-box", cursor: "pointer" }}
+                      onChange={e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const ext = file.name.split('.').pop().toLowerCase();
+                          if (!['pdf', 'ppt', 'pptx'].includes(ext)) {
+                            alert("Only PDF and PPT/PPTX files are allowed!");
+                            e.target.value = "";
+                            setSelectedFile(null);
+                            return;
+                          }
+                          setSelectedFile(file);
+                        } else {
+                          setSelectedFile(null);
+                        }
+                      }}
+                      required={newType !== "Link" && !resourceLink}
+                    />
+                    {selectedFile && (
+                      <span className="form-hint" style={{ color: "#059669", fontWeight: "600", marginTop: "4px", display: "block" }}>
+                        ✓ Selected File: {selectedFile.name}
+                      </span>
+                    )}
+                  </div>
 
-                <div className="form-group-admin" style={{ marginTop: "12px" }}>
-                  <label>Resource Link / URL {newType === "Link" ? "*" : "(Optional)"}</label>
-                  <input
-                    type="url"
-                    className="form-input-admin"
-                    value={resourceLink}
-                    onChange={e => setResourceLink(e.target.value)}
-                    placeholder="e.g. https://drive.google.com/... or https://..."
-                    required={newType === "Link"}
-                  />
+                  <div className="form-group-admin" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                      Resource Link / URL {newType === "Link" ? "*" : ""}
+                    </label>
+                    <input
+                      type="url"
+                      className="form-input-admin"
+                      style={{ height: "42px", boxSizing: "border-box" }}
+                      value={resourceLink}
+                      onChange={e => setResourceLink(e.target.value)}
+                      placeholder="e.g. https://drive.google.com/... (Optional)"
+                      required={newType === "Link"}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowForm(false)}>
+              <div className="sa-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-start', gap: '12px', background: '#ffffff' }}>
+                <button type="button" className="sa-modal-btn-cancel" onClick={() => setShowForm(false)} style={{ padding: '10px 20px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease' }}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-modal-submit">
-                  Add Content
+                <button type="submit" className="sa-modal-btn-submit" style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#3b82f6', color: '#ffffff', fontSize: '14px', fontWeight: 600, cursor: 'pointer', transition: 'all 0.15s ease' }}>
+                  Publish Resource
                 </button>
               </div>
             </form>
@@ -451,6 +535,16 @@ export default function AdminLearningContent() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="learning-filter-pills">
@@ -482,6 +576,14 @@ export default function AdminLearningContent() {
             const iconMap = { Video: Video, Document: FileText, Link: ExternalLink, "AI Notes": Sparkles };
             const IconComponent = iconMap[item.type] || FileText;
             const fileName = item.file_name || (item.file_url && item.file_url !== "#" ? item.file_url.split('/').pop() : null);
+
+            const typeLower = (item.type || "").toLowerCase();
+            const fileUrl = item.file_url || "";
+            const linkUrl = item.link || "";
+
+            const isLink = typeLower.includes("link") || (!fileUrl && linkUrl && !linkUrl.includes("youtube") && !linkUrl.includes("youtu.be") && !linkUrl.includes("vimeo"));
+            const isVideo = typeLower.includes("video") || fileUrl.match(/\.(mp4|webm|mov|mkv)$/i) || linkUrl.includes("youtube.com") || linkUrl.includes("youtu.be") || linkUrl.includes("vimeo.com");
+            const isDocument = !isLink && !isVideo;
 
             return (
               <div key={item.id} className="learning-resource-card">
@@ -518,13 +620,46 @@ export default function AdminLearningContent() {
                 </div>
 
                 <div className="learning-card-footer">
-                  <button
+                  {isLink && (
+                    <button
                       type="button"
-                      className="resource-download-btn"
-                      onClick={() => handleDownloadDocument(item)}
+                      className="resource-action-btn resource-btn-link"
+                      onClick={() => handleOpenLink(item)}
                     >
-                      <Download size={14} /> Download Document
+                      <ExternalLink size={14} /> Open Link
                     </button>
+                  )}
+
+                  {isVideo && (
+                    <button
+                      type="button"
+                      className="resource-action-btn resource-btn-video"
+                      onClick={() => handleOpenVideo(item)}
+                    >
+                      <Video size={14} /> Watch Video
+                    </button>
+                  )}
+
+                  {isDocument && (
+                    <div className="resource-doc-btn-group">
+                      <button
+                        type="button"
+                        className="resource-action-btn resource-btn-view"
+                        onClick={() => handleViewDocument(item)}
+                      >
+                        <Eye size={14} /> View Document
+                      </button>
+                      <button
+                        type="button"
+                        className="resource-action-btn resource-btn-download"
+                        onClick={() => handleDownloadDocument(item)}
+                        title="Download document file"
+                      >
+                        <Download size={14} />
+                      </button>
+                    </div>
+                  )}
+
                   <Badge variant="success" className="learning-status-pill">
                     {item.status}
                   </Badge>
@@ -557,6 +692,89 @@ export default function AdminLearningContent() {
           )}
         </div>
       </div>
+
+      {/* Dynamic File & Video Viewer Modal */}
+      {viewingDocument && createPortal(
+        <div className="lc-viewer-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewingDocument(null); }}>
+          <div className="lc-viewer-modal">
+            <div className="lc-viewer-header">
+              <div className="lc-viewer-title-group">
+                {viewingDocument.type === "video" ? (
+                  <div className="lc-viewer-icon-wrap lc-icon--video"><Video size={20} /></div>
+                ) : (
+                  <div className="lc-viewer-icon-wrap lc-icon--doc"><FileText size={20} /></div>
+                )}
+                <div>
+                  <h3 className="lc-viewer-title">{viewingDocument.title}</h3>
+                  <span className="lc-viewer-subtitle">
+                    {viewingDocument.type === "video" ? "Interactive Video Player" : "Document & File Viewer"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="lc-viewer-actions">
+                <button
+                  className="lc-viewer-action-btn"
+                  onClick={() => window.open(viewingDocument.url, "_blank", "noopener,noreferrer")}
+                  title="Open in new window"
+                >
+                  <ExternalLink size={15} /> Open in New Tab
+                </button>
+                {viewingDocument.type === "document" && (
+                  <button
+                    className="lc-viewer-action-btn lc-viewer-btn-primary"
+                    onClick={() => handleDownloadDocument(viewingDocument.originalItem)}
+                    title="Download File"
+                  >
+                    <Download size={15} /> Download
+                  </button>
+                )}
+                <button className="lc-viewer-close-btn" onClick={() => setViewingDocument(null)} title="Close Viewer">
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="lc-viewer-body">
+              {viewingDocument.type === "video" ? (
+                getEmbedVideoUrl(viewingDocument.url) !== viewingDocument.url ? (
+                  <iframe
+                    src={getEmbedVideoUrl(viewingDocument.url)}
+                    title={viewingDocument.title}
+                    className="lc-viewer-iframe"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : viewingDocument.url.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                  <video controls autoPlay src={viewingDocument.url} className="lc-viewer-video" />
+                ) : (
+                  <iframe
+                    src={viewingDocument.url}
+                    title={viewingDocument.title}
+                    className="lc-viewer-iframe"
+                    allowFullScreen
+                  />
+                )
+              ) : (
+                viewingDocument.url.match(/\.(png|jpg|jpeg|webp|gif|svg)$/i) ? (
+                  <div className="lc-viewer-image-wrap">
+                    <img src={viewingDocument.url} alt={viewingDocument.title} className="lc-viewer-img" />
+                  </div>
+                ) : viewingDocument.url.match(/\.(mp4|webm|ogg)$/i) ? (
+                  <video controls autoPlay src={viewingDocument.url} className="lc-viewer-video" />
+                ) : (
+                  <iframe
+                    src={viewingDocument.url}
+                    title={viewingDocument.title}
+                    className="lc-viewer-iframe"
+                  />
+                )
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

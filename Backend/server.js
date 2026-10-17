@@ -1,8 +1,8 @@
+import 'dotenv/config';
 import dns from 'node:dns';
 dns.setDefaultResultOrder('ipv4first');
 
 import app from './src/app.js';
-import { config } from './src/config/env.js';
 import { checkDatabaseConnection } from './src/config/db.js';
 import { initializeDatabase } from './src/config/init_db.js';
 import { initInterviewSocket } from './src/socket/interview.socket.js';
@@ -15,15 +15,16 @@ const startServer = async () => {
     await initializeDatabase();
 
 
-    const PORT = config.port;
+    const PORT = process.env.PORT || 5000;
+    const NODE_ENV = process.env.NODE_ENV || 'development';
     const server = http.createServer(app);
 
     initInterviewSocket(server);
 
-    server.listen(PORT, () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`==================================================`);
       console.log(`🚀 Training Portal Backend Server running on port ${PORT}`);
-      console.log(`📡 Environment: ${config.nodeEnv}`);
+      console.log(`📡 Environment: ${NODE_ENV}`);
       console.log(`🔗 Health Check: http://localhost:${PORT}/api/v1/health`);
       console.log(`🔌 Socket.IO interview namespace: /interviews`);
       console.log(`==================================================`);

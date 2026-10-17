@@ -1,26 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  TrendingUp,
-  Award,
-  CheckCircle2,
-  BarChart2,
-  ArrowUpRight,
-  ShieldCheck,
-  Code,
-  Target,
-  Sparkles,
-  ClipboardCheck,
-  CalendarCheck,
-  Building2,
-  Search,
-  Activity,
-  Zap,
-  Users,
-  ChevronDown,
-  Check,
-  X,
-  Filter
-} from 'lucide-react';
+import { TrendingUp, Award, CheckCircle2, BarChart2, ArrowUpRight, ShieldCheck, Code, Target, Sparkles, ClipboardCheck, CalendarCheck, Building2, Search, Activity, Zap, Users, ChevronDown, Check, X, Filter, LineChart } from "lucide-react";
 import { collegeAPI } from '../../../services/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Performance.css";
@@ -470,7 +449,8 @@ export default function Performance() {
       <div className="performance-header-wrap">
         <div>
           <h2 className="performance-header-title">
-          <span>Platform Performance &amp; Analytics</span>
+            <LineChart size={24} style={{ color: "var(--primary-color, #4f46e5)", flexShrink: 0 }} />
+            <span>Platform Performance &amp; Analytics</span>
           </h2>
           <p className="performance-header-subtitle">
             Cross-feature student engagement, completion rates, and institutional benchmarks
@@ -561,7 +541,7 @@ export default function Performance() {
         </div>
 
         {/* College-Wise Filter Dropdown */}
-        <div className="flex items-center gap-2">
+        <div className="perf-controls-group">
           <PerfSelect
             icon={Building2}
             value={selectedCollege}
@@ -571,7 +551,7 @@ export default function Performance() {
           />
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="perf-controls-group">
           <button
             onClick={() => setActiveView('cards')}
             className={`manageusers-tab-btn ${activeView === 'cards' ? 'manageusers-tab-btn--active' : ''}`}
@@ -591,18 +571,18 @@ export default function Performance() {
 
       {/* Selected College Filter Active Indicator Banner */}
       {selectedCollege !== 'all' && (
-        <div className="bg-indigo-50/80 border border-indigo-100 rounded-xl px-4 py-3 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-2.5">
+        <div className="perf-filter-banner">
+          <div className="perf-filter-info">
             <div className="sa-icon-badge sa-icon-badge--indigo perf-filter-badge">
               <Filter size={14} />
             </div>
-            <span className="text-xs font-semibold text-slate-700">
-              Filtered College View: <strong className="text-indigo-700 font-extrabold">{selectedCollege}</strong> Analytics
+            <span style={{ fontSize: "12px", fontWeight: 600, color: "#334155" }}>
+              Filtered College View: <strong style={{ color: "#4338ca", fontWeight: 800 }}>{selectedCollege}</strong> Analytics
             </span>
           </div>
           <button
             onClick={() => setSelectedCollege('all')}
-            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-white border border-indigo-200 px-2.5 py-1 rounded-lg transition-all"
+            className="perf-reset-btn"
           >
             <span>Reset to Platform Overview</span>
             <X size={13} />
@@ -711,7 +691,7 @@ export default function Performance() {
                   return (
                     <tr key={feat.id} className="batches-tr">
                       <td className="batches-td">
-                        <div className="flex items-center gap-3">
+                        <div className="perf-table-feature-cell">
                           <div className={`${feat.colorClass} perf-icon-badge-box`}>
                             <Icon size={18} />
                           </div>
@@ -722,8 +702,8 @@ export default function Performance() {
                         </div>
                       </td>
                       <td className="batches-td">
-                        <div className="font-bold text-slate-900">{feat.activeUsers.toLocaleString()}</div>
-                        <div className="text-[10px] text-slate-400 font-semibold uppercase">{feat.metricLabel}: {feat.metricValue}</div>
+                        <div className="perf-feat-users">{feat.activeUsers.toLocaleString()}</div>
+                        <div className="perf-feat-metric">{feat.metricLabel}: {feat.metricValue}</div>
                       </td>
                       <td className="batches-td">
                         <div className="batches-progress-wrap">
@@ -734,7 +714,7 @@ export default function Performance() {
                         </div>
                       </td>
                       <td className="batches-td">
-                        <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <span className="perf-accuracy-badge">
                           {feat.avgAccuracy}%
                         </span>
                       </td>
@@ -749,7 +729,7 @@ export default function Performance() {
                         </div>
                       </td>
                       <td className="batches-td-right">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-600 border border-emerald-200">
+                        <span className="perf-trend-badge">
                           <ArrowUpRight size={13} /> {feat.trend}
                         </span>
                       </td>
@@ -796,33 +776,33 @@ export default function Performance() {
                   >
                     <td className="batches-td">
                       <div className="sa-college-avatar-box">
-                        <div className={`sa-college-logo-icon-wrap ${isSelected ? 'bg-indigo-600 text-white' : ''}`}>
+                        <div className={`sa-college-logo-icon-wrap ${isSelected ? 'perf-college-logo-selected' : ''}`}>
                           <Building2 size={16} />
                         </div>
-                        <span className={`sa-college-name-text ${isSelected ? 'text-indigo-900 font-extrabold' : ''}`}>
+                        <span className={`sa-college-name-text ${isSelected ? 'perf-college-name-selected' : ''}`}>
                           {c.college}
                         </span>
                         {isSelected && (
-                          <span className="ml-2 text-[10px] bg-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-full">
+                          <span className="perf-active-selection-badge">
                             Active Selection
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="batches-td text-emerald-600 font-extrabold">
+                    <td className="batches-td perf-pass-rate">
                       {c.passRate}%
                     </td>
-                    <td className="batches-td font-bold text-slate-800">
+                    <td className="batches-td perf-score-bold">
                       {c.readinessScore} / 100
                     </td>
-                    <td className="batches-td text-slate-600 font-medium">
-                      <div className="flex items-center gap-1.5">
-                        <Users size={13} className="text-slate-400" />
+                    <td className="batches-td perf-students-count">
+                      <div className="perf-students-cell">
+                        <Users size={13} className="perf-users-icon" />
                         <span>{c.activeStudents.toLocaleString()} Students</span>
                       </div>
                     </td>
                     <td className="batches-td-right">
-                      <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      <span className="perf-top-module-pill">
                         {c.topModule || 'Coding Practice'}
                       </span>
                     </td>

@@ -6,6 +6,7 @@ import {
   getMentorDefaulters,
   getMentorStudentsPerformance,
   getMentorWeeklyReports,
+  submitMentorWeeklyReport,
   getMentorAssignments,
   createMentorAssignment,
   deleteMentorAssignment,
@@ -31,15 +32,16 @@ const router = Router();
 router.use(authenticateToken);
 
 // Mentor-scoped data: students, batches and analytics are always resolved from
-// `mentor_student_assignments` for the authenticated mentor.
-const mentorOnly = authorizeRoles(ROLES.MENTOR);
+const mentorOnly = authorizeRoles(ROLES.MENTOR, ROLES.SUPER_ADMIN);
 
 router.get('/overview', mentorOnly, getMentorOverview);
 router.get('/batches', mentorOnly, getMentorBatches);
 router.get('/leaderboard', mentorOnly, getMentorLeaderboard);
 router.get('/defaulters', mentorOnly, getMentorDefaulters);
+router.get('/students', mentorOnly, getMentorStudentsPerformance);
 router.get('/students/performance', mentorOnly, getMentorStudentsPerformance);
 router.get('/weekly-reports', mentorOnly, getMentorWeeklyReports);
+router.post('/weekly-reports', mentorOnly, submitMentorWeeklyReport);
 router.get('/interviews', mentorOnly, getMentorMenteeInterviews);
 router.get('/profile', mentorOnly, getMentorProfile);
 

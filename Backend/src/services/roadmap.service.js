@@ -2,6 +2,8 @@ import { processroadmapAI } from '../ai/roadmap.ai.js';
 import {
   getRoadmapByStudentId,
   getRoadmapByStudentAndRole,
+  getAllRoadmapsByStudentId,
+  getGlobalCachedRoadmap,
   saveRoadmap,
   updateMilestoneItemStatus,
 } from '../models/roadmap.model.js';
@@ -9,11 +11,18 @@ import { query } from '../config/db.js';
 
 /**
  * Service: Fetch current student's active roadmap.
- * Auto-generates a personalized roadmap if none exists yet for the student.
  */
 export const fetchStudentRoadmap = async (studentId) => {
   const roadmap = await getRoadmapByStudentId(studentId);
   return roadmap || null;
+};
+
+/**
+ * Service: Fetch all saved roadmaps for a student
+ */
+export const fetchAllStudentRoadmaps = async (studentId) => {
+  const roadmaps = await getAllRoadmapsByStudentId(studentId);
+  return roadmaps || [];
 };
 
 /**
@@ -97,12 +106,31 @@ export const collectRealStudentSignals = async (studentId) => {
 export const generateNewRoadmap = async (studentId, targetRole = '', signalData = {}) => {
   const numericId = Number(studentId);
 
-  // If the student already has a roadmap for this role, restore it with saved progress
+  // 1. If the student already has a roadmap for this role, restore it with saved progress
   if (targetRole && String(targetRole).trim()) {
     const existing = await getRoadmapByStudentAndRole(numericId, targetRole.trim());
     if (existing && existing.milestones && existing.milestones.length > 0) {
       console.log(`[Roadmap Service] Restoring saved roadmap for student #${numericId}, role: "${targetRole}"`);
       return { ...existing, restored: true };
+    }
+
+    // 2. Check if ANY student has previously generated this roadmap in the DB (Global Cache)
+    const globalCached = await getGlobalCachedRoadmap(targetRole.trim());
+    if (globalCached && globalCached.milestones && globalCached.milestones.length > 0) {
+      console.log(`[Roadmap Service] Global DB Cache Hit! Reusing DB stored roadmap content for role: "${targetRole}" for student #${numericId}`);
+      // Clean content reuse: reset status/progress for the new student so no progress bleed occurs
+      const freshMilestonesForStudent = globalCached.milestones.map((m, idx) => ({
+        ...m,
+        status: idx === 0 ? 'in-progress' : 'locked',
+        progress: 0,
+        completedTopics: [],
+      }));
+      const savedData = await saveRoadmap(numericId, targetRole.trim(), targetRole.trim(), freshMilestonesForStudent);
+      return {
+        ...savedData,
+        aiSource: 'db-global-cache',
+        restored: false,
+      };
     }
   }
 
@@ -155,8 +183,8 @@ export const generateNewRoadmap = async (studentId, targetRole = '', signalData 
 /**
  * Service: Update progress of a specific milestone item
  */
-export const updateMilestoneProgress = async (studentId, itemId, status, progress) => {
-  const updated = await updateMilestoneItemStatus(studentId, itemId, status, progress);
+export const updateMilestoneProgress = async (studentId, itemId, status, progress, completedTopics) => {
+  const updated = await updateMilestoneItemStatus(studentId, itemId, status, progress, completedTopics);
   if (!updated) {
     throw new Error('Milestone item not found or update failed');
   }

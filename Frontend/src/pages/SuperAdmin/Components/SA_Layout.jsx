@@ -1,58 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
-import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock } from 'lucide-react';
+import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import SuperAdminSidebar from "./SA_Sidebar";
+import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
 import { apiFetch } from "../../../utils/api";
 
-const defaultNotificationsList = [
-  {
-    id: 1,
-    title: "Meeting Regarding Quasar 5.0 Problem Statements",
-    desc: "A mandatory meeting for all Quasar 5.0 participants is scheduled for today at 3:00 PM in Seminar Hall 2.",
-    time: "9/26/2026, 1:37:42 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All CSE & IT Batches",
-    priority: "Urgent Notice",
-    created_by_name: "Coordinator Shinde"
-  },
-  {
-    id: 2,
-    title: "Holiday Announcement",
-    desc: "The campus will remain closed on Friday for the upcoming holiday. Online learning resources remain available.",
-    time: "9/26/2026, 1:30:00 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All Students & Faculty",
-    priority: "General Announcement",
-    created_by_name: "Admin Office"
-  },
-  {
-    id: 3,
-    title: "IA-2 Quiz Rescheduled to Friday 10:00 AM",
-    desc: "The Internal Assessment 2 quiz has been rescheduled to Friday 10:00 AM. Please review your module roadmaps.",
-    time: "9/25/2026, 8:56:20 PM",
-    unread: true,
-    type: "quiz",
-    target: "TE Computer Batches",
-    priority: "Academic Notice",
-    created_by_name: "Prof. Verma"
-  },
-  {
-    id: 4,
-    title: "Goldman Sachs Placement Drive Registration Live",
-    desc: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through placement tab.",
-    time: "9/25/2026, 6:15:00 PM",
-    unread: false,
-    type: "calendar",
-    target: "BE All Branches",
-    priority: "Placement Alert",
-    created_by_name: "Placement Cell"
-  }
-];
+const defaultNotificationsList = [];
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
   const [activeTab, setActiveTab] = useState("all");
@@ -90,7 +46,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const autoCloseTimerRef = useRef(null);
@@ -201,7 +157,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -336,43 +292,29 @@ export default function SuperAdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
   const [notifications, setNotifications] = useState(defaultNotificationsList);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
+  const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
     apiFetch("/admin/broadcast")
       .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
-        }
+        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+        const serverItems = rawItems.map((b) => ({
+          id: b.id || `notif-${Math.random()}`,
+          title: b.title || "Announcement",
+          desc: b.message || b.desc || b.description || "",
+          message: b.message || b.desc || "",
+          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+          unread: b.unread !== undefined ? Boolean(b.unread) : true,
+          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+          target: b.target || "All Batches",
+          priority: b.priority || "General Notice",
+          created_by_name: b.created_by_name || "Admin",
+        }));
+        setNotifications(serverItems);
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   const headerRightRef = useRef(null);
 
@@ -382,9 +324,9 @@ export default function SuperAdminLayout() {
   const loadProfile = () => {
     try {
       const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
-      const name = stored.name || stored.email || "Super Admin";
-      const initials = name
-        ? name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+      const name = (typeof stored.name === 'string' && stored.name) || (typeof stored.email === 'string' && stored.email) || "Super Admin";
+      const initials = typeof name === 'string' && name.trim()
+        ? name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
         : "SA";
       return {
         name,
@@ -409,13 +351,15 @@ export default function SuperAdminLayout() {
       if (res.ok) {
         const data = await res.json();
         if (data.user) {
-          const name = data.user.name || data.user.email || "Super Admin";
-          const initials = name
-            .split(' ')
-            .map(n => n[0])
-            .join('')
-            .substring(0, 2)
-            .toUpperCase();
+          const name = (typeof data.user.name === 'string' && data.user.name) || (typeof data.user.email === 'string' && data.user.email) || "Super Admin";
+          const initials = typeof name === 'string' && name.trim()
+            ? name.trim()
+                .split(' ')
+                .map(n => n[0])
+                .join('')
+                .substring(0, 2)
+                .toUpperCase()
+            : "SA";
           setUserProfile({
             name,
             email: data.user.email || "admin@trainingportal.com",
@@ -455,24 +399,6 @@ export default function SuperAdminLayout() {
     setProfileOpen(false);
     setMobileOpen(false);
   }, [pathname]);
-
-  const getPageTitle = (path) => {
-    if (path === "/super-admin" || path === "/super-admin/") return "Overview";
-    if (path.startsWith("/super-admin/colleges")) return "Colleges";
-    if (path.startsWith("/super-admin/departments")) return "Departments";
-    if (path.startsWith("/super-admin/batches")) return "Batches";
-    if (path.startsWith("/super-admin/users")) return "Manage Users";
-    if (path.startsWith("/super-admin/verification")) return "College Admins";
-    if (path.startsWith("/super-admin/coordinators")) return "Coordinators";
-    if (path.startsWith("/super-admin/mentors")) return "Mentors";
-    if (path.startsWith("/super-admin/students")) return "Students";
-    if (path.startsWith("/super-admin/performance")) return "Performance";
-    if (path.startsWith("/super-admin/health")) return "System Health";
-    if (path.startsWith("/super-admin/maintenance")) return "Feature Switches";
-    if (path.startsWith("/super-admin/tickets")) return "Support Tickets";
-    if (path.startsWith("/super-admin/profile")) return "Profile";
-    return "Overview";
-  };
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -518,9 +444,7 @@ export default function SuperAdminLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="sa-breadcrumb">
-                  <span className="sa-breadcrumb-active">{getPageTitle(pathname)}</span>
-                </div>
+                <GlobalHeaderSearch role="superadmin" />
               </div>
 
               <div className="sa-header__right" ref={headerRightRef}>
@@ -542,7 +466,7 @@ export default function SuperAdminLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
@@ -560,11 +484,12 @@ export default function SuperAdminLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="sa-header__user-info">
-                      <span className="sa-header__name">{userProfile.name}</span>
-                    </div>
                     <div className="sa-header__avatar" aria-label={userProfile.name}>
                       {userProfile.initials}
+                    </div>
+                    <div className="sa-header__user-info">
+                      <span className="sa-header__name">{userProfile.name}</span>
+                      <span className="sa-header__role">{userProfile.role || "Super Admin"}</span>
                     </div>
                   </button>
 
@@ -583,8 +508,8 @@ export default function SuperAdminLayout() {
                         className="sa-header__profile-item"
                         onClick={() => setProfileOpen(false)}
                       >
-                        <UserCog size={15} />
-                        Edit Profile
+                        <User size={15} />
+                        View Profile
                       </Link>
                       <button
                         type="button"
@@ -597,7 +522,6 @@ export default function SuperAdminLayout() {
                         <Key size={15} />
                         Change Password
                       </button>
-                      <div className="sa-header__profile-divider" />
                       <button
                         className="sa-header__profile-item sa-header__profile-item--danger"
                         onClick={() => {

@@ -397,12 +397,21 @@
 }
 
 .ui-section-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
   font-size: 22px;
   font-weight: 800;
   color: #0f172a;
   margin: 0;
   letter-spacing: -0.3px;
   line-height: 1.25;
+}
+
+.ui-section-title svg,
+.ui-section-title-icon {
+  color: var(--primary-color, #4f46e5) !important;
+  flex-shrink: 0 !important;
 }
 
 .ui-section-desc {

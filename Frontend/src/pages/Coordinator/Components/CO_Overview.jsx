@@ -1,21 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Users,
-  GraduationCap,
-  UserCheck,
-  LineChart,
-  AlertTriangle,
-  CheckCircle,
-  Sparkles,
-  LayoutDashboard,
-  Info,
-  ChevronRight,
-  Activity,
-  Clock,
-  User,
-  Send,
-} from "lucide-react";
+import { Users, GraduationCap, UserCheck, LineChart, AlertTriangle, CheckCircle, Sparkles, LayoutDashboard, Info, ChevronRight, Activity, Clock, User, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -102,7 +87,7 @@ export default function CoordinatorOverview() {
           if (activeBatches.length > 0) {
             const mappedSessions = activeBatches.map((b) => ({
               id: b.id,
-              trainerName: b.trainer || b.mentorName || b.mentor_name || "Department Faculty",
+              trainerName: b.trainer || b.mentorName || b.mentor_name || "Department Mentor",
               topic: b.topic || `${b.name} - Core Module`,
               topicDetail: b.description || "Active training session topic assigned and managed by Admin.",
               batch: b.name || "CSE Batch",
@@ -193,7 +178,7 @@ export default function CoordinatorOverview() {
   const statsList = [
     { label: "Enrolled Students", value: `${studentCount}`, hint: `Active in ${dept}`, icon: GraduationCap },
     { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
-    { label: "Faculty & Mentors", value: `${mentorCount} Trainers`, hint: "Assigned department mentors", icon: UserCheck },
+    { label: "Mentors", value: `${mentorCount} Trainers`, hint: "Assigned department mentors", icon: UserCheck },
     { label: "Attendance Rate", value: attendanceRate || "0%", hint: "Department average", icon: LineChart },
   ];
 
@@ -245,11 +230,11 @@ export default function CoordinatorOverview() {
       </div>
 
       {/* Live Training Sessions Row */}
-      <Card className="overview-subcard mt-4">
-        <CardHeader className="overview-card-header-between border-b border-slate-100 pb-4 mb-4">
+      <Card className="overview-subcard co-sessions-card">
+        <CardHeader className="overview-card-header-between co-sessions-header">
           <div className="overview-header-left">
-            <div className="overview-header-icon-wrap bg-emerald-100 text-emerald-600">
-              <Activity size={18} className="overview-header-icon animate-pulse" />
+            <div className="overview-header-icon-wrap co-sessions-icon-wrap">
+              <Activity size={18} className="overview-header-icon co-pulse-icon" />
 
             </div>
             <div>

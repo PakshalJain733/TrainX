@@ -1,26 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  LayoutDashboard,
-  Users,
-  GraduationCap,
-  UserCheck,
-  CalendarCheck,
-  FileCheck2,
-  LineChart,
-  Briefcase,
-  Inbox,
-  FileSpreadsheet,
-  Bell,
-  Settings,
-  HelpCircle,
-  Code,
-  Bot,
-  AlertTriangle,
-  Megaphone,
-  Trophy,
-  Code2,
-  UserCog,
-} from "lucide-react";
+import { LayoutDashboard, Users, GraduationCap, UserCheck, CalendarCheck, FileCheck2, LineChart, Briefcase, Inbox, FileSpreadsheet, Bell, Settings, HelpCircle, Code, Bot, AlertTriangle, Megaphone, Trophy, Code2, UserCog } from "lucide-react";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import logoImg from "../../../assets/Logo.png";
 import trainXImg from "../../../assets/TrainX.png";
 import "../Styles/CO_Sidebar.css";
@@ -37,7 +17,7 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
             <span className="brand-name1">Train</span>
             <img src={trainXImg} alt="X" className="brand-x-img-coordinator" />
           </div>
-          {subtitle && <span className="sidebar-brand-sub">{subtitle}</span>}
+          <span className="sidebar-brand-sub">{subtitle || "Training Portal"}</span>
         </div>
       )}
     </div>
@@ -45,25 +25,32 @@ function SidebarBrand({ collapsed, mobileOpen, subtitle }) {
 }
 
 const primaryNavItems = [
-  { title: "Overview", url: "/coordinator", icon: LayoutDashboard, exact: true },
-  { title: "Students", url: "/coordinator/students", icon: Users },
-  { title: "Batches", url: "/coordinator/batches", icon: Code2 },
-  { title: "Mentors", url: "/coordinator/mentors", icon: UserCog },
-  { title: "Performances", url: "/coordinator/performances", icon: LineChart },
-  { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle },
-  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy },
-  { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck },
-  { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox },
+  { title: "Overview", url: "/coordinator", icon: LayoutDashboard, exact: true, moduleKey: "coordinatorDashboard" },
+  { title: "Students", url: "/coordinator/students", icon: Users, moduleKey: "coordinatorStudents" },
+  { title: "Batches", url: "/coordinator/batches", icon: Code2, moduleKey: "coordinatorBatches" },
+  { title: "Mentors", url: "/coordinator/mentors", icon: UserCog, moduleKey: "coordinatorMentors" },
+  { title: "Performances", url: "/coordinator/performances", icon: LineChart, moduleKey: "coordinatorPerformances" },
+  { title: "Academic Support", url: "/coordinator/improvement", icon: AlertTriangle, moduleKey: "coordinatorStudentsNeedImprovement" },
+  { title: "Leaderboard", url: "/coordinator/leaderboard", icon: Trophy, moduleKey: "studentLeaderboard" },
+  { title: "Attendance Governance", url: "/coordinator/attendance", icon: CalendarCheck, moduleKey: "coordinatorAttendance" },
+  { title: "Requests & Approvals", url: "/coordinator/requests", icon: Inbox, moduleKey: "coordinatorRequests" },
 ];
 
 const footerNavItems = [
-  { title: "View Profile", url: "/coordinator/profile", icon: UserCog },
-  { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone },
-  { title: "Support Ticket", url: "/coordinator/help", icon: HelpCircle },
+  { title: "Broadcast Notice Center", url: "/coordinator/broadcast", icon: Megaphone, moduleKey: "coordinatorBroadcast" },
+  { title: "Support Ticket", url: "/coordinator/help", icon: HelpCircle, moduleKey: "coordinatorHelp" },
 ];
 
 export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   const { pathname } = useLocation();
+  const { isModuleActive } = useSystemMaintenance();
+
+  const visiblePrimaryItems = primaryNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
+  const visibleFooterItems = footerNavItems.filter(
+    (item) => !item.moduleKey || isModuleActive(item.moduleKey)
+  );
 
   const isActive = (url, exact) => {
     if (url === "/coordinator/quizzes-and-codes") {
@@ -108,18 +95,18 @@ export function CoordinatorSidebar({ collapsed, mobileOpen, onClose }) {
   return (
     <aside className={`coordinator-sidebar ${collapsed ? "sidebar--collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
       <div className="sidebar-header-coordinator">
-        <SidebarBrand collapsed={collapsed} subtitle="Coordinator Workspace" />
+        <SidebarBrand collapsed={collapsed} subtitle="Training Portal" />
       </div>
 
       <div className="sidebar-content">
         <ul className="sidebar-menu">
-          {primaryNavItems.map(renderItem)}
+          {visiblePrimaryItems.map(renderItem)}
         </ul>
       </div>
 
       <div className="sidebar-footer">
         <ul className="sidebar-menu">
-          {footerNavItems.map(renderItem)}
+          {visibleFooterItems.map(renderItem)}
         </ul>
       </div>
     </aside>

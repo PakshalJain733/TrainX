@@ -30,6 +30,10 @@ router.post('/generate-ai-questions', generateAIQuestions);
 router.post('/verify-ai-questions', verifyAIQuestions);
 router.post('/mark-completed', markQuizCompleted);
 
+// Attempt and submission routes
+router.post('/attempts/:attemptId/submit', submitAssessment);
+router.post('/:id/attempts/:attemptId/submit', submitAssessment);
+
 // Parameter /:id routes LAST
 router.get('/:id', getAssessmentById);
 router.delete('/:id', deleteAssessment);

@@ -1,25 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  Building2,
-  ShieldAlert,
-  ShieldCheck,
-  ArrowUpRight,
-  Clock,
-  Sparkles,
-  Users,
-  GraduationCap,
-  TrendingUp,
-  KeyRound,
-  Lock,
-  Plus,
-  Activity,
-  Server,
-  Database,
-  Shield,
-  Layers,
-  ChevronRight,
-  UserCheck
-} from 'lucide-react';
+import { Building2, ShieldAlert, ShieldCheck, ArrowUpRight, Clock, Sparkles, Users, GraduationCap, TrendingUp, KeyRound, Lock, Plus, Activity, Server, Database, Shield, Layers, ChevronRight, UserCheck, Trash2 } from "lucide-react";
 import { Link, useNavigate } from 'react-router-dom';
 import EmptyState from '../../../components/ui/EmptyState';
 import { apiFetch } from '../../../utils/api';
@@ -37,45 +17,101 @@ const iconMap = {
 function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', theme = 'indigo' }) {
   const IconComponent = iconMap[icon] || Building2;
 
-  const themes = {
+  const themeConfig = {
     indigo: {
-      box: 'sa-stats-icon-box--indigo',
-      val: 'sa-stats-val--indigo',
-      badge: 'sa-stats-change-text--indigo'
+      accent: 'linear-gradient(90deg, #4f46e5 0%, #6366f1 100%)',
+      iconBg: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+      iconColor: '#4338ca',
+      iconBorder: '#c7d2fe',
+      iconShadow: '0 4px 12px rgba(79, 70, 229, 0.12)',
+      pillBg: '#eef2ff',
+      pillColor: '#3730a3',
+      pillBorder: '#c7d2fe',
+      className: 'stat-card-indigo'
     },
     emerald: {
-      box: 'sa-stats-icon-box--emerald',
-      val: 'sa-stats-val--emerald',
-      badge: 'sa-stats-change-text--emerald'
+      accent: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+      iconBg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+      iconColor: '#047857',
+      iconBorder: '#a7f3d0',
+      iconShadow: '0 4px 12px rgba(16, 185, 129, 0.12)',
+      pillBg: '#ecfdf5',
+      pillColor: '#065f46',
+      pillBorder: '#a7f3d0',
+      className: 'stat-card-emerald'
     },
     purple: {
-      box: 'sa-stats-icon-box--purple',
-      val: 'sa-stats-val--purple',
-      badge: 'sa-stats-change-text--purple'
+      accent: 'linear-gradient(90deg, #a855f7 0%, #7c3aed 100%)',
+      iconBg: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+      iconColor: '#6d28d9',
+      iconBorder: '#ddd6fe',
+      iconShadow: '0 4px 12px rgba(124, 58, 237, 0.12)',
+      pillBg: '#f3e8ff',
+      pillColor: '#5b21b6',
+      pillBorder: '#ddd6fe',
+      className: 'stat-card-purple'
     },
     sky: {
-      box: 'sa-stats-icon-box--sky',
-      val: 'sa-stats-val--sky',
-      badge: 'sa-stats-change-text--sky'
+      accent: 'linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)',
+      iconBg: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+      iconColor: '#0369a1',
+      iconBorder: '#7dd3fc',
+      iconShadow: '0 4px 12px rgba(14, 165, 233, 0.12)',
+      pillBg: '#e0f2fe',
+      pillColor: '#075985',
+      pillBorder: '#7dd3fc',
+      className: 'stat-card-sky'
     }
   };
 
-  const currentTheme = themes[theme] || themes.indigo;
+  const t = themeConfig[theme] || themeConfig.indigo;
 
   return (
-    <div className="sa-stats-card">
-      <div className="sa-stats-card-header">
-        <span className="sa-stats-label">{label}</span>
-        <div className={`sa-stats-icon-box ${currentTheme.box}`}>
-          <IconComponent className="sa-stats-icon" />
+    <div className={`sa-pro-card ${t.className}`}>
+      {/* Top Accent Gradient Ribbon */}
+      <div className="sa-pro-card-accent" style={{ background: t.accent }} />
+
+      {/* Header Row: Label & Icon Badge */}
+      <div className="sa-pro-card-header">
+        <span className="sa-pro-card-label">{label}</span>
+        <div
+          className="sa-pro-card-icon-box"
+          style={{
+            background: t.iconBg,
+            color: t.iconColor,
+            border: `1px solid ${t.iconBorder}`,
+            boxShadow: t.iconShadow
+          }}
+        >
+          <IconComponent size={18} />
         </div>
       </div>
 
-      <div className="sa-stats-card-body">
-        <span className={`sa-stats-val ${currentTheme.val}`}>{value}</span>
-        <div className={`sa-stats-change ${currentTheme.badge}`}>
-          <TrendingUp className="sa-stats-trend-icon" />
-          <span>{change}</span>
+      {/* Body Section */}
+      <div className="sa-pro-card-body">
+        <div className="sa-pro-card-value-wrap">
+          {value === "Protected" ? (
+            <span className="sa-pro-card-value-protected">
+              <span className="sa-pro-card-dot" />
+              {value}
+            </span>
+          ) : (
+            <p className="sa-pro-card-value">{value}</p>
+          )}
+        </div>
+
+        <div className="sa-pro-card-pill-wrap">
+          <span
+            className="sa-pro-card-pill"
+            style={{
+              backgroundColor: t.pillBg,
+              color: t.pillColor,
+              border: `1px solid ${t.pillBorder}`
+            }}
+          >
+            <Activity size={12} />
+            <span>{change}</span>
+          </span>
         </div>
       </div>
     </div>
@@ -120,22 +156,28 @@ export default function Overview() {
     const loadUser = async () => {
       try {
         const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
-        const name = stored.name || stored.fullName || stored.email?.split('@')[0] || "Super Admin";
+        const name = (typeof stored.name === 'string' && stored.name) ||
+          (typeof stored.fullName === 'string' && stored.fullName) ||
+          (typeof stored.email === 'string' && stored.email.includes('@') ? stored.email.split('@')[0] : "") ||
+          "Super Admin";
         setUserName(name);
         setUserEmail(stored.email || "");
         setUserRole(stored.role || "Super Admin");
-        setUserInitials(name ? name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
+        setUserInitials(typeof name === 'string' && name.trim() ? name.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
 
         const res = await apiFetch('/auth/me');
         if (res && res.data) {
           const u = res.data;
-          const apiName = u.name || u.fullName || u.email?.split('@')[0] || name;
+          const apiName = (typeof u.name === 'string' && u.name) ||
+            (typeof u.fullName === 'string' && u.fullName) ||
+            (typeof u.email === 'string' && u.email.includes('@') ? u.email.split('@')[0] : "") ||
+            name;
           setUserName(apiName);
           setUserEmail(u.email || stored.email || "");
           setUserRole(u.role || stored.role || "Super Admin");
-          setUserInitials(apiName ? apiName.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
+          setUserInitials(typeof apiName === 'string' && apiName.trim() ? apiName.trim().split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : "SA");
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     loadUser();
@@ -200,12 +242,26 @@ export default function Overview() {
     }
   };
 
+  const handleDeleteCollege = async (collegeId, collegeName) => {
+    if (!window.confirm(`Are you sure you want to remove ${collegeName || 'this college'}?`)) {
+      return;
+    }
+    try {
+      await apiFetch(`/colleges/${collegeId}`, { method: 'DELETE' });
+      setCollegesList((prev) => prev.filter((c) => c.id !== collegeId));
+      fetchOverviewData();
+    } catch (err) {
+      console.error("Failed to remove college:", err);
+      alert(err?.message || "Failed to remove college.");
+    }
+  };
+
   const stats = [
     {
       id: 1,
       label: "Total Partner Colleges",
       value: loadingStats ? "..." : liveMetrics.collegesCount.toString(),
-      change: `${liveMetrics.collegesCount} Registered Institutions`,
+      change: "Verified Institutions",
       trend: "up",
       icon: "Building2",
       theme: "indigo"
@@ -223,7 +279,7 @@ export default function Overview() {
       id: 3,
       label: "Departments Covered",
       value: loadingStats ? "..." : liveMetrics.departmentsCount.toString(),
-      change: `${liveMetrics.departmentsCount} Academic Tracks`,
+      change: "Academic Tracks",
       trend: "up",
       icon: "GraduationCap",
       theme: "purple"
@@ -232,7 +288,7 @@ export default function Overview() {
       id: 4,
       label: "Security & Key Access",
       value: "Protected",
-      change: "100% RBAC Policy Enforced",
+      change: "RBAC Policy Enforced",
       trend: "up",
       icon: "ShieldCheck",
       theme: "sky"
@@ -253,7 +309,7 @@ export default function Overview() {
               Welcome back, {userName}!
             </h1>
             <p className="overview-hero-desc">
-              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "superadmin@pvppcoe.ac.in"} &nbsp;|&nbsp; Institutional Control
+              {userRole || "Super Admin"} &nbsp;|&nbsp; {userEmail || "admin@trainingportal.com"} &nbsp;|&nbsp; Institutional Control
             </p>
           </div>
         </div>
@@ -273,55 +329,8 @@ export default function Overview() {
         ))}
       </div>
 
-      {/* Main Content Grid: Security Widget & Connected Institutions */}
-      <div className="sa-bottom-grid">
-        {/* Security & Registration Access Widget */}
-        <div className="sa-widget-card overview-widget-flex">
-          <div className="overview-widget-header">
-            <div className="overview-widget-title-wrap">
-              <ShieldCheck size={18} className="text-emerald-600" />
-              <h3 className="overview-widget-title">Registration Security Posture</h3>
-            </div>
-            <Link to="/super-admin/users" className="overview-widget-link">
-              Manage Keys <ChevronRight size={13} />
-            </Link>
-          </div>
-
-          <div className="sa-sec-body">
-            <div className="sa-sec-banner">
-              <div className="sa-sec-banner-icon">
-                <Lock size={18} />
-              </div>
-              <div className="sa-sec-banner-text">
-                <h4 className="sa-sec-banner-title">Secure Key Verification Active</h4>
-                <p className="sa-sec-banner-desc">
-                  Self-registration is locked. Colleges require a Super Admin invitation code to register.
-                </p>
-              </div>
-            </div>
-
-            <div className="sa-sec-grid">
-              <div className="sa-sec-grid-card">
-                <span className="sa-sec-card-label">Access Method</span>
-                <span className="sa-sec-card-val">
-                  <KeyRound size={14} className="sa-sec-icon-emerald" /> Pre-Authorized Code
-                </span>
-              </div>
-              <div className="sa-sec-grid-card">
-                <span className="sa-sec-card-label">Unverified Self-Signups</span>
-                <span className="sa-sec-card-val sa-sec-val-emerald">
-                  <ShieldCheck size={14} /> Blocked (0 Pending)
-                </span>
-              </div>
-            </div>
-
-            <div className="sa-sec-footer-badge">
-              <Activity size={13} className="text-emerald-500" />
-              <span>System Firewall & RBAC Guard Active (100% Policy Compliance)</span>
-            </div>
-          </div>
-        </div>
-
+      {/* Main Content Grid: Connected Institutions */}
+      <div className="sa-bottom-grid" style={{ gridTemplateColumns: "1fr" }}>
         {/* Connected Institutions Overview Widget */}
         <div className="sa-widget-card overview-widget-flex">
           <div className="overview-widget-header">
@@ -354,10 +363,11 @@ export default function Overview() {
                     <th className="overview-table-th">Location</th>
                     <th className="overview-table-th">Students</th>
                     <th className="overview-table-th">Status</th>
+                    <th className="overview-table-th" style={{ textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {collegesList.slice(0, 5).map((college) => (
+                  {collegesList.slice(0, 10).map((college) => (
                     <tr key={college.id} className="overview-table-row">
                       <td className="overview-table-td">
                         <div className="overview-td-title">{college.name}</div>
@@ -368,6 +378,38 @@ export default function Overview() {
                       <td className="overview-table-td">
                         <StatusBadge status={college.status || 'Active'} />
                       </td>
+                      <td className="overview-table-td" style={{ textAlign: "right" }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCollege(college.id, college.name)}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "5px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: "#ef4444",
+                            backgroundColor: "#fef2f2",
+                            border: "1px solid #fecaca",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            transition: "all 0.15s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#fee2e2";
+                            e.currentTarget.style.borderColor = "#fca5a5";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#fef2f2";
+                            e.currentTarget.style.borderColor = "#fecaca";
+                          }}
+                          title="Remove College"
+                        >
+                          <Trash2 size={13} />
+                          <span>Remove</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -377,88 +419,7 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* Quick Action Shortcuts & Health Status Row */}
-      <div className="sa-overview-quick-row">
-        <div className="sa-quick-card">
-          <div className="sa-quick-header">
-            <Activity size={16} className="text-indigo-600" />
-            <h4 className="sa-quick-title">Platform Quick Operations</h4>
-          </div>
-          <div className="sa-quick-grid">
-            <Link to="/super-admin/colleges" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--blue">
-                <Building2 size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">Colleges Hub</span>
-                <span className="sa-quick-item-sub">Add or verify institutes</span>
-              </div>
-            </Link>
 
-            <Link to="/super-admin/departments" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--emerald">
-                <GraduationCap size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">Departments</span>
-                <span className="sa-quick-item-sub">Manage academic tracks</span>
-              </div>
-            </Link>
-
-            <Link to="/super-admin/users" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--purple">
-                <UserCheck size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">User Directory</span>
-                <span className="sa-quick-item-sub">RBAC & Role Assignments</span>
-              </div>
-            </Link>
-
-            <Link to="/super-admin/maintenance" className="sa-quick-item">
-              <div className="sa-quick-icon-box sa-quick-icon--amber">
-                <Server size={18} />
-              </div>
-              <div className="sa-quick-item-text">
-                <span className="sa-quick-item-title">System Controls</span>
-                <span className="sa-quick-item-sub">Maintenance & System Audit</span>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        <div className="sa-health-card">
-          <div className="sa-quick-header">
-            <Server size={16} className="text-emerald-600" />
-            <h4 className="sa-quick-title">Real-Time Core Status</h4>
-          </div>
-          <div className="sa-health-list">
-            <div className="sa-health-item">
-              <div className="sa-health-left">
-                <span className="sa-health-dot sa-health-dot--online"></span>
-                <span className="sa-health-name">API Gateway Proxy</span>
-              </div>
-              <span className="sa-health-status sa-health-status--online">99.9% Operational</span>
-            </div>
-
-            <div className="sa-health-item">
-              <div className="sa-health-left">
-                <span className="sa-health-dot sa-health-dot--online"></span>
-                <span className="sa-health-name">Authentication Engine</span>
-              </div>
-              <span className="sa-health-status sa-health-status--online">Secure</span>
-            </div>
-
-            <div className="sa-health-item">
-              <div className="sa-health-left">
-                <span className="sa-health-dot sa-health-dot--online"></span>
-                <span className="sa-health-name">Database Cluster</span>
-              </div>
-              <span className="sa-health-status sa-health-status--online">Connected</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
+import jsQR from "jsqr";
 import { apiFetch } from "../../../utils/api";
-import {
-  Upload, ShieldCheck, CheckCircle2, XCircle,
-  TrendingUp, AlertTriangle, Calendar, Clock,
-  BookOpen, UserCheck, Info, Award,
-  FileText, Paperclip, Send, CalendarDays, CalendarCheck,
-  Clock3, Sparkles, CheckCircle, Search, Filter,
-  GraduationCap, RefreshCw, ChevronRight, ChevronDown, Check, Layers, Code2
-} from "lucide-react";
+import { Upload, ShieldCheck, CheckCircle2, XCircle, TrendingUp, AlertTriangle, Calendar, Clock, BookOpen, UserCheck, Info, Award, FileText, Paperclip, Send, CalendarDays, CalendarCheck, Clock3, Sparkles, CheckCircle, Search, Filter, GraduationCap, RefreshCw, ChevronRight, ChevronDown, Check, Layers, Code2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/Tabs";
 import { Badge } from "../../../components/ui/Badge";
@@ -21,7 +15,8 @@ import "../Styles/ST_Attendance.css";
 function StudentAttSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -36,7 +31,7 @@ function StudentAttSelect({ value, options = [], onChange, placeholder = 'Select
       </button>
       {isOpen && (
         <div className="student-att-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-att-select-option${isSel ? ' student-att-select-option--selected' : ''}`}>
@@ -83,6 +78,7 @@ export default function Attendance() {
   const [cameraError, setCameraError] = useState("");
   const [manualCode, setManualCode] = useState("");
   const videoRef = useRef(null);
+  const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const scanIntervalRef = useRef(null);
 
@@ -99,20 +95,51 @@ export default function Attendance() {
 
   // Fetch Attendance Data from Backend API
   useEffect(() => {
-    apiFetch("/student/attendance")
+    apiFetch("/attendance/history")
       .then((res) => {
         if (res && res.data) {
+          const summary = res.data.summary || {};
+          const rawHistory = res.data.history || [];
+
+          const formattedHistory = rawHistory.map((item) => {
+            const rawDate = item.session_date || item.created_at || item.date;
+            const formattedDate = rawDate
+              ? new Date(rawDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+              : "Today";
+            const monthName = rawDate
+              ? new Date(rawDate).toLocaleDateString("en-IN", { month: "long" })
+              : "October";
+
+            const rawStatus = item.status ? String(item.status).toLowerCase() : "present";
+            const statusDisplay = (rawStatus === "present" || rawStatus === "late") ? "Present" : "Absent";
+
+            return {
+              id: item.id || Math.random(),
+              date: formattedDate,
+              month: monthName,
+              subject: item.session_title || item.batch_name || item.subject || "Training Session",
+              status: statusDisplay,
+              slot: item.session_code || item.slot || "Regular",
+              faculty: item.marked_by_name || item.faculty || "Course Instructor"
+            };
+          });
+
+          const total = Number(summary.total_classes ?? summary.totalSessions ?? 0);
+          const present = Number(summary.present_count ?? summary.present ?? 0);
+          const missed = Number(summary.absent_count ?? summary.absent ?? Math.max(0, total - present));
+          const pct = Number(summary.attendance_percentage ?? summary.percentage ?? (total > 0 ? Math.round((present / total) * 100) : 0));
+
           setData({
-            overallPercentage: res.data.overallPercentage ?? 0,
-            attendedClasses: res.data.attendedClasses ?? 0,
-            missedClasses: res.data.missedClasses ?? 0,
-            totalClasses: res.data.totalClasses ?? 0,
-            requiredThreshold: res.data.requiredThreshold ?? 75,
-            status: res.data.status || "Good",
-            isLowAttendance: res.data.isLowAttendance ?? false,
-            warningMessage: res.data.warningMessage || "⚠ Attendance is below the required 75% threshold.",
-            subjects: res.data.subjects || [],
-            attendanceHistory: res.data.attendanceHistory || res.data.recentLogs || [],
+            overallPercentage: pct,
+            attendedClasses: present,
+            missedClasses: missed,
+            totalClasses: total,
+            requiredThreshold: 75,
+            status: pct >= 75 ? "Good" : "Low",
+            isLowAttendance: pct < 75 && total > 0,
+            warningMessage: "⚠ Attendance is below the required 75% threshold.",
+            subjects: formattedHistory,
+            attendanceHistory: formattedHistory,
             verifications: res.data.verifications || []
           });
           if (res.data.verifications && res.data.verifications.length > 0) {
@@ -135,6 +162,7 @@ export default function Attendance() {
   }, []);
 
   const handleScanSuccess = useCallback((codeVal) => {
+    if (!codeVal) return;
     setScanResult(codeVal);
     setCameraStatus("success");
     stopCamera();
@@ -144,17 +172,69 @@ export default function Attendance() {
       body: JSON.stringify({ code: codeVal })
     })
       .then((res) => {
-        // Refetch or update local attendance state
-        apiFetch("/student/attendance").then((attRes) => {
+        const message = res?.message || "Attendance marked Present successfully!";
+
+        // Broadcast real-time scan event for Admin/Mentor live dashboards
+        try {
+          const scanEvent = { studentName: res?.data?.summary?.studentName || "Student User", code: codeVal, timestamp: Date.now() };
+          localStorage.setItem("admin_live_qr_scans", JSON.stringify([scanEvent]));
+          window.dispatchEvent(new CustomEvent("qr_scan_completed", { detail: scanEvent }));
+        } catch (_) {}
+
+        // Refetch latest student attendance summary & history from backend database
+        apiFetch("/attendance/history").then((attRes) => {
           if (attRes && attRes.data) {
-            setData((prev) => ({ ...prev, ...attRes.data }));
+            const summary = attRes.data.summary || {};
+            const rawHistory = attRes.data.history || [];
+
+            const formattedHistory = rawHistory.map((item) => {
+              const rawDate = item.session_date || item.created_at || item.date;
+              const formattedDate = rawDate
+                ? new Date(rawDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+                : "Today";
+              const monthName = rawDate
+                ? new Date(rawDate).toLocaleDateString("en-IN", { month: "long" })
+                : "October";
+
+              const rawStatus = item.status ? String(item.status).toLowerCase() : "present";
+              const statusDisplay = (rawStatus === "present" || rawStatus === "late") ? "Present" : "Absent";
+
+              return {
+                id: item.id || Math.random(),
+                date: formattedDate,
+                month: monthName,
+                subject: item.session_title || item.batch_name || item.subject || "Training Session",
+                status: statusDisplay,
+                slot: item.session_code || item.slot || "Regular",
+                faculty: item.marked_by_name || item.faculty || "Course Instructor"
+              };
+            });
+
+            const total = Number(summary.total_classes ?? summary.totalSessions ?? 0);
+            const present = Number(summary.present_count ?? summary.present ?? 0);
+            const missed = Number(summary.absent_count ?? summary.absent ?? Math.max(0, total - present));
+            const pct = Number(summary.attendance_percentage ?? summary.percentage ?? (total > 0 ? Math.round((present / total) * 100) : 0));
+
+            setData({
+              overallPercentage: pct,
+              attendedClasses: present,
+              missedClasses: missed,
+              totalClasses: total,
+              requiredThreshold: 75,
+              status: pct >= 75 ? "Good" : "Low",
+              isLowAttendance: pct < 75 && total > 0,
+              warningMessage: "⚠ Attendance is below the required 75% threshold.",
+              subjects: formattedHistory,
+              attendanceHistory: formattedHistory,
+              verifications: attRes.data.verifications || []
+            });
           }
         }).catch(() => { });
 
-        // Optimistically increment attended counts & add today's log
+        // Optimistically increment attended counts & add today's log entry
         setData((prev) => {
           const newAttended = (prev.attendedClasses || 0) + 1;
-          const newTotal = (prev.totalClasses || 0) + 1;
+          const newTotal = Math.max(newAttended, (prev.totalClasses || 0));
           const newPct = Math.round((newAttended / newTotal) * 100);
           const todayDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
           const newLog = {
@@ -175,8 +255,15 @@ export default function Attendance() {
             attendanceHistory: [newLog, ...(prev.attendanceHistory || [])]
           };
         });
+
+        alert(`✅ ${message}`);
       })
-      .catch((err) => console.error("MARK ATTENDANCE ERROR:", err));
+      .catch((err) => {
+        console.error("MARK ATTENDANCE ERROR:", err);
+        setCameraStatus("error");
+        setCameraError(err.message || "Failed to mark attendance. Please verify the code.");
+        alert(`❌ ${err.message || "Invalid or expired QR code."}`);
+      });
   }, [stopCamera]);
 
   const startCamera = useCallback(async () => {
@@ -200,37 +287,47 @@ export default function Attendance() {
         await videoRef.current.play();
         setCameraStatus("active");
 
-        if ("BarcodeDetector" in window) {
+        // Universal frame scanner loop using jsQR + fallback BarcodeDetector
+        scanIntervalRef.current = setInterval(() => {
+          if (!videoRef.current || videoRef.current.readyState < 2) return;
+          const video = videoRef.current;
           try {
-            const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-            scanIntervalRef.current = setInterval(async () => {
-              if (!videoRef.current || videoRef.current.readyState < 2) return;
-              try {
-                const codes = await detector.detect(videoRef.current);
+            // First try canvas jsQR decoding
+            const canvas = canvasRef.current || document.createElement("canvas");
+            if (video.videoWidth > 0 && video.videoHeight > 0) {
+              canvas.width = video.videoWidth;
+              canvas.height = video.videoHeight;
+              const ctx = canvas.getContext("2d", { willReadFrequently: true });
+              if (ctx) {
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
+                  inversionAttempts: "dontInvert"
+                });
+                if (qrCode && qrCode.data && qrCode.data.trim().length > 0) {
+                  handleScanSuccess(qrCode.data.trim());
+                  return;
+                }
+              }
+            }
+
+            // Secondary native BarcodeDetector fallback if supported
+            if ("BarcodeDetector" in window) {
+              const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+              detector.detect(video).then((codes) => {
                 if (codes && codes.length > 0 && codes[0].rawValue) {
                   handleScanSuccess(codes[0].rawValue);
                 }
-              } catch (_) { }
-            }, 300);
-          } catch (_) {
-            // Fallback interval for canvas frames if detector fails constructor
-            scanIntervalRef.current = setInterval(() => {
-              if (!videoRef.current || videoRef.current.readyState < 2) return;
-              // Video stream feed is actively playing and rendering frames
-            }, 400);
-          }
-        } else {
-          // Camera active and playing fallback feed
-          scanIntervalRef.current = setInterval(() => {
-            if (!videoRef.current || videoRef.current.readyState < 2) return;
-          }, 400);
-        }
+              }).catch(() => {});
+            }
+          } catch (_) {}
+        }, 300);
       }
     } catch (err) {
       setCameraStatus("error");
       setCameraError(err.message || "Camera access denied or device not supported.");
     }
-  }, [stopCamera, handleScanSuccess]);
+  }, [handleScanSuccess]);
 
   const handleManualSubmit = (e) => {
     e.preventDefault();
@@ -525,7 +622,7 @@ export default function Attendance() {
         <CardHeader className="attendance-log-header">
           <div className="attendance-row-between flex-wrap gap-4">
             <div>
-              <CardTitle className="attendance-chart-title flex items-center gap-2">
+              <CardTitle className="attendance-chart-title">
                 <Calendar size={18} color="#4f46e5" /> Recent Attendance History Logs
               </CardTitle>
               <CardDescription>Date-wise session presence records retrieved live from database</CardDescription>
@@ -572,7 +669,7 @@ export default function Attendance() {
                   <th>Date</th>
                   <th>Session / Subject</th>
                   <th>Time Slot</th>
-                  <th>Faculty / Mentor</th>
+                  <th>Mentor</th>
                   <th>Status</th>
                 </tr>
               </thead>
@@ -623,13 +720,12 @@ export default function Attendance() {
       {/* Additional Tabs Layout */}
       <Tabs defaultValue="subjects">
         <TabsList>
-          <TabsTrigger value="subjects">Subject-Wise Breakdown</TabsTrigger>
+          <TabsTrigger value="batch">Batch-Wise Breakdown</TabsTrigger>
           <TabsTrigger value="leave">Apply Leave / Absence</TabsTrigger>
-          <TabsTrigger value="verify">Verification Tracker</TabsTrigger>
         </TabsList>
 
         {/* Subject-Wise Breakdown Tab */}
-        <TabsContent value="subjects" className="stack-6">
+        <TabsContent value="batch" className="stack-6">
           <div className="attendance-subject-grid">
             {data.subjects.map((s) => (
               <Card key={s.id} className="attendance-subject-card">
@@ -675,8 +771,8 @@ export default function Attendance() {
           <div className="attendance-leave-layout">
             <Card className="attendance-leave-form-card">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText size={18} className="text-indigo-600" /> Apply for Absence / Leave
+                <CardTitle className="attendance-chart-title">
+                  <FileText size={18} color="#4f46e5" /> Apply for Absence / Leave
                 </CardTitle>
                 <CardDescription>Submit formal leave request for mentor verification</CardDescription>
               </CardHeader>
@@ -704,28 +800,6 @@ export default function Attendance() {
                 </form>
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-
-        {/* Verification Tab */}
-        <TabsContent value="verify" className="stack-6">
-          <div className="attendance-stack-4">
-            {verifications.map((v) => (
-              <Card key={v.id} className="attendance-verify-card">
-                <CardContent className="attendance-verify-card-content">
-                  <div className="attendance-verify-card-header">
-                    <div>
-                      <Badge variant="outline">{v.id}</Badge>
-                      <h4 className="attendance-verify-card-title">{v.title}</h4>
-                      <p className="attendance-verify-dates-text">{v.startDate} ({v.days} Days)</p>
-                    </div>
-                    <Badge className={v.status === "Approved" ? "attendance-status-badge-present" : "attendance-status-badge-excused"}>
-                      {v.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
           </div>
         </TabsContent>
       </Tabs>

@@ -14,6 +14,8 @@ import {
   getSuperAdminVerifications,
   getSuperAdminDashboardSummary,
   getSuperAdminC2CStats,
+  getSuperAdminSupportTickets,
+  updateSuperAdminSupportTicket,
 } from '../controllers/superadmin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -37,5 +39,9 @@ router.get('/weekly-reports', getSuperAdminWeeklyReports);
 router.get('/roadmaps', getSuperAdminRoadmaps);
 router.get('/verifications', getSuperAdminVerifications);
 router.get('/c2c/stats', getSuperAdminC2CStats);
+
+// Support Ticket Management & Escalated Tickets
+router.get('/support/tickets', getSuperAdminSupportTickets);
+router.put('/support/tickets/:id', updateSuperAdminSupportTicket);
 
 export default router;

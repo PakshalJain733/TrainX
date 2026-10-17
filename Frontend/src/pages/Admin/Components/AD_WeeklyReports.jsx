@@ -1,18 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  FileCheck2,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Clock,
-  Search,
-  Download,
-  Eye,
-  Plus,
-  RefreshCw,
-  X,
-  FileText
-} from "lucide-react";
+import { FileCheck2, TrendingUp, AlertCircle, CheckCircle2, Clock, Search, Download, Eye, Plus, RefreshCw, X, FileText } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_WeeklyReports.css";

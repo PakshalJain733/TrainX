@@ -1,24 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import {
-  User,
-  Camera,
-  GraduationCap,
-  Building,
-  Users,
-  ShieldCheck,
-  CheckCircle2,
-  Save,
-  Sparkles,
-  MapPin,
-  Clock,
-  KeyRound,
-  QrCode,
-  Copy,
-  Check,
-  Loader2,
-  X
-} from "lucide-react";
+import { Check, User, Camera, GraduationCap, Building, Users, ShieldCheck, CheckCircle2, Save, Sparkles, MapPin, Clock, KeyRound, QrCode, Copy, Loader2, X, Edit2 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { coordinatorProfile } from "../../../data/coordinatorMockData";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -37,6 +19,7 @@ const deptOptions = [
 export default function CoordinatorProfilePage() {
   const fileInputRef = useRef(null);
   const [saved, setSaved] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [showChangePassModal, setShowChangePassModal] = useState(false);
 
@@ -54,7 +37,7 @@ export default function CoordinatorProfilePage() {
 
   const resolveUser = () => {
     let localUser = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
     let name = localUser.name || localUser.fullName || localUser.full_name || coordinatorProfile?.name || "Department Coordinator";
     let email = localUser.email || coordinatorProfile?.email || "coordinator@pvppcoe.ac.in";
     return { name, email, ...localUser };
@@ -96,7 +79,7 @@ export default function CoordinatorProfilePage() {
           setIs2FAEnabled(Boolean(u.two_factor_enabled || u.two_factor_secret));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleOpen2FASetup = async () => {
@@ -218,6 +201,7 @@ export default function CoordinatorProfilePage() {
       window.dispatchEvent(new Event("userProfileUpdated"));
 
       setSaved(true);
+      setIsEditing(false);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       console.error("Failed to save coordinator profile:", err);
@@ -237,6 +221,7 @@ export default function CoordinatorProfilePage() {
         <div className="ui-section-main">
           <div>
             <h2 className="ui-section-title">
+              <User size={22} className="ui-section-title-icon" />
               <span>Coordinator Profile & Settings</span>
             </h2>
             <p className="ui-section-desc">
@@ -263,19 +248,22 @@ export default function CoordinatorProfilePage() {
               ) : (
                 <div className="profile-avatar-initials">{getInitials(form.name)}</div>
               )}
-              <button
-                type="button"
-                className="profile-camera-btn"
-                onClick={() => fileInputRef.current?.click()}
-                title="Change Avatar Image"
-              >
-                <Camera size={14} />
-              </button>
+              {isEditing && (
+                <button
+                  type="button"
+                  className="profile-camera-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Change Avatar Image"
+                >
+                  <Camera size={14} />
+                </button>
+              )}
               <input
                 type="file"
                 ref={fileInputRef}
                 accept="image/*"
                 className="profile-file-input"
+                disabled={!isEditing}
                 onChange={handleAvatarChange}
               />
             </div>
@@ -286,7 +274,7 @@ export default function CoordinatorProfilePage() {
               <strong>{form.role}</strong>
             </div>
 
-            <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            <div className="profile-badges-wrap">
               <Badge variant="success">Active Coordinator</Badge>
               <Badge variant="default">{form.department || "Engineering"}</Badge>
             </div>
@@ -314,15 +302,15 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <ShieldCheck size={16} className="profile-detail-icon text-indigo-500" />
+              <ShieldCheck size={16} className="profile-detail-icon profile-icon-indigo" />
               <div>
                 <span className="profile-detail-label">Designation & Role</span>
-                <p className="profile-detail-value font-semibold text-indigo-600 dark:text-indigo-400">{form.role}</p>
+                <p className="profile-detail-value profile-role-value">{form.role}</p>
               </div>
             </div>
 
             <div className="profile-detail-row">
-              <Users size={16} className="profile-detail-icon text-emerald-500" />
+              <Users size={16} className="profile-detail-icon profile-icon-emerald" />
               <div>
                 <span className="profile-detail-label">Managed Scope</span>
                 <p className="profile-detail-value">{form.managedBatches} · {form.totalStudents}</p>
@@ -330,7 +318,7 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <MapPin size={16} className="profile-detail-icon text-amber-500" />
+              <MapPin size={16} className="profile-detail-icon profile-icon-amber" />
               <div>
                 <span className="profile-detail-label">Office Location</span>
                 <p className="profile-detail-value">{form.officeLocation}</p>
@@ -338,7 +326,7 @@ export default function CoordinatorProfilePage() {
             </div>
 
             <div className="profile-detail-row">
-              <Clock size={16} className="profile-detail-icon text-purple-500" />
+              <Clock size={16} className="profile-detail-icon profile-icon-purple" />
               <div>
                 <span className="profile-detail-label">Office Hours</span>
                 <p className="profile-detail-value">{form.officeHours}</p>
@@ -352,18 +340,10 @@ export default function CoordinatorProfilePage() {
                 onClick={() => setShowChangePassModal(true)}
                 className="profile-change-pass-btn"
               >
-                <KeyRound size={16} />
                 <span>Change Password</span>
               </button>
 
-              <button
-                type="button"
-                className={`profile-2fa-setup-btn ${is2FAEnabled ? "profile-2fa-setup-btn--active" : "profile-2fa-setup-btn--inactive"}`}
-                onClick={handleOpen2FASetup}
-              >
-                <QrCode size={16} />
-                {is2FAEnabled ? "Reconfigure Google 2FA QR Code" : "Setup Google Authenticator 2FA"}
-              </button>
+
             </div>
           </div>
         </div>
@@ -372,11 +352,41 @@ export default function CoordinatorProfilePage() {
         <div className="profile-form-card">
           <form onSubmit={handleSave}>
             <div className="profile-form-section">
-              <div className="profile-section-heading">
-                <User size={18} className="profile-heading-icon text-indigo-500" />
-                <div>
-                  <h3 className="profile-heading-title">Personal & Contact Details</h3>
-                  <p className="profile-heading-desc">Saved directly to your coordinator profile in MySQL database.</p>
+              <div className="profile-section-heading profile-section-heading-flex">
+                <div className="profile-heading-group">
+                  <User size={18} className="profile-heading-icon profile-icon-indigo" />
+                  <div>
+                    <h3 className="profile-heading-title">{isEditing ? "Edit Personal & Contact Details" : "Personal & Contact Details"}</h3>
+                    <p className="profile-heading-desc">Saved directly to your coordinator profile in MySQL database.</p>
+                  </div>
+                </div>
+
+                <div className="profile-heading-actions">
+                  {!isEditing ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditing(true)}
+                      className="profile-edit-trigger-btn"
+                    >
+                      <Edit2 size={15} /> Edit Profile
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditing(false)}
+                        className="profile-cancel-btn"
+                      >
+                        <X size={15} /> Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="profile-save-btn"
+                      >
+                        <Save size={15} /> Save Profile
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -385,9 +395,11 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Full Name *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.name}
                     onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -396,9 +408,11 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Email Address *</label>
                   <input
                     type="email"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.email}
                     onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -407,9 +421,11 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Phone Number *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.phone}
                     onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                   />
                 </div>
 
@@ -417,9 +433,11 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Office Hours</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.officeHours}
                     onChange={(e) => setForm((p) => ({ ...p, officeHours: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     placeholder="e.g. Mon-Fri 10:00 AM - 5:00 PM"
                   />
                 </div>
@@ -427,9 +445,9 @@ export default function CoordinatorProfilePage() {
             </div>
 
             {/* Section 2: Departmental & Role Governance (SHIFTED DOWN) */}
-            <div className="profile-form-section mt-6">
+            <div className="profile-form-section">
               <div className="profile-section-heading">
-                <Sparkles size={18} className="profile-heading-icon text-indigo-500" />
+                <Sparkles size={18} className="profile-heading-icon profile-icon-indigo" />
                 <div>
                   <h3 className="profile-heading-title">Departmental & Role Governance</h3>
                   <p className="profile-heading-desc">Enter your designation, department, employee ID, and office cabin location.</p>
@@ -441,9 +459,11 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Official Designation / Title *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.role}
                     onChange={(e) => setForm((p) => ({ ...p, role: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -453,6 +473,7 @@ export default function CoordinatorProfilePage() {
                   <CustomSelect
                     value={form.department}
                     options={deptOptions}
+                    disabled={!isEditing}
                     onChange={(val) => setForm((p) => ({ ...p, department: val }))}
                     placeholder="Select Department"
                     icon={Building}
@@ -463,9 +484,11 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Employee / Staff ID *</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.empId}
                     onChange={(e) => setForm((p) => ({ ...p, empId: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     required
                   />
                 </div>
@@ -474,28 +497,160 @@ export default function CoordinatorProfilePage() {
                   <label className="profile-label">Office Location / Cabin</label>
                   <input
                     type="text"
-                    className="profile-input"
+                    className={`profile-input ${!isEditing ? 'profile-input-readonly' : ''}`}
                     value={form.officeLocation}
                     onChange={(e) => setForm((p) => ({ ...p, officeLocation: e.target.value }))}
+                    readOnly={!isEditing}
+                    disabled={!isEditing}
                     placeholder="e.g. Room 402, Block B"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Bottom Actions */}
-            <div className="profile-actions-bar">
-              <button type="submit" className="profile-save-btn">
-                <Save size={16} /> Save Profile Details
-              </button>
-            </div>
           </form>
         </div>
       </div>
 
       {/* Change Password Modal */}
-      {showChangePassModal && (
-        <ChangePasswordModal onClose={() => setShowChangePassModal(false)} />
+      <ChangePasswordModal
+        isOpen={showChangePassModal}
+        onClose={() => setShowChangePassModal(false)}
+      />
+
+      {/* Google Authenticator 2FA Modal */}
+      {is2FASetupOpen && createPortal(
+        <div className="modal-overlay profile-2fa-modal-overlay">
+          <div className="modal-dialog profile-2fa-modal-dialog">
+            <div className="profile-2fa-modal-header">
+              <div className="profile-2fa-modal-title-wrap">
+                <div className="profile-2fa-modal-icon">
+                  <QrCode size={20} />
+                </div>
+                <div>
+                  <h3 className="profile-2fa-modal-title">Google Authenticator 2FA</h3>
+                  <p className="profile-2fa-modal-subtitle">Scan QR code to pair your account</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIs2FASetupOpen(false)}
+                className="profile-2fa-modal-close-btn"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {loading2FASetup ? (
+              <div className="profile-2fa-modal-loading">
+                <Loader2 size={32} className="animate-spin profile-2fa-loader-spinner" />
+                <p className="profile-2fa-loading-text">Generating Google Authenticator QR Code...</p>
+              </div>
+            ) : (
+              <form onSubmit={handleVerify2FASubmit}>
+                {totpError && (
+                  <div className="profile-2fa-alert-error">
+                    {totpError}
+                  </div>
+                )}
+
+                {totpSuccess && (
+                  <div className="profile-2fa-alert-success">
+                    <CheckCircle2 size={16} />
+                    <span>{totpSuccess}</span>
+                  </div>
+                )}
+
+                {/* QR Code Container */}
+                <div className="profile-2fa-qr-box">
+                  {totpData?.qrCode ? (
+                    <img
+                      src={totpData.qrCode}
+                      alt="Google Authenticator QR Code"
+                      className="profile-2fa-qr-img"
+                    />
+                  ) : (
+                    <div className="profile-2fa-qr-placeholder">
+                      <QrCode size={40} className="profile-icon-slate" />
+                    </div>
+                  )}
+                  <p className="profile-2fa-qr-text">
+                    Open <strong>Google Authenticator</strong> or <strong>Microsoft Authenticator</strong> app on your phone and scan this QR code.
+                  </p>
+                </div>
+
+                {/* Secret Key Copy Bar */}
+                {totpData?.secret && (
+                  <div className="profile-2fa-secret-box">
+                    <label className="profile-2fa-secret-label">
+                      Or enter Secret Key manually:
+                    </label>
+                    <div className="profile-2fa-secret-row">
+                      <code className="profile-2fa-secret-code">
+                        {totpData.secret.match(/.{1,4}/g)?.join(" ") || totpData.secret}
+                      </code>
+                      <button
+                        type="button"
+                        onClick={handleCopySecret}
+                        className="profile-2fa-copy-btn"
+                      >
+                        {copiedSecret ? <Check size={12} className="profile-icon-emerald" /> : <Copy size={12} />}
+                        {copiedSecret ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6-Digit Code Input */}
+                <div className="profile-2fa-code-input-section">
+                  <label className="profile-2fa-code-label">
+                    Enter 6-Digit Authenticator Verification Code:
+                  </label>
+                  <div className="profile-2fa-digit-row" onPaste={handleTotpPaste}>
+                    {totpCodeInput.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (totpInputRefs.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleTotpDigitChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleTotpKeyDown(idx, e)}
+                        className="profile-2fa-digit-input"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="profile-2fa-modal-actions">
+                  <button
+                    type="button"
+                    onClick={() => setIs2FASetupOpen(false)}
+                    className="profile-2fa-modal-cancel-btn"
+                    disabled={verifying2FA}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="profile-2fa-modal-submit-btn"
+                    disabled={verifying2FA}
+                  >
+                    {verifying2FA ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Verifying...
+                      </>
+                    ) : (
+                      "Verify & Enable 2FA"
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

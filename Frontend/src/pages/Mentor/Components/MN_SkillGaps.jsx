@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { AlertCircle, AlertTriangle, CheckCircle2, Sparkles, X, Send, Search } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Sparkles, X, Send, Search } from "lucide-react";
 import "../Styles/MN_SkillGaps.css";
 
 const initialSkillGaps = [];
@@ -180,7 +180,7 @@ export default function MentorSkillGaps() {
                   Submission Deadline
                 </label>
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
                   className="mentor-form-control"

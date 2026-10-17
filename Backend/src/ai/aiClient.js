@@ -1,45 +1,99 @@
-import { config } from '../config/env.js';
-
-/**
- * Provider-agnostic AI client.
- *
- * The provider is detected from the API key prefix so the app keeps working
- * regardless of which vendor key is supplied in AI_API_KEY:
- *   nvapi-...  -> NVIDIA NIM        (https://integrate.api.nvidia.com/v1)
- *   AIza...    -> Google Gemini     (https://generativelanguage.googleapis.com)
- *   gsk_...    -> Groq              (https://api.groq.com/openai/v1)
- */
-
 const NVIDIA_URL = 'https://integrate.api.nvidia.com/v1/chat/completions';
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 const DEFAULT_MODELS = {
-  nvidia: ['openai/gpt-oss-20b'],
-  gemini: ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
   groq: ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'],
+  nvidia: ['meta/llama-3.2-11b-vision-instruct', 'nvidia/nemotron-3.5-lightning-30b-a3b'],
+  gemini: ['gemini-1.5-flash', 'gemini-2.0-flash'],
 };
 
 const PLACEHOLDER_KEYS = new Set(['your_ai_api_key', 'your_api_key', 'changeme', '']);
 
-export const getApiKey = () =>
-  config.ai?.apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
+let lastUsedProviderInfo = null;
 
-export const detectProvider = (key = getApiKey()) => {
-  if (!key || PLACEHOLDER_KEYS.has(String(key).trim())) return null;
-  if (key.startsWith('nvapi-')) return 'nvidia';
-  if (key.startsWith('AIza')) return 'gemini';
-  if (key.startsWith('gsk_')) return 'groq';
-  return null;
+export const getAllAvailableProviders = () => {
+  const providers = [];
+
+  // NVIDIA
+  const nvidiaKey = (
+    process.env.NVIDIA_AI_API_KEY ||
+    process.env.NVIDIA_API_KEY ||
+    (String(process.env.AI_API_KEY || '').startsWith('nvapi-') ? process.env.AI_API_KEY : '')
+  ).trim();
+
+  if (nvidiaKey && !PLACEHOLDER_KEYS.has(nvidiaKey)) {
+    providers.push({
+      provider: 'nvidia',
+      key: nvidiaKey,
+      configuredModel: process.env.NVIDIA_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('nvapi-') ? process.env.AI_MODEL : null),
+    });
+  }
+
+  // Gemini
+  const geminiKey = (
+    process.env.GEMINI_AI_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    (String(process.env.AI_API_KEY || '').startsWith('AIza') || String(process.env.AI_API_KEY || '').startsWith('AQ.') ? process.env.AI_API_KEY : '')
+  ).trim();
+
+  if (geminiKey && !PLACEHOLDER_KEYS.has(geminiKey)) {
+    providers.push({
+      provider: 'gemini',
+      key: geminiKey,
+      configuredModel: process.env.GEMINI_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('AIza') || String(process.env.AI_API_KEY || '').startsWith('AQ.') ? process.env.AI_MODEL : null),
+    });
+  }
+
+  // Groq
+  const groqKey = (
+    process.env.Groq_AI_API_KEY ||
+    process.env.GROQ_AI_API_KEY ||
+    process.env.GROQ_API_KEY ||
+    (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_API_KEY : '')
+  ).trim();
+
+  if (groqKey && !PLACEHOLDER_KEYS.has(groqKey)) {
+    providers.push({
+      provider: 'groq',
+      key: groqKey,
+      configuredModel: process.env.Groq_AI_MODEL || process.env.GROQ_AI_MODEL || (String(process.env.AI_API_KEY || '').startsWith('gsk_') ? process.env.AI_MODEL : null),
+    });
+  }
+
+  // Prioritize primary provider specified by AI_API_KEY if present
+  const primaryRawKey = String(process.env.AI_API_KEY || '').trim();
+  if (primaryRawKey.startsWith('nvapi-')) {
+    providers.sort((a, b) => (a.provider === 'nvidia' ? -1 : b.provider === 'nvidia' ? 1 : 0));
+  } else if (primaryRawKey.startsWith('AQ.') || primaryRawKey.startsWith('AIza')) {
+    providers.sort((a, b) => (a.provider === 'gemini' ? -1 : b.provider === 'gemini' ? 1 : 0));
+  } else if (primaryRawKey.startsWith('gsk_')) {
+    providers.sort((a, b) => (a.provider === 'groq' ? -1 : b.provider === 'groq' ? 1 : 0));
+  }
+
+  return providers;
 };
 
-/**
- * Ordered list of models to attempt. The configured AI_MODEL is always tried
- * first, then sensible vendor defaults.
- */
+export const getActiveKeyAndProvider = () => {
+  const available = getAllAvailableProviders();
+  if (available.length > 0) {
+    return { key: available[0].key, provider: available[0].provider };
+  }
+  return { key: '', provider: null };
+};
+
+export const getApiKey = () => getActiveKeyAndProvider().key;
+
+export const detectProvider = () => getActiveKeyAndProvider().provider;
+
 const getModelsToTry = (provider, configured) => {
   const fallback = DEFAULT_MODELS[provider] || [];
-  if (configured && !placeholderModel(configured)) return Array.from(new Set([configured, ...fallback]));
+  if (configured && !placeholderModel(configured)) {
+    if (provider === 'groq' && configured.toLowerCase().startsWith('gemini')) {
+      return Array.from(new Set(fallback));
+    }
+    return Array.from(new Set([configured, ...fallback]));
+  }
   return Array.from(new Set(fallback));
 };
 
@@ -50,21 +104,18 @@ const extractText = (provider, data) => {
   if (provider === 'gemini') {
     return data?.candidates?.[0]?.content?.parts?.[0]?.text ?? null;
   }
-  // NVIDIA + Groq (OpenAI-compatible chat completions shape)
   const msg = data?.choices?.[0]?.message;
   if (!msg) return null;
-  // Reasoning models (e.g. gpt-oss) put thinking in reasoning_content and the
-  // answer in content, but fall back to reasoning_content if content is empty.
   return msg.content || msg.reasoning_content || null;
 };
 
-const buildRequest = (provider, { model, prompt, system, temperature, maxTokens, json }) => {
+const buildRequest = (provider, key, { model, prompt, system, temperature, maxTokens, json }) => {
   if (provider === 'gemini') {
     const generationConfig = { temperature, topK: 40, topP: 0.95 };
     if (maxTokens) generationConfig.maxOutputTokens = maxTokens;
     if (json) generationConfig.response_mime_type = 'application/json';
     return {
-      url: `${GEMINI_URL}/${model}:streamGenerateContent?alt=sse&key=${getApiKey()}`,
+      url: `${GEMINI_URL}/${model}:streamGenerateContent?alt=sse&key=${key}`,
       init: {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -87,7 +138,7 @@ const buildRequest = (provider, { model, prompt, system, temperature, maxTokens,
     init: {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${getApiKey()}`,
+        'Authorization': `Bearer ${key}`,
         'Content-Type': 'application/json',
         'Accept': 'text/event-stream',
       },
@@ -96,11 +147,6 @@ const buildRequest = (provider, { model, prompt, system, temperature, maxTokens,
   };
 };
 
-/**
- * Consume a Server-Sent Events stream and accumulate the response text.
- * `onActivity` is invoked on every chunk so the caller can treat the timeout
- * as an idle timeout rather than a hard deadline.
- */
 const readSSE = async (body, provider, onActivity) => {
   const decoder = new TextDecoder();
   let buffer = '';
@@ -141,14 +187,10 @@ const readSSE = async (body, provider, onActivity) => {
 };
 
 /**
- * Single completion call with automatic model fallback.
+ * Primary completion call with multi-provider rotation & fallback.
  *
- * Requests are streamed so that slow reasoning models (e.g. NVIDIA gpt-oss) do
- * not trip a hard deadline: `timeoutMs` is an *idle* timeout that is reset on
- * every chunk received.
- *
- * @returns {Promise<string|null>} raw model text, or null when the provider is
- *   unconfigured or every model attempt failed.
+ * Tries all active providers (NVIDIA, Gemini, Groq) and their respective models
+ * until a successful response is generated.
  */
 export const generateText = async (prompt, options = {}) => {
   const {
@@ -159,46 +201,53 @@ export const generateText = async (prompt, options = {}) => {
     timeoutMs = 60000,
   } = options;
 
-  const provider = detectProvider();
-  if (!provider) {
-    console.warn('[AI] No usable AI_API_KEY found (expected nvapi-, AIza, or gsk_ prefix). Skipping AI call.');
+  const availableProviders = getAllAvailableProviders();
+  if (availableProviders.length === 0) {
+    console.warn('[AI] No usable AI API keys found. Skipping AI call.');
     return null;
   }
 
-  const models = getModelsToTry(provider, config.ai?.model);
+  for (const { provider, key, configuredModel } of availableProviders) {
+    const models = getModelsToTry(provider, configuredModel);
 
-  for (const model of models) {
-    const controller = new AbortController();
-    let timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    // Idle timeout: any incoming chunk proves the model is still working.
-    const onActivity = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    };
+    for (const model of models) {
+      const controller = new AbortController();
+      let timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      const onActivity = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+      };
 
-    try {
-      const { url, init } = buildRequest(provider, { model, prompt, system, temperature, maxTokens, json });
-      const response = await fetch(url, { ...init, signal: controller.signal });
+      try {
+        const { url, init } = buildRequest(provider, key, { model, prompt, system, temperature, maxTokens, json });
+        const response = await fetch(url, { ...init, signal: controller.signal });
 
-      if (!response.ok) {
-        const body = await response.text().catch(() => '');
-        console.warn(`[AI] ${provider} ${model} HTTP ${response.status}: ${body.slice(0, 180)}`);
-        continue;
+        if (!response.ok) {
+          const body = await response.text().catch(() => '');
+          console.warn(`[AI] ${provider} (${model}) HTTP ${response.status}: ${body.slice(0, 180)}`);
+          continue;
+        }
+
+        if (!response.body) {
+          const data = await response.json();
+          const text = extractText(provider, data);
+          if (text) {
+            lastUsedProviderInfo = { provider, model };
+            return text;
+          }
+          continue;
+        }
+
+        const text = await readSSE(response.body, provider, onActivity);
+        if (text) {
+          lastUsedProviderInfo = { provider, model };
+          return text;
+        }
+      } catch (err) {
+        console.warn(`[AI] ${provider} (${model}) failed: ${err.message}`);
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      if (!response.body) {
-        const data = await response.json();
-        const text = extractText(provider, data);
-        if (text) return text;
-        continue;
-      }
-
-      const text = await readSSE(response.body, provider, onActivity);
-      if (text) return text;
-    } catch (err) {
-      console.warn(`[AI] ${provider} ${model} failed: ${err.message}`);
-    } finally {
-      clearTimeout(timeoutId);
     }
   }
 
@@ -215,22 +264,39 @@ export const generateJSON = async (prompt, options = {}) => {
   try {
     return JSON.parse(clean);
   } catch {
-    // Fall back to the outermost object/array found in the response.
-    const arrayMatch = clean.match(/\[[\s\S]*\]/);
-    if (arrayMatch) {
-      try { return JSON.parse(arrayMatch[0]); } catch { /* fall through */ }
+    // Extract outermost JSON object or array if preamble text exists
+    const arrayStart = clean.indexOf('[');
+    const arrayEnd = clean.lastIndexOf(']');
+    if (arrayStart !== -1 && arrayEnd > arrayStart) {
+      try {
+        return JSON.parse(clean.slice(arrayStart, arrayEnd + 1));
+      } catch {
+        /* fall through */
+      }
     }
-    const objectMatch = clean.match(/\{[\s\S]*\}/);
-    if (objectMatch) {
-      try { return JSON.parse(objectMatch[0]); } catch { /* fall through */ }
+
+    const objStart = clean.indexOf('{');
+    const objEnd = clean.lastIndexOf('}');
+    if (objStart !== -1 && objEnd > objStart) {
+      try {
+        return JSON.parse(clean.slice(objStart, objEnd + 1));
+      } catch {
+        /* fall through */
+      }
     }
+
     console.warn('[AI] Could not parse model output as JSON.');
     return null;
   }
 };
 
 export const describeProvider = () => {
-  const provider = detectProvider();
-  if (!provider) return 'none (no valid AI_API_KEY)';
-  return `${provider} (model: ${config.ai?.model || DEFAULT_MODELS[provider][0]})`;
+  const available = getAllAvailableProviders();
+  if (available.length === 0) return 'none (no valid AI API keys)';
+  const activeNames = available.map(p => p.provider).join(', ');
+  if (lastUsedProviderInfo) {
+    return `${lastUsedProviderInfo.provider} (model: ${lastUsedProviderInfo.model}) [Active Pool: ${activeNames}]`;
+  }
+  return `${available[0].provider} (model: ${available[0].configuredModel || DEFAULT_MODELS[available[0].provider][0]}) [Active Pool: ${activeNames}]`;
 };
+

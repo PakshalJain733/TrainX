@@ -1,7 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Wrench, ShieldAlert, Clock, Sparkles, ArrowLeft, Headphones } from "lucide-react";
+import { Wrench, ShieldAlert, Clock, Sparkles, ArrowLeft, Headphones, Info, HelpCircle } from "lucide-react";
 import { useSystemMaintenance } from "../../context/SystemMaintenanceContext";
+import logoImg from "../../assets/Logo.png";
+import trainXImg from "../../assets/TrainX.png";
+import "./MaintenanceGuard.css";
 
 export default function MaintenanceGuard({ moduleKey, children }) {
   const { isModuleActive, getModuleConfig } = useSystemMaintenance();
@@ -14,201 +17,114 @@ export default function MaintenanceGuard({ moduleKey, children }) {
 
   const moduleConfig = getModuleConfig(moduleKey);
 
-  return (
-    <div
-      style={{
-        minHeight: "65vh",
-        width: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "24px 16px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "480px",
-          width: "100%",
-          background: "#ffffff",
-          border: "1px solid #e2e8f0",
-          borderRadius: "20px",
-          padding: "36px 30px",
-          textAlign: "center",
-          boxShadow: "0 12px 36px rgba(15, 23, 42, 0.08)",
-          position: "relative",
-          overflow: "hidden",
-          color: "#0f172a",
-          fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-          boxSizing: "border-box",
-        }}
-      >
-        {/* Subtle Decorative Gradient Accents */}
-        <div
-          style={{
-            position: "absolute",
-            top: "-50px",
-            left: "-50px",
-            width: "140px",
-            height: "140px",
-            background: "rgba(79, 70, 229, 0.06)",
-            borderRadius: "50%",
-            filter: "blur(30px)",
-            pointerEvents: "none",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: "-50px",
-            right: "-50px",
-            width: "140px",
-            height: "140px",
-            background: "rgba(239, 68, 68, 0.06)",
-            borderRadius: "50%",
-            filter: "blur(30px)",
-            pointerEvents: "none",
-          }}
-        />
+  // Retrieve user role from session/localStorage if available to offer smart return link
+  let homeRoute = "/";
+  try {
+    const raw = sessionStorage.getItem("user") || localStorage.getItem("user");
+    if (raw) {
+      const user = JSON.parse(raw);
+      const role = String(user?.role || "").toLowerCase();
+      if (role.includes("super")) homeRoute = "/super-admin";
+      else if (role.includes("admin")) homeRoute = "/admin";
+      else if (role.includes("mentor")) homeRoute = "/mentor";
+      else if (role.includes("coord")) homeRoute = "/coordinator";
+      else if (role.includes("student")) homeRoute = "/student";
+    }
+  } catch (e) {
+    homeRoute = "/";
+  }
 
-        {/* Maintenance Icon Badge */}
-        <div style={{ position: "relative", display: "inline-block", marginBottom: "20px" }}>
-          <div
-            style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "20px",
-              background: "#fffbeb",
-              border: "1.5px solid #fde68a",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#d97706",
-              margin: "0 auto",
-              boxShadow: "0 4px 12px rgba(217, 119, 6, 0.1)",
-            }}
-          >
-            <Wrench size={34} />
-          </div>
-          <div
-            style={{
-              position: "absolute",
-              bottom: "-4px",
-              right: "-4px",
-              background: "#ef4444",
-              color: "#ffffff",
-              borderRadius: "50%",
-              padding: "4px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "2px solid #ffffff",
-              boxShadow: "0 2px 6px rgba(239, 68, 68, 0.3)",
-            }}
-          >
-            <ShieldAlert size={13} />
+  return (
+    <div className="mg-wrapper">
+      {/* Ambient background glow accents */}
+      <div className="mg-ambient-orb-1" />
+      <div className="mg-ambient-orb-2" />
+      <div className="mg-ambient-orb-3" />
+
+      {/* Main Glassmorphic Card */}
+      <div className="mg-card">
+        {/* Brand Header */}
+        <div className="mg-brand-header">
+          <img src={logoImg} alt="TrainX Logo" className="mg-brand-logo-img" />
+          <div className="mg-brand-title">
+            <span>Train</span>
+            <img src={trainXImg} alt="X" className="mg-brand-x-img" />
           </div>
         </div>
 
-        {/* Status Pill Tag */}
-        <div style={{ marginBottom: "16px" }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              padding: "5px 14px",
-              borderRadius: "9999px",
-              background: "#fffbeb",
-              border: "1px solid #fde68a",
-              color: "#b45309",
-              fontSize: "12px",
-              fontWeight: 700,
-              letterSpacing: "0.2px",
-            }}
-          >
+        {/* Hero Animated Icon */}
+        <div className="mg-icon-wrapper">
+          <div className="mg-icon-box">
+            <Wrench size={38} strokeWidth={2.2} />
+          </div>
+          <div className="mg-badge-shield">
+            <ShieldAlert size={14} />
+          </div>
+        </div>
+
+        {/* Live Status Pill */}
+        <div>
+          <div className="mg-status-tag">
+            <span className="mg-live-dot" />
             <Sparkles size={13} color="#d97706" />
             <span>Scheduled Maintenance Mode</span>
           </div>
         </div>
 
-        {/* Title & Role Target */}
-        <h2 style={{ fontSize: "21px", fontWeight: 800, margin: "0 0 6px 0", color: "#0f172a", letterSpacing: "-0.02em" }}>
+        {/* Title & Scope */}
+        <h1 className="mg-title">
           {moduleConfig.name || "Module Temporarily Offline"}
-        </h2>
-        <p style={{ fontSize: "12.5px", color: "#64748b", margin: "0 0 22px 0", fontWeight: 500 }}>
-          Role Target: <span style={{ color: "#475569", fontWeight: 700 }}>{moduleConfig.role || "Platform System"}</span>
-        </p>
+        </h1>
 
-        {/* Notice Box */}
-        <div
-          style={{
-            padding: "16px 18px",
-            borderRadius: "14px",
-            background: "#f8fafc",
-            border: "1px solid #e2e8f0",
-            textAlign: "left",
-            marginBottom: "24px",
-            fontSize: "13px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-            <span style={{ fontWeight: 700, color: "#334155", fontSize: "12.5px" }}>Super Admin Notice:</span>
-            <span style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>
-              <Clock size={12} />
-              {moduleConfig.updatedAt || "Active"}
-            </span>
-          </div>
-          <p style={{ margin: 0, color: "#1e293b", lineHeight: 1.5, fontWeight: 500 }}>
-            "{moduleConfig.message || "This section is currently undergoing maintenance by the platform engineering team."}"
-          </p>
+        <div className="mg-scope-row">
+          <span>Target Scope:</span>
+          <span className="mg-scope-strong">
+            {moduleConfig.role || "All Platform Roles"}
+          </span>
         </div>
 
-        {/* Action Controls */}
-        <div style={{ display: "flex", gap: "12px" }}>
-          <Link
-            to="/student"
-            style={{
-              flex: 1,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              padding: "11px 18px",
-              background: "#ffffff",
-              color: "#334155",
-              borderRadius: "10px",
-              fontSize: "13px",
-              fontWeight: 600,
-              textDecoration: "none",
-              border: "1px solid #cbd5e1",
-              transition: "all 0.15s ease",
-              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
-            }}
-          >
-            <ArrowLeft size={15} /> Return Home
+        {/* Notice Card - only displayed if notice message is present */}
+        {moduleConfig.message && (
+          <div className="mg-notice-card">
+            <div className="mg-notice-header">
+              <span className="mg-notice-label">
+                <Info size={14} color="#2563eb" />
+                Notice
+              </span>
+              {moduleConfig.updatedAt && (
+                <span className="mg-notice-time">
+                  <Clock size={12} />
+                  {moduleConfig.updatedAt}
+                </span>
+              )}
+            </div>
+            <p className="mg-notice-text">
+              {moduleConfig.message}
+            </p>
+          </div>
+        )}
+
+        {/* Actions Row */}
+        <div className="mg-actions-row">
+          <Link to={homeRoute} className="mg-btn-home">
+            <ArrowLeft size={16} />
+            <span>Return Home</span>
           </Link>
+
           <a
             href="mailto:support@acadnexus.edu.in"
-            style={{
-              flex: 1,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "7px",
-              padding: "11px 18px",
-              background: "linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%)",
-              color: "#ffffff",
-              borderRadius: "10px",
-              fontSize: "13px",
-              fontWeight: 600,
-              textDecoration: "none",
-              boxShadow: "0 3px 10px rgba(79, 70, 229, 0.25)",
-              transition: "all 0.15s ease",
-            }}
+            className="mg-btn-support"
+            title="Contact technical support"
           >
-            <Headphones size={15} /> Contact Support
+            <Headphones size={16} />
+            <span>Support</span>
           </a>
+        </div>
+
+        {/* Footer Guarantee */}
+        <div className="mg-footer-text">
+          <HelpCircle size={13} />
+          <span>Need immediate access? Please notify your institutional campus administrator.</span>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 CREATE DATABASE IF NOT EXISTS training_portal_db;
 USE training_portal_db;
 
@@ -69,6 +70,7 @@ CREATE TABLE IF NOT EXISTS users (
   name VARCHAR(255) NOT NULL,
   email VARCHAR(255) UNIQUE NOT NULL,
   mobile_number VARCHAR(15) UNIQUE,
+  password_hash VARCHAR(255) NULL,
   role ENUM('super_admin', 'college_admin', 'coordinator', 'mentor', 'student') NOT NULL DEFAULT 'student',
   college_id INT NULL,
   is_active BOOLEAN DEFAULT TRUE,
@@ -239,6 +241,30 @@ CREATE TABLE IF NOT EXISTS attendance_summary (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- 11d. Attendance Scans Table (Stores detailed logs of QR code / barcode / code attendance scans)
+CREATE TABLE IF NOT EXISTS attendance_scans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  batch_id INT NULL,
+  session_id INT NULL,
+  scanned_code VARCHAR(255) NOT NULL,
+  session_date DATE NOT NULL,
+  status ENUM('present', 'late', 'absent', 'rejected') NOT NULL DEFAULT 'present',
+  ip_address VARCHAR(100) NULL,
+  device_info VARCHAR(255) NULL,
+  location_lat DECIMAL(10,8) NULL,
+  location_lng DECIMAL(11,8) NULL,
+  remarks VARCHAR(255) NULL,
+  scanned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+  FOREIGN KEY (session_id) REFERENCES attendance_sessions(id) ON DELETE SET NULL,
+  INDEX idx_user_scan (user_id),
+  INDEX idx_session_date (session_date),
+  INDEX idx_scanned_code (scanned_code)
+);
+
 
 -- 12. Practice Problems / Coding Tasks Table
 CREATE TABLE IF NOT EXISTS practice_problems (
@@ -340,4 +366,15 @@ CREATE TABLE IF NOT EXISTS skill_gap_analysis (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   UNIQUE KEY unique_user_skill_gap (user_id)
+);
+
+-- 19. Feature Switches & Maintenance Controls Table
+CREATE TABLE IF NOT EXISTS feature_switches (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  feature_key VARCHAR(100) NOT NULL UNIQUE,
+  feature_name VARCHAR(255) NOT NULL,
+  category VARCHAR(100) DEFAULT 'General',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  notice_message TEXT NULL,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );

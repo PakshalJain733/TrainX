@@ -2,13 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import QRCode from "qrcode";
 import * as XLSX from "xlsx";
-import {
-  CheckCircle2, XCircle, QrCode, RefreshCw,
-  Copy, Check, Calendar, CalendarCheck, Users, ShieldCheck,
-  Download, Clock, Info, Sparkles, X, History,
-  Eye, FileText, ArrowLeft, Zap, FileSpreadsheet,
-  ChevronDown
-} from "lucide-react";
+import { CheckCircle2, XCircle, QrCode, RefreshCw, Copy, Check, Calendar, CalendarCheck, Users, ShieldCheck, Download, Clock, Info, Sparkles, X, History, Eye, FileText, ArrowLeft, Zap, FileSpreadsheet, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_Attendance.css";
@@ -90,6 +84,7 @@ export default function AdminAttendance() {
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState({});
   const [qrScannedMap, setQrScannedMap] = useState({});
+  const [rosterFilter, setRosterFilter] = useState("all"); // "all" | "qr_scanned" | "present" | "absent"
   const [saved, setSaved] = useState(false);
   const [lastScannedName, setLastScannedName] = useState("");
 
@@ -102,7 +97,7 @@ export default function AdminAttendance() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [qrCodePayload, setQrCodePayload] = useState("");
   const [copied, setCopied] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(30); // 30 secs validity
+  const [timeLeft, setTimeLeft] = useState(5); // 5 secs validity
   const [autoRefreshCount, setAutoRefreshCount] = useState(0); // Max 6 auto refreshes
   const canvasRef = useRef(null);
   const isDirtyRef = useRef(false);
@@ -170,21 +165,8 @@ export default function AdminAttendance() {
           if (res && res.data && Array.isArray(res.data)) {
             fetchedStudents = res.data.map((s, idx) => ({
               id: s.id || s.user_id || `S-${idx + 1}`,
-              rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
-              name: s.name || s.full_name || "Student User",
-              status: false
-            }));
-          }
-        } catch (_) {}
-      }
-
-      // If batch-specific fetch returns empty, fallback to fetching system students
-      if (fetchedStudents.length === 0) {
-        try {
-          const res = await apiFetch('/students');
-          if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-            fetchedStudents = res.data.map((s, idx) => ({
-              id: s.id || s.user_id || `S-${idx + 1}`,
+              userId: s.user_id || s.id,
+              studentId: s.id,
               rollNo: s.roll_number || s.rollNo || `STU-${String(idx + 1).padStart(2, '0')}`,
               name: s.name || s.full_name || "Student User",
               status: false
@@ -205,19 +187,21 @@ export default function AdminAttendance() {
 
         fetchedStudents.forEach((s) => {
           // Check if student has marked attendance present on DB (by ID or student name)
-          const record = dbList.find(d => 
-            Number(d.id || d.student_id || d.user_id) === Number(s.id) ||
-            (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim())
-          );
+          const record = dbList.find(d => {
+            const dId = Number(d.id || d.student_id || d.user_id || d.studentId || d.userId);
+            const matchesId = dId && (dId === Number(s.id) || dId === Number(s.userId) || dId === Number(s.studentId));
+            const matchesName = (d.student_name && s.name && d.student_name.toLowerCase().trim() === s.name.toLowerCase().trim()) ||
+                                (d.studentName && s.name && d.studentName.toLowerCase().trim() === s.name.toLowerCase().trim());
+            return matchesId || matchesName;
+          });
           const isPresentInDb = record ? (
-            record.status?.toLowerCase() === 'present' || 
-            Number(record.attendance_percentage || 0) > 0 || 
-            Number(record.present_count || 0) > 0
+            String(record.status || '').toLowerCase() === 'present' || 
+            Number(record.present || record.present_count || 0) > 0 ||
+            Number(record.attendance_percentage || 0) > 0
           ) : false;
           attendanceMap[s.id] = isPresentInDb;
           if (isPresentInDb) scannedMap[s.id] = true;
         });
-
 
         setAttendance(attendanceMap);
         setQrScannedMap(scannedMap);
@@ -278,7 +262,7 @@ export default function AdminAttendance() {
     const randomSalt = Math.random().toString(36).substring(2, 7).toUpperCase();
     const payload = `${selectedBatchCode || "JAVA-QRVL"}:${randomSalt}`;
     setQrCodePayload(payload);
-    setTimeLeft(10);
+    setTimeLeft(5);
   }, [selectedBatchCode]);
 
   // Manual regenerate button resets auto-refresh counter
@@ -308,7 +292,7 @@ export default function AdminAttendance() {
     }
   }, [qrModalOpen, qrCodePayload]);
 
-  // QR Validity Timer & 18 Auto-Refresh Logic (10s per cycle)
+  // QR Validity Timer & 18 Auto-Refresh Logic (5s per cycle)
   useEffect(() => {
     let timer = null;
     if (qrModalOpen) {
@@ -362,18 +346,33 @@ export default function AdminAttendance() {
   };
 
   const presentCount = students.filter(s => attendance[s.id]).length;
+  const qrScannedCount = students.filter(s => qrScannedMap[s.id]).length;
   const totalCount = students.length;
   const ratePct = totalCount ? Math.round((presentCount / totalCount) * 100) : 0;
   const currentBatchObj = batches.find(b => b.code === selectedBatchCode) || batches[0];
 
+  const filteredStudents = students.filter(s => {
+    if (rosterFilter === "qr_scanned") return Boolean(qrScannedMap[s.id]);
+    if (rosterFilter === "present") return Boolean(attendance[s.id]);
+    if (rosterFilter === "absent") return !attendance[s.id];
+    return true;
+  });
+
   const handleSave = async () => {
     try {
+      const payloadAttendance = {};
+      students.forEach(s => {
+        const isPresent = Boolean(attendance[s.id]);
+        const targetKey = s.userId || s.studentId || s.id;
+        payloadAttendance[targetKey] = isPresent;
+      });
+
       await apiFetch("/attendance/mark", {
         method: "POST",
         body: JSON.stringify({
           batch_id: currentBatchObj ? currentBatchObj.id : 1,
           date: sessionDate,
-          attendance
+          attendance: payloadAttendance
         })
       });
     } catch (e) {}
@@ -459,7 +458,7 @@ export default function AdminAttendance() {
                   }}>
                     <XCircle size={36} color="#ef4444" />
                     <span style={{ fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>QR Code Expired</span>
-                    <span style={{ fontSize: "12px", color: "#64748b" }}>10 second session window reached</span>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>5 second session window reached</span>
                     <button className="admin-qr-regen-btn" onClick={handleManualRegenerate} style={{ marginTop: "4px", background: "#2563eb", color: "#ffffff", border: "none" }}>
                       <RefreshCw size={14} /> Regenerate QR
                     </button>
@@ -472,10 +471,10 @@ export default function AdminAttendance() {
 
               {/* Timer Countdown */}
               <div className="admin-qr-details">
-                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 10 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 10 ? "1px solid #fecaca" : "none" }}>
-                  <Clock size={16} className={timeLeft <= 10 ? "text-red-600 animate-pulse" : "text-blue-600"} />
-                  <span>Valid for: <strong style={{ color: timeLeft <= 10 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
-                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (10-Sec Limit)</span>}
+                <div className="admin-qr-timer-box" style={{ background: timeLeft <= 3 ? "#fef2f2" : "#f1f5f9", border: timeLeft <= 3 ? "1px solid #fecaca" : "none" }}>
+                  <Clock size={16} className={timeLeft <= 3 ? "text-red-600 animate-pulse" : "text-blue-600"} />
+                  <span>Valid for: <strong style={{ color: timeLeft <= 3 ? "#dc2626" : "#0f172a" }}>{formatTimer(timeLeft)}</strong></span>
+                  {timeLeft === 0 && <span className="admin-qr-expired-badge">Expired (5-Sec Limit)</span>}
                 </div>
               </div>
             </div>
@@ -630,8 +629,8 @@ export default function AdminAttendance() {
             </div>
 
             <div className="admin-qr-modal-footer">
-              <span style={{ fontSize: "12px", color: "#64748b", display: "flex", alignItems: "center", gap: "4px" }}>
-                <ShieldCheck size={14} className="text-emerald-600" /> Database Verified
+              <span className="admin-qr-verified-text">
+                <ShieldCheck size={14} className="admin-qr-verified-icon" /> Database Verified
               </span>
               <div style={{ display: "flex", gap: "8px" }}>
                 <button
@@ -718,16 +717,20 @@ export default function AdminAttendance() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="attendance-stats-row">
-        <div className="attendance-stat-card">
+      <div className="attendance-stats-row att-stats-grid-5">
+        <div className={`attendance-stat-card ${rosterFilter === 'all' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('all')} style={{ cursor: 'pointer' }}>
           <span className="att-stat-val">{totalCount}</span>
           <span className="att-stat-label">Total Enrolled</span>
         </div>
-        <div className="attendance-stat-card att-present">
+        <div className={`attendance-stat-card att-qr-card ${rosterFilter === 'qr_scanned' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('qr_scanned')} style={{ cursor: 'pointer' }}>
+          <span className="att-stat-val">{qrScannedCount}</span>
+          <span className="att-stat-label">QR Scanned</span>
+        </div>
+        <div className={`attendance-stat-card att-present ${rosterFilter === 'present' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('present')} style={{ cursor: 'pointer' }}>
           <span className="att-stat-val">{presentCount}</span>
           <span className="att-stat-label">Present Today</span>
         </div>
-        <div className="attendance-stat-card att-absent">
+        <div className={`attendance-stat-card att-absent ${rosterFilter === 'absent' ? 'att-stat-active' : ''}`} onClick={() => setRosterFilter('absent')} style={{ cursor: 'pointer' }}>
           <span className="att-stat-val">{totalCount - presentCount}</span>
           <span className="att-stat-label">Absent</span>
         </div>
@@ -740,14 +743,16 @@ export default function AdminAttendance() {
       {/* Student Roster Table Card */}
       <Card className="attendance-table-card">
         <CardHeader className="att-table-header">
+          {/* Subtitle */}
           <div>
             <CardTitle className="att-card-title">
               Student Attendance Roster — {currentBatchObj ? currentBatchObj.name : selectedBatchCode}
             </CardTitle>
             <p className="att-card-subtitle">
-              Session Date: {sessionDate}
+              Session Date: {sessionDate} · Showing All Students ({students.length})
             </p>
           </div>
+
           <div className="att-bulk-actions">
             <button className="att-mark-btn att-mark-all" onClick={() => markAll(true)} disabled={students.length === 0}>
               <CheckCircle2 size={14} /> Mark All Present
@@ -770,14 +775,27 @@ export default function AdminAttendance() {
                 </tr>
               </thead>
               <tbody>
-                {students.length === 0 ? (
+                {filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan="5" className="admin-table-empty-cell">
-                      No students enrolled in this batch.
+                      {rosterFilter === 'qr_scanned' ? (
+                        <div style={{ padding: "24px 12px", textAlign: "center" }}>
+                          <div style={{ width: "44px", height: "44px", borderRadius: "50%", background: "#eff6ff", color: "#2563eb", display: "inline-flex", alignItems: "center", justifyContent: "center", marginBottom: "8px" }}>
+                            <QrCode size={22} />
+                          </div>
+                          <p style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: "700", color: "#0f172a" }}>No Students Have Scanned QR Code Yet</p>
+                          <p style={{ margin: "0 0 12px", fontSize: "12.5px", color: "#64748b" }}>Students who scan the session QR code with their mobile phone will appear here in real time.</p>
+                          <button className="admin-create-qr-btn" onClick={openQrModal} style={{ margin: "0 auto", display: "inline-flex" }}>
+                            <QrCode size={15} /> Show Live QR Code
+                          </button>
+                        </div>
+                      ) : (
+                        "No students found matching the selected filter."
+                      )}
                     </td>
                   </tr>
                 ) : (
-                  students.map(s => (
+                  filteredStudents.map(s => (
                     <tr key={s.id} className={attendance[s.id] ? "att-row-present" : "att-row-absent"}>
                       <td className="att-roll">{s.rollNo}</td>
                       <td className="att-name">

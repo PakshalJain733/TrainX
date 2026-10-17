@@ -5,25 +5,8 @@ import EmptyState from '../../../components/ui/EmptyState';
 import { collegeAPI, departmentAPI } from '../../../services/api';
 import { apiFetch } from '../../../utils/api';
 import { EVENTS } from '../../../utils/sharedStore';
-import {
-  Plus,
-  Search,
-  Filter,
-  Building2,
-  MapPin,
-  Mail,
-  Users,
-  X,
-  ArrowLeft,
-  GraduationCap,
-  MoreVertical,
-  Edit2,
-  Trash2,
-  Eye,
-  ShieldCheck,
-  ChevronDown,
-  Check
-} from 'lucide-react';
+import { Plus, Search, Filter, Building2, MapPin, Mail, Users, X, ArrowLeft, GraduationCap, MoreVertical, Edit2, Trash2, Eye, ShieldCheck, ChevronDown, Check, AlertCircle } from "lucide-react";
+import { validateCollegeForm } from '../../../utils/collegeValidation.js';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/SA_Colleges.css";
 
@@ -33,22 +16,20 @@ function CollegeSelect(props) {
 }
 
 function StatusBadge({ status }) {
-  let badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+  let modifier = '';
   if (status === 'Active' || status === 'Verified' || status === 'Available') {
-    badgeStyles = 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  } else if (status === 'Inactive' || status === 'Disabled') {
-    badgeStyles = 'bg-slate-100 text-slate-700 border-slate-200';
+    modifier = 'badge-active';
   } else if (status === 'High' || status === 'In Progress') {
-    badgeStyles = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    modifier = 'badge-progress';
   } else if (status === 'Busy' || status === 'Medium') {
-    badgeStyles = 'bg-orange-50 text-orange-700 border-orange-200';
+    modifier = 'badge-warning';
   } else if (status === 'Near Completion') {
-    badgeStyles = 'bg-purple-50 text-purple-700 border-purple-200';
+    modifier = 'badge-purple';
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeStyles}`}>
-      <span className="w-1.5 h-1.5 rounded-full bg-current mr-1.5 opacity-75"></span>
+    <span className={`sa-college-badge ${modifier}`}>
+      <span className="sa-college-badge-dot"></span>
       {status}
     </span>
   );
@@ -201,6 +182,8 @@ export default function Colleges() {
   const [viewCollegeModal, setViewCollegeModal] = useState(null);
   const [editCollege, setEditCollege] = useState(null);
   const [deleteCollege, setDeleteCollege] = useState(null);
+  const [formErrors, setFormErrors] = useState({});
+  const [editErrors, setEditErrors] = useState({});
 
   const handleTrigger2FAForCollegeAdmin = async (college) => {
     const adminEmail = college.adminEmail || college.contact_email || college.email;
@@ -211,8 +194,9 @@ export default function Colleges() {
     try {
       const usersRes = await apiFetch('/admin/users');
       let adminUser = null;
-      if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
-        adminUser = usersRes.data.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
+      const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
+      if (userList.length > 0) {
+        adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
       }
       if (!adminUser) {
         alert(`Could not find active user account for admin email '${adminEmail}'.`);
@@ -221,14 +205,24 @@ export default function Colleges() {
       const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
         method: 'POST',
       });
-      if (res && res.success) {
+      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
         alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminEmail}. 2FA is now required on their next login.`);
       } else {
-        alert(res?.message || 'Failed to trigger two-step verification.');
+        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
       }
     } catch (err) {
       console.error('Trigger 2FA error:', err);
-      alert('Failed to trigger two-step verification.');
+      alert(err?.message || 'Failed to trigger two-step verification.');
+    }
+  };
+
+  const handleDeleteCollege = async (id) => {
+    try {
+      await collegeAPI.deleteCollege(id);
+      setColleges((prev) => prev.filter((c) => c.id !== id));
+    } catch (err) {
+      console.error("Error removing college:", err);
+      alert(err.message || "Failed to remove college.");
     }
   };
 
@@ -275,17 +269,23 @@ export default function Colleges() {
 
   const handleAddCollege = async (e) => {
     e.preventDefault();
-    if (!collegeForm.name || !collegeForm.code || !collegeForm.location) return;
+    const validation = validateCollegeForm(collegeForm);
+    if (!validation.isValid) {
+      setFormErrors(validation.errors);
+      return;
+    }
+    setFormErrors({});
+
     try {
       const created = await collegeAPI.createCollege({
-        name: collegeForm.name,
-        code: collegeForm.code,
-        location: collegeForm.location,
-        city: collegeForm.location,
-        contactEmail: collegeForm.adminEmail,
-        adminName: collegeForm.adminName,
-        adminEmail: collegeForm.adminEmail,
-        domain: collegeForm.domain,
+        name: collegeForm.name.trim(),
+        code: collegeForm.code.trim().toUpperCase(),
+        location: collegeForm.location.trim(),
+        city: collegeForm.location.trim(),
+        contactEmail: collegeForm.adminEmail.trim().toLowerCase(),
+        adminName: collegeForm.adminName.trim(),
+        adminEmail: collegeForm.adminEmail.trim().toLowerCase(),
+        domain: collegeForm.domain.trim().toLowerCase(),
       });
       if (created) {
         setColleges([created, ...colleges.filter(c => c.id !== created.id)]);
@@ -298,7 +298,7 @@ export default function Colleges() {
       setCollegeForm({ name: '', code: '', location: '', adminName: '', adminEmail: '', domain: '', departmentsCount: 0, studentsCount: 0 });
     } catch (err) {
       console.error("Failed to save college to backend:", err);
-      alert(err.message || "Failed to save college. The college code might already exist. Please enter a unique college code.");
+      setFormErrors(prev => ({ ...prev, _general: err.message || "Failed to save college. The college code might already exist. Please enter a unique college code." }));
       collegeAPI.getColleges().then(data => setColleges(Array.isArray(data) ? data : colleges)).catch(() => {});
     }
   };
@@ -333,43 +333,29 @@ export default function Colleges() {
     setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
   };
 
-  const handleDeleteCollege = async (id) => {
-    try {
-      await collegeAPI.deleteCollege(id);
-    } catch (err) {
-      console.error("Failed to delete college from API:", err);
-    }
-    setColleges(colleges.filter((c) => c.id !== id));
-  };
-
   // If collegeId URL param is present, render College Departments view
   if (collegeId) {
     return (
-      <div className="space-y-6 text-slate-800">
+      <div className="college-depts-container">
         <div className="sa-page-header">
           <div>
-            <div className="flex items-center gap-3 mb-1">
+            <div className="colleges-header-title-wrap mb-1">
               <button
                 onClick={() => navigate('/super-admin/colleges')}
-                className="p-1.5 hover:bg-slate-100 text-slate-500 rounded-lg transition cursor-pointer"
+                className="colleges-back-btn"
                 title="Back to Colleges Directory"
               >
                 <ArrowLeft className="w-5 h-5" />
               </button>
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2 m-0">
-                <GraduationCap className="w-5 h-5 text-indigo-600" />
+              <h2 className="colleges-header-title colleges-header-title-wrap m-0">
+                <GraduationCap className="colleges-header-cap-icon" />
                 <span>{selectedCollege ? selectedCollege.name : "College Departments"}</span>
               </h2>
             </div>
-            <p className="text-xs text-slate-500 ml-9">
+            <p className="colleges-depts-subtitle">
               Managing departments inside {selectedCollege ? selectedCollege.name : "selected college"}
             </p>
           </div>
-
-          <button className="sa-btn-primary ml-auto" onClick={() => setIsAddDeptModalOpen(true)}>
-            <Plus className="w-4 h-4" />
-            <span>Add Department</span>
-          </button>
         </div>
 
         <div className="sa-search-card">
@@ -382,18 +368,28 @@ export default function Colleges() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="sa-search-input"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                className="search-clear-btn"
+                onClick={() => setSearchQuery("")}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="colleges-depts-grid">
           {filteredDepts.map((dept) => (
-            <div key={dept.id} className="sa-widget-card hover:border-indigo-300 transition college-dept-widget-card">
-              <div className="flex items-start justify-between">
+            <div key={dept.id} className="sa-widget-card college-dept-widget-card">
+              <div className="colleges-dept-card-header">
                 <div>
-                  <span className="inline-block px-2 py-0.5 text-[10px] font-bold rounded bg-indigo-50 text-indigo-600 mb-1 border border-indigo-100">
+                  <span className="college-dept-code-badge">
                     {dept.code}
                   </span>
-                  <h3 className="font-bold text-slate-900 text-base">{dept.name}</h3>
+                  <h3 className="college-dept-card-title">{dept.name}</h3>
                 </div>
                 <ActionDropdown
                   onView={() => alert(`View ${dept.name}`)}
@@ -401,103 +397,20 @@ export default function Colleges() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-100 text-center">
-                <div className="p-2 rounded-xl bg-slate-50">
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase">Active Students</p>
-                  <p className="font-bold text-slate-900 text-base mt-0.5">{dept.activeStudents || 120}</p>
+              <div className="college-dept-stats-row">
+                <div className="college-dept-stat-box">
+                  <p className="college-dept-stat-label">Active Students</p>
+                  <p className="college-dept-stat-num">{dept.activeStudents || 120}</p>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-50">
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase">Batches</p>
-                  <p className="font-bold text-slate-900 text-base mt-0.5">{dept.batchesCount || 4}</p>
+                <div className="college-dept-stat-box">
+                  <p className="college-dept-stat-label">Batches</p>
+                  <p className="college-dept-stat-num">{dept.batchesCount || 4}</p>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Add Department Modal */}
-        {isAddDeptModalOpen && createPortal(
-          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddDeptModalOpen(false); }}>
-            <div className="modal-dialog college-modal-540">
-              <div className="modal-header">
-                <div className="modal-header-left">
-                  <div className="modal-header-icon-wrap modal-header-icon--indigo">
-                    <GraduationCap size={20} />
-                  </div>
-                  <div>
-                    <h2 className="modal-title">Add New Department</h2>
-                    <p className="modal-subtitle">Create an academic department for this college.</p>
-                  </div>
-                </div>
-                <button className="modal-close-btn" onClick={() => setIsAddDeptModalOpen(false)}>
-                  <X size={18} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddDepartment}>
-                <div className="modal-body">
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>Department Name *</label>
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin"
-                        placeholder="e.g. Computer Science & Engineering"
-                        value={deptForm.name}
-                        onChange={(e) => setDeptForm({ ...deptForm, name: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label>Department Code *</label>
-                      <input
-                        type="text"
-                        required
-                        className="form-input-admin"
-                        placeholder="e.g. CSE"
-                        value={deptForm.code}
-                        onChange={(e) => setDeptForm({ ...deptForm, code: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="form-row-2">
-                    <div className="form-group-admin">
-                      <label>HOD Name</label>
-                      <input
-                        type="text"
-                        className="form-input-admin"
-                        placeholder="Dr. Arvind Kulkarni"
-                        value={deptForm.hodName}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
-                      />
-                    </div>
-                    <div className="form-group-admin">
-                      <label>HOD Email</label>
-                      <input
-                        type="email"
-                        className="form-input-admin"
-                        placeholder="hod.cse@college.edu.in"
-                        value={deptForm.hodEmail}
-                        onChange={(e) => setDeptForm({ ...deptForm, hodEmail: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="modal-footer">
-                  <button type="button" className="btn-modal-cancel" onClick={() => setIsAddDeptModalOpen(false)}>
-                    Cancel
-                  </button>
-                  <button type="submit" className="btn-modal-submit">
-                    Save Department
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>,
-          document.body
-        )}
       </div>
     );
   }
@@ -508,13 +421,13 @@ export default function Colleges() {
       {/* Header & Main Action */}
       <div className="sa-page-header">
         <div>
-          <div className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <h2 className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
             <Building2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
-            <span className="colleges-header-title">Colleges Directory</span>
-          </div>
+            <span className="colleges-header-title" style={{ fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>Colleges Directory</span>
+          </h2>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>
         </div>
-        <button onClick={() => setIsAddCollegeModalOpen(true)} className="sa-btn-primary">
+        <button onClick={() => { setFormErrors({}); setIsAddCollegeModalOpen(true); }} className="sa-btn-primary">
           <Plus size={16} />
           <span>Add New College</span>
         </button>
@@ -531,6 +444,16 @@ export default function Colleges() {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="sa-search-input"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearchQuery("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <CollegeSelect
@@ -610,7 +533,7 @@ export default function Colleges() {
                     <td className="colleges-td-right">
                       <ActionDropdown
                         onView={() => navigate(`/super-admin/colleges/${college.id}`)}
-                        onEdit={() => setEditCollege(college)}
+                        onEdit={() => { setEditErrors({}); setEditCollege(college); }}
                         onDelete={() => setDeleteCollege(college)}
                         customActions={[
                           {
@@ -648,30 +571,55 @@ export default function Colleges() {
               </button>
             </div>
 
-            <form onSubmit={handleAddCollege}>
+            <form onSubmit={handleAddCollege} noValidate>
               <div className="modal-body">
+                {formErrors._general && (
+                  <div className="modal-form-alert-banner">
+                    <AlertCircle size={16} />
+                    <span>{formErrors._general}</span>
+                  </div>
+                )}
+
                 <div className="form-row-2">
                   <div className="form-group-admin">
                     <label>College Full Name *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
-                      placeholder="Vasantdada Patil Pratishthan"
+                      className={`form-input-admin ${formErrors.name ? 'form-input-error' : ''}`}
+                      placeholder="Apex Institute of Technology"
                       value={collegeForm.name}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, name: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, name: e.target.value });
+                        if (formErrors.name) setFormErrors({ ...formErrors, name: null });
+                      }}
                     />
+                    {formErrors.name && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.name}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
                     <label>Short Code *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
-                      placeholder="PVPPCOE"
+                      className={`form-input-admin ${formErrors.code ? 'form-input-error' : ''}`}
+                      placeholder="AIT-2026"
                       value={collegeForm.code}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, code: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, code: e.target.value.toUpperCase() });
+                        if (formErrors.code) setFormErrors({ ...formErrors, code: null });
+                      }}
                     />
+                    {formErrors.code && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.code}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -681,52 +629,96 @@ export default function Colleges() {
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
-                      placeholder="Sion, Mumbai"
+                      className={`form-input-admin ${formErrors.location ? 'form-input-error' : ''}`}
+                      placeholder="Mumbai Campus"
                       value={collegeForm.location}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, location: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, location: e.target.value });
+                        if (formErrors.location) setFormErrors({ ...formErrors, location: null });
+                      }}
                     />
+                    {formErrors.location && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.location}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Email Domain</label>
+                    <label>Email Domain *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${formErrors.domain ? 'form-input-error' : ''}`}
                       placeholder="pvppcoe.ac.in"
                       value={collegeForm.domain}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, domain: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, domain: e.target.value });
+                        if (formErrors.domain) setFormErrors({ ...formErrors, domain: null });
+                      }}
                     />
+                    {formErrors.domain && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.domain}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>College Administrator Name</label>
+                    <label>College Administrator Name *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${formErrors.adminName ? 'form-input-error' : ''}`}
                       placeholder="Dr. Verma"
                       value={collegeForm.adminName}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, adminName: e.target.value })}
+                      onChange={(e) => {
+                        setCollegeForm({ ...collegeForm, adminName: e.target.value });
+                        if (formErrors.adminName) setFormErrors({ ...formErrors, adminName: null });
+                      }}
                     />
+                    {formErrors.adminName && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.adminName}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Admin Email</label>
+                    <label>Admin Email *</label>
                     <input
                       type="email"
-                      className="form-input-admin"
-                      placeholder="admin@pvppcoe.ac.in"
+                      required
+                      className={`form-input-admin ${formErrors.adminEmail ? 'form-input-error' : ''}`}
+                      placeholder="admin@institution.edu"
                       value={collegeForm.adminEmail}
-                      onChange={(e) => setCollegeForm({ ...collegeForm, adminEmail: e.target.value })}
+                      onChange={(e) => {
+                        const email = e.target.value;
+                        let autoDomain = collegeForm.domain;
+                        if (!autoDomain && email.includes('@')) {
+                          const parts = email.split('@');
+                          if (parts[1] && parts[1].includes('.')) {
+                            autoDomain = parts[1].toLowerCase();
+                          }
+                        }
+                        setCollegeForm({ ...collegeForm, adminEmail: email, domain: autoDomain });
+                        if (formErrors.adminEmail) setFormErrors({ ...formErrors, adminEmail: null });
+                      }}
                     />
+                    {formErrors.adminEmail && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {formErrors.adminEmail}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setIsAddCollegeModalOpen(false)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit">
                   Register Institution
                 </button>
@@ -758,47 +750,84 @@ export default function Colleges() {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
+              const validation = validateCollegeForm({
+                name: editCollege.name,
+                code: editCollege.code,
+                location: editCollege.location,
+                domain: editCollege.domain,
+                adminName: editCollege.adminName,
+                adminEmail: editCollege.adminEmail,
+              });
+              if (!validation.isValid) {
+                setEditErrors(validation.errors);
+                return;
+              }
+              setEditErrors({});
               try {
                 const updated = await collegeAPI.updateCollege(editCollege.id, {
-                  name: editCollege.name,
-                  code: editCollege.code,
-                  location: editCollege.location,
-                  city: editCollege.location,
+                  name: editCollege.name.trim(),
+                  code: editCollege.code.trim().toUpperCase(),
+                  location: editCollege.location.trim(),
+                  city: editCollege.location.trim(),
                   status: editCollege.status,
-                  contactEmail: editCollege.adminEmail,
-                  adminName: editCollege.adminName,
-                  domain: editCollege.domain,
+                  contactEmail: editCollege.adminEmail.trim().toLowerCase(),
+                  adminName: editCollege.adminName.trim(),
+                  domain: editCollege.domain ? editCollege.domain.trim().toLowerCase() : '',
                 });
                 if (updated) {
                   setColleges(colleges.map(c => c.id === editCollege.id ? { ...c, ...updated, adminEmail: updated.contact_email || editCollege.adminEmail, domain: updated.domain || editCollege.domain } : c));
                 }
+                setEditCollege(null);
               } catch (err) {
                 console.error("Failed to update college:", err);
-                alert(err.message || "Failed to update college details.");
+                setEditErrors(prev => ({ ...prev, _general: err.message || "Failed to update college details." }));
               }
-              setEditCollege(null);
-            }}>
+            }} noValidate>
               <div className="modal-body">
+                {editErrors._general && (
+                  <div className="modal-form-alert-banner">
+                    <AlertCircle size={16} />
+                    <span>{editErrors._general}</span>
+                  </div>
+                )}
                 <div className="form-row-2">
                   <div className="form-group-admin">
                     <label>College Name *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${editErrors.name ? 'form-input-error' : ''}`}
                       value={editCollege.name}
-                      onChange={(e) => setEditCollege({ ...editCollege, name: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, name: e.target.value });
+                        if (editErrors.name) setEditErrors({ ...editErrors, name: null });
+                      }}
                     />
+                    {editErrors.name && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.name}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
                     <label>Short Code *</label>
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${editErrors.code ? 'form-input-error' : ''}`}
                       value={editCollege.code || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, code: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, code: e.target.value.toUpperCase() });
+                        if (editErrors.code) setEditErrors({ ...editErrors, code: null });
+                      }}
                     />
+                    {editErrors.code && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.code}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -808,41 +837,80 @@ export default function Colleges() {
                     <input
                       type="text"
                       required
-                      className="form-input-admin"
+                      className={`form-input-admin ${editErrors.location ? 'form-input-error' : ''}`}
                       value={editCollege.location || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, location: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, location: e.target.value });
+                        if (editErrors.location) setEditErrors({ ...editErrors, location: null });
+                      }}
                     />
+                    {editErrors.location && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.location}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Email Domain</label>
+                    <label>Email Domain *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${editErrors.domain ? 'form-input-error' : ''}`}
                       placeholder="pvppcoe.ac.in"
                       value={editCollege.domain || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, domain: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, domain: e.target.value });
+                        if (editErrors.domain) setEditErrors({ ...editErrors, domain: null });
+                      }}
                     />
+                    {editErrors.domain && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.domain}
+                      </span>
+                    )}
                   </div>
                 </div>
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>Administrator Name</label>
+                    <label>College Administrator Name *</label>
                     <input
                       type="text"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${editErrors.adminName ? 'form-input-error' : ''}`}
                       value={editCollege.adminName || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, adminName: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, adminName: e.target.value });
+                        if (editErrors.adminName) setEditErrors({ ...editErrors, adminName: null });
+                      }}
                     />
+                    {editErrors.adminName && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.adminName}
+                      </span>
+                    )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Admin Email</label>
+                    <label>Admin Email *</label>
                     <input
                       type="email"
-                      className="form-input-admin"
+                      required
+                      className={`form-input-admin ${editErrors.adminEmail ? 'form-input-error' : ''}`}
                       value={editCollege.adminEmail || ''}
-                      onChange={(e) => setEditCollege({ ...editCollege, adminEmail: e.target.value })}
+                      onChange={(e) => {
+                        setEditCollege({ ...editCollege, adminEmail: e.target.value });
+                        if (editErrors.adminEmail) setEditErrors({ ...editErrors, adminEmail: null });
+                      }}
                     />
+                    {editErrors.adminEmail && (
+                      <span className="form-field-error-msg">
+                        <AlertCircle size={12} />
+                        {editErrors.adminEmail}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -860,9 +928,6 @@ export default function Colleges() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setEditCollege(null)}>
-                  Cancel
-                </button>
                 <button type="submit" className="btn-modal-submit">
                   Save Changes
                 </button>
@@ -893,15 +958,12 @@ export default function Colleges() {
             </div>
 
             <div className="modal-body">
-              <p className="text-sm text-slate-600 m-0">
-                Are you sure you want to remove <strong className="text-slate-900">{deleteCollege.name}</strong>? All associated departments, batches, and student records will be archived.
+              <p className="colleges-delete-confirm-text">
+                Are you sure you want to remove <strong className="colleges-delete-confirm-name">{deleteCollege.name}</strong>? All associated departments, batches, and student records will be archived.
               </p>
             </div>
 
             <div className="modal-footer">
-              <button type="button" className="btn-modal-cancel" onClick={() => setDeleteCollege(null)}>
-                Cancel
-              </button>
               <button
                 type="button"
                 className="manageusers-btn-reject college-btn-delete-confirm"

@@ -1,22 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Bell,
-  CheckCheck,
-  Sparkles,
-  Award,
-  Bot,
-  Terminal,
-  CalendarCheck,
-  Clock,
-  Trash2,
-  Filter,
-  ExternalLink,
-  Info,
-  CheckCircle2,
-} from "lucide-react";
+import { Bell, CheckCheck, Sparkles, Award, Bot, Terminal, CalendarCheck, Clock, Trash2, Filter, ExternalLink, Info, CheckCircle2 } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import { getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
+import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
 import "../Styles/MN_Notifications.css"
 const defaultNotifications = [];
 
@@ -116,7 +103,8 @@ export default function MentorNotifications() {
             MENTOR ACTIVITY LOG & ALERTS
           </span>
           <h2 className="mn-notif-header-title">
-            Mentor Notifications
+            <Bell size={22} className="ui-section-title-icon" />
+            <span>Mentor Notifications</span>
           </h2>
           <p className="mn-notif-header-subtitle">
             Stay updated with batch progress, evaluation requests, student submissions, and institutional announcements.
@@ -151,6 +139,8 @@ export default function MentorNotifications() {
           );
         })}
       </div>
+
+      <DesktopNotificationToggle />
 
       {/* Notifications List Card */}
       <div className="mn-notif-list-container">

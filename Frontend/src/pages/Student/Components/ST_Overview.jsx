@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame,
-  Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight,
-  Plus, X, KeyRound, Loader2, UserCog, GraduationCap, Award, BadgeCheck,
-  Activity, Layers, Zap
-} from "lucide-react";
+import { CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame, Users, CalendarDays, ChevronRight, Sparkles, Info, BookOpen, UserCheck, ArrowRight, Plus, X, KeyRound, Loader2, UserCog, GraduationCap, Award, BadgeCheck, Activity, Layers, Zap } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS } from "../../../utils/sharedStore";
+import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import "../Styles/ST_Overview.css";
 
 const API_BASE = getApiBaseUrl();
@@ -27,7 +23,7 @@ function getAuthHeaders() {
 }
 
 const getInitials = (name) => {
-  if (!name || name.trim().length === 0) return "?";
+  if (!name || typeof name !== "string" || name.trim().length === 0) return "?";
   const parts = name.trim().split(" ");
   if (parts.length >= 2) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
@@ -39,7 +35,11 @@ const getStoredUserName = () => {
   try {
     const u = JSON.parse(sessionStorage.getItem("user") || "{}");
     if (!u) return "Student";
-    return u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
+    return (typeof u.name === "string" && u.name) ||
+      (typeof u.fullName === "string" && u.fullName) ||
+      (typeof u.full_name === "string" && u.full_name) ||
+      (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
+      "Student";
   } catch { return "Student"; }
 };
 
@@ -72,6 +72,7 @@ const defaultDashboardData = {
 };
 
 export default function Overview() {
+  const { isModuleActive } = useSystemMaintenance();
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
   const [myBatchesCount, setMyBatchesCount] = useState(0);
@@ -114,11 +115,15 @@ export default function Overview() {
           const u = res.data;
           const student = u.studentProfile || {};
 
-          let resolvedName = u.name || u.fullName || u.full_name || u.email?.split("@")[0] || "Student";
-          const dept = student.department || u.department || "";
-          const sem = student.semester || u.semester || "";
+          let resolvedName = (typeof u.name === "string" && u.name) ||
+            (typeof u.fullName === "string" && u.fullName) ||
+            (typeof u.full_name === "string" && u.full_name) ||
+            (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
+            "Student";
+          const dept = student.department || u.department || u.dept || "";
+          const sem = student.semester || u.semester || u.sem || u.current_semester || "";
           const cgpa = student.cgpa || u.cgpa || u.aggregate_cgpa || "";
-          const rollNum = student.roll_number || u.roll_number || "";
+          const rollNum = student.roll_number || u.roll_number || u.rollNumber || "";
           const userKey = u.id || u.email;
           const isCompleted = Boolean(
             u.is_profile_updated ||
@@ -262,19 +267,45 @@ export default function Overview() {
     }
   };
 
-  const studentName = dashboard.personalDetails.name || getStoredUserName() || "Student";
-  const dept = dashboard.personalDetails.department || "";
-  const sem = dashboard.academicOverview.semester || "";
-  const rollNum = dashboard.academicOverview.rollNumber || "";
-  const cgpa = dashboard.academicOverview.cgpa || "";
+  const storedUser = (() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch { return {}; }
+  })();
+
+  const studentName = dashboard.personalDetails.name || storedUser.name || getStoredUserName() || "Student";
+  const dept = dashboard.personalDetails.department || storedUser.department || storedUser.dept || storedUser.studentProfile?.department || "";
+  const sem = dashboard.academicOverview.semester || storedUser.semester || storedUser.sem || storedUser.current_semester || storedUser.studentProfile?.semester || "";
+  const rollNum = dashboard.academicOverview.rollNumber || storedUser.rollNumber || storedUser.roll_number || storedUser.studentProfile?.roll_number || "";
+  const cgpa = dashboard.academicOverview.cgpa || storedUser.cgpa || storedUser.aggregate_cgpa || storedUser.studentProfile?.cgpa || "";
   const upcoming = dashboard.upcomingDeadlines || [];
   const leaderboardList = dashboard.leaderboard || [];
 
   const studentStats = [
-    { label: "Attendance Rate", value: `${Math.round(dashboard.attendanceSummary.percentage)}%`, hint: "Active semester attendance", icon: Activity },
-    { label: "Active Batches", value: `${myBatchesCount} Active`, hint: "Assigned training batches", icon: Layers },
-    { label: "Coding Rank", value: `#${dashboard.codingProgress.currentRank}`, hint: "Current batch rank", icon: Trophy },
-    { label: "Earned Points", value: "0 XP", hint: "Coding & quiz points", icon: Zap },
+    {
+      label: "Attendance Rate",
+      value: isModuleActive("attendance") ? `${Math.round(dashboard.attendanceSummary.percentage)}%` : "Offline",
+      hint: isModuleActive("attendance") ? "Active semester attendance" : "Module in maintenance",
+      icon: Activity
+    },
+    {
+      label: "Active Batches",
+      value: isModuleActive("studentBatches") ? `${myBatchesCount} Active` : "Offline",
+      hint: isModuleActive("studentBatches") ? "Assigned training batches" : "Module in maintenance",
+      icon: Layers
+    },
+    {
+      label: "Coding Rank",
+      value: isModuleActive("studentLeaderboard") ? `#${dashboard.codingProgress.currentRank}` : "Offline",
+      hint: isModuleActive("studentLeaderboard") ? "Current batch rank" : "Leaderboard in maintenance",
+      icon: Trophy
+    },
+    {
+      label: "Earned Points",
+      value: isModuleActive("practiceCoding") ? "0 XP" : "Offline",
+      hint: isModuleActive("practiceCoding") ? "Coding & quiz points" : "Practice in maintenance",
+      icon: Zap
+    },
   ];
 
   return (
@@ -362,17 +393,17 @@ export default function Overview() {
           </CardHeader>
           <CardContent>
             {upcoming.length === 0 ? (
-              <div className="py-8 text-center text-slate-500">
-                <BookOpen size={28} className="mx-auto text-slate-400 mb-2" />
-                <p className="text-sm">No pending deadlines for this week.</p>
+              <div className="overview-deadlines-empty">
+                <BookOpen size={28} className="overview-empty-icon" />
+                <p className="overview-empty-text">No pending deadlines for this week.</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="overview-tasks-list">
                 {upcoming.map((task, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-slate-100 dark:border-slate-800">
+                  <div key={i} className="overview-task-item">
                     <div>
-                      <h4 className="text-sm font-semibold">{task.title}</h4>
-                      <p className="text-xs text-slate-500">{task.dueDate}</p>
+                      <h4 className="overview-item-title">{task.title}</h4>
+                      <p className="overview-item-due">{task.dueDate}</p>
                     </div>
                     <Badge variant={task.status === "Pending" ? "outline" : "success"}>{task.status}</Badge>
                   </div>
@@ -387,19 +418,25 @@ export default function Overview() {
           <CardHeader className="overview-card-header-between">
             <div className="overview-header-left">
               <div className="overview-header-icon-wrap">
-                <Trophy size={18} className="overview-header-icon text-amber-500" />
+                <Trophy size={18} className="overview-header-icon overview-trophy-icon" />
               </div>
               <div>
                 <CardTitle className="overview-card-title">All Batches Leaderboard</CardTitle>
                 <CardDescription className="overview-card-desc">Top performers across all training batches</CardDescription>
               </div>
             </div>
-            <Link to="/student/leaderboard" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
-              View All <ChevronRight size={14} />
-            </Link>
+            {isModuleActive("studentLeaderboard") && (
+              <Link to="/student/leaderboard" className="overview-view-all-link">
+                View All <ChevronRight size={14} />
+              </Link>
+            )}
           </CardHeader>
           <CardContent style={{ padding: '20px 24px' }}>
-            {leaderboardList.length === 0 ? (
+            {!isModuleActive("studentLeaderboard") ? (
+              <div style={{ padding: '24px 16px', textAlign: 'center', color: '#b45309', fontSize: '13px', background: '#fffbeb', borderRadius: '12px', border: '1px solid #fde68a' }}>
+                Leaderboard rankings are currently undergoing maintenance by administrator policy.
+              </div>
+            ) : leaderboardList.length === 0 ? (
               <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '13.5px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #e2e8f0' }}>
                 No active leaderboard scores recorded yet. Rankings will update automatically across all batches as students complete coding tasks and quizzes.
               </div>
@@ -456,7 +493,7 @@ export default function Overview() {
                       >
                         {item.initials}
                       </div>
-                      <div className="flex-col">
+                      <div className="overview-student-info">
                         <span style={{ fontSize: '14px', fontWeight: '700', color: item.you ? '#3730a3' : '#0f172a', lineHeight: 1.2 }}>
                           {formatStudentName(item.name)}
                         </span>
@@ -530,14 +567,7 @@ export default function Overview() {
               </div>
 
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn-modal-cancel"
-                  onClick={() => setShowJoinModal(false)}
-                  disabled={joining}
-                >
-                  Cancel
-                </button>
+
                 <button
                   type="submit"
                   className="btn-modal-submit"

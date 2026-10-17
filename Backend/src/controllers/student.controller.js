@@ -155,9 +155,6 @@ export const getStudentDashboard = async (req, res, next) => {
         `SELECT status FROM attendance WHERE user_id = ?`,
         [callerId]
       );
-      if (!attRows || attRows.length === 0) {
-        attRows = await query(`SELECT status FROM attendance`);
-      }
       if (attRows && attRows.length > 0) {
         const total = attRows.length;
         const present = attRows.filter(r => String(r.status).toLowerCase() === 'present').length;
@@ -208,19 +205,41 @@ export const getStudentDashboard = async (req, res, next) => {
     const currentStudentIdx = realLeaderboard.findIndex((s) => s.you);
     const currentRank = currentStudentIdx !== -1 ? `${realLeaderboard[currentStudentIdx].rank} / ${realLeaderboard.length}` : `1 / ${Math.max(1, realLeaderboard.length)}`;
 
-    // Fetch published study materials or tasks for upcomingDeadlines
+    // Fetch upcoming deadlines: prioritize practice problems and coding tasks
     let upcomingDeadlines = [];
     try {
-      const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
-      if (materials && materials.length > 0) {
-        upcomingDeadlines = materials.map(m => ({
-          title: m.title,
-          dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
-          status: 'Published',
+      const problemRows = await query(
+        `SELECT id, title, due_date, difficulty FROM practice_problems 
+         WHERE (college_id = ? OR college_id IS NULL)
+         ORDER BY (due_date IS NULL), due_date ASC, id DESC LIMIT 5`,
+        [collegeId]
+      );
+      if (problemRows && problemRows.length > 0) {
+        upcomingDeadlines = problemRows.map(p => ({
+          id: p.id,
+          title: p.title,
+          dueDate: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Flexible Deadline',
+          status: 'Pending',
+          type: 'Coding Practice',
         }));
       }
     } catch (e) {
-      console.warn('[getStudentDashboard materials query warning]', e.message);
+      console.warn('[getStudentDashboard practice problems deadlines warning]', e.message);
+    }
+
+    if (upcomingDeadlines.length === 0) {
+      try {
+        const materials = await query(`SELECT * FROM study_materials ORDER BY id DESC LIMIT 5`);
+        if (materials && materials.length > 0) {
+          upcomingDeadlines = materials.map(m => ({
+            title: m.title,
+            dueDate: m.type === 'Link' ? 'Web Link Resource' : 'Study Resource',
+            status: 'Published',
+          }));
+        }
+      } catch (e) {
+        console.warn('[getStudentDashboard materials query warning]', e.message);
+      }
     }
 
     let callerUser = await findUserById(callerId);
@@ -319,17 +338,37 @@ export const getStudentTrainingEnrollment = async (req, res, next) => {
 
 export const getStudentPracticeProblems = async (req, res, next) => {
   try {
+    const callerId = req.user?.userId || req.user?.id;
     const dbProblems = await getPracticeProblemsModel({
       collegeId: req.user?.collegeId || req.user?.college_id,
     });
+
+    let solvedIds = new Set();
+    if (callerId) {
+      try {
+        const solvedRows = await query(
+          `SELECT DISTINCT problem_id FROM coding_submissions WHERE student_id = ? AND status = 'Accepted'`,
+          [callerId]
+        );
+        if (Array.isArray(solvedRows)) {
+          solvedIds = new Set(solvedRows.map(r => Number(r.problem_id)));
+        }
+      } catch (e) { }
+    }
+
     if (dbProblems && dbProblems.length > 0) {
       const mapped = dbProblems.map((p) => ({
         id: p.id,
         title: p.title,
         category: p.category || 'General DSA',
+        topic: p.category || 'General DSA',
         difficulty: p.difficulty,
         points: p.points || 100,
-        solve_status: 'Unsolved',
+        due_date: p.due_date || p.dueDate || null,
+        dueDate: p.due_date || p.dueDate || null,
+        tags: p.tags || [],
+        description: p.description || '',
+        solve_status: solvedIds.has(Number(p.id)) ? 'Solved' : 'Unsolved',
       }));
       return sendSuccess(res, 'Practice problems retrieved successfully', mapped);
     }
@@ -343,7 +382,7 @@ export const getStudentPracticeProblems = async (req, res, next) => {
 export const getStudentPracticeProblemById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const problem = await getPracticeProblemByIdModel(id);
+    const problem = await getPracticeProblemByIdModel(id, { forStudent: true });
     if (!problem) {
       return sendError(res, 'Practice problem not found', 404);
     }
@@ -407,15 +446,6 @@ export const getStudentAttendance = async (req, res, next) => {
            ORDER BY a.session_date DESC, a.id DESC`,
           [userId, userEmail, userMobile]
         );
-
-        if (!rows || rows.length === 0) {
-          rows = await query(
-            `SELECT a.*, b.name AS batch_name, b.code AS batch_code
-             FROM attendance a
-             LEFT JOIN batches b ON a.batch_id = b.id
-             ORDER BY a.session_date DESC, a.id DESC`
-          );
-        }
         if (rows && rows.length > 0) {
           totalClasses = rows.length;
           presentClasses = rows.filter(r => String(r.status).toLowerCase() === 'present').length;
@@ -458,9 +488,6 @@ export const getStudentAttendance = async (req, res, next) => {
       verifications: verifications,
       recentLogs: recentLogs,
       attendanceHistory: recentLogs,
-      subjects: [
-        { id: 'sub-1', code: 'CS-301', name: 'Java & OOP', attended: presentClasses, total: totalClasses || 1, pct: percentage, status: percentage >= 75 ? 'Good' : 'Warning', safeMargin: 'Margin based on real scans' }
-      ]
     };
     return sendSuccess(res, 'Attendance data retrieved successfully', attendanceData);
   } catch (error) {
@@ -635,7 +662,22 @@ export const getSupportTickets = async (req, res, next) => {
     } catch (e) {
       console.warn('[DB getSupportTickets fallback]', e.message);
     }
-    return sendSuccess(res, 'Support tickets retrieved', tickets || []);
+
+    const formatted = (tickets || []).map(t => ({
+      id: `TICK-${t.id}`,
+      dbId: t.id,
+      subject: t.subject,
+      category: t.category || 'Technical',
+      priority: t.priority || 'Medium',
+      status: t.status || 'Open',
+      created: t.created_at ? new Date(t.created_at).toLocaleDateString() : 'Just now',
+      description: t.description || '',
+      resolutionNote: t.resolution_note || '',
+      isEscalated: Boolean(t.is_escalated),
+      escalationReason: t.escalation_reason || ''
+    }));
+
+    return sendSuccess(res, 'Support tickets retrieved', formatted);
   } catch (error) {
     next(error);
   }
@@ -654,6 +696,26 @@ export const createSupportTicket = async (req, res, next) => {
         [userId, subject, category || 'Technical', priority || 'Medium', description || '']
       );
       if (result && result.insertId) insertId = result.insertId;
+
+      // Automatically generate a notification for College Admin
+      try {
+        const uRows = await query('SELECT name, college_id FROM users WHERE id = ?', [userId]);
+        const userName = uRows && uRows[0] ? uRows[0].name : 'Student';
+        const userCollegeId = uRows && uRows[0] ? uRows[0].college_id : 1;
+
+        await query(
+          `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
+           VALUES (?, ?, ?, 'Admin Resolution Desk', 'High Priority', ?, 'Student Support Ticket')`,
+          [
+            userCollegeId,
+            `🎫 Support Ticket: ${subject}`,
+            `New support ticket submitted by ${userName} (${category}, Priority: ${priority || 'Medium'}). Ticket ID: TICK-${insertId}. Details: "${description || subject}"`,
+            userName
+          ]
+        );
+      } catch (notifErr) {
+        console.warn('[DB notifySupportTicket warning]', notifErr.message);
+      }
     } catch (e) {
       console.warn('[DB createSupportTicket fallback]', e.message);
     }

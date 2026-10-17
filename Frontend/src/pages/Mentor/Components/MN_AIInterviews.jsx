@@ -1,20 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Bot,
-  Search,
-  Filter,
-  TrendingUp,
-  Award,
-  AlertCircle,
-  FileText,
-  Eye,
-  X,
-  CheckCircle2,
-  BrainCircuit,
-  UserCheck,
-  Sparkles,
-  RefreshCw,
-} from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Bot, Search, Filter, TrendingUp, Award, AlertCircle, FileText, Eye, X, CheckCircle2, BrainCircuit, UserCheck, Sparkles, RefreshCw } from "lucide-react";
 import { apiFetch } from '../../../utils/api';
 import CustomSelect from '../../../components/ui/CustomSelect';
 import '../Styles/MN_AIInterviews.css';
@@ -325,9 +311,17 @@ export default function MN_AIInterviews() {
       </div>
 
       {/* AI Evaluation Detail Modal */}
-      {selectedSession && (
-        <div className="mn-ai-modal-overlay" onClick={() => setSelectedSession(null)}>
-          <div className="mn-ai-modal-card" onClick={(e) => e.stopPropagation()}>
+      {selectedSession && createPortal(
+        <div 
+          className="mn-ai-modal-overlay" 
+          style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', animation: 'fadeIn 0.2s ease-out' }}
+          onClick={() => setSelectedSession(null)}
+        >
+          <div 
+            className="mn-ai-modal-card" 
+            style={{ background: '#ffffff', width: '100%', maxWidth: '800px', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', maxHeight: 'calc(100vh - 48px)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mn-ai-modal-header">
               <div className="mn-ai-modal-header-left">
                 <div className="mn-ai-modal-avatar">
@@ -345,7 +339,7 @@ export default function MN_AIInterviews() {
               </button>
             </div>
 
-            <div className="mn-ai-modal-body">
+            <div className="mn-ai-modal-body" style={{ overflowY: 'auto', flex: 1 }}>
               <div className="mn-ai-modal-meta-grid">
                 <div className="mn-ai-meta-item">
                   <span className="mn-ai-meta-label">Target Role</span>
@@ -405,13 +399,14 @@ export default function MN_AIInterviews() {
               </div>
             </div>
 
-            <div className="mn-ai-modal-footer">
+            <div className="mn-ai-modal-footer" style={{ borderTop: '1px solid #f1f5f9', background: '#ffffff' }}>
               <button className="mn-ai-modal-dismiss-btn" onClick={() => setSelectedSession(null)}>
                 Close Report
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

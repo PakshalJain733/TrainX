@@ -8,16 +8,16 @@ async function request(endpoint, options = {}) {
   const url = `${baseUrl}${cleanEndpoint.startsWith("/") ? "" : "/"}${cleanEndpoint}`;
   let token =
     sessionStorage.getItem("token") ||
+    localStorage.getItem("token") ||
     sessionStorage.getItem("auth_token") ||
+    localStorage.getItem("auth_token") ||
     sessionStorage.getItem("authToken") ||
-    sessionStorage.getItem("token") ||
-    sessionStorage.getItem("auth_token") ||
-    sessionStorage.getItem("authToken");
+    localStorage.getItem("authToken");
 
   if (!token) {
     try {
       const u = JSON.parse(
-        sessionStorage.getItem("user") || sessionStorage.getItem("user") || "{}"
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
       );
       token = u.token || u.authToken || u.auth_token || u.accessToken || u.jwt;
     } catch (e) {}

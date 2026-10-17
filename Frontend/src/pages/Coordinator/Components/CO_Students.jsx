@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../../../utils/api";
-import {
-  Search,
-  GraduationCap,
-  Users,
-  Mail,
-  Phone,
-  Sparkles,
-  CheckCircle2,
-  CircleDot,
-  Lock,
-  ArrowLeft,
-  Send,
-  Target,
-} from "lucide-react";
+import { Search, GraduationCap, Users, Mail, Phone, Sparkles, CheckCircle2, CircleDot, Lock, ArrowLeft, Send, Target, X } from "lucide-react";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -554,6 +541,16 @@ export default function CoordinatorStudents() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button
+              type="button"
+              className="search-clear-btn"
+              onClick={() => setSearch("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="coord-filter-select-box">

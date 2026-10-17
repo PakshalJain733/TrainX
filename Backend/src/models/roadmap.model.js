@@ -21,7 +21,9 @@ const formatRoadmapResult = (roadmap, items) => ({
     tags: typeof item.tags === 'string' ? JSON.parse(item.tags) : (item.tags || []),
     topics: typeof item.topics === 'string' ? JSON.parse(item.topics) : (item.topics || []),
     syllabus: typeof item.syllabus === 'string' ? JSON.parse(item.syllabus) : (item.syllabus || []),
+    videos: typeof item.videos === 'string' ? JSON.parse(item.videos) : (item.videos || []),
     resources: typeof item.resources === 'string' ? JSON.parse(item.resources) : (item.resources || []),
+    completedTopics: typeof item.completed_topics === 'string' ? JSON.parse(item.completed_topics) : (item.completed_topics || []),
     quizzes: item.quizzes || 0,
     exercises: item.exercises || 0,
   })),
@@ -52,6 +54,44 @@ export const getRoadmapByStudentId = async (studentId) => {
   }
 
   return mockRoadmaps.get(sId) || null;
+};
+
+/**
+ * Fetch all saved roadmaps for a student
+ */
+export const getAllRoadmapsByStudentId = async (studentId) => {
+  const sId = Number(studentId);
+
+  try {
+    const roadmaps = await query(
+      'SELECT * FROM roadmaps WHERE student_id = ? ORDER BY updated_at DESC',
+      [sId]
+    );
+
+    if (roadmaps && roadmaps.length > 0) {
+      const results = [];
+      for (const r of roadmaps) {
+        const items = await query(
+          'SELECT * FROM roadmap_items WHERE roadmap_id = ? ORDER BY sequence_order ASC',
+          [r.id]
+        );
+        results.push(formatRoadmapResult(r, items));
+      }
+      return results;
+    }
+  } catch (error) {
+    console.warn(`[Roadmap Model] DB lookup all warning: ${error.message}.`);
+  }
+
+  const mockList = [];
+  for (const [key, val] of mockRoadmaps.entries()) {
+    if (typeof key === 'string' && key.startsWith(`${sId}__`) && val && val.targetRole) {
+      mockList.push(val);
+    }
+  }
+  if (mockList.length > 0) return mockList;
+  const single = mockRoadmaps.get(sId);
+  return single ? [single] : [];
 };
 
 /**
@@ -178,6 +218,9 @@ export const saveRoadmap = async (studentId, targetRole, careerTrackName, milest
     progress: m.progress || 0,
     tags: m.tags || [],
     topics: m.topics || [],
+    syllabus: m.syllabus || [],
+    videos: m.videos || [],
+    resources: m.resources || [],
     quizzes: m.quizzes || 0,
     exercises: m.exercises || 0,
   }));
@@ -201,15 +244,24 @@ export const saveRoadmap = async (studentId, targetRole, careerTrackName, milest
 /**
  * Update milestone status & progress
  */
-export const updateMilestoneItemStatus = async (studentId, itemId, status, progress) => {
+export const updateMilestoneItemStatus = async (studentId, itemId, status, progress, completedTopics) => {
   const sId = Number(studentId);
   const itId = Number(itemId);
 
   try {
-    const res = await query(
-      'UPDATE roadmap_items SET status = ?, progress = ? WHERE id = ?',
-      [status, progress, itId]
-    );
+    const completedJson = completedTopics ? JSON.stringify(completedTopics) : null;
+    let res;
+    if (completedJson !== null) {
+      res = await query(
+        'UPDATE roadmap_items SET status = ?, progress = ?, completed_topics = ? WHERE id = ?',
+        [status, progress, completedJson, itId]
+      );
+    } else {
+      res = await query(
+        'UPDATE roadmap_items SET status = ?, progress = ? WHERE id = ?',
+        [status, progress, itId]
+      );
+    }
 
     if (res && res.affectedRows > 0) {
       return getRoadmapByStudentId(sId);
@@ -224,9 +276,224 @@ export const updateMilestoneItemStatus = async (studentId, itemId, status, progr
     if (item) {
       item.status = status;
       if (progress !== undefined) item.progress = progress;
+      if (completedTopics !== undefined) item.completedTopics = completedTopics;
     }
     return mockData;
   }
 
   return null;
+};
+
+const globalQuizCache = new Map();
+
+/**
+ * Find ANY existing AI roadmap for a target role across ALL students in DB or memory cache.
+ */
+export const getGlobalCachedRoadmap = async (targetRole) => {
+  const normalizedRole = String(targetRole || '').trim().toLowerCase();
+  if (!normalizedRole) return null;
+
+  try {
+    const roadmaps = await query(
+      'SELECT * FROM roadmaps WHERE LOWER(target_role) = ? ORDER BY updated_at DESC LIMIT 1',
+      [normalizedRole]
+    );
+    if (roadmaps && roadmaps.length > 0) {
+      const roadmap = roadmaps[0];
+      const items = await query(
+        'SELECT * FROM roadmap_items WHERE roadmap_id = ? ORDER BY sequence_order ASC',
+        [roadmap.id]
+      );
+      if (items && items.length > 0) {
+        return formatRoadmapResult(roadmap, items);
+      }
+    }
+  } catch (err) {
+    console.warn(`[Roadmap Model] Global DB lookup warning: ${err.message}`);
+  }
+
+  // Search in-memory mock store across all keys
+  for (const [key, value] of mockRoadmaps.entries()) {
+    if (typeof key === 'string' && key.includes('__')) {
+      const storedRole = key.split('__')[1] || '';
+      if (storedRole === normalizedRole && value && value.milestones && value.milestones.length > 0) {
+        return value;
+      }
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Ensure ai_topic_quizzes table exists for storing AI topic quizzes
+ */
+let isQuizTableChecked = false;
+const ensureQuizTable = async () => {
+  if (isQuizTableChecked) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ai_topic_quizzes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        topic_title VARCHAR(255) NOT NULL UNIQUE,
+        questions JSON NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    isQuizTableChecked = true;
+  } catch (err) {
+    console.warn(`[Roadmap Model] Could not ensure ai_topic_quizzes table: ${err.message}`);
+  }
+};
+
+/**
+ * Fetch cached AI quiz for a topic from DB or Memory Cache
+ */
+export const getCachedTopicQuiz = async (topicTitle) => {
+  const normalizedTopic = String(topicTitle || '').trim().toLowerCase();
+  if (!normalizedTopic) return null;
+
+  // 1. Check in-memory Map cache
+  if (globalQuizCache.has(normalizedTopic)) {
+    return globalQuizCache.get(normalizedTopic);
+  }
+
+  // 2. Check Database table
+  try {
+    await ensureQuizTable();
+    const rows = await query(
+      'SELECT topic_title, questions FROM ai_topic_quizzes WHERE LOWER(topic_title) = ? LIMIT 1',
+      [normalizedTopic]
+    );
+
+    if (rows && rows.length > 0) {
+      const row = rows[0];
+      const questions = typeof row.questions === 'string' ? JSON.parse(row.questions) : row.questions;
+      if (Array.isArray(questions) && questions.length >= 5) {
+        const quizData = {
+          topic: row.topic_title || topicTitle,
+          questions,
+          fromCache: true,
+        };
+        globalQuizCache.set(normalizedTopic, quizData);
+        return quizData;
+      }
+    }
+  } catch (err) {
+    console.warn(`[Roadmap Model] Quiz DB cache lookup warning: ${err.message}`);
+  }
+
+  return null;
+};
+
+/**
+ * Save AI generated quiz into DB and Memory Cache
+ */
+export const saveCachedTopicQuiz = async (topicTitle, quizData) => {
+  const cleanTitle = String(topicTitle || quizData?.topic || '').trim();
+  const normalizedTopic = cleanTitle.toLowerCase();
+  if (!cleanTitle || !quizData || !Array.isArray(quizData.questions)) return;
+
+  const cachePayload = {
+    topic: cleanTitle,
+    questions: quizData.questions,
+    fromCache: true,
+  };
+
+  // 1. Save to in-memory cache
+  globalQuizCache.set(normalizedTopic, cachePayload);
+
+  // 2. Save to Database
+  try {
+    await ensureQuizTable();
+    const questionsJson = JSON.stringify(quizData.questions);
+    await query(
+      `INSERT INTO ai_topic_quizzes (topic_title, questions, created_at)
+       VALUES (?, ?, NOW())
+       ON DUPLICATE KEY UPDATE questions = VALUES(questions)`,
+      [cleanTitle, questionsJson]
+    );
+    console.log(`[Roadmap Model] Saved AI quiz for topic "${cleanTitle}" to database.`);
+  } catch (err) {
+    console.warn(`[Roadmap Model] Quiz DB cache save warning: ${err.message}`);
+  }
+};
+
+const globalTheoryCache = new Map();
+let isTheoryTableChecked = false;
+
+const ensureTheoryTable = async () => {
+  if (isTheoryTableChecked) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ai_milestone_theories (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        theory_key VARCHAR(255) NOT NULL UNIQUE,
+        theory_json JSON NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    isTheoryTableChecked = true;
+  } catch (err) {
+    console.warn(`[Roadmap Model] Could not ensure ai_milestone_theories table: ${err.message}`);
+  }
+};
+
+/**
+ * Fetch cached AI theory guide for a milestone topic
+ */
+export const getCachedMilestoneTheory = async (milestoneTitle, targetRole = '') => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
+  const cleanRole = String(targetRole || '').trim().toLowerCase();
+  const key = `${cleanTitle}__${cleanRole}`;
+  if (!cleanTitle) return null;
+
+  if (globalTheoryCache.has(key)) {
+    return globalTheoryCache.get(key);
+  }
+
+  try {
+    await ensureTheoryTable();
+    const rows = await query(
+      'SELECT theory_json FROM ai_milestone_theories WHERE theory_key = ? LIMIT 1',
+      [key]
+    );
+    if (rows && rows.length > 0) {
+      const data = typeof rows[0].theory_json === 'string' ? JSON.parse(rows[0].theory_json) : rows[0].theory_json;
+      if (data && data.title && Array.isArray(data.sections) && data.sections.some(s => Array.isArray(s.points) && s.points.length > 0)) {
+        globalTheoryCache.set(key, data);
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn(`[Roadmap Model] Theory DB cache lookup warning: ${err.message}`);
+  }
+
+  return null;
+};
+
+/**
+ * Save AI generated theory guide into DB and Memory Cache
+ */
+export const saveCachedMilestoneTheory = async (milestoneTitle, targetRole, theoryData) => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
+  const cleanRole = String(targetRole || '').trim().toLowerCase();
+  const key = `${cleanTitle}__${cleanRole}`;
+  if (!cleanTitle || !theoryData || !Array.isArray(theoryData.sections)) return;
+
+  globalTheoryCache.set(key, theoryData);
+
+  try {
+    await ensureTheoryTable();
+    const theoryJson = JSON.stringify(theoryData);
+    await query(
+      `INSERT INTO ai_milestone_theories (theory_key, theory_json, created_at)
+       VALUES (?, ?, NOW())
+       ON DUPLICATE KEY UPDATE theory_json = VALUES(theory_json)`,
+      [key, theoryJson]
+    );
+    console.log(`[Roadmap Model] Saved AI theory for "${cleanTitle}" to database.`);
+  } catch (err) {
+    console.warn(`[Roadmap Model] Theory DB cache save warning: ${err.message}`);
+  }
 };

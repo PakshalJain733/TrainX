@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone
-} from "lucide-react";
+import { CalendarCheck, TrendingUp, Clock, Trophy, Users, Sparkles, BookOpen, Flame, HelpCircle, UserPlus, UserCog, Shield, Megaphone } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Avatar, AvatarFallback } from "../../../components/ui/Avatar";
@@ -86,7 +84,7 @@ export default function AdminOverview() {
 
   const statCards = [
     { label: "Total Students", value: `${stats.students}`, hint: "Enrolled in campus programs", icon: Users },
-    { label: "Faculty & Mentors", value: `${stats.mentors}`, hint: "Active mentors on portal", icon: BookOpen },
+    { label: "Mentors", value: `${stats.mentors}`, hint: "Active mentors on portal", icon: BookOpen },
     { label: "Coordinators", value: `${stats.coordinators}`, hint: "Department coordinators", icon: Shield },
     { label: "Total Accounts", value: `${stats.totalUsers}`, hint: "All registered users", icon: UserCog },
   ];

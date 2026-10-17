@@ -14,7 +14,8 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, dropUp: false });
   const triggerRef = useRef(null);
   const dropdownRef = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
 
   const updateCoords = () => {
     if (triggerRef.current) {
@@ -82,7 +83,7 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
             zIndex: 99999,
           }}
         >
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-batch-select-option${isSel ? ' admin-batch-select-option--selected' : ''}`}>
@@ -153,6 +154,7 @@ export default function AdminBatches() {
     points: 100,
     deadline: "",
     desc: "",
+    language: "Java",
     testCases: [
       { input: "", expectedOutput: "", isHidden: false },
       { input: "", expectedOutput: "", isHidden: true },
@@ -372,7 +374,7 @@ export default function AdminBatches() {
         const sorted = [...res.data]
           .map((s) => ({
             ...s,
-            xp: s.xp || `${Math.floor(Math.random() * 500 + 100)} XP`,
+            xp: s.xp !== undefined && s.xp !== null ? (typeof s.xp === 'number' ? `${s.xp} XP` : (String(s.xp).includes("XP") ? String(s.xp) : `${s.xp} XP`)) : "0 XP",
           }))
           .sort((a, b) => parseInt(b.xp || 0) - parseInt(a.xp || 0));
         setBatchLeaderboard(sorted);
@@ -400,6 +402,7 @@ export default function AdminBatches() {
       points: taskForm.points || 100,
       deadline: taskForm.deadline || "",
       description: taskForm.desc || "",
+      language: taskForm.language || "Java",
       testCases: taskForm.testCases || [],
     };
 
@@ -412,6 +415,7 @@ export default function AdminBatches() {
       points: 100,
       deadline: "",
       desc: "",
+      language: "Java",
       testCases: [
         { input: "", expectedOutput: "", isHidden: false },
         { input: "", expectedOutput: "", isHidden: true },
@@ -520,7 +524,7 @@ export default function AdminBatches() {
             <div>
               <div className="batch-view-tag" style={{ color: "#4f46e5", fontSize: "11px", fontWeight: "800", letterSpacing: "0.5px" }}>
                 <span>BATCH DASHBOARD</span>
-                <span className="batch-view-mentor" style={{ color: "#64748b", marginLeft: "8px", fontWeight: "600" }}>• Mentor: {selectedBatch.mentor}</span>
+                <span className="batch-view-mentor" style={{ color: "#64748b", marginLeft: "8px", fontWeight: "600" }}>• Trainer: {selectedBatch.trainer || selectedBatch.mentor || "Not Assigned"}</span>
               </div>
               <h1 style={{ fontSize: "22px", fontWeight: "800", margin: "2px 0 0 0", color: "#0f172a" }}>{selectedBatch.name}</h1>
             </div>
@@ -695,7 +699,28 @@ export default function AdminBatches() {
                     </div>
                   </div>
 
-                  <div className="form-row-3">
+                  <div className="form-row-4">
+                    <div className="form-group-admin">
+                      <label className="add-task-label">
+                        <Code size={14} color="#4f46e5" />
+                        <span>Coding Language *</span>
+                      </label>
+                      <AdminBatchSelect
+                        value={taskForm.language}
+                        onChange={(val) => setTaskForm((p) => ({ ...p, language: val }))}
+                        options={[
+                          { value: "Java", label: "Java" },
+                          { value: "Python", label: "Python" },
+                          { value: "C++", label: "C++" },
+                          { value: "C", label: "C" },
+                          { value: "JavaScript", label: "JavaScript" },
+                          { value: "TypeScript", label: "TypeScript" },
+                          { value: "Go", label: "Go" },
+                          { value: "SQL", label: "SQL" },
+                          { value: "Any Language", label: "Any Language" }
+                        ]}
+                      />
+                    </div>
                     <div className="form-group-admin">
                       <label className="add-task-label">
                         <Award size={14} color="#4f46e5" />
@@ -730,7 +755,7 @@ export default function AdminBatches() {
                         <span>Submission Deadline</span>
                       </label>
                       <input
-                        type="date"
+                        type="datetime-local"
                         className="form-input-admin"
                         value={taskForm.deadline}
                         onChange={(e) => setTaskForm((p) => ({ ...p, deadline: e.target.value }))}
@@ -846,7 +871,8 @@ export default function AdminBatches() {
 
                   <div className="add-task-form-footer">
                     <button type="submit" className="add-task-submit-btn">
-                      <Plus size={18} /> Assign Task to Batch
+                      <Plus size={18} />
+                      <span>Assign Task to Batch</span>
                     </button>
                   </div>
                 </form>
@@ -862,25 +888,6 @@ export default function AdminBatches() {
                   <h3 className="batch-tab-title" style={{ fontSize: "18px" }}>Assigned Tasks for {selectedBatch.name}</h3>
                   <p className="batch-tab-sub">All coding problems and assignments created for students in this batch.</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setBatchTab("addTask")}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    padding: "8px 16px",
-                    background: "#4f46e5",
-                    color: "#ffffff",
-                    border: "none",
-                    borderRadius: "9999px",
-                    fontSize: "13px",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  <Plus size={16} /> Create New Task
-                </button>
               </div>
 
               {batchTasks.length === 0 ? (
@@ -910,18 +917,35 @@ export default function AdminBatches() {
                       >
                         <div>
                           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                fontWeight: "700",
-                                padding: "4px 10px",
-                                borderRadius: "9999px",
-                                background: t.difficulty === "Easy" ? "#dcfce7" : t.difficulty === "Hard" ? "#fee2e2" : "#fef3c7",
-                                color: t.difficulty === "Easy" ? "#166534" : t.difficulty === "Hard" ? "#991b1b" : "#92400e"
-                              }}
-                            >
-                              {t.difficulty || "Medium"}
-                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                  padding: "4px 10px",
+                                  borderRadius: "9999px",
+                                  background: t.difficulty === "Easy" ? "#dcfce7" : t.difficulty === "Hard" ? "#fee2e2" : "#fef3c7",
+                                  color: t.difficulty === "Easy" ? "#166534" : t.difficulty === "Hard" ? "#991b1b" : "#92400e"
+                                }}
+                              >
+                                {t.difficulty || "Medium"}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  fontWeight: "700",
+                                  padding: "4px 10px",
+                                  borderRadius: "9999px",
+                                  background: "#e0e7ff",
+                                  color: "#3730a3",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "4px"
+                                }}
+                              >
+                                <Code size={12} /> {t.language || "Java"}
+                              </span>
+                            </div>
                             <span style={{ fontSize: "12px", fontWeight: "700", color: "#4f46e5", background: "#eef2ff", padding: "4px 10px", borderRadius: "9999px" }}>
                               +{t.points || 100} XP
                             </span>
@@ -1222,9 +1246,7 @@ export default function AdminBatches() {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-modal-cancel" onClick={() => setShowAddForm(false)}>
-                  Cancel
-                </button>
+
                 <button type="submit" className="btn-modal-submit" disabled={submitting}>
                   {submitting ? "Creating..." : "Create Batch"}
                 </button>
@@ -1293,7 +1315,7 @@ export default function AdminBatches() {
                         {isInactive ? "Inactive" : "Active"}
                       </Badge>
                     </div>
-                    <p className="batch-mentor">Mentor: {b.mentor}</p>
+                    <p className="batch-mentor">Trainer: {b.trainer || b.mentor || "Not Assigned"}</p>
                   </div>
                 </CardHeader>
                 <CardContent className="batch-card-body">

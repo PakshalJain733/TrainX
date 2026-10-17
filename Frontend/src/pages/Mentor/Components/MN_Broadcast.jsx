@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Bell, Trash2, Megaphone, CheckCircle2, Users, Calendar, ChevronDown, Check } from "lucide-react";
+import { Check, Send, Bell, Trash2, Megaphone, CheckCircle2, Users, Calendar, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
@@ -9,7 +9,8 @@ import "../Styles/MN_Broadcast.css";
 function MentorBcastSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef(null);
-  const selected = options.find(o => String(o.value) === String(value));
+  const safeOptions = Array.isArray(options) ? options : [];
+  const selected = safeOptions.find(o => String(o.value) === String(value));
   useEffect(() => {
     const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
     document.addEventListener('mousedown', h);
@@ -24,7 +25,7 @@ function MentorBcastSelect({ value, options = [], onChange, placeholder = 'Selec
       </button>
       {isOpen && (
         <div className="mentor-bcast-select-dropdown">
-          {options.map(opt => {
+          {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
               <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-bcast-select-option${isSel ? ' mentor-bcast-select-option--selected' : ''}`}>
@@ -240,7 +241,7 @@ export default function MentorBroadcast() {
                   onChange={setTarget}
                   options={[
                     { value: "All Allocated Batches", label: "All Allocated Batches" },
-                    ...batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })),
+                    ...(Array.isArray(batches) ? batches.map((b) => ({ value: b.name, label: `Batch: ${b.name}` })) : []),
                   ]}
                 />
               </div>

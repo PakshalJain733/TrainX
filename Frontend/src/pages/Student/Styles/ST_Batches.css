@@ -1030,7 +1030,7 @@
 
 .batches-empty-state {
   background: #ffffff;
-  border: 2px dashed #cbd5e1;
+  border: 2px solid #cbd5e1;
   border-radius: 20px;
   padding: 48px 24px;
   text-align: center;

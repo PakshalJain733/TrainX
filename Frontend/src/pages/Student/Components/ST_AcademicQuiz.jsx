@@ -1,25 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import {
-  GraduationCap,
-  Clock,
-  CalendarDays,
-  CheckCircle2,
-  PlayCircle,
-  AlertCircle,
-  Timer,
-  Trophy,
-  Target,
-  ArrowLeft,
-  ArrowRight,
-  ChevronLeft,
-  Send,
-  RotateCcw,
-  X,
-  CheckCheck,
-  Circle,
-  Flag,
-} from "lucide-react";
+import { GraduationCap, Clock, CalendarDays, CheckCircle2, PlayCircle, AlertCircle, Timer, Trophy, Target, ArrowLeft, ArrowRight, ChevronLeft, Send, RotateCcw, X, CheckCheck, Circle, Flag } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card, CardContent } from "../../../components/ui/Card";

@@ -1,28 +1,7 @@
 import { query } from '../config/db.js';
 
 // Pre-seeded fallback mock broadcasts
-const mockBroadcasts = [
-  {
-    id: 1,
-    title: 'IA-2 Quiz Rescheduled to Friday 10:00 AM',
-    message: 'The Internal Assessment 2 test for TE Computer batches has been shifted to Friday 10:00 AM. Please revise your modules.',
-    target: 'All CSE & IT Batches',
-    priority: 'Urgent Notice',
-    created_by_name: 'Coordinator Shinde',
-    sender_role: 'Coordinator',
-    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-  },
-  {
-    id: 2,
-    title: 'Goldman Sachs Placement Drive Registration Live',
-    message: 'Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through the placement tab.',
-    target: 'Students Only',
-    priority: 'Placement Drive Alert',
-    created_by_name: 'Placement Admin',
-    sender_role: 'Admin',
-    created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-  },
-];
+const mockBroadcasts = [];
 
 export const getBroadcastsModel = async (collegeId = null, userRole = null) => {
   let items = [];

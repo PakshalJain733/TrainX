@@ -23,7 +23,12 @@ const router = Router();
 // Protect student routes
 router.use(authenticateToken);
 
-router.get('/', getStudentData);
+router.get('/', (req, res, next) => {
+  if (req.baseUrl && req.baseUrl.includes('practice-problems')) {
+    return getStudentPracticeProblems(req, res, next);
+  }
+  return getStudentData(req, res, next);
+});
 router.get('/me', getStudentProfile);
 router.patch('/me', updateStudentProfile);
 router.get('/profile', getStudentProfile);

@@ -1,6 +1,6 @@
-import { sendRegistrationOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
+import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { findUserById, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
+import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
   try {
@@ -16,6 +16,15 @@ export const sendRegisterOtp = async (req, res, next) => {
   try {
     const result = await sendRegistrationOtp(req.body);
     return sendSuccess(res, 'Verification code sent to your college email.', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const verifyRegisterEmailOtp = async (req, res, next) => {
+  try {
+    const result = await checkRegistrationEmailOtp(req.body);
+    return sendSuccess(res, 'College email verified successfully!', result);
   } catch (error) {
     next(error);
   }
@@ -79,8 +88,13 @@ export const verifyTotp = async (req, res, next) => {
     const isRemember = rememberMe !== undefined ? rememberMe : remember_me;
 
     if (preAuthToken) {
-      const result = await verifyTotpAndLogin(preAuthToken, formattedCode, isRemember);
-      return sendSuccess(res, 'Authenticator verification successful', result);
+      try {
+        const result = await verifyTotpAndLogin(preAuthToken, formattedCode, isRemember);
+        return sendSuccess(res, 'Authenticator verification successful', result);
+      } catch (err) {
+        if (!identifier) throw err;
+        console.warn(`[TOTP] preAuthToken verification failed (${err.message}). Falling back to identifier verification.`);
+      }
     }
 
     if (!identifier) {
@@ -205,5 +219,44 @@ export const verify2FA = async (req, res, next) => {
     return sendSuccess(res, 'Google Authenticator 2FA paired successfully', result);
   } catch (error) {
     return sendError(res, error.message || 'Failed to verify 2FA code', 400);
+  }
+};
+
+export const registerInstitution = async (req, res) => {
+  try {
+    const { collegeName, contactPerson, designation, email, phone, studentCount } = req.body;
+    if (!collegeName || !email) {
+      return sendError(res, 'College Name and Email are required', 400);
+    }
+    const code = collegeName.substring(0, 3).toUpperCase() + Math.random().toString(36).substring(2, 6).toUpperCase();
+    await pool.query('INSERT INTO colleges (name, code, contact_email, contact_phone, status) VALUES (?, ?, ?, ?, ?)', [collegeName, code, email, phone || null, 'Pending']);
+    return sendSuccess(res, 'Institution request submitted successfully');
+  } catch (error) {
+    console.error('Register Institution error:', error);
+    return sendError(res, 'Failed to submit request', 500);
+  }
+};
+
+export const checkRegistrationStatus = async (req, res, next) => {
+  try {
+    const email = req.query.email || req.body.email;
+    if (!email) {
+      return sendError(res, 'Email is required to check registration status', 400);
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+    const user = await findUserByEmailOrMobile(cleanEmail);
+    if (!user) {
+      return sendError(res, 'No registered account found for this email', 404);
+    }
+    const isApproved = user.is_active === 1 || user.is_active === true || user.is_active === '\x01';
+    return sendSuccess(res, 'Registration status retrieved successfully', {
+      email: user.email,
+      isApproved,
+      status: isApproved ? 'approved' : 'pending',
+      role: user.role,
+      name: user.name,
+    });
+  } catch (error) {
+    next(error);
   }
 };

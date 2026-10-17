@@ -11,6 +11,7 @@
     "test": "echo 'No tests specified'",
     "import:c2c": "node scripts/import-c2c-2029.mjs",
     "verify:ai": "node scripts/verify_ai_key.mjs",
+    "db:migrate": "node scripts/migrate.js",
     "db:clear": "node scripts/clear_db.js"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "googleapis": "^183.0.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.3.0",
     "multer-s3": "^3.0.1",
@@ -30,6 +32,7 @@
     "socket.io": "^4.8.4",
     "socket.io-client": "^4.8.4",
     "speakeasy": "^2.0.0",
+    "systeminformation": "^5.33.15",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

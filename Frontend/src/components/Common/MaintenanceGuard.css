@@ -1,0 +1,393 @@
+/* MaintenanceGuard.css - Premium Scheduled Maintenance Screen */
+
+.mg-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 10%, #e0e7ff 0%, #f1f5f9 45%, #e2e8f0 100%);
+  position: relative;
+  overflow: hidden;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #0f172a;
+}
+
+/* Ambient Background Orbs */
+.mg-ambient-orb-1 {
+  position: absolute;
+  top: 8%;
+  left: 12%;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.22) 0%, rgba(99, 102, 241, 0) 70%);
+  filter: blur(50px);
+  pointer-events: none;
+  animation: mgFloat 10s ease-in-out infinite alternate;
+}
+
+.mg-ambient-orb-2 {
+  position: absolute;
+  bottom: 10%;
+  right: 14%;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0) 70%);
+  filter: blur(60px);
+  pointer-events: none;
+  animation: mgFloat 12s ease-in-out infinite alternate-reverse;
+}
+
+.mg-ambient-orb-3 {
+  position: absolute;
+  top: 40%;
+  right: 30%;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, rgba(14, 165, 233, 0) 70%);
+  filter: blur(45px);
+  pointer-events: none;
+}
+
+@keyframes mgFloat {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(20px) scale(1.06); }
+}
+
+/* Brand Bar at the top of the card */
+.mg-brand-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.mg-brand-logo-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #ffffff;
+  padding: 2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.mg-brand-title {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.mg-brand-x-img {
+  height: 18px;
+  width: auto;
+  object-fit: contain;
+  margin-left: 1px;
+}
+
+/* Main Card Container */
+.mg-card {
+  max-width: 540px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12),
+              0 0 0 1px rgba(226, 232, 240, 0.6);
+  border-radius: 28px;
+  padding: 40px 36px;
+  text-align: center;
+  position: relative;
+  box-sizing: border-box;
+  animation: mgCardEntrance 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+}
+
+@keyframes mgCardEntrance {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Hero Maintenance Icon */
+.mg-icon-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 22px;
+}
+
+.mg-icon-box {
+  width: 82px;
+  height: 82px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 2px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  margin: 0 auto;
+  box-shadow: 0 10px 24px -4px rgba(217, 119, 6, 0.22);
+  transition: transform 0.2s ease;
+}
+
+.mg-icon-box:hover {
+  transform: scale(1.04) rotate(-3deg);
+}
+
+.mg-badge-shield {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: #ffffff;
+  border-radius: 50%;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+  animation: mgPulseShield 2s infinite;
+}
+
+@keyframes mgPulseShield {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+/* Status Pill */
+.mg-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  color: #b45309;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  margin-bottom: 18px;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.08);
+}
+
+.mg-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+  animation: mgBlink 1.5s infinite;
+}
+
+@keyframes mgBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Titles */
+.mg-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+}
+
+.mg-scope-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 24px;
+  background: #f1f5f9;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+.mg-scope-strong {
+  color: #1e293b;
+  font-weight: 700;
+}
+
+/* Notice Box */
+.mg-notice-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 18px 20px;
+  text-align: left;
+  margin-bottom: 28px;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.mg-notice-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mg-notice-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.01em;
+}
+
+.mg-notice-time {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.mg-notice-text {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+/* Actions Row */
+.mg-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mg-btn-home {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #ffffff;
+  color: #334155;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.mg-btn-home:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.mg-btn-refresh {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: #ffffff;
+  color: #0284c7;
+  border: 1.5px solid #bae6fd;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.mg-btn-refresh:hover:not(:disabled) {
+  background: #f0f9ff;
+  border-color: #7dd3fc;
+  color: #0369a1;
+  transform: translateY(-1px);
+}
+
+.mg-btn-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mg-btn-support {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+}
+
+.mg-btn-support:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
+}
+
+/* Footer Help Text */
+.mg-footer-text {
+  margin-top: 22px;
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .mg-card {
+    padding: 30px 20px;
+    border-radius: 22px;
+  }
+  .mg-actions-row {
+    flex-direction: column;
+  }
+  .mg-btn-home,
+  .mg-btn-refresh,
+  .mg-btn-support {
+    width: 100%;
+  }
+}

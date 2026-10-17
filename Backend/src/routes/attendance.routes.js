@@ -3,6 +3,7 @@ import {
   getMyAttendanceSummary,
   getStudentAttendanceById,
   getStudentAttendanceHistory,
+  getMyAttendanceScans,
   getLowAttendanceStudents,
   getAllStudentsAttendance,
   getDepartmentSummary,
@@ -10,7 +11,9 @@ import {
   getDashboardSummary,
   markSelfAttendanceByCode,
   getLeaveRequests,
+  createLeaveRequest,
   updateLeaveRequestStatus,
+  deleteLeaveRequest,
 } from '../controllers/attendance.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
@@ -23,10 +26,14 @@ router.use(authenticateToken);
 
 // 0. Student mark self attendance present via QR scan or code
 router.post('/mark', markSelfAttendanceByCode);
+router.get('/scans', getMyAttendanceScans);
 
 // Leave Requests Routes
 router.get('/leave-requests', getLeaveRequests);
+router.post('/leave-requests', createLeaveRequest);
 router.put('/leave-requests/:id/status', updateLeaveRequestStatus);
+router.patch('/leave-requests/:id/status', updateLeaveRequestStatus);
+router.delete('/leave-requests/:id', deleteLeaveRequest);
 
 // 1. Logged in student personal summary & history
 router.get('/summary', getMyAttendanceSummary);

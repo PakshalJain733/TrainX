@@ -1,16 +1,17 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
-import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, Key, Clock } from "lucide-react";
+import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, Key, Clock, User } from "lucide-react";
 import { AdminSidebar } from "./AD_Sidebar";
+import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
 import "../Styles/AD_Layout.css";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
+import { apiFetch } from "../../../utils/api";
 
-function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
+function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onNavigate, onSelectNotification }) {
   const [activeTab, setActiveTab] = useState("all");
-  const [expandedId, setExpandedId] = useState(null);
 
   const autoCloseTimerRef = useRef(null);
 
@@ -120,7 +121,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   };
 
   return (
-    <div 
+    <div
       className="notif-dropdown-box"
       onMouseEnter={clearAutoCloseTimer}
       onMouseLeave={startAutoCloseTimer}
@@ -167,7 +168,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
         </button>
       </div>
 
-      {/* List */}
+      {/* List - Small Form Preview Cards */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
           <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
@@ -175,14 +176,16 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           </div>
         ) : (
           visibleNotifications.slice(0, 5).map((n) => {
-            const isExpanded = expandedId === n.id;
             return (
               <div
                 key={n.id}
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
-                  setExpandedId(isExpanded ? null : n.id);
+                  if (onClose) onClose();
+                  if (onSelectNotification) {
+                    onSelectNotification(n);
+                  }
                 }}
               >
                 {getIcon(n)}
@@ -196,21 +199,6 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
-
-                  {isExpanded && (
-                    <div className="notif-expanded-desc">
-                      {(n.target || n.created_by_name || n.priority) && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px', fontSize: '11px', fontWeight: '700' }}>
-                          {n.target && <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px' }}>🎯 For: {n.target}</span>}
-                          {n.created_by_name && <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '2px 8px', borderRadius: '6px' }}>👤 By: {n.created_by_name}</span>}
-                          {n.priority && <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px' }}>⚡ {n.priority}</span>}
-                        </div>
-                      )}
-                      <div>
-                        {n.message || n.desc || "No additional details available."}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <button
@@ -250,52 +238,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
   );
 }
 
-const defaultNotificationsList = [
-  {
-    id: 1,
-    title: "Meeting Regarding Quasar 5.0 Problem Statements",
-    desc: "A mandatory meeting for all Quasar 5.0 participants is scheduled for today at 3:00 PM in Seminar Hall 2.",
-    time: "9/26/2026, 1:37:42 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All CSE & IT Batches",
-    priority: "Urgent Notice",
-    created_by_name: "Coordinator Shinde"
-  },
-  {
-    id: 2,
-    title: "Holiday Announcement",
-    desc: "The campus will remain closed on Friday for the upcoming holiday. Online learning resources remain available.",
-    time: "9/26/2026, 1:30:00 PM",
-    unread: true,
-    type: "broadcast",
-    target: "All Students & Faculty",
-    priority: "General Announcement",
-    created_by_name: "Admin Office"
-  },
-  {
-    id: 3,
-    title: "IA-2 Quiz Rescheduled to Friday 10:00 AM",
-    desc: "The Internal Assessment 2 quiz has been rescheduled to Friday 10:00 AM. Please review your module roadmaps.",
-    time: "9/25/2026, 8:56:20 PM",
-    unread: true,
-    type: "quiz",
-    target: "TE Computer Batches",
-    priority: "Academic Notice",
-    created_by_name: "Prof. Verma"
-  },
-  {
-    id: 4,
-    title: "Goldman Sachs Placement Drive Registration Live",
-    desc: "Eligible students with CGPA > 8.0 can apply for Goldman Sachs campus drive through placement tab.",
-    time: "9/25/2026, 6:15:00 PM",
-    unread: false,
-    type: "calendar",
-    target: "BE All Branches",
-    priority: "Placement Alert",
-    created_by_name: "Placement Cell"
-  }
-];
+const defaultNotificationsList = [];
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -303,16 +246,23 @@ export default function AdminLayout() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [fullNotifOpen, setFullNotifOpen] = useState(false);
-  const [hasUnreadNotif, setHasUnreadNotif] = useState(true);
+  const [selectedNotifModal, setSelectedNotifModal] = useState(null);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
-
   const [notifications, setNotifications] = useState(defaultNotificationsList);
+  const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    apiFetch("/admin/broadcast")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
+    const loadNotifications = () => {
+      let prefs = { notifSystemAlerts: true, notifWeeklyReport: true, notifNewUsers: true };
+      try {
+        const stored = JSON.parse(sessionStorage.getItem("adminNotifPrefs") || "{}");
+        prefs = { ...prefs, ...stored };
+      } catch (_) {}
+
+      apiFetch("/admin/broadcast")
+        .then((res) => {
+          const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+          const serverItems = rawItems.map((b) => ({
             id: b.id || `notif-${Math.random()}`,
             title: b.title || "Announcement",
             desc: b.message || b.desc || b.description || "",
@@ -325,22 +275,67 @@ export default function AdminLayout() {
             created_by_name: b.created_by_name || "Admin",
           }));
 
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
-        }
-      })
-      .catch(() => {});
+          const prefItems = [];
+          if (prefs.notifSystemAlerts) {
+            prefItems.push({
+              id: "pref-sec-alert",
+              title: "🛡️ System Security Alert",
+              desc: "2FA Authentication & System Security monitoring active.",
+              message: "2FA Authentication & System Security monitoring active.",
+              time: "Just now",
+              unread: true,
+              type: "alert",
+              target: "System Security",
+              priority: "High Priority",
+              created_by_name: "Security Engine"
+            });
+          }
+          if (prefs.notifWeeklyReport) {
+            prefItems.push({
+              id: "pref-weekly-audit",
+              title: "📊 Weekly Audit Digest",
+              desc: "Weekly institutional audit report and analytics digest is available.",
+              message: "Weekly institutional audit report and analytics digest is available.",
+              time: "Today",
+              unread: true,
+              type: "calendar",
+              target: "Institutional Audit",
+              priority: "Weekly Digest",
+              created_by_name: "Analytics Service"
+            });
+          }
+          if (prefs.notifNewUsers) {
+            prefItems.push({
+              id: "pref-new-users",
+              title: "👤 New User Enrollment",
+              desc: "New student and faculty registration applications pending verification.",
+              message: "New student and faculty registration applications pending verification.",
+              time: "Today",
+              unread: true,
+              type: "alert",
+              target: "User Management",
+              priority: "Action Required",
+              created_by_name: "Enrollment Desk"
+            });
+          }
+
+          // Combine server items and active preference items
+          const combined = [...prefItems, ...serverItems];
+          setNotifications(combined);
+        })
+        .catch(() => { });
+    };
+
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 8000);
+    window.addEventListener("adminNotifPrefsUpdated", loadNotifications);
+    window.addEventListener("userProfileUpdated", loadNotifications);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("adminNotifPrefsUpdated", loadNotifications);
+      window.removeEventListener("userProfileUpdated", loadNotifications);
+    };
   }, []);
 
   const headerRightRef = useRef(null);
@@ -379,7 +374,7 @@ export default function AdminLayout() {
     try {
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       if (!token) return;
-      const res = await fetch(`${getApiBaseUrl()}/admin/profile`, {
+      const res = await fetch('/api/v1/admin/profile', {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {
@@ -396,7 +391,7 @@ export default function AdminLayout() {
           };
           setUser(updated);
           let localUser = {};
-          try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch {}
+          try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
           sessionStorage.setItem("user", JSON.stringify({ ...localUser, ...updated }));
         }
       }
@@ -427,24 +422,6 @@ export default function AdminLayout() {
     setProfileOpen(false);
     setMobileOpen(false);
   }, [pathname]);
-
-  const getPageTitle = (path) => {
-    if (path === "/admin" || path === "/admin/") return "Overview";
-    if (path.startsWith("/admin/users")) return "User Management";
-    if (path.startsWith("/admin/batches")) return "Manage Batches";
-    if (path.startsWith("/admin/attendance")) return "Track Attendance";
-    if (path.startsWith("/admin/learning")) return "Manage Learning Content";
-    if (path.startsWith("/admin/quiz")) return "Manage Quizzes";
-    if (path.startsWith("/admin/practice")) return "Coding Practice";
-    if (path.startsWith("/admin/broadcast")) return "Broadcast Notice Center";
-    if (path.startsWith("/admin/progress")) return "Student Progress Analytics";
-    if (path.startsWith("/admin/leaderboard")) return "Leaderboard";
-    if (path.startsWith("/admin/weekly-reports")) return "Weekly Reports";
-    if (path.startsWith("/admin/help")) return "Support Tickets";
-    return "Overview";
-  };
-
-  const pageTitle = getPageTitle(pathname);
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
@@ -482,9 +459,7 @@ export default function AdminLayout() {
                   <PanelLeft size={20} />
                 </button>
 
-                <div className="admin-breadcrumb">
-                  <span className="admin-breadcrumb-active">{pageTitle}</span>
-                </div>
+                <GlobalHeaderSearch role="admin" />
               </div>
 
               <div className="admin-header__right" ref={headerRightRef}>
@@ -507,10 +482,15 @@ export default function AdminLayout() {
                   {notifOpen && (
                     <NotificationDropdown
                       onClose={() => setNotifOpen(false)}
-                      onUnreadChange={(hasUnread) => setHasUnreadNotif(hasUnread)}
+                      onUnreadChange={() => { }}
                       onOpenViewAll={() => setFullNotifOpen(true)}
                       notifications={notifications}
                       setNotifications={setNotifications}
+                      onSelectNotification={(n) => setSelectedNotifModal(n)}
+                      onNavigate={(path) => {
+                        setNotifOpen(false);
+                        navigate(path);
+                      }}
                     />
                   )}
                 </div>
@@ -525,17 +505,18 @@ export default function AdminLayout() {
                     }}
                     aria-label="User menu"
                   >
-                    <div className="admin-header__user-info">
-                      <span className="admin-header__name">{user.name}</span>
-                    </div>
                     <div className="admin-header__avatar" aria-label={`User profile ${user.name}`}>
                       {user.avatar ? (
                         <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                      ) : user.name ? (
+                      ) : typeof user?.name === "string" && user.name.trim() ? (
                         user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                       ) : (
                         "AD"
                       )}
+                    </div>
+                    <div className="admin-header__user-info">
+                      <span className="admin-header__name">{user.name || "Admin User"}</span>
+                      <span className="admin-header__role">{user.role || "Admin"}</span>
                     </div>
                   </button>
 
@@ -546,7 +527,7 @@ export default function AdminLayout() {
                           <div className="admin-header__profile-avatar">
                             {user.avatar ? (
                               <img src={user.avatar} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-                            ) : user.name ? (
+                            ) : typeof user?.name === "string" && user.name.trim() ? (
                               user.name.trim().split(" ").filter(Boolean).map(n => n[0]).join("").toUpperCase().slice(0, 2)
                             ) : (
                               "AD"
@@ -565,8 +546,8 @@ export default function AdminLayout() {
                             navigate("/admin/profile");
                           }}
                         >
-                          <UserCog size={15} />
-                          Edit Profile
+                          <User size={15} />
+                          View Profile
                         </button>
                         <button
                           className="admin-header__profile-item"
@@ -604,6 +585,13 @@ export default function AdminLayout() {
         </main>
       </div>
       <BroadcastToast />
+      <NotificationDetailModal
+        notification={selectedNotifModal}
+        onClose={() => setSelectedNotifModal(null)}
+        onMarkRead={(id) => setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, unread: !n.unread } : n))}
+        onDelete={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+        onNavigate={(path) => navigate(path)}
+      />
       <FullNotificationModal
         isOpen={fullNotifOpen}
         onClose={() => setFullNotifOpen(false)}

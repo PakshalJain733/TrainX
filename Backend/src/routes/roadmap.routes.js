@@ -1,24 +1,36 @@
 import { Router } from 'express';
 import {
   getRoadmapData,
+  getAllRoadmaps,
   generateRoadmap,
   updateMilestone,
+  generateTopicQuiz,
+  generateMilestoneTheory,
+  getMilestoneVideo,
 } from '../controllers/roadmap.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
+
+// Public educational endpoints (YouTube search & AI Theory Generation)
+router.get('/video', getMilestoneVideo);
+router.post('/theory/generate', generateMilestoneTheory);
 
 // Protect roadmap routes
 router.use(authenticateToken);
 
 // Retrieve student active roadmap
 router.get('/', getRoadmapData);
+router.get('/all', getAllRoadmaps);
 router.get('/my-roadmap', getRoadmapData);
 router.get('/student/:id', getRoadmapData);
 
 // AI Roadmap Generation
 router.post('/generate', generateRoadmap);
 router.post('/student/:id/generate', generateRoadmap);
+
+// AI Quiz Generation
+router.post('/quiz/generate', generateTopicQuiz);
 
 // Milestone Item Status & Progress Update
 router.patch('/items/:itemId', updateMilestone);

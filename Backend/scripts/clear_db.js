@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import mysql from 'mysql2/promise';
-import { config } from '../src/config/env.js';
 import { initializeDatabase } from '../src/config/init_db.js';
 
 async function clearDatabase() {
@@ -7,11 +7,11 @@ async function clearDatabase() {
   
   try {
     const conn = await mysql.createConnection({
-      host: config.db.host,
-      port: config.db.port,
-      user: config.db.user,
-      password: config.db.password,
-      database: config.db.database,
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '3306', 10),
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'training_portal_db',
     });
 
     console.log('[DB Clear] Connected to MySQL database:', config.db.database);
