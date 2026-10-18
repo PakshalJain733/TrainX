@@ -6,7 +6,12 @@ const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
 const dbUser = process.env.DB_USER || 'root';
 const dbPassword = process.env.DB_PASSWORD || '';
 const dbName = process.env.DB_NAME || 'training_portal_db';
-const dbSsl = process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined;
+const dbSsl = process.env.DB_SSL === 'true' 
+  ? { 
+      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'false' ? false : true,
+      ...(process.env.DB_SSL_CA ? { ca: process.env.DB_SSL_CA } : {})
+    } 
+  : undefined;
 const connectTimeout = parseInt(process.env.DB_CONNECT_TIMEOUT || '15000', 10);
 
 export const pool = mysql.createPool({

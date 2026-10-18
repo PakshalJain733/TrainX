@@ -240,7 +240,7 @@ export default function CoordinatorStudents() {
 
     apiFetch("/coordinator/students")
       .then((res) => {
-        let fetched = [];
+        let fetched;
         if (res && res.data && Array.isArray(res.data)) {
           fetched = res.data;
         } else if (res && res.students && Array.isArray(res.students)) {

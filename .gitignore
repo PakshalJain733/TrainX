@@ -53,3 +53,6 @@ Backend/uploads/*
 
 # Script Run Output
 Backend/scripts/tests_and_logs/
+
+# Nested clones/backups
+Training Portal/

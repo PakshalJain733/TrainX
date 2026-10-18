@@ -3,90 +3,40 @@ import { Navigate, useLocation } from "react-router-dom";
 import { getAuthToken } from "../../utils/api";
 import { roleFromAccessToken, getRoleFlags } from "../../utils/authRole";
 
+/**
+ * Enterprise Production-Ready Protected Route Guard.
+ * Enforces authenticated tokens and validates role-based access control (RBAC).
+ * Unauthenticated requests are redirected to login with return path preserved.
+ * Unauthorized requests are redirected to the user's primary assigned dashboard.
+ */
 export default function ProtectedRoute({ allowedRoles = [], children }) {
   const location = useLocation();
 
-  const isLocalhost =
-    typeof window !== "undefined" &&
-    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const token = getAuthToken();
 
-  let token = getAuthToken();
-
-  // 2. Retrieve user object
+  // Retrieve authenticated user object
   let user = null;
   try {
     const rawUser = sessionStorage.getItem("user") || localStorage.getItem("user");
     if (rawUser) user = JSON.parse(rawUser);
-  } catch (e) {
+  } catch (_e) {
     user = null;
   }
 
-  // Localhost Developer Mode: Allow direct URL navigation (e.g. localhost:5173/admin, /coordinator, /mentor)
-  if (isLocalhost) {
-    const currentPath = location.pathname.toLowerCase();
-    let targetRole = null;
-    let devName = null;
-
-    if (currentPath.includes("/super-admin") || currentPath.includes("/superadmin")) {
-      targetRole = "superadmin";
-      devName = "Local Super Admin";
-    } else if (currentPath.includes("/coordinator")) {
-      targetRole = "coordinator";
-      devName = "Local Coordinator";
-    } else if (currentPath.includes("/admin")) {
-      targetRole = "college_admin";
-      devName = "Local Admin";
-    } else if (currentPath.includes("/mentor")) {
-      targetRole = "mentor";
-      devName = "Local Mentor";
-    } else if (currentPath.includes("/student")) {
-      targetRole = "student";
-      devName = "Local Student";
-    }
-
-    const userRoleStr = user?.role ? String(user.role).toLowerCase() : "";
-    const isMatchingRole =
-      !targetRole ||
-      userRoleStr.includes("super") ||
-      (targetRole === "college_admin" && (userRoleStr.includes("admin") || userRoleStr.includes("college_admin") || userRoleStr.includes("hod"))) ||
-      (targetRole === "coordinator" && userRoleStr.includes("coordinator")) ||
-      (targetRole === "mentor" && (userRoleStr.includes("mentor") || userRoleStr.includes("faculty"))) ||
-      (targetRole === "student" && (userRoleStr.includes("student") || userRoleStr === "user"));
-
-    if (targetRole && (!isMatchingRole || !token || !user || !user.role)) {
-      const mockDevUser = {
-        id: 99999,
-        name: devName || "Local User",
-        email: `${targetRole}@localhost.dev`,
-        role: targetRole,
-        college_id: 1,
-        is_profile_updated: true,
-        profileCompleted: true,
-      };
-
-      token = "mock_localhost_dev_token";
-      user = mockDevUser;
-
-      try {
-        sessionStorage.setItem("token", token);
-        sessionStorage.setItem("authToken", token);
-        sessionStorage.setItem("role", targetRole);
-        sessionStorage.setItem("user", JSON.stringify(mockDevUser));
-      } catch (_) {}
-    }
-  }
-
+  // Populate role from access token if user object is partially incomplete
   if (token && (!user || !user.role)) {
     const jwtRole = roleFromAccessToken(token);
     if (jwtRole) {
       user = { ...(user || {}), role: jwtRole };
       try {
         sessionStorage.setItem("user", JSON.stringify(user));
-      } catch (_) {}
+      } catch (_e) {
+        // Storage access handled gracefully
+      }
     }
   }
 
-  // In Deployed / Production environment: if unauthenticated, redirect to login page
+  // If unauthenticated or token is missing, redirect to login
   if (!token || !user || !user.role) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
@@ -110,10 +60,7 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
   }
 
   if (!isAllowed) {
-    if (isLocalhost) {
-      return children;
-    }
-    // If unauthorized on production, redirect to user's assigned dashboard
+    // If unauthorized, redirect to user's assigned dashboard
     if (isSuperAdmin) return <Navigate to="/super-admin" replace />;
     if (isAdmin) return <Navigate to="/admin" replace />;
     if (isCoordinator) return <Navigate to="/coordinator" replace />;

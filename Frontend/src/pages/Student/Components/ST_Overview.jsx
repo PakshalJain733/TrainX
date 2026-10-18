@@ -173,7 +173,9 @@ export default function Overview() {
             });
           }
         })
-        .catch(() => {});
+        .catch((err) => {
+          console.warn('[ST_Overview] Failed to load student overview data:', err?.message || err);
+        });
     };
 
     loadDashboardData();
@@ -184,7 +186,9 @@ export default function Overview() {
           setMyBatchesCount(res.data.length);
         }
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.warn('[ST_Overview] Failed to fetch enrolled batches:', err?.message || err);
+      });
 
     window.addEventListener(EVENTS.QUIZ_UPDATED, loadDashboardData);
     window.addEventListener(EVENTS.CODING_UPDATED, loadDashboardData);

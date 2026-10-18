@@ -484,7 +484,9 @@ export default function Performance() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">{currentKPI.readiness} / 100</h3>
+            <h3 className="sa-stats-val">
+              {currentKPI.readiness} <span className="sa-stats-unit">/ 100</span>
+            </h3>
             <p className="sa-stats-change">
               <ShieldCheck className="sa-stats-trend-icon sa-stats-trend-icon--up" />
               <span className="sa-stats-change-text--up">Top Tier Benchmark</span>
@@ -518,7 +520,9 @@ export default function Performance() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">5 Features</h3>
+            <h3 className="sa-stats-val">
+              5 <span className="sa-stats-unit">Features</span>
+            </h3>
             <p className="sa-stats-change">
               <Activity className="sa-stats-trend-icon sa-stats-trend-icon--up" />
               <span className="sa-stats-change-text--up">100% Operational</span>

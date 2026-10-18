@@ -1,26 +1,18 @@
 /* ─── StudentSidebar.css ─────────────────────────────────────────────────── */
 
 :root {
-  --sidebar-bg: var(--app-sidebar-bg, #dbe5ee);
-  --sidebar-border: var(--app-sidebar-border, #cbd2eb);
+  --sidebar-bg: var(--app-sidebar-bg, #ffffff);
+  --sidebar-border: var(--app-sidebar-border, #e2e8f0);
   --sidebar-width: 240px;
   --sidebar-width-icon: 68px;
   --sidebar-text: #64748b;
   --sidebar-text-bright: #0f172a;
-  --sidebar-primary: #4f46e5;
-  --sidebar-primary-fg: #ffffff;
-  --sidebar-hover-bg: #f1f5f9;
-  --sidebar-active-bg: #4f46e5;
   --sidebar-primary: var(--primary-color, #4f46e5);
   --sidebar-primary-fg: #ffffff;
   --sidebar-hover-bg: #f1f5f9;
   --sidebar-active-bg: var(--primary-color, #4f46e5);
   --sidebar-active-text: #ffffff;
   --sidebar-active-bar: var(--primary-color, #4f46e5);
-  --sidebar-radius: 8px;
-  --sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    opacity 0.2s ease;
-  --sidebar-active-bar: #4f46e5;
   --sidebar-radius: 8px;
   --sidebar-transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.2s ease;
@@ -33,7 +25,7 @@
   width: var(--sidebar-width);
   min-height: 100vh;
   background: var(--sidebar-bg);
-  border-right: none;
+  border-right: 1px solid #e2e8f0;
   transition: var(--sidebar-transition);
   overflow: hidden;
   position: relative;
@@ -53,7 +45,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16px 0px 16px;
-  border-bottom: 1.5px solid #cbd2eb !important;
+  border-bottom: 1px solid #e2e8f0 !important;
   height: auto;
   min-height: 64px;
   gap: 8px;

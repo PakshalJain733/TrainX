@@ -14,7 +14,7 @@ export default function MeetingReminderBanner() {
       const userRaw = sessionStorage.getItem("user") || localStorage.getItem("user");
       if (!userRaw) return;
 
-      let user = null;
+      let user;
       try {
         user = JSON.parse(userRaw);
       } catch (_) {

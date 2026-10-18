@@ -152,6 +152,17 @@ export default function CustomSelect({
         type="button"
         disabled={disabled}
         onClick={handleToggle}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+        aria-label={selectedOption ? selectedOption.label : placeholder}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            setIsOpen(false);
+          } else if ((e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") && !isOpen) {
+            e.preventDefault();
+            handleToggle();
+          }
+        }}
         className="custom-select-trigger"
       >
         <div className="custom-select-left">
@@ -174,11 +185,13 @@ export default function CustomSelect({
         createPortal(
           <div
             ref={menuRef}
+            role="listbox"
+            aria-label={placeholder}
             className={`custom-select-dropdown ${openUpState ? "custom-select-dropdown--up" : ""}`}
             style={menuStyle}
           >
             {normalizedOptions.length === 0 ? (
-              <div className="custom-select-empty">No options available</div>
+              <div className="custom-select-empty" role="status">No options available</div>
             ) : (
               normalizedOptions.map((opt) => {
                 const isSelected = String(opt.value) === String(value);
@@ -186,7 +199,18 @@ export default function CustomSelect({
                 return (
                   <div
                     key={opt.value}
+                    role="option"
+                    tabIndex={0}
+                    aria-selected={isSelected}
                     onClick={() => handleSelect(opt.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        handleSelect(opt.value);
+                      } else if (e.key === "Escape") {
+                        setIsOpen(false);
+                      }
+                    }}
                     className={`custom-select-option ${
                       isSelected ? "custom-select-option--selected" : ""
                     }`}

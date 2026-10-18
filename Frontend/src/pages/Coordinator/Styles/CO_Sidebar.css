@@ -1,8 +1,8 @@
 /* CoordinatorSidebar.css - Aligned with Student & Mentor Workspace Design System */
 
 :root {
-  --sidebar-bg: var(--app-sidebar-bg, #dbe5ee);
-  --sidebar-border: var(--app-sidebar-border, #cbd2eb);
+  --sidebar-bg: var(--app-sidebar-bg, #ffffff);
+  --sidebar-border: var(--app-sidebar-border, #e2e8f0);
   --sidebar-width: 240px;
   --sidebar-width-icon: 68px;
   --sidebar-text: #64748b;
@@ -21,7 +21,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   background: var(--sidebar-bg);
-  border-right: none;
+  border-right: 1px solid #e2e8f0;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   position: relative;
@@ -41,7 +41,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 16px 0px 16px;
-  border-bottom: 1.5px solid #cbd2eb !important;
+  border-bottom: 1px solid #e2e8f0 !important;
   height: auto;
   min-height: 64px;
   gap: 8px;
@@ -280,7 +280,7 @@
 /* ── Footer ── */
 .sidebar-footer {
   padding: 14px 12px 12px 12px;
-  border-top: 1.5px solid #cbd2eb !important;
+  border-top: 1px solid #e2e8f0 !important;
   margin-top: 8px;
 }
 

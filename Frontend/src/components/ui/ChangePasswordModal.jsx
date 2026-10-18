@@ -70,18 +70,18 @@ export default function ChangePasswordModal({ isOpen = true, onClose }) {
 
   return createPortal(
     <div className="cp-modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="cp-modal-dialog">
+      <div className="cp-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="cp-modal-title">
         <div className="cp-modal-header">
           <div className="cp-modal-header-title">
             <div className="cp-modal-icon-badge">
               <Shield size={20} />
             </div>
             <div>
-              <h3>Change Account Password</h3>
+              <h3 id="cp-modal-title">Change Account Password</h3>
               <p>Update your portal access credentials securely.</p>
             </div>
           </div>
-          <button type="button" className="cp-modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="cp-modal-close" onClick={onClose} aria-label="Close dialog">
             <X size={18} />
           </button>
         </div>

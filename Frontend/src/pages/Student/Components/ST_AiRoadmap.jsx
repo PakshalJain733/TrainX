@@ -267,8 +267,8 @@ function getTheoryForMilestone(m, targetRole) {
   const lowerRole = `${title} ${role}`.toLowerCase();
   const isTech = isTechnicalCodingRole(role, title);
 
-  let overview = "";
-  let sections = [];
+  let overview;
+  let sections;
 
   if (lowerRole.includes("python") || lowerRole.includes("ai") || lowerRole.includes("data") || lowerRole.includes("ml")) {
     overview = `In-depth technical curriculum for ${title} within ${role}. This curriculum progresses step-by-step from foundational syntax and object models to CPython bytecode compilation, memory reference counting, and high-performance data processing pipelines.`;

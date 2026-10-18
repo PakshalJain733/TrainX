@@ -262,7 +262,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: #dbe5ee;
+  background: var(--app-page-bg, #f8fafc);
 }
 
 /* Notification Dropdown */
@@ -636,7 +636,7 @@ body {
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: #dbe5ee;
+  background: var(--app-page-bg, #f8fafc);
   padding: 12px 14px 14px 12px;
   box-sizing: border-box;
 }
@@ -694,8 +694,6 @@ body {
 .header-marquee-text {
   display: inline-block;
   white-space: nowrap;
-  animation: marqueeHeaderScroll 18s linear infinite;
-  padding-left: 100%;
   font-size: 12.5px;
   color: #475569;
 }
@@ -871,7 +869,7 @@ body {
 
 .student-header__icon-btn:hover .student-header__bell-icon {
   stroke: #0f172a;
-  transform: rotate(10deg) scale(1.05);
+  transform: scale(1.05);
 }
 
 .student-header__notification-dot {
@@ -1355,9 +1353,9 @@ body {
   display: flex;
   flex-direction: column;
   background: #ffffff;
-  border-radius: 20px;
+  border-radius: 12px;
   border: 1px solid #e2e8f0;
-  box-shadow: none;
+  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
   min-height: 0;
   height: 100%;
   width: 100%;
@@ -1375,8 +1373,8 @@ body {
   justify-content: space-between;
   padding: 0 24px;
   flex-shrink: 0;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
 }
 
 .student-breadcrumb {
@@ -1705,16 +1703,16 @@ body {
   box-shadow: none !important;
 }
 
-/* 4. Floating Ranks & Badges */
+/* 4. Ranks & Badges */
 .overview-rank-gold,
 .overview-trophy-icon,
 [class*="trophy"] {
-  animation: floatBadge 3s ease-in-out infinite;
+  display: inline-flex;
 }
 
 .overview-xp-pill,
 [class*="xp-pill"] {
-  animation: flamePulse 2.5s ease-in-out infinite;
+  display: inline-flex;
 }
 
 /* 5. Active Status Breathing Dot */
@@ -1749,13 +1747,13 @@ button:active:not(:disabled),
   transition: transform 0.08s ease;
 }
 
-/* 10. Icon Hover Micro-Rotation (EXCLUDES Charts and Graphs) */
+/* 10. Icon Hover Micro-Interaction (EXCLUDES Charts and Graphs) */
 .batch-metric-card:hover .batch-metric-icon-box,
 .overview-kpi-card:hover>svg,
 .student-header__icon-btn:hover svg,
 .card:hover svg:not([class*="recharts"]):not(.recharts-surface) {
-  transform: scale(1.12) rotate(3deg);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(1.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* ════════════════════════════════════════════════════════════

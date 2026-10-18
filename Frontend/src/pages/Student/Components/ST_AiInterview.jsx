@@ -1721,7 +1721,7 @@ export default function AIInterview() {
             <div className="ai-timer-left">
               <Timer size={18} />
               <span className={`ai-timer-value ${remaining <= WARNING_SECONDS ? "ai-timer-critical" : ""}`}>
-                {firstQuestionRef.current ? fmtTime(remaining) : "Waiting..."}
+                {question ? fmtTime(remaining) : "Waiting..."}
               </span>
               {warningShown && remaining > 0 && (
                 <span className="ai-time-lbl">1 minute remaining</span>
