@@ -1567,8 +1567,20 @@ export default function ManageUsers() {
     }
   };
 
+  const [codeRequests, setCodeRequests] = useState([]);
+
+  const loadCodeRequests = async () => {
+    try {
+      const res = await apiFetch('/auth/secure-code-requests');
+      if (res && res.data && Array.isArray(res.data)) {
+        setCodeRequests(res.data.filter(r => r.status === 'Pending'));
+      }
+    } catch (_) {}
+  };
+
   useEffect(() => {
     loadSecureCodes();
+    loadCodeRequests();
   }, []);
 
   const handleGenerateCode = async (e) => {
@@ -1950,6 +1962,45 @@ export default function ManageUsers() {
       {/* TAB CONTENT: HODs & College Admins */}
       {activeTab === "admins" && (
         <div className="manageusers-tab-content">
+          {codeRequests.length > 0 && (
+            <div style={{
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <KeyRound size={20} style={{ color: '#2563eb', flexShrink: 0 }} />
+                <div>
+                  <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 800, color: '#1e3a8a' }}>
+                    {codeRequests.length} Admin Secure Code Request(s) Pending
+                  </h4>
+                  <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#3b82f6' }}>
+                    {codeRequests.map(r => `${r.name} (${r.email})`).join(', ')} requested an Admin Secure Code. Generate an access code and provide it to them.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCodeRole('admins');
+                  setGeneratedCode(null);
+                  setIsGenerateCodeModalOpen(true);
+                }}
+                className="sa-btn-primary"
+                style={{ fontSize: '12px', padding: '8px 16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Key size={14} />
+                <span>Generate Code</span>
+              </button>
+            </div>
+          )}
 
 
           <div className="manageusers-table-card">

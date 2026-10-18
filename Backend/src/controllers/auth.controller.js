@@ -1,6 +1,7 @@
 import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
+import { pool, query } from '../config/db.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
   try {
@@ -274,3 +275,79 @@ export const checkRegistrationStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+export const requestSecureCode = async (req, res, next) => {
+  try {
+    const { name, email, role, collegeName } = req.body;
+    if (!name || !email) {
+      return sendError(res, 'Full Name and Email are required to request a secure code', 400);
+    }
+    const cleanEmail = String(email).trim().toLowerCase();
+    const cleanName = String(name).trim();
+    const targetRole = role || 'Admin';
+
+    // 1. Ensure table exists
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS secure_code_requests (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        role VARCHAR(50) DEFAULT 'Admin',
+        college_name VARCHAR(255) NULL,
+        status VARCHAR(50) DEFAULT 'Pending',
+        generated_code VARCHAR(100) NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    `);
+
+    // 2. Insert request record
+    await pool.query(
+      `INSERT INTO secure_code_requests (name, email, role, college_name, status) VALUES (?, ?, ?, ?, 'Pending')`,
+      [cleanName, cleanEmail, targetRole, collegeName || null]
+    );
+
+    // 3. Create a support ticket for Super Admin review
+    try {
+      const [superAdminRows] = await pool.query(
+        `SELECT id FROM users WHERE role = 'super_admin' ORDER BY id ASC LIMIT 1`
+      );
+      const superAdminId = superAdminRows && superAdminRows.length > 0 ? superAdminRows[0].id : 1;
+
+      await pool.query(
+        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description)
+         VALUES (?, ?, 'Access Request', 'Urgent', 'Open', ?)`,
+        [
+          superAdminId,
+          `Secure Code Request: ${cleanName} (${cleanEmail})`,
+          `College Administrator registration request: ${cleanName} (${cleanEmail}) has requested a Secure Authorization Code for self-registration. Please generate an Admin secure code and provide it to them.`
+        ]
+      );
+    } catch (ticketErr) {
+      console.warn('[RequestSecureCode] Ticket creation warning:', ticketErr.message);
+    }
+
+    return sendSuccess(
+      res,
+      'Secure code request submitted successfully to Super Admin! Super Admin will generate your secure code and share it with you.'
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSecureCodeRequests = async (req, res, next) => {
+  try {
+    try {
+      const [rows] = await pool.query(
+        `SELECT * FROM secure_code_requests ORDER BY id DESC LIMIT 50`
+      );
+      return sendSuccess(res, 'Secure code requests retrieved', rows);
+    } catch (_) {
+      return sendSuccess(res, 'Secure code requests retrieved', []);
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+

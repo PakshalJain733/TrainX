@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail , registerInstitution } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -14,6 +14,8 @@ router.get('/registration-status', checkRegistrationStatus);
 router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOtp);
 router.post('/register/verify-email-otp', validateRequestBody(['email', 'otp']), verifyRegisterEmailOtp);
 router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
+router.post('/request-secure-code', requestSecureCode);
+router.get('/secure-code-requests', getSecureCodeRequests);
 
 // OTP, TOTP & Password Login flows
 router.post('/send-otp', sendOtp);
@@ -38,3 +40,4 @@ router.post('/verify-2fa', authenticateToken, verify2FA);
 export default router;
 
 router.post('/register-institution', registerInstitution);
+

@@ -348,6 +348,51 @@ function Register() {
   // Request College Access Key / Demo State
   const [isRequestDemoOpen, setIsRequestDemoOpen] = useState(false);
   const [demoSubmitted, setDemoSubmitted] = useState(false);
+
+  // Secure Code Request State (for College Admin self-registration)
+  const [isRequestingCode, setIsRequestingCode] = useState(false);
+  const [codeRequested, setCodeRequested] = useState(false);
+  const [codeRequestedMsg, setCodeRequestedMsg] = useState("");
+
+  const handleRequestSecureCode = async () => {
+    const name = (formData.name || "").trim();
+    const email = (formData.email || "").trim();
+
+    if (!name || !email) {
+      setErrorMsg("Please enter your Full Name and Email before requesting a Secure Code.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setErrorMsg("Please enter a valid college email address.");
+      return;
+    }
+
+    setIsRequestingCode(true);
+    setErrorMsg("");
+    setCodeRequestedMsg("");
+
+    try {
+      const response = await fetch(`${getApiBaseUrl()}/auth/request-secure-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, role: role || "Admin" }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setCodeRequested(true);
+        setCodeRequestedMsg("✓ Secure code request sent to Super Admin! Super Admin will generate your code and share it with you.");
+        setSuccessMsg("Secure code request sent to Super Admin!");
+      } else {
+        setErrorMsg(data.message || "Failed to request secure code. Please try again.");
+      }
+    } catch (err) {
+      console.error("Error requesting secure code:", err);
+      setErrorMsg("Unable to connect to server. Please try again.");
+    } finally {
+      setIsRequestingCode(false);
+    }
+  };
+
   const [demoFormData, setDemoFormData] = useState({
     collegeName: "",
     contactPerson: "",
@@ -443,11 +488,21 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
-        setRegisteredEmail(emailToVerify);
-        setShowTotpSetup(false);
-        setShowPendingApproval(true);
-        setErrorMsg("");
-        setSuccessMsg("");
+        if (data.data?.token && (role === "Admin" || data.data?.user?.role === "college_admin")) {
+          localStorage.setItem("token", data.data.token);
+          localStorage.setItem("user", JSON.stringify(data.data.user));
+          setShowTotpSetup(false);
+          setSuccessMsg("🎉 Registration and 2FA verified successfully! Redirecting to your Admin Dashboard...");
+          setTimeout(() => {
+            navigate("/admin");
+          }, 1200);
+        } else {
+          setRegisteredEmail(emailToVerify);
+          setShowTotpSetup(false);
+          setShowPendingApproval(true);
+          setErrorMsg("");
+          setSuccessMsg("");
+        }
       } else {
         setErrorMsg(data.message || "Invalid Authenticator Code. Please check Microsoft or Google Authenticator.");
       }
@@ -1267,13 +1322,47 @@ function Register() {
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
-                  <input
-                    type="text"
-                    name="secure_code"
-                    placeholder={`Enter ${role} secure code`}
-                    value={formData.secure_code}
-                    onChange={handleChange}
-                  />
+                  <div className="register-secure-code-wrap" style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                    <input
+                      type="text"
+                      name="secure_code"
+                      placeholder={`Enter ${role} secure code`}
+                      value={formData.secure_code}
+                      onChange={handleChange}
+                      style={{ flex: 1, margin: 0 }}
+                    />
+                    {role === "Admin" && (
+                      <button
+                        type="button"
+                        onClick={handleRequestSecureCode}
+                        disabled={isRequestingCode}
+                        className={`register-request-code-btn ${codeRequested ? 'requested' : ''}`}
+                        style={{
+                          padding: '0 16px',
+                          whiteSpace: 'nowrap',
+                          borderRadius: '8px',
+                          fontWeight: 600,
+                          fontSize: '12.5px',
+                          cursor: isRequestingCode ? 'wait' : 'pointer',
+                          background: codeRequested ? '#10b981' : '#2563eb',
+                          color: '#fff',
+                          border: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.2s ease',
+                          flexShrink: 0
+                        }}
+                      >
+                        {isRequestingCode ? "Sending..." : (codeRequested ? "✓ Code Requested" : "Generate / Request Code")}
+                      </button>
+                    )}
+                  </div>
+                  {codeRequestedMsg && (
+                    <div style={{ fontSize: '12px', color: '#059669', marginTop: '6px', fontWeight: 500 }}>
+                      {codeRequestedMsg}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

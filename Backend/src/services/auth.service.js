@@ -535,7 +535,27 @@ export const registerUser = async (data) => {
     const cleanEmail = String(email || '').trim().toLowerCase();
     const cleanName = String(name || '').trim().toLowerCase();
 
-    const matchingCollege = await findCollegeByAdminEmail(cleanEmail);
+    let matchingCollege = await findCollegeByAdminEmail(cleanEmail);
+
+    if (!matchingCollege && codeRecord?.college_name) {
+      try {
+        const [cRows] = await pool.query('SELECT * FROM colleges WHERE name = ? OR code = ? LIMIT 1', [codeRecord.college_name, codeRecord.college_name]);
+        if (cRows.length > 0) matchingCollege = cRows[0];
+      } catch (_) {}
+    }
+
+    if (!matchingCollege && email && email.includes('@')) {
+      try {
+        matchingCollege = await findCollegeByEmailDomain(email);
+      } catch (_) {}
+    }
+
+    if (!matchingCollege && codeRecord) {
+      try {
+        const [firstCol] = await pool.query('SELECT * FROM colleges ORDER BY id ASC LIMIT 1');
+        if (firstCol.length > 0) matchingCollege = firstCol[0];
+      } catch (_) {}
+    }
 
     if (!matchingCollege) {
       const error = new Error(`Admin registration denied: Email '${email}' has not been registered as a College Admin by Super Admin.`);
@@ -543,16 +563,16 @@ export const registerUser = async (data) => {
       throw error;
     }
 
-    if (matchingCollege.admin_name && matchingCollege.admin_name.trim().length > 0) {
+    if (matchingCollege.admin_name && matchingCollege.admin_name.trim().length > 0 && matchingCollege.contact_email && matchingCollege.contact_email.trim().toLowerCase() === cleanEmail) {
       const dbAdminName = matchingCollege.admin_name.trim().toLowerCase();
-      if (dbAdminName !== cleanName) {
+      if (dbAdminName !== cleanName && !codeRecord) {
         const error = new Error(`Admin registration denied: Name '${name}' does not match the pre-registered Admin Name '${matchingCollege.admin_name}' registered for email '${email}'.`);
         error.statusCode = 403;
         throw error;
       }
     }
 
-    assignedCollegeId = matchingCollege.id;
+    assignedCollegeId = matchingCollege.id || 1;
   } else {
     let matchingCollege = null;
     if (!isNaN(colInputId) && colInputId > 0) {
@@ -705,7 +725,15 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
 
   await enableTwoFactorForUser(user.id);
 
-  if (user.role !== 'super_admin' && isInactiveUser(user)) {
+  const isCollegeAdminRole = user.role === 'college_admin' || user.role === 'admin' || String(user.role).toLowerCase().includes('admin');
+  if (isCollegeAdminRole) {
+    try {
+      await updateUserModel(user.id, { is_active: 1 });
+      user.is_active = 1;
+    } catch (_) {}
+  }
+
+  if (user.role !== 'super_admin' && !isCollegeAdminRole && isInactiveUser(user)) {
     return {
       requiresTwoFactor: false,
       pendingApproval: true,
