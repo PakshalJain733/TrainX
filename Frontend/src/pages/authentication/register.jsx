@@ -1143,7 +1143,7 @@ function Register() {
                 {/* Row 4: Password | Confirm Password */}
                 <div className="form-grid-2">
                   <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
+                    <FieldLabel icon={Icons.lock}>Password</FieldLabel>
                     <div className="register-password-wrapper">
                       <input
                         type={showPassword ? "text" : "password"}
@@ -1221,7 +1221,7 @@ function Register() {
                 {/* Row: Password | Confirm Password for Staff/Mentors */}
                 <div className="form-grid-2">
                   <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Create Password</FieldLabel>
+                    <FieldLabel icon={Icons.lock}>Password</FieldLabel>
                     <div className="register-password-wrapper">
                       <input
                         type={showPassword ? "text" : "password"}
