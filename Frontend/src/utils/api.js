@@ -1,9 +1,23 @@
 export const getApiBaseUrl = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  // In the browser, always use same-origin /api/v1 (Vite proxy locally, Vercel rewrites in prod).
-  if (typeof window !== "undefined") {
-    return "/api/v1";
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL.replace(/\/$/, "");
+  if (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.startsWith("http")) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, "");
   }
+
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    // Local development: use relative /api/v1 so Vite dev server proxies to localhost:5000
+    if (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host.endsWith(".local")
+    ) {
+      return "/api/v1";
+    }
+  }
+
+  // Deployed production API (Render live backend)
   return "https://trainx-6w8m.onrender.com/api/v1";
 };
 
@@ -19,7 +33,7 @@ export const getBackendOrigin = () => {
   }
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
-    if (host === "localhost" || host === "127.0.0.1") {
+    if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
       return `${window.location.protocol}//${host}:5000`;
     }
   }

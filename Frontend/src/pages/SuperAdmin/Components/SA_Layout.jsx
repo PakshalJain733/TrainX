@@ -6,7 +6,7 @@ import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
-import { apiFetch } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 
 const defaultNotificationsList = [];
 
@@ -345,7 +345,7 @@ export default function SuperAdminLayout() {
     try {
       const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
       if (!token) return;
-      const res = await fetch('/api/v1/auth/me', {
+      const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) {

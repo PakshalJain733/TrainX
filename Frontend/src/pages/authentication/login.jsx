@@ -367,7 +367,22 @@ function Login() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, rememberMe }),
       });
-      const data = await response.json();
+      let data = {};
+      try {
+        data = await response.json();
+      } catch (jsonErr) {
+        console.warn("Non-JSON response received:", jsonErr);
+      }
+
+      if (!response.ok) {
+        if (response.status === 502 || response.status === 503 || response.status === 504) {
+          setErrorMsg("Backend server is waking up or temporarily busy. Please wait a few moments and try again.");
+        } else {
+          setErrorMsg(data.message || `Server returned error (${response.status}). Please try again.`);
+        }
+        return;
+      }
+
       if (data.success && data.data?.requiresTwoFactorSetup) {
         setTotpSetupData(data.data);
         setPreAuthToken(null);
