@@ -20,6 +20,16 @@ services:
     networks:
       - trainx-network
 
+  # Code Runner Sandbox Container Image Builder
+  code-runner:
+    build:
+      context: ./Backend/docker/compiler
+      dockerfile: Dockerfile
+    image: trainx-code-runner
+    container_name: trainx-code-runner-builder
+    restart: "no"
+    entrypoint: ["echo", "trainx-code-runner sandbox image built successfully"]
+
   # Backend Node.js API Service
   backend:
     build:
@@ -30,6 +40,8 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      code-runner:
+        condition: service_completed_successfully
     environment:
       PORT: 5000
       NODE_ENV: production
