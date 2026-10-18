@@ -14,7 +14,7 @@ const startServer = async () => {
     await checkDatabaseConnection();
     await initializeDatabase();
 
-
+    // Trigger reload: 2026-10-19
     const PORT = process.env.PORT || 5000;
     const NODE_ENV = process.env.NODE_ENV || 'development';
     const server = http.createServer(app);
