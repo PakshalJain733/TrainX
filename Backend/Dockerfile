@@ -1,11 +1,12 @@
 # Production Dockerfile for TrainX Backend API
 FROM node:20-bookworm-slim
 
-# Install system dependencies (curl for healthchecks, procps for metrics)
+# Install system dependencies (curl for healthchecks, procps for metrics, docker.io for compiler CLI)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     procps \
     ca-certificates \
+    docker.io \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
