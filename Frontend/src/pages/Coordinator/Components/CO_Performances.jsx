@@ -192,7 +192,7 @@ export function CodingPerformance() {
       <div className="coord-perf-card">
         <div className="coord-perf-card-header">
           <h3 className="coord-perf-card-title">
-            <Trophy size={18} style={{ color: "#4f46e5" }} /> Student Coding Performance & Leaderboard
+            <Trophy size={18} className="coord-perf-icon-indigo" /> Student Coding Performance & Leaderboard
           </h3>
           <span className="coord-perf-results-count">
             Showing {filteredData.length} of {performanceData.length} Students
@@ -201,11 +201,11 @@ export function CodingPerformance() {
 
         <div className="coord-perf-table-wrap">
           {loading ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="coord-perf-empty-state-box">
               Loading performance metrics...
             </div>
           ) : filteredData.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="coord-perf-empty-state-box">
               No coding performance records match the selected filters.
             </div>
           ) : (
@@ -221,7 +221,7 @@ export function CodingPerformance() {
                   <th>Accuracy</th>
                   <th>Streak</th>
                   <th>Status</th>
-                  <th style={{ textAlign: "right" }}>Action</th>
+                  <th className="coord-perf-th-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -237,23 +237,23 @@ export function CodingPerformance() {
                       <div className="coord-perf-student-sub">{row.rollNo}</div>
                     </td>
                     <td><span className="coord-perf-batch-badge">{row.batch}</span></td>
-                    <td style={{ fontFamily: "monospace", color: "#475569" }}>{row.primaryLanguage}</td>
-                    <td style={{ fontWeight: 700, color: "#0f172a" }}>{row.totalSolved}</td>
+                    <td className="coord-perf-lang-cell">{row.primaryLanguage}</td>
+                    <td className="coord-perf-solved-cell">{row.totalSolved}</td>
                     <td>{row.totalSubmissions}</td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div className="coord-perf-progress-row">
                         <div className="coord-perf-progress-track">
                           <div
                             className={`coord-perf-progress-bar ${row.accuracyRate >= 80 ? "coord-perf-progress-bar--emerald" : row.accuracyRate >= 60 ? "coord-perf-progress-bar--indigo" : "coord-perf-progress-bar--rose"}`}
                             style={{ width: `${row.accuracyRate}%` }}
                           />
                         </div>
-                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>{row.accuracyRate}%</span>
+                        <span className="coord-perf-rate-text">{row.accuracyRate}%</span>
                       </div>
                     </td>
                     <td>
                       <span className="coord-perf-streak-tag">
-                        <Flame size={13} style={{ color: "#f59e0b" }} /> {row.streakDays}d
+                        <Flame size={13} className="coord-perf-streak-icon" /> {row.streakDays}d
                       </span>
                     </td>
                     <td>
@@ -261,7 +261,7 @@ export function CodingPerformance() {
                         {row.status}
                       </span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="coord-perf-td-right">
                       <button
                         onClick={() => setSelectedStudent(row)}
                         className="coord-perf-btn coord-perf-btn--indigo-light"
@@ -281,54 +281,54 @@ export function CodingPerformance() {
       {selectedStudent && (
         <div className="coord-perf-modal-backdrop">
           <div className="coord-perf-modal-content">
-            <div className="coord-perf-modal-header" style={{ background: "linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)", color: "#fff" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", width: "100%" }}>
+            <div className="coord-perf-modal-header coord-perf-modal-indigo-header">
+              <div className="coord-perf-modal-title-row">
                 <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>
+                  <h3 className="coord-perf-modal-student-title">
                     {selectedStudent.studentName} ({selectedStudent.rollNo})
                   </h3>
-                  <p style={{ fontSize: "12px", color: "#a5b4fc", margin: "2px 0 0 0" }}>
+                  <p className="coord-perf-modal-sub-indigo">
                     Batch: {selectedStudent.batch} &bull; Leaderboard Rank #{selectedStudent.leaderboardRank}
                   </p>
                 </div>
-                <button onClick={() => setSelectedStudent(null)} className="coord-perf-btn" style={{ background: "transparent", border: "none", color: "#a5b4fc", padding: "4px" }}>
+                <button onClick={() => setSelectedStudent(null)} className="coord-perf-btn coord-perf-modal-close-ghost">
                   <X size={20} />
                 </button>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginTop: "16px", background: "rgba(255, 255, 255, 0.08)", padding: "12px", borderRadius: "12px" }}>
+              <div className="coord-perf-modal-stat-grid">
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Total Solved</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#fff", margin: "2px 0 0 0" }}>{selectedStudent.totalSolved}</p>
+                  <p className="coord-perf-modal-stat-label">Total Solved</p>
+                  <p className="coord-perf-modal-stat-val">{selectedStudent.totalSolved}</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Accuracy Rate</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#34d399", margin: "2px 0 0 0" }}>{selectedStudent.accuracyRate}%</p>
+                  <p className="coord-perf-modal-stat-label">Accuracy Rate</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--emerald">{selectedStudent.accuracyRate}%</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Current Streak</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#fbbf24", margin: "2px 0 0 0" }}>{selectedStudent.streakDays} Days</p>
+                  <p className="coord-perf-modal-stat-label">Current Streak</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--amber">{selectedStudent.streakDays} Days</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Primary Lang</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#a5b4fc", margin: "2px 0 0 0" }}>{selectedStudent.primaryLanguage}</p>
+                  <p className="coord-perf-modal-stat-label">Primary Lang</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--indigo">{selectedStudent.primaryLanguage}</p>
                 </div>
               </div>
             </div>
 
             <div className="coord-perf-modal-body">
               <div>
-                <h4 style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em", color: "#64748b", marginBottom: "12px" }}>
+                <h4 className="coord-perf-topic-section-title">
                   Topic Mastery & Skill Breakdown
                 </h4>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "12px" }}>
+                <div className="coord-perf-topic-grid">
                   {Object.entries(selectedStudent.topics).map(([topic, pct]) => (
-                    <div key={topic} style={{ padding: "12px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 700, color: "#334155", marginBottom: "6px" }}>
+                    <div key={topic} className="coord-perf-topic-card">
+                      <div className="coord-perf-topic-header">
                         <span>{topic}</span>
-                        <span style={{ color: "#4f46e5" }}>{pct}%</span>
+                        <span className="coord-perf-topic-pct">{pct}%</span>
                       </div>
-                      <div className="coord-perf-progress-track" style={{ height: "8px" }}>
+                      <div className="coord-perf-progress-track coord-perf-progress-track--sm">
                         <div
                           className="coord-perf-progress-bar coord-perf-progress-bar--indigo"
                           style={{ width: `${pct}%` }}
@@ -341,13 +341,12 @@ export function CodingPerformance() {
             </div>
 
             <div className="coord-perf-modal-footer">
-              <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Last active: <strong style={{ color: "#0f172a" }}>{selectedStudent.lastActive}</strong>
+              <span className="coord-perf-modal-footer-hint">
+                Last active: <strong className="coord-perf-td-bold">{selectedStudent.lastActive}</strong>
               </span>
               <button
                 onClick={() => setSelectedStudent(null)}
-                className="coord-perf-btn"
-                style={{ background: "#4f46e5", color: "#ffffff", border: "none" }}
+                className="coord-perf-btn coord-perf-btn-primary-solid"
               >
                 Close Diagnostic
               </button>
@@ -411,7 +410,7 @@ export function QuizPerformance() {
   return (
     <div className="coord-perf-container">
       {/* KPI Stats */}
-      <div className="coord-perf-kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+      <div className="coord-perf-kpi-grid">
         <div className="coord-perf-kpi-card">
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--indigo">
             <FileCheck2 size={20} />
@@ -486,7 +485,7 @@ export function QuizPerformance() {
       <div className="coord-perf-card">
         <div className="coord-perf-card-header">
           <h3 className="coord-perf-card-title">
-            <BarChart2 size={18} style={{ color: "#4f46e5" }} /> Academic MCQ Quiz & Assessment Performance
+            <BarChart2 size={18} className="coord-perf-icon-indigo" /> Academic MCQ Quiz & Assessment Performance
           </h3>
           <span className="coord-perf-results-count">
             Showing {filteredQuizzes.length} of {quizzesList.length} Quizzes
@@ -495,11 +494,11 @@ export function QuizPerformance() {
 
         <div className="coord-perf-table-wrap">
           {loading ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="coord-perf-empty-state-box">
               Loading quiz performance data...
             </div>
           ) : filteredQuizzes.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="coord-perf-empty-state-box">
               No quiz performance records found.
             </div>
           ) : (
@@ -519,19 +518,19 @@ export function QuizPerformance() {
                   const score = Number(q.avgScore) || 82;
                   return (
                     <tr key={q.id || idx}>
-                      <td style={{ fontWeight: 700, color: "#0f172a" }}>{q.title}</td>
+                      <td className="coord-perf-td-bold">{q.title}</td>
                       <td><span className="coord-perf-batch-badge">{q.category || q.topic || "Core CS"}</span></td>
                       <td>{q.batch || q.batch_name || "All Batches"}</td>
-                      <td style={{ fontWeight: 600 }}>{q.submissions || 18} Attempts</td>
+                      <td className="coord-perf-td-subm">{q.submissions || 18} Attempts</td>
                       <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <div className="coord-perf-progress-row">
                           <div className="coord-perf-progress-track">
                             <div
                               className={`coord-perf-progress-bar ${score >= 80 ? "coord-perf-progress-bar--emerald" : score >= 65 ? "coord-perf-progress-bar--indigo" : "coord-perf-progress-bar--rose"}`}
                               style={{ width: `${score}%` }}
                             />
                           </div>
-                          <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>{score}%</span>
+                          <span className="coord-perf-rate-text">{score}%</span>
                         </div>
                       </td>
                       <td>
@@ -708,7 +707,7 @@ export function InterviewPerformance() {
       <div className="coord-perf-card">
         <div className="coord-perf-card-header">
           <h3 className="coord-perf-card-title">
-            <BarChart2 size={18} style={{ color: "#4f46e5" }} /> AI Mock Interview Evaluation Reports
+            <BarChart2 size={18} className="coord-perf-header-line-icon" /> AI Mock Interview Evaluation Reports
           </h3>
           <span className="coord-perf-results-count">
             Showing {filteredInterviews.length} of {interviewList.length} Interviews
@@ -717,11 +716,11 @@ export function InterviewPerformance() {
 
         <div className="coord-perf-table-wrap">
           {loading ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="coord-perf-empty-state-box">
               Loading interview evaluations...
             </div>
           ) : filteredInterviews.length === 0 ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
+            <div className="coord-perf-empty-state-box">
               No interview records match the selected filters.
             </div>
           ) : (
@@ -735,7 +734,7 @@ export function InterviewPerformance() {
                   <th>Overall Score</th>
                   <th>Technical Score</th>
                   <th>Status</th>
-                  <th style={{ textAlign: "right" }}>Action</th>
+                  <th className="coord-perf-th-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -745,27 +744,27 @@ export function InterviewPerformance() {
                       <div className="coord-perf-student-name">{rec.studentName}</div>
                       <div className="coord-perf-student-sub">{rec.rollNo}</div>
                     </td>
-                    <td style={{ fontWeight: 600, color: "#0f172a" }}>{rec.targetRole}</td>
+                    <td className="coord-perf-td-bold">{rec.targetRole}</td>
                     <td><span className="coord-perf-batch-badge">{rec.batch}</span></td>
-                    <td style={{ color: "#64748b", fontSize: "12px" }}>{rec.conductedDate}</td>
+                    <td className="coord-perf-td-date">{rec.conductedDate}</td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <div className="coord-perf-progress-row">
                         <div className="coord-perf-progress-track">
                           <div
                             className={`coord-perf-progress-bar ${rec.overallScore >= 80 ? "coord-perf-progress-bar--emerald" : rec.overallScore >= 65 ? "coord-perf-progress-bar--indigo" : "coord-perf-progress-bar--rose"}`}
                             style={{ width: `${rec.overallScore}%` }}
                           />
                         </div>
-                        <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155" }}>{rec.overallScore}%</span>
+                        <span className="coord-perf-rate-text">{rec.overallScore}%</span>
                       </div>
                     </td>
-                    <td style={{ fontWeight: 700, color: "#4f46e5" }}>{rec.techScore}%</td>
+                    <td className="coord-perf-td-tech">{rec.techScore}%</td>
                     <td>
                       <span className={`coord-perf-status-pill ${rec.category === "Excellent" ? "coord-perf-status-pill--top" : rec.category === "Good" ? "coord-perf-status-pill--good" : "coord-perf-status-pill--struggling"}`}>
                         {rec.category}
                       </span>
                     </td>
-                    <td style={{ textAlign: "right" }}>
+                    <td className="coord-perf-td-right">
                       <button
                         onClick={() => setSelectedInterview(rec)}
                         className="coord-perf-btn coord-perf-btn--indigo-light"
@@ -785,56 +784,56 @@ export function InterviewPerformance() {
       {selectedInterview && (
         <div className="coord-perf-modal-backdrop">
           <div className="coord-perf-modal-content">
-            <div className="coord-perf-modal-header" style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", color: "#fff" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyBetween: "space-between", width: "100%" }}>
+            <div className="coord-perf-modal-header coord-perf-modal-dark-header">
+              <div className="coord-perf-modal-title-row">
                 <div>
-                  <h3 style={{ fontSize: "16px", fontWeight: 800, margin: 0 }}>
+                  <h3 className="coord-perf-modal-student-title">
                     AI Mock Interview Evaluation: {selectedInterview.studentName}
                   </h3>
-                  <p style={{ fontSize: "12px", color: "#94a3b8", margin: "2px 0 0 0" }}>
+                  <p className="coord-perf-modal-sub-slate">
                     Role: {selectedInterview.targetRole} &bull; Roll: {selectedInterview.rollNo} &bull; {selectedInterview.conductedDate}
                   </p>
                 </div>
-                <button onClick={() => setSelectedInterview(null)} className="coord-perf-btn" style={{ background: "transparent", border: "none", color: "#94a3b8", padding: "4px" }}>
+                <button onClick={() => setSelectedInterview(null)} className="coord-perf-btn coord-perf-modal-close-ghost">
                   <X size={20} />
                 </button>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px", marginTop: "16px", background: "rgba(255, 255, 255, 0.08)", padding: "12px", borderRadius: "12px" }}>
+              <div className="coord-perf-modal-stat-grid">
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Overall Score</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#38bdf8", margin: "2px 0 0 0" }}>{selectedInterview.overallScore}%</p>
+                  <p className="coord-perf-modal-stat-label">Overall Score</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--sky">{selectedInterview.overallScore}%</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Technical Knowledge</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#34d399", margin: "2px 0 0 0" }}>{selectedInterview.techScore}%</p>
+                  <p className="coord-perf-modal-stat-label">Technical Knowledge</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--emerald">{selectedInterview.techScore}%</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Communication</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#fbbf24", margin: "2px 0 0 0" }}>{selectedInterview.communicationScore}%</p>
+                  <p className="coord-perf-modal-stat-label">Communication</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--amber">{selectedInterview.communicationScore}%</p>
                 </div>
                 <div>
-                  <p style={{ fontSize: "11px", color: "#94a3b8", margin: 0 }}>Problem Solving</p>
-                  <p style={{ fontSize: "18px", fontWeight: 800, color: "#a5b4fc", margin: "2px 0 0 0" }}>{selectedInterview.problemSolvingScore}%</p>
+                  <p className="coord-perf-modal-stat-label">Problem Solving</p>
+                  <p className="coord-perf-modal-stat-val coord-perf-modal-stat-val--indigo">{selectedInterview.problemSolvingScore}%</p>
                 </div>
               </div>
             </div>
 
-            <div className="coord-perf-modal-body" style={{ spaceY: "16px" }}>
-              <div style={{ padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
-                <h4 style={{ fontSize: "12px", fontWeight: 800, color: "#0f172a", marginBottom: "6px" }}>
+            <div className="coord-perf-modal-body">
+              <div className="coord-perf-feedback-card">
+                <h4 className="coord-perf-feedback-title">
                   AI Feedback & Recommendations
                 </h4>
-                <p style={{ fontSize: "13px", color: "#334155", margin: 0, lineHeight: 1.5 }}>
+                <p className="coord-perf-feedback-body">
                   {selectedInterview.recommendation}
                 </p>
               </div>
 
               <div>
-                <h4 style={{ fontSize: "12px", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>
+                <h4 className="coord-perf-strengths-title">
                   Key Strengths
                 </h4>
-                <ul style={{ paddingLeft: "18px", margin: 0, fontSize: "12px", color: "#059669", spaceY: "4px" }}>
+                <ul className="coord-perf-strengths-list">
                   {selectedInterview.strengths.map((s, idx) => (
                     <li key={idx}>&bull; {s}</li>
                   ))}
@@ -845,8 +844,7 @@ export function InterviewPerformance() {
             <div className="coord-perf-modal-footer">
               <button
                 onClick={() => setSelectedInterview(null)}
-                className="coord-perf-btn"
-                style={{ background: "#4f46e5", color: "#ffffff", border: "none" }}
+                className="coord-perf-btn coord-perf-btn-primary-solid"
               >
                 Close Report
               </button>
@@ -869,13 +867,13 @@ export default function CoordinatorPerformances() {
       {/* Header & Sub-Tab Switcher */}
       <div className="coord-perf-header-bar">
         <div className="coord-perf-header-left">
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <LineChart size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+          <div className="coord-perf-header-flex-row">
+            <LineChart size={24} className="coord-perf-header-line-icon" />
             <div>
-              <h1 className="coord-perf-title" style={{ margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
+              <h1 className="coord-perf-title">
                 Performances Governance
               </h1>
-              <p className="coord-perf-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+              <p className="coord-perf-sub">
                 Comprehensive unified analytics for student coding practice metrics, MCQ quiz scorecards, and AI mock interview evaluations.
               </p>
             </div>

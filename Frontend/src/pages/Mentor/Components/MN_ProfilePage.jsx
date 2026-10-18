@@ -8,14 +8,6 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_ProfilePage.css";
 
-const deptOptions = [
-  { value: "Computer Engineering", label: "Computer Engineering" },
-  { value: "Information Technology", label: "Information Technology" },
-  { value: "Artificial Intelligence & Data Science", label: "Artificial Intelligence & Data Science" },
-  { value: "Electronics & Telecommunication", label: "Electronics & Telecommunication" },
-  { value: "Mechanical Engineering", label: "Mechanical Engineering" },
-];
-
 const specOptions = [
   { value: "Full Stack Development", label: "Full Stack Development" },
   { value: "Data Structures & Algorithms", label: "Data Structures & Algorithms" },
@@ -26,6 +18,7 @@ const specOptions = [
 
 function MN_ProfilePage() {
   const fileInputRef = useRef(null);
+  const [deptOptions, setDeptOptions] = useState([]);
   const [saved, setSaved] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
@@ -86,6 +79,19 @@ function MN_ProfilePage() {
         }
       })
       .catch(() => { });
+
+    apiFetch("/departments")
+      .then((res) => {
+        const list = res?.data || res || [];
+        if (Array.isArray(list) && list.length > 0) {
+          const opts = list.map((d) => {
+            const code = (d.code && d.code.trim()) || d.name;
+            return { value: code, label: code };
+          });
+          setDeptOptions(opts);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleOpen2FASetup = async () => {

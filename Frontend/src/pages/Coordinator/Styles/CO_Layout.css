@@ -2017,3 +2017,45 @@ body {
   color: var(--primary-color, #4f46e5) !important;
   flex-shrink: 0 !important;
 }
+
+.coord-notif-empty {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.coord-notif-tags-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.coord-notif-tag-target {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.coord-notif-tag-by {
+  background: #f3e8ff;
+  color: #7e22ce;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.coord-notif-tag-priority {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.coord-notif-btn--disabled {
+  opacity: 0.5;
+  cursor: default !important;
+}

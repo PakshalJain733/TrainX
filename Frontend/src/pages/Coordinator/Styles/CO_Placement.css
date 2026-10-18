@@ -1,3 +1,34 @@
+.coord-placement-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.coord-placement-header-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.coord-placement-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.coord-placement-sub {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
 .coord-drive-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;

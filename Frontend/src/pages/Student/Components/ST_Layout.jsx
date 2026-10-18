@@ -11,6 +11,7 @@ import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
+import { getShortDept } from "../../../utils/departmentHelper";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
   const navigate = useNavigate();
@@ -470,16 +471,6 @@ export default function StudentLayout() {
     setProfileOpen(false);
     setMobileOpen(false);
   }, [pathname]);
-
-  const getShortDept = (dept) => {
-    if (!dept) return "ECS";
-    const d = dept.toLowerCase();
-    if (d.includes("electronics") && d.includes("computer")) return "ECS";
-    if (d.includes("computer engineering")) return "CE";
-    if (d.includes("information technology")) return "IT";
-    if (d.includes("artificial intelligence") || d.includes("data science")) return "AI&DS";
-    return dept;
-  };
 
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {

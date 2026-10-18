@@ -39,6 +39,9 @@
   letter-spacing: -0.025em;
   margin: 0;
   line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 @media (min-width: 640px) {

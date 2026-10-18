@@ -20,7 +20,7 @@ function CoordinatorBcastSelect({ value, options = [], onChange, placeholder = '
     <div className={`coordination-bcast-select-wrap${isOpen ? ' coordination-bcast-select-wrap--open' : ''}`} ref={ref}>
       <button type="button" onClick={() => setIsOpen(v => !v)} className={`coordination-bcast-select-trigger${isOpen ? ' coordination-bcast-select-trigger--open' : ''}`}>
         {Icon && <Icon className="coordination-bcast-select-icon" />}
-        <span className="coordination-bcast-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="coordination-bcast-select-text">{selected ? selected.label : <span className="coordination-bcast-select-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`coordination-bcast-select-arrow${isOpen ? ' coordination-bcast-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && (

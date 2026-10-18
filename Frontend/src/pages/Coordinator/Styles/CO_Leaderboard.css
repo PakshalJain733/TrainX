@@ -47,3 +47,16 @@
   border: 1px solid #bfdbfe;
   display: inline-block;
 }
+
+.co-lb-loading {
+  padding: 32px;
+  text-align: center;
+  color: #64748b;
+}
+
+.co-lb-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}

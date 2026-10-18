@@ -182,20 +182,14 @@ const getValidCollegeId = async (collegeId) => {
       let depts = [];
       if (college && college.id) {
         depts = await query(
-          `SELECT id, name, code FROM departments WHERE college_id = ? AND (status IS NULL OR LOWER(status) = 'active') ORDER BY name ASC`,
+          `SELECT id, name, code FROM departments WHERE college_id = ? AND (status IS NULL OR LOWER(status) = 'active') ORDER BY id ASC`,
           [college.id]
-        );
-      }
-
-      if (!depts || depts.length === 0) {
-        depts = await query(
-          `SELECT DISTINCT name, code FROM departments WHERE (status IS NULL OR LOWER(status) = 'active') ORDER BY name ASC`
         );
       }
 
       if (depts && depts.length > 0) {
         return depts.map((d) => {
-          const shortCode = (d.code && d.code.trim()) || (d.name && d.name.trim());
+          const shortCode = (d.code && d.code.trim()) || (d.name && d.name.trim()) || '';
           return {
             value: shortCode,
             label: shortCode,
@@ -205,27 +199,12 @@ const getValidCollegeId = async (collegeId) => {
         });
       }
 
-      return [
-        { value: "COMPS", label: "COMPS", code: "COMPS" },
-        { value: "IT", label: "IT", code: "IT" },
-        { value: "AIML", label: "AIML", code: "AIML" },
-        { value: "ECS", label: "ECS", code: "ECS" },
-        { value: "MTRX", label: "MTRX", code: "MTRX" },
-        { value: "EXTC", label: "EXTC", code: "EXTC" },
-      ];
+      return [];
     } catch (err) {
       console.warn(`[User Model Warning] getDepartmentsByEmailDomain error: ${err.message}`);
-      return [
-        { value: "COMPS", label: "COMPS", code: "COMPS" },
-        { value: "IT", label: "IT", code: "IT" },
-        { value: "AIML", label: "AIML", code: "AIML" },
-        { value: "ECS", label: "ECS", code: "ECS" },
-        { value: "MTRX", label: "MTRX", code: "MTRX" },
-        { value: "EXTC", label: "EXTC", code: "EXTC" },
-      ];
+      return [];
     }
   };
-
 
   export const createUser = async ({
     name,

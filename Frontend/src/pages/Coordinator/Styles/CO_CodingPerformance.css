@@ -842,3 +842,248 @@
     padding: 14px;
   }
 }
+
+
+/* Additional Performance & Modal Styles */
+.coord-perf-icon-indigo {
+  color: #4f46e5;
+}
+
+.coord-perf-empty-state-box {
+  padding: 40px;
+  text-align: center;
+  color: #64748b;
+}
+
+.coord-perf-th-right {
+  text-align: right;
+}
+
+.coord-perf-td-right {
+  text-align: right;
+}
+
+.coord-perf-lang-cell {
+  font-family: monospace;
+  color: #475569;
+}
+
+.coord-perf-solved-cell {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.coord-perf-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-perf-rate-text {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.coord-perf-streak-icon {
+  color: #f59e0b;
+}
+
+.coord-perf-modal-indigo-header {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #ffffff;
+}
+
+.coord-perf-modal-dark-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+}
+
+.coord-perf-modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.coord-perf-modal-student-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.coord-perf-modal-sub-indigo {
+  font-size: 12px;
+  color: #a5b4fc;
+  margin: 2px 0 0 0;
+}
+
+.coord-perf-modal-sub-slate {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 2px 0 0 0;
+}
+
+.coord-perf-modal-close-ghost {
+  background: transparent !important;
+  border: none !important;
+  color: #a5b4fc !important;
+  padding: 4px !important;
+}
+
+.coord-perf-modal-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.coord-perf-modal-stat-label {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.coord-perf-modal-stat-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 2px 0 0 0;
+}
+
+.coord-perf-modal-stat-val--emerald {
+  color: #34d399;
+}
+
+.coord-perf-modal-stat-val--amber {
+  color: #fbbf24;
+}
+
+.coord-perf-modal-stat-val--indigo {
+  color: #a5b4fc;
+}
+
+.coord-perf-modal-stat-val--sky {
+  color: #38bdf8;
+}
+
+.coord-perf-topic-section-title {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.coord-perf-topic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.coord-perf-topic-card {
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.coord-perf-topic-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 6px;
+}
+
+.coord-perf-topic-pct {
+  color: #4f46e5;
+}
+
+.coord-perf-progress-track--sm {
+  height: 8px;
+}
+
+.coord-perf-modal-footer-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.coord-perf-btn-primary-solid {
+  background: #4f46e5 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.coord-perf-header-flex-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-perf-header-line-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.coord-perf-feedback-card {
+  padding: 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.coord-perf-feedback-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 6px;
+}
+
+.coord-perf-feedback-body {
+  font-size: 13px;
+  color: #334155;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.coord-perf-strengths-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 8px;
+}
+
+.coord-perf-strengths-list {
+  padding-left: 18px;
+  margin: 0;
+  font-size: 12px;
+  color: #059669;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coord-perf-td-bold {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.coord-perf-td-subm {
+  font-weight: 600;
+}
+
+.coord-perf-td-date {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.coord-perf-td-tech {
+  font-weight: 700;
+  color: #4f46e5;
+}

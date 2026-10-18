@@ -40,6 +40,9 @@
   letter-spacing: -0.025em;
   margin: 0;
   line-height: 1.25;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 @media (min-width: 640px) {
@@ -1060,4 +1063,71 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+
+/* Additional Helpers for Coding Practice */
+.coord-cp-cell-bold-slate {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.coord-cp-cell-muted {
+  font-weight: 600;
+  color: #334155;
+}
+
+.coord-cp-icon-indigo {
+  color: #4f46e5;
+}
+
+.coord-cp-tc-title {
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.coord-cp-tc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.coord-cp-tc-num {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.coord-cp-tc-preview {
+  margin: 0;
+  font-family: monospace;
+  color: #475569;
+  font-size: 11.5px;
+}
+
+.coord-cp-modal-code-header {
+  border-bottom: 1px solid #1e293b;
+}
+
+.coord-cp-modal-code-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-cp-modal-code-footer {
+  background-color: rgba(15, 23, 42, 0.4);
+  border-top: 1px solid #1e293b;
+  padding: 12px 24px;
+}
+
+.coord-cp-code-passed {
+  color: #cbd5e1;
+}
+
+.coord-cp-code-meta-stats {
+  font-family: monospace;
+  color: #94a3b8;
 }

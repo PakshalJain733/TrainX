@@ -34,6 +34,14 @@
   font-size: 20px;
   font-weight: 800;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-batches-header-icon {
+  color: #2563eb;
+  flex-shrink: 0;
 }
 
 .coord-page-sub {

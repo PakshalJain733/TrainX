@@ -53,6 +53,14 @@
   font-size: 22px;
   font-weight: 800;
   color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-requests-inbox-icon {
+  color: #0284c7;
+  flex-shrink: 0;
 }
 
 .coord-requests-page-subtitle {

@@ -31,7 +31,7 @@ export default function TrainingRegistrationPage() {
     mobile: "",
     roll_number: "",
     college: "PVPPCOE",
-    branch: "Computer Engineering",
+    branch: "CS",
     year: "Third Year",
     division: "A",
     batch: "C2C",
@@ -39,8 +39,22 @@ export default function TrainingRegistrationPage() {
     utr_number: "",
     payment_proof_url: "",
   });
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
+    apiFetch("/departments")
+      .then((res) => {
+        const list = res?.data || res || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setDepartments(list);
+          setFormData((prev) => ({
+            ...prev,
+            branch: prev.branch || list[0].code || list[0].value,
+          }));
+        }
+      })
+      .catch(() => {});
+
     async function loadTraining() {
       setLoading(true);
       setError("");
@@ -352,11 +366,18 @@ export default function TrainingRegistrationPage() {
                     value={formData.branch}
                     onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
                   >
-                    <option value="Computer Engineering">Computer Engineering</option>
-                    <option value="Information Technology">Information Technology</option>
-                    <option value="AI & Data Science">AI & Data Science</option>
-                    <option value="Electronics & Telecommunication">Electronics & Telecommunication</option>
-                    <option value="Other">Other</option>
+                    {departments.length > 0 ? (
+                      departments.map((d) => {
+                        const code = (d.code && d.code.trim()) || d.value;
+                        return (
+                          <option key={d.id || code} value={code}>
+                            {code}
+                          </option>
+                        );
+                      })
+                    ) : (
+                      <option value={formData.branch || "CS"}>{formData.branch || "CS"}</option>
+                    )}
                   </select>
                 </div>
 

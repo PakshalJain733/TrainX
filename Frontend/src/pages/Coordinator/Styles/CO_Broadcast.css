@@ -41,6 +41,10 @@
   animation: fadeIn 0.3s ease;
 }
 
+.coordination-bcast-select-placeholder {
+  color: #94a3b8;
+}
+
 .coordinator-broadcast-form-card, .coordinator-broadcast-history-card {
   border-radius: 12px !important;
   border: 1px solid #e2e8f0 !important;

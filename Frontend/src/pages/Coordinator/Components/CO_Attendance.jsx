@@ -326,11 +326,11 @@ export default function CoordinatorAttendance({ hideHeader }) {
                     <th>Roll No.</th>
                     <th>Department</th>
                     <th>Batch</th>
-                    <th style={{ textAlign: "center" }}>Present</th>
-                    <th style={{ textAlign: "center" }}>Absent</th>
-                    <th style={{ textAlign: "center" }}>Attendance %</th>
-                    <th style={{ textAlign: "center" }}>Status / Risk Level</th>
-                    <th style={{ textAlign: "right" }}>Action</th>
+                    <th className="att-text-center">Present</th>
+                    <th className="att-text-center">Absent</th>
+                    <th className="att-text-center">Attendance %</th>
+                    <th className="att-text-center">Status / Risk Level</th>
+                    <th className="att-text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,7 +341,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
                         {/* Student Name */}
                         <td>
                           <div className="coord-perf-student-cell">
-                            <div className="coord-perf-avatar-lg" style={{ width: "36px", height: "36px", fontSize: "12px", borderRadius: "10px" }}>
+                            <div className="coord-perf-avatar-lg att-avatar-sm">
                               {student.name.split(" ").map((n) => n[0]).join("")}
                             </div>
                             <div>
@@ -352,7 +352,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
                         </td>
 
                         {/* Roll No. */}
-                        <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#334155" }}>
+                        <td className="att-roll">
                           {student.rollNo}
                         </td>
 
@@ -364,40 +364,36 @@ export default function CoordinatorAttendance({ hideHeader }) {
                         </td>
 
                         {/* Batch */}
-                        <td style={{ fontWeight: 600, color: "#475569" }}>
+                        <td className="att-batch">
                           {student.batch}
                         </td>
 
                         {/* Present */}
-                        <td style={{ textAlign: "center", fontWeight: 800, color: "#059669" }}>
+                        <td className="att-present-val">
                           {student.present}
                         </td>
 
                         {/* Absent */}
-                        <td style={{ textAlign: "center", fontWeight: 800, color: "#e11d48" }}>
+                        <td className="att-absent-val">
                           {student.absent}
                         </td>
 
                         {/* Attendance % */}
-                        <td style={{ textAlign: "center" }}>
-                          <span style={{
-                            fontWeight: 800,
-                            fontSize: "14px",
-                            color: student.attendance < 65 ? "#e11d48" : student.attendance < attendanceThreshold ? "#d97706" : "#059669"
-                          }}>
+                        <td className="att-text-center">
+                          <span className={student.attendance < 65 ? "att-pct-crit" : student.attendance < attendanceThreshold ? "att-pct-warn" : "att-pct-good"}>
                             {student.attendance}%
                           </span>
                         </td>
 
                         {/* Status */}
-                        <td style={{ textAlign: "center" }}>
+                        <td className="att-text-center">
                           <span className={`coord-perf-status-badge ${statusObj.badgeClass}`}>
                             {student.attendance >= 75 ? "75%+ Good" : student.attendance >= 65 ? "65–74% Warning" : "Below 65% Critical"}
                           </span>
                         </td>
 
                         {/* Action */}
-                        <td style={{ textAlign: "right" }}>
+                        <td className="att-text-right">
                           <button
                             onClick={() => setSelectedStudentForDetail(student)}
                             className="coord-perf-btn coord-perf-btn--secondary"
@@ -412,7 +408,7 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
                   {(activeTab === "defaulters" ? defaulterStudents : filteredStudents).length === 0 && (
                     <tr>
-                      <td colSpan={9} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
+                      <td colSpan={9} className="att-empty-cell">
                         No student attendance records match your active search filter settings.
                       </td>
                     </tr>
@@ -439,20 +435,20 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
               <div className="flex-between">
                 <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <h3 style={{ fontSize: "20px", fontWeight: 800, margin: 0 }}>{selectedStudentForDetail.name}</h3>
+                  <div className="att-modal-header-row">
+                    <h3 className="att-modal-student-name">{selectedStudentForDetail.name}</h3>
                     <span className={`coord-perf-status-badge ${getDynamicStatus(selectedStudentForDetail.attendance).badgeClass}`}>
                       {selectedStudentForDetail.attendance >= 75 ? "Good" : selectedStudentForDetail.attendance >= 65 ? "Warning" : "Critical"}
                     </span>
                   </div>
-                  <p style={{ fontSize: "12px", color: "#cbd5e1", margin: "4px 0 0 0" }}>
-                    Roll No: <strong style={{ color: "#ffffff" }}>{selectedStudentForDetail.rollNo}</strong> · Dept: {selectedStudentForDetail.department} · Batch: {selectedStudentForDetail.batch}
+                  <p className="att-modal-sub-text">
+                    Roll No: <strong>{selectedStudentForDetail.rollNo}</strong> · Dept: {selectedStudentForDetail.department} · Batch: {selectedStudentForDetail.batch}
                   </p>
                 </div>
 
-                <div style={{ background: "rgba(255,255,255,0.1)", padding: "8px 16px", borderRadius: "12px", textAlign: "center" }}>
-                  <span style={{ fontSize: "10px", color: "#cbd5e1", textTransform: "uppercase", display: "block" }}>Overall Attendance</span>
-                  <span style={{ fontSize: "20px", fontWeight: 800, color: selectedStudentForDetail.attendance < 65 ? "#f43f5e" : "#34d399" }}>
+                <div className="att-modal-overall-pill">
+                  <span className="att-modal-overall-label">Overall Attendance</span>
+                  <span className={`att-modal-overall-val ${selectedStudentForDetail.attendance < 65 ? "att-modal-overall-val--crit" : "att-modal-overall-val--good"}`}>
                     {selectedStudentForDetail.attendance}%
                   </span>
                 </div>
@@ -462,26 +458,26 @@ export default function CoordinatorAttendance({ hideHeader }) {
             {/* Content Body */}
             <div className="coord-perf-modal-body">
               {/* Profile Bar */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px", background: "#f8fafc", padding: "14px", borderRadius: "14px", border: "1px solid #e2e8f0" }}>
+              <div className="att-modal-stat-grid">
                 <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Total Sessions</span>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>{selectedStudentForDetail.totalClasses} Sessions</span>
+                  <span className="att-modal-stat-label">Total Sessions</span>
+                  <span className="att-modal-stat-val">{selectedStudentForDetail.totalClasses} Sessions</span>
                 </div>
                 <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Present / Absent</span>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>
-                    <span style={{ color: "#059669" }}>{selectedStudentForDetail.present} Present</span> / <span style={{ color: "#e11d48" }}>{selectedStudentForDetail.absent} Absent</span>
+                  <span className="att-modal-stat-label">Present / Absent</span>
+                  <span className="att-modal-stat-val">
+                    <span className="att-trend-improving">{selectedStudentForDetail.present} Present</span> / <span className="att-trend-declining">{selectedStudentForDetail.absent} Absent</span>
                   </span>
                 </div>
                 <div>
-                  <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600, display: "block" }}>Attendance Trend</span>
-                  <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", display: "flex", alignItems: "center", gap: "6px", marginTop: "2px" }}>
+                  <span className="att-modal-stat-label">Attendance Trend</span>
+                  <span className="att-modal-trend-row">
                     {selectedStudentForDetail.trend === "Declining" ? (
-                      <span style={{ color: "#e11d48", display: "flex", alignItems: "center", gap: "4px" }}><TrendingDown size={16} /> Declining (-6%)</span>
+                      <span className="att-trend-declining"><TrendingDown size={16} /> Declining (-6%)</span>
                     ) : selectedStudentForDetail.trend === "Improving" ? (
-                      <span style={{ color: "#059669", display: "flex", alignItems: "center", gap: "4px" }}><TrendingUp size={16} /> Improving (+4%)</span>
+                      <span className="att-trend-improving"><TrendingUp size={16} /> Improving (+4%)</span>
                     ) : (
-                      <span style={{ color: "#64748b" }}>Stable</span>
+                      <span className="att-trend-stable">Stable</span>
                     )}
                   </span>
                 </div>
@@ -489,18 +485,18 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
               {/* Monthly Breakdown */}
               <div>
-                <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <h4 className="att-modal-section-title">
                   <Calendar size={16} color="#4f46e5" />
                   Monthly Attendance History
                 </h4>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px" }}>
+                <div className="att-modal-month-grid">
                   {selectedStudentForDetail.monthlyAttendance.map((m, idx) => (
-                    <div key={idx} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "10px", textAlign: "center" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#334155", display: "block" }}>{m.month}</span>
-                      <span style={{ fontSize: "16px", fontWeight: 800, color: m.percent < 75 ? "#e11d48" : "#059669" }}>
+                    <div key={idx} className="att-modal-month-box">
+                      <span className="att-modal-month-title">{m.month}</span>
+                      <span className={m.percent < 75 ? "att-month-pct--crit" : "att-month-pct--good"}>
                         {m.percent}%
                       </span>
-                      <span style={{ fontSize: "10px", color: "#94a3b8", display: "block", marginTop: "2px" }}>
+                      <span className="att-modal-month-sub">
                         {m.present} P / {m.absent} A
                       </span>
                     </div>
@@ -510,27 +506,27 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
               {/* Subject Breakdown */}
               <div>
-                <h4 style={{ fontSize: "13px", fontWeight: 800, color: "#0f172a", marginBottom: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <h4 className="att-modal-section-title">
                   <FileSpreadsheet size={16} color="#4f46e5" />
                   Subject / Session-Wise Attendance Breakdown
                 </h4>
-                <div className="coord-perf-card" style={{ border: "1px solid #e2e8f0" }}>
+                <div className="coord-perf-card att-modal-table-card">
                   <table className="coord-perf-table">
                     <thead>
                       <tr>
                         <th>Subject / Module</th>
-                        <th style={{ textAlign: "center" }}>Present</th>
-                        <th style={{ textAlign: "center" }}>Absent</th>
-                        <th style={{ textAlign: "right" }}>Attendance %</th>
+                        <th className="att-text-center">Present</th>
+                        <th className="att-text-center">Absent</th>
+                        <th className="att-text-right">Attendance %</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedStudentForDetail.subjectHistory.map((sub, idx) => (
                         <tr key={idx}>
-                          <td style={{ fontWeight: 700, color: "#0f172a" }}>{sub.subject}</td>
-                          <td style={{ textAlign: "center", color: "#059669", fontWeight: 700 }}>{sub.present}</td>
-                          <td style={{ textAlign: "center", color: "#e11d48", fontWeight: 700 }}>{sub.absent}</td>
-                          <td style={{ textAlign: "right", fontWeight: 800, color: "#0f172a" }}>{sub.percent}%</td>
+                          <td className="att-table-td-bold">{sub.subject}</td>
+                          <td className="att-table-td-present">{sub.present}</td>
+                          <td className="att-table-td-absent">{sub.absent}</td>
+                          <td className="att-table-td-pct">{sub.percent}%</td>
                         </tr>
                       ))}
                     </tbody>
@@ -541,13 +537,12 @@ export default function CoordinatorAttendance({ hideHeader }) {
 
             {/* Footer */}
             <div className="coord-perf-modal-footer">
-              <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Target Flow: <strong style={{ color: "#0f172a" }}>Attendance → Student History Logs</strong>
+              <span className="att-modal-footer-hint">
+                Target Flow: <strong>Attendance → Student History Logs</strong>
               </span>
               <button
                 onClick={() => setSelectedStudentForDetail(null)}
-                className="coord-perf-btn coord-perf-btn--indigo-light"
-                style={{ background: "#0f172a", color: "#ffffff", border: "none" }}
+                className="coord-perf-btn att-btn-dark"
               >
                 Close History View
               </button>

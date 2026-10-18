@@ -17,7 +17,7 @@ function CoordHelpSelect({ value, options = [], onChange, placeholder = 'Select.
     <div className={`student-help-select-wrap${isOpen ? ' student-help-select-wrap--open' : ''}`} ref={ref}>
       <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-help-select-trigger${isOpen ? ' student-help-select-trigger--open' : ''}`}>
         {Icon && <Icon className="student-help-select-icon" />}
-        <span className="student-help-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
+        <span className="student-help-select-text">{selected ? selected.label : <span className="coord-help-placeholder">{placeholder}</span>}</span>
         <ChevronDown className={`student-help-select-arrow${isOpen ? ' student-help-select-arrow--rotate' : ''}`} />
       </button>
       {isOpen && (
@@ -158,12 +158,12 @@ export default function CoordinatorHelp() {
 
   return (
     <div className="help-page-wrapper">
-      <div style={{ marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em", display: "flex", alignItems: "center", gap: "10px" }}>
-          <HelpCircle size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+      <div className="coord-help-header-wrap">
+        <h2 className="coord-help-title">
+          <HelpCircle size={24} className="coord-help-icon" />
           Support Ticket & Help Desk
         </h2>
-        <p style={{ color: "#64748b", fontSize: "0.95rem", margin: "4px 0 0 0" }}>
+        <p className="coord-help-desc">
           Find answers to common questions or reach out to our support team.
         </p>
       </div>
@@ -171,9 +171,8 @@ export default function CoordinatorHelp() {
       {/* Support Channel Quick Cards */}
       <div className="help-channels-grid">
         <div
-          className="help-channel-card-modern"
+          className="help-channel-card-modern coord-help-card-clickable"
           onClick={() => setIsTicketModalOpen(true)}
-          style={{ cursor: "pointer" }}
         >
           <div className="help-channel-icon-avatar help-icon-blue">
             <Ticket size={22} />
@@ -187,9 +186,8 @@ export default function CoordinatorHelp() {
         </div>
 
         <div
-          className="help-channel-card-modern"
+          className="help-channel-card-modern coord-help-card-clickable"
           onClick={() => { window.location.href = "mailto:support@acadnexus.com"; }}
-          style={{ cursor: "pointer" }}
         >
           <div className="help-channel-icon-avatar help-icon-emerald">
             <MessageCircle size={22} />
@@ -203,9 +201,8 @@ export default function CoordinatorHelp() {
         </div>
 
         <div
-          className="help-channel-card-modern"
+          className="help-channel-card-modern coord-help-card-clickable"
           onClick={() => { window.location.href = "tel:+919876543210"; }}
-          style={{ cursor: "pointer" }}
         >
           <div className="help-channel-icon-avatar help-icon-purple">
             <Phone size={22} />

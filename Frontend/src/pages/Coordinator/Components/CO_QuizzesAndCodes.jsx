@@ -19,7 +19,7 @@ export default function CoordinatorQuizzesAndCodes() {
       {/* Header & Sub-Tab Switcher */}
       <div className="coord-qnc-header">
         <div className="coord-qnc-header-content">
-          <h1 className="coord-qnc-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <h1 className="coord-qnc-title">
             <GraduationCap size={24} className="ui-section-title-icon" />
             <span>Quizzes and Codes</span>
           </h1>

@@ -92,7 +92,7 @@ export default function CoordinatorMentors() {
       .then((res) => {
         const list = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(list)) {
-          setDbDepartments(list.map((d) => d.name || d.code).filter(Boolean));
+          setDbDepartments(list.map((d) => (d.code && d.code.trim()) || d.shortCode || d.name).filter(Boolean));
         }
       })
       .catch(() => null);
@@ -123,7 +123,7 @@ export default function CoordinatorMentors() {
         value: deptName,
         label: deptName,
       }))
-    : [{ value: "Computer Engineering", label: "Computer Engineering" }];
+    : [{ value: "CS", label: "CS" }];
 
   const handleAddMentor = (e) => {
     e.preventDefault();
@@ -198,8 +198,8 @@ export default function CoordinatorMentors() {
       <div className="coord-page-header">
         <div className="coord-header-left">
           <div>
-            <h1 className="coord-page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <h1 className="coord-page-title">
+              <UserCog size={24} className="coord-mentors-header-icon" />
               <span>Assigned Mentors</span>
             </h1>
             <p className="coord-page-sub">

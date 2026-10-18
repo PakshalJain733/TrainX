@@ -27,33 +27,48 @@ export const getDepartments = async (req, res, next) => {
   try {
     await ensureDeptTable();
     const { collegeId, college_id } = req.query;
-    const cid = collegeId || college_id;
+    const userCollegeId = req.user?.college_id || req.user?.collegeId;
+    let cid = collegeId || college_id;
+    if (!cid && userCollegeId && req.user?.role !== 'super_admin') {
+      cid = userCollegeId;
+    }
 
     let sql = `
       SELECT d.*, c.name AS college_name, c.code AS college_code
       FROM departments d
       LEFT JOIN colleges c ON d.college_id = c.id
-      WHERE 1=1
+      WHERE (d.status IS NULL OR LOWER(d.status) = 'active')
     `;
     const params = [];
 
     if (cid && cid !== 'all') {
-      sql += ' AND (d.college_id = ? OR d.college_id IS NULL)';
+      sql += ' AND d.college_id = ?';
       params.push(cid);
     }
 
-    sql += ' ORDER BY d.id DESC';
+    sql += ' ORDER BY d.id ASC';
 
     const dbDepts = await query(sql, params);
-    const formatted = (dbDepts || []).map((d) => ({
-      ...d,
-      collegeId: d.collegeId || d.college_id || 1,
-      college_id: d.college_id || d.collegeId || 1,
-      collegeName: d.college_name || d.collegeName || '',
-      college_name: d.college_name || d.collegeName || '',
-      hodName: d.hodName || d.hod_name || '',
-      hodEmail: d.hodEmail || d.hod_email || '',
-    }));
+    const formatted = (dbDepts || []).map((d) => {
+      const shortCode = (d.code && d.code.trim()) || (d.name && d.name.trim()) || '';
+      return {
+        ...d,
+        id: d.id,
+        code: shortCode,
+        shortCode,
+        value: shortCode,
+        label: shortCode,
+        name: d.name,
+        fullName: d.name,
+        collegeId: d.college_id,
+        college_id: d.college_id,
+        collegeName: d.college_name || '',
+        college_name: d.college_name || '',
+        hodName: d.hod_name || '',
+        hodEmail: d.hod_email || '',
+        status: d.status || 'Active',
+      };
+    });
     return sendSuccess(res, 'Departments retrieved successfully', formatted);
   } catch (error) {
     next(error);

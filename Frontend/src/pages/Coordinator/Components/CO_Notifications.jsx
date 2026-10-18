@@ -98,16 +98,16 @@ export default function CoordinatorNotifications() {
 
   return (
     <div className="student-page-inner notif-page-container">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+      <div className="coord-notif-page-header-row">
         <div>
-          <span style={{ fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em', color: '#6366f1', textTransform: 'uppercase' }}>
+          <span className="coord-notif-eyebrow">
             ACTIVITY LOG & ALERTS
           </span>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '4px 0 0 0', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h2 className="coord-notif-page-title">
             <Bell size={24} className="ui-section-title-icon" />
             <span>Notifications</span>
           </h2>
-          <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+          <p className="coord-notif-page-subtext">
             Stay updated with milestone progression, mentor scorecard dossiers, mock interview drill alerts, and system announcements.
           </p>
         </div>
@@ -115,20 +115,7 @@ export default function CoordinatorNotifications() {
         {unreadCount > 0 && (
           <button 
             onClick={markAllRead}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '0.5rem 1rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '2rem',
-              color: '#1e293b',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-            }}
+            className="coord-notif-mark-read-btn"
           >
             <CheckCheck size={16} color="#2563eb" />
             <span>Mark all read</span>
@@ -197,15 +184,7 @@ export default function CoordinatorNotifications() {
                     <p className="notif-item-body">{item.body}</p>
 
                     <div className="notif-item-bottom-row">
-                      <span style={{
-                        padding: '0.2rem 0.6rem',
-                        borderRadius: '1rem',
-                        backgroundColor: '#f1f5f9',
-                        color: '#475569',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        border: '1px solid #e2e8f0'
-                      }}>
+                      <span className="coord-notif-category-badge">
                         {item.category}
                       </span>
 

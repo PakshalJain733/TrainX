@@ -292,11 +292,11 @@ export default function StudentsNeedImprovement() {
       <div className="coord-perf-header-bar">
         <div className="coord-perf-header-left">
           <div>
-            <h1 className="coord-perf-title" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0, fontSize: "20px", fontWeight: "800", color: "#0f172a" }}>
-              <AlertTriangle size={24} style={{ color: "#e11d48", flexShrink: 0 }} />
+            <h1 className="coord-perf-title coord-sni-header-title-flex">
+              <AlertTriangle size={24} className="coord-sni-alert-icon" />
               <span>Academic Support & Skill-Gap Analysis</span>
             </h1>
-            <p className="coord-perf-sub" style={{ margin: "3px 0 0", fontSize: "13px", color: "#64748b" }}>
+            <p className="coord-perf-sub coord-sni-header-desc">
               Identify students requiring academic intervention, inspect granular scores across quizzes, coding & interviews, and assign targeted remediation plans.
             </p>
           </div>
@@ -318,22 +318,22 @@ export default function StudentsNeedImprovement() {
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="coord-perf-kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "16px" }}>
+      <div className="coord-perf-kpi-grid coord-sni-kpi-grid">
         <div 
           onClick={() => setActiveTab("immediate")}
           className={`coord-perf-kpi-card ${activeTab === "immediate" ? "coord-perf-kpi-card--active" : ""}`}
-          style={{ cursor: "pointer", borderColor: activeTab === "immediate" ? "#e11d48" : "#e2e8f0" }}
+          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--rose">
             <ShieldAlert size={22} />
           </div>
           <div className="coord-perf-kpi-info">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "4px" }}>
-              <span className="coord-perf-kpi-label" style={{ whiteSpace: "normal", lineHeight: "1.3", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Needing Immediate Attention</span>
-              <span className="coord-perf-status-badge coord-perf-status--struggling" style={{ fontSize: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>High Priority</span>
+            <div className="coord-sni-kpi-label-row">
+              <span className="coord-perf-kpi-label coord-sni-kpi-label">Needing Immediate Attention</span>
+              <span className="coord-perf-status-badge coord-perf-status--struggling" className="coord-sni-kpi-badge">High Priority</span>
             </div>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{immediateAttentionStudents.length} Students</span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#e11d48", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+            <span className="coord-perf-kpi-sub coord-sni-sub-rose-flex">
               <AlertTriangle size={12} /> High risk priority skills
             </span>
           </div>
@@ -342,20 +342,20 @@ export default function StudentsNeedImprovement() {
         <div 
           onClick={() => setActiveTab("commonSkills")}
           className="coord-perf-kpi-card"
-          style={{ cursor: "pointer", borderColor: activeTab === "commonSkills" ? "#4f46e5" : "#e2e8f0" }}
+          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--indigo">
             <BrainCircuit size={22} />
           </div>
           <div className="coord-perf-kpi-info">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "4px" }}>
-              <span className="coord-perf-kpi-label" style={{ whiteSpace: "normal", lineHeight: "1.3", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Most Common Weak Skills</span>
-              <span className="coord-perf-status-badge coord-perf-status--good" style={{ fontSize: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>{commonWeakSkills.length} Topics</span>
+            <div className="coord-sni-kpi-label-row">
+              <span className="coord-perf-kpi-label coord-sni-kpi-label">Most Common Weak Skills</span>
+              <span className="coord-perf-status-badge coord-perf-status--good" className="coord-sni-kpi-badge">{commonWeakSkills.length} Topics</span>
             </div>
-            <span className="coord-perf-kpi-value" style={{ color: "#4f46e5" }}>
+            <span className="coord-perf-kpi-value coord-sni-sub-indigo-val">
               {commonWeakSkills[0]?.skillName || "DBMS"}
             </span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#4f46e5", fontWeight: 600 }}>
+            <span className="coord-perf-kpi-sub coord-sni-sub-indigo-text">
               Affecting {commonWeakSkills[0]?.count || 0} students
             </span>
           </div>
@@ -364,18 +364,18 @@ export default function StudentsNeedImprovement() {
         <div 
           onClick={() => setActiveTab("improving")}
           className="coord-perf-kpi-card"
-          style={{ cursor: "pointer", borderColor: activeTab === "improving" ? "#059669" : "#e2e8f0" }}
+          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--emerald">
             <TrendingUp size={22} />
           </div>
           <div className="coord-perf-kpi-info">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "4px" }}>
-              <span className="coord-perf-kpi-label" style={{ whiteSpace: "normal", lineHeight: "1.3", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Students Improving</span>
-              <span className="coord-perf-status-badge coord-perf-status--top" style={{ fontSize: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>Positive Growth</span>
+            <div className="coord-sni-kpi-label-row">
+              <span className="coord-perf-kpi-label coord-sni-kpi-label">Students Improving</span>
+              <span className="coord-perf-status-badge coord-perf-status--top" className="coord-sni-kpi-badge">Positive Growth</span>
             </div>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{improvingStudents.length} Students</span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#059669", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
+            <span className="coord-perf-kpi-sub coord-sni-sub-emerald-flex">
               <CheckCircle size={12} /> Positive response to practice
             </span>
           </div>
@@ -384,18 +384,18 @@ export default function StudentsNeedImprovement() {
         <div 
           onClick={() => setActiveTab("notImproving")}
           className="coord-perf-kpi-card"
-          style={{ cursor: "pointer", borderColor: activeTab === "notImproving" ? "#d97706" : "#e2e8f0" }}
+          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--amber">
             <TrendingDown size={22} />
           </div>
           <div className="coord-perf-kpi-info">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px", marginBottom: "4px" }}>
-              <span className="coord-perf-kpi-label" style={{ whiteSpace: "normal", lineHeight: "1.3", fontSize: "12px", color: "#64748b", fontWeight: 600 }}>Performance Not Improving</span>
-              <span className="coord-perf-status-badge coord-perf-status--avg" style={{ fontSize: "10px", flexShrink: 0, whiteSpace: "nowrap" }}>Action Needed</span>
+            <div className="coord-sni-kpi-label-row">
+              <span className="coord-perf-kpi-label coord-sni-kpi-label">Performance Not Improving</span>
+              <span className="coord-perf-status-badge coord-perf-status--avg" className="coord-sni-kpi-badge">Action Needed</span>
             </div>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--amber">{notImprovingStudents.length} Students</span>
-            <span className="coord-perf-kpi-sub" style={{ color: "#d97706", fontWeight: 600 }}>
+            <span className="coord-perf-kpi-sub coord-sni-sub-amber-text">
               Stagnant or declining trend
             </span>
           </div>
@@ -405,9 +405,9 @@ export default function StudentsNeedImprovement() {
       {/* View Content based on Tab */}
       {activeTab === "commonSkills" ? (
         /* Most Common Weak Skills Analysis Breakdown */
-        <div className="coord-perf-card" style={{ padding: "24px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div className="coord-perf-card coord-sni-card-padded">
           <div>
-            <h2 className="coord-perf-card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <h2 className="coord-perf-card-title coord-sni-card-title">
               <BrainCircuit color="#4f46e5" size={20} />
               Most Common Weak Skills Analysis across Department
             </h2>
@@ -416,20 +416,20 @@ export default function StudentsNeedImprovement() {
             </p>
           </div>
 
-          <div className="coord-perf-cat-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+          <div className="coord-perf-cat-grid">
             {commonWeakSkills.map((skill, idx) => (
-              <div key={idx} style={{ padding: "16px", borderRadius: "14px", background: "#f8fafc", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div key={idx} className="coord-sni-skill-card">
                 <div className="flex-between">
-                  <h3 style={{ fontWeight: 800, fontSize: "14px", color: "#0f172a", margin: 0 }}>{skill.skillName}</h3>
+                  <h3 className="coord-sni-skill-title">{skill.skillName}</h3>
                   <span className="coord-perf-status-badge coord-perf-status--good">
                     {skill.count} Students Weak
                   </span>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", fontWeight: 600, color: "#475569" }}>
+                <div className="coord-sni-col-gap-6">
+                  <div className="coord-sni-skill-row">
                     <span>Average Student Score:</span>
-                    <span style={{ fontWeight: 800, color: skill.avgScore < 50 ? "#e11d48" : "#d97706" }}>
+                    <span className={skill.avgScore < 50 ? "coord-sni-skill-crit-text" : "coord-sni-skill-amber-text"}>
                       {skill.avgScore}%
                     </span>
                   </div>
@@ -441,14 +441,14 @@ export default function StudentsNeedImprovement() {
                   </div>
                 </div>
 
-                <div style={{ paddingTop: "8px", borderTop: "1px solid #e2e8f0", fontSize: "11px", color: "#64748b", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <div className="coord-sni-footer-notes">
                   <div>
-                    <strong style={{ color: "#334155" }}>Primary Sources:</strong> {skill.sourcesList}
+                    <strong className="coord-sni-strong-dark">Primary Sources:</strong> {skill.sourcesList}
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <div className="coord-sni-flex-gap-8">
                     <span>Severity:</span>
-                    <span style={{ color: "#e11d48", fontWeight: 700 }}>{skill.levels.Critical} Critical</span> · 
-                    <span style={{ color: "#d97706", fontWeight: 700 }}>{skill.levels.High} High</span>
+                    <span className="coord-sni-text-rose-bold">{skill.levels.Critical} Critical</span> · 
+                    <span className="coord-sni-text-amber-bold">{skill.levels.High} High</span>
                   </div>
                 </div>
               </div>
@@ -457,7 +457,7 @@ export default function StudentsNeedImprovement() {
         </div>
       ) : (
         /* Filterable Students List */
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+        <div className="coord-sni-section-gap">
           {/* Filters Bar */}
           <div className="coord-perf-filter-card">
             <div className="coord-perf-filter-row">
@@ -519,10 +519,10 @@ export default function StudentsNeedImprovement() {
                     <th>Student Name</th>
                     <th>Roll Number</th>
                     <th>Batch</th>
-                    <th style={{ textAlign: "center" }}>Overall Performance</th>
-                    <th style={{ textAlign: "center" }}>Weak Skills</th>
-                    <th style={{ textAlign: "center" }}>Improvement Priority</th>
-                    <th style={{ textAlign: "center" }}>Action</th>
+                    <th className="coord-sni-text-center">Overall Performance</th>
+                    <th className="coord-sni-text-center">Weak Skills</th>
+                    <th className="coord-sni-text-center">Improvement Priority</th>
+                    <th className="coord-sni-text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -531,7 +531,7 @@ export default function StudentsNeedImprovement() {
                       {/* Student Name */}
                       <td>
                         <div className="coord-perf-student-cell">
-                          <div className="coord-perf-avatar-lg" style={{ width: "36px", height: "36px", fontSize: "12px", borderRadius: "10px" }}>
+                          <div className="coord-perf-avatar-lg coord-sni-avatar-sm">
                             {getInitials(student.studentName)}
                           </div>
                           <div>
@@ -542,19 +542,19 @@ export default function StudentsNeedImprovement() {
                       </td>
 
                       {/* Roll Number */}
-                      <td style={{ fontFamily: "monospace", fontWeight: 700, color: "#334155" }}>
+                      <td className="coord-sni-table-roll">
                         {student.rollNo}
                       </td>
 
                       {/* Batch */}
-                      <td style={{ fontWeight: 600, color: "#475569" }}>
+                      <td className="coord-sni-table-batch">
                         {student.batch}
                       </td>
 
                       {/* Overall Performance */}
-                      <td style={{ textAlign: "center" }}>
-                        <div className="coord-perf-progress-wrap" style={{ margin: "0 auto" }}>
-                          <div style={{ textAlign: "center", fontWeight: 800, color: student.overallPerformance < 65 ? "#e11d48" : "#d97706", fontSize: "13px" }}>
+                      <td className="coord-sni-text-center">
+                        <div className="coord-perf-progress-wrap coord-sni-margin-auto">
+                          <div className={student.overallPerformance < 65 ? "coord-sni-score-crit" : "coord-sni-score-amber"}>
                             {student.overallPerformance}%
                           </div>
                           <div className="coord-perf-progress-track">
@@ -567,22 +567,22 @@ export default function StudentsNeedImprovement() {
                       </td>
 
                       {/* Number of Weak Skills */}
-                      <td style={{ textAlign: "center" }}>
+                      <td className="coord-sni-text-center">
                         <span className="coord-perf-status-badge coord-perf-status--struggling">
                           {student.weakSkillsCount || student.weakSkills?.length || 0} Weak Skills
                         </span>
                       </td>
 
                       {/* Priority Badge */}
-                      <td style={{ textAlign: "center" }}>
+                      <td className="coord-sni-text-center">
                         <span className={`coord-perf-status-badge ${getPriorityBadgeClass(student.priority)}`}>
                           {student.priority} Priority
                         </span>
                       </td>
 
                       {/* View Skill Gap Button */}
-                      <td style={{ textAlign: "center" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                      <td className="coord-sni-text-center">
+                        <div className="coord-sni-table-actions">
                           <button
                             onClick={() => setSelectedSkillGapStudent(student)}
                             className="coord-perf-btn coord-perf-btn--indigo-light"
@@ -593,7 +593,7 @@ export default function StudentsNeedImprovement() {
                           <button
                             onClick={() => setRemediationStudent(student)}
                             className="coord-perf-btn coord-perf-btn--secondary"
-                            style={{ padding: "0 10px" }}
+                            className="coord-perf-btn coord-perf-btn--secondary coord-sni-btn-icon-pad"
                             title="Assign Remediation Plan"
                           >
                             <PlusCircle size={15} />
@@ -605,7 +605,7 @@ export default function StudentsNeedImprovement() {
 
                   {filteredStudents.length === 0 && (
                     <tr>
-                      <td colSpan={7} style={{ textAlign: "center", padding: "36px", color: "#94a3b8" }}>
+                      <td colSpan={7} className="coord-sni-empty-tr">
                         No students found matching your selected filters.
                       </td>
                     </tr>
@@ -629,7 +629,7 @@ export default function StudentsNeedImprovement() {
                     {getInitials(selectedSkillGapStudent.studentName)}
                   </div>
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <div className="coord-sni-modal-name-group">
                       <h3 className="coord-sni-modal-name">{selectedSkillGapStudent.studentName}</h3>
                       <span className={`coord-perf-status-badge ${getPriorityBadgeClass(selectedSkillGapStudent.priority)}`}>
                         {selectedSkillGapStudent.priority} Priority
@@ -679,7 +679,7 @@ export default function StudentsNeedImprovement() {
                   <div key={idx} className="coord-sni-weak-card">
                     <div className="coord-sni-weak-header">
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <div className="coord-sni-weak-name-wrap">
                           <h5 className="coord-sni-weak-name">{skill.skillName}</h5>
                           <span className={`coord-sni-level-badge ${skill.level === "Critical" ? "badge-critical" : "badge-high"}`}>
                             {skill.level} Weakness
@@ -735,7 +735,7 @@ export default function StudentsNeedImprovement() {
                   setSelectedSkillGapStudent(null);
                 }}
                 className="coord-btn coord-btn--primary"
-                style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}
+                className="coord-btn coord-btn--primary coord-sni-btn-assign-plan"
               >
                 <PlusCircle size={15} />
                 Assign Formal Support Plan
@@ -748,7 +748,7 @@ export default function StudentsNeedImprovement() {
       {/* Remediation Plan Assignment Modal */}
       {remediationStudent && (
         <div className="coord-perf-modal-backdrop">
-          <div className="coord-perf-modal-card" style={{ maxWidth: "520px" }}>
+          <div className="coord-perf-modal-card coord-sni-remediation-modal-card">
             <div className="coord-perf-modal-header">
               <button
                 onClick={() => setRemediationStudent(null)}
@@ -757,15 +757,15 @@ export default function StudentsNeedImprovement() {
                 <X size={18} />
               </button>
 
-              <h3 style={{ fontSize: "18px", fontWeight: 800, margin: 0 }}>Assign Remedial Support Plan</h3>
-              <p style={{ fontSize: "12px", color: "#fda4af", margin: "4px 0 0 0" }}>
+              <h3 className="coord-sni-remediation-title">Assign Remedial Support Plan</h3>
+              <p className="coord-sni-remediation-sub">
                 Student: <strong>{remediationStudent.studentName}</strong> ({remediationStudent.rollNo})
               </p>
             </div>
 
-            <form onSubmit={handleAssignPlan} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px", fontSize: "12.5px" }}>
+            <form onSubmit={handleAssignPlan} className="coord-sni-remediation-form">
               <div>
-                <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Select Action Plan Type</label>
+                <label className="coord-sni-form-label">Select Action Plan Type</label>
                 <CustomSelect
                   value={planType}
                   onChange={setPlanType}
@@ -779,30 +779,28 @@ export default function StudentsNeedImprovement() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Target Remediation Deadline</label>
+                <label className="coord-sni-form-label">Target Remediation Deadline</label>
                 <input
                   type="date"
                   value={planDeadline}
                   onChange={(e) => setPlanDeadline(e.target.value)}
-                  className="coord-perf-search-input"
-                  style={{ width: "100%", paddingLeft: "12px" }}
+                  className="coord-perf-search-input coord-sni-form-date-input"
                   required
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontWeight: 700, color: "#334155", marginBottom: "4px" }}>Coordinator Directives & Notes</label>
+                <label className="coord-sni-form-label">Coordinator Directives & Notes</label>
                 <textarea
                   rows={3}
                   value={planNotes}
                   onChange={(e) => setPlanNotes(e.target.value)}
                   placeholder="Enter specific instructions for student and assigned mentor..."
-                  className="coord-perf-search-input"
-                  style={{ width: "100%", paddingLeft: "12px", height: "auto", paddingTop: "8px", resize: "none" }}
+                  className="coord-perf-search-input coord-sni-form-textarea"
                 />
               </div>
 
-              <div style={{ paddingTop: "12px", borderTop: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px" }}>
+              <div className="coord-sni-form-footer">
                 <button
                   type="button"
                   onClick={() => setRemediationStudent(null)}
@@ -812,8 +810,7 @@ export default function StudentsNeedImprovement() {
                 </button>
                 <button
                   type="submit"
-                  className="coord-perf-btn coord-perf-btn--indigo-light"
-                  style={{ background: "#e11d48", color: "#ffffff", border: "none" }}
+                  className="coord-perf-btn coord-sni-btn-confirm"
                 >
                   Confirm & Trigger Remediation
                 </button>
