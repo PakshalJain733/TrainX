@@ -169,7 +169,9 @@ export function initInterviewSocket(httpServer) {
             host.endsWith('.vercel.app') ||
             host.endsWith('.netlify.app') ||
             host.endsWith('.onrender.com') ||
-            host.endsWith('.github.io');
+            host.endsWith('.github.io') ||
+            host.endsWith('getflytechnologies.com') ||
+            host.endsWith('vppcoe.tech');
 
           if (isLocalHost || isAllowedDeployment) return cb(null, true);
         } catch (e) {}

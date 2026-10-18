@@ -45,58 +45,70 @@ const app = express();
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
 
-// Production-safe CORS: allow the configured frontend origin(s) plus local dev
+// Production-safe CORS: allow configured frontend origin(s), production domains, and local dev
+const configuredOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 const allowedOrigins = new Set(
   [
-    frontendUrl,
+    ...configuredOrigins,
+    'https://trainingportal.getflytechnologies.com',
+    'https://api.trainingportal.getflytechnologies.com',
+    'https://trainx.vppcoe.tech',
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
-    nodeEnv === 'production' ? '' : 'http://localhost:5500',
+    'http://localhost:5500',
   ]
     .filter(Boolean)
     .filter((o) => typeof o === 'string')
     .map((o) => o.replace(/\/$/, ''))
 );
 
-app.use(
-  cors({
-    origin(origin, cb) {
-      // Allow non-browser / same-origin requests
-      if (!origin) return cb(null, true);
-      const cleanOrigin = origin.replace(/\/$/, '');
-      if (allowedOrigins.has(cleanOrigin)) return cb(null, true);
+const corsOptions = {
+  origin(origin, cb) {
+    // Allow non-browser / same-origin requests
+    if (!origin) return cb(null, true);
+    const cleanOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.has(cleanOrigin)) return cb(null, true);
 
-      // Allow LAN / private IP origins and standard deployment platforms
-      try {
-        const url = new URL(cleanOrigin);
-        const host = url.hostname;
-        const isLocalHost =
-          ['localhost', '127.0.0.1', '::1'].includes(host) ||
-          host.endsWith('.local') ||
-          /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
-          /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
-          /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
+    // Allow LAN / private IP origins and standard deployment platforms
+    try {
+      const url = new URL(cleanOrigin);
+      const host = url.hostname;
+      const isLocalHost =
+        ['localhost', '127.0.0.1', '::1'].includes(host) ||
+        host.endsWith('.local') ||
+        /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
+        /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
+        /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
 
-        const isAllowedDeployment =
-          host.endsWith('.vercel.app') ||
-          host.endsWith('.netlify.app') ||
-          host.endsWith('.onrender.com') ||
-          host.endsWith('.github.io');
+      const isAllowedDeployment =
+        host.endsWith('.vercel.app') ||
+        host.endsWith('.netlify.app') ||
+        host.endsWith('.onrender.com') ||
+        host.endsWith('.github.io') ||
+        host.endsWith('getflytechnologies.com') ||
+        host.endsWith('vppcoe.tech');
 
-        if (isLocalHost || isAllowedDeployment) return cb(null, true);
-      } catch (e) {}
+      if (isLocalHost || isAllowedDeployment) return cb(null, true);
+    } catch (e) {}
 
-      if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
-        return cb(null, true);
-      }
+    if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
+      return cb(null, true);
+    }
 
-      return cb(null, false);
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token', 'x-c2c-webhook-secret'],
-  })
-);
+    return cb(null, false);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token', 'x-c2c-webhook-secret'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(apiMetricsMiddleware);
