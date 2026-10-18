@@ -5,7 +5,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/SA_Tickets.css";
 
-const statusVariant = (s) => s === "Open" ? "destructive" : s === "In Progress" ? "default" : s === "Escalated" ? "warning" : "success";
+const statusVariant = (s) => s === "Open" ? "destructive" : s === "In Progress" ? "default" : "success";
 const priorityClass = (p) => p === "High" || p === "Urgent" ? "ticket-priority--high" : p === "Medium" || p === "Normal" ? "ticket-priority--med" : "ticket-priority--low";
 
 export default function SuperAdminTickets() {
@@ -70,15 +70,12 @@ export default function SuperAdminTickets() {
     const matchesStatus =
       statusFilter === "All"
         ? true
-        : statusFilter === "Escalated"
-        ? (t.status === "Escalated" || t.isEscalated)
         : t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
   const openCount = tickets.filter(t => t.status === "Open").length;
   const inProgressCount = tickets.filter(t => t.status === "In Progress").length;
-  const escalatedCount = tickets.filter(t => t.status === "Escalated" || t.isEscalated).length;
   const resolvedCount = tickets.filter(t => t.status === "Resolved").length;
 
   return (
@@ -90,14 +87,13 @@ export default function SuperAdminTickets() {
               <span>Super Admin Issue Resolution Center</span>
             </h2>
             <p className="ui-section-desc">
-              Review, manage, and resolve system-wide tickets & escalated issues forwarded by College Admins.
+              Review, manage, and resolve system-wide support tickets.
             </p>
           </div>
           <div className="ui-section-action">
             <div className="help-stats">
               <span className="help-stat-badge help-stat-open">{openCount} Open</span>
               <span className="help-stat-badge help-stat-inprogress">{inProgressCount} In Progress</span>
-              <span className="help-stat-badge" style={{ background: '#ffedd5', color: '#c2410c' }}>{escalatedCount} Escalated</span>
               <span className="help-stat-badge help-stat-resolved">{resolvedCount} Resolved</span>
             </div>
           </div>
@@ -128,7 +124,7 @@ export default function SuperAdminTickets() {
         </div>
 
         <div className="admin-status-tabs">
-          {["All", "Escalated", "Open", "In Progress", "Resolved"].map((st) => (
+          {["All", "Open", "In Progress", "Resolved"].map((st) => (
             <button
               key={st}
               className={`admin-status-tab ${statusFilter === st ? "active" : ""}`}
@@ -150,7 +146,7 @@ export default function SuperAdminTickets() {
           <div className="admin-empty-state-card">
             <MessageSquare size={36} className="admin-empty-state-icon" />
             <p className="admin-empty-state-title">No support tickets found</p>
-            <p className="admin-empty-state-sub">Escalated issues and student/mentor tickets will appear here for Super Admin resolution.</p>
+            <p className="admin-empty-state-sub">Student and mentor support tickets will appear here for Super Admin resolution.</p>
           </div>
         ) : (
           filteredTickets.map(t => (
@@ -159,8 +155,6 @@ export default function SuperAdminTickets() {
                 <div className="ticket-icon-wrap">
                   {t.status === "Resolved" ? (
                     <CheckCircle2 size={20} className="ticket-icon-resolved" />
-                  ) : t.isEscalated || t.status === "Escalated" ? (
-                    <ShieldAlert size={20} style={{ color: "#ea580c" }} />
                   ) : (
                     <MessageSquare size={20} className="ticket-icon-open" />
                   )}
@@ -171,11 +165,6 @@ export default function SuperAdminTickets() {
                     <span className="ticket-id-pill">{t.id}</span>
                     <span className="ticket-role-pill">{t.role}</span>
                     <span className="ticket-category-pill">{t.category}</span>
-                    {(t.isEscalated || t.status === "Escalated") && (
-                      <span className="ticket-role-pill" style={{ background: "#ffedd5", color: "#c2410c", border: "1px solid #fdba74" }}>
-                        <ShieldAlert size={11} style={{ marginRight: 4, display: "inline" }} /> Escalated by Admin ({t.escalatedByName || 'College Admin'})
-                      </span>
-                    )}
                   </div>
                   <h4 className="ticket-title">{t.title}</h4>
                   <p className="ticket-desc-snippet">{t.description}</p>
@@ -188,12 +177,6 @@ export default function SuperAdminTickets() {
                     <Clock size={12} className="ticket-clock" />
                     <span className="ticket-time">{t.time}</span>
                   </div>
-
-                  {t.isEscalated && t.escalationReason && (
-                    <div className="ticket-resolution-note-box" style={{ background: "#fff7ed", borderColor: "#f97316", color: "#9a3412" }}>
-                      <strong>College Admin Escalation Note:</strong> {t.escalationReason}
-                    </div>
-                  )}
 
                   {t.resolutionNote && (
                     <div className="ticket-resolution-note-box">
@@ -240,11 +223,6 @@ export default function SuperAdminTickets() {
                 <p><strong>Title:</strong> {selectedTicket.title}</p>
                 <p><strong>Submitted by:</strong> {selectedTicket.requesterName} ({selectedTicket.role} - {selectedTicket.batch})</p>
                 <p><strong>Description:</strong> {selectedTicket.description}</p>
-                {selectedTicket.isEscalated && (
-                  <p style={{ color: "#c2410c", marginTop: 4 }}>
-                    <strong>Admin Escalation Note:</strong> {selectedTicket.escalationReason}
-                  </p>
-                )}
               </div>
 
               <div className="admin-form-group">
