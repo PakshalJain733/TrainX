@@ -8,6 +8,7 @@ import { Button } from "../../../components/ui/Button";
 import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 import { EVENTS } from "../../../utils/sharedStore";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
+import { getShortDept } from "../../../utils/departmentHelper";
 import "../Styles/ST_Overview.css";
 
 const API_BASE = getApiBaseUrl();
@@ -305,7 +306,7 @@ export default function Overview() {
             </h1>
             <p className="overview-hero-desc">
               {[
-                dept,
+                getShortDept(dept),
                 sem ? (String(sem).toLowerCase().includes("sem") ? sem : `Semester ${sem}`) : null,
                 cgpa ? `CGPA: ${cgpa}` : null,
                 rollNum ? `Roll: ${rollNum}` : null

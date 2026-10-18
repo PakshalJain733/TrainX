@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import { MentorSidebar } from "./MN_Sidebar";
 import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
+import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -480,7 +481,9 @@ export default function MentorLayout() {
 
             {/* Page Content Body */}
             <div className="mentor-card-body">
-              <Outlet />
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
 
           </div>

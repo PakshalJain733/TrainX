@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { Badge } from "../../../components/ui/Badge";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
+import { getShortDept } from "../../../utils/departmentHelper";
 import "../Styles/CO_Overview.css";
 
 const DEFAULT_TRAINING_SESSIONS = [];
@@ -376,7 +377,7 @@ export default function CoordinatorOverview() {
   const userInitials = getInitials(fullName);
 
   const statsList = [
-    { label: "Enrolled Students", value: `${studentCount}`, hint: `Active in ${dept}`, icon: GraduationCap },
+    { label: "Enrolled Students", value: `${studentCount}`, hint: `Active in ${getShortDept(dept) || "CS"}`, icon: GraduationCap },
     { label: "Managed Batches", value: `${liveBatches.length} Batches`, hint: "Current active batches", icon: Users },
     { label: "Mentors", value: `${mentorCount} Trainers`, hint: "Assigned department mentors", icon: UserCheck },
     { label: "Attendance Rate", value: attendanceRate || "0%", hint: "Department average", icon: LineChart },
@@ -400,7 +401,7 @@ export default function CoordinatorOverview() {
               Welcome back, {fullName}!
             </h1>
             <p className="overview-hero-desc">
-              {dept || "Computer Engineering"} &nbsp;|&nbsp; {role || "Training Coordinator"} &nbsp;|&nbsp; {email || "coordinator@pvppcoe.ac.in"}
+              {getShortDept(dept) || "CS"} &nbsp;|&nbsp; {role || "Training Coordinator"} &nbsp;|&nbsp; {email || "coordinator@pvppcoe.ac.in"}
             </p>
           </div>
         </div>

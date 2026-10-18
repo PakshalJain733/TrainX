@@ -567,3 +567,252 @@
   color: #0f172a;
 }
 
+
+
+/* Attendance Table & Modal Classes */
+.att-text-center {
+  text-align: center;
+}
+
+.att-text-right {
+  text-align: right;
+}
+
+.att-roll {
+  font-family: monospace;
+  font-weight: 700;
+  color: #334155;
+}
+
+.att-batch {
+  font-weight: 600;
+  color: #475569;
+}
+
+.att-present-val {
+  text-align: center;
+  font-weight: 800;
+  color: #059669;
+}
+
+.att-absent-val {
+  text-align: center;
+  font-weight: 800;
+  color: #e11d48;
+}
+
+.att-avatar-sm {
+  width: 36px;
+  height: 36px;
+  font-size: 12px;
+  border-radius: 10px;
+}
+
+.att-empty-cell {
+  text-align: center;
+  padding: 36px;
+  color: #94a3b8;
+}
+
+.att-modal-header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.att-modal-student-name {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.att-modal-sub-text {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin: 4px 0 0 0;
+}
+
+.att-modal-overall-pill {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.att-modal-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  background: #f8fafc;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+}
+
+.att-modal-stat-label {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+  display: block;
+}
+
+.att-modal-stat-val {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.att-modal-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.att-modal-month-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  text-align: center;
+}
+
+.att-modal-month-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  display: block;
+}
+
+.att-modal-month-sub {
+  font-size: 10px;
+  color: #94a3b8;
+  display: block;
+  margin-top: 2px;
+}
+
+.att-modal-section-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.att-modal-table-card {
+  border: 1px solid #e2e8f0;
+}
+
+.att-modal-footer-hint {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.att-btn-dark {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+}
+
+.att-pct-good {
+  font-weight: 800;
+  font-size: 14px;
+  color: #059669;
+}
+
+.att-pct-warn {
+  font-weight: 800;
+  font-size: 14px;
+  color: #d97706;
+}
+
+.att-pct-crit {
+  font-weight: 800;
+  font-size: 14px;
+  color: #e11d48;
+}
+
+.att-modal-overall-label {
+  font-size: 10px;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  display: block;
+}
+
+.att-modal-overall-val {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.att-modal-overall-val--good {
+  color: #34d399;
+}
+
+.att-modal-overall-val--crit {
+  color: #f43f5e;
+}
+
+.att-modal-trend-row {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.att-trend-declining {
+  color: #e11d48;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.att-trend-improving {
+  color: #059669;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.att-trend-stable {
+  color: #64748b;
+}
+
+.att-month-pct--good {
+  font-size: 16px;
+  font-weight: 800;
+  color: #059669;
+}
+
+.att-month-pct--crit {
+  font-size: 16px;
+  font-weight: 800;
+  color: #e11d48;
+}
+
+.att-table-td-bold {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.att-table-td-present {
+  text-align: center;
+  color: #059669;
+  font-weight: 700;
+}
+
+.att-table-td-absent {
+  text-align: center;
+  color: #e11d48;
+  font-weight: 700;
+}
+
+.att-table-td-pct {
+  text-align: right;
+  font-weight: 800;
+  color: #0f172a;
+}
+

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation, Link } from 'react-router-dom';
 import { PanelLeft, Bell, Search, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import SuperAdminSidebar from "./SA_Sidebar";
 import GlobalHeaderSearch from '../../../components/Common/GlobalHeaderSearch';
+import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import ChangePasswordModal from '../../../components/ui/ChangePasswordModal';
 import "../Styles/SA_Layout.css";
@@ -540,7 +541,9 @@ export default function SuperAdminLayout() {
 
             {/* Page Content Body */}
             <div className="sa-card-body">
-              <Outlet />
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
 
           </div>

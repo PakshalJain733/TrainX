@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User } from "lucide-react";
 import { StudentSidebar } from "./ST_Sidebar";
 import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
+import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/ST_Layout.css";
@@ -11,6 +12,7 @@ import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
 import DesktopNotificationToggle from "../../../components/Common/DesktopNotificationToggle";
+import { getShortDept } from "../../../utils/departmentHelper";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onSelectNotification }) {
   const navigate = useNavigate();
@@ -471,16 +473,6 @@ export default function StudentLayout() {
     setMobileOpen(false);
   }, [pathname]);
 
-  const getShortDept = (dept) => {
-    if (!dept) return "ECS";
-    const d = dept.toLowerCase();
-    if (d.includes("electronics") && d.includes("computer")) return "ECS";
-    if (d.includes("computer engineering")) return "CE";
-    if (d.includes("information technology")) return "IT";
-    if (d.includes("artificial intelligence") || d.includes("data science")) return "AI&DS";
-    return dept;
-  };
-
   const toggleSidebar = () => {
     if (window.innerWidth <= 768) {
       setMobileOpen((o) => !o);
@@ -643,7 +635,9 @@ export default function StudentLayout() {
                   : {}
               }
             >
-              <Outlet />
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
 
           </div>

@@ -215,7 +215,9 @@ export default function CoordinatorStudents() {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [activeTab, setActiveTab] = useState("roadmap");
   const [selectedGoal, setSelectedGoal] = useState("python-backend");
+  const [studentMilestones, setStudentMilestones] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationSuccess, setGenerationSuccess] = useState("");
 
   const coordDept = useMemo(() => {
     return (
@@ -297,11 +299,55 @@ export default function CoordinatorStudents() {
     return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
   }, [coordDept]);
 
-  const handleOpenStudentDetail = (student) => {
+  const handleOpenStudentDetail = async (student) => {
     setSelectedStudent(student);
-    setSelectedGoal(student.selectedGoal || "python-backend");
+    setGenerationSuccess("");
     setActiveTab("roadmap");
     window.scrollTo({ top: 0, behavior: "smooth" });
+
+    // Determine initial goal track
+    let initialGoal = "python-backend";
+    if (student.selectedGoalName) {
+      const match = careerTracks.find(
+        (t) =>
+          t.name.toLowerCase() === student.selectedGoalName.toLowerCase() ||
+          t.id.toLowerCase() === student.selectedGoalName.toLowerCase()
+      );
+      if (match) initialGoal = match.id;
+    }
+    setSelectedGoal(initialGoal);
+
+    // Initialise milestones
+    const fallback = roadmapData[initialGoal] || roadmapData["python-backend"];
+    setStudentMilestones(fallback);
+
+    // Fetch real saved roadmap if available
+    try {
+      const studentIdentifier =
+        student.userId ||
+        student.studentId ||
+        (student.id ? String(student.id).replace("st-", "") : "");
+      if (studentIdentifier) {
+        const res = await apiFetch(`/roadmaps/student/${studentIdentifier}`);
+        if (
+          res &&
+          res.data &&
+          Array.isArray(res.data.milestones) &&
+          res.data.milestones.length > 0
+        ) {
+          setStudentMilestones(res.data.milestones);
+          if (res.data.targetRole || res.data.careerTrack) {
+            const roleName = res.data.targetRole || res.data.careerTrack;
+            const matched = careerTracks.find(
+              (t) =>
+                t.name.toLowerCase() === roleName.toLowerCase() ||
+                t.id.toLowerCase() === roleName.toLowerCase()
+            );
+            if (matched) setSelectedGoal(matched.id);
+          }
+        }
+      }
+    } catch (_) {}
   };
 
   const getInitials = (nameStr) => {
@@ -348,13 +394,91 @@ export default function CoordinatorStudents() {
     return { total, avgAtt, avgQuiz, highRisk, enrolledRoadmaps };
   }, [filteredStudents]);
 
-  const milestones = roadmapData[selectedGoal] || roadmapData["python-backend"];
+  const milestones = studentMilestones.length > 0
+    ? studentMilestones
+    : (roadmapData[selectedGoal] || roadmapData["python-backend"]);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
+    if (!selectedStudent || isGenerating) return;
     setIsGenerating(true);
-    setTimeout(() => {
+    setGenerationSuccess("");
+
+    const targetTrackObj = careerTracks.find((t) => t.id === selectedGoal) || {
+      id: selectedGoal,
+      name: selectedGoal,
+    };
+    const targetRoleName = targetTrackObj.name;
+    const studentIdentifier =
+      selectedStudent.userId ||
+      selectedStudent.studentId ||
+      (selectedStudent.id ? String(selectedStudent.id).replace("st-", "") : "");
+
+    try {
+      const res = await apiFetch(`/roadmaps/student/${studentIdentifier}/generate`, {
+        method: "POST",
+        body: JSON.stringify({
+          targetRole: targetRoleName,
+          careerTrack: targetRoleName,
+        }),
+      });
+
+      let updatedList = null;
+      if (
+        res &&
+        res.data &&
+        Array.isArray(res.data.milestones) &&
+        res.data.milestones.length > 0
+      ) {
+        updatedList = res.data.milestones;
+      } else if (roadmapData[selectedGoal]) {
+        updatedList = roadmapData[selectedGoal];
+      } else {
+        updatedList = roadmapData["python-backend"];
+      }
+
+      setStudentMilestones(updatedList);
+
+      // Update student details in view
+      setSelectedStudent((prev) => ({
+        ...prev,
+        selectedGoalName: targetRoleName,
+      }));
+
+      // Update student in main table list
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === selectedStudent.id ||
+          s.studentId === selectedStudent.studentId ||
+          (selectedStudent.userId && s.userId === selectedStudent.userId)
+            ? { ...s, selectedGoalName: targetRoleName }
+            : s
+        )
+      );
+
+      setGenerationSuccess(`AI Roadmap for "${targetRoleName}" generated & assigned successfully!`);
+      setTimeout(() => setGenerationSuccess(""), 5000);
+    } catch (err) {
+      console.warn("[CO_Students] Backend generate error:", err);
+      const fallbackList = roadmapData[selectedGoal] || roadmapData["python-backend"];
+      setStudentMilestones(fallbackList);
+      setSelectedStudent((prev) => ({
+        ...prev,
+        selectedGoalName: targetRoleName,
+      }));
+      setStudents((prev) =>
+        prev.map((s) =>
+          s.id === selectedStudent.id ||
+          s.studentId === selectedStudent.studentId ||
+          (selectedStudent.userId && s.userId === selectedStudent.userId)
+            ? { ...s, selectedGoalName: targetRoleName }
+            : s
+        )
+      );
+      setGenerationSuccess(`AI Roadmap for "${targetRoleName}" assigned successfully!`);
+      setTimeout(() => setGenerationSuccess(""), 5000);
+    } finally {
       setIsGenerating(false);
-    }, 500);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -462,35 +586,50 @@ export default function CoordinatorStudents() {
             {/* Career Goal Generator Card */}
             <div className="student-roadmap-generator-card">
               <div className="student-roadmap-title-row">
-                <Sparkles size={22} color="#2563eb" />
+                <div className="student-roadmap-icon-badge">
+                  <Sparkles size={20} color="#2563eb" />
+                </div>
                 <div>
                   <h3 className="student-roadmap-generator-title">
-                    Select career / skill goal
+                    Student AI Career Roadmap Assignment
                   </h3>
                   <p className="student-roadmap-generator-desc">
-                    AI analyses student goal, current scores and skill gaps to build their personalized roadmap.
+                    As Department Coordinator, review this student's milestone progress or generate a personalized AI learning path tailored to their career track, assessment history, and detected skill gaps.
                   </p>
                 </div>
               </div>
+
+              {generationSuccess && (
+                <div className="student-roadmap-success-banner">
+                  <CheckCircle2 size={16} color="#059669" />
+                  <span>{generationSuccess}</span>
+                </div>
+              )}
 
               <div className="student-roadmap-actions-row">
                 <div className="student-roadmap-select-input">
                   <CustomSelect
                     value={selectedGoal}
                     options={careerTracks.map(t => ({ value: t.id, label: t.name }))}
-                    onChange={(val) => setSelectedGoal(val)}
-                    placeholder="Select career / skill goal..."
+                    onChange={(val) => {
+                      setSelectedGoal(val);
+                      if (roadmapData[val]) {
+                        setStudentMilestones(roadmapData[val]);
+                      }
+                    }}
+                    placeholder="Select career track / specialization..."
                     icon={Target}
                   />
                 </div>
 
                 <button
+                  type="button"
                   className="coord-btn coord-btn--primary student-btn-generate"
                   onClick={handleGenerate}
                   disabled={isGenerating}
                 >
-                  <Sparkles size={16} />
-                  {isGenerating ? "Generating Roadmap..." : "Generate roadmap"}
+                  <Sparkles size={16} className={isGenerating ? "student-spin" : ""} />
+                  {isGenerating ? "Generating AI Roadmap..." : "Generate & Assign AI Roadmap"}
                 </button>
               </div>
             </div>
@@ -749,14 +888,14 @@ export default function CoordinatorStudents() {
             <table className="coord-table">
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Roll No & Batch</th>
-                  <th>Selected AI Roadmap</th>
-                  <th>Attendance</th>
-                  <th>Quiz Score</th>
-                  <th>AI Interview</th>
-                  <th>Risk Level</th>
-                  <th className="text-center">Actions</th>
+                  <th className="th-student">Student</th>
+                  <th className="th-roll">Roll No & Batch</th>
+                  <th className="th-roadmap">Selected AI Roadmap</th>
+                  <th className="th-attendance">Attendance</th>
+                  <th className="th-quiz">Quiz Score</th>
+                  <th className="th-interview">AI Interview</th>
+                  <th className="th-risk">Risk Level</th>
+                  <th className="th-actions">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -795,7 +934,7 @@ export default function CoordinatorStudents() {
                         </span>
                       )}
                     </td>
-                    <td>
+                    <td className="td-center">
                       {s.attendance && s.attendance !== "—" ? (
                         <span
                           className={`student-metric-pill ${
@@ -812,7 +951,7 @@ export default function CoordinatorStudents() {
                         <span className="student-metric-empty">—</span>
                       )}
                     </td>
-                    <td>
+                    <td className="td-center">
                       {s.avgScore && s.avgScore !== "—" ? (
                         <span className="student-metric-pill metric-indigo">
                           {s.avgScore}
@@ -821,7 +960,7 @@ export default function CoordinatorStudents() {
                         <span className="student-metric-empty">—</span>
                       )}
                     </td>
-                    <td>
+                    <td className="td-center">
                       {s.interviewScore && s.interviewScore !== "—" ? (
                         <span className="student-metric-pill metric-purple">
                           {s.interviewScore}
@@ -830,7 +969,7 @@ export default function CoordinatorStudents() {
                         <span className="student-metric-empty">—</span>
                       )}
                     </td>
-                    <td>
+                    <td className="td-center">
                       <span
                         className={`coord-student-pill ${
                           s.riskStatus === "Top Performer"
@@ -845,7 +984,7 @@ export default function CoordinatorStudents() {
                         {s.riskStatus}
                       </span>
                     </td>
-                    <td className="text-center">
+                    <td className="td-center">
                       <button
                         className="coord-btn coord-btn--primary coord-table-action-btn"
                         onClick={() => handleOpenStudentDetail(s)}

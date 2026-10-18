@@ -287,7 +287,7 @@ export default function CodingPractice() {
       {/* Header Banner */}
       <div className="coord-cp-header">
         <div className="coord-cp-header-info">
-          <h1 className="coord-cp-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <h1 className="coord-cp-title">
             <Terminal size={24} className="ui-section-title-icon" />
             <span>Coding Practice & Assignment Governance</span>
           </h1>
@@ -731,7 +731,7 @@ export default function CodingPractice() {
 
                       <td>{sub.batch}</td>
 
-                      <td style={{ fontWeight: 600, color: "#1e293b" }}>{sub.problemTitle}</td>
+                      <td className="coord-cp-cell-bold-slate">{sub.problemTitle}</td>
 
                       <td>
                         <span className="coord-cp-lang-text">{sub.language}</span>
@@ -751,7 +751,7 @@ export default function CodingPractice() {
                         </span>
                       </td>
 
-                      <td style={{ fontWeight: 600, color: "#334155" }}>
+                      <td className="coord-cp-cell-muted">
                         {sub.passedTestCases} / {sub.totalTestCases}
                       </td>
 
@@ -986,7 +986,7 @@ export default function CodingPractice() {
               {/* Add Test Case Form */}
               <form onSubmit={handleAddTestCase} className="coord-cp-tc-add-box">
                 <h4 className="coord-cp-tc-box-title">
-                  <Plus size={14} style={{ color: "#4f46e5" }} /> Add New Test Case
+                  <Plus size={14} className="coord-cp-icon-indigo" /> Add New Test Case
                 </h4>
 
                 <div className="coord-cp-form-grid-2">
@@ -1036,7 +1036,7 @@ export default function CodingPractice() {
 
               {/* Existing Test Cases List */}
               <div>
-                <h4 style={{ fontWeight: 700, color: "#0f172a", marginBottom: "12px", fontSize: "13px" }}>
+                <h4 className="coord-cp-tc-title">
                   Existing Test Suite ({selectedProblemForTestCases.testCases ? selectedProblemForTestCases.testCases.length : 0})
                 </h4>
 
@@ -1044,8 +1044,8 @@ export default function CodingPractice() {
                   {selectedProblemForTestCases.testCases && selectedProblemForTestCases.testCases.map((tc, idx) => (
                     <div key={tc.id} className="coord-cp-tc-list-item">
                       <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                          <span style={{ fontWeight: 700, color: "#0f172a" }}>Case #{idx + 1}</span>
+                        <div className="coord-cp-tc-header">
+                          <span className="coord-cp-tc-num">Case #{idx + 1}</span>
                           <span
                             className={`coord-cp-tc-badge ${
                               tc.isHidden ? "hidden-tc" : "public-tc"
@@ -1054,7 +1054,7 @@ export default function CodingPractice() {
                             {tc.isHidden ? "Hidden" : "Public"}
                           </span>
                         </div>
-                        <p style={{ margin: 0, fontFamily: "monospace", color: "#475569", fontSize: "11.5px" }}>
+                        <p className="coord-cp-tc-preview">
                           <strong>Input:</strong> {tc.input} | <strong>Output:</strong> {tc.expectedOutput}
                         </p>
                       </div>
@@ -1187,7 +1187,7 @@ export default function CodingPractice() {
       {selectedSubmissionCode && (
         <div className="coord-cp-modal-backdrop">
           <div className="coord-cp-modal-window dark-theme">
-            <div className="coord-cp-modal-header" style={{ borderBottom: "1px solid #1e293b" }}>
+            <div className="coord-cp-modal-header coord-cp-modal-code-header">
               <div>
                 <h3 className="coord-cp-modal-title">
                   Submitted Code: {selectedSubmissionCode.studentName}
@@ -1206,7 +1206,7 @@ export default function CodingPractice() {
 
             <div className="coord-cp-modal-body">
               <div className="coord-cp-code-status-bar">
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <div className="coord-cp-modal-code-meta">
                   <span
                     className={`coord-cp-verdict-badge ${
                       selectedSubmissionCode.status === "Accepted"
@@ -1216,11 +1216,11 @@ export default function CodingPractice() {
                   >
                     {selectedSubmissionCode.status}
                   </span>
-                  <span style={{ color: "#cbd5e1" }}>
+                  <span className="coord-cp-code-passed">
                     Passed: {selectedSubmissionCode.passedTestCases}/{selectedSubmissionCode.totalTestCases}
                   </span>
                 </div>
-                <span style={{ fontFamily: "monospace", color: "#94a3b8" }}>
+                <span className="coord-cp-code-meta-stats">
                   {selectedSubmissionCode.runtime} | {selectedSubmissionCode.memory}
                 </span>
               </div>
@@ -1230,7 +1230,7 @@ export default function CodingPractice() {
               </div>
             </div>
 
-            <div className="coord-cp-form-footer" style={{ backgroundColor: "rgba(15, 23, 42, 0.4)", borderTop: "1px solid #1e293b", padding: "12px 24px" }}>
+            <div className="coord-cp-form-footer coord-cp-modal-code-footer">
               <button
                 onClick={() => setSelectedSubmissionCode(null)}
                 className="coord-cp-btn-primary"

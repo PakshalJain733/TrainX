@@ -1,4 +1,38 @@
 /* Coordinator Support Tickets & Help Desk Styling */
+.coord-help-placeholder {
+  color: #94a3b8;
+}
+
+.coord-help-header-wrap {
+  margin-bottom: 1rem;
+}
+
+.coord-help-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.coord-help-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.coord-help-desc {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 4px 0 0 0;
+}
+
+.coord-help-card-clickable {
+  cursor: pointer;
+}
+
 .coord-tickets-container {
   display: flex;
   flex-direction: column;

@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, Check, Calendar, AlertTriangle, CheckCircle2, FileText, Trash2, Key, Clock, User } from "lucide-react";
 import { CoordinatorSidebar } from "./CO_Sidebar";
 import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
+import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
@@ -144,10 +145,9 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
         </div>
         <div className="notif-header-actions-right">
           <button
-            className="notif-mark-read-btn"
+            className={`notif-mark-read-btn ${unreadCount === 0 ? "coord-notif-btn--disabled" : ""}`}
             onClick={handleMarkAllRead}
             disabled={unreadCount === 0}
-            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
           >
             <Check size={14} className="notif-check-icon" /> Mark read
           </button>
@@ -173,7 +173,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
       {/* List */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
-          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
+          <div className="coord-notif-empty">
             No notifications to display
           </div>
         ) : (
@@ -203,10 +203,10 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                   {isExpanded && (
                     <div className="notif-expanded-desc">
                       {(n.target || n.created_by_name || n.priority) && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px', fontSize: '11px', fontWeight: '700' }}>
-                          {n.target && <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '2px 8px', borderRadius: '6px' }}>🎯 For: {n.target}</span>}
-                          {n.created_by_name && <span style={{ background: '#f3e8ff', color: '#7e22ce', padding: '2px 8px', borderRadius: '6px' }}>👤 By: {n.created_by_name}</span>}
-                          {n.priority && <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px' }}>⚡ {n.priority}</span>}
+                        <div className="coord-notif-tags-row">
+                          {n.target && <span className="coord-notif-tag-target">🎯 For: {n.target}</span>}
+                          {n.created_by_name && <span className="coord-notif-tag-by">👤 By: {n.created_by_name}</span>}
+                          {n.priority && <span className="coord-notif-tag-priority">⚡ {n.priority}</span>}
                         </div>
                       )}
                       <div>
@@ -241,10 +241,9 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           View all
         </button>
         <button
-          className="notif-clear-all-btn"
+          className={`notif-clear-all-btn ${totalCount === 0 ? "coord-notif-btn--disabled" : ""}`}
           onClick={handleClearAll}
           disabled={totalCount === 0}
-          style={{ opacity: totalCount === 0 ? 0.5 : 1, cursor: totalCount === 0 ? "default" : "pointer" }}
         >
           Clear all
         </button>
@@ -491,7 +490,9 @@ export default function CoordinatorLayout() {
 
             {/* Main Content Body */}
             <div className="coordinator-card-body">
-              <Outlet />
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
           </div>
         </main>

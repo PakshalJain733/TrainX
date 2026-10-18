@@ -141,6 +141,19 @@ export const getMe = async (req, res, next) => {
       (studentProfile.department && studentProfile.semester && studentProfile.roll_number && studentProfile.skills) ||
       (user.department && user.semester && user.roll_number && user.skills)
     );
+    let resolvedDept = user.department || studentProfile.department || '';
+    if (studentProfile.department_id || resolvedDept) {
+      try {
+        const dRows = await query(
+          'SELECT code FROM departments WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+          [studentProfile.department_id || 0, resolvedDept, resolvedDept]
+        );
+        if (dRows && dRows.length > 0 && dRows[0].code) {
+          resolvedDept = dRows[0].code.trim();
+        }
+      } catch (_) {}
+    }
+
     return sendSuccess(res, 'Authenticated user data retrieved', {
       ...safeUser,
       ...studentProfile,
@@ -148,9 +161,10 @@ export const getMe = async (req, res, next) => {
       is_profile_updated: isProfileUpdated,
       studentProfile: {
         ...studentProfile,
+        department: resolvedDept,
         is_profile_updated: isProfileUpdated,
       },
-      department: user.department || studentProfile.department || '',
+      department: resolvedDept,
       semester: user.semester || studentProfile.semester || '',
       cgpa: user.cgpa || studentProfile.cgpa || '',
       skills: user.skills || studentProfile.skills || '',

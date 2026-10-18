@@ -174,8 +174,8 @@ export default function CoordinatorRequests() {
       <div className="coord-requests-page-header">
         <div className="coord-requests-header-left">
           <div>
-            <h1 className="coord-requests-page-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Inbox size={24} style={{ color: "#0284c7", flexShrink: 0 }} />
+            <h1 className="coord-requests-page-title">
+              <Inbox size={24} className="coord-requests-inbox-icon" />
               <span>Requests & Approvals Governance Center</span>
             </h1>
             <p className="coord-requests-page-subtitle">

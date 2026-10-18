@@ -257,7 +257,7 @@ export const getCoordinatorStudents = async (req, res, next) => {
              (
                SELECT COALESCE(r.goal_name, r.target_role, r.career_track, 'Fullstack Web Development')
                 FROM roadmaps r
-                WHERE (r.user_id = u.id OR r.student_id = u.id)
+                WHERE (r.user_id = u.id OR r.student_id = u.id OR r.student_id = s.id)
                 ORDER BY r.id DESC
                 LIMIT 1
              ) as roadmap_title
@@ -321,6 +321,7 @@ export const getCoordinatorStudents = async (req, res, next) => {
       return {
         id: `st-${s.student_id}`,
         studentId: s.student_id,
+        userId: s.id,
         name: s.name,
         email: s.email,
         phone: s.mobile_number || '—',

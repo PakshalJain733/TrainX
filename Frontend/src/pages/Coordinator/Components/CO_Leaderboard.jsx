@@ -38,9 +38,9 @@ export default function CoordinatorLeaderboard() {
       <div className="mentor-table-card">
         <div className="mentor-table-responsive">
           {loading ? (
-            <div style={{ padding: "32px", textAlign: "center", color: "#64748b" }}>Loading leaderboard...</div>
+            <div className="co-lb-loading">Loading leaderboard...</div>
           ) : leaderboard.length === 0 ? (
-            <div style={{ padding: "48px 24px", textAlign: "center", color: "#64748b", fontSize: "14px" }}>
+            <div className="co-lb-empty">
               No leaderboard student records found in database.
             </div>
           ) : (
