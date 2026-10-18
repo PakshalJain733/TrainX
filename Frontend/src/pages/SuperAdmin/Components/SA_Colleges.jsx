@@ -239,6 +239,39 @@ function validateEditCollegeForm(values) {
   };
 }
 
+function validateDeptForm(values) {
+  const errors = {};
+
+  const name = (values?.name || '').trim();
+  if (!name) {
+    errors.name = 'Department name is required.';
+  } else if (name.length < 2) {
+    errors.name = 'Department name must be at least 2 characters.';
+  } else if (name.length > 100) {
+    errors.name = 'Department name cannot exceed 100 characters.';
+  }
+
+  const code = (values?.code || '').trim().toUpperCase();
+  if (!code) {
+    errors.code = 'Department code is required.';
+  } else if (code.length < 1 || code.length > 15) {
+    errors.code = 'Department code must be between 1 and 15 characters (e.g. CE, IT, EXTC).';
+  } else if (!/^[A-Z0-9-]+$/.test(code)) {
+    errors.code = 'Department code can only contain uppercase letters, numbers, and hyphens.';
+  }
+
+  const hodEmail = (values?.hodEmail || '').trim().toLowerCase();
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (hodEmail && !emailRegex.test(hodEmail)) {
+    errors.hodEmail = 'Please enter a valid email address.';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
 export default function Colleges() {
   const { collegeId } = useParams();
   const navigate = useNavigate();
@@ -255,6 +288,13 @@ export default function Colleges() {
   const [formErrors, setFormErrors] = useState({});
   const [editErrors, setEditErrors] = useState({});
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Department Modals & State
+  const [viewDeptModal, setViewDeptModal] = useState(null);
+  const [editDeptModal, setEditDeptModal] = useState(null);
+  const [deleteDeptModal, setDeleteDeptModal] = useState(null);
+  const [deptErrors, setDeptErrors] = useState({});
+  const [isSavingDept, setIsSavingDept] = useState(false);
 
   const handleTrigger2FAForCollegeAdmin = async (college) => {
     const rawEmail = college.adminEmail || college.contact_email || college.email;
@@ -379,32 +419,101 @@ export default function Colleges() {
 
   const handleAddDepartment = async (e) => {
     e.preventDefault();
-    if (!deptForm.name || !deptForm.code) return;
+    const validation = validateDeptForm(deptForm);
+    if (!validation.isValid) {
+      setDeptErrors(validation.errors);
+      return;
+    }
+    setDeptErrors({});
+    setIsSavingDept(true);
 
     const payload = {
-      name: deptForm.name,
-      code: deptForm.code,
+      name: deptForm.name.trim(),
+      code: deptForm.code.trim().toUpperCase(),
       collegeId: collegeId || 1,
       college_id: collegeId || 1,
-      hodName: deptForm.hodName || "Dr. Department HOD",
-      hodEmail: deptForm.hodEmail || `hod.${deptForm.code.toLowerCase()}@college.edu.in`,
+      hodName: deptForm.hodName ? deptForm.hodName.trim() : "Dr. Department HOD",
+      hodEmail: deptForm.hodEmail ? deptForm.hodEmail.trim().toLowerCase() : `hod.${deptForm.code.trim().toLowerCase()}@college.edu.in`,
     };
 
     try {
       const created = await departmentAPI.createDepartment(payload);
       if (created) {
-        setDepartments([created, ...departments.filter(d => d.id !== created.id)]);
+        setDepartments((prev) => [created, ...prev.filter((d) => d.id !== created.id)]);
       } else {
         const fresh = await departmentAPI.getDepartments(collegeId);
         setDepartments(Array.isArray(fresh) ? fresh : departments);
       }
+      setIsAddDeptModalOpen(false);
+      setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
     } catch (err) {
       console.error("Failed to save department to database:", err);
-      departmentAPI.getDepartments(collegeId).then(data => setDepartments(Array.isArray(data) ? data : departments)).catch(() => {});
+      setDeptErrors((prev) => ({
+        ...prev,
+        _general: err.message || "Failed to save department. Please check department details.",
+      }));
+    } finally {
+      setIsSavingDept(false);
     }
+  };
 
-    setIsAddDeptModalOpen(false);
-    setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
+  const handleUpdateDepartment = async (e) => {
+    e.preventDefault();
+    const validation = validateDeptForm(editDeptModal);
+    if (!validation.isValid) {
+      setDeptErrors(validation.errors);
+      return;
+    }
+    setDeptErrors({});
+    setIsSavingDept(true);
+
+    const payload = {
+      name: editDeptModal.name.trim(),
+      code: editDeptModal.code.trim().toUpperCase(),
+      hodName: editDeptModal.hodName ? editDeptModal.hodName.trim() : '',
+      hodEmail: editDeptModal.hodEmail ? editDeptModal.hodEmail.trim().toLowerCase() : '',
+      status: editDeptModal.status || 'Active',
+    };
+
+    try {
+      const updated = await departmentAPI.updateDepartment(editDeptModal.id, payload);
+      setDepartments((prev) =>
+        prev.map((d) => {
+          if (d.id === editDeptModal.id) {
+            return {
+              ...d,
+              ...(updated || {}),
+              name: payload.name,
+              code: payload.code,
+              hodName: payload.hodName,
+              hodEmail: payload.hodEmail,
+              status: payload.status,
+            };
+          }
+          return d;
+        })
+      );
+      setEditDeptModal(null);
+    } catch (err) {
+      console.error("Failed to update department:", err);
+      setDeptErrors((prev) => ({
+        ...prev,
+        _general: err.message || "Failed to update department.",
+      }));
+    } finally {
+      setIsSavingDept(false);
+    }
+  };
+
+  const handleDeleteDepartment = async (id) => {
+    try {
+      await departmentAPI.deleteDepartment(id);
+      setDepartments((prev) => prev.filter((d) => d.id !== id));
+      setDeleteDeptModal(null);
+    } catch (err) {
+      console.error("Failed to remove department:", err);
+      alert(err.message || "Failed to remove department.");
+    }
   };
 
   // If collegeId URL param is present, render College Departments view
@@ -430,6 +539,17 @@ export default function Colleges() {
               Managing departments inside {selectedCollege ? selectedCollege.name : "selected college"}
             </p>
           </div>
+          <button
+            onClick={() => {
+              setDeptErrors({});
+              setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
+              setIsAddDeptModalOpen(true);
+            }}
+            className="sa-btn-primary"
+          >
+            <Plus size={16} />
+            <span>Add Department</span>
+          </button>
         </div>
 
         <div className="sa-search-card">
@@ -455,36 +575,469 @@ export default function Colleges() {
           </div>
         </div>
 
-        <div className="colleges-depts-grid">
-          {filteredDepts.map((dept) => (
-            <div key={dept.id} className="sa-widget-card college-dept-widget-card">
-              <div className="colleges-dept-card-header">
-                <div>
-                  <span className="college-dept-code-badge">
-                    {dept.code}
-                  </span>
-                  <h3 className="college-dept-card-title">{dept.name}</h3>
+        {filteredDepts.length === 0 ? (
+          <div style={{ background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '48px 24px', textAlign: 'center', marginTop: '16px' }}>
+            <GraduationCap size={44} style={{ color: '#94a3b8', margin: '0 auto 12px' }} />
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+              No departments found
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', maxWidth: '420px', margin: '0 auto 16px' }}>
+              {searchQuery ? `No departments match "${searchQuery}".` : "No departments have been configured for this college yet."}
+            </p>
+            {!searchQuery && (
+              <button
+                onClick={() => {
+                  setDeptErrors({});
+                  setDeptForm({ name: '', code: '', hodName: '', hodEmail: '' });
+                  setIsAddDeptModalOpen(true);
+                }}
+                className="sa-btn-primary"
+                style={{ margin: '0 auto' }}
+              >
+                <Plus size={16} />
+                <span>Add Department</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="colleges-depts-grid">
+            {filteredDepts.map((dept) => (
+              <div key={dept.id} className="sa-widget-card college-dept-widget-card">
+                <div className="colleges-dept-card-header">
+                  <div>
+                    <span className="college-dept-code-badge">
+                      {dept.code}
+                    </span>
+                    <h3 className="college-dept-card-title">{dept.name}</h3>
+                  </div>
+                  <ActionDropdown
+                    onView={() => setViewDeptModal(dept)}
+                    onEdit={() => {
+                      setDeptErrors({});
+                      setEditDeptModal({
+                        id: dept.id,
+                        name: dept.name || '',
+                        code: dept.code || '',
+                        hodName: dept.hodName || dept.hod_name || '',
+                        hodEmail: dept.hodEmail || dept.hod_email || '',
+                        collegeId: dept.collegeId || dept.college_id || collegeId,
+                        status: dept.status || 'Active',
+                      });
+                    }}
+                    onDelete={() => setDeleteDeptModal(dept)}
+                  />
                 </div>
-                <ActionDropdown
-                  onView={() => alert(`View ${dept.name}`)}
-                  onEdit={() => alert(`Edit ${dept.name}`)}
-                />
+
+                <div className="college-dept-stats-row">
+                  <div className="college-dept-stat-box">
+                    <p className="college-dept-stat-label">Active Students</p>
+                    <p className="college-dept-stat-num">{dept.activeStudents || 120}</p>
+                  </div>
+                  <div className="college-dept-stat-box">
+                    <p className="college-dept-stat-label">Batches</p>
+                    <p className="college-dept-stat-num">{dept.batchesCount || 4}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Add Department Modal */}
+        {isAddDeptModalOpen && createPortal(
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setIsAddDeptModalOpen(false); }}>
+            <div className="modal-dialog college-modal-540">
+              <div className="modal-header">
+                <div className="modal-header-left">
+                  <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                    <GraduationCap size={20} />
+                  </div>
+                  <div>
+                    <h2 className="modal-title">Add Department</h2>
+                    <p className="modal-subtitle">
+                      Register a new academic department under {selectedCollege ? selectedCollege.name : 'this institution'}
+                    </p>
+                  </div>
+                </div>
+                <button className="modal-close-btn" onClick={() => setIsAddDeptModalOpen(false)}>
+                  <X size={18} />
+                </button>
               </div>
 
-              <div className="college-dept-stats-row">
-                <div className="college-dept-stat-box">
-                  <p className="college-dept-stat-label">Active Students</p>
-                  <p className="college-dept-stat-num">{dept.activeStudents || 120}</p>
+              <form onSubmit={handleAddDepartment} noValidate>
+                <div className="modal-body">
+                  {deptErrors._general && (
+                    <div className="modal-form-alert-banner">
+                      <AlertCircle size={16} />
+                      <span>{deptErrors._general}</span>
+                    </div>
+                  )}
+
+                  <div className="form-row-2">
+                    <div className="form-group-admin">
+                      <label>Department Name *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Computer Engineering"
+                        className={`form-input-admin ${deptErrors.name ? 'form-input-error' : ''}`}
+                        value={deptForm.name}
+                        onChange={(e) => {
+                          setDeptForm({ ...deptForm, name: e.target.value });
+                          if (deptErrors.name) setDeptErrors({ ...deptErrors, name: null });
+                        }}
+                      />
+                      {deptErrors.name && (
+                        <span className="form-field-error-msg">
+                          <AlertCircle size={12} />
+                          {deptErrors.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="form-group-admin">
+                      <label>Department Code *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. CE"
+                        className={`form-input-admin ${deptErrors.code ? 'form-input-error' : ''}`}
+                        value={deptForm.code}
+                        onChange={(e) => {
+                          setDeptForm({ ...deptForm, code: e.target.value.toUpperCase() });
+                          if (deptErrors.code) setDeptErrors({ ...deptErrors, code: null });
+                        }}
+                      />
+                      {deptErrors.code && (
+                        <span className="form-field-error-msg">
+                          <AlertCircle size={12} />
+                          {deptErrors.code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-row-2">
+                    <div className="form-group-admin">
+                      <label>Head of Department (HOD)</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Dr. John Doe"
+                        className="form-input-admin"
+                        value={deptForm.hodName}
+                        onChange={(e) => setDeptForm({ ...deptForm, hodName: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label>HOD Contact Email</label>
+                      <input
+                        type="email"
+                        placeholder="e.g. hod.ce@college.edu.in"
+                        className={`form-input-admin ${deptErrors.hodEmail ? 'form-input-error' : ''}`}
+                        value={deptForm.hodEmail}
+                        onChange={(e) => {
+                          setDeptForm({ ...deptForm, hodEmail: e.target.value });
+                          if (deptErrors.hodEmail) setDeptErrors({ ...deptErrors, hodEmail: null });
+                        }}
+                      />
+                      {deptErrors.hodEmail && (
+                        <span className="form-field-error-msg">
+                          <AlertCircle size={12} />
+                          {deptErrors.hodEmail}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="college-dept-stat-box">
-                  <p className="college-dept-stat-label">Batches</p>
-                  <p className="college-dept-stat-num">{dept.batchesCount || 4}</p>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn-modal-cancel"
+                    onClick={() => setIsAddDeptModalOpen(false)}
+                    disabled={isSavingDept}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-modal-submit"
+                    disabled={isSavingDept}
+                  >
+                    {isSavingDept ? "Adding Department..." : "Add Department"}
+                  </button>
                 </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* View Department Details Modal */}
+        {viewDeptModal && createPortal(
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewDeptModal(null); }}>
+            <div className="modal-dialog college-modal-540">
+              <div className="modal-header">
+                <div className="modal-header-left">
+                  <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                    <GraduationCap size={20} />
+                  </div>
+                  <div>
+                    <h2 className="modal-title">{viewDeptModal.name}</h2>
+                    <p className="modal-subtitle">Department Details &amp; Operational Record</p>
+                  </div>
+                </div>
+                <button className="modal-close-btn" onClick={() => setViewDeptModal(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="modal-body">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="form-group-admin">
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Department Code</label>
+                    <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewDeptModal.code || '—'}</p>
+                  </div>
+                  <div className="form-group-admin">
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Operational Status</label>
+                    <div style={{ marginTop: '2px' }}><StatusBadge status={viewDeptModal.status || 'Active'} /></div>
+                  </div>
+                  <div className="form-group-admin" style={{ gridColumn: 'span 2' }}>
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Associated Institution</label>
+                    <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#334155', fontSize: '13.5px' }}>
+                      {selectedCollege ? selectedCollege.name : (viewDeptModal.collegeName || '—')}
+                    </p>
+                  </div>
+                  <div className="form-group-admin">
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Head of Department (HOD)</label>
+                    <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>
+                      {viewDeptModal.hodName || viewDeptModal.hod_name || 'Dr. Department HOD'}
+                    </p>
+                  </div>
+                  <div className="form-group-admin">
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>HOD Email</label>
+                    <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#2563eb', fontSize: '13.5px' }}>
+                      {viewDeptModal.hodEmail || viewDeptModal.hod_email || '—'}
+                    </p>
+                  </div>
+                  <div className="form-group-admin">
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Active Batches</label>
+                    <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>
+                      {viewDeptModal.batchesCount || 4}
+                    </p>
+                  </div>
+                  <div className="form-group-admin">
+                    <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Active Students</label>
+                    <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>
+                      {viewDeptModal.activeStudents || 120}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setViewDeptModal(null)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn-modal-submit"
+                  onClick={() => {
+                    const d = viewDeptModal;
+                    setViewDeptModal(null);
+                    setDeptErrors({});
+                    setEditDeptModal({
+                      id: d.id,
+                      name: d.name || '',
+                      code: d.code || '',
+                      hodName: d.hodName || d.hod_name || '',
+                      hodEmail: d.hodEmail || d.hod_email || '',
+                      collegeId: d.collegeId || d.college_id || collegeId,
+                      status: d.status || 'Active',
+                    });
+                  }}
+                >
+                  <Edit2 size={14} style={{ marginRight: '6px' }} />
+                  <span>Edit Record</span>
+                </button>
               </div>
             </div>
-          ))}
-        </div>
+          </div>,
+          document.body
+        )}
 
+        {/* Edit Department Modal */}
+        {editDeptModal && createPortal(
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditDeptModal(null); }}>
+            <div className="modal-dialog college-modal-540">
+              <div className="modal-header">
+                <div className="modal-header-left">
+                  <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                    <Edit2 size={20} />
+                  </div>
+                  <div>
+                    <h2 className="modal-title">Edit Department</h2>
+                    <p className="modal-subtitle">Update department details for {editDeptModal.name}</p>
+                  </div>
+                </div>
+                <button className="modal-close-btn" onClick={() => setEditDeptModal(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateDepartment} noValidate>
+                <div className="modal-body">
+                  {deptErrors._general && (
+                    <div className="modal-form-alert-banner">
+                      <AlertCircle size={16} />
+                      <span>{deptErrors._general}</span>
+                    </div>
+                  )}
+
+                  <div className="form-row-2">
+                    <div className="form-group-admin">
+                      <label>Department Name *</label>
+                      <input
+                        type="text"
+                        required
+                        className={`form-input-admin ${deptErrors.name ? 'form-input-error' : ''}`}
+                        value={editDeptModal.name || ''}
+                        onChange={(e) => {
+                          setEditDeptModal({ ...editDeptModal, name: e.target.value });
+                          if (deptErrors.name) setDeptErrors({ ...deptErrors, name: null });
+                        }}
+                      />
+                      {deptErrors.name && (
+                        <span className="form-field-error-msg">
+                          <AlertCircle size={12} />
+                          {deptErrors.name}
+                        </span>
+                      )}
+                    </div>
+                    <div className="form-group-admin">
+                      <label>Department Code *</label>
+                      <input
+                        type="text"
+                        required
+                        className={`form-input-admin ${deptErrors.code ? 'form-input-error' : ''}`}
+                        value={editDeptModal.code || ''}
+                        onChange={(e) => {
+                          setEditDeptModal({ ...editDeptModal, code: e.target.value.toUpperCase() });
+                          if (deptErrors.code) setDeptErrors({ ...deptErrors, code: null });
+                        }}
+                      />
+                      {deptErrors.code && (
+                        <span className="form-field-error-msg">
+                          <AlertCircle size={12} />
+                          {deptErrors.code}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="form-row-2">
+                    <div className="form-group-admin">
+                      <label>Head of Department (HOD)</label>
+                      <input
+                        type="text"
+                        className="form-input-admin"
+                        value={editDeptModal.hodName || ''}
+                        onChange={(e) => setEditDeptModal({ ...editDeptModal, hodName: e.target.value })}
+                      />
+                    </div>
+                    <div className="form-group-admin">
+                      <label>HOD Contact Email</label>
+                      <input
+                        type="email"
+                        className={`form-input-admin ${deptErrors.hodEmail ? 'form-input-error' : ''}`}
+                        value={editDeptModal.hodEmail || ''}
+                        onChange={(e) => {
+                          setEditDeptModal({ ...editDeptModal, hodEmail: e.target.value });
+                          if (deptErrors.hodEmail) setDeptErrors({ ...deptErrors, hodEmail: null });
+                        }}
+                      />
+                      {deptErrors.hodEmail && (
+                        <span className="form-field-error-msg">
+                          <AlertCircle size={12} />
+                          {deptErrors.hodEmail}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="modal-footer">
+                  <button
+                    type="button"
+                    className="btn-modal-cancel"
+                    onClick={() => setEditDeptModal(null)}
+                    disabled={isSavingDept}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-modal-submit"
+                    disabled={isSavingDept}
+                  >
+                    {isSavingDept ? "Saving Changes..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {/* Delete Department Confirmation Modal */}
+        {deleteDeptModal && createPortal(
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setDeleteDeptModal(null); }}>
+            <div className="modal-dialog college-modal-440">
+              <div className="modal-header">
+                <div className="modal-header-left">
+                  <div className="modal-header-icon-wrap college-delete-modal-icon">
+                    <Trash2 size={20} />
+                  </div>
+                  <div>
+                    <h2 className="modal-title">Remove Department</h2>
+                    <p className="modal-subtitle">Confirm department deletion</p>
+                  </div>
+                </div>
+                <button className="modal-close-btn" onClick={() => setDeleteDeptModal(null)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="modal-body">
+                <p className="colleges-delete-confirm-text">
+                  Are you sure you want to remove <strong className="colleges-delete-confirm-name">{deleteDeptModal.name}</strong> ({deleteDeptModal.code})? All associated batches and student records will be affected.
+                </p>
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setDeleteDeptModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn-modal-submit btn-modal-danger"
+                  onClick={() => handleDeleteDepartment(deleteDeptModal.id)}
+                >
+                  <Trash2 size={15} style={{ marginRight: '6px' }} />
+                  <span>Confirm Remove</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
       </div>
     );
   }
