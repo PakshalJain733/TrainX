@@ -1,4 +1,5 @@
 /* ProfilePage.css - Dedicated styling for Mentor Profile Page */
+@import "../../Admin/Styles/AD_Profile.css";
 
 .mentor-profile-container {
   display: flex;

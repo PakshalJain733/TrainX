@@ -1,4 +1,5 @@
 /* SuperAdminProfile.css — Profile page matching student ProfilePage aesthetic */
+@import "../../Admin/Styles/AD_Profile.css";
 
 .sa-profile-container {
   display: flex;

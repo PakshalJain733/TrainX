@@ -1,3 +1,5 @@
+@import "../../Admin/Styles/AD_Profile.css";
+
 .coord-profile-header {
   background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
   border-radius: 16px;
