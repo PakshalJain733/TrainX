@@ -376,6 +376,67 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
 };
 
 /**
+ * Generates an in-depth, hands-on practice coding challenge for a milestone topic using AI
+ */
+export const generateMilestonePracticeAI = async (milestoneTitle, targetRole = '', topic = '') => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
+  const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
+  const cleanTopic = String(topic || cleanTitle).trim();
+
+  const prompt = `You are a Principal Technical Architect & Coding Instructor. Create a highly specific, practical, real-world coding challenge for a student on the topic: "${cleanTopic}" (from module: "${cleanTitle}") preparing for a career in "${cleanRole}".
+
+CRITICAL REQUIREMENTS:
+1. SPECIFIC CHALLENGE:
+   - The challenge MUST directly test real-world application of "${cleanTopic}".
+   - DO NOT provide a generic "iterate through an array" template.
+   - Example: if topic is "SQL Joins", ask to write a JOIN query. If topic is "React Hooks", ask to implement a custom hook or toggle component. If topic is "Node.js Streams", ask to pipe data.
+2. CLEAR PROMPT:
+   - Provide a 2-3 sentence problem statement, requirements, and constraints.
+3. REALISTIC I/O:
+   - Provide concrete sample input and sample expected output.
+4. STARTER CODE:
+   - Provide functional boilerplate starter code with comments showing where the student writes code.
+5. LANGUAGE:
+   - Set "language" to one of: "node", "python", "java", "react", "html", "sql", "cpp".
+
+Output ONLY valid JSON strictly matching this schema without markdown backticks:
+{
+  "title": "Hands-on Challenge: Specific Title for ${cleanTopic}",
+  "prompt": "Detailed challenge problem statement...",
+  "sampleInput": "Concrete sample input data...",
+  "sampleOutput": "Concrete expected output...",
+  "starterCode": "// Starter code with instructions\\nfunction solve() {\\n  // Your implementation\\n}\\n",
+  "solutionCode": "// Reference solution...",
+  "language": "node"
+}`;
+
+  try {
+    const parsed = await generateJSON(prompt, {
+      system: 'You are an AI coding exercise generator. Output valid JSON strictly matching the requested practice challenge schema.',
+      temperature: 0.7,
+      maxTokens: 3000,
+      timeoutMs: 45000,
+    });
+
+    if (parsed && parsed.title && parsed.prompt) {
+      return parsed;
+    }
+  } catch (err) {
+    console.warn(`[AI Engine] Practice generation warning for "${cleanTopic}": ${err.message}`);
+  }
+
+  return {
+    title: `Hands-on Practice: ${cleanTopic}`,
+    prompt: `Implement a modular, production-ready solution applying the core mechanics of ${cleanTopic} for ${cleanRole}. Handle edge cases and validate your output.`,
+    sampleInput: `Input: Dataset for ${cleanTopic}`,
+    sampleOutput: `Expected Output: Processed verified result for ${cleanTopic}`,
+    starterCode: `// Practice Exercise for: ${cleanTopic}\n// Target Role: ${cleanRole}\n\nfunction solution(input) {\n  // TODO: Implement solution for ${cleanTopic}\n  console.log("Processing input:", input);\n  return input;\n}\n\n// Sample execution:\nsolution("Test Input");\n`,
+    solutionCode: `// Sample verified solution for ${cleanTopic}`,
+    language: 'node'
+  };
+};
+
+/**
  * Generates deep technical theory for a milestone topic using AI
  */
 export const generateMilestoneTheoryAI = async (milestoneTitle, targetRole = '') => {

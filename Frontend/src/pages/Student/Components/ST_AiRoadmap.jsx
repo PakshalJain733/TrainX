@@ -174,16 +174,18 @@ function resolveEmbeddableVideoId(cleanTitle = "", targetRole = "", milestoneTit
 
 function getVideoForMilestone(m, targetRole) {
   const cleanTitle = (m?.title || targetRole || "Tutorial").replace(/^Milestone\s*\d+\s*:\s*/i, "");
-  const vId = resolveEmbeddableVideoId(cleanTitle, targetRole, m?.title);
   const query = `${cleanTitle} tutorial ${targetRole || ""}`.trim();
+  const vId = resolveEmbeddableVideoId(cleanTitle, targetRole, m?.title);
 
   return {
     id: `v-${m?.id || 1}`,
     title: `${cleanTitle} - Video Tutorial & Lecture`,
-    channel: "Tech Education Academy",
-    duration: "24 mins",
-    videoId: vId,
-    embedUrl: `https://www.youtube-nocookie.com/embed/${vId}?rel=0`,
+    channel: "YouTube Tech Educator",
+    duration: "25 mins",
+    videoId: vId !== "rfscVS0vtbw" ? vId : null,
+    embedUrl: vId && vId !== "rfscVS0vtbw"
+      ? `https://www.youtube-nocookie.com/embed/${vId}?rel=0`
+      : `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(query)}`,
     searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
     topicsCovered: cleanTitle,
   };
@@ -751,6 +753,14 @@ export default function AIRoadmap() {
   const [milestoneVideosCache, setMilestoneVideosCache] = useState({});
   const [isVideoLoading, setIsVideoLoading] = useState(false);
 
+  // Dynamic AI Practice Challenge Cache & Loading State
+  const [aiPracticeCache, setAiPracticeCache] = useState({});
+  const [isPracticeLoading, setIsPracticeLoading] = useState(false);
+
+  // Dynamic AI Assessment Quiz Cache & Loading State
+  const [aiQuizCache, setAiQuizCache] = useState({});
+  const [isQuizLoading, setIsQuizLoading] = useState(false);
+
   const [aiSource, setAiSource] = useState(null);
   const [error, setError] = useState(null);
 
@@ -762,15 +772,18 @@ export default function AIRoadmap() {
   const milestones = currentRoadmap?.milestones || [];
   const activeMilestone = activeMilestoneIdx !== null ? milestones[activeMilestoneIdx] : null;
 
-  // Fetch AI Theory whenever active milestone or theory section is opened
+  // Fetch AI Theory, Video, Practice Challenge & Quiz whenever active milestone changes
   useEffect(() => {
     if (activeMilestone) {
-      loadAITheoryForMilestone(activeMilestone.title, currentRoadmap?.targetRole);
-      loadMilestoneVideo(activeMilestone.title, currentRoadmap?.targetRole);
-
-      // Auto-detect and set appropriate language & starter code for this milestone practice
       const role = currentRoadmap?.targetRole || goalInput || "";
       const title = activeMilestone.title || "";
+
+      loadAITheoryForMilestone(title, role);
+      loadMilestoneVideo(title, role);
+      loadAIPracticeForMilestone(title, role);
+      loadAIQuizForMilestone(title, role);
+
+      // Auto-detect and set appropriate language & starter code for this milestone practice
       const practice = getPracticeQuestionForMilestone(activeMilestone, role);
       const promptText = practice?.prompt || "";
       const lang = resolveLanguageForRole(role, title, promptText);
@@ -836,7 +849,7 @@ export default function AIRoadmap() {
       const res = await apiFetch(`/roadmaps/video?q=${encodeURIComponent(query)}`);
       setMilestoneVideosCache((prev) => ({
         ...prev,
-        [cacheKey]: (res && res.data && res.data.videoId) ? res.data : null
+        [cacheKey]: (res && res.data && (res.data.videoId || res.data.embedUrl)) ? res.data : null
       }));
     } catch (err) {
       console.warn("Milestone video fetch warning:", err);
@@ -846,6 +859,80 @@ export default function AIRoadmap() {
       }));
     } finally {
       setIsVideoLoading(false);
+    }
+  };
+
+  const loadAIPracticeForMilestone = async (milestoneTitle, targetRole, forceRefresh = false) => {
+    if (!milestoneTitle) return;
+    const cleanTitle = String(milestoneTitle).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+
+    if (!forceRefresh && aiPracticeCache[cacheKey]) {
+      return;
+    }
+
+    setIsPracticeLoading(true);
+    try {
+      const res = await apiFetch("/roadmaps/practice/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          milestoneTitle: cleanTitle,
+          targetRole: cleanRole || currentRoadmap?.targetRole || goalInput,
+          topic: cleanTitle,
+          forceRefresh: Boolean(forceRefresh),
+        }),
+      });
+
+      if (res && res.data && res.data.title && res.data.prompt) {
+        setAiPracticeCache((prev) => ({
+          ...prev,
+          [cacheKey]: res.data,
+        }));
+        if (res.data.language) {
+          setCompilerLanguage(res.data.language);
+        }
+        if (res.data.starterCode) {
+          setCompilerCode((prevCode) => (prevCode ? prevCode : res.data.starterCode));
+        }
+      }
+    } catch (err) {
+      console.warn("AI Practice challenge fetch warning:", err);
+    } finally {
+      setIsPracticeLoading(false);
+    }
+  };
+
+  const loadAIQuizForMilestone = async (milestoneTitle, targetRole, forceRefresh = false) => {
+    if (!milestoneTitle) return;
+    const cleanTitle = String(milestoneTitle).replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+
+    if (!forceRefresh && aiQuizCache[cacheKey]) {
+      return;
+    }
+
+    setIsQuizLoading(true);
+    try {
+      const res = await apiFetch("/roadmaps/quiz/generate", {
+        method: "POST",
+        body: JSON.stringify({
+          topicTitle: cleanTitle,
+          targetRole: cleanRole || currentRoadmap?.targetRole || goalInput,
+        }),
+      });
+
+      if (res && res.data && Array.isArray(res.data.questions) && res.data.questions.length > 0) {
+        setAiQuizCache((prev) => ({
+          ...prev,
+          [cacheKey]: res.data,
+        }));
+      }
+    } catch (err) {
+      console.warn("AI Quiz questions fetch warning:", err);
+    } finally {
+      setIsQuizLoading(false);
     }
   };
 
@@ -1018,7 +1105,14 @@ export default function AIRoadmap() {
     const activeM = milestones[activeMilestoneIdx];
     if (!activeM) return;
 
-    const questions = getQuizQuestionsForMilestone(activeM, currentRoadmap?.targetRole);
+    const cleanTitle = String(activeM.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+    const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+    const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+    const rawQuestions = aiQuizCache[cacheKey]?.questions || getQuizQuestionsForMilestone(activeM, currentRoadmap?.targetRole);
+    const questions = rawQuestions.map((q, idx) => ({
+      id: q.id || idx + 1,
+      correctAnswer: q.correctAnswer ?? q.correctAnswerIndex ?? 0,
+    }));
     let correctCount = 0;
 
     questions.forEach((q, qIdx) => {
@@ -1751,7 +1845,11 @@ export default function AIRoadmap() {
 
               {/* ── PART 3: PRACTICE QUESTION & LIVE COMPILER ── */}
               {activeSection === "practice" && (() => {
-                const practice = getPracticeQuestionForMilestone(activeMilestone, currentRoadmap.targetRole);
+                const cleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+                const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+                const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+                const aiPractice = aiPracticeCache[cacheKey];
+                const practice = aiPractice || getPracticeQuestionForMilestone(activeMilestone, currentRoadmap.targetRole);
                 return (
                   <div className="roadmap-section-card">
                     <div>
@@ -1761,8 +1859,13 @@ export default function AIRoadmap() {
                         </span>
                         <span className="roadmap-practice-tag-pill">
                           <Code2 size={13} />
-                          <span>Hands-on Practice & Compiler</span>
+                          <span>{aiPractice ? "AI Tailored Practice Challenge" : "Hands-on Practice & Compiler"}</span>
                         </span>
+                        {isPracticeLoading && !aiPractice && (
+                          <span className="roadmap-meta-text" style={{ fontSize: "11px", color: "#818cf8" }}>
+                            Generating AI challenge for this topic...
+                          </span>
+                        )}
                       </div>
                       <h3 className="roadmap-section-heading">
                         {practice.title}
@@ -1924,7 +2027,18 @@ export default function AIRoadmap() {
 
               {/* ── PART 4: ASSESSMENT QUIZ & UNLOCKING M2 ── */}
               {activeSection === "quiz" && (() => {
-                const questions = getQuizQuestionsForMilestone(activeMilestone, currentRoadmap.targetRole);
+                const cleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
+                const cleanRole = String(currentRoadmap?.targetRole || "").trim();
+                const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
+                const rawQuestions = aiQuizCache[cacheKey]?.questions || getQuizQuestionsForMilestone(activeMilestone, currentRoadmap.targetRole);
+                const isDynamicQuiz = Boolean(aiQuizCache[cacheKey]?.questions);
+                const questions = rawQuestions.map((q, idx) => ({
+                  id: q.id || idx + 1,
+                  question: q.question,
+                  options: q.options || [],
+                  correctAnswer: q.correctAnswer ?? q.correctAnswerIndex ?? 0,
+                  explanation: q.explanation || `Core concept of ${cleanTitle} verified.`
+                }));
                 return (
                   <div className="roadmap-section-card">
                     <div>
@@ -1934,14 +2048,19 @@ export default function AIRoadmap() {
                         </span>
                         <span className="roadmap-quiz-tag-pill">
                           <CheckCircle2 size={13} />
-                          <span>Milestone Assessment Quiz</span>
+                          <span>{isDynamicQuiz ? "AI Topic Assessment Quiz" : "Milestone Assessment Quiz"}</span>
                         </span>
+                        {isQuizLoading && !isDynamicQuiz && (
+                          <span className="roadmap-meta-text" style={{ fontSize: "11px", color: "#818cf8" }}>
+                            Generating AI quiz questions for "{cleanTitle}"...
+                          </span>
+                        )}
                       </div>
                       <h3 className="roadmap-section-heading">
-                        Milestone Assessment Quiz
+                        Milestone Assessment Quiz: {cleanTitle}
                       </h3>
                       <p className="roadmap-meta-text">
-                        Complete this 5-question assessment quiz to verify your understanding and unlock Milestone {activeMilestoneIdx + 2}!
+                        Complete this 5-question assessment quiz to verify your understanding of <strong>{cleanTitle}</strong> and unlock Milestone {activeMilestoneIdx + 2}!
                       </p>
                     </div>
 

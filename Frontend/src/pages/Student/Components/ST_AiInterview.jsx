@@ -324,16 +324,23 @@ export default function AIInterview() {
   const triggerProctoringWarning = useCallback((type = "SUSPICIOUS_BEHAVIOR", customMsg = "") => {
     const nowMs = Date.now();
 
-    // 5-second startup grace period: no false-positive warnings during initial stream setup
-    if (nowMs - livePhaseStartTimeRef.current < 5000) {
+    // 25-second startup grace period: prevents any false positives while candidate settles in
+    if (nowMs - livePhaseStartTimeRef.current < 25000) {
       return;
     }
 
+    // Do not penalize candidate strikes for right clicks
+    if (type === "RIGHT_CLICK") {
+      return;
+    }
+
+    // Enforce 15-second cooldown between warnings to avoid rapid penalty stacking
     const lastTimeMs = lastWarningTypeTimestampRef.current[type] || 0;
-    if (nowMs - lastTimeMs < 6000) {
+    if (nowMs - lastTimeMs < 15000 || nowMs - lastWarningTimeRef.current < 12000) {
       return;
     }
     lastWarningTypeTimestampRef.current[type] = nowMs;
+    lastWarningTimeRef.current = nowMs;
 
     const timestamp = new Date().toLocaleTimeString();
     const defaultMsgs = {
@@ -733,7 +740,6 @@ export default function AIInterview() {
         let skinPixels = 0;
         let topSkinPixels = 0;
         let bottomSkinPixels = 0;
-        let activeScreenGlowPixels = 0;
         let roiPixelCount = 0;
         const pixelCount = data.length / 4;
 
@@ -753,73 +759,51 @@ export default function AIInterview() {
           if (x >= 20 && x <= 140 && y >= 10 && y <= 110) {
             roiPixelCount++;
 
-            // 1. Strict human skin tone detection
+            // Strict human skin tone detection
             const isSkin = r > 50 && g > 30 && b > 20 && r > g && r > b && (r - g) >= 8;
             if (isSkin) {
               skinPixels++;
               if (y < 65) topSkinPixels++;
               else bottomSkinPixels++;
             }
-
-            // 2. Mobile Phone Screen Glow / Active Electronic Display:
-            // High-luminance screen light (r,g,b > 210) in front of face
-            if (r > 210 && g > 210 && b > 210) {
-              activeScreenGlowPixels++;
-            }
           }
         }
 
         const avgBrightness = totalSum / pixelCount;
         const skinRatio = roiPixelCount > 0 ? skinPixels / roiPixelCount : 0;
-        const screenGlowRatio = roiPixelCount > 0 ? activeScreenGlowPixels / roiPixelCount : 0;
         const now = Date.now();
 
-        // 10-second startup grace period (gives user time to settle in before any checks activate)
-        if (now - livePhaseStartTimeRef.current < 10000) return;
+        // 25-second startup grace period (gives user time to settle in and read first question)
+        if (now - livePhaseStartTimeRef.current < 25000) return;
 
-        // Enforce 8 seconds cooldown between consecutive warnings
-        if (now - lastWarningTimeRef.current < 8000) return;
+        // Enforce 15 seconds cooldown between consecutive warnings
+        if (now - lastWarningTimeRef.current < 15000) return;
 
-        // ─── CHECK A: Eye Gaze / Head Turned Away continuously (LOOKING_AWAY) ───
-        const isLookingAway = skinRatio > 0.06 && (topSkinPixels < 5 || bottomSkinPixels / (topSkinPixels + 1) > 5.0);
+        // ─── CHECK A: Head / Gaze Completely Turned Away (LOOKING_AWAY) ───
+        // Only triggers if candidate turns head completely away from camera for 10+ continuous seconds (25 ticks)
+        const isLookingAway = skinRatio > 0.08 && topSkinPixels < 2 && (bottomSkinPixels / (topSkinPixels + 1) > 8.0);
 
         if (isLookingAway) {
           consecutiveViolationsRef.current.lookingAway += 1;
-          if (consecutiveViolationsRef.current.lookingAway >= 9) { // 9 ticks x 400ms = 3.6s continuous looking away
+          if (consecutiveViolationsRef.current.lookingAway >= 25) { // 25 ticks x 400ms = 10.0s continuous looking away
             lastWarningTimeRef.current = now;
             consecutiveViolationsRef.current.lookingAway = 0;
             triggerProctoringWarning(
               "LOOKING_AWAY",
-              "Candidate continuously looking away from camera screen!"
+              "Candidate continuously turned away from camera screen!"
             );
           }
         } else {
-          consecutiveViolationsRef.current.lookingAway = Math.max(0, consecutiveViolationsRef.current.lookingAway - 1);
+          consecutiveViolationsRef.current.lookingAway = Math.max(0, consecutiveViolationsRef.current.lookingAway - 2);
         }
 
-        // ─── CHECK B: Electronic Device / Active Screen Glow (DEVICE_DETECTED) ───
-        const isDeviceInView = screenGlowRatio > 0.15;
-
-        if (isDeviceInView) {
-          consecutiveViolationsRef.current.device += 1;
-          if (consecutiveViolationsRef.current.device >= 7) { // 7 ticks x 400ms = 2.8s continuous device display
-            lastWarningTimeRef.current = now;
-            consecutiveViolationsRef.current.device = 0;
-            triggerProctoringWarning(
-              "DEVICE_DETECTED",
-              "Mobile phone or electronic copying device detected in camera frame!"
-            );
-          }
-        } else {
-          consecutiveViolationsRef.current.device = Math.max(0, consecutiveViolationsRef.current.device - 1);
-        }
-
-        // ─── CHECK C: Face Covered / No Face in View (NO_FACE) ───
-        const isFaceObscured = (skinRatio < 0.025 && !isDeviceInView) || avgBrightness < 4;
+        // ─── CHECK B: Face Covered / Completely Absent (NO_FACE) ───
+        // Only triggers if candidate leaves frame completely for 10+ continuous seconds (25 ticks)
+        const isFaceObscured = skinRatio < 0.015 || avgBrightness < 3;
 
         if (isFaceObscured) {
           consecutiveViolationsRef.current.noFace += 1;
-          if (consecutiveViolationsRef.current.noFace >= 10) { // 10 ticks x 400ms = 4.0s continuous no-face
+          if (consecutiveViolationsRef.current.noFace >= 25) { // 25 ticks x 400ms = 10.0s continuous absence
             lastWarningTimeRef.current = now;
             consecutiveViolationsRef.current.noFace = 0;
             triggerProctoringWarning(
@@ -828,7 +812,7 @@ export default function AIInterview() {
             );
           }
         } else {
-          consecutiveViolationsRef.current.noFace = Math.max(0, consecutiveViolationsRef.current.noFace - 1);
+          consecutiveViolationsRef.current.noFace = Math.max(0, consecutiveViolationsRef.current.noFace - 2);
         }
       } catch (e) {
         console.warn("Proctoring frame warning:", e);
@@ -1032,9 +1016,23 @@ export default function AIInterview() {
 
   // ─── Anti-Cheat: Tab switch auto-submit + copy-paste block ──────────────────
   useEffect(() => {
+    let tabSwitchTimeout = null;
+
     const handleVisibility = () => {
-      if (document.hidden && phaseRef.current === "live" && !endRequestedRef.current) {
-        triggerProctoringWarning("TAB_SWITCH", "Tab switching or window minimizing detected during live interview!");
+      if (document.hidden) {
+        if (phaseRef.current === "live" && !endRequestedRef.current) {
+          // 2.5s debounce: ignore momentary system dialogs, alt-tab slips, or notifications
+          tabSwitchTimeout = setTimeout(() => {
+            if (document.hidden && phaseRef.current === "live" && !endRequestedRef.current) {
+              triggerProctoringWarning("TAB_SWITCH", "Tab switching or window minimizing detected during live interview!");
+            }
+          }, 2500);
+        }
+      } else {
+        if (tabSwitchTimeout) {
+          clearTimeout(tabSwitchTimeout);
+          tabSwitchTimeout = null;
+        }
       }
     };
 
@@ -1051,12 +1049,12 @@ export default function AIInterview() {
     document.addEventListener("paste", preventCopy);
     document.addEventListener("contextmenu", (e) => {
       if (phaseRef.current === "live") {
-        e.preventDefault();
-        triggerProctoringWarning("RIGHT_CLICK", "Right-click context menu opened during live interview!");
+        e.preventDefault(); // Silently block context menu without issuing false strike
       }
     });
 
     return () => {
+      if (tabSwitchTimeout) clearTimeout(tabSwitchTimeout);
       document.removeEventListener("visibilitychange", handleVisibility);
       document.removeEventListener("copy", preventCopy);
       document.removeEventListener("cut", preventCopy);
@@ -1234,8 +1232,8 @@ export default function AIInterview() {
     // Reset all state & initialize startup grace period
     const startNow = Date.now();
     livePhaseStartTimeRef.current = startNow;
-    lastWarningTimeRef.current = startNow + 5000;
-    consecutiveViolationsRef.current = { noFace: 0, device: 0, lookingAway: 0 };
+    lastWarningTimeRef.current = startNow + 25000; // 25s initial grace period
+    consecutiveViolationsRef.current = { noFace: 0, lookingAway: 0 };
     completedRef.current = false;
     endRequestedRef.current = false;
     firstQuestionRef.current = false;

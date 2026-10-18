@@ -5,6 +5,7 @@ import {
   generateRoadmap,
   updateMilestone,
   generateTopicQuiz,
+  generateMilestonePractice,
   generateMilestoneTheory,
   getMilestoneVideo,
 } from '../controllers/roadmap.controller.js';
@@ -12,9 +13,11 @@ import { authenticateToken } from '../middleware/auth.middleware.js';
 
 const router = Router();
 
-// Public educational endpoints (YouTube search & AI Theory Generation)
+// Public educational learning endpoints (YouTube Video, AI Theory, Practice Challenge & Quiz)
 router.get('/video', getMilestoneVideo);
 router.post('/theory/generate', generateMilestoneTheory);
+router.post('/practice/generate', generateMilestonePractice);
+router.post('/quiz/generate', generateTopicQuiz);
 
 // Protect roadmap routes
 router.use(authenticateToken);

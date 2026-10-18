@@ -497,3 +497,84 @@ export const saveCachedMilestoneTheory = async (milestoneTitle, targetRole, theo
     console.warn(`[Roadmap Model] Theory DB cache save warning: ${err.message}`);
   }
 };
+
+const globalPracticeCache = new Map();
+let isPracticeTableChecked = false;
+
+const ensurePracticeTable = async () => {
+  if (isPracticeTableChecked) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS ai_milestone_practices (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        practice_key VARCHAR(255) NOT NULL UNIQUE,
+        practice_json JSON NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    `);
+    isPracticeTableChecked = true;
+  } catch (err) {
+    console.warn(`[Roadmap Model] Could not ensure ai_milestone_practices table: ${err.message}`);
+  }
+};
+
+/**
+ * Fetch cached AI practice challenge for a milestone topic
+ */
+export const getCachedMilestonePractice = async (milestoneTitle, targetRole = '', topic = '') => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
+  const cleanRole = String(targetRole || '').trim().toLowerCase();
+  const cleanTopic = String(topic || cleanTitle).trim().toLowerCase();
+  const key = `${cleanTitle}__${cleanRole}__${cleanTopic}`;
+  if (!cleanTitle) return null;
+
+  if (globalPracticeCache.has(key)) {
+    return globalPracticeCache.get(key);
+  }
+
+  try {
+    await ensurePracticeTable();
+    const rows = await query(
+      'SELECT practice_json FROM ai_milestone_practices WHERE practice_key = ? LIMIT 1',
+      [key]
+    );
+    if (rows && rows.length > 0) {
+      const data = typeof rows[0].practice_json === 'string' ? JSON.parse(rows[0].practice_json) : rows[0].practice_json;
+      if (data && data.title && data.prompt) {
+        globalPracticeCache.set(key, data);
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn(`[Roadmap Model] Practice DB cache lookup warning: ${err.message}`);
+  }
+
+  return null;
+};
+
+/**
+ * Save AI generated practice challenge into DB and Memory Cache
+ */
+export const saveCachedMilestonePractice = async (milestoneTitle, targetRole, topic, practiceData) => {
+  const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim().toLowerCase();
+  const cleanRole = String(targetRole || '').trim().toLowerCase();
+  const cleanTopic = String(topic || cleanTitle).trim().toLowerCase();
+  const key = `${cleanTitle}__${cleanRole}__${cleanTopic}`;
+  if (!cleanTitle || !practiceData || !practiceData.title) return;
+
+  globalPracticeCache.set(key, practiceData);
+
+  try {
+    await ensurePracticeTable();
+    const practiceJson = JSON.stringify(practiceData);
+    await query(
+      `INSERT INTO ai_milestone_practices (practice_key, practice_json, created_at)
+       VALUES (?, ?, NOW())
+       ON DUPLICATE KEY UPDATE practice_json = VALUES(practice_json)`,
+      [key, practiceJson]
+    );
+    console.log(`[Roadmap Model] Saved AI practice challenge for "${cleanTopic}" to database.`);
+  } catch (err) {
+    console.warn(`[Roadmap Model] Practice DB cache save warning: ${err.message}`);
+  }
+};

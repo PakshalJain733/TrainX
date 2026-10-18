@@ -294,17 +294,18 @@
 
 .ai-bot-graphic {
   position: relative;
-  width: 120px;
-  height: 120px;
+  width: 100px;
+  height: 100px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
+  margin: 0 auto 12px auto;
 }
 
 .ai-bot-circle {
-  width: 90px;
-  height: 90px;
+  position: relative;
+  width: 84px;
+  height: 84px;
   background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border-radius: 50%;
   display: flex;
@@ -326,20 +327,21 @@
 
 .ai-bot-pulse {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90px;
-  height: 90px;
-  background: rgba(99, 102, 241, 0.2);
+  inset: 0;
+  margin: auto;
+  width: 84px;
+  height: 84px;
+  background: rgba(99, 102, 241, 0.25);
   border-radius: 50%;
   z-index: 1;
-  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  transform-origin: center center;
+  animation: aiBotPulseHalo 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  pointer-events: none;
 }
 
-@keyframes pulse-ring {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1.65); opacity: 0; }
+@keyframes aiBotPulseHalo {
+  0% { transform: scale(1); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
 }
 
 .ai-bot-title {

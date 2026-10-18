@@ -72,9 +72,86 @@ function resolveFallbackVideo(queryStr = "") {
   };
 }
 
+async function searchYouTubePublic(query, maxResults = 3) {
+  try {
+    const cleanQuery = encodeURIComponent(`${query} tutorial`);
+    const searchUrl = `https://www.youtube.com/results?search_query=${cleanQuery}`;
+    const res = await fetch(searchUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (res.ok) {
+      const html = await res.text();
+      // Match videoRenderer entries to get real videoId, title, and channel
+      const videoMatches = [
+        ...html.matchAll(
+          /"videoRenderer":\{"videoId":"([a-zA-Z0-9_-]{11})"(?:.*?"title":\{"runs":\[\{"text":"([^"]+)"\}\])?(?:.*?"ownerText":\{"runs":\[\{"text":"([^"]+)"\}\])?/g
+        ),
+      ];
+
+      if (videoMatches.length > 0) {
+        const seen = new Set();
+        const results = [];
+
+        for (const match of videoMatches) {
+          const vId = match[1];
+          if (!vId || seen.has(vId)) continue;
+          seen.add(vId);
+
+          const title = match[2] || `${query} Tutorial & Lecture`;
+          const channel = match[3] || 'YouTube Tech Educator';
+
+          results.push({
+            id: `v-yt-pub-${vId}`,
+            videoId: vId,
+            title,
+            channel,
+            duration: '20-40 mins',
+            searchQuery: query,
+            searchUrl: `https://www.youtube.com/results?search_query=${cleanQuery}`,
+            embedUrl: `https://www.youtube-nocookie.com/embed/${vId}?rel=0`,
+            topicsCovered: query,
+          });
+
+          if (results.length >= maxResults) break;
+        }
+
+        if (results.length > 0) {
+          return results;
+        }
+      }
+
+      // Secondary fallback: Extract videoId regex
+      const idMatches = [...html.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)];
+      const ids = [...new Set(idMatches.map((m) => m[1]))];
+      if (ids.length > 0) {
+        return ids.slice(0, maxResults).map((vId, idx) => ({
+          id: `v-yt-id-${vId}`,
+          videoId: vId,
+          title: `${query} - Tutorial Lecture ${idx + 1}`,
+          channel: 'Tech Educator',
+          duration: '25 mins',
+          searchQuery: query,
+          searchUrl: `https://www.youtube.com/results?search_query=${cleanQuery}`,
+          embedUrl: `https://www.youtube-nocookie.com/embed/${vId}?rel=0`,
+          topicsCovered: query,
+        }));
+      }
+    }
+  } catch (err) {
+    console.warn(`[YouTube Public Search Note]: ${err.message}`);
+  }
+  return [];
+}
+
 export const searchYouTubeVideos = async (query, maxResults = 3) => {
   const apiKey = (process.env.YOUTUBE_API_KEY || process.env.GOOGLE_CALENDAR_API_KEY || "").trim();
 
+  // 1. Try Official YouTube Data API if valid key is provided
   if (apiKey) {
     try {
       const cleanQuery = encodeURIComponent(`${query} tutorial`);
@@ -94,22 +171,37 @@ export const searchYouTubeVideos = async (query, maxResults = 3) => {
             searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
             embedUrl: item.id?.videoId 
               ? `https://www.youtube-nocookie.com/embed/${item.id.videoId}?rel=0`
-              : `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(query)}`,
+              : `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(query + ' tutorial')}`,
             topicsCovered: query,
           }));
-          return mapped.filter(v => v.videoId && v.embedUrl);
+          const valid = mapped.filter(v => v.videoId && v.embedUrl);
+          if (valid.length > 0) return valid;
         }
-      } else {
-        const errorText = await res.text();
-        console.warn(`[YouTube API Note] Status ${res.status}: ${errorText.slice(0, 150)}`);
       }
     } catch (err) {
       console.warn(`[YouTube API Call Failed]: ${err.message}`);
     }
   }
 
-  // Return curated educational video tutorial as fallback
-  const fallback = resolveFallbackVideo(query);
-  return fallback ? [fallback] : [];
+  // 2. Direct Public YouTube Search (no API key restrictions or quotas)
+  const publicResults = await searchYouTubePublic(query, maxResults);
+  if (publicResults.length > 0) {
+    return publicResults;
+  }
+
+  // 3. Dynamic YouTube Search Embed (plays the top result matching the exact topic directly in iframe)
+  return [
+    {
+      id: `v-search-${Date.now()}`,
+      videoId: `search-${encodeURIComponent(query)}`,
+      title: `${query} - Video Lecture & Tutorial`,
+      channel: 'YouTube Video Search',
+      duration: '25-45 mins',
+      searchQuery: query,
+      searchUrl: `https://www.youtube.com/results?search_query=${encodeURIComponent(query + ' tutorial')}`,
+      embedUrl: `https://www.youtube-nocookie.com/embed?listType=search&list=${encodeURIComponent(query + ' tutorial')}`,
+      topicsCovered: query,
+    },
+  ];
 };
 

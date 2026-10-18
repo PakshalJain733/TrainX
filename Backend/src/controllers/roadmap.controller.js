@@ -6,12 +6,14 @@ import {
   generateNewRoadmap,
   updateMilestoneProgress,
 } from '../services/roadmap.service.js';
-import { generateTopicQuizAI, generateMilestoneTheoryAI } from '../ai/roadmap.ai.js';
+import { generateTopicQuizAI, generateMilestoneTheoryAI, generateMilestonePracticeAI } from '../ai/roadmap.ai.js';
 import {
   getCachedTopicQuiz,
   saveCachedTopicQuiz,
   getCachedMilestoneTheory,
   saveCachedMilestoneTheory,
+  getCachedMilestonePractice,
+  saveCachedMilestonePractice,
 } from '../models/roadmap.model.js';
 import { searchYouTubeVideos } from '../services/youtube.service.js';
 
@@ -142,6 +144,42 @@ export const generateTopicQuiz = async (req, res, next) => {
     await saveCachedTopicQuiz(cleanTopic, quiz);
 
     return sendSuccess(res, 'Topic quiz generated via AI and saved to DB', quiz);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Generate hands-on practical coding challenge for a milestone topic with DB caching
+ */
+export const generateMilestonePractice = async (req, res, next) => {
+  try {
+    const { milestoneTitle, targetRole, topic, forceRefresh } = req.body || {};
+    if (!milestoneTitle || !String(milestoneTitle).trim()) {
+      return sendError(res, 'milestoneTitle is required', 400);
+    }
+
+    const cleanTitle = String(milestoneTitle).trim();
+    const cleanRole = String(targetRole || '').trim();
+    const cleanTopic = String(topic || cleanTitle).trim();
+
+    // 1. Check DB/Memory cache
+    if (!forceRefresh) {
+      const cached = await getCachedMilestonePractice(cleanTitle, cleanRole, cleanTopic);
+      if (cached && cached.title && cached.prompt) {
+        console.log(`[Practice Controller] DB Cache Hit for practice challenge "${cleanTopic}". Returning stored challenge.`);
+        return sendSuccess(res, 'Milestone practice challenge retrieved from DB cache', cached);
+      }
+    }
+
+    // 2. Generate via AI
+    console.log(`[Practice Controller] Generating NEW AI practice challenge for "${cleanTopic}"...`);
+    const challenge = await generateMilestonePracticeAI(cleanTitle, cleanRole, cleanTopic);
+
+    // 3. Save to DB cache
+    await saveCachedMilestonePractice(cleanTitle, cleanRole, cleanTopic, challenge);
+
+    return sendSuccess(res, 'Milestone practice challenge generated via AI and saved to DB', challenge);
   } catch (error) {
     next(error);
   }

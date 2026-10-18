@@ -45,34 +45,51 @@ const app = express();
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
 
-// Comprehensive & Bulletproof CORS Middleware
-// Ensures Access-Control-Allow-Origin and preflight headers are ALWAYS present
+// ============================================================================
+// Robust Universal CORS Middleware (All Routes, Preflights & Methods)
+// ============================================================================
 app.use((req, res, next) => {
   const origin = req.headers.origin;
+
   if (origin) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-access-token, token, x-c2c-webhook-secret, sentry-trace, baggage, Cache-Control, Pragma'
-    );
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
 
-  // Handle preflight OPTIONS requests immediately
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+  res.setHeader(
+    'Access-Control-Allow-Methods',
+    'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD'
+  );
+
+  const requestHeaders = req.headers['access-control-request-headers'];
+  if (requestHeaders) {
+    res.setHeader('Access-Control-Allow-Headers', requestHeaders);
+  } else {
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-access-token, token, x-c2c-webhook-secret, sentry-trace, baggage, Cache-Control, Pragma, sec-ch-ua, sec-ch-ua-mobile, sec-ch-ua-platform'
+    );
   }
+
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Authorization, token');
+  res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+
+  // Immediate handling of preflight OPTIONS requests across ALL routes
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
   next();
 });
 
-// Configure cors library with origin reflection and credentials
+// Configure cors library for full express middleware compatibility
 app.use(
   cors({
     origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
     allowedHeaders: [
       'Origin',
       'X-Requested-With',
@@ -82,12 +99,35 @@ app.use(
       'x-access-token',
       'token',
       'x-c2c-webhook-secret',
+      'sentry-trace',
+      'baggage',
       'Cache-Control',
       'Pragma',
+      'sec-ch-ua',
+      'sec-ch-ua-mobile',
+      'sec-ch-ua-platform',
     ],
+    exposedHeaders: ['Content-Length', 'Content-Range', 'Authorization', 'token'],
+    maxAge: 86400,
   })
 );
-app.options('*', (req, res) => res.status(200).end());
+
+// Explicit OPTIONS handler for all wildcard routes
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+  const requestHeaders = req.headers['access-control-request-headers'];
+  if (requestHeaders) {
+    res.setHeader('Access-Control-Allow-Headers', requestHeaders);
+  }
+  res.status(204).end();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(apiMetricsMiddleware);
@@ -202,6 +242,10 @@ app.use('/api/v1/maintenance', featureSwitchRoutes);
 
 // 404 Route Handler
 app.use('*', (req, res) => {
+  if (req.headers.origin && !res.getHeader('Access-Control-Allow-Origin')) {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+  }
   return sendError(res, `Route not found: ${req.originalUrl}`, 404);
 });
 

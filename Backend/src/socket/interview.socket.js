@@ -145,43 +145,8 @@ async function finalizeSession(io, socket, session, reason = 'completed') {
 export function initInterviewSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: (origin, cb) => {
-        if (!origin) return cb(null, true);
-        const cleanOrigin = origin.replace(/\/$/, '');
-        const allowed = new Set([
-          (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, ''),
-          'http://localhost:5173',
-          'http://127.0.0.1:5173',
-        ]);
-        if (allowed.has(cleanOrigin)) return cb(null, true);
-
-        try {
-          const url = new URL(cleanOrigin);
-          const host = url.hostname;
-          const isLocalHost =
-            ['localhost', '127.0.0.1', '::1'].includes(host) ||
-            host.endsWith('.local') ||
-            /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
-            /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
-            /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
-
-          const isAllowedDeployment =
-            host.endsWith('.vercel.app') ||
-            host.endsWith('.netlify.app') ||
-            host.endsWith('.onrender.com') ||
-            host.endsWith('.github.io') ||
-            host.endsWith('getflytechnologies.com') ||
-            host.endsWith('vppcoe.tech');
-
-          if (isLocalHost || isAllowedDeployment) return cb(null, true);
-        } catch (e) {}
-
-        if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
-          return cb(null, true);
-        }
-
-        return cb(new Error('Origin not allowed by CORS'));
-      },
+      origin: true,
+      credentials: true,
       methods: ['GET', 'POST'],
     },
     path: '/socket.io',
