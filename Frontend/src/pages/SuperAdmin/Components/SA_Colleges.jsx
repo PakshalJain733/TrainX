@@ -99,6 +99,7 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
         <div
           ref={menuRef}
           className="action-dropdown-menu action-dropdown-portal"
+          onMouseDown={(e) => e.stopPropagation()}
           style={{
             top: `${coords.top}px`,
             right: `${coords.right}px`,
@@ -107,7 +108,8 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
           {onView && (
             <button
               type="button"
-              onClick={() => { onView(); setOpen(false); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => { setOpen(false); onView(); }}
               className="action-dropdown-item"
             >
               <Eye className="action-dropdown-icon" />
@@ -118,7 +120,8 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
           {onVerify && (
             <button
               type="button"
-              onClick={() => { onVerify(); setOpen(false); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => { setOpen(false); onVerify(); }}
               className="action-dropdown-item action-dropdown-item--verify"
             >
               <ShieldCheck className="action-dropdown-icon" />
@@ -129,7 +132,8 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
           {onEdit && (
             <button
               type="button"
-              onClick={() => { onEdit(); setOpen(false); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => { setOpen(false); onEdit(); }}
               className="action-dropdown-item"
             >
               <Edit2 className="action-dropdown-icon" />
@@ -141,7 +145,8 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
             <button
               key={idx}
               type="button"
-              onClick={() => { action.onClick(); setOpen(false); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={() => { setOpen(false); action.onClick(); }}
               className="action-dropdown-item"
             >
               {action.icon && <action.icon className="action-dropdown-icon" />}
@@ -154,7 +159,8 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
               <div className="action-dropdown-divider" />
               <button
                 type="button"
-                onClick={() => { onDelete(); setOpen(false); }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => { setOpen(false); onDelete(); }}
                 className="action-dropdown-item action-dropdown-item--danger"
               >
                 <Trash2 className="action-dropdown-icon" />
@@ -251,27 +257,30 @@ export default function Colleges() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const handleTrigger2FAForCollegeAdmin = async (college) => {
-    const adminEmail = college.adminEmail || college.contact_email || college.email;
-    if (!adminEmail) {
-      alert("No college admin email associated with this college record.");
-      return;
-    }
+    const rawEmail = college.adminEmail || college.contact_email || college.email;
+    const adminEmail = (rawEmail && rawEmail !== '-' && rawEmail.trim()) ? rawEmail.trim() : null;
+
     try {
       const usersRes = await apiFetch('/admin/users');
       let adminUser = null;
       const userList = Array.isArray(usersRes?.data) ? usersRes.data : (Array.isArray(usersRes) ? usersRes : []);
       if (userList.length > 0) {
-        adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
+        if (adminEmail) {
+          adminUser = userList.find(u => u.email && u.email.toLowerCase() === adminEmail.toLowerCase());
+        }
+        if (!adminUser) {
+          adminUser = userList.find(u => String(u.college_id) === String(college.id) && String(u.role).toLowerCase().includes('admin'));
+        }
       }
       if (!adminUser) {
-        alert(`Could not find active user account for admin email '${adminEmail}'.`);
+        alert(`No active College Admin account found for ${college.name}. Please edit this college record to set an Administrator Email first.`);
         return;
       }
       const res = await apiFetch(`/admin/users/${adminUser.id}/trigger-2fa`, {
         method: 'POST',
       });
       if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
-        alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminEmail}. 2FA is now required on their next login.`);
+        alert(res.message || `Two-step verification has been re-triggered for ${adminUser.name || adminUser.email} (${college.name}). 2FA setup is now required on their next sign-in.`);
       } else {
         alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
       }
@@ -327,7 +336,7 @@ export default function Colleges() {
   });
 
   const filteredDepts = departments.filter((d) =>
-    (!collegeId || String(d.collegeId) === String(collegeId)) &&
+    (!collegeId || String(d.collegeId || d.college_id) === String(collegeId)) &&
     (d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.code.toLowerCase().includes(searchQuery.toLowerCase()))
   );
@@ -597,7 +606,7 @@ export default function Colleges() {
                     </td>
                     <td className="colleges-td-right">
                       <ActionDropdown
-                        onView={() => navigate(`/super-admin/colleges/${college.id}`)}
+                        onView={() => setViewCollegeModal(college)}
                         onEdit={() => {
                           setEditErrors({});
                           setEditCollege({
@@ -613,6 +622,11 @@ export default function Colleges() {
                         }}
                         onDelete={() => setDeleteCollege(college)}
                         customActions={[
+                          {
+                            label: 'Explore Departments',
+                            icon: GraduationCap,
+                            onClick: () => navigate(`/super-admin/colleges/${college.id}`),
+                          },
                           {
                             label: 'Re-trigger 2FA Setup',
                             icon: ShieldCheck,
@@ -1064,15 +1078,132 @@ export default function Colleges() {
             <div className="modal-footer">
               <button
                 type="button"
-                className="manageusers-btn-reject college-btn-delete-confirm"
+                className="btn-modal-cancel"
+                onClick={() => setDeleteCollege(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-modal-submit btn-modal-danger"
                 onClick={() => {
                   handleDeleteCollege(deleteCollege.id);
                   setDeleteCollege(null);
                 }}
               >
-                <Trash2 size={15} />
+                <Trash2 size={15} style={{ marginRight: '6px' }} />
                 <span>Confirm Remove</span>
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* View College Details Modal */}
+      {viewCollegeModal && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setViewCollegeModal(null); }}>
+          <div className="modal-dialog college-modal-560">
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <Building2 size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">{viewCollegeModal.name}</h2>
+                  <p className="modal-subtitle">Institutional Details &amp; Profile Record</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setViewCollegeModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Short Code</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{viewCollegeModal.code || '—'}</p>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Operational Status</label>
+                  <div style={{ marginTop: '2px' }}><StatusBadge status={viewCollegeModal.status || 'Active'} /></div>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Location &amp; Campus</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#334155', fontSize: '13.5px' }}>{viewCollegeModal.location || viewCollegeModal.city || '—'}</p>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Email Domain</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#4f46e5', fontSize: '13.5px' }}>{viewCollegeModal.domain ? `@${viewCollegeModal.domain.replace(/^@/, '')}` : '—'}</p>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>College Administrator</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#0f172a', fontSize: '13.5px' }}>{viewCollegeModal.adminName || viewCollegeModal.admin_name || '—'}</p>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Admin Email Address</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 600, color: '#2563eb', fontSize: '13.5px' }}>{viewCollegeModal.adminEmail || viewCollegeModal.contact_email || '—'}</p>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Departments Count</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>
+                    {departments.filter(d => String(d.collegeId || d.college_id) === String(viewCollegeModal.id)).length || viewCollegeModal.departmentsCount || viewCollegeModal.department_count || 0}
+                  </p>
+                </div>
+                <div className="form-group-admin">
+                  <label style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', letterSpacing: '0.04em' }}>Active Students</label>
+                  <p style={{ margin: '2px 0 0', fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>
+                    {viewCollegeModal.studentsCount || viewCollegeModal.student_count || 0}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => {
+                  const targetId = viewCollegeModal.id;
+                  setViewCollegeModal(null);
+                  navigate(`/super-admin/colleges/${targetId}`);
+                }}
+              >
+                <GraduationCap size={15} style={{ marginRight: '6px' }} />
+                <span>Explore Departments</span>
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setViewCollegeModal(null)}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn-modal-submit"
+                  onClick={() => {
+                    const c = viewCollegeModal;
+                    setViewCollegeModal(null);
+                    setEditErrors({});
+                    setEditCollege({
+                      ...c,
+                      name: c.name || '',
+                      code: c.code || '',
+                      location: c.location || c.city || '',
+                      domain: c.domain || '',
+                      adminName: c.adminName || c.admin_name || '',
+                      adminEmail: c.adminEmail || c.contact_email || '',
+                      status: c.status || 'Active',
+                    });
+                  }}
+                >
+                  <Edit2 size={14} style={{ marginRight: '6px' }} />
+                  <span>Edit Record</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>,

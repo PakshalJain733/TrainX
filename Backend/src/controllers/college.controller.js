@@ -32,7 +32,7 @@ async function ensureCollegeTable() {
       "domain VARCHAR(255) NULL",
     ];
     for (const c of cols) {
-      try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) {}
+      try { await query(`ALTER TABLE colleges ADD COLUMN ${c}`); } catch (err) { }
     }
     tablesInitialized = true;
   } catch (e) {
@@ -78,7 +78,7 @@ export const getColleges = async (req, res, next) => {
         FROM colleges c ORDER BY c.id DESC
       `);
       const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1] : '';
-      const matched = (allCols || []).filter(c => 
+      const matched = (allCols || []).filter(c =>
         String(c.id) === String(userCollegeId) ||
         (c.contact_email && c.contact_email.toLowerCase() === userEmail) ||
         (c.admin_name && c.admin_name.toLowerCase().includes(userEmail.split('@')[0])) ||
