@@ -199,7 +199,6 @@ export default function CoordinatorMentors() {
         <div className="coord-header-left">
           <div>
             <h1 className="coord-page-title">
-              <UserCog size={24} className="coord-mentors-header-icon" />
               <span>Assigned Mentors</span>
             </h1>
             <p className="coord-page-sub">

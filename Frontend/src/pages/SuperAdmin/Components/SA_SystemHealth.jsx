@@ -273,9 +273,6 @@ export default function SystemHealth() {
       <div className="sh-header-bar">
         <div className="sh-header-left">
           <div className="sh-title-row">
-            <div className="sh-title-icon-box">
-              <Activity size={22} className="sh-title-icon" />
-            </div>
             <div>
               <h1 className="sh-page-title">Real-Time System Health &amp; Infrastructure</h1>
               <p className="sh-page-subtitle">

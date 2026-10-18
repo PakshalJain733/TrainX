@@ -523,15 +523,7 @@ export default function Colleges() {
         <div className="sa-page-header">
           <div>
             <div className="colleges-header-title-wrap mb-1">
-              <button
-                onClick={() => navigate('/super-admin/colleges')}
-                className="colleges-back-btn"
-                title="Back to Colleges Directory"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
               <h2 className="colleges-header-title colleges-header-title-wrap m-0">
-                <GraduationCap className="colleges-header-cap-icon" />
                 <span>{selectedCollege ? selectedCollege.name : "College Departments"}</span>
               </h2>
             </div>
@@ -1048,8 +1040,7 @@ export default function Colleges() {
       {/* Header & Main Action */}
       <div className="sa-page-header">
         <div>
-          <h2 className="colleges-header-title-wrap" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0 }}>
-            <Building2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+          <h2 className="colleges-header-title-wrap" style={{ margin: 0 }}>
             <span className="colleges-header-title" style={{ fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>Colleges Directory</span>
           </h2>
           <p className="colleges-header-subtitle">Manage all registered institutions and partner universities</p>

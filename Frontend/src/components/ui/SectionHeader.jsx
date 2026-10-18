@@ -7,7 +7,6 @@ export function SectionHeader({ title, description, action, icon: Icon, classNam
       <div className="ui-section-main">
         <div>
           <h2 className="ui-section-title">
-            {Icon && <Icon size={22} className="ui-section-title-icon" />}
             <span>{title}</span>
           </h2>
           {description && (

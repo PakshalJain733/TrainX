@@ -449,7 +449,6 @@ export default function Performance() {
       <div className="performance-header-wrap">
         <div>
           <h2 className="performance-header-title">
-            <LineChart size={24} style={{ color: "var(--primary-color, #4f46e5)", flexShrink: 0 }} />
             <span>Platform Performance &amp; Analytics</span>
           </h2>
           <p className="performance-header-subtitle">

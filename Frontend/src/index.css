@@ -251,6 +251,8 @@ p {
 .maintenancecontrols-header-title svg,
 .colleges-header-title svg,
 .colleges-header-title-wrap svg,
+.colleges-back-btn,
+.colleges-header-cap-icon,
 .departments-header-title svg,
 .manageusers-header-title svg,
 .performance-header-title svg,
@@ -258,13 +260,20 @@ p {
 .batches-header-title svg,
 .coursework-header-title svg,
 .coord-header-title-text svg,
+.coord-page-title svg,
+.coord-perf-title svg,
+.coord-mentors-header-icon,
+.coord-batches-header-icon,
+.coord-sni-alert-icon,
+.sa-approve-title-icon,
+.sh-title-icon-box,
+.sh-title-icon,
 .fs-portal-header-title svg,
 .ad-wr-header-title-row svg,
 .mentor-defaulter-header-title svg,
 .mn-notif-header-title svg,
 .my-attendance-header-title svg {
-  color: var(--primary-color, #4f46e5) !important;
-  flex-shrink: 0 !important;
+  display: none !important;
 }
 
 .ui-section-desc,

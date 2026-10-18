@@ -157,7 +157,6 @@ export default function SuperAdminApproveUsers() {
       <div className="sa-approve-header">
         <div>
           <div className="sa-approve-title-row">
-            <UserCheck size={24} className="sa-approve-title-icon" />
             <h1 className="sa-approve-page-title">Pending Registrations</h1>
             {pendingUsers.length > 0 && (
               <span className="sa-approve-count-badge">

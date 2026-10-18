@@ -162,7 +162,6 @@ export default function CoordinatorBatches() {
         <div className="coord-header-left">
           <div className="coord-header-text-group">
             <h1 className="coord-page-title">
-              <Code2 size={24} className="coord-batches-header-icon" />
               <span>Batches Governance</span>
             </h1>
             <p className="coord-page-sub">

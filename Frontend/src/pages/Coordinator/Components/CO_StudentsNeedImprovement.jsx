@@ -293,7 +293,6 @@ export default function StudentsNeedImprovement() {
         <div className="coord-perf-header-left">
           <div>
             <h1 className="coord-perf-title coord-sni-header-title-flex">
-              <AlertTriangle size={24} className="coord-sni-alert-icon" />
               <span>Academic Support & Skill-Gap Analysis</span>
             </h1>
             <p className="coord-perf-sub coord-sni-header-desc">

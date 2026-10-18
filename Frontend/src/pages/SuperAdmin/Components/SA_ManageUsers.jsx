@@ -1764,8 +1764,7 @@ export default function ManageUsers() {
       {/* Page Header */}
       <div className="sa-page-header">
         <div>
-          <h2 className="manageusers-header-title" style={{ display: "flex", alignItems: "center", gap: "10px", margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>
-            <UserCog size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+          <h2 className="manageusers-header-title" style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "inherit" }}>
             <span>Manage Users &amp; Registration Codes</span>
           </h2>
           <p className="manageusers-header-subtitle">View system users, issue role-based registration invitation codes, and provision institutional users</p>

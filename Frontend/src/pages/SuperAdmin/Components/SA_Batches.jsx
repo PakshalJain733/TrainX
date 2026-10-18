@@ -320,8 +320,7 @@ export default function Batches() {
       {/* Header Bar */}
       <div className="batches-header-wrap">
         <div>
-          <h2 className="batches-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+          <h2 className="batches-header-title">
             <span>Training Batches</span>
           </h2>
           <p className="batches-header-subtitle">Monitor batch timelines, completion progress, and assigned mentors</p>
