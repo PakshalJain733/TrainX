@@ -2181,3 +2181,16 @@ button:active:not(:disabled),
     gap: 12px !important;
   }
 }
+
+.notif-mark-read-btn:disabled,
+.notif-clear-all-btn:disabled {
+  opacity: 0.5 !important;
+  cursor: default !important;
+}
+
+.notif-empty-state {
+  padding: 24px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.875rem;
+}

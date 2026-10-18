@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User } from "lucide-react";
 import { StudentSidebar } from "./ST_Sidebar";
 import GlobalHeaderSearch from "../../../components/Common/GlobalHeaderSearch";
+import RouteLoadingFallback from "../../../components/Common/RouteLoadingFallback";
 import { apiFetch } from "../../../utils/api";
 import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import "../Styles/ST_Layout.css";
@@ -634,7 +635,9 @@ export default function StudentLayout() {
                   : {}
               }
             >
-              <Outlet />
+              <Suspense fallback={<RouteLoadingFallback />}>
+                <Outlet />
+              </Suspense>
             </div>
 
           </div>

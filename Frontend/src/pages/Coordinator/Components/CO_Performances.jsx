@@ -151,6 +151,16 @@ export function CodingPerformance() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="coord-perf-search-input"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="coord-perf-search-clear"
+              onClick={() => setSearchTerm("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="coord-perf-filters-group">
@@ -467,6 +477,16 @@ export function QuizPerformance() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="coord-perf-search-input"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="coord-perf-search-clear"
+              onClick={() => setSearchTerm("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="coord-perf-filters-group">
@@ -689,6 +709,16 @@ export function InterviewPerformance() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="coord-perf-search-input"
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="coord-perf-search-clear"
+              onClick={() => setSearchTerm("")}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="coord-perf-filters-group">
