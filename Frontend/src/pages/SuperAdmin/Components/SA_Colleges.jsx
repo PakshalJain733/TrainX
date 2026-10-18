@@ -1360,13 +1360,6 @@ export default function Colleges() {
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   type="button"
-                  className="btn-modal-cancel"
-                  onClick={() => setViewCollegeModal(null)}
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
                   className="btn-modal-submit"
                   onClick={() => {
                     const c = viewCollegeModal;
