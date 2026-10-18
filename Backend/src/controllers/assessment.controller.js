@@ -459,8 +459,19 @@ export const submitAssessment = async (req, res, next) => {
     const { answers = [] } = req.body;
 
     let targetAssessmentId = assessmentId;
-    if (targetAssessmentId === 'attempts' && attemptId) {
+    if ((!targetAssessmentId || targetAssessmentId === 'attempts') && attemptId) {
       targetAssessmentId = req.body.assessment_id || req.query.assessment_id || null;
+      if (!targetAssessmentId) {
+        try {
+          const attemptRows = await query(
+            `SELECT assessment_id FROM assessment_attempts WHERE id = ? LIMIT 1`,
+            [attemptId]
+          );
+          if (attemptRows && attemptRows.length > 0 && attemptRows[0].assessment_id) {
+            targetAssessmentId = attemptRows[0].assessment_id;
+          }
+        } catch (_) {}
+      }
     }
 
     // 1. Fetch questions for this assessment
@@ -529,15 +540,29 @@ export const submitAssessment = async (req, res, next) => {
 
     try {
       if (attemptId && attemptId !== 'attempts') {
-        await query(
-          `UPDATE assessment_attempts SET marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
-          [marksObtained, totalMarks, percentage, correctCount, status, attemptId]
-        );
+        try {
+          await query(
+            `UPDATE assessment_attempts SET marks_obtained = ?, total_marks = ?, percentage = ?, correct_count = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
+            [marksObtained, totalMarks, percentage, correctCount, status, attemptId]
+          );
+        } catch (_) {
+          await query(
+            `UPDATE assessment_attempts SET score = ?, percentage = ?, correct_answers = ?, status = ?, submitted_at = NOW() WHERE id = ?`,
+            [marksObtained, percentage, correctCount, status, attemptId]
+          );
+        }
       } else if (targetAssessmentId) {
-        await query(
-          `INSERT INTO assessment_attempts (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-          [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount, status]
-        );
+        try {
+          await query(
+            `INSERT INTO assessment_attempts (assessment_id, user_id, marks_obtained, total_marks, percentage, correct_count, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [targetAssessmentId, userId, marksObtained, totalMarks, percentage, correctCount, status]
+          );
+        } catch (_) {
+          await query(
+            `INSERT INTO assessment_attempts (assessment_id, user_id, score, percentage, correct_answers, status, submitted_at) VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+            [targetAssessmentId, userId, marksObtained, percentage, correctCount, status]
+          );
+        }
       }
     } catch (e) {
       console.warn('[DB submitAssessment update fallback]', e.message);
@@ -602,17 +627,27 @@ export const startAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId || req.user?.id || 1;
+    let attemptId = Date.now();
 
     try {
-      await query(
+      const insertResult = await query(
         `INSERT INTO assessment_attempts (assessment_id, user_id, status, started_at) VALUES (?, ?, 'in_progress', NOW())`,
         [id, userId]
       );
+      if (insertResult && insertResult.insertId) {
+        attemptId = insertResult.insertId;
+      }
     } catch (e) {
       console.warn('[DB startAssessment fallback]', e.message);
     }
 
-    return sendSuccess(res, 'Assessment started successfully', { assessment_id: id, status: 'in_progress' });
+    return sendSuccess(res, 'Assessment started successfully', {
+      assessment_id: id,
+      status: 'in_progress',
+      attemptId,
+      attempt_id: attemptId,
+      attempt: { id: attemptId, assessment_id: id, status: 'in_progress' }
+    });
   } catch (error) {
     next(error);
   }

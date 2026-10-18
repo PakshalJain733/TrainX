@@ -318,6 +318,27 @@ export default function StudentLayout() {
 
   const [showFirstLoginFlash, setShowFirstLoginFlash] = useState(false);
 
+  const handleDismissFirstLoginModal = (goToProfile = false) => {
+    let key = user?.id || user?.email;
+    if (!key) {
+      try {
+        const u = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+        key = u.id || u.email;
+      } catch {}
+    }
+    if (key) {
+      sessionStorage.setItem(`st_flash_skipped_${key}`, "true");
+      localStorage.setItem(`st_flash_skipped_${key}`, "true");
+    }
+    sessionStorage.setItem("st_flash_skipped_current", "true");
+    localStorage.setItem("st_flash_skipped_current", "true");
+    sessionStorage.removeItem("showFirstLoginAlert");
+    setShowFirstLoginFlash(false);
+    if (goToProfile) {
+      navigate('/student/profile');
+    }
+  };
+
   // Load user profile from backend on mount (device-synced)
   useEffect(() => {
     apiFetch("/student/profile")
@@ -330,16 +351,25 @@ export default function StudentLayout() {
           const isUpdated = Boolean(
             res.data.is_profile_updated ||
             res.data.studentProfile?.is_profile_updated ||
-            (userKey && sessionStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+            (userKey && (
+              sessionStorage.getItem(`profile_updated_${userKey}`) === "true" ||
+              localStorage.getItem(`profile_updated_${userKey}`) === "true"
+            )) ||
             (res.data.gender && res.data.city) ||
             ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
           );
 
-          if (!isUpdated) {
-            const sessionSkipped = sessionStorage.getItem(`st_flash_skipped_${fetchedUser.id || fetchedUser.email}`);
-            if (!sessionSkipped) {
-              setShowFirstLoginFlash(true);
-            }
+          const isDismissed = Boolean(
+            (userKey && (
+              sessionStorage.getItem(`st_flash_skipped_${userKey}`) === "true" ||
+              localStorage.getItem(`st_flash_skipped_${userKey}`) === "true"
+            )) ||
+            sessionStorage.getItem("st_flash_skipped_current") === "true" ||
+            localStorage.getItem("st_flash_skipped_current") === "true"
+          );
+
+          if (!isUpdated && !isDismissed) {
+            setShowFirstLoginFlash(true);
           } else {
             setShowFirstLoginFlash(false);
           }
@@ -363,11 +393,22 @@ export default function StudentLayout() {
             const isUpdated = Boolean(
               res.data.is_profile_updated ||
               res.data.studentProfile?.is_profile_updated ||
-              (userKey && sessionStorage.getItem(`profile_updated_${userKey}`) === "true") ||
+              (userKey && (
+                sessionStorage.getItem(`profile_updated_${userKey}`) === "true" ||
+                localStorage.getItem(`profile_updated_${userKey}`) === "true"
+              )) ||
               (res.data.gender && res.data.city) ||
               ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
             );
-            if (isUpdated) {
+            const isDismissed = Boolean(
+              (userKey && (
+                sessionStorage.getItem(`st_flash_skipped_${userKey}`) === "true" ||
+                localStorage.getItem(`st_flash_skipped_${userKey}`) === "true"
+              )) ||
+              sessionStorage.getItem("st_flash_skipped_current") === "true" ||
+              localStorage.getItem("st_flash_skipped_current") === "true"
+            );
+            if (isUpdated || isDismissed) {
               setShowFirstLoginFlash(false);
             }
           }
@@ -630,20 +671,13 @@ export default function StudentLayout() {
             <div className="st-firstlogin-actions">
               <button
                 className="st-firstlogin-btn-secondary"
-                onClick={() => {
-                  const userKey = `st_flash_skipped_${user.id || user.email}`;
-                  sessionStorage.setItem(userKey, "true");
-                  setShowFirstLoginFlash(false);
-                }}
+                onClick={() => handleDismissFirstLoginModal(false)}
               >
                 Skip for now
               </button>
               <button
                 className="st-firstlogin-btn-primary"
-                onClick={() => {
-                  setShowFirstLoginFlash(false);
-                  navigate('/student/profile');
-                }}
+                onClick={() => handleDismissFirstLoginModal(true)}
               >
                 Update Profile
               </button>

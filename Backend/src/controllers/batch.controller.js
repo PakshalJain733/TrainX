@@ -192,6 +192,7 @@ export const createBatch = async (req, res, next) => {
     const batchCode = (code || join_code).trim();
     const batchTrainer = (trainer || mentor || 'Faculty Instructor').trim();
     const batchSchedule = (schedule || 'Mon, Wed, Fri (10:00 AM - 12:00 PM)').trim();
+    const targetCollegeId = collegeId || req.user?.college_id || req.user?.collegeId || 1;
 
     const result = await query(
       `INSERT INTO batches (name, code, join_code, code_expires_at, college_id, department_id, trainer, schedule, topic, description, date, status)
@@ -201,7 +202,7 @@ export const createBatch = async (req, res, next) => {
         batchCode,
         batchCode,
         code_expires_at || null,
-        collegeId || 1,
+        targetCollegeId,
         departmentId || 1,
         batchTrainer,
         batchSchedule,

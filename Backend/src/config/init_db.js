@@ -707,9 +707,14 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN trend_status VARCHAR(50) DEFAULT 'On Track'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN score_delta VARCHAR(50) DEFAULT '+0%'`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN full_payload JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN user_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN week_label VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE weekly_reports ADD COLUMN generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`); } catch (_) { }
     try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN student_id INT NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE interview_sessions ADD COLUMN details JSON NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE assessment_attempts ADD COLUMN marks_obtained INT DEFAULT 0`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE assessment_attempts ADD COLUMN total_marks INT DEFAULT 100`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE assessment_attempts ADD COLUMN correct_count INT DEFAULT 0`); } catch (_) { }
 
     // 23. Ensure Practice Problems Table
     await conn.query(`

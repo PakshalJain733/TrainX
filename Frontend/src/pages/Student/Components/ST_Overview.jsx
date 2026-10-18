@@ -76,26 +76,8 @@ export default function Overview() {
   const [dashboard, setDashboard] = useState(defaultDashboardData);
   const [profileCompleted, setProfileCompleted] = useState(true);
   const [myBatchesCount, setMyBatchesCount] = useState(0);
-  const [showFirstLoginAlert, setShowFirstLoginAlert] = useState(false);
   const [noticeDismissed, setNoticeDismissed] = useState(false);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    if (sessionStorage.getItem("showFirstLoginAlert") === "true") {
-      setShowFirstLoginAlert(true);
-    }
-  }, []);
-
-  const handleDismissFirstLoginAlert = () => {
-    sessionStorage.removeItem("showFirstLoginAlert");
-    setShowFirstLoginAlert(false);
-  };
-
-  const handleGoToProfileUpdate = () => {
-    sessionStorage.removeItem("showFirstLoginAlert");
-    setShowFirstLoginAlert(false);
-    navigate("/student/profile");
-  };
 
   const dismissNotice = () => {
     setNoticeDismissed(true);
@@ -134,15 +116,8 @@ export default function Overview() {
           );
 
           setProfileCompleted(isCompleted);
-
-          if (isCompleted) {
-            if (userKey) sessionStorage.setItem(`profile_updated_${userKey}`, "true");
-            sessionStorage.removeItem("showFirstLoginAlert");
-            setShowFirstLoginAlert(false);
-          } else {
-            if (sessionStorage.getItem("showFirstLoginAlert") === "true") {
-              setShowFirstLoginAlert(true);
-            }
+          if (isCompleted && userKey) {
+            sessionStorage.setItem(`profile_updated_${userKey}`, "true");
           }
 
           setDashboard((prev) => ({
@@ -588,41 +563,6 @@ export default function Overview() {
         document.body
       )}
 
-      {/* First Login Profile Update Alert Modal */}
-      {showFirstLoginAlert && createPortal(
-        <div className="modal-overlay" style={{ zIndex: 9999 }}>
-          <div className="modal-dialog" style={{ maxWidth: "480px", textAlign: "center", padding: "28px 24px" }}>
-            <div style={{ width: "56px", height: "56px", background: "#e0e7ff", color: "#4f46e5", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px auto" }}>
-              <UserCog size={28} />
-            </div>
-            <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#0f172a", marginBottom: "8px" }}>
-              Welcome, {dashboard.personalDetails.name}! 🎉
-            </h2>
-            <p style={{ fontSize: "13.5px", color: "#64748b", lineHeight: "1.5", marginBottom: "24px" }}>
-              Your account has been registered successfully. Please update your profile details (department, semester, roll number, and skills) to complete your account setup.
-            </p>
-            <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-              <button
-                type="button"
-                className="btn-modal-cancel"
-                onClick={handleDismissFirstLoginAlert}
-                style={{ flex: 1, padding: "10px 16px", borderRadius: "10px" }}
-              >
-                Remind Me Later
-              </button>
-              <button
-                type="button"
-                className="btn-modal-submit"
-                onClick={handleGoToProfileUpdate}
-                style={{ flex: 1, padding: "10px 16px", borderRadius: "10px" }}
-              >
-                Update Profile Now
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

@@ -54,3 +54,55 @@ export const authenticateToken = (req, res, next) => {
     next();
   });
 };
+
+export const optionalAuthenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'] || req.headers['Authorization'] || req.headers['x-access-token'] || req.headers['token'];
+
+  if (!authHeader) {
+    req.user = null;
+    return next();
+  }
+
+  let token = authHeader;
+  if (typeof token === 'string') {
+    if (/^Bearer\s+/i.test(token)) {
+      token = token.replace(/^Bearer\s+/i, '');
+    }
+    token = token.replace(/^["']|["']$/g, '').trim();
+  }
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  const jwtSecret = process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal';
+
+  jwt.verify(token, jwtSecret, (err, decodedUser) => {
+    if (err || !decodedUser || decodedUser.tokenType === 'preauth' || decodedUser.purpose === 'totp') {
+      req.user = null;
+      return next();
+    }
+
+    const userId = decodedUser.userId || decodedUser.id;
+    const collegeId = decodedUser.collegeId || decodedUser.college_id;
+    const role = decodedUser.role;
+
+    if (!userId || !role) {
+      req.user = null;
+      return next();
+    }
+
+    req.user = {
+      ...decodedUser,
+      id: userId,
+      userId,
+      collegeId: collegeId || null,
+      college_id: collegeId || null,
+      role,
+    };
+
+    next();
+  });
+};
+

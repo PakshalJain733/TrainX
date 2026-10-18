@@ -217,12 +217,25 @@ function Register() {
         const res = await fetch(`${getApiBaseUrl()}/auth/departments-by-email?email=${encodeURIComponent(email)}`);
         const data = await res.json();
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
-          setDeptOptions(data.data);
+          const formatted = data.data.map((d) => {
+            const shortCode = (d.code && d.code.trim()) ||
+              (d.label && d.label.includes("(") ? d.label.match(/\(([^)]+)\)/)?.[1] : null) ||
+              d.value ||
+              d.name ||
+              "";
+            return {
+              value: shortCode,
+              label: shortCode,
+              code: shortCode,
+              fullName: d.fullName || d.name || d.value,
+            };
+          });
+          setDeptOptions(formatted);
           setFormData((prev) => {
-            const hasExisting = data.data.some((d) => String(d.value).toLowerCase() === String(prev.department).toLowerCase());
+            const hasExisting = formatted.some((d) => String(d.value).toLowerCase() === String(prev.department).toLowerCase());
             return {
               ...prev,
-              department: hasExisting ? prev.department : data.data[0].value,
+              department: hasExisting ? prev.department : formatted[0].value,
             };
           });
         }
@@ -945,21 +958,40 @@ function Register() {
                 {/* Row 2: College Email & Inline 6-Digit OTP Code */}
                 <div className="input-group" style={{ marginBottom: "11px" }}>
                   {emailVerified ? (
-                    <div className="email-verified-badge-card">
-                      <span className="email-verified-badge-text" style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ color: "#16a34a", display: "inline-flex" }}>{Icons.check}</span> College Email Verified: <strong>{formData.email}</strong>
-                      </span>
-                      <button
-                        type="button"
-                        className="email-verified-change-btn"
-                        onClick={() => {
-                          setEmailVerified(false);
-                          setEmailOtpSent(false);
-                          setEmailOtp(["", "", "", "", "", ""]);
-                        }}
-                      >
-                        Change Email
-                      </button>
+                    <div className="input-group" style={{ marginBottom: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <FieldLabel icon={Icons.email}>College Email</FieldLabel>
+                        <button
+                          type="button"
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#2563eb",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            padding: 0
+                          }}
+                          onClick={() => {
+                            setEmailVerified(false);
+                            setEmailOtpSent(false);
+                            setEmailOtp(["", "", "", "", "", ""]);
+                            setSuccessMsg("");
+                          }}
+                        >
+                          Change Email
+                        </button>
+                      </div>
+                      <input
+                        type="email"
+                        name="email"
+                        autoComplete="email"
+                        required
+                        placeholder="name@college.edu"
+                        value={formData.email}
+                        readOnly
+                        style={{ backgroundColor: "#f8fafc", cursor: "default" }}
+                      />
                     </div>
                   ) : (
                     <div className={emailOtpSent ? "form-grid-2" : "input-group"} style={{ marginBottom: 0 }}>

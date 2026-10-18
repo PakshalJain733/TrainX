@@ -5,6 +5,10 @@
       "destination": "https://trainx-6w8m.onrender.com/api/v1/:path*"
     },
     {
+      "source": "/api/:path*",
+      "destination": "https://trainx-6w8m.onrender.com/api/:path*"
+    },
+    {
       "source": "/uploads/:path*",
       "destination": "https://trainx-6w8m.onrender.com/uploads/:path*"
     },
