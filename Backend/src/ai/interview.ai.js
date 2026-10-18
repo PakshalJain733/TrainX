@@ -139,7 +139,7 @@ function getFallbackQuestions(topic) {
 // Track used fallback question indices per session
 const fallbackSessionState = new Map();
 
-function pickFallbackQuestion(sessionId, topic, askedTopics) {
+export function pickFallbackQuestion(sessionId, topic, askedTopics) {
   const key = `${sessionId}-${topic}`;
   if (!fallbackSessionState.has(key)) {
     // Shuffle the pool
@@ -189,15 +189,19 @@ Respond ONLY with valid JSON:
   "hint": "Give a concise 60-90 second introduction covering your background, role focus, and a project you feel confident in."
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
-  const parsed = parseAIJson(raw);
-  if (parsed && parsed.question) {
-    const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
-    return {
-      source: 'ai-live',
-      ...parsed,
-      question: cleanQuestion || parsed.question,
-    };
+  try {
+    const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
+    const parsed = parseAIJson(raw);
+    if (parsed && parsed.question) {
+      const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
+      return {
+        source: 'ai-live',
+        ...parsed,
+        question: cleanQuestion || parsed.question,
+      };
+    }
+  } catch (err) {
+    console.warn('[Interview AI] generateOpeningQuestion error:', err.message);
   }
 
   // Fallback opening
@@ -278,15 +282,19 @@ Respond ONLY with valid JSON:
   "hint": "a one-line guiding hint"
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
-  const parsed = parseAIJson(raw);
-  if (parsed && parsed.question) {
-    const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
-    return {
-      source: 'ai-live',
-      ...parsed,
-      question: cleanQuestion || parsed.question,
-    };
+  try {
+    const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
+    const parsed = parseAIJson(raw);
+    if (parsed && parsed.question) {
+      const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
+      return {
+        source: 'ai-live',
+        ...parsed,
+        question: cleanQuestion || parsed.question,
+      };
+    }
+  } catch (err) {
+    console.warn('[Interview AI] generateFollowUpQuestion error:', err.message);
   }
 
   // Gemini unavailable — use fallback question bank
@@ -342,34 +350,38 @@ Respond ONLY with valid JSON:
   "isCorrectDirection": true|false
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 20000 });
-  const parsed = parseAIJson(raw);
+  try {
+    const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 20000 });
+    const parsed = parseAIJson(raw);
 
-  if (parsed && typeof parsed.score === 'number') {
-    const isZero = parsed.score <= 1 || (!parsed.isCorrectDirection && parsed.score <= 2);
-    const rawModelAnswer = Array.isArray(parsed.modelAnswer)
-      ? parsed.modelAnswer.join('. ')
-      : String(parsed.modelAnswer || '');
-    let cleanModelAns = rawModelAnswer.trim();
-    if (question && cleanModelAns.includes(question)) {
-      cleanModelAns = cleanModelAns.replace(question, '').replace(/["“”'']/g, '').trim();
+    if (parsed && typeof parsed.score === 'number') {
+      const isZero = parsed.score <= 1 || (!parsed.isCorrectDirection && parsed.score <= 2);
+      const rawModelAnswer = Array.isArray(parsed.modelAnswer)
+        ? parsed.modelAnswer.join('. ')
+        : String(parsed.modelAnswer || '');
+      let cleanModelAns = rawModelAnswer.trim();
+      if (question && cleanModelAns.includes(question)) {
+        cleanModelAns = cleanModelAns.replace(question, '').replace(/["“”'']/g, '').trim();
+      }
+      cleanModelAns = cleanModelAns
+        .replace(/^a\s+(proper|technical|correct|gold-standard)\s+answer\s+to\s+.*?\s+covering/i, 'Key concepts:')
+        .replace(/^a\s+(proper|technical|correct|gold-standard)\s+response\s+should\s+explain/i, 'Key concepts:')
+        .replace(/^a\s+proper\s+technical\s+answer\s+to\b/i, 'Key concepts:')
+        .trim();
+
+      return {
+        source: 'ai-live',
+        score: Math.min(10, Math.max(0, parsed.score)),
+        technical: isZero ? Math.min(2, parsed.technical ?? parsed.score) : (parsed.technical ?? parsed.score),
+        communication: isZero ? Math.min(3, parsed.communication ?? parsed.score) : (parsed.communication ?? parsed.score),
+        confidence: isZero ? Math.min(2, parsed.confidence ?? parsed.score) : (parsed.confidence ?? parsed.score),
+        feedback: parsed.feedback || (isZero ? "Answer lacks required technical depth or is factually incorrect." : "Answer evaluated."),
+        modelAnswer: cleanModelAns || `Core concepts in ${topic}, key principles, and practical application.`,
+        isCorrectDirection: !isZero && Boolean(parsed.isCorrectDirection),
+      };
     }
-    cleanModelAns = cleanModelAns
-      .replace(/^a\s+(proper|technical|correct|gold-standard)\s+answer\s+to\s+.*?\s+covering/i, 'Key concepts:')
-      .replace(/^a\s+(proper|technical|correct|gold-standard)\s+response\s+should\s+explain/i, 'Key concepts:')
-      .replace(/^a\s+proper\s+technical\s+answer\s+to\b/i, 'Key concepts:')
-      .trim();
-
-    return {
-      source: 'ai-live',
-      score: Math.min(10, Math.max(0, parsed.score)),
-      technical: isZero ? Math.min(2, parsed.technical ?? parsed.score) : (parsed.technical ?? parsed.score),
-      communication: isZero ? Math.min(3, parsed.communication ?? parsed.score) : (parsed.communication ?? parsed.score),
-      confidence: isZero ? Math.min(2, parsed.confidence ?? parsed.score) : (parsed.confidence ?? parsed.score),
-      feedback: parsed.feedback || (isZero ? "Answer lacks required technical depth or is factually incorrect." : "Answer evaluated."),
-      modelAnswer: cleanModelAns || `Core concepts in ${topic}, key principles, and practical application.`,
-      isCorrectDirection: !isZero && Boolean(parsed.isCorrectDirection),
-    };
+  } catch (err) {
+    console.warn('[Interview AI] evaluateAnswer AI call failed, falling back to heuristic evaluation:', err.message);
   }
 
   // Fallback: strict semantic heuristic validation
@@ -507,29 +519,33 @@ Compute the final scorecard and respond ONLY with valid JSON:
   "readiness": "Specific readiness summary"
 }`;
 
-  const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 25000 });
-  const parsed = parseAIJson(raw);
+  try {
+    const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 25000 });
+    const parsed = parseAIJson(raw);
 
-  if (parsed && typeof parsed.overallScore === 'number') {
-    return {
-      source: 'ai-live',
-      overallScore: trueOverall,
-      technical: isFailing ? Math.min(trueOverall, parsed.technical ?? trueOverall) : (parsed.technical ?? trueOverall),
-      communication: isFailing ? Math.min(50, parsed.communication ?? trueOverall) : (parsed.communication ?? trueOverall),
-      problemSolving: isFailing ? Math.min(trueOverall, parsed.problemSolving ?? trueOverall) : (parsed.problemSolving ?? trueOverall),
-      confidence: isFailing ? Math.min(40, parsed.confidence ?? trueOverall) : (parsed.confidence ?? trueOverall),
-      confidenceLevel: trueOverall >= 75 ? 'High Confidence' : trueOverall >= 50 ? 'Moderate Confidence' : 'Needs Work (Low)',
-      grade: isFailing ? 'Needs Improvement' : (parsed.grade || (trueOverall >= 80 ? 'Excellent' : 'Good')),
-      strengths: isFailing
-        ? (trueOverall === 0 ? ['None - Answers provided were incorrect or invalid'] : ['Attempted interview drill session'])
-        : (parsed.strengths && parsed.strengths.length > 0 ? parsed.strengths : ['Solid foundational understanding']),
-      improvementAreas: parsed.improvementAreas || [`Review core principles in ${topic}`, 'Provide deeper technical explanations with syntax'],
-      recommendedTopics: parsed.recommendedTopics || [topic, 'System Design Basics', 'Data Structures & Algorithms'].slice(0, 3),
-      feedback: parsed.feedback || `Candidate scored ${trueOverall}%. Technical answers lacked required depth in ${topic}.`,
-      readiness: isFailing
-        ? `Not Interview Ready (${trueOverall}% score). Deep technical preparation required before attending live industry interviews.`
-        : (parsed.readiness || 'Ready for entry-level technical interviews. Continue practicing.'),
-    };
+    if (parsed && typeof parsed.overallScore === 'number') {
+      return {
+        source: 'ai-live',
+        overallScore: trueOverall,
+        technical: isFailing ? Math.min(trueOverall, parsed.technical ?? trueOverall) : (parsed.technical ?? trueOverall),
+        communication: isFailing ? Math.min(50, parsed.communication ?? trueOverall) : (parsed.communication ?? trueOverall),
+        problemSolving: isFailing ? Math.min(trueOverall, parsed.problemSolving ?? trueOverall) : (parsed.problemSolving ?? trueOverall),
+        confidence: isFailing ? Math.min(40, parsed.confidence ?? trueOverall) : (parsed.confidence ?? trueOverall),
+        confidenceLevel: trueOverall >= 75 ? 'High Confidence' : trueOverall >= 50 ? 'Moderate Confidence' : 'Needs Work (Low)',
+        grade: isFailing ? 'Needs Improvement' : (parsed.grade || (trueOverall >= 80 ? 'Excellent' : 'Good')),
+        strengths: isFailing
+          ? (trueOverall === 0 ? ['None - Answers provided were incorrect or invalid'] : ['Attempted interview drill session'])
+          : (parsed.strengths && parsed.strengths.length > 0 ? parsed.strengths : ['Solid foundational understanding']),
+        improvementAreas: parsed.improvementAreas || [`Review core principles in ${topic}`, 'Provide deeper technical explanations with syntax'],
+        recommendedTopics: parsed.recommendedTopics || [topic, 'System Design Basics', 'Data Structures & Algorithms'].slice(0, 3),
+        feedback: parsed.feedback || `Candidate scored ${trueOverall}%. Technical answers lacked required depth in ${topic}.`,
+        readiness: isFailing
+          ? `Not Interview Ready (${trueOverall}% score). Deep technical preparation required before attending live industry interviews.`
+          : (parsed.readiness || 'Ready for entry-level technical interviews. Continue practicing.'),
+      };
+    }
+  } catch (err) {
+    console.warn('[Interview AI] generateScorecard AI call failed, using fallback scorecard:', err.message);
   }
 
   // Fallback computed scorecard

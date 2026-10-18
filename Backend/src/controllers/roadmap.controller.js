@@ -202,8 +202,9 @@ export const generateMilestoneTheory = async (req, res, next) => {
     if (!forceRefresh) {
       const cachedTheory = await getCachedMilestoneTheory(cleanTitle, cleanRole);
       const hasPoints = cachedTheory && Array.isArray(cachedTheory.sections) && cachedTheory.sections.some(s => Array.isArray(s.points) && s.points.length > 0);
-      if (cachedTheory && cachedTheory.title && hasPoints) {
-        console.log(`[Theory Controller] DB Cache Hit for theory "${cleanTitle}". Returning stored theory.`);
+      const hasProgression = cachedTheory && (cachedTheory.difficultyProgression || (Array.isArray(cachedTheory.sections) && cachedTheory.sections.length >= 4 && cachedTheory.sections.some(s => s.level)));
+      if (cachedTheory && cachedTheory.title && hasPoints && hasProgression) {
+        console.log(`[Theory Controller] DB Cache Hit for progressive theory "${cleanTitle}". Returning stored theory.`);
         return sendSuccess(res, 'Milestone theory retrieved from DB cache', cachedTheory);
       }
     }

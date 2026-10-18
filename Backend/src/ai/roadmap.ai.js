@@ -443,49 +443,127 @@ export const generateMilestoneTheoryAI = async (milestoneTitle, targetRole = '')
   const cleanTitle = String(milestoneTitle || '').replace(/^Milestone\s*\d+\s*:\s*/i, '').trim();
   const cleanRole = String(targetRole || '').trim() || 'Software Engineering';
 
-  const prompt = `You are a Principal Curriculum Architect & Educator. Write a comprehensive, highly professional, detailed domain theory guide for the topic: "${cleanTitle}" in the context of "${cleanRole}".
+  const prompt = `You are a Distinguished Principal Software Engineer, Computer Science Professor, and Curriculum Architect.
+Write an authentic, deeply technical, exhaustive theory guide specifically for the topic: "${cleanTitle}" tailored for the role: "${cleanRole}".
 
-CRITICAL INSTRUCTIONS:
-1. Provide a clear, structured overview of "${cleanTitle}" tailored strictly to "${cleanRole}".
-2. Provide EXACTLY 3 to 4 detailed domain sections.
-   - ABSOLUTE RULE: DO NOT use generic section titles like "Concept 1", "Concept 2", "Concept 3", "Topic 1", or "Section A".
-   - EVERY section title MUST be a specific, meaningful subhead naming exact mechanisms, principles, frameworks, or workflows specific to "${cleanRole}".
-   - If "${cleanRole}" is a non-software role (e.g. Graphic Designer, HR Specialist, Accountant, Civil Engineer, Murti Making, Marketing, Legal, Doctor), write theory purely for that domain without software/coding concepts.
-3. For each section, provide:
-   - "title": Specific domain subhead name
-   - "explanation": Brief high-level summary paragraph (1-2 sentences).
-   - "points": An array of EXACTLY 3 to 5 clear, highly structured, informative bullet points detailing step-by-step principles, operational mechanics, memory/runtime behavior, or domain execution steps.
-   - "takeaway": Concrete industry takeaway or practical tip.
-4. Provide a practical code snippet OR structured domain case study workflow ("codeExample") for "${cleanTitle}".
-5. Provide 3-4 professional industry best practices ("bestPractices").
+CRITICAL RULE AGAINST PLACEHOLDERS & TEMPLATES:
+- The user demands 100% genuine, deeply technical, AI-generated curriculum specifically crafted for "${cleanTitle}".
+- DO NOT use generic sample phrasing or plug-in templates.
+- DO NOT use generic titles like "Elementary Foundations of ${cleanTitle}", "Operational Execution Flow", "Memory Architecture", or "Enterprise Optimization".
+- Every section title MUST name the specific mechanisms, language constructs, data structures, or runtime engine subsystems of "${cleanTitle}".
+  * Example for React: "Declarative JSX, React.createElement & Synthetic Event Delegation", "Fiber WorkLoop, Reconciliation Diffing & Commit Phase", etc.
+  * Example for Java: "Bytecode Disassembly, ClassLoader Delegation & HotSpot JIT Compilation", "G1 Garbage Collector Region Partitioning & Memory Barriers", etc.
+  * Example for SQL: "B-Tree Storage Pages, WAL (Write-Ahead Logging) & Buffer Pool Management", "Query Execution Plans, Nested Loop Joins vs Hash Joins & Index SARGability", etc.
 
-Output ONLY valid JSON strictly matching this schema without markdown backticks:
+MANDATORY 4-LEVEL PEDAGOGICAL STRUCTURE (Strictly in this order):
+1. SECTION 1 [Level 1: Foundational Basics & Core Mental Model]
+   - "level": "Level 1: Foundational Basics"
+   - "levelBadge": "Basics"
+   - "title": Specific technical title for beginner foundation of "${cleanTitle}"
+   - "explanation": In-depth explanation of what "${cleanTitle}" is, why it was created, its core mental model, and elementary syntax.
+   - "points": 4-5 bullet points starting with bold tags (e.g. "**Core Definition:** ...", "**Why It Exists:** ...", "**Basic Syntax:** ...", "**Mental Model:** ...")
+   - "takeaway": High-impact foundational rule to remember.
+
+2. SECTION 2 [Level 2: Working Mechanics & Operational Lifecycle]
+   - "level": "Level 2: Working Mechanics & Lifecycle"
+   - "levelBadge": "Mechanics"
+   - "title": Specific technical title for runtime flow and API lifecycle of "${cleanTitle}"
+   - "explanation": Step-by-step lifecycle, parameter passing, return semantics, state transformations, and idiomatic daily patterns.
+   - "points": 4-5 bullet points starting with bold tags (e.g. "**Execution Lifecycle:** ...", "**Parameter Passing & Contracts:** ...", "**Idiomatic Patterns:** ...", "**Boundary Validation:** ...")
+   - "takeaway": Practical rule for writing clean, maintainable code with "${cleanTitle}".
+
+3. SECTION 3 [Level 3: Deep Core Internals & Architecture]
+   - "level": "Level 3: Deep Core Internals & Architecture"
+   - "levelBadge": "Core Internals"
+   - "title": Specific technical title naming the exact engine, memory, or architectural internals of "${cleanTitle}"
+   - "explanation": Under-the-hood low-level deep dive into Stack vs Heap memory layout, compiler/interpreter/VM execution steps, Big-O Time & Space complexity, and concurrency/thread-safety mechanics.
+   - "points": 4-5 bullet points starting with bold tags (e.g. "**Memory Allocation & Heap Mechanics:** ...", "**Runtime Engine & VM Dispatch:** ...", "**Big-O Complexity Analysis:** ...", "**Concurrency & Thread-Safety:** ...")
+   - "takeaway": Low-level optimization rule to minimize latency and memory bloat.
+
+4. SECTION 4 [Level 4: Advanced Production Standards & Anti-Patterns]
+   - "level": "Level 4: Advanced Production Standards & Anti-Patterns"
+   - "levelBadge": "Advanced Mastery"
+   - "title": Specific technical title covering enterprise optimization and critical anti-patterns for "${cleanTitle}"
+   - "explanation": Enterprise deployment best practices, high-throughput tuning, memory leak vectors, edge cases, and critical anti-patterns.
+   - "points": 4-5 bullet points starting with bold tags (e.g. "**Performance Optimization:** ...", "**Critical Anti-Patterns to Avoid:** ...", "**Edge Cases & Resiliency:** ...", "**Production Observability:** ...")
+   - "takeaway": Enterprise checklist rule for mission-critical deployments.
+
+CODE EXAMPLE REQUIREMENT:
+- "codeExample": Provide a REAL, fully functional code snippet demonstrating "${cleanTitle}".
+  * Show basic usage first, then advance into an optimized production-grade pattern.
+  * Must be 100% relevant to "${cleanTitle}". NEVER use generic "reduce array" or "executeWorkflow" templates.
+
+Output ONLY valid JSON strictly matching this schema without markdown fences:
 {
-  "title": "Comprehensive Theory & Domain Guide: ${cleanTitle}",
-  "overview": "Deep technical/domain overview...",
+  "title": "Comprehensive Technical Theory Guide: ${cleanTitle}",
+  "overview": "Detailed 2-3 paragraph architectural overview explaining ${cleanTitle} from foundations to core internals...",
+  "difficultyProgression": "Foundations (Basic) ➔ Working Mechanics (Intermediate) ➔ Core Internals (Deep Dive) ➔ Production Mastery (Advanced)",
   "sections": [
     {
-      "title": "Specific Technical or Domain Subhead Name",
-      "explanation": "Brief overview...",
+      "level": "Level 1: Foundational Basics",
+      "levelBadge": "Basics",
+      "title": "Specific Technical Name for Level 1",
+      "explanation": "Detailed explanation...",
       "points": [
-        "Core Principle: Clear explanation of foundational rule...",
-        "Execution Flow: Step-by-step operational mechanics...",
-        "Performance & Standards: Key optimization and best practice...",
-        "Industry Usage: Practical application in production..."
+        "**Core Definition:** Exact explanation...",
+        "**Problem Solved:** Exact problem addressed...",
+        "**Elementary Syntax:** Exact code or construct usage...",
+        "**Mental Model:** Intuitive conceptual model..."
       ],
-      "takeaway": "Industry takeaway..."
+      "takeaway": "Actionable takeaway..."
+    },
+    {
+      "level": "Level 2: Working Mechanics & Lifecycle",
+      "levelBadge": "Mechanics",
+      "title": "Specific Technical Name for Level 2",
+      "explanation": "Detailed explanation...",
+      "points": [
+        "**Execution Flow:** Step-by-step lifecycle...",
+        "**Parameter Mechanics:** How arguments and state are handled...",
+        "**Standard Patterns:** Idiomatic usage...",
+        "**Error Handling:** Validation checks..."
+      ],
+      "takeaway": "Actionable takeaway..."
+    },
+    {
+      "level": "Level 3: Deep Core Internals & Architecture",
+      "levelBadge": "Core Internals",
+      "title": "Specific Technical Name for Level 3",
+      "explanation": "Detailed low-level explanation...",
+      "points": [
+        "**Memory Layout:** Stack vs Heap allocations...",
+        "**Engine Internals:** VM bytecode, JIT, or event loop dispatch...",
+        "**Asymptotic Complexity:** Big-O Time and Space bounds...",
+        "**Concurrency:** Thread safety and synchronization..."
+      ],
+      "takeaway": "Actionable takeaway..."
+    },
+    {
+      "level": "Level 4: Advanced Production Standards & Anti-Patterns",
+      "levelBadge": "Advanced Mastery",
+      "title": "Specific Technical Name for Level 4",
+      "explanation": "Detailed production explanation...",
+      "points": [
+        "**Performance Tuning:** Cache optimization and pooling...",
+        "**Dangerous Anti-Patterns:** Specific pitfalls and memory leak causes...",
+        "**Edge-Case Handling:** Defensive resilience...",
+        "**Production Standards:** Deployment checklist..."
+      ],
+      "takeaway": "Actionable takeaway..."
     }
   ],
-  "codeExample": "// Real working code example OR Domain Workflow Case Study\\n...",
+  "codeExample": "// Real working code specifically for ${cleanTitle}...",
   "bestPractices": [
-    "Industry best practice 1...",
-    "Industry best practice 2..."
+    "Specific production rule 1...",
+    "Specific production rule 2...",
+    "Specific production rule 3...",
+    "Specific production rule 4..."
   ]
 }`;
 
   try {
     const parsed = await generateJSON(prompt, {
-      system: 'You are a Principal Technical Educator. Output valid JSON strictly matching the requested theory guide schema.',
+      system: 'You are a Principal Curriculum Architect. Output valid JSON strictly matching the requested 4-tier basic to core theory schema.',
       temperature: 0.7,
       maxTokens: 4000,
       timeoutMs: 60000,
@@ -508,169 +586,394 @@ function generateRoleSpecificTheoryFallback(cleanTitle, cleanRole) {
   let sections = [];
   let codeExample = "";
 
-  if (lower.includes("java") || lower.includes("oop") || lower.includes("backend")) {
-    overview = `${cleanTitle} forms a fundamental cornerstone in Java Enterprise Architecture and Object-Oriented System Design. Java code compiles into platform-independent bytecode executed by the Java Virtual Machine (JVM), enforcing strong type safety, encapsulation, and structured memory allocation.`;
+  if (lower.includes("java") || lower.includes("oop") || lower.includes("backend") || lower.includes("spring")) {
+    overview = `Exhaustive technical curriculum for ${cleanTitle} in Java Enterprise Architecture. This guide progresses step-by-step from foundational Object-Oriented principles to low-level JVM memory management, bytecode execution, and enterprise production resilience.`;
     sections = [
       {
-        title: "JVM Memory Model: Heap vs Stack Allocation & Garbage Collection",
-        explanation: "Java manages execution across Stack frames and Heap regions. Local primitive variables and method references reside in short-lived Stack frames, while Object instances are instantiated dynamically on the Heap. The JVM Garbage Collector periodically identifies unreferenced heap objects and reclaims memory automatically.",
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Mental Model & Syntax for ${cleanTitle}`,
+        explanation: `${cleanTitle} establishes the foundational structural building blocks in Java. Java enforces strong type safety, structured class definitions, and object encapsulation to prevent invalid program states.`,
+        points: [
+          `Core Definition: Understand the fundamental purpose and role of ${cleanTitle} within Java programs.`,
+          `Syntax & Primitives: How variables, access modifiers, and method definitions are declared.`,
+          `Mental Model: Objects represent state (fields) and behavior (methods) modeled after real-world domain entities.`,
+          `Type Safety: The Java compiler verifies static types at compile time before generating bytecode.`
+        ],
+        takeaway: "Master fundamental syntax and access modifiers (private, protected, public) before designing complex class hierarchies."
+      },
+      {
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Flow, Method Dispatch & Lifecycle`,
+        explanation: `When a Java program executes, class definitions are loaded dynamically, instances are created via constructors, and methods execute via virtual method invocation.`,
+        points: [
+          `Constructor Execution: Memory is reserved, default fields initialized, and constructor chains (super) execute sequentially.`,
+          `Pass-by-Value Semantics: Java passes all arguments strictly by value (passing copies of primitive values or copies of object references).`,
+          `Polymorphic Method Dispatch: The JVM resolves virtual methods at runtime via the vtable based on the actual object instance.`,
+          `Interface Contracts: Decouple client code from concrete implementations using interface contracts.`
+        ],
+        takeaway: "Favor Interface-based programming and Composition over deep, fragile class inheritance."
+      },
+      {
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `JVM Memory Model: Heap, Stack, Bytecode & GC Algorithms`,
+        explanation: `The JVM manages execution across distinct memory regions: Stack frames for thread execution and Heap spaces for dynamic object allocation.`,
+        points: [
+          `Stack vs Heap: Local primitive variables live in fast thread-specific Stack frames; object instances live in the JVM Heap.`,
+          `Generational Garbage Collection: Young Generation (Eden, Survivor spaces) reclaims short-lived instances; Old Generation handles persistent data.`,
+          `JIT Compilation: The HotSpot JIT compiler profiles execution and compiles hot bytecode methods directly into native machine code.`,
+          `Time & Space Bounds: Standard array and reference access operates in O(1) time; dynamic allocations introduce GC tracking overhead.`
+        ],
         takeaway: "Minimize premature object creation inside high-frequency execution loops to reduce Garbage Collector pause times."
       },
       {
-        title: "Object Encapsulation, Abstraction & Polymorphism Mechanics",
-        explanation: "Encapsulation protects class member state using access modifiers and controlled accessor methods. Abstraction hides concrete implementation details behind interface contracts, enabling dynamic method dispatch and runtime polymorphism.",
-        takeaway: "Favor Interface-based programming and Composition over deep class inheritance hierarchies."
-      },
-      {
-        title: "Exception Hierarchy & Structured Error Recovery (Checked vs Unchecked)",
-        explanation: "Java enforces a strict Exception hierarchy. Checked exceptions represent recoverable conditions that must be handled at compile time, whereas Unchecked RuntimeExceptions represent programmer logic flaws or invalid state assertions.",
-        takeaway: "Catch specific exception types explicitly rather than swallowing generic Throwable or Exception objects."
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Critical Anti-Patterns & Resilience`,
+        explanation: `Production Java applications require thread safety, proper connection pooling, defensive input handling, and rigorous memory leak prevention.`,
+        points: [
+          `Memory Leak Prevention: Prevent hidden memory leaks caused by static collections, unclosed streams, or lingering thread locals.`,
+          `Concurrency & Immutability: Use immutable classes (e.g. Java Records) and concurrent collections (ConcurrentHashMap) for thread safety.`,
+          `Anti-Pattern to Avoid: Never swallow generic Throwable or Exception; catch specific exceptions and preserve the original cause.`,
+          `Performance Tuning: Monitor heap allocation rates with JFR (Java Flight Recorder) and tune GC ergonomics for low-latency throughput.`
+        ],
+        takeaway: "Catch specific exception types explicitly, close resources via try-with-resources, and profile heap usage under production load."
       }
     ];
-    codeExample = `// Enterprise Java Pattern for: ${cleanTitle}
-public class ExecutionHandler {
-    private final String moduleName;
+    codeExample = `// Progressive Java Implementation: ${cleanTitle}
+import java.util.*;
 
-    public ExecutionHandler(String moduleName) {
+public class ProductionModule {
+    // Level 1: Encapsulated State
+    private final String moduleName;
+    private final List<Integer> metrics;
+
+    public ProductionModule(String moduleName) {
+        if (moduleName == null || moduleName.isBlank()) {
+            throw new IllegalArgumentException("Module name cannot be blank.");
+        }
         this.moduleName = moduleName;
+        this.metrics = new ArrayList<>();
     }
 
-    public void executeProcess(int[] dataset) throws IllegalArgumentException {
-        if (dataset == null || dataset.length == 0) {
-            throw new IllegalArgumentException("Dataset cannot be null or empty.");
+    // Level 2: Controlled Operational Mechanics
+    public synchronized void recordMetric(int value) {
+        this.metrics.add(value);
+    }
+
+    // Level 3 & 4: Core Optimization & Defensive Processing
+    public Map<String, Object> computeSummary() {
+        if (metrics.isEmpty()) {
+            return Map.of("module", moduleName, "status", "EMPTY", "count", 0);
         }
         
-        int totalSum = 0;
-        for (int value : dataset) {
-            totalSum += value;
+        // Stream reduction with O(N) complexity
+        long sum = 0;
+        for (int v : metrics) {
+            sum += v;
         }
-        System.out.println("✅ Processed " + dataset.length + " elements for " + moduleName + ". Sum: " + totalSum);
+        double average = (double) sum / metrics.size();
+
+        return Map.of(
+            "module", moduleName,
+            "count", metrics.size(),
+            "sum", sum,
+            "average", average,
+            "status", "OPTIMIZED"
+        );
     }
 
     public static void main(String[] args) {
-        ExecutionHandler handler = new ExecutionHandler("${cleanTitle}");
-        handler.executeProcess(new int[]{10, 20, 30, 40, 50});
+        ProductionModule module = new ProductionModule("${cleanTitle}");
+        module.recordMetric(10);
+        module.recordMetric(25);
+        module.recordMetric(40);
+        System.out.println("✅ Processed: " + module.computeSummary());
     }
 }`;
-  } else if (lower.includes("python") || lower.includes("ai") || lower.includes("data")) {
-    overview = `${cleanTitle} in Python provides high-level abstractions designed for rapid development, clean readability, and modular extensibility. Python code executes through the CPython Virtual Machine, translating dynamic syntax into bytecode instructions.`;
+  } else if (lower.includes("python") || lower.includes("ai") || lower.includes("data") || lower.includes("ml")) {
+    overview = `Exhaustive technical curriculum for ${cleanTitle} in Python. This guide systematically progresses from beginner syntax and core idioms up to CPython Virtual Machine internals, memory reference counts, GIL dynamics, and enterprise data pipeline optimization.`;
     sections = [
       {
-        title: "CPython Object Model, Mutability & Memory Allocation",
-        explanation: "In Python, all data structures are first-class objects. Types are strictly divided into Immutable (integers, strings, tuples) and Mutable (lists, dictionaries, sets). Modifying an immutable instance instantiates a distinct object in memory.",
-        takeaway: "Use tuple structures for fixed lookup tables to optimize memory allocation and iteration speed."
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Mental Model & Syntax for ${cleanTitle}`,
+        explanation: `${cleanTitle} provides readable, expressive abstractions in Python. Everything in Python is an object, with consistent duck-typing and dynamic evaluation.`,
+        points: [
+          `Core Definition: Understand the fundamental purpose and role of ${cleanTitle} in Python programs.`,
+          `Syntax & Types: Dynamic variable assignment, built-in primitive types, and indentation-driven code blocks.`,
+          `Mental Model: Names are pointers to objects stored in heap memory rather than fixed memory storage cells.`,
+          `Object Identity: Differentiate between value equality (==) and identity checking (is) for object references.`
+        ],
+        takeaway: "Understand that Python variables are references bound to objects in memory, not rigid storage boxes."
       },
       {
-        title: "List Comprehensions, Generator Expressions & Iteration Mechanics",
-        explanation: "Python list comprehensions and generator expressions evaluate sequence transformations at C-level speed inside CPython, bypassing interpreter loop overhead and reducing RAM consumption for large data pipelines.",
-        takeaway: "Prefer generator expressions over massive list comprehensions when streaming large data batches."
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Flow, Data Structures & Idioms`,
+        explanation: `Python scripts compile dynamically into bytecode, executing through the interpreter with rich built-in data structures and comprehension mechanics.`,
+        points: [
+          `List Comprehensions & Generators: Vectorized iterations evaluate at C-speed, reducing interpreter loop overhead.`,
+          `Hash Table Lookups: Python dictionaries use open-addressed hash tables offering average O(1) key search time.`,
+          `Scope Resolution (LEGB): Names resolve sequentially through Local, Enclosing, Global, and Built-in namespaces.`,
+          `Context Managers: Use 'with' statements to guarantee deterministic resource reclamation for files and sockets.`
+        ],
+        takeaway: "Prefer generator expressions over massive list comprehensions when streaming large datasets to conserve RAM."
       },
       {
-        title: "Global Interpreter Lock (GIL) & Asynchronous Event Loops",
-        explanation: "CPython uses the Global Interpreter Lock (GIL) to prevent multiple native threads from executing bytecode simultaneously. For CPU-bound parallel workloads, multiprocessing or native C extensions bypass GIL bottlenecks.",
-        takeaway: "Utilize asyncio for non-blocking I/O operations and multiprocessing for CPU-intensive tasks."
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `CPython Engine: Bytecode, Reference Counting, GC & GIL`,
+        explanation: `Under the hood, CPython translates source into .pyc bytecode executed by a stack-based evaluation loop with dual memory management.`,
+        points: [
+          `Reference Counting: Every PyObject tracks ob_refcnt; memory is immediately deallocated when ref count drops to zero.`,
+          `Cyclic Garbage Collector: A generational GC periodically detects and reclaims circular references that reference counting misses.`,
+          `Global Interpreter Lock (GIL): Mutex that prevents multiple native threads from executing bytecode concurrently in CPython.`,
+          `Time & Space Bounds: List appends amortize to O(1); dictionary resizing rehashes entries when load factor reaches 2/3.`
+        ],
+        takeaway: "Deploy asyncio for I/O-bound workflows and multiprocessing or native C extensions to bypass GIL bottlenecks for CPU-bound tasks."
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Anti-Patterns & Production Resilience`,
+        explanation: `Production Python applications require strict type hinting, memory profiling, resilient exception chains, and clean modular boundaries.`,
+        points: [
+          `Memory Optimization with __slots__: Use __slots__ in data classes to eliminate __dict__ overhead and save up to 40% RAM per instance.`,
+          `Anti-Pattern to Avoid: Never use mutable default arguments (e.g. def func(arr=[])); use None as sentinel value instead.`,
+          `Defensive Validation: Validate external inputs using Pydantic or type annotations to catch invalid schema boundaries early.`,
+          `Production Profiling: Profile execution bottlenecks using cProfile and trace memory allocations with tracemalloc.`
+        ],
+        takeaway: "Annotate functions with explicit type hints, use None sentinels for default arguments, and profile memory under peak load."
       }
     ];
-    codeExample = `# Python Execution Module for: ${cleanTitle}
-from typing import List, Dict, Any
+    codeExample = `# Progressive Python Implementation: ${cleanTitle}
+from typing import List, Dict, Any, Optional
 
-def process_pipeline(data_batch: List[int]) -> Dict[str, Any]:
-    """Processes input dataset and computes summary metrics."""
-    if not data_batch:
-        raise ValueError("Data batch cannot be empty.")
-        
-    filtered = [x for x in data_batch if x > 0]
-    total_sum = sum(filtered)
-    
-    return {
-        "topic": "${cleanTitle}",
-        "count": len(filtered),
-        "total": total_sum,
-        "status": "SUCCESS"
-    }
+class ProductionModule:
+    """Level 1 & 2: Encapsulated class with explicit type hints."""
+    __slots__ = ("module_name", "_records")  # Level 4: Memory optimization
+
+    def __init__(self, module_name: str) -> None:
+        if not module_name.strip():
+            raise ValueError("Module name cannot be empty.")
+        self.module_name = module_name
+        self._records: List[int] = []
+
+    def record_entry(self, val: int) -> None:
+        self._records.append(val)
+
+    def process_pipeline(self) -> Dict[str, Any]:
+        """Level 3 & 4: Generator-based processing with O(N) complexity."""
+        if not self._records:
+            return {"module": self.module_name, "status": "EMPTY", "count": 0}
+
+        # Vectorized generator expression avoids large temporary allocations
+        total_sum = sum(x for x in self._records if x > 0)
+        avg = total_sum / len(self._records)
+
+        return {
+            "module": self.module_name,
+            "count": len(self._records),
+            "sum": total_sum,
+            "average": round(avg, 2),
+            "status": "OPTIMIZED"
+        }
 
 if __name__ == "__main__":
-    result = process_pipeline([10, 20, 30, 40, 50])
-    print(f"✅ Pipeline Result: {result}")
-`;
-  } else if (lower.includes("react") || lower.includes("frontend") || lower.includes("web") || lower.includes("html") || lower.includes("css")) {
-    overview = `${cleanTitle} in Modern Web Engineering is centered around declarative UI architecture, reactive state synchronization, Virtual DOM reconciliation, and component composition.`;
+    mod = ProductionModule("${cleanTitle}")
+    for item in [10, 20, 30, 40, 50]:
+        mod.record_entry(item)
+    print("✅ Pipeline Result:", mod.process_pipeline())`;
+  } else if (lower.includes("react") || lower.includes("frontend") || lower.includes("web") || lower.includes("javascript") || lower.includes("css") || lower.includes("html")) {
+    overview = `Exhaustive technical curriculum for ${cleanTitle} in Modern Web Engineering. This guide systematically progresses from fundamental DOM and declarative component models up to browser rendering pipelines, Virtual DOM Fiber diffing, and enterprise performance optimization.`;
     sections = [
       {
-        title: "Virtual DOM Reconciliation & Fiber Diffing Algorithm",
-        explanation: "React maintains a dynamic Virtual DOM tree representation of the UI. When state updates occur, Fiber reconciliation computes minimal DOM mutations and efficiently patches dirty nodes in the browser DOM.",
-        takeaway: "Supply unique, stable keys when rendering dynamic element lists to optimize Fiber reconciliation."
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Mental Model & Declarative Syntax for ${cleanTitle}`,
+        explanation: `${cleanTitle} provides declarative UI patterns for building responsive web applications. Instead of imperative DOM manipulation, components describe what the UI should look like for a given state.`,
+        points: [
+          `Core Definition: Understand the role of ${cleanTitle} in structuring interactive, scalable web interfaces.`,
+          `Declarative vs Imperative: Write predictable UI code driven by state rather than manually mutating browser DOM nodes.`,
+          `Component Mental Model: Components are pure functions that accept inputs (props) and return renderable UI hierarchies (JSX/HTML).`,
+          `Unidirectional Data Flow: Data flows cleanly top-down from parent components to child components.`
+        ],
+        takeaway: "Master declarative state representation and keep component boundaries clean and focused on a single responsibility."
       },
       {
-        title: "Component State Lifecycle & Hook Execution Mechanics",
-        explanation: "React Hooks (useState, useEffect, useMemo) allow functional components to manage local state, lifecycle subscriptions, and memoized compute caches cleanly without writing legacy ES6 class syntax.",
-        takeaway: "Maintain hook execution order by placing calls strictly at the top level of component functions."
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Flow, Reactive Hooks & Event Dispatch`,
+        explanation: `When state changes, the component function executes, computing new outputs. Hooks manage local state, subscriptions, and memoized values across render cycles.`,
+        points: [
+          `State Updates & Re-renders: Calling state setters schedules a re-render; state values remain stable within the current execution frame.`,
+          `Effect Synchronization: useEffect runs after DOM mutations, handling side-effects like network calls, timers, and cleanup listeners.`,
+          `Event Dispatch Mechanics: Synthetic events pool browser events and dispatch them through React's root listener delegator.`,
+          `Lifting State Up: Share state across sibling components by hoisting state to their closest common ancestor.`
+        ],
+        takeaway: "Keep state localized, lifting it up only when required by sibling components to avoid unnecessary re-render cascades."
       },
       {
-        title: "Unidirectional Data Flow & State Lifting Patterns",
-        explanation: "Data propagates strictly top-down from parent components to children via props. State updates trigger reactive re-render cycles, keeping user interfaces automatically synchronized with application data.",
-        takeaway: "Keep component state localized, lifting state up only when required by sibling components."
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `Virtual DOM, Fiber Reconciliation & Browser Render Pipeline`,
+        explanation: `Under the hood, React builds a lightweight Virtual DOM Fiber tree. When updates occur, the Fiber reconciler calculates minimal DOM patches.`,
+        points: [
+          `Fiber Diffing Algorithm: React reconciles trees in O(N) heuristic time by comparing element types and unique keys.`,
+          `Browser Critical Rendering Path: Minimizes costly layout reflows and repaints by batching multiple DOM updates in a single tick.`,
+          `Event Loop & Microtasks: State updates queue microtasks, ensuring all synchronous code finishes before browser paint occurs.`,
+          `Memory Layout & Closures: Stale closures occur when effect hooks capture old state references without proper dependency declarations.`
+        ],
+        takeaway: "Supply unique, stable keys when rendering dynamic element lists to optimize Fiber reconciliation and prevent state corruption."
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Anti-Patterns & Bundle Tuning`,
+        explanation: `Production web applications require code splitting, memoization, layout shift prevention, and defensive error boundaries.`,
+        points: [
+          `Performance Memoization: Use useMemo and useCallback strategically for expensive calculations and stable callback references.`,
+          `Anti-Pattern to Avoid: Never mutate state directly (e.g. state.items.push()); always produce new immutable references.`,
+          `Code Splitting: Deploy dynamic imports (React.lazy / Suspense) to split bundles and achieve fast First Contentful Paint (FCP).`,
+          `Error Boundaries: Wrap feature trees in Error Boundaries to gracefully catch rendering errors without crashing the entire app.`
+        ],
+        takeaway: "Treat state as strictly immutable, audit dependency arrays in hooks, and split route bundles for optimal Core Web Vitals."
       }
     ];
-    codeExample = `// Modern Component Pattern for: ${cleanTitle}
-import React, { useState, useMemo } from 'react';
+    codeExample = `// Progressive Web Component: ${cleanTitle}
+import React, { useState, useMemo, useCallback } from 'react';
 
-export default function ModuleComponent() {
-  const [data, setData] = useState([10, 20, 30, 40, 50]);
+export default function ProductionComponent() {
+  // Level 1: Declarative State
+  const [items, setItems] = useState([10, 20, 30, 40, 50]);
+  const [inputValue, setInputValue] = useState('');
 
-  const summary = useMemo(() => {
-    return data.reduce((acc, val) => acc + val, 0);
-  }, [data]);
+  // Level 2: Controlled Event Handler
+  const handleAddItem = useCallback(() => {
+    const parsed = parseInt(inputValue, 10);
+    if (!isNaN(parsed)) {
+      // Level 4: Immutable state update
+      setItems(prev => [...prev, parsed]);
+      setInputValue('');
+    }
+  }, [inputValue]);
+
+  // Level 3: Memoized computation (O(N) time)
+  const stats = useMemo(() => {
+    const sum = items.reduce((acc, x) => acc + x, 0);
+    return { count: items.length, sum, average: sum / (items.length || 1) };
+  }, [items]);
 
   return (
-    <div className="module-card">
-      <h3>${cleanTitle}</h3>
-      <p>Processed {data.length} items. Total: {summary}</p>
+    <div className="p-4 border rounded-xl bg-slate-900 text-white shadow-lg">
+      <h3 className="text-lg font-bold text-indigo-400">${cleanTitle}</h3>
+      <p className="text-sm text-slate-400 mt-1">
+        Processed {stats.count} elements. Sum: {stats.sum} (Avg: {stats.average.toFixed(1)})
+      </p>
+
+      <div className="flex gap-2 mt-4">
+        <input
+          type="number"
+          value={inputValue}
+          onChange={e => setInputValue(e.target.value)}
+          placeholder="Enter value..."
+          className="px-3 py-1.5 rounded bg-slate-800 text-sm border border-slate-700"
+        />
+        <button
+          onClick={handleAddItem}
+          className="px-4 py-1.5 rounded bg-indigo-600 hover:bg-indigo-500 font-bold text-sm"
+        >
+          Add Item
+        </button>
+      </div>
     </div>
   );
-}
-`;
+}`;
   } else {
-    overview = `${cleanTitle} represents a fundamental technical module in ${cleanRole}. Mastering this concept establishes strong domain fundamentals, operational mechanics, memory layout understanding, and production-grade implementation capabilities.`;
+    overview = `Comprehensive curriculum for ${cleanTitle} in ${cleanRole}. This professional guide progresses step-by-step from fundamental principles and core mental models to operational execution, low-level mechanics, and enterprise production standards.`;
     sections = [
       {
-        title: "Foundational Execution Mechanics & Operational Model",
-        explanation: `Understand how ${cleanTitle} processes inputs, executes internal algorithms, manages memory scopes, and returns structured outputs within ${cleanRole} applications.`,
-        takeaway: "Follow modular design principles to build maintainable, scalable software solutions."
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Foundational Principles & Mental Model of ${cleanTitle}`,
+        explanation: `${cleanTitle} establishes the foundational bedrock within ${cleanRole}. Understanding what it represents and the problem it solves creates a clear mental model.`,
+        points: [
+          `Core Concept: Understand the fundamental definition and scope of ${cleanTitle}.`,
+          `Problem Addressed: The key challenges and inefficiencies that ${cleanTitle} solves.`,
+          `Elementary Standards: Initial steps, essential tools, and terminology used in practice.`,
+          `Mental Model: An intuitive framework for reasoning about ${cleanTitle} reliably.`
+        ],
+        takeaway: "Build a rock-solid grasp of core definitions and purpose before advancing to complex workflows."
       },
       {
-        title: "State Scoping, Variable Lifecycles & Context Passing",
-        explanation: `Examine how variables pass across function boundaries, event loops, and execution contexts without introducing memory leaks, race conditions, or state pollution.`,
-        takeaway: "Keep variable boundaries tightly scoped to ensure predictable runtime execution."
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Workflow & Daily Patterns`,
+        explanation: `Examine how ${cleanTitle} is applied step-by-step in professional practice, including input validation, lifecycle stages, and standardized procedures.`,
+        points: [
+          `Workflow Sequence: Step-by-step procedures followed from initiation to completion.`,
+          `Input Processing: Validating parameters, requirements, and domain criteria.`,
+          `Standard Methods: Daily best practices and industry-accepted patterns.`,
+          `Quality Gates: Verification milestones to ensure accuracy throughout the lifecycle.`
+        ],
+        takeaway: "Follow structured operational sequences and validate requirements at every milestone."
       },
       {
-        title: "Diagnostic Workflows, Boundary Validations & Error Recovery",
-        explanation: `Implement comprehensive input validation assertions and error handling to ensure ${cleanTitle} recovers gracefully when handling unexpected or edge-case inputs.`,
-        takeaway: "Thoroughly test boundary conditions before releasing code to production environments."
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `Deep Structural Mechanics, Resource Dynamics & Standards`,
+        explanation: `A deep-dive into the underlying architecture, resource allocation models, latency considerations, and structural dependencies governing ${cleanTitle}.`,
+        points: [
+          `Structural Architecture: Underlying mechanisms and structural dependencies.`,
+          `Resource Allocation: Managing capacity, throughput, and operational efficiency.`,
+          `Bottleneck Analysis: Identifying performance choke points and friction factors.`,
+          `Systemic Governance: Industry compliance standards and regulatory frameworks.`
+        ],
+        takeaway: "Master the underlying architectural mechanisms to anticipate bottlenecks and optimize system performance."
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Critical Anti-Patterns & Risk Mitigation`,
+        explanation: `Mastering enterprise deployment standards, identifying high-risk anti-patterns, and implementing fault-tolerant safeguards for ${cleanTitle}.`,
+        points: [
+          `High-Impact Optimization: Advanced techniques to achieve maximum throughput and quality.`,
+          `Critical Anti-Patterns: Common operational missteps, shortcuts, and systemic risks to avoid.`,
+          `Defensive Contingency: Fault tolerance and emergency recovery protocols.`,
+          `Production Checklist: Verification criteria for mission-critical releases.`
+        ],
+        takeaway: "Implement proactive risk controls, avoid dangerous anti-patterns, and enforce rigorous quality checks."
       }
     ];
-    codeExample = `// Execution Pattern for: ${cleanTitle}
-function executeModule() {
-  console.log("Executing module for: ${cleanTitle}");
-  const dataset = [10, 20, 30, 40, 50];
-  const result = dataset.reduce((acc, x) => acc + x, 0);
-  console.log(\`✅ Result: Processed \${dataset.length} items. Total: \${result}\`);
+    codeExample = `// Enterprise Implementation Pattern: ${cleanTitle}
+function executeWorkflow() {
+  console.log("Executing structured workflow for: ${cleanTitle}");
+  const dataset = [10, 25, 40, 60, 85];
+  
+  // O(N) Processing Pipeline
+  const total = dataset.reduce((acc, val) => acc + val, 0);
+  const average = total / dataset.length;
+
+  console.log(\`✅ Workflow Complete for \${cleanTitle}: Processed \${dataset.length} items. Total: \${total}, Avg: \${average}\`);
 }
 
-executeModule();
-`;
+executeWorkflow();`;
   }
 
   return {
-    title: `Comprehensive Theory & Architectural Guide: ${cleanTitle}`,
+    title: `Comprehensive Theory & Core Guide: ${cleanTitle}`,
     overview,
+    difficultyProgression: "Foundations (Basic) ➔ Working Mechanics (Intermediate) ➔ Core Internals (Deep Dive) ➔ Production Mastery (Advanced)",
     sections,
     codeExample,
     bestPractices: [
-      `Write clean, self-documenting code with descriptive variable and method names.`,
-      `Implement robust input validation and handle specific exception types explicitly.`,
-      `Optimize runtime time and space complexity before releasing code.`,
-      `Consistently practice hands-on coding challenges after reviewing theoretical concepts.`
+      `Master core fundamentals before implementing advanced structural designs.`,
+      `Implement defensive validation to catch invalid inputs at system boundaries.`,
+      `Profile memory, runtime complexity, and resource allocation under heavy workloads.`,
+      `Avoid common anti-patterns by strictly adhering to modern industry standards.`
     ]
   };
 }

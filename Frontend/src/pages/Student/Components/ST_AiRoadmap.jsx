@@ -41,7 +41,8 @@ import {
   ChevronRight,
   Plus,
   Eye,
-  RotateCcw
+  RotateCcw,
+  ShieldCheck
 } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
@@ -269,134 +270,195 @@ function getTheoryForMilestone(m, targetRole) {
   let overview = "";
   let sections = [];
 
-  if (lowerRole.includes("python") || lowerRole.includes("ai") || lowerRole.includes("data")) {
-    overview = `In-depth technical architecture of ${title} within ${role}. Python provides high-level object abstractions, dynamic bytecode compilation via CPython, and powerful memory management models for building production-grade data pipelines and intelligent applications.`;
+  if (lowerRole.includes("python") || lowerRole.includes("ai") || lowerRole.includes("data") || lowerRole.includes("ml")) {
+    overview = `In-depth technical curriculum for ${title} within ${role}. This curriculum progresses step-by-step from foundational syntax and object models to CPython bytecode compilation, memory reference counting, and high-performance data processing pipelines.`;
     sections = [
       {
-        title: `CPython Execution Engine & Memory Allocation for ${title}`,
-        explanation: `Understand how Python translates source code into bytecode (.pyc) executed inside the CPython Virtual Machine.`,
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Mental Model & Syntax for ${title}`,
+        explanation: `${title} provides clean, expressive abstractions in Python. Python treats everything as first-class objects, utilizing dynamic typing and intuitive semantics.`,
         points: [
-          `Bytecode Compilation: Source is compiled into .pyc bytecode executed by the CPython Virtual Machine.`,
-          `Heap & Garbage Collection: Objects are dynamically allocated on the heap using reference counting and a generational cyclic detector.`,
-          `Memory Mutability: Immutable tuples and strings are cached efficiently; mutable lists and dictionaries allow dynamic in-place updates.`,
-          `Optimization Strategy: Use generator expressions and __slots__ to minimize heap allocations and iteration overhead.`
+          `Core Definition: Understand the fundamental purpose and role of ${title} within Python programs.`,
+          `Syntax & Types: Dynamic assignment, primitive data types, and indentation-delimited code blocks.`,
+          `Mental Model: Variables are pointers to objects stored on the heap rather than fixed memory cells.`,
+          `Identity vs Equality: Distinguish between value equality (==) and object identity comparison (is).`
         ],
-        takeaway: `Use immutable tuples and generator expressions to optimize heap allocations and iteration speed.`
+        takeaway: `Understand that Python variables are references bound to objects in memory, not rigid storage boxes.`
       },
       {
-        title: `Core Data Structures, Control Mechanics & Algorithms`,
-        explanation: `Master list comprehensions, dictionary hash tables, exception handling patterns, and object-oriented abstractions.`,
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Flow, Data Structures & Lifecycle`,
+        explanation: `Python source translates dynamically into bytecode (.pyc), executing through the CPython interpreter with rich built-in collections and comprehension mechanics.`,
         points: [
+          `List Comprehensions & Generators: Vectorized iterations evaluate at C-speed inside CPython, reducing interpreter loop overhead.`,
           `Hash Table Lookups: Python dictionaries utilize open-addressed hash tables with amortized O(1) key lookups.`,
-          `Vectorized Iterations: List comprehensions evaluate transformations at C-speed, bypassing interpreter loop overhead.`,
-          `Exception Safety: Use explicit try-except-finally blocks to guarantee cleanup of database connections and file descriptors.`,
-          `Code Quality: Annotate modular functions with explicit typing hints and docstrings for maintainable production code.`
+          `Scope Resolution (LEGB): Names resolve sequentially through Local, Enclosing, Global, and Built-in namespaces.`,
+          `Context Managers: Deploy 'with' statements to guarantee deterministic resource cleanup for files and sockets.`
         ],
-        takeaway: `Structure modular functions with explicit type hints and docstrings for maintainable data pipelines.`
+        takeaway: `Prefer generator expressions over massive list comprehensions when streaming large datasets to conserve RAM.`
       },
       {
-        title: `Concurrency, Asynchronous I/O & GIL Bottleneck Mitigations`,
-        explanation: `Explore how the Global Interpreter Lock (GIL) affects multi-threading and learn async execution patterns.`,
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `CPython Engine: Bytecode, Reference Counting, GC & GIL`,
+        explanation: `Under the hood, CPython uses reference counting combined with a generational cyclic garbage collector and a Global Interpreter Lock.`,
         points: [
-          `Global Interpreter Lock: GIL ensures single-threaded bytecode execution to preserve CPython reference counts safely.`,
-          `Async Event Loop: Deploy asyncio for non-blocking network I/O and concurrent web socket handling.`,
-          `CPU-Bound Scaling: Leverage the multiprocessing library or native C extensions to bypass GIL constraints across CPU cores.`,
-          `Task Queuing: Structure distributed background jobs using worker pools for heavy computational workflows.`
+          `Reference Counting: Every PyObject tracks ob_refcnt; memory is immediately freed when reference count reaches zero.`,
+          `Cyclic Garbage Collector: A generational GC periodically detects and reclaims circular references that reference counting misses.`,
+          `Global Interpreter Lock (GIL): Mutex that prevents multiple native threads from executing bytecode concurrently in CPython.`,
+          `Time & Space Bounds: List appends amortize to O(1); dictionary resizing rehashes entries when load factor reaches 2/3.`
         ],
-        takeaway: `Deploy asyncio for network I/O bound workflows and multiprocessing for CPU-bound computations.`
+        takeaway: `Deploy asyncio for I/O-bound workflows and multiprocessing to bypass GIL constraints for CPU-bound computations.`
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Anti-Patterns & Production Resilience`,
+        explanation: `Production Python applications require strict type hinting, memory profiling, resilient exception handling, and clean modular boundaries.`,
+        points: [
+          `Memory Optimization with __slots__: Use __slots__ in data classes to eliminate __dict__ overhead and save up to 40% RAM per instance.`,
+          `Anti-Pattern to Avoid: Never use mutable default arguments (e.g. def func(arr=[])); use None as a sentinel value instead.`,
+          `Defensive Validation: Validate external inputs using explicit type hints or schema validators to catch invalid inputs early.`,
+          `Production Profiling: Profile execution bottlenecks using cProfile and trace memory allocations with tracemalloc.`
+        ],
+        takeaway: `Annotate functions with explicit type hints, use None sentinels for default arguments, and profile memory under peak load.`
       }
     ];
-  } else if (lowerRole.includes("java") || lowerRole.includes("spring") || lowerRole.includes("backend")) {
+  } else if (lowerRole.includes("java") || lowerRole.includes("spring") || lowerRole.includes("backend") || lowerRole.includes("oop")) {
     overview = `Enterprise architecture guide for ${title} in ${role}. Java delivers strong type safety, robust Object-Oriented design, JVM platform independence, and high-concurrency memory management required for mission-critical enterprise platforms.`;
     sections = [
       {
-        title: `JVM Memory Architecture: Heap, Stack & Garbage Collector`,
-        explanation: `Examine how the Java Virtual Machine manages stack frame allocations and generational heap regions.`,
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Mental Model & Syntax for ${title}`,
+        explanation: `${title} establishes the foundational structural building blocks in Java. Java enforces strong static typing, structured class definitions, and object encapsulation.`,
         points: [
-          `Stack vs Heap: Primitive local variables live in fast-executing Stack frames; dynamic objects reside in the JVM Heap.`,
-          `Generational Garbage Collection: Young generation (Eden/Survivor) reclaims transient instances quickly; Old generation stores long-lived objects.`,
-          `Memory Leaks Prevention: Clear unneeded static references and close database ResultSets to avoid heap exhaustion.`,
-          `Tuning Best Practice: Monitor JVM heap metrics (-Xms, -Xmx) and minimize short-lived objects inside hot loops.`
+          `Core Definition: Understand the fundamental purpose and role of ${title} within Java programs.`,
+          `Syntax & Primitives: How variables, access modifiers, and method definitions are declared.`,
+          `Mental Model: Objects represent state (fields) and behavior (methods) modeled after real-world domain entities.`,
+          `Type Safety: The Java compiler verifies static types at compile time before generating bytecode.`
+        ],
+        takeaway: `Master fundamental syntax and access modifiers (private, protected, public) before designing complex class hierarchies.`
+      },
+      {
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Flow, Method Dispatch & Lifecycle`,
+        explanation: `When a Java program executes, class definitions are loaded dynamically, instances are created via constructors, and methods execute via virtual method invocation.`,
+        points: [
+          `Constructor Execution: Memory is reserved, default fields initialized, and constructor chains (super) execute sequentially.`,
+          `Pass-by-Value Semantics: Java passes all arguments strictly by value (passing copies of primitive values or copies of object references).`,
+          `Polymorphic Method Dispatch: The JVM resolves virtual methods at runtime via the vtable based on the actual object instance.`,
+          `Interface Contracts: Decouple client code from concrete implementations using interface contracts.`
+        ],
+        takeaway: `Favor Interface-based programming and Composition over deep, fragile class inheritance.`
+      },
+      {
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `JVM Memory Model: Heap, Stack, Bytecode & GC Algorithms`,
+        explanation: `The JVM manages execution across distinct memory regions: Stack frames for thread execution and Heap spaces for dynamic object allocation.`,
+        points: [
+          `Stack vs Heap: Primitive local variables live in fast thread-specific Stack frames; object instances live in the JVM Heap.`,
+          `Generational Garbage Collection: Young Generation (Eden, Survivor spaces) reclaims transient instances quickly; Old Generation handles persistent data.`,
+          `JIT Compilation: The HotSpot JIT compiler profiles execution and compiles hot bytecode methods directly into native machine code.`,
+          `Time & Space Bounds: Standard array and reference access operates in O(1) time; dynamic allocations introduce GC tracking overhead.`
         ],
         takeaway: `Minimize transient object allocations inside high-frequency loop executions to prevent JVM pause spikes.`
       },
       {
-        title: `Object Encapsulation, Abstraction & Polymorphic Interfaces`,
-        explanation: `Implement clean encapsulation with access control modifiers, interface contracts, and abstract classes.`,
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Critical Anti-Patterns & Resilience`,
+        explanation: `Production Java applications require thread safety, proper connection pooling, defensive input handling, and rigorous memory leak prevention.`,
         points: [
-          `Encapsulation Boundary: Shield internal object fields with private modifiers and controlled accessor methods.`,
-          `Interface Contracts: Decouple business logic using clean interfaces to enable flexible dependency injection.`,
-          `Runtime Polymorphism: Java resolves virtual method calls dynamically via method table (vtable) dispatching.`,
-          `Composition Over Inheritance: Favor object composition over rigid class hierarchies for scalable enterprise systems.`
+          `Memory Leak Prevention: Prevent hidden memory leaks caused by static collections, unclosed streams, or lingering thread locals.`,
+          `Concurrency & Immutability: Use immutable classes (e.g. Java Records) and concurrent collections (ConcurrentHashMap) for thread safety.`,
+          `Anti-Pattern to Avoid: Never swallow generic Throwable or Exception; catch specific exceptions and preserve the original cause.`,
+          `Performance Tuning: Monitor heap allocation rates with JFR (Java Flight Recorder) and tune GC ergonomics for low-latency throughput.`
         ],
-        takeaway: `Design clean interface contracts to decouple service implementations and support dependency injection.`
-      },
-      {
-        title: `Structured Exception Recovery & Multi-Threading Concurrency`,
-        explanation: `Differentiate between Checked Compile-time Exceptions and Unchecked RuntimeExceptions.`,
-        points: [
-          `Exception Separation: Checked exceptions represent recoverable events; Unchecked RuntimeExceptions indicate programming errors.`,
-          `Thread Safety: Synchronize shared state using atomic variables (AtomicInteger) and reentrant locks without deadlocks.`,
-          `ExecutorService Pools: Avoid spawning raw threads manually; manage worker pools with structured ExecutorServices.`,
-          `Graceful Degradation: Wrap critical external microservice calls in circuit breakers and fallback exception handlers.`
-        ],
-        takeaway: `Catch specific exception types explicitly and utilize ThreadPoolExecutors for manageable concurrent tasks.`
+        takeaway: `Catch specific exception types explicitly, close resources via try-with-resources, and profile heap usage under production load.`
       }
     ];
-  } else if (lowerRole.includes("react") || lowerRole.includes("frontend") || lowerRole.includes("html") || lowerRole.includes("css") || lowerRole.includes("web")) {
+  } else if (lowerRole.includes("react") || lowerRole.includes("frontend") || lowerRole.includes("html") || lowerRole.includes("css") || lowerRole.includes("web") || lowerRole.includes("javascript")) {
     overview = `Modern UI engineering principles for ${title} in ${role}. Web engineering revolves around declarative UI rendering, Virtual DOM Fiber reconciliation, state synchronization, and modular component architecture.`;
     sections = [
       {
-        title: `Virtual DOM Fiber Reconciliation & Diffing Algorithm`,
-        explanation: `Learn how React maintains an in-memory Virtual DOM tree and patches the browser DOM.`,
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Mental Model & Declarative Syntax for ${title}`,
+        explanation: `${title} provides declarative UI patterns for building responsive web applications. Instead of imperative DOM manipulation, components describe what the UI should look like for a given state.`,
         points: [
-          `Fiber Tree Mechanics: React constructs an internal Fiber work tree to schedule and prioritize rendering units.`,
-          `Heuristic O(n) Diffing: Components of different types produce entirely new subtrees; keys differentiate list items.`,
-          `Batch Updates: React 18 batches multiple state dispatches into a single render pass to prevent layout thrashing.`,
-          `Performance Rule: Provide stable, unique keys on dynamic lists to allow React Fiber to optimize DOM updates.`
+          `Core Definition: Understand the role of ${title} in structuring interactive, scalable web interfaces.`,
+          `Declarative vs Imperative: Write predictable UI code driven by state rather than manually mutating browser DOM nodes.`,
+          `Component Mental Model: Components are pure functions that accept inputs (props) and return renderable UI hierarchies (JSX/HTML).`,
+          `Unidirectional Data Flow: Data flows cleanly top-down from parent components to child components.`
         ],
-        takeaway: `Provide stable, unique keys on list items to allow React Fiber to optimize DOM updates.`
+        takeaway: `Master declarative state representation and keep component boundaries clean and focused on a single responsibility.`
       },
       {
-        title: `Component State Lifecycle, Hooks & Reactive Synchronization`,
-        explanation: `Master functional component state lifecycle hooks and reactive data propagation.`,
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Flow, Reactive Hooks & Event Dispatch`,
+        explanation: `When state changes, the component function executes, computing new outputs. Hooks manage local state, subscriptions, and memoized values across render cycles.`,
         points: [
-          `Unidirectional Data Flow: State flows down via props; user interactions dispatch actions up via callback functions.`,
-          `Hook Execution Rules: Hooks must be invoked unconditionally at the top level to preserve hook linked-list indices.`,
-          `Memoization Strategy: Wrap compute-heavy operations in useMemo and callback references in useCallback to prevent re-renders.`,
-          `Side Effect Cleanups: Always return cleanup handler functions in useEffect to cancel listeners and fetch subscriptions.`
+          `State Updates & Re-renders: Calling state setters schedules a re-render; state values remain stable within the current execution frame.`,
+          `Effect Synchronization: useEffect runs after DOM mutations, handling side-effects like network calls, timers, and cleanup listeners.`,
+          `Event Dispatch Mechanics: Synthetic events pool browser events and dispatch them through React's root listener delegator.`,
+          `Lifting State Up: Share state across sibling components by hoisting state to their closest common ancestor.`
         ],
-        takeaway: `Keep component state localized and memoize expensive calculations with useMemo.`
+        takeaway: `Keep component state localized, lifting it up only when required by sibling components to avoid unnecessary re-render cascades.`
       },
       {
-        title: `Modular Architecture, Performance & Responsive UI Design`,
-        explanation: `Explore component composition patterns, modern CSS layout engines, and cross-device performance.`,
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `Virtual DOM, Fiber Reconciliation & Browser Render Pipeline`,
+        explanation: `Under the hood, React builds a lightweight Virtual DOM Fiber tree. When updates occur, the Fiber reconciler calculates minimal DOM patches.`,
         points: [
-          `Modern Layout Engines: Utilize CSS Flexbox for 1D alignments and CSS Grid for structured 2D UI designs.`,
-          `Component Boundaries: Separate presentation components from business logic containers for high reusability.`,
-          `Web Accessibility: Structure semantic HTML tags (nav, main, section) with proper ARIA attributes and focus traps.`,
-          `Core Web Vitals: Minimize Cumulative Layout Shift (CLS) and Largest Contentful Paint (LCP) through asset optimization.`
+          `Fiber Diffing Algorithm: React reconciles trees in O(N) heuristic time by comparing element types and unique keys.`,
+          `Browser Critical Rendering Path: Minimizes costly layout reflows and repaints by batching multiple DOM updates in a single tick.`,
+          `Event Loop & Microtasks: State updates queue microtasks, ensuring all synchronous code finishes before browser paint occurs.`,
+          `Memory Layout & Closures: Stale closures occur when effect hooks capture old state references without proper dependency declarations.`
         ],
-        takeaway: `Build reusable modular UI components with responsive CSS boundaries and accessible semantic HTML.`
+        takeaway: `Supply unique, stable keys when rendering dynamic element lists to optimize Fiber reconciliation and prevent state corruption.`
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Anti-Patterns & Bundle Tuning`,
+        explanation: `Production web applications require code splitting, memoization, layout shift prevention, and defensive error boundaries.`,
+        points: [
+          `Performance Memoization: Use useMemo and useCallback strategically for expensive calculations and stable callback references.`,
+          `Anti-Pattern to Avoid: Never mutate state directly (e.g. state.items.push()); always produce new immutable references.`,
+          `Code Splitting: Deploy dynamic imports (React.lazy / Suspense) to split bundles and achieve fast First Contentful Paint (FCP).`,
+          `Error Boundaries: Wrap feature trees in Error Boundaries to gracefully catch rendering errors without crashing the entire app.`
+        ],
+        takeaway: `Treat state as strictly immutable, audit dependency arrays in hooks, and split route bundles for optimal Core Web Vitals.`
       }
     ];
   } else if (lowerRole.includes("c++") || lowerRole.includes("cpp") || lowerRole.includes("dsa") || lowerRole.includes("algorithm")) {
     overview = `Systems engineering and algorithmic mastery of ${title} in ${role}. C++ offers low-level memory control, zero-cost abstractions, RAII resource management, and deterministic performance for high-speed algorithmic computing.`;
     sections = [
       {
-        title: `Pointer Arithmetic, Stack vs Heap & RAII Memory Management`,
-        explanation: `Master raw memory address manipulation, stack allocation speed, and heap pointers.`,
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Core Concept, Pointers & Elementary Syntax for ${title}`,
+        explanation: `${title} in C++ provides precise control over computer hardware and system resources without runtime overhead.`,
         points: [
-          `Direct Memory Addressing: Pointer dereferencing operates directly on memory addresses with zero abstraction overhead.`,
-          `RAII Principle: Resource Acquisition Is Initialization binds heap memory, file handles, and mutexes to object lifecycles.`,
-          `Smart Pointers: Use std::unique_ptr for exclusive ownership and std::shared_ptr for reference-counted ownership.`,
-          `Cache Locality: Stack memory benefits from CPU cache line locality; fragmented heap allocations increase cache misses.`
+          `Core Definition: Understand the fundamental purpose and role of ${title} in systems programming.`,
+          `Syntax & Primitive Types: Static typing, memory sizes (sizeof), value declarations, and reference aliases (&).`,
+          `Pointer Basics: Direct memory addresses, the address-of operator (&), and pointer dereferencing (*).`,
+          `Mental Model: Programs execute directly on hardware without virtual machines or garbage collectors.`
         ],
-        takeaway: `Use std::unique_ptr to enforce single-ownership semantics and prevent memory leaks.`
+        takeaway: `Master pointer syntax and reference mechanics before implementing complex data structures.`
       },
       {
-        title: `Standard Template Library (STL) Containers & Algorithms`,
-        explanation: `Examine internal performance characteristics of STL containers and algorithm complexities.`,
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `STL Containers, Iterators & Operational Mechanics`,
+        explanation: `The C++ Standard Template Library provides standardized container implementations and algorithm patterns.`,
         points: [
           `Contiguous Memory: std::vector provides contiguous heap storage with amortized O(1) push_back and fast index access.`,
           `Tree & Hash Tables: std::map implements Red-Black trees (O(log n)); std::unordered_map utilizes hash buckets (O(1) average).`,
@@ -406,82 +468,157 @@ function getTheoryForMilestone(m, targetRole) {
         takeaway: `Prefer std::vector for contiguous memory cache locality and std::unordered_map for O(1) average lookups.`
       },
       {
-        title: `Time & Space Complexity Optimization (Big-O Analysis)`,
-        explanation: `Analyze asymptotic bounds for sorting, searching, tree traversals, and dynamic programming algorithms.`,
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `Memory Layout: Stack vs Heap, RAII, Cache & Big-O Bounds`,
+        explanation: `Under the hood, C++ execution relies on stack frames, heap allocators, CPU cache line hierarchies, and asymptotic efficiency.`,
         points: [
-          `Asymptotic Growth: Quantify worst-case (Big-O), average (Theta), and best-case (Omega) performance limits.`,
-          `Space-Time Tradeoffs: Trade auxiliary RAM for speed using memoization, lookup tables, and dynamic programming.`,
-          `Recursion Overhead: Guard recursive implementations against call stack exhaustion by converting to iterative or tail-call formats.`,
+          `Direct Memory Addressing: Pointer dereferencing operates directly on memory addresses with zero abstraction overhead.`,
+          `RAII Principle: Resource Acquisition Is Initialization binds heap memory, file handles, and mutexes to object lifecycles.`,
+          `Smart Pointers: Use std::unique_ptr for exclusive ownership and std::shared_ptr for reference-counted ownership.`,
+          `Cache Locality: Stack memory benefits from CPU cache line locality; fragmented heap allocations increase cache misses.`
+        ],
+        takeaway: `Use std::unique_ptr to enforce single-ownership semantics and eliminate memory leaks.`
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Undefined Behavior Prevention, Move Semantics & Anti-Patterns`,
+        explanation: `Production C++ requires strict prevention of undefined behavior, dangling pointers, memory corruption, and cache misses.`,
+        points: [
+          `Move Semantics & rvalue References: Use std::move to transfer resource ownership without deep copying memory buffers.`,
+          `Anti-Pattern to Avoid: Dangling pointers and double-free errors caused by manually invoking delete on shared pointers.`,
+          `Undefined Behavior: Always initialize variables before use and verify container bounds to prevent buffer overflows.`,
           `Inner Loop Tuning: Avoid redundant allocations, function call overhead, and memory branching inside critical loops.`
         ],
-        takeaway: `Analyze worst-case Big-O bounds and optimize inner loop memory accesses for cache efficiency.`
+        takeaway: `Analyze worst-case Big-O bounds, eliminate undefined behavior, and leverage move semantics for performance.`
       }
     ];
   } else if (lowerRole.includes("sql") || lowerRole.includes("database") || lowerRole.includes("postgres") || lowerRole.includes("mongo")) {
     overview = `Data architecture and relational database mechanics for ${title} in ${role}. Efficient database management relies on relational normalization, B-Tree index structures, ACID transaction guarantees, and optimized query execution plans.`;
     sections = [
       {
-        title: `Relational Schema Normalization & Entity Relationships`,
-        explanation: `Design normalized database schemas across First (1NF), Second (2NF), and Third (3NF) normal forms.`,
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Relational Concepts, Tables & Elementary Syntax for ${title}`,
+        explanation: `${title} forms the relational data backbone. Relational databases structure data into tables with typed columns, primary keys, and relations.`,
         points: [
-          `1NF to 3NF Rules: Eliminate repeating groups, full depend on primary keys, and remove transitive non-key dependencies.`,
-          `Foreign Key Constraints: Enforce relational referential integrity to prevent orphan records on update or delete operations.`,
-          `Strategic Denormalization: Pre-aggregate or combine tables selectively in read-intensive analytics dashboards.`,
-          `Data Type Precision: Use exact decimal types for financial records and appropriately sized integers for primary keys.`
+          `Core Definition: Understand the fundamental purpose and role of ${title} within relational storage.`,
+          `DDL & DML Syntax: CREATE, ALTER, SELECT, INSERT, UPDATE, and DELETE statement structure.`,
+          `Mental Model: Data is stored as structured records (rows) inside strictly typed relational schemas (tables).`,
+          `Primary & Foreign Keys: Guarantee entity uniqueness and establish verifiable relationships across tables.`
         ],
-        takeaway: `Normalize schemas to prevent update anomalies while selectively denormalizing for read-heavy analytics.`
+        takeaway: `Define clear primary keys and relational constraints when establishing schema structures.`
       },
       {
-        title: `Indexing Mechanics, B-Trees & Query Optimization`,
-        explanation: `Understand how database engines construct B-Tree indexes for fast logarithmic search lookups.`,
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Query Execution Order, JOINs & Aggregation Mechanics`,
+        explanation: `SQL queries execute in a strict logical processing order: FROM ➔ JOIN ➔ WHERE ➔ GROUP BY ➔ HAVING ➔ SELECT ➔ ORDER BY.`,
+        points: [
+          `Logical Execution Order: Understanding that WHERE filters rows before GROUP BY aggregation occurs.`,
+          `JOIN Mechanics: INNER JOIN, LEFT OUTER JOIN, and CROSS JOIN match records across relational foreign keys.`,
+          `Aggregation & Windowing: Group rows with GROUP BY and compute running metrics using OVER (PARTITION BY) window functions.`,
+          `Transaction Boundaries: Group atomic operations within BEGIN TRANSACTION and COMMIT blocks.`
+        ],
+        takeaway: `Structure queries according to SQL logical execution order to write efficient filtering and join conditions.`
+      },
+      {
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `B-Tree Indexes, Buffer Pools, EXPLAIN Plans & ACID`,
+        explanation: `Under the hood, database storage engines store data in fixed-size disk pages, cached in memory buffer pools with B-Tree indexes.`,
         points: [
           `B-Tree Index Structure: Self-balancing search trees provide O(log n) searches, range scans, and sorted ordering.`,
           `Composite Indexes: Align multi-column index order with the leftmost prefix rule in WHERE and ORDER BY clauses.`,
           `Execution Plan Analysis: Run EXPLAIN ANALYZE to identify costly sequential table scans and missing indexes.`,
-          `Write Overhead: Every additional index adds write and disk reorganization cost during INSERT, UPDATE, and DELETE.`
+          `ACID & Isolation Levels: Understand dirty reads (Read Uncommitted), non-repeatable reads (Read Committed), and serializable transactions.`
         ],
         takeaway: `Index high-frequency filtering and join columns while avoiding over-indexing on write-heavy tables.`
       },
       {
-        title: `ACID Transactions, Locking & Concurrency Control`,
-        explanation: `Master Atomicity, Consistency, Isolation, and Durability (ACID) and concurrency isolation levels.`,
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Query Tuning, Critical Anti-Patterns & Scaling`,
+        explanation: `Production database systems require lock contention mitigation, connection pooling, and prevention of N+1 query traps.`,
         points: [
-          `Atomicity & Durability: All operations inside a transaction commit completely or roll back without leaving partial state.`,
-          `Isolation Levels: Understand dirty reads (Read Uncommitted), non-repeatable reads (Read Committed), and phantoms (Serializable).`,
-          `Row-Level Locking: Database engines lock specific rows during updates to prevent write conflicts while allowing reads.`,
-          `Deadlock Prevention: Always access and modify tables in consistent order across concurrent application services.`
+          `Anti-Pattern to Avoid: N+1 query anti-pattern; always batch fetch related records using JOINs or IN clauses.`,
+          `Lock Contention & Deadlocks: Always access and modify tables in consistent order across concurrent application services.`,
+          `Strategic Denormalization: Pre-aggregate or combine tables selectively in read-intensive analytics dashboards.`,
+          `Connection Pooling: Deploy connection poolers (HikariCP, PgBouncer) to prevent database process exhaustion under load.`
         ],
-        takeaway: `Use explicit transaction blocks for multi-table updates to guarantee system-wide consistency.`
+        takeaway: `Use explicit transaction blocks, eliminate N+1 query patterns, and monitor execution plans with EXPLAIN ANALYZE.`
       }
     ];
   } else {
-    overview = `Comprehensive architectural and professional guide to ${title} for ${role}. Mastering this module establishes core domain proficiency, operational mechanics, and production-grade implementation standards.`;
-    sections = topics.slice(0, 3).map((t, idx) => {
-      const topicText = typeof t === 'string' ? t : t.title || t.name || `Module ${idx + 1}`;
-      return {
-        title: `${idx + 1}. ${topicText}`,
-        explanation: `Deep technical analysis of ${topicText} within ${role}.`,
+    overview = `Comprehensive curriculum for ${title} in ${role}. This professional guide progresses step-by-step from fundamental principles and core mental models to operational execution, low-level mechanics, and enterprise production standards.`;
+    sections = [
+      {
+        level: "Level 1: Foundational Basics",
+        levelBadge: "Basics",
+        title: `Foundational Principles & Mental Model of ${title}`,
+        explanation: `${title} establishes the foundational bedrock within ${role}. Understanding what it represents and the problem it solves creates a clear mental model.`,
         points: [
-          `Core Standard: Foundational principles and operational standards for ${topicText}.`,
-          `Execution Workflow: Step-by-step lifecycle and implementation guidelines for ${topicText}.`,
-          `Verification & Quality: Strict quality assurance metrics and compliance checkpoints.`,
-          `Production Best Practice: Real-world industry techniques to guarantee high-performance outcomes.`
+          `Core Concept: Understand the fundamental definition and scope of ${title}.`,
+          `Problem Addressed: The key challenges and inefficiencies that ${title} solves.`,
+          `Elementary Standards: Initial steps, essential tools, and terminology used in practice.`,
+          `Mental Model: An intuitive framework for reasoning about ${title} reliably.`
         ],
-        takeaway: `Implement modular software boundaries and validate inputs before deploying ${topicText} to production.`
-      };
-    });
+        takeaway: `Build a rock-solid grasp of core definitions and purpose before advancing to complex workflows.`
+      },
+      {
+        level: "Level 2: Working Mechanics & Lifecycle",
+        levelBadge: "Mechanics",
+        title: `Operational Execution Workflow & Daily Patterns`,
+        explanation: `Examine how ${title} is applied step-by-step in professional practice, including input validation, lifecycle stages, and standardized procedures.`,
+        points: [
+          `Workflow Sequence: Step-by-step procedures followed from initiation to completion.`,
+          `Input Processing: Validating parameters, requirements, and domain criteria.`,
+          `Standard Methods: Daily best practices and industry-accepted patterns.`,
+          `Quality Gates: Verification milestones to ensure accuracy throughout the lifecycle.`
+        ],
+        takeaway: `Follow structured operational sequences and validate requirements at every milestone.`
+      },
+      {
+        level: "Level 3: Deep Core Internals & Architecture",
+        levelBadge: "Core Internals",
+        title: `Deep Structural Mechanics, Resource Dynamics & Standards`,
+        explanation: `A deep-dive into the underlying architecture, resource allocation models, latency considerations, and structural dependencies governing ${title}.`,
+        points: [
+          `Structural Architecture: Underlying mechanisms and structural dependencies.`,
+          `Resource Allocation: Managing capacity, throughput, and operational efficiency.`,
+          `Bottleneck Analysis: Identifying performance choke points and friction factors.`,
+          `Systemic Governance: Industry compliance standards and regulatory frameworks.`
+        ],
+        takeaway: `Master the underlying architectural mechanisms to anticipate bottlenecks and optimize system performance.`
+      },
+      {
+        level: "Level 4: Advanced Production Standards & Anti-Patterns",
+        levelBadge: "Advanced Mastery",
+        title: `Enterprise Optimization, Critical Anti-Patterns & Risk Mitigation`,
+        explanation: `Mastering enterprise deployment standards, identifying high-risk anti-patterns, and implementing fault-tolerant safeguards for ${title}.`,
+        points: [
+          `High-Impact Optimization: Advanced techniques to achieve maximum throughput and quality.`,
+          `Critical Anti-Patterns: Common operational missteps, shortcuts, and systemic risks to avoid.`,
+          `Defensive Contingency: Fault tolerance and emergency recovery protocols.`,
+          `Production Checklist: Verification criteria for mission-critical releases.`
+        ],
+        takeaway: `Implement proactive risk controls, avoid dangerous anti-patterns, and enforce rigorous quality checks.`
+      }
+    ];
   }
 
   return {
-    title: `Core Technical Theory: ${title}`,
+    title: `Comprehensive Theory & Core Guide: ${title}`,
     overview,
+    difficultyProgression: "Foundations (Basic) ➔ Working Mechanics (Intermediate) ➔ Core Internals (Deep Dive) ➔ Production Mastery (Advanced)",
     sections,
     codeExample: getStarterCodeForTopic(title, lang, role),
     bestPractices: [
-      `Write clean, self-documenting code with clear variable and function identifiers.`,
-      `Implement proper exception handling and validate input parameters.`,
-      `Follow modern industry standard modular architecture and performance guidelines.`,
-      `Consistently test your logic with hands-on practice exercises after reviewing theory.`
+      `Master core fundamentals before implementing advanced structural designs.`,
+      `Implement defensive validation to catch invalid inputs at system boundaries.`,
+      `Profile memory, runtime complexity, and resource allocation under heavy workloads.`,
+      `Avoid common anti-patterns by strictly adhering to modern industry standards.`
     ]
   };
 }
@@ -1650,23 +1787,41 @@ export default function AIRoadmap() {
                 const cleanRole = String(currentRoadmap?.targetRole || "").trim();
                 const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
                 const fetchedTheory = aiTheoryCache[cacheKey];
-                const theoryData = fetchedTheory || getTheoryForMilestone(activeMilestone, currentRoadmap?.targetRole);
 
-                if (isTheoryLoading && !fetchedTheory) {
+                if (!fetchedTheory) {
                   return (
                     <div className="roadmap-section-card roadmap-theory-loading">
-                      <RefreshCw size={32} className="roadmap-icon-indigo roadmap-spin-loader" />
+                      <div className="roadmap-loading-orb-wrap">
+                        <Sparkles size={36} className="roadmap-icon-amber roadmap-spin-pulse" />
+                      </div>
                       <h4 className="roadmap-empty-title">
-                        Generating AI Technical Theory Guide...
+                        Generating 100% Live AI Technical Theory for "{cleanTitle}"...
                       </h4>
                       <p className="roadmap-empty-desc">
-                        Synthesizing technical architectural explanations, code examples, and best practices for "{cleanTitle}".
+                        Groq AI is synthesizing authentic, topic-specific curriculum from foundational basics to deep runtime engine architecture, working code, and enterprise standards.
                       </p>
+                      <div className="roadmap-loading-steps-pills">
+                        <span className="roadmap-load-step-chip">L1: Foundational Basics</span>
+                        <span className="roadmap-load-step-chip">L2: Working Mechanics</span>
+                        <span className="roadmap-load-step-chip">L3: Core Architecture</span>
+                        <span className="roadmap-load-step-chip">L4: Production Mastery</span>
+                      </div>
+                      {!isTheoryLoading && (
+                        <button
+                          type="button"
+                          onClick={() => loadAITheoryForMilestone(cleanTitle, cleanRole, true)}
+                          className="roadmap-retry-ai-btn"
+                        >
+                          <RefreshCw size={14} />
+                          <span>Generate Now with AI</span>
+                        </button>
+                      )}
                     </div>
                   );
                 }
 
-                const sectionsList = theoryData.sections || (theoryData.keyPoints ? theoryData.keyPoints.map(kp => ({ title: kp.title, explanation: kp.explanation })) : []);
+                const theoryData = fetchedTheory;
+                const sectionsList = theoryData.sections || [];
 
                 return (
                   <div className="roadmap-section-card">
@@ -1677,11 +1832,21 @@ export default function AIRoadmap() {
                         </span>
                         <span className="roadmap-ai-tag-pill">
                           <Sparkles size={12} className="roadmap-icon-emerald" />
-                          <span>{fetchedTheory ? "Live AI Generated Theory" : "AI Technical Curriculum"}</span>
+                          <span>100% Live AI Generated Theory</span>
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => loadAITheoryForMilestone(cleanTitle, cleanRole, true)}
+                          disabled={isTheoryLoading}
+                          className="roadmap-refresh-theory-btn"
+                          title="Regenerate this topic's theory fresh with AI"
+                        >
+                          <RefreshCw size={12} className={isTheoryLoading ? "roadmap-spin-loader" : ""} />
+                          <span>{isTheoryLoading ? "Regenerating..." : "Regenerate with AI"}</span>
+                        </button>
                       </div>
                       <h3 className="roadmap-section-heading">
-                        {theoryData.title || `Core Technical Theory: ${cleanTitle}`}
+                        {theoryData.title || `Comprehensive Technical Guide: ${cleanTitle}`}
                       </h3>
                       <p className="roadmap-theory-overview-box">
                         {renderFormattedTheoryText(theoryData.overview)}
@@ -1689,18 +1854,62 @@ export default function AIRoadmap() {
                     </div>
 
                     <div className="roadmap-key-concepts">
+                      <div className="roadmap-theory-level-bar">
+                        <div className="roadmap-theory-level-title">
+                          <Sparkles size={15} className="roadmap-icon-amber" />
+                          <span>Curriculum Track: Foundational Basics ➔ Core Architecture</span>
+                        </div>
+                        <div className="roadmap-theory-level-steps">
+                          <div className="roadmap-theory-step-pill step-lvl-1">
+                            <span className="step-num">L1</span>
+                            <span className="step-lbl">Basics</span>
+                          </div>
+                          <span className="roadmap-theory-step-arrow">→</span>
+                          <div className="roadmap-theory-step-pill step-lvl-2">
+                            <span className="step-num">L2</span>
+                            <span className="step-lbl">Mechanics</span>
+                          </div>
+                          <span className="roadmap-theory-step-arrow">→</span>
+                          <div className="roadmap-theory-step-pill step-lvl-3">
+                            <span className="step-num">L3</span>
+                            <span className="step-lbl">Core Internals</span>
+                          </div>
+                          <span className="roadmap-theory-step-arrow">→</span>
+                          <div className="roadmap-theory-step-pill step-lvl-4">
+                            <span className="step-num">L4</span>
+                            <span className="step-lbl">Production Mastery</span>
+                          </div>
+                        </div>
+                      </div>
+
                       <h4 className="roadmap-section-subheading">
                         {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
-                          ? "Technical Architecture & Mechanics" 
+                          ? "Progressive Technical Architecture & Core Internals" 
                           : "Core Methodology & Framework Mechanics"}
                       </h4>
 
                       {sectionsList.map((sec, sIdx) => {
                         const points = extractPointsFromSection(sec);
+                        const lvlTier = sIdx % 4;
+                        const levelConfig = [
+                          { label: "Level 1: Foundational Basics", badge: "Basics", colorClass: "lvl-emerald", Icon: BookOpen },
+                          { label: "Level 2: Working Mechanics & Lifecycle", badge: "Mechanics", colorClass: "lvl-sky", Icon: Cpu },
+                          { label: "Level 3: Deep Core Internals & Architecture", badge: "Core Internals", colorClass: "lvl-indigo", Icon: Layers },
+                          { label: "Level 4: Advanced Production Standards & Anti-Patterns", badge: "Advanced Mastery", colorClass: "lvl-amber", Icon: ShieldCheck }
+                        ][lvlTier];
+
+                        const sectionLevel = sec.level || levelConfig.label;
+                        const SectionIcon = levelConfig.Icon;
+
                         return (
-                          <div key={sIdx} className="roadmap-theory-subcard">
+                          <div key={sIdx} className={`roadmap-theory-subcard ${levelConfig.colorClass}-card`}>
+                            <div className="roadmap-theory-subcard-header">
+                              <span className={`roadmap-theory-level-pill ${levelConfig.colorClass}`}>
+                                <SectionIcon size={13} />
+                                <span>{sectionLevel}</span>
+                              </span>
+                            </div>
                             <h5 className="roadmap-theory-subhead">
-                              <Layers size={17} className="roadmap-icon-indigo" />
                               <span>{renderFormattedTheoryText(sec.title)}</span>
                             </h5>
                             {sec.explanation && points.length > 1 && (
@@ -1711,13 +1920,13 @@ export default function AIRoadmap() {
                             <ul className="roadmap-theory-points-list">
                               {points.map((pt, pIdx) => (
                                 <li key={pIdx} className="roadmap-theory-point-item">
-                                  <span className="roadmap-point-bullet">{pIdx + 1}</span>
+                                  <span className={`roadmap-point-bullet ${levelConfig.colorClass}-bullet`}>{pIdx + 1}</span>
                                   <span>{renderFormattedTheoryText(pt)}</span>
                                 </li>
                               ))}
                             </ul>
                             {sec.takeaway && (
-                              <div className="roadmap-theory-takeaway">
+                              <div className={`roadmap-theory-takeaway ${levelConfig.colorClass}-takeaway`}>
                                 💡 Industry Takeaway: {renderFormattedTheoryText(sec.takeaway)}
                               </div>
                             )}

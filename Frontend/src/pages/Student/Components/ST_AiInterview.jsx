@@ -12,8 +12,8 @@ import CustomSelect from "../../../components/ui/CustomSelect";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 
 
-const INTERVIEW_SECONDS = 5 * 60; // 5 minutes
-const WARNING_SECONDS = 60;
+const INTERVIEW_SECONDS = 15 * 60; // 15 minutes (ample duration so candidate is never cut off prematurely)
+const WARNING_SECONDS = 90;
 
 const ROLE_OPTIONS = [
   "Software Engineer Intern",
@@ -313,7 +313,21 @@ export default function AIInterview() {
   const lastWarningTypeTimestampRef = useRef({});
   const proctoringCanvasRef = useRef(null);
   const hasCameraBeenTurnedOnRef = useRef(false);
-  const consecutiveViolationsRef = useRef({ noFace: 0, device: 0, lookingAway: 0 });
+  const consecutiveViolationsRef = useRef({ noFace: 0, lookingAway: 0, multipleFaces: 0 });
+  const endReasonRef = useRef("");
+  const proctoringWarningsRef = useRef([]);
+  const aiFaceDetectorRef = useRef(null);
+
+  // Initialize Native AI FaceDetector if supported in candidate's browser
+  useEffect(() => {
+    if (typeof window !== "undefined" && "FaceDetector" in window) {
+      try {
+        aiFaceDetectorRef.current = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 4 });
+      } catch (err) {
+        aiFaceDetectorRef.current = null;
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (cameraState === "on") {
@@ -359,6 +373,17 @@ export default function AIInterview() {
     setProctoringWarnings((prev) => {
       const warningCount = prev.length + 1;
       const updated = [...prev, { id: Date.now(), type, message: baseMsg, timestamp, warningCount }];
+      proctoringWarningsRef.current = updated;
+
+      // Broadcast flag to socket server for audit tracking
+      if (socketRef.current && socketRef.current.connected && sessionIdRef.current) {
+        socketRef.current.emit("interview:flag", {
+          sessionId: sessionIdRef.current,
+          type,
+          message: baseMsg,
+          timestamp,
+        });
+      }
 
       if (warningCount === 1) {
         // Warning 1 of 3
@@ -390,6 +415,10 @@ export default function AIInterview() {
         speakNow("Warning 2 of 3. Final warning before interview termination.");
       } else if (warningCount >= 3) {
         // Warning 3 of 3 (Termination & Auto-submit!)
+        const strikesSummary = updated.map((v, i) => `Strike ${i + 1}: ${v.message} (${v.timestamp})`).join("; ");
+        const terminationReason = `Auto-Submitted: Maximum Proctoring Warnings Exceeded (3 Strikes). Violations: ${strikesSummary}`;
+        endReasonRef.current = terminationReason;
+
         setActiveProctoringModal({
           level: 3,
           warningCount: 3,
@@ -406,7 +435,7 @@ export default function AIInterview() {
 
         setTimeout(() => {
           if (endInterviewRef.current) {
-            endInterviewRef.current();
+            endInterviewRef.current(terminationReason, updated);
           }
         }, 1500);
       }
@@ -520,6 +549,8 @@ export default function AIInterview() {
       questionsAnswered: d.questionsAnswered ?? (history.length || (overallScore > 0 ? 1 : 0)),
       durationSeconds: d.durationSeconds ?? sessionData.duration_seconds ?? null,
       evaluationHistory: history,
+      endReason: d.endReason || sc.endReason || sessionData.end_reason || (overallScore > 0 ? "Completed: All questions evaluated" : "Interview session ended"),
+      proctoringWarnings: d.proctoringWarnings || sc.proctoringWarnings || [],
     });
     setPhase("result");
   }, []);
@@ -714,12 +745,12 @@ export default function AIInterview() {
     }
   }, [cameraState, phase]);
 
-  // Real-Time Camera Proctoring & Gaze / Device Detection Monitor
+  // Real-Time AI Camera Proctoring & Face/Gaze Recognition Engine
   useEffect(() => {
     if (cameraState !== "on" || phase !== "live") return;
 
-    // 400ms sampling interval for smooth, accurate, non-erratic proctoring
-    const intervalId = setInterval(() => {
+    // 400ms sampling interval for smooth, non-erratic proctoring
+    const intervalId = setInterval(async () => {
       if (!videoRef.current || videoRef.current.readyState < 2) return;
 
       try {
@@ -733,89 +764,147 @@ export default function AIInterview() {
         if (!ctx) return;
 
         ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-        const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const data = frameData.data;
+        const now = Date.now();
 
-        let totalSum = 0;
-        let skinPixels = 0;
-        let topSkinPixels = 0;
-        let bottomSkinPixels = 0;
-        let roiPixelCount = 0;
-        const pixelCount = data.length / 4;
+        // 25-second startup grace period (gives user time to settle in and read initial question)
+        if (now - livePhaseStartTimeRef.current < 25000) return;
 
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          const brightness = (r + g + b) / 3;
+        // Enforce 15 seconds cooldown between warnings to avoid rapid penalty stacking
+        if (now - lastWarningTimeRef.current < 15000) return;
 
-          totalSum += brightness;
+        let detectedFacesCount = -1; // -1 means use vision contrast heuristics
+        let faceBox = null;
 
-          const pixelIndex = i / 4;
-          const x = pixelIndex % 160;
-          const y = Math.floor(pixelIndex / 160);
+        // ── 1. Native Browser AI Face Recognition (FaceDetector API) ──
+        if (aiFaceDetectorRef.current) {
+          try {
+            const detected = await aiFaceDetectorRef.current.detect(canvas);
+            detectedFacesCount = detected.length;
+            if (detected.length > 0) {
+              faceBox = detected[0].boundingBox;
+            }
+          } catch {
+            detectedFacesCount = -1;
+          }
+        }
 
-          // Active central region where candidate's face & eyes/head appear
-          if (x >= 20 && x <= 140 && y >= 10 && y <= 110) {
-            roiPixelCount++;
+        // ── 2. Fallback AI Vision Contrast & Spatial Analysis (if FaceDetector unavailable) ──
+        if (detectedFacesCount === -1) {
+          const frameData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = frameData.data;
 
-            // Strict human skin tone detection
-            const isSkin = r > 50 && g > 30 && b > 20 && r > g && r > b && (r - g) >= 8;
-            if (isSkin) {
-              skinPixels++;
-              if (y < 65) topSkinPixels++;
-              else bottomSkinPixels++;
+          let totalBrightness = 0;
+          let centerLumaSum = 0;
+          let centerCount = 0;
+          let leftQuadrantMotion = 0;
+          let rightQuadrantMotion = 0;
+
+          // Compute luminance and spatial feature variance
+          for (let i = 0; i < data.length; i += 4) {
+            const r = data[i];
+            const g = data[i + 1];
+            const b = data[i + 2];
+            const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+            totalBrightness += luma;
+
+            const pixelIdx = i / 4;
+            const x = pixelIdx % 160;
+            const y = Math.floor(pixelIdx / 160);
+
+            // Center ROI (x: 35-125, y: 15-105)
+            if (x >= 35 && x <= 125 && y >= 15 && y <= 105) {
+              centerLumaSum += luma;
+              centerCount++;
+            } else if (x < 35 && y >= 20 && y <= 100) {
+              leftQuadrantMotion += luma;
+            } else if (x > 125 && y >= 20 && y <= 100) {
+              rightQuadrantMotion += luma;
+            }
+          }
+
+          const avgBrightness = totalBrightness / (canvas.width * canvas.height);
+          const avgCenterLuma = centerCount > 0 ? centerLumaSum / centerCount : 0;
+
+          // Second pass: feature contrast variance in central ROI (faces contain high feature variance)
+          let centerSqDiff = 0;
+          for (let y = 20; y <= 100; y += 4) {
+            for (let x = 40; x <= 120; x += 4) {
+              const idx = (y * 160 + x) * 4;
+              const luma = 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+              centerSqDiff += Math.abs(luma - avgCenterLuma);
+            }
+          }
+          const centerVariance = centerSqDiff / (21 * 21);
+
+          // If frame is completely black or camera covered, or zero feature variance
+          const isFaceAbsent = avgBrightness < 10 || (avgCenterLuma < 12 && centerVariance < 3.5) || centerVariance < 2.5;
+
+          if (isFaceAbsent) {
+            detectedFacesCount = 0;
+          } else {
+            detectedFacesCount = 1;
+            const leftAvg = leftQuadrantMotion / (35 * 81);
+            const rightAvg = rightQuadrantMotion / (35 * 81);
+            if (Math.abs(leftAvg - rightAvg) > 65 && centerVariance > 25) {
+              detectedFacesCount = 2; // Secondary background activity
             }
           }
         }
 
-        const avgBrightness = totalSum / pixelCount;
-        const skinRatio = roiPixelCount > 0 ? skinPixels / roiPixelCount : 0;
-        const now = Date.now();
+        // ── 3. Process AI Recognition Results ──
+        if (detectedFacesCount === 0) {
+          // No face in frame
+          consecutiveViolationsRef.current.noFace = (consecutiveViolationsRef.current.noFace || 0) + 1;
+          consecutiveViolationsRef.current.multipleFaces = 0;
+          consecutiveViolationsRef.current.lookingAway = Math.max(0, (consecutiveViolationsRef.current.lookingAway || 0) - 1);
 
-        // 25-second startup grace period (gives user time to settle in and read first question)
-        if (now - livePhaseStartTimeRef.current < 25000) return;
-
-        // Enforce 15 seconds cooldown between consecutive warnings
-        if (now - lastWarningTimeRef.current < 15000) return;
-
-        // ─── CHECK A: Head / Gaze Completely Turned Away (LOOKING_AWAY) ───
-        // Only triggers if candidate turns head completely away from camera for 10+ continuous seconds (25 ticks)
-        const isLookingAway = skinRatio > 0.08 && topSkinPixels < 2 && (bottomSkinPixels / (topSkinPixels + 1) > 8.0);
-
-        if (isLookingAway) {
-          consecutiveViolationsRef.current.lookingAway += 1;
-          if (consecutiveViolationsRef.current.lookingAway >= 25) { // 25 ticks x 400ms = 10.0s continuous looking away
-            lastWarningTimeRef.current = now;
-            consecutiveViolationsRef.current.lookingAway = 0;
-            triggerProctoringWarning(
-              "LOOKING_AWAY",
-              "Candidate continuously turned away from camera screen!"
-            );
-          }
-        } else {
-          consecutiveViolationsRef.current.lookingAway = Math.max(0, consecutiveViolationsRef.current.lookingAway - 2);
-        }
-
-        // ─── CHECK B: Face Covered / Completely Absent (NO_FACE) ───
-        // Only triggers if candidate leaves frame completely for 10+ continuous seconds (25 ticks)
-        const isFaceObscured = skinRatio < 0.015 || avgBrightness < 3;
-
-        if (isFaceObscured) {
-          consecutiveViolationsRef.current.noFace += 1;
-          if (consecutiveViolationsRef.current.noFace >= 25) { // 25 ticks x 400ms = 10.0s continuous absence
+          if (consecutiveViolationsRef.current.noFace >= 25) { // 25 ticks x 400ms = 10s continuous
             lastWarningTimeRef.current = now;
             consecutiveViolationsRef.current.noFace = 0;
             triggerProctoringWarning(
               "NO_FACE",
-              "Face not detected in camera view! Please look at the camera."
+              "AI Face Recognition: Candidate face not detected in camera frame! Please sit facing your camera."
+            );
+          }
+        } else if (detectedFacesCount > 1) {
+          // Multiple faces detected
+          consecutiveViolationsRef.current.multipleFaces = (consecutiveViolationsRef.current.multipleFaces || 0) + 1;
+          consecutiveViolationsRef.current.noFace = Math.max(0, (consecutiveViolationsRef.current.noFace || 0) - 2);
+
+          if (consecutiveViolationsRef.current.multipleFaces >= 20) { // 20 ticks x 400ms = 8s continuous
+            lastWarningTimeRef.current = now;
+            consecutiveViolationsRef.current.multipleFaces = 0;
+            triggerProctoringWarning(
+              "MULTIPLE_PERSONS",
+              `AI Face Recognition: Multiple persons (${detectedFacesCount} faces) detected in camera view! Candidate must be alone.`
             );
           }
         } else {
-          consecutiveViolationsRef.current.noFace = Math.max(0, consecutiveViolationsRef.current.noFace - 2);
+          // Exactly 1 face detected -> Candidate present and active
+          consecutiveViolationsRef.current.noFace = Math.max(0, (consecutiveViolationsRef.current.noFace || 0) - 3);
+          consecutiveViolationsRef.current.multipleFaces = Math.max(0, (consecutiveViolationsRef.current.multipleFaces || 0) - 3);
+
+          if (faceBox) {
+            const centerX = (faceBox.x + faceBox.width / 2) / canvas.width;
+            if (centerX < 0.12 || centerX > 0.88) {
+              consecutiveViolationsRef.current.lookingAway = (consecutiveViolationsRef.current.lookingAway || 0) + 1;
+              if (consecutiveViolationsRef.current.lookingAway >= 25) { // 10s continuous
+                lastWarningTimeRef.current = now;
+                consecutiveViolationsRef.current.lookingAway = 0;
+                triggerProctoringWarning(
+                  "LOOKING_AWAY",
+                  "AI Gaze Monitor: Candidate looking completely away from the interview screen!"
+                );
+              }
+            } else {
+              consecutiveViolationsRef.current.lookingAway = Math.max(0, (consecutiveViolationsRef.current.lookingAway || 0) - 2);
+            }
+          } else {
+            consecutiveViolationsRef.current.lookingAway = Math.max(0, (consecutiveViolationsRef.current.lookingAway || 0) - 2);
+          }
         }
       } catch (e) {
-        console.warn("Proctoring frame warning:", e);
+        console.warn("AI Proctoring frame processing warning:", e);
       }
     }, 400);
 
@@ -906,7 +995,9 @@ export default function AIInterview() {
       }
       if (left <= 0) {
         stopTimer();
-        if (endInterviewRef.current) endInterviewRef.current();
+        const timeReason = `Auto-Submitted: Allocated interview duration (${Math.round(INTERVIEW_SECONDS / 60)} minutes) completed.`;
+        endReasonRef.current = timeReason;
+        if (endInterviewRef.current) endInterviewRef.current(timeReason);
       }
     }, 1000);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -914,7 +1005,7 @@ export default function AIInterview() {
 
   // ─── Finish interview ────────────────────────────────────────────────────────
   const finishInterview = useCallback(
-    (summary) => {
+    (summary, explicitReason, explicitWarnings) => {
       if (completedRef.current) return;
       completedRef.current = true;
       endRequestedRef.current = true;
@@ -932,11 +1023,24 @@ export default function AIInterview() {
       }
       setSocketConnected(false);
       const { scorecard, evaluationHistory, durationSeconds, questionsAnswered } = summary || {};
+      const finalEndReason =
+        explicitReason ||
+        summary?.endReason ||
+        endReasonRef.current ||
+        "Completed: All Questions Answered";
+      const finalWarnings =
+        explicitWarnings ||
+        summary?.proctoringWarnings ||
+        proctoringWarningsRef.current ||
+        [];
+
       const finalResult = {
         scorecard: scorecard || null,
         questionsAnswered: questionsAnswered ?? (evaluationHistory?.length ?? 0),
         durationSeconds: durationSeconds ?? Math.round((Date.now() - (timerStartRef.current ?? Date.now())) / 1000),
         evaluationHistory: evaluationHistory || [],
+        endReason: finalEndReason,
+        proctoringWarnings: finalWarnings,
       };
       setResult(finalResult);
       setPhase("result");
@@ -960,6 +1064,8 @@ export default function AIInterview() {
           grade: finalResult.scorecard?.grade || "Average",
           evaluationHistory: finalResult.evaluationHistory,
           scorecard: finalResult.scorecard,
+          endReason: finalEndReason,
+          proctoringWarnings: finalWarnings,
         };
 
         apiFetch("/interviews", {
@@ -987,27 +1093,38 @@ export default function AIInterview() {
   );
 
   // ─── End interview ───────────────────────────────────────────────────────────
-  const endInterview = useCallback(() => {
-    if (completedRef.current || endRequestedRef.current) return;
-    endRequestedRef.current = true;
-    stopRecognition();
-    stopTimer();
-    stopSpeaking();
+  const endInterview = useCallback(
+    (explicitReason, explicitWarnings) => {
+      if (completedRef.current || endRequestedRef.current) return;
+      endRequestedRef.current = true;
+      stopRecognition();
+      stopTimer();
+      stopSpeaking();
 
-    const socket = socketRef.current;
-    if (socket && socket.connected && sessionIdRef.current) {
-      setIsEvaluating(true);
-      socket.emit("interview:end", { sessionId: sessionIdRef.current });
-      // Generous fallback timeout if network disconnects before complete arrives
-      setTimeout(() => {
-        if (phaseRef.current !== "result" && !completedRef.current) {
-          finishInterview(null);
-        }
-      }, 25000);
-    } else {
-      finishInterview(null);
-    }
-  }, [stopRecognition, stopTimer, stopSpeaking, finishInterview]);
+      const finalReason = explicitReason || endReasonRef.current || "Completed: Candidate voluntarily ended the interview";
+      endReasonRef.current = finalReason;
+      const finalWarnings = explicitWarnings || proctoringWarningsRef.current || [];
+
+      const socket = socketRef.current;
+      if (socket && socket.connected && sessionIdRef.current) {
+        setIsEvaluating(true);
+        socket.emit("interview:end", {
+          sessionId: sessionIdRef.current,
+          reason: finalReason,
+          proctoringWarnings: finalWarnings,
+        });
+        // Generous fallback timeout if network disconnects before complete arrives
+        setTimeout(() => {
+          if (phaseRef.current !== "result" && !completedRef.current) {
+            finishInterview(null, finalReason, finalWarnings);
+          }
+        }, 25000);
+      } else {
+        finishInterview(null, finalReason, finalWarnings);
+      }
+    },
+    [stopRecognition, stopTimer, stopSpeaking, finishInterview]
+  );
 
   // Wire endInterview into ref so startTimer can call it
   useEffect(() => {
@@ -1297,28 +1414,19 @@ export default function AIInterview() {
     }
   }, [stopTimer, stopRecognition, stopCamera, stopSpeaking, fetchPastInterviews]);
 
-  // ─── Escape Key & Fullscreen Exit Handler (Stop & Return to Setup Screen) ─
+  // ─── Fullscreen & Focus Monitor ───────────────────────────────────────────
   useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === "Escape" && phaseRef.current === "live") {
-        e.preventDefault();
-        resetInterview();
-      }
-    };
-
     const handleFullscreenChange = () => {
-      if (typeof document !== "undefined" && !document.fullscreenElement && phaseRef.current === "live") {
-        resetInterview();
+      if (typeof document !== "undefined" && !document.fullscreenElement && phaseRef.current === "live" && !endRequestedRef.current) {
+        triggerProctoringWarning("TAB_SWITCH", "Fullscreen mode exited during live interview! Please stay in fullscreen.");
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
     };
-  }, [resetInterview]);
+  }, [triggerProctoringWarning]);
 
   // ─── Cleanup on unmount ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -1627,7 +1735,11 @@ export default function AIInterview() {
               <button
                 type="button"
                 className="ai-mic-btn ai-end-btn"
-                onClick={endInterview}
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to end and submit your interview? Your responses will be evaluated.")) {
+                    endInterview("Completed: Candidate voluntarily ended the interview");
+                  }
+                }}
               >
                 End Interview
               </button>
@@ -1891,8 +2003,71 @@ export default function AIInterview() {
       {phase === "result" && (() => {
         const overallScore = result?.scorecard?.overallScore ?? 0;
         const scoreTier = overallScore >= 70 ? "pass" : overallScore >= 40 ? "warn" : "fail";
+        const reasonStr = (result?.endReason || "").toLowerCase();
+        const isAutoSubmitted = reasonStr.includes("auto-submit") || reasonStr.includes("proctoring") || reasonStr.includes("warning");
+        const isTimeExpired = reasonStr.includes("time expired") || reasonStr.includes("duration");
+        const warningsList = result?.proctoringWarnings || [];
+
         return (
           <div className="ai-result-wrapper">
+
+            {/* ── INTERVIEW SUBMISSION & STATUS REPORT BANNER ── */}
+            <div className={`ai-report-status-banner ${isAutoSubmitted ? "banner-terminated" : isTimeExpired ? "banner-time-expired" : "banner-completed"}`}>
+              <div className="status-banner-left">
+                <div className={`status-banner-icon-box ${isAutoSubmitted ? "icon-box-terminated" : isTimeExpired ? "icon-box-warn" : "icon-box-success"}`}>
+                  {isAutoSubmitted ? (
+                    <ShieldAlert size={26} />
+                  ) : isTimeExpired ? (
+                    <Timer size={26} />
+                  ) : (
+                    <CheckCircle2 size={26} />
+                  )}
+                </div>
+                <div className="status-banner-text">
+                  <div className="status-banner-headline">
+                    {isAutoSubmitted
+                      ? "Interview Auto-Submitted: Proctoring Violations Limit Reached"
+                      : isTimeExpired
+                        ? "Interview Auto-Submitted: Session Time Limit Reached"
+                        : "Interview Successfully Completed & Evaluated"}
+                  </div>
+                  <div className="status-banner-desc">
+                    <span className="status-banner-desc-label">Termination & Submission Reason:</span>{" "}
+                    <span className="status-banner-desc-text">
+                      {result?.endReason || (overallScore > 0 ? "Completed: All interview questions evaluated." : "Interview session concluded.")}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {isAutoSubmitted && (
+                <div className="status-banner-pill-danger">
+                  <AlertTriangle size={15} /> 3 Strikes Auto-Submit
+                </div>
+              )}
+            </div>
+
+            {/* Proctoring Audit Log if any strikes/warnings were recorded */}
+            {warningsList.length > 0 && (
+              <div className="ai-proctoring-audit-card">
+                <div className="ai-proctoring-audit-header">
+                  <ShieldAlert size={18} className="audit-alert-icon" />
+                  <span className="audit-header-title">Proctoring AI Audit Log & Incident Details</span>
+                  <span className="audit-count-badge">
+                    {warningsList.length} Incident{warningsList.length !== 1 ? "s" : ""} Recorded
+                  </span>
+                </div>
+                <div className="ai-proctoring-audit-list">
+                  {warningsList.map((warn, wIdx) => (
+                    <div key={wIdx} className="ai-proctoring-audit-row">
+                      <span className="audit-strike-badge">Strike {warn.warningCount || (wIdx + 1)}</span>
+                      <span className="audit-type-tag">{warn.type?.replace(/_/g, " ")}</span>
+                      <span className="audit-msg-text">{warn.message}</span>
+                      <span className="audit-timestamp">{warn.timestamp}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* ── HERO SCORECARD ── */}
             <div className="ai-report-hero">

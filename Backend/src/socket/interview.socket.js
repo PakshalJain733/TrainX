@@ -5,6 +5,7 @@ import {
   generateFollowUpQuestion,
   evaluateAnswer,
   generateScorecard,
+  pickFallbackQuestion,
 } from '../ai/interview.ai.js';
 import { ingestDocument, clearOwnerKnowledge } from '../services/rag/rag.service.js';
 import { createInterviewSessionModel } from '../models/interview.model.js';
@@ -52,13 +53,20 @@ function getOrCreateSession(sessionId, payload) {
   return session;
 }
 
-async function finalizeSession(io, socket, session, reason = 'completed') {
+async function finalizeSession(io, socket, session, reason = 'completed', explicitReason = '') {
   if (session.status === 'completed' || session.status === 'ended') {
     socket.emit('interview:error', { message: 'This interview has already ended.' });
     return null;
   }
   session.status = reason === 'ended' ? 'ended' : 'completed';
   session.endedAt = Date.now();
+
+  const finalEndReason =
+    explicitReason ||
+    session.endReason ||
+    (reason === 'ended' ? 'Ended by Candidate' : 'Completed: All Questions Answered');
+
+  const proctoringWarnings = session.proctoringWarnings || [];
 
   const scorecard = await generateScorecard({
     role: session.role,
@@ -95,6 +103,8 @@ async function finalizeSession(io, socket, session, reason = 'completed') {
     questionsAnswered: session.evaluationHistory.length,
     scorecard: finalReport,
     evaluationHistory: session.evaluationHistory,
+    endReason: finalEndReason,
+    proctoringWarnings,
   };
 
   socket.emit('interview:complete', summary);
@@ -133,6 +143,8 @@ async function finalizeSession(io, socket, session, reason = 'completed') {
         grade: finalReport.grade,
         evaluationHistory: session.evaluationHistory,
         scorecard: finalReport,
+        endReason: finalEndReason,
+        proctoringWarnings,
       },
     });
   } catch (err) {
@@ -348,35 +360,38 @@ export function initInterviewSocket(httpServer) {
         session.currentIndex += 1;
 
         if (session.currentIndex >= session.totalQuestions) {
-          await finalizeSession(io, socket, session, 'completed');
+          await finalizeSession(io, socket, session, 'completed', 'Completed: All Questions Answered');
           return;
         }
 
-        if (!followUp) {
-          socket.emit('interview:error', {
-            message: 'Could not generate the next question. Ending the interview with your results so far.',
-          });
-          await finalizeSession(io, socket, session, 'completed');
+        let nextQuestion = followUp;
+        if (!nextQuestion) {
+          console.warn(`[Interview Socket] Next question generation returned null. Using fallback question for topic: ${session.topic}`);
+          nextQuestion = pickFallbackQuestion(session.id, session.topic, session.askedTopics);
+        }
+
+        if (!nextQuestion) {
+          await finalizeSession(io, socket, session, 'completed', 'Completed: All Available Questions Answered');
           return;
         }
 
-        session.priorQa.push({ question: followUp.question, answer: null, score: null });
-        session.askedTopics.push(followUp.topic);
+        session.priorQa.push({ question: nextQuestion.question, answer: null, score: null });
+        session.askedTopics.push(nextQuestion.topic);
 
         socket.emit('interview:question', {
           sessionId: session.id,
           index: session.evaluationHistory.length + 1,
           total: session.totalQuestions,
-          question: followUp.question,
-          topic: followUp.topic,
-          hint: followUp.hint,
+          question: nextQuestion.question,
+          topic: nextQuestion.topic,
+          hint: nextQuestion.hint,
         });
       } catch (err) {
         socket.emit('interview:error', { message: `Answer processing failed: ${err.message}` });
       }
     });
 
-    socket.on('interview:end', async ({ sessionId } = {}) => {
+    socket.on('interview:end', async ({ sessionId, reason, proctoringWarnings } = {}) => {
       try {
         const key = normalizeSessionId(sessionId);
         const session = activeSessions.get(key);
@@ -384,9 +399,26 @@ export function initInterviewSocket(httpServer) {
           socket.emit('interview:error', { message: 'Session not found. Please restart.' });
           return;
         }
-        await finalizeSession(io, socket, session, 'ended');
+        if (reason) session.endReason = reason;
+        if (Array.isArray(proctoringWarnings) && proctoringWarnings.length > 0) {
+          session.proctoringWarnings = proctoringWarnings;
+        }
+        await finalizeSession(io, socket, session, 'ended', reason);
       } catch (err) {
         socket.emit('interview:error', { message: `Failed to end interview: ${err.message}` });
+      }
+    });
+
+    socket.on('interview:flag', ({ sessionId, type, message, timestamp } = {}) => {
+      const key = normalizeSessionId(sessionId);
+      const session = activeSessions.get(key);
+      if (session) {
+        if (!session.proctoringWarnings) session.proctoringWarnings = [];
+        session.proctoringWarnings.push({
+          type: type || 'FLAG',
+          message: message || 'Proctoring violation',
+          timestamp: timestamp || new Date().toLocaleTimeString(),
+        });
       }
     });
 

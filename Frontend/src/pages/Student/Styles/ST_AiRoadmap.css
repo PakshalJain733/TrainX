@@ -2246,27 +2246,206 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.roadmap-theory-subhead {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 800;
-  color: #1e293b;
+.roadmap-theory-subcard:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Curriculum Basic-to-Core Learning Track Bar ── */
+.roadmap-theory-level-bar {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.roadmap-theory-level-title {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #1e293b;
 }
 
-.roadmap-theory-takeaway {
-  background: #fffbeb;
-  border: 1px solid #fcd34d;
-  color: #92400e;
-  padding: 8px 12px;
+.roadmap-theory-level-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roadmap-theory-step-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
-  margin-top: 4px;
+  border: 1px solid transparent;
+}
+
+.roadmap-theory-step-pill .step-num {
+  font-size: 10px;
+  font-weight: 900;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.roadmap-theory-step-pill.step-lvl-1 {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+.roadmap-theory-step-pill.step-lvl-1 .step-num {
+  background: #059669;
+  color: #ffffff;
+}
+
+.roadmap-theory-step-pill.step-lvl-2 {
+  background: #f0f9ff;
+  color: #0284c7;
+  border-color: #bae6fd;
+}
+.roadmap-theory-step-pill.step-lvl-2 .step-num {
+  background: #0284c7;
+  color: #ffffff;
+}
+
+.roadmap-theory-step-pill.step-lvl-3 {
+  background: #eef2ff;
+  color: #4338ca;
+  border-color: #c7d2fe;
+}
+.roadmap-theory-step-pill.step-lvl-3 .step-num {
+  background: #6366f1;
+  color: #ffffff;
+}
+
+.roadmap-theory-step-pill.step-lvl-4 {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}
+.roadmap-theory-step-pill.step-lvl-4 .step-num {
+  background: #d97706;
+  color: #ffffff;
+}
+
+.roadmap-theory-step-arrow {
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+/* ── Theory Subcards & Level Badges ── */
+.roadmap-theory-subcard-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.roadmap-theory-level-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.roadmap-theory-level-pill.lvl-emerald {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.roadmap-theory-level-pill.lvl-sky {
+  background: #f0f9ff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+}
+
+.roadmap-theory-level-pill.lvl-indigo {
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+}
+
+.roadmap-theory-level-pill.lvl-amber {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+/* Subcard Borders with Level Accent */
+.roadmap-theory-subcard.lvl-emerald-card {
+  border-left: 4px solid #10b981;
+}
+
+.roadmap-theory-subcard.lvl-sky-card {
+  border-left: 4px solid #0284c7;
+}
+
+.roadmap-theory-subcard.lvl-indigo-card {
+  border-left: 4px solid #6366f1;
+}
+
+.roadmap-theory-subcard.lvl-amber-card {
+  border-left: 4px solid #f59e0b;
+}
+
+/* Level Bullet Numbers */
+.roadmap-point-bullet.lvl-emerald-bullet {
+  color: #059669;
+}
+
+.roadmap-point-bullet.lvl-sky-bullet {
+  color: #0284c7;
+}
+
+.roadmap-point-bullet.lvl-indigo-bullet {
+  color: #6366f1;
+}
+
+.roadmap-point-bullet.lvl-amber-bullet {
+  color: #d97706;
+}
+
+/* Level Takeaways */
+.roadmap-theory-takeaway.lvl-emerald-takeaway {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.roadmap-theory-takeaway.lvl-sky-takeaway {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  color: #075985;
+}
+
+.roadmap-theory-takeaway.lvl-indigo-takeaway {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  color: #3730a3;
+}
+
+.roadmap-theory-takeaway.lvl-amber-takeaway {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
 }
 
 /* Points-wise Theory Styles */
@@ -3109,6 +3288,121 @@
   align-items: center;
   gap: 6px;
   box-shadow: 0 1px 2px rgba(124, 58, 237, 0.06);
+}
+
+/* ── Regenerate AI Theory Button ── */
+.roadmap-refresh-theory-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.roadmap-refresh-theory-btn:hover:not(:disabled) {
+  background: #eef2ff;
+  color: #4f46e5;
+  border-color: #a5b4fc;
+}
+
+.roadmap-refresh-theory-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Live AI Theory Loading Box ── */
+.roadmap-theory-loading {
+  text-align: center;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 18px;
+}
+
+.roadmap-loading-orb-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #fef3c7 0%, #ede9fe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+  animation: aiOrbPulse 2s infinite ease-in-out;
+}
+
+@keyframes aiOrbPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 30px rgba(99, 102, 241, 0.35);
+  }
+}
+
+.roadmap-spin-pulse {
+  animation: aiSpinSlow 6s linear infinite;
+}
+
+@keyframes aiSpinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.roadmap-loading-steps-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.roadmap-load-step-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.roadmap-retry-ai-btn {
+  margin-top: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
+  transition: all 0.15s ease;
+}
+
+.roadmap-retry-ai-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.45);
 }
 
 /* Clean Roadmap Content & Section Classes */
