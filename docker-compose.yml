@@ -1,0 +1,81 @@
+services:
+  # MySQL Database Service
+  mysql:
+    image: mysql:8.0
+    container_name: trainx-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-trainx_secure_pass_2026}
+      MYSQL_DATABASE: ${DB_NAME:-training_portal_db}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - trainx-network
+
+  # Backend Node.js API Service
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: trainx-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      PORT: 5000
+      NODE_ENV: production
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-trainx_secure_pass_2026}
+      DB_NAME: ${DB_NAME:-training_portal_db}
+      DB_SSL: "false"
+      JWT_SECRET: ${JWT_SECRET:-trainx_super_secret_jwt_key_2026}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+      BREVO_SENDER_NAME: ${BREVO_SENDER_NAME:-TrainX}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gemini-2.5-flash}
+      Groq_AI_API_KEY: ${Groq_AI_API_KEY:-}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@trainingportal.com}
+      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-admin123}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+    ports:
+      - "5000:5000"
+    volumes:
+      - backend_uploads:/app/uploads
+      - /var/run/docker.sock:/var/run/docker.sock # Allows containerized code compilation
+    networks:
+      - trainx-network
+
+  # Frontend Nginx Web Service
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    container_name: trainx-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - trainx-network
+
+volumes:
+  mysql_data:
+  backend_uploads:
+
+networks:
+  trainx-network:
+    driver: bridge

@@ -707,18 +707,6 @@ function Register() {
 
   return (
     <div className="register-page">
-      {/* Decorative Background Shapes */}
-      <div className="bg-shape circle1"></div>
-      <div className="bg-shape circle2"></div>
-      <div className="bg-shape circle3"></div>
-      <div className="bg-shape circle4"></div>
-      <div className="bg-shape circle5"></div>
-      <div className="bg-shape circle6"></div>
-      <div className="bg-shape blob1"></div>
-      <div className="bg-shape blob2"></div>
-      <div className="bg-shape ring1"></div>
-      <div className="bg-shape ring2"></div>
-
       <div className="register-card">
         {/* Horizontal Brand Banner */}
         <div className="register-header-banner">

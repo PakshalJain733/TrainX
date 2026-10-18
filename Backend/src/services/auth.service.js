@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import speakeasy from 'speakeasy';
 import QRCode from 'qrcode';
+import { getJwtSecret } from '../config/jwt.js';
 import {
   findUserByEmailOrMobile,
   findUserById,
@@ -132,7 +133,7 @@ const generatePreauthToken = (user) => jwt.sign({
   tokenType: PREAUTH_TOKEN_TYPE,
   purpose: PREAUTH_PURPOSE,
   jti: randomUUID(),
-}, process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal', {
+}, getJwtSecret(), {
   expiresIn: PREAUTH_TOKEN_TTL,
 });
 
@@ -214,7 +215,7 @@ const decodePreauthToken = (token) => {
 
   let decoded;
   try {
-    decoded = jwt.verify(normalizedToken, process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal');
+    decoded = jwt.verify(normalizedToken, getJwtSecret());
   } catch {
     throw createAuthError('Invalid or expired temporary authentication token.', 401);
   }

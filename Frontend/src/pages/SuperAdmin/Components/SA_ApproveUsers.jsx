@@ -192,7 +192,7 @@ export default function SuperAdminApproveUsers() {
             <div className="sa-approve-stat-sub">Awaiting Super Admin review</div>
           </div>
           <div className="sa-approve-stat-icon sa-icon-amber">
-            <Clock size={24} />
+            <Clock size={18} />
           </div>
         </div>
 
@@ -203,7 +203,7 @@ export default function SuperAdminApproveUsers() {
             <div className="sa-approve-stat-sub">Campus administrative accounts</div>
           </div>
           <div className="sa-approve-stat-icon sa-icon-blue">
-            <Building2 size={24} />
+            <Building2 size={18} />
           </div>
         </div>
 
@@ -214,7 +214,7 @@ export default function SuperAdminApproveUsers() {
             <div className="sa-approve-stat-sub">Colleges requesting access</div>
           </div>
           <div className="sa-approve-stat-icon sa-icon-emerald">
-            <ShieldCheck size={24} />
+            <ShieldCheck size={18} />
           </div>
         </div>
       </div>

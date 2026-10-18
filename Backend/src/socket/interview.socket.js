@@ -1,5 +1,6 @@
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/jwt.js';
 import {
   generateOpeningQuestion,
   generateFollowUpQuestion,
@@ -176,19 +177,10 @@ export function initInterviewSocket(httpServer) {
       if (!token) return next(new Error('Authentication token required'));
 
       let decoded = null;
-      const candidateSecrets = [
-        process.env.JWT_SECRET,
-        'dev_jwt_secret_key_trainx_2026_super_secret',
-        'trainx_dev_secret_2026_ganesh_shinde_training_portal',
-      ].filter(Boolean);
-
-      for (const secret of candidateSecrets) {
-        try {
-          decoded = jwt.verify(token, secret);
-          if (decoded) break;
-        } catch (e) {
-          // try next secret
-        }
+      try {
+        decoded = jwt.verify(token, getJwtSecret());
+      } catch (err) {
+        decoded = null;
       }
 
       if (!decoded && process.env.NODE_ENV !== 'production') {

@@ -46,7 +46,12 @@
   gap: 10px;
   padding-bottom: 4px;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.maintenancecontrols-categories-wrap::-webkit-scrollbar {
+  display: none;
 }
 
 .maintenancecontrols-category-pill {

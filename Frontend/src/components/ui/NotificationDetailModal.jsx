@@ -52,7 +52,7 @@ export default function NotificationDetailModal({
 
   return createPortal(
     <div className="notif-modal-overlay" onClick={onClose}>
-      <div className="notif-modal-card" onClick={(e) => e.stopPropagation()}>
+      <div className="notif-modal-card" role="dialog" aria-modal="true" aria-labelledby="notif-modal-heading" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="notif-modal-header">
           <div className="notif-modal-header-left">
@@ -71,10 +71,10 @@ export default function NotificationDetailModal({
                   <span className="notif-modal-pill target">🎯 {notification.target}</span>
                 )}
               </div>
-              <h3 className="notif-modal-title">{notification.title}</h3>
+              <h3 id="notif-modal-heading" className="notif-modal-title">{notification.title}</h3>
             </div>
           </div>
-          <button className="notif-modal-close-btn" onClick={onClose} title="Close">
+          <button className="notif-modal-close-btn" onClick={onClose} title="Close" aria-label="Close notification dialog">
             <X size={18} />
           </button>
         </div>

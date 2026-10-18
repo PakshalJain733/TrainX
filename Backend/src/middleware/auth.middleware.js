@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { sendError } from '../utils/response.js';
+import { getJwtSecret } from '../config/jwt.js';
 
 export const authenticateToken = (req, res, next) => {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || req.headers['x-access-token'] || req.headers['token'];
@@ -22,7 +23,7 @@ export const authenticateToken = (req, res, next) => {
     return sendError(res, 'Authentication required. Please log in.', 401);
   }
 
-  const jwtSecret = process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal';
+  const jwtSecret = getJwtSecret();
 
   jwt.verify(token, jwtSecret, (err, decodedUser) => {
     if (err) {
@@ -76,7 +77,7 @@ export const optionalAuthenticateToken = (req, res, next) => {
     return next();
   }
 
-  const jwtSecret = process.env.JWT_SECRET || 'trainx_dev_secret_2026_ganesh_shinde_training_portal';
+  const jwtSecret = getJwtSecret();
 
   jwt.verify(token, jwtSecret, (err, decodedUser) => {
     if (err || !decodedUser || decodedUser.tokenType === 'preauth' || decodedUser.purpose === 'totp') {

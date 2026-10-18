@@ -264,7 +264,7 @@ export default function CoordinatorStudents() {
     const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
     apiFetch(`/coordinator/students${queryParam}`)
       .then((res) => {
-        let fetched = [];
+        let fetched;
         if (res && res.data && Array.isArray(res.data)) {
           fetched = res.data;
         } else if (res && res.data && Array.isArray(res.data.students)) {

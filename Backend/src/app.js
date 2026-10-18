@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/auth.routes.js';
 import studentRoutes from './routes/student.routes.js';
 import adminRoutes from './routes/admin.routes.js';
@@ -128,9 +130,48 @@ app.options('*', (req, res) => {
   }
   res.status(204).end();
 });
+
+// Production Security Headers via Helmet
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false, // Allows Vite HMR, custom CDNs, and Google Fonts
+    frameguard: { action: 'deny' },
+    xContentTypeOptions: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(apiMetricsMiddleware);
+
+// Security Rate Limiters
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 auth requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many authentication attempts from this IP. Please try again after 15 minutes.' },
+});
+
+export const aiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 120, // Limit each IP to 120 AI operations per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'AI rate limit reached. Please wait a few moments before trying again.' },
+});
+
+// HTML escaping helper to prevent Reflected XSS
+const escapeHtml = (unsafeStr) => {
+  return String(unsafeStr || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
 
 // Serve uploaded files statically with path resolution fallback
 const uploadPaths = [
@@ -140,8 +181,11 @@ const uploadPaths = [
 ];
 
 const handleUploadsFile = (req, res, next) => {
-  const filename = req.params.filename || req.params[0];
-  if (!filename) return next();
+  const rawFilename = req.params.filename || req.params[0];
+  if (!rawFilename) return next();
+
+  // Prevent path traversal attacks
+  const filename = path.basename(rawFilename);
 
   for (const uploadDir of uploadPaths) {
     const fullPath = path.join(uploadDir, filename);
@@ -150,12 +194,23 @@ const handleUploadsFile = (req, res, next) => {
     }
   }
 
-  // If file not found on disk, return a clean HTML notice page instead of JSON 404
-  res.status(200).send(`
+  // If API / JSON client, return standard 404 JSON response
+  if (req.accepts('json') && !req.accepts('html')) {
+    return res.status(404).json({
+      success: false,
+      message: 'The requested document or uploaded file was not found.',
+      filename,
+    });
+  }
+
+  // For browser navigation, return a sanitized HTML notice page (XSS safe)
+  const safeFilename = escapeHtml(filename);
+  res.status(404).send(`
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Document File Notice</title>
       <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; }
@@ -171,7 +226,7 @@ const handleUploadsFile = (req, res, next) => {
         <div class="icon">📄</div>
         <h2>Document Unavailable</h2>
         <p>The uploaded file is not stored on local disk or has been replaced. Please re-upload the document or select an active file.</p>
-        <div class="badge">${filename}</div>
+        <div class="badge">${safeFilename}</div>
       </div>
     </body>
     </html>
@@ -201,7 +256,7 @@ app.use('/api/v1/system', systemHealthRoutes);
 app.use('/api/system/health', systemHealthRoutes);
 
 // Mount Module Routes under /api/v1 (Section 11)
-app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/auth', authLimiter, authRoutes);
 app.use('/api/v1', authRoutes);
 app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/student', studentRoutes);
@@ -217,9 +272,9 @@ app.use('/api/v1/assessments', assessmentRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);
 app.use('/api/v1/milestones', milestoneRoutes);
 app.use('/api/v1/leaderboards', leaderboardRoutes);
-app.use('/api/v1/roadmaps', roadmapRoutes);
-app.use('/api/v1/roadmap', roadmapRoutes);
-app.use('/api/v1/interviews', interviewRoutes);
+app.use('/api/v1/roadmaps', aiLimiter, roadmapRoutes);
+app.use('/api/v1/roadmap', aiLimiter, roadmapRoutes);
+app.use('/api/v1/interviews', aiLimiter, interviewRoutes);
 app.use('/api/v1/skill-gaps', skillGapRoutes);
 app.use('/api/v1/skill-gap', skillGapRoutes);
 app.use('/api/v1/interventions', interventionRoutes);

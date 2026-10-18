@@ -112,7 +112,9 @@
 .mentor-kpi-grid {
   display: grid;
   grid-template-columns: repeat(1, minmax(0, 1fr));
-  gap: 16px;
+  gap: var(--gap-sections, 20px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {
@@ -126,38 +128,54 @@
 @media (min-width: 640px) {
   .mentor-kpi-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 }
 
 @media (min-width: 1024px) {
   .mentor-kpi-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--gap-sections, 20px);
   }
 }
 
 .mentor-kpi-card {
   background: #ffffff;
-  padding: 20px;
-  border-radius: 16px;
+  padding: var(--stat-card-padding, 16px 18px);
+  min-height: var(--stat-card-min-height, 120px);
+  max-height: 130px;
+  border-radius: var(--stat-card-radius, 12px);
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.mentor-kpi-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
 }
 
 .mentor-kpi-label {
-  font-size: 12px;
+  font-size: var(--stat-label-size, 11.5px);
   color: #64748b;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   margin: 0;
 }
 
 .mentor-kpi-value {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: var(--stat-number-size, 26px);
+  font-weight: var(--stat-number-weight, 800);
   color: #0f172a;
   margin: 4px 0 0 0;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 
 .mentor-kpi-sub {

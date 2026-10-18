@@ -19,47 +19,47 @@ function StatsCard({ label, value, change, trend = 'up', icon = 'Building2', the
 
   const themeConfig = {
     indigo: {
-      accent: 'linear-gradient(90deg, #4f46e5 0%, #6366f1 100%)',
-      iconBg: 'linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%)',
+      accent: '#4f46e5',
+      iconBg: '#eef2ff',
       iconColor: '#4338ca',
       iconBorder: '#c7d2fe',
-      iconShadow: '0 4px 12px rgba(79, 70, 229, 0.12)',
+      iconShadow: 'none',
       pillBg: '#eef2ff',
       pillColor: '#3730a3',
       pillBorder: '#c7d2fe',
       className: 'stat-card-indigo'
     },
     emerald: {
-      accent: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-      iconBg: 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)',
+      accent: '#10b981',
+      iconBg: '#ecfdf5',
       iconColor: '#047857',
       iconBorder: '#a7f3d0',
-      iconShadow: '0 4px 12px rgba(16, 185, 129, 0.12)',
+      iconShadow: 'none',
       pillBg: '#ecfdf5',
       pillColor: '#065f46',
       pillBorder: '#a7f3d0',
       className: 'stat-card-emerald'
     },
     purple: {
-      accent: 'linear-gradient(90deg, #a855f7 0%, #7c3aed 100%)',
-      iconBg: 'linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)',
+      accent: '#8b5cf6',
+      iconBg: '#f5f3ff',
       iconColor: '#6d28d9',
       iconBorder: '#ddd6fe',
-      iconShadow: '0 4px 12px rgba(124, 58, 237, 0.12)',
-      pillBg: '#f3e8ff',
+      iconShadow: 'none',
+      pillBg: '#f5f3ff',
       pillColor: '#5b21b6',
       pillBorder: '#ddd6fe',
       className: 'stat-card-purple'
     },
     sky: {
-      accent: 'linear-gradient(90deg, #0ea5e9 0%, #0284c7 100%)',
-      iconBg: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
+      accent: '#0ea5e9',
+      iconBg: '#f0f9ff',
       iconColor: '#0369a1',
-      iconBorder: '#7dd3fc',
-      iconShadow: '0 4px 12px rgba(14, 165, 233, 0.12)',
-      pillBg: '#e0f2fe',
+      iconBorder: '#bae6fd',
+      iconShadow: 'none',
+      pillBg: '#f0f9ff',
       pillColor: '#075985',
-      pillBorder: '#7dd3fc',
+      pillBorder: '#bae6fd',
       className: 'stat-card-sky'
     }
   };

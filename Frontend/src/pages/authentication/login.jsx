@@ -619,28 +619,12 @@ function Login() {
 
   return (
     <div className="login-page">
-      {/* Background Shapes */}
-      <div className="login-bg-shape login-circle1"></div>
-      <div className="login-bg-shape login-circle2"></div>
-      <div className="login-bg-shape login-circle3"></div>
-      <div className="login-bg-shape login-circle4"></div>
-      <div className="login-bg-shape login-circle5"></div>
-      <div className="login-bg-shape login-circle6"></div>
-
       <div className="login-wrapper-outer">
         <div className="login-wrapper">
-          {/* Left Panel - Minimal Premium TrainX Logo Creation Animation */}
+          {/* Left Panel - Minimal Premium TrainX Logo Presentation */}
           <div className="lp2-panel">
             {/* Subtle Ambient Radial Glow */}
             <div className="tx-ambient-radial-glow"></div>
-
-            {/* Minimal Floating Ambient Energy Particles */}
-            <div className="tx-micro-particle p1"></div>
-            <div className="tx-micro-particle p2"></div>
-            <div className="tx-micro-particle p3"></div>
-            <div className="tx-micro-particle p4"></div>
-            <div className="tx-micro-particle p5"></div>
-            <div className="tx-micro-particle p6"></div>
 
             {/* Top Eyebrow Section */}
             <div className="tx-hero-header">

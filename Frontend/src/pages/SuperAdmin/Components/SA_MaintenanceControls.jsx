@@ -292,7 +292,9 @@ export default function MaintenanceControls() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val">{totalModules} Systems</h3>
+            <h3 className="sa-stats-val">
+              {totalModules} <span className="sa-stats-unit">Systems</span>
+            </h3>
             <p className="sa-stats-change">
               <span className="sa-stats-change-text--up">Full feature inventory</span>
             </p>
@@ -307,7 +309,9 @@ export default function MaintenanceControls() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val sa-stats-val--emerald">{activeCount} Systems</h3>
+            <h3 className="sa-stats-val sa-stats-val--emerald">
+              {activeCount} <span className="sa-stats-unit">Systems</span>
+            </h3>
             <p className="sa-stats-change">
               <span className="sa-stats-change-text--up">
                 {((activeCount / totalModules) * 100).toFixed(0)}% Operational
@@ -324,7 +328,9 @@ export default function MaintenanceControls() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val text-amber-600">{maintenanceCount} Systems</h3>
+            <h3 className="sa-stats-val text-amber-600">
+              {maintenanceCount} <span className="sa-stats-unit">Systems</span>
+            </h3>
             <p className="sa-stats-change">
               <span className="sa-stats-change-text--up">Toggled OFF</span>
             </p>
@@ -339,7 +345,9 @@ export default function MaintenanceControls() {
             </div>
           </div>
           <div className="sa-stats-card-body">
-            <h3 className="sa-stats-val text-purple-600">{uspCount} Key Features</h3>
+            <h3 className="sa-stats-val text-purple-600">
+              {uspCount} <span className="sa-stats-unit">Key Features</span>
+            </h3>
             <p className="sa-stats-change">
               <span className="sa-stats-change-text--up">AI Roadmaps, Interviews, etc.</span>
             </p>
