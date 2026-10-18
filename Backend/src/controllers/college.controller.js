@@ -50,8 +50,8 @@ export const getColleges = async (req, res, next) => {
     let sql = `
       SELECT 
         c.*,
-        c.contact_email AS adminEmail,
-        c.admin_name AS adminName,
+        COALESCE(NULLIF(c.contact_email, ''), (SELECT a.email FROM users a WHERE a.college_id = c.id AND a.role = 'college_admin' ORDER BY a.id ASC LIMIT 1)) AS adminEmail,
+        COALESCE(NULLIF(c.admin_name, ''), (SELECT a.name FROM users a WHERE a.college_id = c.id AND a.role = 'college_admin' ORDER BY a.id ASC LIMIT 1)) AS adminName,
         (SELECT COUNT(*) FROM departments d WHERE d.college_id = c.id) AS department_count,
         (SELECT COUNT(*) FROM users u WHERE u.college_id = c.id AND u.role = 'student') AS student_count
       FROM colleges c
