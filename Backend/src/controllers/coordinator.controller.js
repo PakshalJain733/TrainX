@@ -255,11 +255,11 @@ export const getCoordinatorStudents = async (req, res, next) => {
                WHERE iv.user_id = u.id
              ) as avg_interview_score,
              (
-               SELECT r.title
-               FROM roadmaps r
-               WHERE r.student_id = u.id
-               ORDER BY r.id DESC
-               LIMIT 1
+               SELECT COALESCE(r.goal_name, r.target_role, r.career_track, 'Fullstack Web Development')
+                FROM roadmaps r
+                WHERE (r.user_id = u.id OR r.student_id = u.id)
+                ORDER BY r.id DESC
+                LIMIT 1
              ) as roadmap_title
        FROM users u
        JOIN students s ON u.id = s.user_id
@@ -355,31 +355,33 @@ export const getCoordinatorMentors = async (req, res, next) => {
 
     let sql = `
       SELECT u.id, u.name, u.email, u.mobile_number, u.target_track as specialization,
-             d.name as department,
+             COALESCE(MAX(d.name), 'Computer Engineering') as department,
              GROUP_CONCAT(DISTINCT b.name SEPARATOR ', ') as assignedBatch,
              COALESCE((
                SELECT COUNT(DISTINCT msa.student_id)
                FROM mentor_student_assignments msa
                WHERE msa.mentor_id = u.id
-             ), (
-               SELECT COUNT(DISTINCT s.id)
-               FROM students s
-               JOIN mentor_assignments ma ON s.batch_id = ma.batch_id
-               WHERE ma.mentor_id = u.id
              ), 0) as studentsCount
       FROM users u
-      LEFT JOIN mentor_assignments ma ON u.id = ma.mentor_id
-      LEFT JOIN batches b ON ma.batch_id = b.id
+      LEFT JOIN batches b ON (
+        b.mentor = u.name 
+        OR b.trainer = u.name 
+        OR b.id IN (SELECT msa2.batch_id FROM mentor_student_assignments msa2 WHERE msa2.mentor_id = u.id)
+      )
       LEFT JOIN departments d ON b.department_id = d.id
-      WHERE u.college_id = ? AND u.role = 'mentor'`;
+      WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'mentor'`;
     const params = [scope.collegeId];
     if (scope.hasDept) {
-      sql += ` AND (b.department_id IN (${scope.deptList}) OR u.id IN (
-                SELECT DISTINCT ma2.mentor_id
-                FROM mentor_assignments ma2
-                JOIN batches b2 ON ma2.batch_id = b2.id
-                WHERE b2.college_id = ? AND b2.department_id IN (${scope.deptList})))`;
-      params.push(scope.collegeId);
+      sql += ` AND (
+        b.department_id IN (${scope.deptList})
+        OR u.id IN (
+          SELECT DISTINCT msa3.mentor_id 
+          FROM mentor_student_assignments msa3
+          JOIN batches b3 ON msa3.batch_id = b3.id
+          WHERE b3.department_id IN (${scope.deptList})
+        )
+        OR b.id IS NULL
+      )`;
     }
     sql += ` GROUP BY u.id ORDER BY u.name ASC`;
 
@@ -410,15 +412,16 @@ export const getCoordinatorMentorStudents = async (req, res, next) => {
       ORDER BY u.name ASC`;
     let students = await query(sql, [id]);
 
-    // 2. Batch assignments
+    // 2. Batch assignments based on batch mentor/trainer
     if (!students || students.length === 0) {
       sql = `
         SELECT u.id, u.name, s.roll_number as rollNo, s.department as department,
                u.is_active as status
         FROM users u
         JOIN students s ON u.id = s.user_id
-        JOIN mentor_assignments ma ON s.batch_id = ma.batch_id
-        WHERE ma.mentor_id = ?
+        JOIN batches b ON s.batch_id = b.id
+        JOIN users m ON (b.mentor = m.name OR b.trainer = m.name)
+        WHERE m.id = ?
         ORDER BY u.name ASC`;
       students = await query(sql, [id]);
     }
@@ -545,8 +548,7 @@ export const getCoordinatorSkillGaps = async (req, res, next) => {
        JOIN users u ON sg.student_id = u.id
        LEFT JOIN students s ON u.id = s.user_id
        LEFT JOIN batches b ON s.batch_id = b.id
-       LEFT JOIN mentor_assignments ma ON b.id = ma.batch_id
-       LEFT JOIN users m ON ma.mentor_id = m.id
+       LEFT JOIN users m ON (b.mentor = m.name OR b.trainer = m.name)
        WHERE sg.college_id = ? AND sg.student_id IS NOT NULL`;
     const rowsParams = [scope.collegeId];
     if (scope.hasDept) {
@@ -659,9 +661,9 @@ export const getCoordinatorLiveSessions = async (req, res, next) => {
       SELECT ls.*, u.name as mentor_name, b.name as batch_name
        FROM live_sessions ls
        LEFT JOIN users u ON ls.mentor_id = u.id
-       LEFT JOIN batches b ON ls.batch_id = b.id
-       WHERE (ls.batch_id IN (SELECT id FROM batches WHERE college_id = ?) OR ls.mentor_id IN (SELECT id FROM users WHERE college_id = ? AND role = 'mentor'))`;
-    const sessionsParams = [scope.collegeId, scope.collegeId];
+       LEFT JOIN batches b ON (ls.batch = b.name OR ls.batch = b.code)
+       WHERE (u.college_id = ? OR u.college_id IS NULL)`;
+    const sessionsParams = [scope.collegeId];
 
     if (filterDate) {
       sessionsSql += ` AND (ls.date = ? OR ls.date IS NULL)`;
@@ -670,26 +672,28 @@ export const getCoordinatorLiveSessions = async (req, res, next) => {
 
     if (scope.hasDept) {
       sessionsSql += ` AND (
-          ls.batch_id IN (SELECT id FROM batches WHERE college_id = ? AND department_id IN (${scope.deptList}))
+          b.department_id IN (${scope.deptList})
+          OR b.department_id IS NULL
+          OR ls.batch = 'All Batches'
           OR ls.mentor_id IN (
-            SELECT DISTINCT ma.mentor_id FROM mentor_assignments ma
-            JOIN batches b2 ON ma.batch_id = b2.id
-            WHERE b2.college_id = ? AND b2.department_id IN (${scope.deptList}))
+            SELECT u2.id FROM users u2
+            LEFT JOIN batches b2 ON (b2.mentor = u2.name OR b2.trainer = u2.name)
+            WHERE b2.department_id IN (${scope.deptList})
+          )
         )`;
-      sessionsParams.push(scope.collegeId, scope.collegeId);
     }
     sessionsSql += ` ORDER BY ls.id DESC`;
 
     const sessions = await query(sessionsSql, sessionsParams);
 
     return sendSuccess(res, 'Live sessions retrieved successfully', {
-      sessions: sessions.map((s) => ({
+      sessions: (sessions || []).map((s) => ({
         id: s.id,
         title: s.title,
         subject: s.subject,
         batch: s.batch_name || s.batch || 'All Batches',
         trainer: s.mentor_name || 'Assigned Faculty',
-        time: `${s.date} ${s.time}`, 
+        time: s.time ? `${s.date || ''} ${s.time}`.trim() : 'Scheduled', 
         meetLink: s.meeting_link || '',
         status: s.status,
       })),

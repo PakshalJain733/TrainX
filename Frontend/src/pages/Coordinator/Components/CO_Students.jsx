@@ -264,7 +264,7 @@ export default function CoordinatorStudents() {
     const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
     apiFetch(`/coordinator/students${queryParam}`)
       .then((res) => {
-        let fetched;
+        let fetched = [];
         if (res && res.data && Array.isArray(res.data)) {
           fetched = res.data;
         } else if (res && res.data && Array.isArray(res.data.students)) {
@@ -276,7 +276,7 @@ export default function CoordinatorStudents() {
         }
 
         // Strict department filter if coordinator department is known
-        if (coordDept && fetched.length > 0) {
+        if (coordDept && Array.isArray(fetched) && fetched.length > 0) {
           const target = coordDept.toLowerCase().trim();
           const deptFiltered = fetched.filter((s) => {
             if (!s.department) return false;
@@ -285,7 +285,7 @@ export default function CoordinatorStudents() {
           });
           setStudents(deptFiltered);
         } else {
-          setStudents(fetched);
+          setStudents(Array.isArray(fetched) ? fetched : []);
         }
       })
       .catch((err) => {
@@ -312,7 +312,8 @@ export default function CoordinatorStudents() {
   };
 
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
+    const list = Array.isArray(students) ? students : [];
+    return list.filter((s) => {
       const matchesSearch =
         (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
         (s.rollNo || s.roll_number || "").toLowerCase().includes(search.toLowerCase()) ||

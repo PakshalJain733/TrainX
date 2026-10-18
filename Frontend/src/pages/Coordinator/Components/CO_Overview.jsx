@@ -430,11 +430,12 @@ export default function CoordinatorOverview() {
       </div>
 
       {/* Dynamic Training Sessions with Date Selection */}
-      <Card className="overview-subcard co-sessions-card">
-        <CardHeader className="overview-card-header-between co-sessions-header">
-          <div className="overview-header-left">
-            <div className="overview-header-icon-wrap co-sessions-icon-wrap">
-              <Activity size={18} className="overview-header-icon co-pulse-icon" />
+      {/* Dynamic Training Sessions with Date Selection */}
+      <div className="co-arena-card co-sessions-card">
+        <div className="co-arena-card-header co-sessions-header">
+          <div className="co-arena-header-left overview-header-left">
+            <div className="co-arena-icon-wrap co-arena-icon-wrap--emerald co-sessions-icon-wrap overview-header-icon-wrap">
+              <Activity size={18} className="co-pulse-icon" />
             </div>
             <div>
               <h3 className="co-arena-header-title">Current Training Sessions</h3>
@@ -494,52 +495,60 @@ export default function CoordinatorOverview() {
               {displaySessions.length} Active Sessions
             </span>
           </div>
-        </CardHeader>
+        </div>
 
         <div className="co-arena-card-body">
-          <div className="co-sessions-grid">
-            {displaySessions.map((session, index) => (
-              <div key={session.id || index} className="co-session-card">
-                {/* Trainer Box Header */}
-                <div className="co-session-trainer-box">
-                  <div className="co-session-trainer-badge">
-                    <User size={12} />
-                    <span>TRAINER</span>
+          {displaySessions.length === 0 ? (
+            <div className="co-risk-empty-box">
+              <Calendar size={32} color="#6366f1" />
+              <h4 className="co-risk-empty-title">No training sessions scheduled for {getDateLabel(selectedDate)}</h4>
+              <p className="co-risk-empty-sub">Use the date controls above to navigate to other days or check department batches.</p>
+            </div>
+          ) : (
+            <div className="co-sessions-grid">
+              {displaySessions.map((session, index) => (
+                <div key={session.id || index} className="co-session-card">
+                  {/* Trainer Box Header */}
+                  <div className="co-session-trainer-box">
+                    <div className="co-session-trainer-badge">
+                      <User size={12} />
+                      <span>TRAINER</span>
+                    </div>
+                    <h4 className="co-session-trainer-name">{session.trainerName}</h4>
                   </div>
-                  <h4 className="co-session-trainer-name">{session.trainerName}</h4>
-                </div>
 
-                {/* Session Main Content with Topic & Dynamic Status */}
-                <div className="co-session-main">
-                  <div className="co-session-status-row">
-                    <span className={`co-session-status-tag ${(session.status || "scheduled").toLowerCase()}`}>
-                      <span className="co-status-dot" />
-                      {session.status || "Scheduled"}
-                    </span>
-                    <span className="co-session-date-tag">
-                      <Calendar size={11} /> {getDateLabel(selectedDate)}
-                    </span>
+                  {/* Session Main Content with Topic & Dynamic Status */}
+                  <div className="co-session-main">
+                    <div className="co-session-status-row">
+                      <span className={`co-session-status-tag ${(session.status || "scheduled").toLowerCase()}`}>
+                        <span className="co-status-dot" />
+                        {session.status || "Scheduled"}
+                      </span>
+                      <span className="co-session-date-tag">
+                        <Calendar size={11} /> {getDateLabel(selectedDate)}
+                      </span>
+                    </div>
+                    <h4 className="co-session-title">{session.topic}</h4>
+                    <p className="co-session-desc">{session.topicDetail || session.description || "Active training module."}</p>
                   </div>
-                  <h4 className="co-session-title">{session.topic}</h4>
-                  <p className="co-session-desc">{session.topicDetail || session.description || "Active training module."}</p>
-                </div>
 
-                {/* Session Footer with Batch & Schedule Time */}
-                <div className="co-session-footer">
-                  <div className="co-session-footer-left">
-                    <User size={13} className="co-session-user-icon" />
-                    <span>{session.batch}</span>
-                  </div>
-                  <div className="co-session-footer-right">
-                    <Clock size={12} />
-                    <span>{session.time}</span>
+                  {/* Session Footer with Batch & Schedule Time */}
+                  <div className="co-session-footer">
+                    <div className="co-session-footer-left">
+                      <User size={13} className="co-session-user-icon" />
+                      <span>{session.batch}</span>
+                    </div>
+                    <div className="co-session-footer-right">
+                      <Clock size={12} />
+                      <span>{session.time}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
-      </Card>
+      </div>
 
       {/* Flagged High Risk Students Audit Arena */}
       <div className="co-arena-card">

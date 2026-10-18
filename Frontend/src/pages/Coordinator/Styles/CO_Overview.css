@@ -1213,18 +1213,51 @@
 
 /* ── Live Sessions Card Header & Date Selection Styles ── */
 .co-sessions-card {
-  margin-top: 16px;
+  margin-top: 20px;
 }
 
 .co-sessions-header {
+  padding: 18px 24px;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+  gap: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  margin-bottom: 0;
+}
+
+.co-sessions-header-left,
+.overview-header-left {
+  display: flex;
+  align-items: center;
   gap: 14px;
+  min-width: 0;
+}
+
+.co-sessions-icon-wrap,
+.overview-header-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.12);
+}
+
+.co-pulse-icon {
+  animation: coPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes coPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(0.92); }
 }
 
 .co-sessions-header-right {
@@ -1232,6 +1265,21 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.co-sessions-count-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 /* Interactive Date Control Container */
@@ -1343,20 +1391,6 @@
 .co-date-today-btn:hover {
   background: #c7d2fe;
   color: #312e81;
-}
-
-.co-sessions-icon-wrap {
-  background: #d1fae5;
-  color: #059669;
-}
-
-.co-pulse-icon {
-  animation: coPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-@keyframes coPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
 }
 
 
