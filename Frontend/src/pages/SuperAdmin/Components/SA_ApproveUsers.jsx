@@ -168,18 +168,6 @@ export default function SuperAdminApproveUsers() {
             Review and approve newly registered college admins, department heads, and institutional representatives before granting them portal access.
           </p>
         </div>
-
-        <div className="sa-approve-header-actions">
-          <button
-            type="button"
-            onClick={fetchPendingUsers}
-            className="sa-approve-refresh-btn"
-            disabled={loading}
-          >
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-            <span>Refresh List</span>
-          </button>
-        </div>
       </div>
 
       {/* Metric Cards Grid - 3 Core Cards for Admin Approvals */}
