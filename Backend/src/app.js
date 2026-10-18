@@ -208,7 +208,6 @@ app.use('/api/v1/student', studentRoutes);
 app.use('/api/v1/practice-problems', studentRoutes);
 app.use('/api/practice-problems', studentRoutes);
 app.use('/api/v1/users', studentRoutes);
-app.use('/api/v1/coordinator/students', studentRoutes);
 app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/colleges', collegeRoutes);
 app.use('/api/v1/departments', departmentRoutes);

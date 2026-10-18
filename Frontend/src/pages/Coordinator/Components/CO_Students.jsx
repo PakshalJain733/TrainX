@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { apiFetch } from "../../../utils/api";
-import { Search, GraduationCap, Users, Mail, Phone, Sparkles, CheckCircle2, CircleDot, Lock, ArrowLeft, Send, Target, X } from "lucide-react";
+import { Search, GraduationCap, Users, Mail, Phone, Sparkles, CheckCircle2, CircleDot, Lock, ArrowLeft, Send, Target, X, Building2, TrendingUp, AlertTriangle, Eye, ShieldCheck, Award } from "lucide-react";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
@@ -198,6 +198,14 @@ const roadmapData = {
 };
 
 export default function CoordinatorStudents() {
+  const [coordUser, setCoordUser] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
   const [students, setStudents] = useState([]);
   const [batchesList, setBatchesList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -208,6 +216,16 @@ export default function CoordinatorStudents() {
   const [activeTab, setActiveTab] = useState("roadmap");
   const [selectedGoal, setSelectedGoal] = useState("python-backend");
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const coordDept = useMemo(() => {
+    return (
+      coordUser.department ||
+      coordUser.dept ||
+      coordUser.departmentName ||
+      coordUser.coordinatorProfile?.department ||
+      ""
+    );
+  }, [coordUser]);
 
   const fetchBatches = async () => {
     try {
@@ -222,51 +240,62 @@ export default function CoordinatorStudents() {
     }
   };
 
-  const getCoordinatorDept = () => {
-    try {
-      const local = JSON.parse(sessionStorage.getItem("user") || "{}");
-      return local.department || local.dept || null;
-    } catch {
-      return null;
-    }
-  };
-  const coordDept = getCoordinatorDept();
+  // Sync logged-in coordinator profile to ensure exact department is loaded
+  useEffect(() => {
+    apiFetch("/auth/me")
+      .then((res) => {
+        if (res && res.data) {
+          setCoordUser(res.data);
+          try {
+            sessionStorage.setItem("user", JSON.stringify(res.data));
+          } catch (_) {}
+        }
+      })
+      .catch(() => {});
+  }, []);
 
+  // Fetch real students strictly scoped to coordinator's department
   useEffect(() => {
     setLoading(true);
     fetchBatches();
     const handleBatchUpdate = () => fetchBatches();
     window.addEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
 
-    apiFetch("/coordinator/students")
+    const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
+    apiFetch(`/coordinator/students${queryParam}`)
       .then((res) => {
         let fetched = [];
         if (res && res.data && Array.isArray(res.data)) {
           fetched = res.data;
+        } else if (res && res.data && Array.isArray(res.data.students)) {
+          fetched = res.data.students;
         } else if (res && res.students && Array.isArray(res.students)) {
           fetched = res.students;
-        } else {
-          fetched = [];
+        } else if (Array.isArray(res)) {
+          fetched = res;
         }
+
+        // Strict department filter if coordinator department is known
         if (coordDept && fetched.length > 0) {
-          const targetDept = coordDept.toLowerCase();
-          const deptFiltered = fetched.filter(s => 
-            !s.department || 
-            s.department.toLowerCase().includes(targetDept) || 
-            targetDept.includes(s.department.toLowerCase())
-          );
+          const target = coordDept.toLowerCase().trim();
+          const deptFiltered = fetched.filter((s) => {
+            if (!s.department) return false;
+            const sDept = String(s.department).toLowerCase().trim();
+            return sDept.includes(target) || target.includes(sDept);
+          });
           setStudents(deptFiltered);
         } else {
           setStudents(fetched);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.warn("[CO_Students] fetch error:", err);
         setStudents([]);
       })
       .finally(() => setLoading(false));
 
     return () => window.removeEventListener(EVENTS.BATCH_UPDATED, handleBatchUpdate);
-  }, []);
+  }, [coordDept]);
 
   const handleOpenStudentDetail = (student) => {
     setSelectedStudent(student);
@@ -275,16 +304,48 @@ export default function CoordinatorStudents() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const filteredStudents = students.filter((s) => {
-    const matchesSearch =
-      (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (s.rollNo || s.roll_number || "").toLowerCase().includes(search.toLowerCase()) ||
-      (s.email || "").toLowerCase().includes(search.toLowerCase());
-    const matchesBatch = batchFilter === "All" || s.batch === batchFilter;
-    const matchesRisk = riskFilter === "All" || s.riskStatus === riskFilter;
-    const matchesDept = !coordDept || !s.department || s.department.toLowerCase().includes(coordDept.toLowerCase()) || coordDept.toLowerCase().includes(s.department.toLowerCase());
-    return matchesSearch && matchesBatch && matchesRisk && matchesDept;
-  });
+  const getInitials = (nameStr) => {
+    if (!nameStr) return "ST";
+    const parts = nameStr.trim().split(" ").filter(Boolean);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return nameStr.substring(0, 2).toUpperCase();
+  };
+
+  const filteredStudents = useMemo(() => {
+    return students.filter((s) => {
+      const matchesSearch =
+        (s.name || "").toLowerCase().includes(search.toLowerCase()) ||
+        (s.rollNo || s.roll_number || "").toLowerCase().includes(search.toLowerCase()) ||
+        (s.email || "").toLowerCase().includes(search.toLowerCase());
+      const matchesBatch = batchFilter === "All" || s.batch === batchFilter;
+      const matchesRisk =
+        riskFilter === "All" ||
+        String(s.riskStatus || "").toLowerCase().includes(riskFilter.toLowerCase());
+      return matchesSearch && matchesBatch && matchesRisk;
+    });
+  }, [students, search, batchFilter, riskFilter]);
+
+  // Department Aggregated KPI Metrics
+  const stats = useMemo(() => {
+    const total = filteredStudents.length;
+    const attList = filteredStudents
+      .map((s) => (typeof s.attendanceNum === "number" ? s.attendanceNum : parseFloat(s.attendance)))
+      .filter((v) => !isNaN(v));
+    const avgAtt = attList.length > 0 ? Math.round(attList.reduce((a, b) => a + b, 0) / attList.length) : null;
+
+    const quizList = filteredStudents
+      .map((s) => parseFloat(s.avgScore || s.quizScore))
+      .filter((v) => !isNaN(v));
+    const avgQuiz = quizList.length > 0 ? Math.round(quizList.reduce((a, b) => a + b, 0) / quizList.length) : null;
+
+    const highRisk = filteredStudents.filter((s) =>
+      String(s.riskStatus || "").toLowerCase().includes("risk")
+    ).length;
+
+    const enrolledRoadmaps = filteredStudents.filter((s) => Boolean(s.selectedGoalName)).length;
+
+    return { total, avgAtt, avgQuiz, highRisk, enrolledRoadmaps };
+  }, [filteredStudents]);
 
   const milestones = roadmapData[selectedGoal] || roadmapData["python-backend"];
 
@@ -517,20 +578,98 @@ export default function CoordinatorStudents() {
   // DEFAULT STUDENT DIRECTORY TABLE VIEW
   return (
     <div className="coord-students-container">
+      {/* Top Header & Department Scope */}
       <div className="coord-page-header">
         <div className="coord-header-left">
+          <div className="coord-header-icon-box">
+            <Users size={22} />
+          </div>
           <div>
-            <h1 className="coord-header-title-text" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <Users size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
-              <span>Student Directory & AI Roadmap Audit</span>
+            <h1 className="coord-header-title-text">
+              Student Directory & AI Roadmap Audit
             </h1>
             <p className="coord-header-sub-text">
-              Monitor student attendance %, academic scores, selected AI career roadmaps, and risk level.
+              Real-time academic performance, AI roadmap tracking, and risk compliance for your department.
             </p>
           </div>
         </div>
+
+        {coordDept && (
+          <div className="coord-dept-scope-pill">
+            <Building2 size={15} className="coord-dept-icon" />
+            <span className="coord-dept-label">Department:</span>
+            <span className="coord-dept-name">{coordDept}</span>
+          </div>
+        )}
       </div>
 
+      {/* KPI Summary Cards */}
+      <div className="coord-kpi-grid">
+        <div className="coord-kpi-card">
+          <div className="coord-kpi-header">
+            <span className="coord-kpi-title">Total Students</span>
+            <div className="coord-kpi-icon-box icon-blue">
+              <Users size={18} />
+            </div>
+          </div>
+          <div className="coord-kpi-value">{stats.total}</div>
+          <div className="coord-kpi-hint">Scoped to {coordDept || "Department"}</div>
+        </div>
+
+        <div className="coord-kpi-card">
+          <div className="coord-kpi-header">
+            <span className="coord-kpi-title">Avg Attendance</span>
+            <div className="coord-kpi-icon-box icon-green">
+              <TrendingUp size={18} />
+            </div>
+          </div>
+          <div className="coord-kpi-value">
+            {stats.avgAtt !== null ? `${stats.avgAtt}%` : "—"}
+          </div>
+          <div className="coord-kpi-hint">Department verified rate</div>
+        </div>
+
+        <div className="coord-kpi-card">
+          <div className="coord-kpi-header">
+            <span className="coord-kpi-title">Avg Quiz Score</span>
+            <div className="coord-kpi-icon-box icon-indigo">
+              <Award size={18} />
+            </div>
+          </div>
+          <div className="coord-kpi-value">
+            {stats.avgQuiz !== null ? `${stats.avgQuiz}%` : "—"}
+          </div>
+          <div className="coord-kpi-hint">Assessment benchmark</div>
+        </div>
+
+        <div className={`coord-kpi-card ${stats.highRisk > 0 ? "coord-kpi-card--alert" : ""}`}>
+          <div className="coord-kpi-header">
+            <span className="coord-kpi-title">High Risk Defaulters</span>
+            <div className={`coord-kpi-icon-box ${stats.highRisk > 0 ? "icon-red" : "icon-gray"}`}>
+              <AlertTriangle size={18} />
+            </div>
+          </div>
+          <div className={`coord-kpi-value ${stats.highRisk > 0 ? "text-red" : ""}`}>
+            {stats.highRisk}
+          </div>
+          <div className="coord-kpi-hint">
+            {stats.highRisk > 0 ? "Requires coordinator counseling" : "No critical defaulters"}
+          </div>
+        </div>
+
+        <div className="coord-kpi-card">
+          <div className="coord-kpi-header">
+            <span className="coord-kpi-title">Roadmaps Active</span>
+            <div className="coord-kpi-icon-box icon-purple">
+              <Sparkles size={18} />
+            </div>
+          </div>
+          <div className="coord-kpi-value">{stats.enrolledRoadmaps}</div>
+          <div className="coord-kpi-hint">Pursuing AI career tracks</div>
+        </div>
+      </div>
+
+      {/* Filter & Search Bar */}
       <div className="coord-filter-row-wrap">
         <div className="coord-search-input-box">
           <Search size={16} className="coord-search-icon-pos" />
@@ -558,7 +697,7 @@ export default function CoordinatorStudents() {
             value={batchFilter}
             options={[
               { value: "All", label: "All Batches" },
-              ...batchesList.map((b) => ({ value: b.name, label: b.name }))
+              ...batchesList.map((b) => ({ value: b.name, label: b.name })),
             ]}
             onChange={(val) => setBatchFilter(val)}
             placeholder="Select batch..."
@@ -579,85 +718,146 @@ export default function CoordinatorStudents() {
             placeholder="Select risk level..."
           />
         </div>
+
+        <div className="coord-filter-count-badge">
+          Showing <strong>{filteredStudents.length}</strong> of {students.length} students
+        </div>
       </div>
 
+      {/* Table Card */}
       <div className="coord-table-card">
-        <table className="coord-table">
-          <thead>
-            <tr>
-              <th>Student</th>
-              <th>Roll No & Batch</th>
-              <th>Selected AI Roadmap</th>
-              <th>Attendance</th>
-              <th>Quiz Score</th>
-              <th>AI Interview</th>
-              <th>Risk Level</th>
-              <th className="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredStudents.map((s) => (
-              <tr key={s.id}>
-                <td>
-                  <div className="student-table-name">{s.name}</div>
-                  <div className="student-table-email">{s.email}</div>
-                </td>
-                <td>
-                  <div className="student-table-roll">{s.rollNo}</div>
-                  <div className="student-table-batch">{s.batch}</div>
-                </td>
-                <td>
-                  <span className="student-roadmap-pill">
-                    <Sparkles size={13} color="#2563eb" />
-                    {s.selectedGoalName || "Python Backend"}
-                  </span>
-                </td>
-                <td>
-                  <span
-                    className={
-                      s.attendance >= 90
-                        ? "student-score-green"
-                        : s.attendance >= 75
-                        ? "student-score-amber"
-                        : "student-score-red"
-                    }
-                  >
-                    {s.attendance}%
-                  </span>
-                </td>
-                <td>
-                  <span className="student-score-indigo">{s.avgScore}%</span>
-                </td>
-                <td>
-                  <span className="student-score-purple">{s.interviewScore}%</span>
-                </td>
-                <td>
-                  <span
-                    className={`coord-student-pill ${
-                      s.riskStatus === "Top Performer"
-                        ? "coord-student-pill--top"
-                        : s.riskStatus === "Good"
-                        ? "coord-student-pill--good"
-                        : s.riskStatus === "Moderate"
-                        ? "coord-student-pill--moderate"
-                        : "coord-student-pill--risk"
-                    }`}
-                  >
-                    {s.riskStatus}
-                  </span>
-                </td>
-                <td className="text-center">
-                  <button
-                    className="coord-btn coord-btn--primary coord-table-action-btn"
-                    onClick={() => handleOpenStudentDetail(s)}
-                  >
-                    View Details
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {loading ? (
+          <div className="coord-table-loading-state">
+            <div className="coord-loading-spinner" />
+            <p>Loading department students...</p>
+          </div>
+        ) : filteredStudents.length === 0 ? (
+          <div className="coord-empty-table-state">
+            <div className="coord-empty-icon-wrap">
+              <Users size={32} />
+            </div>
+            <div className="coord-empty-title">No Students Found</div>
+            <p className="coord-empty-desc">
+              {search || batchFilter !== "All" || riskFilter !== "All"
+                ? "No students match your active search and filter criteria. Try resetting filters."
+                : `No enrolled students registered in ${coordDept || "your department"} yet.`}
+            </p>
+          </div>
+        ) : (
+          <div className="coord-table-responsive-wrapper">
+            <table className="coord-table">
+              <thead>
+                <tr>
+                  <th>Student</th>
+                  <th>Roll No & Batch</th>
+                  <th>Selected AI Roadmap</th>
+                  <th>Attendance</th>
+                  <th>Quiz Score</th>
+                  <th>AI Interview</th>
+                  <th>Risk Level</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((s) => (
+                  <tr key={s.id}>
+                    <td>
+                      <div className="student-info-cell">
+                        <div className="student-avatar-bubble">
+                          {getInitials(s.name)}
+                        </div>
+                        <div className="student-meta-col">
+                          <div className="student-table-name">{s.name}</div>
+                          <div className="student-table-email">{s.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="student-table-roll">{s.rollNo || "—"}</div>
+                      <div className="student-batch-wrapper">
+                        {s.batch === "Unassigned" ? (
+                          <span className="student-batch-unassigned">Unassigned</span>
+                        ) : (
+                          <span className="student-batch-pill">{s.batch}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      {s.selectedGoalName ? (
+                        <span className="student-roadmap-pill">
+                          <Sparkles size={13} className="roadmap-icon" />
+                          {s.selectedGoalName}
+                        </span>
+                      ) : (
+                        <span className="student-roadmap-pill student-roadmap-pill--none">
+                          Not Enrolled
+                        </span>
+                      )}
+                    </td>
+                    <td>
+                      {s.attendance && s.attendance !== "—" ? (
+                        <span
+                          className={`student-metric-pill ${
+                            (s.attendanceNum ?? parseFloat(s.attendance)) >= 75
+                              ? "metric-good"
+                              : (s.attendanceNum ?? parseFloat(s.attendance)) >= 60
+                              ? "metric-amber"
+                              : "metric-danger"
+                          }`}
+                        >
+                          {s.attendance}
+                        </span>
+                      ) : (
+                        <span className="student-metric-empty">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {s.avgScore && s.avgScore !== "—" ? (
+                        <span className="student-metric-pill metric-indigo">
+                          {s.avgScore}
+                        </span>
+                      ) : (
+                        <span className="student-metric-empty">—</span>
+                      )}
+                    </td>
+                    <td>
+                      {s.interviewScore && s.interviewScore !== "—" ? (
+                        <span className="student-metric-pill metric-purple">
+                          {s.interviewScore}
+                        </span>
+                      ) : (
+                        <span className="student-metric-empty">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span
+                        className={`coord-student-pill ${
+                          s.riskStatus === "Top Performer"
+                            ? "coord-student-pill--top"
+                            : s.riskStatus === "Good"
+                            ? "coord-student-pill--good"
+                            : s.riskStatus === "Moderate"
+                            ? "coord-student-pill--moderate"
+                            : "coord-student-pill--risk"
+                        }`}
+                      >
+                        {s.riskStatus}
+                      </span>
+                    </td>
+                    <td className="text-center">
+                      <button
+                        className="coord-btn coord-btn--primary coord-table-action-btn"
+                        onClick={() => handleOpenStudentDetail(s)}
+                      >
+                        <Eye size={13} /> View Details
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

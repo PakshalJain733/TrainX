@@ -490,7 +490,7 @@ export default function StudentLayout() {
   };
 
   const isCodingPlatform = pathname.startsWith('/student/coding-platform');
-  const isFullScreenApp = interviewLive || isCodingPlatform;
+  const isFullScreenApp = Boolean(interviewLive);
 
   return (
     <div className={`student-layout ${isFullScreenApp ? 'student-layout--fullscreen' : ''}`}>
@@ -498,7 +498,7 @@ export default function StudentLayout() {
         <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Sidebar — hidden during live interview or coding platform */}
+      {/* Sidebar — hidden during live proctored interview */}
       {!isFullScreenApp && (
         <StudentSidebar
           collapsed={collapsed}
@@ -633,7 +633,16 @@ export default function StudentLayout() {
             )}
 
             {/* Page Content Body */}
-            <div className="student-card-body" style={isFullScreenApp ? { padding: 0, margin: 0, height: '100%', width: '100%', overflow: 'hidden' } : {}}>
+            <div
+              className={`student-card-body ${isCodingPlatform ? 'student-card-body--coding' : ''}`}
+              style={
+                isFullScreenApp
+                  ? { padding: 0, margin: 0, height: '100%', width: '100%', overflow: 'hidden' }
+                  : isCodingPlatform
+                  ? { padding: 0, margin: 0, height: 'calc(100vh - 84px)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }
+                  : {}
+              }
+            >
               <Outlet />
             </div>
 

@@ -208,8 +208,14 @@ export const getAllDefaultersModel = async (filters = {}) => {
       params.push(parseInt(college_id, 10), parseInt(college_id, 10));
     }
     if (department_id) {
-      sql += ' AND (s.department_id = ? OR s.department = ?)';
-      params.push(parseInt(department_id, 10), String(department_id));
+      const numDept = parseInt(department_id, 10);
+      if (!isNaN(numDept)) {
+        sql += ' AND (s.department_id = ? OR s.department = ?)';
+        params.push(numDept, String(department_id));
+      } else {
+        sql += ' AND (s.department LIKE ?)';
+        params.push(`%${department_id}%`);
+      }
     }
     if (batch_id) {
       sql += ' AND s.batch_id = ?';
@@ -226,6 +232,8 @@ export const getAllDefaultersModel = async (filters = {}) => {
     if (rows && Array.isArray(rows) && rows.length > 0) {
       return rows.map((r) => ({
         ...r,
+        department: r.department || 'Computer Engineering',
+        batch_name: r.batch_name || 'Active Cohort',
         reasons: typeof r.reasons === 'string' ? JSON.parse(r.reasons) : (r.reasons || []),
         weak_areas: typeof r.weak_areas === 'string' ? JSON.parse(r.weak_areas) : (r.weak_areas || []),
       }));
@@ -234,5 +242,5 @@ export const getAllDefaultersModel = async (filters = {}) => {
     console.warn(`[Intervention Model] DB query all defaulters fallback: ${error.message}`);
   }
 
-  return Array.from(mockDefaulters.values());
+  return [];
 };

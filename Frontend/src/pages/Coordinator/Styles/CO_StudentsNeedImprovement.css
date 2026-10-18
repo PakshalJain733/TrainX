@@ -170,3 +170,346 @@
     width: 100% !important;
   }
 }
+
+/* ── Detail Modal Overhaul ── */
+.coord-sni-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.coord-sni-modal-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 760px;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  margin: auto;
+  animation: coordSniModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes coordSniModalPop {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.coord-sni-modal-header {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.coord-sni-modal-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.coord-sni-modal-student-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.coord-sni-modal-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.35);
+  letter-spacing: 0.5px;
+}
+
+.coord-sni-modal-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+.coord-sni-modal-sub {
+  margin-top: 5px;
+  font-size: 12px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-sni-modal-sub strong {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.dot-sep {
+  color: #64748b;
+}
+
+.coord-sni-modal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.coord-sni-perf-pill {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 8px 16px;
+  border-radius: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.coord-sni-perf-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.coord-sni-perf-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f43f5e;
+  line-height: 1.1;
+}
+
+.coord-sni-modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.coord-sni-modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.coord-sni-modal-body {
+  padding: 24px 28px;
+  max-height: 62vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.coord-sni-subhead-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.coord-sni-subhead-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coord-sni-mentor-tag {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.coord-sni-mentor-tag strong {
+  color: #0f172a;
+}
+
+.coord-sni-weak-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.coord-sni-weak-card {
+  padding: 18px 20px;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s ease;
+}
+
+.coord-sni-weak-card:hover {
+  border-color: #cbd5e1;
+}
+
+.coord-sni-weak-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.coord-sni-weak-name {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.coord-sni-level-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.badge-critical {
+  background: #ffe4e6;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+.badge-high {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.coord-sni-weak-source {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.coord-sni-weak-source strong {
+  color: #334155;
+}
+
+.coord-sni-weak-score-wrap {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.coord-sni-weak-score-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #e11d48;
+  line-height: 1.1;
+}
+
+.coord-sni-weak-score-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  font-weight: 700;
+}
+
+.coord-sni-track {
+  height: 6px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  overflow: hidden;
+}
+
+.coord-sni-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.coord-sni-action-box {
+  padding: 12px 14px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  font-size: 12.5px;
+}
+
+.coord-sni-action-label {
+  font-weight: 800;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  font-size: 12px;
+}
+
+.coord-sni-sparkle-icon {
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.coord-sni-action-text {
+  margin: 0;
+  color: #78350f;
+  line-height: 1.5;
+}
+
+.coord-sni-modal-footer {
+  padding: 18px 28px;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.coord-sni-footer-flow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.flow-step {
+  font-weight: 600;
+}
+
+.flow-step.active {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.flow-arrow {
+  color: #94a3b8;
+}

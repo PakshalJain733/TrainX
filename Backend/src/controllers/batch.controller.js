@@ -115,13 +115,18 @@ function parseTaskRecord(t, isStudent = false) {
 export const getBatches = async (req, res, next) => {
   try {
     await ensureTables();
-    const { collegeId, departmentId } = req.query;
+    const { collegeId, departmentId, date: filterDate } = req.query;
+    const queryDate = (filterDate || new Date().toISOString().split('T')[0]).trim();
 
     let sql = `
       SELECT 
         b.*,
         c.name AS collegeName,
         d.name AS departmentName,
+        bdt.topic AS dailyTopic,
+        bdt.description AS dailyDescription,
+        bdt.trainer AS dailyTrainer,
+        bdt.status AS dailyStatus,
         (
           SELECT COUNT(*) 
           FROM students s 
@@ -136,9 +141,10 @@ export const getBatches = async (req, res, next) => {
       FROM batches b
       LEFT JOIN colleges c ON b.college_id = c.id
       LEFT JOIN departments d ON b.department_id = d.id
+      LEFT JOIN batch_daily_topics bdt ON (bdt.batch_id = b.id AND bdt.topic_date = ?)
       WHERE 1=1
     `;
-    const params = [];
+    const params = [queryDate];
 
     if (collegeId && collegeId !== 'all') {
       sql += ' AND (b.college_id = ? OR b.college_id IS NULL)';
@@ -156,22 +162,26 @@ export const getBatches = async (req, res, next) => {
     const formatted = (dbBatches || []).map((b) => {
       const sCount = Number(b.dynamicStudentsCount || b.students || 0);
       const pPct = Number(b.dynamicProgressPct || 0);
+      const activeTopic = b.dailyTopic || b.topic;
+      const activeDesc = b.dailyDescription || b.description;
+      const activeTrainer = b.dailyTrainer || b.trainer || b.mentor || 'Faculty Instructor';
+      const activeStatus = b.dailyStatus || b.status;
       return {
         ...b,
         collegeId: b.college_id || 1,
         departmentId: b.department_id || 1,
         collegeName: b.collegeName || b.college_name || 'College Campus',
         departmentName: b.departmentName || b.department_name || 'Academic Stream',
-        trainer: b.trainer || b.mentor || 'Faculty Instructor',
+        trainer: activeTrainer,
         schedule: b.schedule || 'Mon, Wed, Fri (10:00 AM)',
         studentsCount: sCount,
         students: sCount,
         completionRate: `${pPct}%`,
         progressPct: pPct,
-        topic: b.topic || "DSA & System Architecture",
-        description: b.description || "Core concepts and masterclass",
-        date: b.date || new Date().toISOString().split("T")[0],
-        status: b.status ? (b.status.charAt(0).toUpperCase() + b.status.slice(1)) : 'Active',
+        topic: activeTopic || "DSA & System Architecture",
+        description: activeDesc || "Core concepts and masterclass",
+        date: queryDate,
+        status: activeStatus ? (activeStatus.charAt(0).toUpperCase() + activeStatus.slice(1)) : 'Active',
       };
     });
 

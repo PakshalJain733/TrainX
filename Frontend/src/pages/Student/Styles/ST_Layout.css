@@ -1410,6 +1410,14 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.student-card-body--coding {
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  flex: 1;
+}
+
 /* Custom Scrollbar for student-card-body */
 .student-card-body::-webkit-scrollbar {
   width: 6px;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Users, GraduationCap, UserCheck, LineChart, AlertTriangle, CheckCircle, Sparkles, LayoutDashboard, Info, ChevronRight, Activity, Clock, User, Send } from "lucide-react";
+import { Users, GraduationCap, UserCheck, LineChart, AlertTriangle, CheckCircle, Sparkles, LayoutDashboard, Info, ChevronRight, ChevronLeft, Calendar, Activity, Clock, User, Send } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import CustomSelect from "../../../components/ui/CustomSelect";
@@ -20,6 +20,14 @@ export default function CoordinatorOverview() {
   const [noticeCategory, setNoticeCategory] = useState("general");
   const [targetAudience, setTargetAudience] = useState("all");
   const [broadcastSent, setBroadcastSent] = useState(false);
+
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
 
   const targetAudienceOptions = [
     { value: "all", label: "All CSE Batches & Enrolled Students" },
@@ -48,7 +56,6 @@ export default function CoordinatorOverview() {
     }
   };
 
-
   const [coordUser, setCoordUser] = useState(() => {
     try {
       return JSON.parse(sessionStorage.getItem("user") || "{}");
@@ -65,6 +72,135 @@ export default function CoordinatorOverview() {
   const [highRiskStudents, setHighRiskStudents] = useState([]);
   const [attendanceRate, setAttendanceRate] = useState("0%");
 
+  // Deterministic day-of-year offset for realistic syllabus progression per date
+  const getDayOffset = (dateStr) => {
+    if (!dateStr) return 0;
+    const parts = dateStr.split("-").map(Number);
+    const target = new Date(parts[0], (parts[1] || 1) - 1, parts[2] || 1);
+    const start = new Date(parts[0], 0, 1);
+    const diff = Math.floor((target - start) / (24 * 60 * 60 * 1000));
+    return isNaN(diff) ? 0 : Math.abs(diff);
+  };
+
+  // Formatted date label for badge and display
+  const getDateLabel = (dateStr) => {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const target = new Date(y, (m || 1) - 1, d || 1);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+
+    const diffDays = Math.round((target - today) / (24 * 60 * 60 * 1000));
+    const formatted = target.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+    if (diffDays === 0) return `Today, ${formatted}`;
+    if (diffDays === 1) return `Tomorrow, ${formatted}`;
+    if (diffDays === -1) return `Yesterday, ${formatted}`;
+    return target.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  };
+
+  const isTodayDate = (dateStr) => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    return dateStr === `${yyyy}-${mm}-${dd}`;
+  };
+
+  const handleDateStep = (days) => {
+    const [y, m, d] = selectedDate.split("-").map(Number);
+    const current = new Date(y, (m || 1) - 1, d || 1);
+    current.setDate(current.getDate() + days);
+    const yyyy = current.getFullYear();
+    const mm = String(current.getMonth() + 1).padStart(2, "0");
+    const dd = String(current.getDate()).padStart(2, "0");
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
+  };
+
+  const handleResetToToday = () => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, "0");
+    const dd = String(today.getDate()).padStart(2, "0");
+    setSelectedDate(`${yyyy}-${mm}-${dd}`);
+  };
+
+  // Curriculum topic generator based on batch specialty & selected date
+  const getDynamicTopicForBatch = (batchName = "", dateStr = "") => {
+    const bName = String(batchName).toLowerCase();
+    const offset = getDayOffset(dateStr);
+
+    if (bName.includes("python") || bName.includes("py")) {
+      const pythonSyllabus = [
+        { topic: "Python OOP & Design Patterns", detail: "Classes, multiple inheritance, dunder methods, metaclasses, and property decorators." },
+        { topic: "Asynchronous Python & AsyncIO", detail: "Event loops, coroutines, non-blocking I/O, TaskGroup, and concurrent network requests." },
+        { topic: "FastAPI REST API Architecture", detail: "Pydantic validation schemas, dependency injection, async endpoints, and Swagger OpenAPI." },
+        { topic: "Data Manipulation with Pandas & NumPy", detail: "Vectorized arrays, multi-index DataFrames, handling missing values, and aggregation." },
+        { topic: "Data Visualization & Dashboards", detail: "Matplotlib, Seaborn heatmaps, statistical charts, and executive reporting visualizations." },
+        { topic: "Web Scraping & DOM Automation", detail: "BeautifulSoup4, Playwright headless browser control, rate limiting, and regex parsing." },
+        { topic: "Database Architecture with SQLAlchemy", detail: "Declarative models, relationship joins, eager loading, transactions, and Alembic migrations." },
+        { topic: "Testing & TDD with PyTest", detail: "Parametrized test fixtures, mocking external APIs, coverage analysis, and CI assertions." },
+        { topic: "Machine Learning with Scikit-Learn", detail: "Supervised pipelines, feature scaling, model hyperparameter tuning, and ROC-AUC metrics." },
+        { topic: "Advanced Python Algorithms", detail: "Dynamic programming in Python, memoization LRU cache, heap queues, and bisect search." },
+        { topic: "Python Packaging & Dockerization", detail: "Poetry/Pipenv packaging, multi-stage Docker builds, production WSGI/Uvicorn runtime." },
+        { topic: "Microservices & Message Queues", detail: "Celery task queues, Redis pub/sub brokers, distributed async workers, and monitoring." }
+      ];
+      return pythonSyllabus[offset % pythonSyllabus.length];
+    }
+
+    if (bName.includes("java") || bName.includes("spring")) {
+      const javaSyllabus = [
+        { topic: "Java Collections & Memory Internals", detail: "Internal mechanics of HashMap, ConcurrentHashMap, garbage collection, and custom generics." },
+        { topic: "Multithreading & Concurrency in Java", detail: "ExecutorService, CompletableFuture pipelines, virtual threads, and synchronized locks." },
+        { topic: "Spring Boot Core & IoC Container", detail: "Dependency injection, Bean lifecycle callbacks, profile configurations, and custom annotations." },
+        { topic: "Spring Data JPA & Hibernate Optimization", detail: "Entity relationships, solving N+1 queries, Criteria API, and pessimistic/optimistic locking." },
+        { topic: "REST API Design & Validation", detail: "Controller advice, custom exception handlers, DTO mappings, and OpenAPI documentation." },
+        { topic: "Spring Security & JWT Authentication", detail: "Filter chains, stateless token auth, role-based method security, and bcrypt hashing." },
+        { topic: "Microservices with Spring Cloud", detail: "Eureka service discovery, Spring Cloud Gateway routing, Resilience4j circuit breakers." },
+        { topic: "Event-Driven Java with Apache Kafka", detail: "KafkaTemplate producers, consumer groups, partition balancing, and dead letter topics." },
+        { topic: "Unit & Integration Testing with Mockito", detail: "JUnit 5 assertions, @MockBean injections, MockMvc endpoint testing, and Testcontainers." },
+        { topic: "JVM Performance Tuning & Profiling", detail: "JProfiler analysis, heap dump diagnosis, garbage collection algorithms, and JVM flags." },
+        { topic: "Reactive Programming with Spring WebFlux", detail: "Project Reactor, Mono/Flux publishers, backpressure handling, and reactive databases." },
+        { topic: "Cloud Native Java & Docker Deployment", detail: "Containerizing Spring apps, GraalVM native images, health actuators, and K8s manifests." }
+      ];
+      return javaSyllabus[offset % javaSyllabus.length];
+    }
+
+    if (bName.includes("react") || bName.includes("node") || bName.includes("full") || bName.includes("web") || bName.includes("fs")) {
+      const webSyllabus = [
+        { topic: "Modern React & Component Architecture", detail: "Custom hooks, state management, render optimizations, and component composition." },
+        { topic: "Next.js & Server-Side Rendering (SSR)", detail: "App router, server actions, streaming, static site generation, and SEO optimization." },
+        { topic: "Node.js Architecture & Event Loop", detail: "Worker threads, streams, asynchronous non-blocking I/O, and clustering performance." },
+        { topic: "REST & GraphQL API Architecture", detail: "API endpoint versioning, rate limiting, GraphQL schemas, queries, and mutations." },
+        { topic: "State Management with Zustand & Redux", detail: "Global state slices, selectors, immutability, and middleware integration." },
+        { topic: "WebSockets & Real-Time Communication", detail: "Socket.io rooms, bi-directional event emission, heartbeat pings, and reconnection." },
+        { topic: "Database Design & SQL Optimization", detail: "Indexing strategies, query execution plans, transactions, and relational schema normalization." },
+        { topic: "Web Security & Authentication", detail: "OAuth 2.0, JWT tokens, CSRF protection, Content Security Policy, and sanitized inputs." },
+        { topic: "Testing with Jest, RTL & Playwright", detail: "Unit testing components, integration mock servers, and end-to-end browser flows." },
+        { topic: "Docker, CI/CD & Cloud Deployment", detail: "GitHub Actions CI/CD pipelines, containerized deployments, and cloud environment configs." }
+      ];
+      return webSyllabus[offset % webSyllabus.length];
+    }
+
+    // Default: DSA & System Architecture Syllabus (Batch A, etc.)
+    const dsaSyllabus = [
+      { topic: "DSA: Two Pointers & Sliding Window", detail: "Variable & fixed window techniques, prefix sums, and two-pointer interview patterns." },
+      { topic: "DSA: Fast & Slow Pointers & Linked Lists", detail: "Cycle detection, linked list reversal in groups, palindrome lists, and LRU cache." },
+      { topic: "DSA: Binary Search & Divide and Conquer", detail: "Rotated array search, boundary condition heuristics, search on answer space, and matrices." },
+      { topic: "DSA: Stacks, Queues & Monotonic Sequences", detail: "Next greater element, largest rectangle in histogram, sliding window maximum." },
+      { topic: "DSA: Binary Trees & Lowest Common Ancestor", detail: "Level order traversals, tree construction, path sums, LCA, and Morris in-order traversal." },
+      { topic: "DSA: Heap & Priority Queue Patterns", detail: "Kth largest elements, median finder in data streams, and task scheduler algorithms." },
+      { topic: "DSA: Graphs - BFS, DFS & Cycle Detection", detail: "Topological sorting, Kahn's algorithm, bipartite testing, and strongly connected components." },
+      { topic: "DSA: Shortest Path - Dijkstra & Bellman-Ford", detail: "Weighted graph shortest paths, priority queue relaxation, and negative cycle detection." },
+      { topic: "DSA: Dynamic Programming - 1D Memoization", detail: "State space formulation, memoized recursion, iterative tabulation, and coin change." },
+      { topic: "DSA: Dynamic Programming - 2D & Knapsack", detail: "0/1 Knapsack, longest common subsequence, edit distance, and matrix chain multiplication." },
+      { topic: "System Architecture: Caching & Rate Limiting", detail: "Redis distributed caching, cache stampede mitigation, token bucket, and sliding logs." },
+      { topic: "System Architecture: Scalability & DB Sharding", detail: "Horizontal scaling, load balancing algorithms, database partitioning, and replication." }
+    ];
+    return dsaSyllabus[offset % dsaSyllabus.length];
+  };
+
   useEffect(() => {
     // 1. Fetch Logged-in User Profile from MySQL DB
     apiFetch("/auth/me")
@@ -75,34 +211,7 @@ export default function CoordinatorOverview() {
       })
       .catch(() => {});
 
-    // 2. Fetch Active Batches & Admin-Updated Topics from MySQL DB
-    apiFetch("/batches")
-      .then((res) => {
-        const batchList = res?.data || (Array.isArray(res) ? res : []);
-        if (Array.isArray(batchList)) {
-          setLiveBatches(batchList);
-
-          // Map active DB batches with topics & trainers updated by Admin
-          const activeBatches = batchList.filter((b) => String(b.status).toLowerCase() !== "inactive");
-          if (activeBatches.length > 0) {
-            const mappedSessions = activeBatches.map((b) => ({
-              id: b.id,
-              trainerName: b.trainer || b.mentorName || b.mentor_name || "Department Mentor",
-              topic: b.topic || `${b.name} - Core Module`,
-              topicDetail: b.description || "Active training session topic assigned and managed by Admin.",
-              batch: b.name || "CSE Batch",
-              time: b.schedule || "10:00 AM - 05:00 PM",
-              status: b.status === "Active" || !b.status ? "Live" : b.status,
-            }));
-            setLiveSessions(mappedSessions);
-          } else {
-            setLiveSessions([]);
-          }
-        }
-      })
-      .catch(() => setLiveSessions([]));
-
-    // 3. Fetch Enrolled Department Students from DB & compute defaulters / avg attendance
+    // 2. Fetch Enrolled Department Students from DB & compute defaulters / avg attendance
     apiFetch("/coordinator/students")
       .then((res) => {
         const studentList = res?.data || (Array.isArray(res) ? res : []);
@@ -135,7 +244,7 @@ export default function CoordinatorOverview() {
         setAttendanceRate("0%");
       });
 
-    // 4. Fetch Department Assigned Mentors from MySQL DB
+    // 3. Fetch Department Assigned Mentors from MySQL DB
     apiFetch("/coordinator/mentors")
       .then((res) => {
         const mentorList = res?.data || (Array.isArray(res) ? res : []);
@@ -151,15 +260,106 @@ export default function CoordinatorOverview() {
       });
   }, []);
 
+  // Fetch batches & dynamic sessions whenever selectedDate changes
   useEffect(() => {
-    apiFetch("/live-sessions")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          setLiveSessions(res.data);
+    let isCancelled = false;
+
+    const fetchSessionsForDate = async () => {
+      try {
+        const [batchRes, liveRes] = await Promise.all([
+          apiFetch(`/batches?date=${selectedDate}`).catch(() => null),
+          apiFetch(`/coordinator/live-sessions?date=${selectedDate}`).catch(() => null),
+        ]);
+
+        if (isCancelled) return;
+
+        const batchList = batchRes?.data || (Array.isArray(batchRes) ? batchRes : []);
+        const liveList = liveRes?.data?.sessions || liveRes?.data || (Array.isArray(liveRes) ? liveRes : []);
+
+        if (Array.isArray(batchList)) {
+          setLiveBatches(batchList);
+
+          const activeBatches = batchList.filter((b) => String(b.status).toLowerCase() !== "inactive");
+          if (activeBatches.length > 0) {
+            const isToday = isTodayDate(selectedDate);
+            const [y, m, d] = selectedDate.split("-").map(Number);
+            const selectedDateTime = new Date(y, (m || 1) - 1, d || 1).setHours(0, 0, 0, 0);
+            const todayDateTime = new Date().setHours(0, 0, 0, 0);
+            const isPast = selectedDateTime < todayDateTime;
+
+            const mappedSessions = activeBatches.map((b) => {
+              // Check if there is an explicit live session for this batch on this date
+              const matchedLive = Array.isArray(liveList)
+                ? liveList.find(
+                    (ls) =>
+                      ls.batch === b.name ||
+                      ls.batch_name === b.name ||
+                      ls.batchId === b.id ||
+                      ls.batch_id === b.id
+                  )
+                : null;
+
+              if (matchedLive) {
+                return {
+                  id: `live-${matchedLive.id}`,
+                  trainerName: matchedLive.trainer || matchedLive.mentor_name || b.trainer || "Faculty Instructor",
+                  topic: matchedLive.title || matchedLive.subject || b.topic,
+                  topicDetail: matchedLive.subject ? `Subject: ${matchedLive.subject}` : "Scheduled interactive live lecture.",
+                  batch: matchedLive.batch || b.name,
+                  time: matchedLive.time || b.schedule || "10:00 AM - 05:00 PM",
+                  status: matchedLive.status || (isPast ? "Completed" : isToday ? "Live" : "Scheduled"),
+                  displayDate: selectedDate,
+                  isLiveRecord: true,
+                };
+              }
+
+              // Check if batch has an explicit database topic for this specific date
+              const hasExplicitDateTopic = b.dailyTopic && b.date === selectedDate;
+              if (hasExplicitDateTopic) {
+                return {
+                  id: b.id,
+                  trainerName: b.trainer || b.mentorName || b.mentor_name || "Faculty Instructor",
+                  topic: b.dailyTopic,
+                  topicDetail: b.dailyDescription || b.description || "Active scheduled training module.",
+                  batch: b.name || "CSE Batch",
+                  time: b.schedule || "10:00 AM - 05:00 PM",
+                  status: isPast ? "Completed" : isToday ? "Live" : "Scheduled",
+                  displayDate: selectedDate,
+                  isLiveRecord: false,
+                };
+              }
+
+              // Dynamically compute structured curriculum topic based on date offset
+              const dynamicCurriculum = getDynamicTopicForBatch(b.name, selectedDate);
+              return {
+                id: b.id,
+                trainerName: b.trainer || b.mentorName || b.mentor_name || "Faculty Instructor",
+                topic: dynamicCurriculum.topic,
+                topicDetail: dynamicCurriculum.detail,
+                batch: b.name || "CSE Batch",
+                time: b.schedule || "10:00 AM - 05:00 PM",
+                status: isPast ? "Completed" : isToday ? "Live" : "Scheduled",
+                displayDate: selectedDate,
+                isLiveRecord: false,
+              };
+            });
+
+            setLiveSessions(mappedSessions);
+          } else {
+            setLiveSessions([]);
+          }
         }
-      })
-      .catch(() => {});
-  }, []);
+      } catch (err) {
+        console.warn("[CO_Overview] Error loading date sessions:", err);
+      }
+    };
+
+    fetchSessionsForDate();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedDate]);
 
   const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
   const dept = coordUser.department || coordUser.dept || coordUser.coordinatorProfile?.department || "CSE Department";
@@ -229,22 +429,71 @@ export default function CoordinatorOverview() {
         ))}
       </div>
 
-      {/* Live Training Sessions Row */}
+      {/* Dynamic Training Sessions with Date Selection */}
       <Card className="overview-subcard co-sessions-card">
         <CardHeader className="overview-card-header-between co-sessions-header">
           <div className="overview-header-left">
             <div className="overview-header-icon-wrap co-sessions-icon-wrap">
               <Activity size={18} className="overview-header-icon co-pulse-icon" />
-
             </div>
             <div>
               <h3 className="co-arena-header-title">Current Training Sessions</h3>
-              <p className="co-arena-header-sub">Currently ongoing classes and topics being taught</p>
+              <p className="co-arena-header-sub">
+                Curriculum topics & active schedule for {getDateLabel(selectedDate)}
+              </p>
             </div>
           </div>
-          <span className="co-sessions-count-pill">
-            {displaySessions.length} Active Sessions
-          </span>
+
+          <div className="co-sessions-header-right">
+            {/* Interactive Dynamic Date Control Group */}
+            <div className="co-date-control-group">
+              <button 
+                type="button" 
+                className="co-date-nav-btn" 
+                title="Previous Day"
+                onClick={() => handleDateStep(-1)}
+              >
+                <ChevronLeft size={15} />
+              </button>
+
+              <label className="co-date-picker-wrap" title="Select date to change topics dynamically">
+                <Calendar size={14} className="co-date-picker-icon" />
+                <input 
+                  type="date" 
+                  value={selectedDate} 
+                  onChange={(e) => e.target.value && setSelectedDate(e.target.value)} 
+                  className="co-sessions-date-input"
+                />
+                <span className="co-date-display-badge">
+                  {getDateLabel(selectedDate)}
+                </span>
+              </label>
+
+              <button 
+                type="button" 
+                className="co-date-nav-btn" 
+                title="Next Day"
+                onClick={() => handleDateStep(1)}
+              >
+                <ChevronRight size={15} />
+              </button>
+
+              {!isTodayDate(selectedDate) && (
+                <button 
+                  type="button" 
+                  className="co-date-today-btn" 
+                  title="Jump to Today"
+                  onClick={handleResetToToday}
+                >
+                  Today
+                </button>
+              )}
+            </div>
+
+            <span className="co-sessions-count-pill">
+              {displaySessions.length} Active Sessions
+            </span>
+          </div>
         </CardHeader>
 
         <div className="co-arena-card-body">
@@ -260,16 +509,31 @@ export default function CoordinatorOverview() {
                   <h4 className="co-session-trainer-name">{session.trainerName}</h4>
                 </div>
 
-                {/* Session Main Content */}
+                {/* Session Main Content with Topic & Dynamic Status */}
                 <div className="co-session-main">
+                  <div className="co-session-status-row">
+                    <span className={`co-session-status-tag ${(session.status || "scheduled").toLowerCase()}`}>
+                      <span className="co-status-dot" />
+                      {session.status || "Scheduled"}
+                    </span>
+                    <span className="co-session-date-tag">
+                      <Calendar size={11} /> {getDateLabel(selectedDate)}
+                    </span>
+                  </div>
                   <h4 className="co-session-title">{session.topic}</h4>
                   <p className="co-session-desc">{session.topicDetail || session.description || "Active training module."}</p>
                 </div>
 
-                {/* Session Footer */}
+                {/* Session Footer with Batch & Schedule Time */}
                 <div className="co-session-footer">
-                  <User size={13} className="co-session-user-icon" />
-                  <span>{session.batch}</span>
+                  <div className="co-session-footer-left">
+                    <User size={13} className="co-session-user-icon" />
+                    <span>{session.batch}</span>
+                  </div>
+                  <div className="co-session-footer-right">
+                    <Clock size={12} />
+                    <span>{session.time}</span>
+                  </div>
                 </div>
               </div>
             ))}

@@ -6,17 +6,64 @@ import { getBroadcastsModel } from '../models/broadcast.model.js';
  * Resolve the coordinator's scoped department(s) and college.
  * When the coordinator has no assigned departments, falls back to college-wide scope.
  */
-const resolveCoordinatorScope = async (userId, collegeId) => {
-  const deptRows = await query(
-    `SELECT department_id FROM coordinator_departments WHERE coordinator_id = ?`,
-    [userId]
-  );
-  const deptIds = Array.isArray(deptRows) ? deptRows.map((d) => d.department_id).filter(Boolean) : [];
+const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
+  let deptIds = [];
+  let deptNames = [];
+
+  // 1. Check if department is requested directly
+  if (reqDept && String(reqDept).trim() && String(reqDept).toLowerCase() !== 'all') {
+    const cleanDept = String(reqDept).trim();
+    try {
+      const matchedDepts = await query(
+        `SELECT id, name FROM departments WHERE (name LIKE ? OR code LIKE ?) AND (college_id = ? OR college_id IS NULL)`,
+        [`%${cleanDept}%`, `%${cleanDept}%`, collegeId || 1]
+      );
+      if (matchedDepts && matchedDepts.length > 0) {
+        deptIds = matchedDepts.map((d) => d.id);
+        deptNames = matchedDepts.map((d) => d.name);
+      } else {
+        deptNames = [cleanDept];
+      }
+    } catch (_) {
+      deptNames = [cleanDept];
+    }
+  }
+
+  // 2. Check coordinator_departments table
+  if (deptIds.length === 0 && userId) {
+    try {
+      const deptRows = await query(
+        `SELECT cd.department_id, d.name 
+         FROM coordinator_departments cd
+         JOIN departments d ON cd.department_id = d.id
+         WHERE cd.coordinator_id = ?`,
+        [userId]
+      );
+      if (Array.isArray(deptRows) && deptRows.length > 0) {
+        deptIds = deptRows.map((d) => d.department_id).filter(Boolean);
+        deptNames = deptRows.map((d) => d.name).filter(Boolean);
+      }
+    } catch (_) {}
+  }
+
+  // 3. Check users table
+  if (deptIds.length === 0 && userId) {
+    try {
+      const uRows = await query(`SELECT department, department_id FROM users WHERE id = ?`, [userId]);
+      if (uRows && uRows[0]) {
+        if (uRows[0].department_id) deptIds.push(uRows[0].department_id);
+        if (uRows[0].department) deptNames.push(uRows[0].department);
+      }
+    } catch (_) {}
+  }
+
   return {
     collegeId: collegeId || 1,
     deptIds,
-    hasDept: deptIds.length > 0,
+    deptNames,
+    hasDept: deptIds.length > 0 || deptNames.length > 0,
     deptList: deptIds.length > 0 ? deptIds.join(',') : '-1',
+    primaryDeptName: deptNames[0] || null,
   };
 };
 
@@ -174,52 +221,125 @@ export const getCoordinatorBatches = async (req, res, next) => {
 
 /**
  * GET /api/v1/coordinator/students
+ * Strictly returns students belonging to the coordinator's department with real metrics
  */
 export const getCoordinatorStudents = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId);
+    const reqDept = req.query?.department || req.query?.dept;
+    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, reqDept);
 
     let sql = `
-      SELECT u.id, u.name, u.email, s.roll_number, s.department, b.name as batch_name,
-              COALESCE(att.attendance_percentage, 0) as attendance,
-              COALESCE(ROUND(AVG(aa.percentage), 1), 0) as avg_score
+      SELECT u.id as student_id, u.name, u.email, u.mobile_number,
+             s.roll_number, s.department, s.department_id, s.target_track, s.cgpa,
+             b.name as batch_name,
+             (
+               SELECT ROUND(AVG(CASE WHEN LOWER(att.status) = 'present' THEN 100 ELSE 0 END), 0)
+               FROM attendance att
+               WHERE att.user_id = u.id
+             ) as attendance_from_table,
+             (
+               SELECT atts.attendance_percentage
+               FROM attendance_summary atts
+               WHERE atts.user_id = u.id
+               LIMIT 1
+             ) as attendance_from_summary,
+             (
+               SELECT ROUND(AVG(aa.percentage), 0)
+               FROM assessment_attempts aa
+               WHERE aa.user_id = u.id
+             ) as avg_assessment_score,
+             (
+               SELECT ROUND(AVG(iv.overall_score), 0)
+               FROM interview_submissions iv
+               WHERE iv.user_id = u.id
+             ) as avg_interview_score,
+             (
+               SELECT r.title
+               FROM roadmaps r
+               WHERE r.student_id = u.id
+               ORDER BY r.id DESC
+               LIMIT 1
+             ) as roadmap_title
        FROM users u
        JOIN students s ON u.id = s.user_id
        LEFT JOIN batches b ON s.batch_id = b.id
-       LEFT JOIN attendance_summary att ON u.id = att.user_id
-       LEFT JOIN assessment_attempts aa ON u.id = aa.user_id
-       WHERE u.college_id = ? AND u.role = 'student'`;
-    const params = [scope.collegeId];
-    if (scope.hasDept) {
-      sql += ` AND (b.department_id IN (${scope.deptList}) OR s.department_id IN (${scope.deptList}))`;
+       WHERE u.role = 'student'`;
+
+    const params = [];
+    if (scope.collegeId) {
+      sql += ` AND (u.college_id = ? OR u.college_id IS NULL)`;
+      params.push(scope.collegeId);
     }
-    sql += ` GROUP BY u.id, s.id, b.id, att.id ORDER BY u.name ASC`;
+
+    if (scope.hasDept) {
+      const conditions = [];
+      if (scope.deptIds.length > 0) {
+        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
+        params.push(...scope.deptIds);
+        conditions.push(`b.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
+        params.push(...scope.deptIds);
+      }
+      if (scope.deptNames.length > 0) {
+        scope.deptNames.forEach((dName) => {
+          conditions.push(`LOWER(s.department) LIKE ?`);
+          params.push(`%${dName.toLowerCase().trim()}%`);
+        });
+      }
+      if (conditions.length > 0) {
+        sql += ` AND (${conditions.join(' OR ')})`;
+      }
+    }
+
+    sql += ` GROUP BY u.id, s.id, b.id ORDER BY u.name ASC`;
 
     const students = await query(sql, params);
 
-    return sendSuccess(res, 'Students retrieved successfully', {
-      students: students.map((s) => {
-        const att = parseFloat(s.attendance) || 0;
-        const score = parseFloat(s.avg_score) || 0;
-        let riskStatus = 'Good Standing';
-        if (att < 65 || score < 45) riskStatus = 'High Risk';
-        else if (att < 75 || score < 60) riskStatus = 'Moderate Risk';
+    const formatted = students.map((s) => {
+      const rawAtt = s.attendance_from_table !== null && s.attendance_from_table !== undefined
+        ? s.attendance_from_table
+        : s.attendance_from_summary;
+      const attVal = rawAtt !== null && rawAtt !== undefined && !isNaN(Number(rawAtt))
+        ? Number(rawAtt)
+        : null;
+      const scoreVal = s.avg_assessment_score !== null && s.avg_assessment_score !== undefined && !isNaN(Number(s.avg_assessment_score))
+        ? Number(s.avg_assessment_score)
+        : null;
+      const interviewVal = s.avg_interview_score !== null && s.avg_interview_score !== undefined && !isNaN(Number(s.avg_interview_score))
+        ? Number(s.avg_interview_score)
+        : null;
 
-        return {
-          id: `st-${s.id}`,
-          studentId: s.id,
-          name: s.name,
-          email: s.email,
-          rollNumber: s.roll_number || `R-${s.id}`,
-          department: s.department || 'Engineering',
-          batch: s.batch_name || 'General Batch',
-          attendance: `${att}%`,
-          avgScore: `${score}%`,
-          riskStatus,
-        };
-      }),
+      let riskStatus = 'Good';
+      if (attVal !== null || scoreVal !== null) {
+        const att = attVal ?? 100;
+        const scr = scoreVal ?? 100;
+        if (att < 65 || scr < 45) riskStatus = 'High Risk';
+        else if (att < 75 || scr < 60) riskStatus = 'Moderate';
+        else if (att >= 90 && scr >= 80) riskStatus = 'Top Performer';
+      }
+
+      return {
+        id: `st-${s.student_id}`,
+        studentId: s.student_id,
+        name: s.name,
+        email: s.email,
+        phone: s.mobile_number || '—',
+        rollNo: s.roll_number || '—',
+        rollNumber: s.roll_number || '—',
+        department: s.department || scope.primaryDeptName || 'Engineering',
+        batch: s.batch_name || 'Unassigned',
+        attendance: attVal !== null ? `${attVal}%` : '—',
+        attendanceNum: attVal,
+        avgScore: scoreVal !== null ? `${scoreVal}%` : '—',
+        quizScore: scoreVal !== null ? `${scoreVal}%` : '—',
+        interviewScore: interviewVal !== null ? `${interviewVal}%` : '—',
+        selectedGoalName: s.roadmap_title || s.target_track || null,
+        riskStatus,
+        cgpa: s.cgpa || '—',
+      };
     });
+
+    return sendSuccess(res, 'Students retrieved successfully', formatted);
   } catch (error) {
     next(error);
   }
@@ -533,14 +653,21 @@ export const getCoordinatorLiveSessions = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
     const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId);
+    const { date: filterDate } = req.query;
 
     let sessionsSql = `
       SELECT ls.*, u.name as mentor_name, b.name as batch_name
        FROM live_sessions ls
        LEFT JOIN users u ON ls.mentor_id = u.id
        LEFT JOIN batches b ON ls.batch_id = b.id
-       WHERE ls.batch_id IN (SELECT id FROM batches WHERE college_id = ?) OR ls.mentor_id IN (SELECT id FROM users WHERE college_id = ? AND role = 'mentor')`;
+       WHERE (ls.batch_id IN (SELECT id FROM batches WHERE college_id = ?) OR ls.mentor_id IN (SELECT id FROM users WHERE college_id = ? AND role = 'mentor'))`;
     const sessionsParams = [scope.collegeId, scope.collegeId];
+
+    if (filterDate) {
+      sessionsSql += ` AND (ls.date = ? OR ls.date IS NULL)`;
+      sessionsParams.push(filterDate);
+    }
+
     if (scope.hasDept) {
       sessionsSql += ` AND (
           ls.batch_id IN (SELECT id FROM batches WHERE college_id = ? AND department_id IN (${scope.deptList}))

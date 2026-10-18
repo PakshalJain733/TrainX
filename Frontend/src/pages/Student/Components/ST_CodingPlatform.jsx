@@ -526,8 +526,8 @@ export default function CodingPlatform() {
   const testCasesList = taskData?.testCases || taskData?.test_cases || [];
 
   return (
-    <div className="student-page-inner">
-      <div className="coding-platform-container">
+    <div className="student-page-inner student-page-inner--coding">
+      <div className={`coding-platform-container ${isFullscreen ? 'is-fullscreen' : ''}`}>
         {notFound && (
           <div className="cp-not-found" style={{ padding: "40px 24px", textAlign: "center" }}>
             <h2 style={{ marginBottom: "10px", fontSize: "18px" }}>Problem not found</h2>
@@ -641,7 +641,7 @@ export default function CodingPlatform() {
               {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
             </button>
 
-            {user?.name && (
+            {isFullscreen && user?.name && (
               <div className="cp-user-profile-badge" title={user.email || user.name}>
                 <div className="cp-user-avatar">
                   {getInitials(user.name)}
