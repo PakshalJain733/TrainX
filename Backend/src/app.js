@@ -45,70 +45,49 @@ const app = express();
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
 
-// Production-safe CORS: allow configured frontend origin(s), production domains, and local dev
-const configuredOrigins = (process.env.FRONTEND_URL || '')
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+// Comprehensive & Bulletproof CORS Middleware
+// Ensures Access-Control-Allow-Origin and preflight headers are ALWAYS present
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    res.setHeader(
+      'Access-Control-Allow-Headers',
+      'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-access-token, token, x-c2c-webhook-secret, sentry-trace, baggage, Cache-Control, Pragma'
+    );
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range');
+  }
 
-const allowedOrigins = new Set(
-  [
-    ...configuredOrigins,
-    'https://trainingportal.getflytechnologies.com',
-    'https://api.trainingportal.getflytechnologies.com',
-    'https://trainx.vppcoe.tech',
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://localhost:5500',
-  ]
-    .filter(Boolean)
-    .filter((o) => typeof o === 'string')
-    .map((o) => o.replace(/\/$/, ''))
+  // Handle preflight OPTIONS requests immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
+// Configure cors library with origin reflection and credentials
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+      'x-access-token',
+      'token',
+      'x-c2c-webhook-secret',
+      'Cache-Control',
+      'Pragma',
+    ],
+  })
 );
-
-const corsOptions = {
-  origin(origin, cb) {
-    // Allow non-browser / same-origin requests
-    if (!origin) return cb(null, true);
-    const cleanOrigin = origin.replace(/\/$/, '');
-    if (allowedOrigins.has(cleanOrigin)) return cb(null, true);
-
-    // Allow LAN / private IP origins and standard deployment platforms
-    try {
-      const url = new URL(cleanOrigin);
-      const host = url.hostname;
-      const isLocalHost =
-        ['localhost', '127.0.0.1', '::1'].includes(host) ||
-        host.endsWith('.local') ||
-        /^192\.168\.\d{1,3}\.\d{1,3}$/.test(host) ||
-        /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host) ||
-        /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(host);
-
-      const isAllowedDeployment =
-        host.endsWith('.vercel.app') ||
-        host.endsWith('.netlify.app') ||
-        host.endsWith('.onrender.com') ||
-        host.endsWith('.github.io') ||
-        host.endsWith('getflytechnologies.com') ||
-        host.endsWith('vppcoe.tech');
-
-      if (isLocalHost || isAllowedDeployment) return cb(null, true);
-    } catch (e) {}
-
-    if (!process.env.FRONTEND_URL || process.env.NODE_ENV !== 'production') {
-      return cb(null, true);
-    }
-
-    return cb(null, false);
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-access-token', 'token', 'x-c2c-webhook-secret'],
-};
-
-app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('*', (req, res) => res.status(200).end());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(apiMetricsMiddleware);
