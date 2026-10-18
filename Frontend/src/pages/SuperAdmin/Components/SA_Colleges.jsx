@@ -666,16 +666,6 @@ export default function Colleges() {
                   </div>
                 </div>
               </div>
-
-              <div className="modal-footer" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="btn-modal-cancel"
-                  onClick={() => setViewDeptModal(null)}
-                >
-                  Close
-                </button>
-              </div>
             </div>
           </div>,
           document.body
