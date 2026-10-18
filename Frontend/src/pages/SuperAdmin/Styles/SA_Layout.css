@@ -1143,6 +1143,11 @@ body {
   list-style: none;
 }
 
+.action-dropdown-portal {
+  position: fixed !important;
+  z-index: 999999 !important;
+}
+
 .action-dropdown-item {
   display: flex !important;
   align-items: center !important;

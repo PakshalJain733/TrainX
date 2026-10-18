@@ -169,6 +169,70 @@ function ActionDropdown({ onEdit, onDelete, onView, onVerify, customActions = []
   );
 }
 
+function validateEditCollegeForm(values) {
+  const errors = {};
+
+  // 1. College Full Name (Required)
+  const name = (values.name || '').trim();
+  if (!name) {
+    errors.name = 'College name is required.';
+  } else if (name.length < 3) {
+    errors.name = 'College name must be at least 3 characters.';
+  } else if (name.length > 150) {
+    errors.name = 'College name cannot exceed 150 characters.';
+  }
+
+  // 2. Short Code (Required)
+  const code = (values.code || '').trim().toUpperCase();
+  if (!code) {
+    errors.code = 'Short code is required.';
+  } else if (code.length < 2 || code.length > 15) {
+    errors.code = 'Short code must be between 2 and 15 characters (e.g., VPPCOE).';
+  } else if (!/^[A-Z0-9-]+$/.test(code)) {
+    errors.code = 'Short code can only contain uppercase letters, numbers, and hyphens.';
+  }
+
+  // 3. City & Location (Required)
+  const location = (values.location || '').trim();
+  if (!location) {
+    errors.location = 'City & Location is required.';
+  } else if (location.length < 2) {
+    errors.location = 'Location must be at least 2 characters.';
+  }
+
+  // 4. Email Domain (Optional for existing colleges; validate if provided)
+  const domain = (values.domain || '').trim().toLowerCase();
+  const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z]{2,})+$/;
+  if (domain && !domainRegex.test(domain)) {
+    errors.domain = 'Please enter a valid domain format (e.g., pvppcoe.ac.in).';
+  }
+
+  // 5. College Administrator Name (Optional for edit)
+  const adminName = (values.adminName || '').trim();
+  if (adminName && adminName.length < 2) {
+    errors.adminName = 'Administrator name must be at least 2 characters.';
+  }
+
+  // 6. Admin Email (Optional for edit; validate format if provided)
+  const adminEmail = (values.adminEmail || '').trim().toLowerCase();
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (adminEmail) {
+    if (!emailRegex.test(adminEmail)) {
+      errors.adminEmail = 'Please enter a valid email address.';
+    } else if (domain) {
+      const emailDomain = adminEmail.split('@')[1];
+      if (emailDomain && emailDomain.toLowerCase() !== domain.toLowerCase()) {
+        errors.adminEmail = `Admin email domain (@${emailDomain}) must match the Email Domain (@${domain}).`;
+      }
+    }
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
 export default function Colleges() {
   const { collegeId } = useParams();
   const navigate = useNavigate();
@@ -184,6 +248,7 @@ export default function Colleges() {
   const [deleteCollege, setDeleteCollege] = useState(null);
   const [formErrors, setFormErrors] = useState({});
   const [editErrors, setEditErrors] = useState({});
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const handleTrigger2FAForCollegeAdmin = async (college) => {
     const adminEmail = college.adminEmail || college.contact_email || college.email;
@@ -533,7 +598,19 @@ export default function Colleges() {
                     <td className="colleges-td-right">
                       <ActionDropdown
                         onView={() => navigate(`/super-admin/colleges/${college.id}`)}
-                        onEdit={() => { setEditErrors({}); setEditCollege(college); }}
+                        onEdit={() => {
+                          setEditErrors({});
+                          setEditCollege({
+                            ...college,
+                            name: college.name || '',
+                            code: college.code || '',
+                            location: college.location || college.city || '',
+                            domain: college.domain || '',
+                            adminName: college.adminName || college.admin_name || '',
+                            adminEmail: college.adminEmail || college.contact_email || '',
+                            status: college.status || 'Active',
+                          });
+                        }}
                         onDelete={() => setDeleteCollege(college)}
                         customActions={[
                           {
@@ -750,7 +827,7 @@ export default function Colleges() {
 
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const validation = validateCollegeForm({
+              const validation = validateEditCollegeForm({
                 name: editCollege.name,
                 code: editCollege.code,
                 location: editCollege.location,
@@ -763,24 +840,34 @@ export default function Colleges() {
                 return;
               }
               setEditErrors({});
+              setIsSavingEdit(true);
               try {
                 const updated = await collegeAPI.updateCollege(editCollege.id, {
-                  name: editCollege.name.trim(),
-                  code: editCollege.code.trim().toUpperCase(),
-                  location: editCollege.location.trim(),
-                  city: editCollege.location.trim(),
-                  status: editCollege.status,
-                  contactEmail: editCollege.adminEmail.trim().toLowerCase(),
-                  adminName: editCollege.adminName.trim(),
-                  domain: editCollege.domain ? editCollege.domain.trim().toLowerCase() : '',
+                  name: (editCollege.name || '').trim(),
+                  code: (editCollege.code || '').trim().toUpperCase(),
+                  location: (editCollege.location || '').trim(),
+                  city: (editCollege.location || '').trim(),
+                  status: editCollege.status || 'Active',
+                  contactEmail: (editCollege.adminEmail || '').trim().toLowerCase() || null,
+                  adminEmail: (editCollege.adminEmail || '').trim().toLowerCase() || null,
+                  adminName: (editCollege.adminName || '').trim() || null,
+                  domain: (editCollege.domain || '').trim().toLowerCase() || null,
                 });
                 if (updated) {
-                  setColleges(colleges.map(c => c.id === editCollege.id ? { ...c, ...updated, adminEmail: updated.contact_email || editCollege.adminEmail, domain: updated.domain || editCollege.domain } : c));
+                  setColleges(prev => prev.map(c => c.id === editCollege.id ? {
+                    ...c,
+                    ...updated,
+                    adminEmail: updated.adminEmail || updated.contact_email || editCollege.adminEmail,
+                    adminName: updated.adminName || updated.admin_name || editCollege.adminName,
+                    domain: updated.domain || editCollege.domain,
+                  } : c));
                 }
                 setEditCollege(null);
               } catch (err) {
                 console.error("Failed to update college:", err);
                 setEditErrors(prev => ({ ...prev, _general: err.message || "Failed to update college details." }));
+              } finally {
+                setIsSavingEdit(false);
               }
             }} noValidate>
               <div className="modal-body">
@@ -797,7 +884,7 @@ export default function Colleges() {
                       type="text"
                       required
                       className={`form-input-admin ${editErrors.name ? 'form-input-error' : ''}`}
-                      value={editCollege.name}
+                      value={editCollege.name || ''}
                       onChange={(e) => {
                         setEditCollege({ ...editCollege, name: e.target.value });
                         if (editErrors.name) setEditErrors({ ...editErrors, name: null });
@@ -852,12 +939,11 @@ export default function Colleges() {
                     )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Email Domain *</label>
+                    <label>Email Domain</label>
                     <input
                       type="text"
-                      required
                       className={`form-input-admin ${editErrors.domain ? 'form-input-error' : ''}`}
-                      placeholder="pvppcoe.ac.in"
+                      placeholder="e.g. pvppcoe.ac.in"
                       value={editCollege.domain || ''}
                       onChange={(e) => {
                         setEditCollege({ ...editCollege, domain: e.target.value });
@@ -875,11 +961,11 @@ export default function Colleges() {
 
                 <div className="form-row-2">
                   <div className="form-group-admin">
-                    <label>College Administrator Name *</label>
+                    <label>College Administrator Name</label>
                     <input
                       type="text"
-                      required
                       className={`form-input-admin ${editErrors.adminName ? 'form-input-error' : ''}`}
+                      placeholder="e.g. Dr. Verma"
                       value={editCollege.adminName || ''}
                       onChange={(e) => {
                         setEditCollege({ ...editCollege, adminName: e.target.value });
@@ -894,11 +980,11 @@ export default function Colleges() {
                     )}
                   </div>
                   <div className="form-group-admin">
-                    <label>Admin Email *</label>
+                    <label>Admin Email</label>
                     <input
                       type="email"
-                      required
                       className={`form-input-admin ${editErrors.adminEmail ? 'form-input-error' : ''}`}
+                      placeholder="e.g. admin@pvppcoe.ac.in"
                       value={editCollege.adminEmail || ''}
                       onChange={(e) => {
                         setEditCollege({ ...editCollege, adminEmail: e.target.value });
@@ -928,8 +1014,20 @@ export default function Colleges() {
               </div>
 
               <div className="modal-footer">
-                <button type="submit" className="btn-modal-submit">
-                  Save Changes
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setEditCollege(null)}
+                  disabled={isSavingEdit}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-modal-submit"
+                  disabled={isSavingEdit}
+                >
+                  {isSavingEdit ? "Saving Changes..." : "Save Changes"}
                 </button>
               </div>
             </form>
