@@ -359,11 +359,11 @@ export default function Overview() {
               <table className="overview-table">
                 <thead>
                   <tr className="overview-table-head-row">
-                    <th className="overview-table-th">Institution</th>
-                    <th className="overview-table-th">Location</th>
-                    <th className="overview-table-th">Students</th>
-                    <th className="overview-table-th">Status</th>
-                    <th className="overview-table-th" style={{ textAlign: "right" }}>Actions</th>
+                    <th className="overview-table-th" style={{ width: "38%" }}>Institution</th>
+                    <th className="overview-table-th" style={{ width: "20%" }}>Location</th>
+                    <th className="overview-table-th overview-table-th--center" style={{ width: "14%" }}>Students</th>
+                    <th className="overview-table-th overview-table-th--center" style={{ width: "14%" }}>Status</th>
+                    <th className="overview-table-th overview-table-th--right" style={{ width: "14%" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -374,11 +374,11 @@ export default function Overview() {
                         <div className="overview-td-sub">{college.code}</div>
                       </td>
                       <td className="overview-table-td overview-td-text">{college.location || "Main Campus"}</td>
-                      <td className="overview-table-td overview-td-count">{college.studentsCount || college.student_count || 0}</td>
-                      <td className="overview-table-td">
+                      <td className="overview-table-td overview-table-td--center overview-td-count">{college.studentsCount || college.student_count || 0}</td>
+                      <td className="overview-table-td overview-table-td--center">
                         <StatusBadge status={college.status || 'Active'} />
                       </td>
-                      <td className="overview-table-td" style={{ textAlign: "right" }}>
+                      <td className="overview-table-td overview-table-td--right">
                         <button
                           type="button"
                           onClick={() => handleDeleteCollege(college.id, college.name)}
