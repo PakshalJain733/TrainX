@@ -141,8 +141,8 @@
   gap: 24px;
   overflow-x: auto;
   font-size: 14px;
-  font-weight: 600;
-  scrollbar-width: thin;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .coord-cp-tab-btn {

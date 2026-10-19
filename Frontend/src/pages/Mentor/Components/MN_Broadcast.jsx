@@ -1,43 +1,15 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Check, Send, Bell, Trash2, Megaphone, CheckCircle2, Users, Calendar, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import { addSharedBroadcast, getSharedBroadcasts, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/MN_Broadcast.css";
 
-function MentorBcastSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef(null);
-  const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`mentor-bcast-select-wrap${isOpen ? ' mentor-bcast-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`mentor-bcast-select-trigger${isOpen ? ' mentor-bcast-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="mentor-bcast-select-icon" />}
-        <span className="mentor-bcast-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`mentor-bcast-select-arrow${isOpen ? ' mentor-bcast-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="mentor-bcast-select-dropdown">
-          {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`mentor-bcast-select-option${isSel ? ' mentor-bcast-select-option--selected' : ''}`}>
-                <span className="mentor-bcast-select-option-label">{opt.label}</span>
-                {isSel && <Check className="mentor-bcast-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Dropdown for Mentor Broadcast using CustomSelect ── */
+function MentorBcastSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 export default function MentorBroadcast() {

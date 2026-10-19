@@ -49,8 +49,82 @@ export const getDepartments = async (req, res, next) => {
     sql += ' ORDER BY d.id ASC';
 
     const dbDepts = await query(sql, params);
-    const formatted = (dbDepts || []).map((d) => {
+    const formatted = await Promise.all((dbDepts || []).map(async (d) => {
       const shortCode = (d.code && d.code.trim()) || (d.name && d.name.trim()) || '';
+
+      let studentsCount = 0;
+      let batchesCount = 0;
+
+      try {
+        const sc = await query(`
+          SELECT COUNT(DISTINCT u.id) AS count
+          FROM users u
+          JOIN students s ON u.id = s.user_id
+          WHERE u.role = 'student'
+            AND (u.college_id = ? OR u.college_id IS NULL OR ? IS NULL)
+            AND (
+              s.department_id = ?
+              OR LOWER(TRIM(s.department)) = LOWER(TRIM(?))
+              OR LOWER(TRIM(s.department)) = LOWER(TRIM(?))
+              OR LOWER(TRIM(?)) LIKE CONCAT('%', LOWER(TRIM(s.department)), '%')
+              OR LOWER(TRIM(s.department)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
+            )
+        `, [d.college_id, d.college_id, d.id, d.code, d.name, d.name, d.code]);
+        studentsCount = sc[0]?.count || 0;
+      } catch (err) {
+        console.warn('Error counting students for dept:', d.id, err.message);
+      }
+
+      try {
+        const bc = await query(`
+          SELECT COUNT(DISTINCT b_id) AS count
+          FROM (
+            SELECT b.id AS b_id
+            FROM batches b
+            WHERE b.department_id = ?
+
+            UNION
+
+            SELECT sb.batch_id AS b_id
+            FROM student_batches sb
+            JOIN students s ON sb.user_id = s.user_id
+            JOIN users u ON u.id = s.user_id
+            WHERE u.role = 'student'
+              AND (u.college_id = ? OR u.college_id IS NULL OR ? IS NULL)
+              AND (
+                s.department_id = ?
+                OR LOWER(TRIM(s.department)) = LOWER(TRIM(?))
+                OR LOWER(TRIM(s.department)) = LOWER(TRIM(?))
+                OR LOWER(TRIM(?)) LIKE CONCAT('%', LOWER(TRIM(s.department)), '%')
+                OR LOWER(TRIM(s.department)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
+              )
+
+            UNION
+
+            SELECT s.batch_id AS b_id
+            FROM students s
+            JOIN users u ON u.id = s.user_id
+            WHERE u.role = 'student'
+              AND s.batch_id IS NOT NULL
+              AND (u.college_id = ? OR u.college_id IS NULL OR ? IS NULL)
+              AND (
+                s.department_id = ?
+                OR LOWER(TRIM(s.department)) = LOWER(TRIM(?))
+                OR LOWER(TRIM(s.department)) = LOWER(TRIM(?))
+                OR LOWER(TRIM(?)) LIKE CONCAT('%', LOWER(TRIM(s.department)), '%')
+                OR LOWER(TRIM(s.department)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
+              )
+          ) AS dept_batches
+        `, [
+          d.id,
+          d.college_id, d.college_id, d.id, d.code, d.name, d.name, d.code,
+          d.college_id, d.college_id, d.id, d.code, d.name, d.name, d.code
+        ]);
+        batchesCount = bc[0]?.count || 0;
+      } catch (err) {
+        console.warn('Error counting batches for dept:', d.id, err.message);
+      }
+
       return {
         ...d,
         id: d.id,
@@ -67,8 +141,12 @@ export const getDepartments = async (req, res, next) => {
         hodName: d.hod_name || '',
         hodEmail: d.hod_email || '',
         status: d.status || 'Active',
+        studentsCount,
+        activeStudents: studentsCount,
+        batchesCount,
+        activeBatches: batchesCount,
       };
-    });
+    }));
     return sendSuccess(res, 'Departments retrieved successfully', formatted);
   } catch (error) {
     next(error);

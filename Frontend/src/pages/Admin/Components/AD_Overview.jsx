@@ -19,19 +19,42 @@ export default function AdminOverview() {
   const [loading, setLoading] = useState(true);
   const [adminUser, setAdminUser] = useState(() => {
     try {
-      return JSON.parse(sessionStorage.getItem("user") || "{}");
+      const u = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+      return u;
     } catch (_) {
       return {};
     }
   });
 
-  const fullName = adminUser.name || adminUser.fullName || adminUser.email?.split("@")[0] || "Admin";
+  const formatDisplayName = (rawName, email, fallback = "Ganesh Shinde") => {
+    if (typeof rawName === "string" && rawName.trim()) {
+      const trimmed = rawName.trim();
+      if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const source = (typeof email === "string" && email.includes("@")) ? email.split("@")[0] : "";
+    if (source) {
+      const cleaned = source.replace(/[0-9_.-]+/g, " ").trim();
+      if (cleaned.length > 0) {
+        return cleaned
+          .split(" ")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+      }
+    }
+    return fallback;
+  };
+
+  const rawName = adminUser.name || adminUser.fullName || adminUser.full_name;
   const email = adminUser.email || "";
+  const fullName = formatDisplayName(rawName, email, "Ganesh Shinde");
   const role = adminUser.role || "Campus Admin";
-  const dept = adminUser.department || adminUser.dept || "";
+  const dept = adminUser.department || adminUser.dept || "Computer Engineering";
 
   const getInitials = (name) => {
-    if (!name) return "AD";
+    if (!name) return "GS";
     const parts = name.trim().split(" ");
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     return name.slice(0, 2).toUpperCase();

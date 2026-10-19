@@ -1,40 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { Check, HelpCircle, MessageCircle, Phone, Search, Plus, ChevronDown, Sparkles, Ticket, FileText, Download, ThumbsUp, ThumbsDown, X, Send, ShieldAlert, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_Help.css";
 
-function MentorHelpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = React.useRef(null);
-  const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-  return (
-    <div className={`student-help-select-wrap${isOpen ? ' student-help-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-help-select-trigger${isOpen ? ' student-help-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="student-help-select-icon" />}
-        <span className="student-help-select-text">{selected ? selected.label : <span style={{color:'#94a3b8'}}>{placeholder}</span>}</span>
-        <ChevronDown className={`student-help-select-arrow${isOpen ? ' student-help-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className="student-help-select-dropdown">
-          {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`student-help-select-option${isSel ? ' student-help-select-option--selected' : ''}`}>
-                <span className="student-help-select-option-label">{opt.label}</span>
-                {isSel && <Check className="student-help-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Inline dropdown for Mentor Help using CustomSelect ── */
+function MentorHelpSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 const defaultFaqs = [
@@ -158,11 +130,11 @@ export default function Help() {
 
   return (
     <div className="help-page-wrapper">
-      <div style={{ marginBottom: "1rem" }}>
-        <h2 style={{ fontSize: "1.75rem", fontWeight: 800, color: "#0f172a", margin: 0, letterSpacing: "-0.02em" }}>
+      <div className="help-header-wrap">
+        <h2 className="help-header-title">
           <span>Help & Support</span>
         </h2>
-        <p style={{ color: "#64748b", fontSize: "0.95rem", margin: "4px 0 0 0" }}>
+        <p className="help-header-desc">
           Find answers to common questions or reach out to our support team.
         </p>
       </div>

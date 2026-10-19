@@ -5,6 +5,27 @@
   gap: 24px;
 }
 
+.mentor-page-header {
+  margin-bottom: 24px;
+}
+
+.mentor-page-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.01em;
+}
+
+.mentor-page-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
 .co-lb-rank {
   font-weight: 700;
   color: #0f172a;

@@ -150,7 +150,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .stack-8 {
@@ -263,7 +263,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
 }
 
 /* Notification Dropdown */
@@ -651,7 +651,7 @@ body {
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
   padding: 12px 14px 14px 12px;
   box-sizing: border-box;
 }
@@ -1406,22 +1406,16 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Custom Scrollbar for coordinator-card-body */
+/* Hide scrollbar for coordinator-card-body */
+.coordinator-card-body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 .coordinator-card-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.coordinator-card-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.coordinator-card-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.coordinator-card-body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Sub-containers inside page components */

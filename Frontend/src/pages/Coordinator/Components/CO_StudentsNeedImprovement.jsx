@@ -329,7 +329,7 @@ export default function StudentsNeedImprovement() {
           <div className="coord-perf-kpi-info">
             <div className="coord-sni-kpi-label-row">
               <span className="coord-perf-kpi-label coord-sni-kpi-label">Needing Immediate Attention</span>
-              <span className="coord-perf-status-badge coord-perf-status--struggling" className="coord-sni-kpi-badge">High Priority</span>
+              <span className="coord-perf-status-badge coord-perf-status--struggling coord-sni-kpi-badge">High Priority</span>
             </div>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--rose">{immediateAttentionStudents.length} Students</span>
             <span className="coord-perf-kpi-sub coord-sni-sub-rose-flex">
@@ -341,7 +341,6 @@ export default function StudentsNeedImprovement() {
         <div 
           onClick={() => setActiveTab("commonSkills")}
           className="coord-perf-kpi-card"
-          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--indigo">
             <BrainCircuit size={22} />
@@ -349,7 +348,7 @@ export default function StudentsNeedImprovement() {
           <div className="coord-perf-kpi-info">
             <div className="coord-sni-kpi-label-row">
               <span className="coord-perf-kpi-label coord-sni-kpi-label">Most Common Weak Skills</span>
-              <span className="coord-perf-status-badge coord-perf-status--good" className="coord-sni-kpi-badge">{commonWeakSkills.length} Topics</span>
+              <span className="coord-perf-status-badge coord-perf-status--good coord-sni-kpi-badge">{commonWeakSkills.length} Topics</span>
             </div>
             <span className="coord-perf-kpi-value coord-sni-sub-indigo-val">
               {commonWeakSkills[0]?.skillName || "DBMS"}
@@ -363,7 +362,6 @@ export default function StudentsNeedImprovement() {
         <div 
           onClick={() => setActiveTab("improving")}
           className="coord-perf-kpi-card"
-          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--emerald">
             <TrendingUp size={22} />
@@ -371,7 +369,7 @@ export default function StudentsNeedImprovement() {
           <div className="coord-perf-kpi-info">
             <div className="coord-sni-kpi-label-row">
               <span className="coord-perf-kpi-label coord-sni-kpi-label">Students Improving</span>
-              <span className="coord-perf-status-badge coord-perf-status--top" className="coord-sni-kpi-badge">Positive Growth</span>
+              <span className="coord-perf-status-badge coord-perf-status--top coord-sni-kpi-badge">Positive Growth</span>
             </div>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--emerald">{improvingStudents.length} Students</span>
             <span className="coord-perf-kpi-sub coord-sni-sub-emerald-flex">
@@ -383,7 +381,6 @@ export default function StudentsNeedImprovement() {
         <div 
           onClick={() => setActiveTab("notImproving")}
           className="coord-perf-kpi-card"
-          
         >
           <div className="coord-perf-kpi-icon coord-perf-kpi-icon--amber">
             <TrendingDown size={22} />
@@ -391,7 +388,7 @@ export default function StudentsNeedImprovement() {
           <div className="coord-perf-kpi-info">
             <div className="coord-sni-kpi-label-row">
               <span className="coord-perf-kpi-label coord-sni-kpi-label">Performance Not Improving</span>
-              <span className="coord-perf-status-badge coord-perf-status--avg" className="coord-sni-kpi-badge">Action Needed</span>
+              <span className="coord-perf-status-badge coord-perf-status--avg coord-sni-kpi-badge">Action Needed</span>
             </div>
             <span className="coord-perf-kpi-value coord-perf-kpi-value--amber">{notImprovingStudents.length} Students</span>
             <span className="coord-perf-kpi-sub coord-sni-sub-amber-text">
@@ -591,7 +588,6 @@ export default function StudentsNeedImprovement() {
                           </button>
                           <button
                             onClick={() => setRemediationStudent(student)}
-                            className="coord-perf-btn coord-perf-btn--secondary"
                             className="coord-perf-btn coord-perf-btn--secondary coord-sni-btn-icon-pad"
                             title="Assign Remediation Plan"
                           >
@@ -733,7 +729,6 @@ export default function StudentsNeedImprovement() {
                   setRemediationStudent(selectedSkillGapStudent);
                   setSelectedSkillGapStudent(null);
                 }}
-                className="coord-btn coord-btn--primary"
                 className="coord-btn coord-btn--primary coord-sni-btn-assign-plan"
               >
                 <PlusCircle size={15} />

@@ -1,8 +1,8 @@
 /* ─── StudentSidebar.css ─────────────────────────────────────────────────── */
 
 :root {
-  --sidebar-bg: var(--app-sidebar-bg, #ffffff);
-  --sidebar-border: var(--app-sidebar-border, #e2e8f0);
+  --sidebar-bg: var(--app-sidebar-bg, #dbe6f2);
+  --sidebar-border: var(--app-sidebar-border, #cbd5e1);
   --sidebar-width: 240px;
   --sidebar-width-icon: 68px;
   --sidebar-text: #64748b;
@@ -25,7 +25,7 @@
   width: var(--sidebar-width);
   min-height: 100vh;
   background: var(--sidebar-bg);
-  border-right: 1px solid #e2e8f0;
+  border-right: none !important;
   transition: var(--sidebar-transition);
   overflow: hidden;
   position: relative;
@@ -44,20 +44,20 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px 0px 16px;
-  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 0 16px 14px 16px !important;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.12) !important;
   height: auto;
   min-height: 64px;
   gap: 8px;
   box-sizing: border-box;
-  margin-bottom: 8px;
+  margin-bottom: 10px !important;
 }
 
 /* ── Footer ── */
 .sidebar-footer {
-  padding: 14px 12px 12px 12px;
-  border-top: 1px solid #e2e8f0 !important;
-  margin-top: 8px;
+  padding: 14px 12px 12px 12px !important;
+  border-top: 1px solid rgba(15, 23, 42, 0.12) !important;
+  margin-top: 10px !important;
 }
 
 .sidebar-brand {
@@ -116,16 +116,16 @@
   object-fit: contain;
   display: inline-block;
   vertical-align: middle;
-  padding-bottom: 3px;
+  padding-bottom: 2px;
 }
 
 .sidebar-brand-sub {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11.5px;
+  font-weight: 600;
   color: #64748b;
   margin-top: 2px;
   line-height: 1.2;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.15px;
 }
 
 /* ── Toggle button ── */
@@ -167,19 +167,14 @@
   padding: 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .sidebar-content::-webkit-scrollbar {
-  width: 3px;
-}
-
-.sidebar-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 85, 186, 0.3);
-  border-radius: 4px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ── Group label ── */

@@ -149,7 +149,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .stack-8 {
@@ -262,7 +262,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
 }
 
 /* Notification Dropdown */
@@ -636,7 +636,7 @@ body {
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
   padding: 12px 14px 14px 12px;
   box-sizing: border-box;
 }
@@ -1416,22 +1416,16 @@ body {
   flex: 1;
 }
 
-/* Custom Scrollbar for student-card-body */
+/* Hide scrollbars on student-card-body */
+.student-card-body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 .student-card-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.student-card-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.student-card-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.student-card-body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Sub-containers inside page components */
@@ -2301,8 +2295,13 @@ button:active:not(:disabled),
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-dialog,
@@ -2324,6 +2323,7 @@ button:active:not(:disabled),
     opacity: 0;
     transform: scale(0.94) translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -2495,7 +2495,7 @@ button:active:not(:disabled),
   border-top: 1px solid #e2e8f0 !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-end !important;
+  justify-content: space-between !important;
   gap: 12px !important;
 }
 

@@ -286,14 +286,36 @@ export default function MentorLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const formatDisplayName = (rawName, email, fallback = "Mentor") => {
+    if (typeof rawName === "string" && rawName.trim()) {
+      const trimmed = rawName.trim();
+      if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const source = (typeof email === "string" && email.includes("@")) ? email.split("@")[0] : "";
+    if (source) {
+      const cleaned = source.replace(/[0-9_.-]+/g, " ").trim();
+      if (cleaned.length > 0) {
+        return cleaned
+          .split(" ")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+      }
+    }
+    return fallback;
+  };
+
   const resolveUser = (rawUser) => {
     let localUser = {};
     let mentorProf = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-    try { mentorProf = JSON.parse(sessionStorage.getItem("mentorProfile")) || {}; } catch { }
+    try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {}; } catch { }
+    try { mentorProf = JSON.parse(sessionStorage.getItem("mentorProfile") || localStorage.getItem("mentorProfile")) || {}; } catch { }
     const u = rawUser || {};
-    let name = mentorProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Mentor";
-    let email = mentorProf.email || localUser.email || u.email || "mentor@pvppcoe.ac.in";
+    const rawName = mentorProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name;
+    const email = mentorProf.email || localUser.email || u.email || "mentor@pvppcoe.ac.in";
+    const name = formatDisplayName(rawName, email, "Mentor");
     return { ...localUser, ...u, name, email };
   };
 

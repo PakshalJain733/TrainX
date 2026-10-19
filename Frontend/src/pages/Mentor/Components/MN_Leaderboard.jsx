@@ -74,8 +74,8 @@ export default function Leaderboard() {
     <div className="mentor-leaderboard-container">
       <div className="mentor-page-header">
         <div>
-          <h2 className="mentor-page-title">
-            <Trophy size={20} color="#4f46e5" />
+          <h2 className="mentor-page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Trophy size={20} color="#4f46e5" style={{ flexShrink: 0 }} />
             <span>Batch Leaderboard & Rankings</span>
           </h2>
           <p className="mentor-page-subtitle">Student rankings and activity values returned by the mentor service</p>

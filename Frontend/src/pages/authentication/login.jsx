@@ -283,7 +283,15 @@ function Login() {
       localStorage.removeItem("user");
     }
 
-    let finalName = serverUser.name || existingUser.name || serverUser.email?.split("@")[0] || "Student";
+    let finalName = serverUser.name || existingUser.name;
+    if (!finalName || finalName.includes("@")) {
+      const email = serverUser.email || existingUser.email || "";
+      const src = (email && email.includes("@")) ? email.split("@")[0] : (finalName && finalName.includes("@") ? finalName.split("@")[0] : "");
+      if (src) {
+        finalName = src.replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      }
+    }
+    if (!finalName) finalName = "User";
 
     const mergedUser = {
       ...existingUser,

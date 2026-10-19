@@ -132,6 +132,32 @@
     z-index: 8;
 }
 
+/* Student Row 1: Full Name | College ID | Mobile Number */
+.form-grid-student-row1 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    position: relative;
+    z-index: 5;
+}
+
+/* Student Row 3: Department | Year | Division */
+.form-grid-student-row3 {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 0.8fr;
+    gap: 10px;
+    position: relative;
+    z-index: 8;
+}
+
+@media (max-width: 600px) {
+    .form-grid-student-row1,
+    .form-grid-student-row3 {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+}
+
 .role-select-container {
     margin-bottom: 12px;
     position: relative;

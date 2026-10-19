@@ -182,6 +182,14 @@ export default function AdminProfile() {
         }),
       });
 
+      let localUser = {};
+      try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {}; } catch { }
+      const updatedUser = { ...localUser, name: form.name, email: form.email, phone: form.phone, department: form.department };
+      sessionStorage.setItem("user", JSON.stringify(updatedUser));
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      sessionStorage.setItem("adminProfile", JSON.stringify(updatedUser));
+      localStorage.setItem("adminProfile", JSON.stringify(updatedUser));
+
       window.dispatchEvent(new Event("userProfileUpdated"));
 
       setSaved(true);

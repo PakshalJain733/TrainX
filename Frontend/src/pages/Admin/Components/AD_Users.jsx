@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Users, UserPlus, Search, Filter, Edit2, Edit3, Zap, User, Trash2, Copy, CheckCircle2, XCircle, Sparkles, Shield, GraduationCap, Briefcase, UserCheck, RefreshCw, X, AlertCircle, ChevronDown, UserCog, BookOpenCheck, FileSpreadsheet, UploadCloud, Download, Check, History, Clock, KeyRound, Building2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -85,13 +86,13 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
         if (existing) {
           setTopicTitle(existing.topic || "");
           setTopicDesc(existing.description || "");
-          setTopicStatus(existing.status || computeAutoStatus(currentDate));
+          setTopicStatus(normalizeTopicStatus(existing.status, currentDate));
           if (existing.trainer) setCurrentTrainer(existing.trainer);
         } else if (selected) {
           setTopicTitle(selected.topic || "");
           setTopicDesc(selected.description || "");
           setTopicDate(selected.date || new Date().toISOString().split("T")[0]);
-          setTopicStatus(selected.status || "Scheduled");
+          setTopicStatus(normalizeTopicStatus(selected.status, selected.date));
         }
       })
       .catch((err) => {
@@ -100,7 +101,7 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
         if (selected) {
           setTopicTitle(selected.topic || "");
           setTopicDesc(selected.description || "");
-          setTopicStatus(selected.status || "Scheduled");
+          setTopicStatus(normalizeTopicStatus(selected.status, selected.date));
         }
       })
       .finally(() => setLoadingTopics(false));
@@ -117,6 +118,14 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     return fallbackStatus || "Scheduled";
   };
 
+  const normalizeTopicStatus = (status, dateStr) => {
+    const s = String(status || "").toLowerCase().trim();
+    if (s === "scheduled") return "Scheduled";
+    if (s === "in progress" || s === "in_progress") return "In Progress";
+    if (s === "completed") return "Completed";
+    return computeAutoStatus(dateStr, "Scheduled");
+  };
+
   const handleDateChange = (newDate) => {
     setTopicDate(newDate);
 
@@ -125,14 +134,14 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
     if (existing) {
       setTopicTitle(existing.topic || "");
       setTopicDesc(existing.description || "");
-      setTopicStatus(existing.status || computeAutoStatus(newDate));
+      setTopicStatus(normalizeTopicStatus(existing.status, newDate));
       if (existing.trainer) setCurrentTrainer(existing.trainer);
     } else {
       const selected = batches.find(b => b.id === selectedBatchId);
       if (selected && selected.date === newDate) {
         setTopicTitle(selected.topic || "");
         setTopicDesc(selected.description || "");
-        setTopicStatus(selected.status || computeAutoStatus(newDate));
+        setTopicStatus(normalizeTopicStatus(selected.status, newDate));
       } else {
         // Reset topic fields for new date entry
         setTopicTitle("");
@@ -380,6 +389,8 @@ function AssignTrainerModal({ isOpen, onClose, users = [] }) {
                       { value: "Completed", label: "Completed" }
                     ]}
                     onChange={val => setTopicStatus(val)}
+                    placeholder="Select Status"
+                    icon={Clock}
                   />
                 </div>
               </div>
@@ -1241,7 +1252,15 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
           )}
         </div>
 
-        <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div className="modal-footer modal-footer-users">
+          <button
+            type="button"
+            className="btn-modal-cancel"
+            onClick={onClose}
+            disabled={isProcessing}
+          >
+            Cancel
+          </button>
           <button
             type="button"
             className="btn-modal-submit bulk-submit-btn"
@@ -1258,11 +1277,21 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
 }
 
 export default function AdminUsers() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState(() => searchParams.get("role") || "all");
+  const [departmentFilter, setDepartmentFilter] = useState(() => searchParams.get("department") || searchParams.get("dept") || "");
   const [stats, setStats] = useState({ totalUsers: 0, students: 0, mentors: 0, coordinators: 0 });
+
+  // Sync state when URL search parameters change
+  useEffect(() => {
+    const d = searchParams.get("department") || searchParams.get("dept") || "";
+    const r = searchParams.get("role") || "all";
+    if (d !== departmentFilter) setDepartmentFilter(d);
+    if (r !== roleFilter) setRoleFilter(r);
+  }, [searchParams]);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -1332,14 +1361,27 @@ export default function AdminUsers() {
       const queryParams = new URLSearchParams();
       if (roleFilter !== "all") queryParams.append("role", roleFilter);
       if (search.trim()) queryParams.append("search", search.trim());
+      if (departmentFilter.trim() && departmentFilter !== "all") {
+        queryParams.append("department", departmentFilter.trim());
+      }
 
       const res = await apiFetch(`/admin/users?${queryParams.toString()}`);
       if (res && res.data) {
         // Filter out admin accounts from College Admin user list
-        const nonAdmins = (res.data || []).filter(u => {
+        let nonAdmins = (res.data || []).filter(u => {
           const r = String(u.role || '').toLowerCase();
           return !r.includes('admin');
         });
+
+        // Strict department filter on client as well
+        if (departmentFilter.trim() && departmentFilter !== "all") {
+          const targetDept = departmentFilter.trim().toLowerCase();
+          nonAdmins = nonAdmins.filter(u => {
+            const ud = String(u.department || '').trim().toLowerCase();
+            return ud === targetDept || ud.includes(targetDept) || targetDept.includes(ud);
+          });
+        }
+
         setUsers(nonAdmins);
       }
     } catch (err) {
@@ -1365,7 +1407,7 @@ export default function AdminUsers() {
 
   useEffect(() => {
     fetchUsers();
-  }, [roleFilter, search]);
+  }, [roleFilter, search, departmentFilter]);
 
   useEffect(() => {
     fetchStats();
@@ -1451,12 +1493,12 @@ export default function AdminUsers() {
         body: JSON.stringify(formData),
       });
 
-      if (res && res.data) {
+      if (res && (res.data || res.success)) {
         setIsEditModalOpen(false);
         fetchUsers();
         fetchStats();
       } else {
-        setFeedback({ type: "error", message: res.error || "Failed to update user" });
+        setFeedback({ type: "error", message: res?.error || res?.message || "Failed to update user" });
       }
     } catch (err) {
       setFeedback({ type: "error", message: err.message || "An error occurred" });
@@ -1469,14 +1511,19 @@ export default function AdminUsers() {
     if (!selectedUser) return;
     setActionLoading(true);
     try {
-      await apiFetch(`/admin/users/${selectedUser.id}`, {
+      const res = await apiFetch(`/admin/users/${selectedUser.id}`, {
         method: "DELETE",
       });
-      setIsDeleteModalOpen(false);
-      fetchUsers();
-      fetchStats();
+      if (res && res.error) {
+        alert(res.error || res.message || "Failed to delete user");
+      } else {
+        setIsDeleteModalOpen(false);
+        fetchUsers();
+        fetchStats();
+      }
     } catch (err) {
       console.error("Failed to delete user:", err);
+      alert(err.message || "Failed to delete user");
     } finally {
       setActionLoading(false);
     }
@@ -1624,6 +1671,33 @@ export default function AdminUsers() {
           </button>
         </div>
       </div>
+
+      {/* Active Department Filter Banner */}
+      {departmentFilter && (
+        <div className="admin-active-filter-strip">
+          <div className="admin-active-filter-info">
+            <Building2 size={16} className="admin-active-filter-icon" />
+            <span>
+              Showing students from department: <strong>{departmentFilter}</strong>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="admin-clear-filter-btn"
+            onClick={() => {
+              setDepartmentFilter("");
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete("department");
+              nextParams.delete("dept");
+              setSearchParams(nextParams);
+            }}
+            title="Clear department filter"
+          >
+            <X size={14} />
+            <span>Clear Department Filter</span>
+          </button>
+        </div>
+      )}
 
       {/* Users Table */}
       <div className="admin-users-table-card">
@@ -1799,34 +1873,46 @@ export default function AdminUsers() {
                 </div>
 
                 {formData.role !== 'student' && (
-                  <div style={{ marginTop: '12px', marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <button
-                        type="button"
-                        className="btn-modal-submit"
-                        style={{
-                          padding: '9px 22px',
-                          fontSize: '13.5px',
-                          fontWeight: '700',
-                          width: 'auto',
-                          background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '8px',
-                          borderRadius: '10px',
-                          boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                          cursor: 'pointer'
-                        }}
-                        disabled={isGeneratingCode}
-                        onClick={() => handleGenerateSecureCode(formData.role)}
-                      >
-                        <Sparkles size={16} />
-                        {isGeneratingCode ? "Generating..." : "Generate Token"}
-                      </button>
+                  <div className="admin-user-token-section">
+                    <div className="admin-user-token-header">
+                      <div className="admin-user-token-label-wrap">
+                        <div className="admin-user-token-icon">
+                          <KeyRound size={17} />
+                        </div>
+                        <div>
+                          <div className="admin-user-token-title">Role Access Token</div>
+                          <div className="admin-user-token-sub">
+                            Required for {formData.role === 'coordinator' ? 'Coordinator' : 'Mentor'} onboarding
+                          </div>
+                        </div>
+                      </div>
+
+                      {!generatedCode ? (
+                        <button
+                          type="button"
+                          className="admin-user-token-gen-btn"
+                          disabled={isGeneratingCode}
+                          onClick={() => handleGenerateSecureCode(formData.role)}
+                        >
+                          <Sparkles size={15} />
+                          <span>{isGeneratingCode ? "Generating..." : "Generate Token"}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="admin-user-token-regen-btn"
+                          disabled={isGeneratingCode}
+                          onClick={() => handleGenerateSecureCode(formData.role)}
+                          title="Generate a new token"
+                        >
+                          <RefreshCw size={13} className={isGeneratingCode ? "spin" : ""} />
+                          <span>{isGeneratingCode ? "Regenerating..." : "Regenerate"}</span>
+                        </button>
+                      )}
                     </div>
 
-                    {generatedCode && (
-                      <div className="manageusers-token-hero" style={{ marginTop: '10px' }}>
+                    {generatedCode ? (
+                      <div className="manageusers-token-hero" style={{ marginTop: '12px' }}>
                         <div>
                           <div className="manageusers-token-label">
                             <Sparkles size={13} style={{ color: '#c7d2fe' }} />
@@ -1866,6 +1952,10 @@ export default function AdminUsers() {
                           {copiedCode ? <Check size={15} /> : <Copy size={15} />}
                           <span>{copiedCode ? 'Copied!' : 'Copy Token'}</span>
                         </button>
+                      </div>
+                    ) : (
+                      <div className="admin-user-token-empty-card">
+                        <span>Click <strong>Generate Token</strong> above to issue a single-use onboarding key.</span>
                       </div>
                     )}
                   </div>
@@ -1931,7 +2021,15 @@ export default function AdminUsers() {
                   </>
                 )}
               </div>
-              <div className="modal-footer-users">
+              <div className="modal-footer modal-footer-users">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="btn-modal-submit" disabled={actionLoading}>
                   {actionLoading ? "Creating..." : "Create User"}
                 </button>
@@ -2093,7 +2191,15 @@ export default function AdminUsers() {
                   </>
                 )}
               </div>
-              <div className="modal-footer">
+              <div className="modal-footer modal-footer-users">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={actionLoading}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="btn-modal-submit" disabled={actionLoading}>
                   {actionLoading ? "Saving..." : "Save Changes"}
                 </button>
@@ -2134,7 +2240,15 @@ export default function AdminUsers() {
                 </div>
               </div>
             </div>
-            <div className="modal-footer">
+            <div className="modal-footer modal-footer-users">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setIsDeleteModalOpen(false)}
+                disabled={actionLoading}
+              >
+                Cancel
+              </button>
               <button type="button" className="btn-modal-submit btn-modal-danger" onClick={handleDeleteUser} disabled={actionLoading}>
                 {actionLoading ? "Deleting..." : "Delete User"}
               </button>

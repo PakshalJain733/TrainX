@@ -564,17 +564,15 @@
   color: #94a3b8;
 }
 
+.overview-leaderboard-content {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 .overview-leaderboard-content::-webkit-scrollbar {
-  width: 5px;
-}
-
-.overview-leaderboard-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.overview-leaderboard-content::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .overview-leaderboard-divider {

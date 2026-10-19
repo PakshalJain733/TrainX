@@ -271,10 +271,12 @@ export default function MaintenanceControls() {
 
       {/* Global Emergency Alert Banner if ON */}
       {config.globalEmergencyMode && (
-        <div className="p-4 bg-amber-50/90 border border-amber-200/80 rounded-2xl flex items-center justify-between gap-3 shadow-xs">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
-            <p className="text-xs text-amber-900 font-semibold">
+        <div className="maintenancecontrols-emergency-banner">
+          <div className="maintenancecontrols-emergency-banner-content">
+            <div className="maintenancecontrols-emergency-icon-wrap">
+              <AlertTriangle size={20} color="#d97706" className="maintenancecontrols-emergency-icon" />
+            </div>
+            <p className="maintenancecontrols-emergency-text">
               Emergency Maintenance Mode is currently active. All role dashboards are temporarily redirected to scheduled maintenance screens.
             </p>
           </div>

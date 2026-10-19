@@ -362,17 +362,18 @@ export default function AdminC2CEnrollments() {
                         </div>
                       </td>
                       <td>
-                        <select
-                          className={`c2c-status-select ${meta.cls}`}
+                        <CustomSelect
                           value={currentStatus}
                           disabled={updatingId === row.id}
-                          onChange={(e) => handleStatusChange(row.id, e.target.value)}
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Part Payment">Part Payment</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
+                          options={[
+                            { value: "Pending", label: "Pending" },
+                            { value: "Part Payment", label: "Part Payment" },
+                            { value: "Completed", label: "Completed" },
+                            { value: "Cancelled", label: "Cancelled" },
+                          ]}
+                          onChange={(val) => handleStatusChange(row.id, val)}
+                          className="c2c-table-custom-select"
+                        />
                       </td>
                       <td>
                         <span style={{ fontFamily: "monospace", fontSize: "12px", color: "#334155" }}>{utr}</span>

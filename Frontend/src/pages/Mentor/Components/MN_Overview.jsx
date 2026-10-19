@@ -63,7 +63,7 @@ const DEFAULT_MENTOR_BATCHES = [];
 export default function Overview() {
   const [mentorUser, setMentorUser] = useState(() => {
     try {
-      return JSON.parse(sessionStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }
@@ -122,9 +122,17 @@ export default function Overview() {
   const fetchedList = getList(overviewData, ["sessions", "upcomingSessions", "liveSessions", "upcoming_sessions"]);
   const sessionsList = fetchedList.length > 0 ? fetchedList : liveSessionsData;
 
-  const fullName = mentorUser.name || asText(firstValue(mentor, ["name", "fullName", "full_name"])) || mentorUser.email?.split("@")[0] || "Mentor";
+  const rawFullName = mentorUser.name || asText(firstValue(mentor, ["name", "fullName", "full_name"]));
+  const email = mentorUser.email || asText(firstValue(mentor, ["email"])) || "";
+  let fullName = rawFullName;
+  if (!fullName || fullName.includes("@")) {
+    const src = (email && email.includes("@")) ? email.split("@")[0] : (fullName && fullName.includes("@") ? fullName.split("@")[0] : "");
+    if (src) {
+      fullName = src.replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    }
+  }
+  if (!fullName) fullName = "Mentor";
   const role = mentorUser.role || asText(firstValue(mentor, ["role", "designation"])) || "Mentor";
-  const email = mentorUser.email || asText(firstValue(mentor, ["email"])) || "N/A";
   const department = mentorUser.department || asText(firstValue(mentor, ["department", "departmentName", "department_name", "dept"])) || "Computer Engineering";
   const assignedStudents = getNumber(mentor, ["assignedStudents", "totalStudents", "studentsCount", "studentCount", "assigned_students"]) ?? 0;
   const assignedBatches = getNumber(mentor, ["assignedBatches", "totalBatches", "batchesCount", "batchCount", "assigned_batches"]) ?? batches.length;

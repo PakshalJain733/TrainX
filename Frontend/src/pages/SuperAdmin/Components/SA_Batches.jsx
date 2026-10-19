@@ -593,6 +593,13 @@ export default function Batches() {
               </div>
 
               <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setIsCreateModalOpen(false)}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="btn-modal-submit">
                   Create Batch
                 </button>
@@ -829,9 +836,13 @@ export default function Batches() {
               </div>
 
               <div className="modal-footer">
-
-
-
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setIsEditModalOpen(false)}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="btn-modal-submit">
                   Save Changes
                 </button>
@@ -868,6 +879,13 @@ export default function Batches() {
             </div>
 
             <div className="modal-footer">
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setDeleteBatch(null)}
+              >
+                Cancel
+              </button>
               <button
                 type="button"
                 className="manageusers-btn-reject modal-btn-confirm-delete"

@@ -101,7 +101,7 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
 
 import { apiFetch } from "../../../utils/api";
 
-const CODE_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days validity for batch join codes
+const CODE_DURATION_MS = 5 * 60 * 1000; // 5 minutes validity for batch join codes
 
 const generateJoinCode = (batchName = "") => {
   const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
@@ -113,9 +113,13 @@ const generateJoinCode = (batchName = "") => {
 const formatTimeRemaining = (expiresAt, now) => {
   if (!expiresAt) return { expired: true, text: "Expired", seconds: 0 };
   const expNum = typeof expiresAt === "string" ? new Date(expiresAt).getTime() : Number(expiresAt);
-  const diffMs = expNum - now;
+  let diffMs = expNum - now;
   if (diffMs <= 0 || isNaN(diffMs)) {
     return { expired: true, text: "Expired", seconds: 0 };
+  }
+  // Cap at 5 minutes if it was saved with a legacy 30-day duration
+  if (diffMs > CODE_DURATION_MS) {
+    diffMs = CODE_DURATION_MS;
   }
   const totalSeconds = Math.floor(diffMs / 1000);
   const minutes = Math.floor(totalSeconds / 60);
@@ -1170,7 +1174,7 @@ export default function AdminBatches() {
 
       {showAddForm && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false); }}>
-          <div className="modal-dialog">
+          <div className="modal-dialog create-batch-modal-dialog">
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap modal-header-icon--indigo">
@@ -1246,7 +1250,13 @@ export default function AdminBatches() {
               </div>
 
               <div className="modal-footer">
-
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setShowAddForm(false)}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="btn-modal-submit" disabled={submitting}>
                   {submitting ? "Creating..." : "Create Batch"}
                 </button>

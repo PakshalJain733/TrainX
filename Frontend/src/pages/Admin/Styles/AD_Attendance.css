@@ -9,7 +9,6 @@
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
 }
 
 .admin-attendance-top-actions {
@@ -108,7 +107,6 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-bottom: 15px;
 }
 
 .attendance-stat-card {

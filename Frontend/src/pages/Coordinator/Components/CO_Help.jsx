@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Check, HelpCircle, MessageCircle, Phone, Search, Plus, ChevronDown, Sparkles, Ticket, FileText, Download, ThumbsUp, ThumbsDown, X, Send, ShieldAlert, Clock, CheckCircle2, AlertCircle } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
+import "../../Student/Styles/ST_Help.css";
 import "../Styles/CO_Help.css";
 
 function CoordHelpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {

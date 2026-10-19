@@ -108,7 +108,7 @@ export const getAdminStats = async (req, res, next) => {
 
 export const getAdminUsers = async (req, res, next) => {
   try {
-    const { role, search } = req.query;
+    const { role, search, department } = req.query;
     const collegeId = getCallerCollegeFilter(req);
 
     // Multi-college isolation: strictly partitioned by caller's collegeId unless super_admin
@@ -125,6 +125,14 @@ export const getAdminUsers = async (req, res, next) => {
     if (role && role !== 'all') {
       const canonicalRole = role.toLowerCase();
       users = users.filter((u) => u.role.toLowerCase() === canonicalRole);
+    }
+
+    if (department && department !== 'all') {
+      const d = department.trim().toLowerCase();
+      users = users.filter((u) => {
+        const ud = String(u.department || '').trim().toLowerCase();
+        return ud === d || ud.includes(d) || d.includes(ud);
+      });
     }
 
     if (search) {

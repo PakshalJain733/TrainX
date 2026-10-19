@@ -467,8 +467,7 @@ export default function AdminLearningContent() {
                     <input
                       type="file"
                       accept=".pdf,.ppt,.pptx"
-                      className="form-input-admin"
-                      style={{ padding: "8px 12px", height: "42px", boxSizing: "border-box", cursor: "pointer" }}
+                      className="form-input-admin form-file-input"
                       onChange={e => {
                         const file = e.target.files[0];
                         if (file) {
@@ -500,10 +499,9 @@ export default function AdminLearningContent() {
                     <input
                       type="url"
                       className="form-input-admin"
-                      style={{ height: "42px", boxSizing: "border-box" }}
                       value={resourceLink}
                       onChange={e => setResourceLink(e.target.value)}
-                      placeholder="e.g. https://drive.google.com/... (Optional)"
+                      placeholder="e.g. https://drive.google.com/..."
                       required={newType === "Link"}
                     />
                   </div>
