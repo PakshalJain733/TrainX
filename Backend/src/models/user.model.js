@@ -700,7 +700,7 @@ const getValidCollegeId = async (collegeId) => {
     const targetCollege = college_id || data.college || data.college_name || data.collegeName;
     const validCollegeId = targetCollege ? await getValidCollegeId(targetCollege) : null;
     const isActiveVal = is_active !== undefined ? is_active : null;
-    const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : 1;
+    const isProfileUpdatedVal = is_profile_updated !== undefined ? (is_profile_updated ? 1 : 0) : null;
 
     await query(
       'UPDATE users SET name = COALESCE(?, name), email = COALESCE(?, email), mobile_number = COALESCE(?, mobile_number), password_hash = COALESCE(?, password_hash), role = COALESCE(?, role), college_id = COALESCE(?, college_id), is_active = COALESCE(?, is_active), gender = COALESCE(?, gender), city = COALESCE(?, city), emergency_contact = COALESCE(?, emergency_contact), target_track = COALESCE(?, target_track), is_profile_updated = COALESCE(?, is_profile_updated) WHERE id = ?',

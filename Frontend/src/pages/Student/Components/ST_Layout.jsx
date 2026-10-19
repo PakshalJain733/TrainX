@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, Suspense } from "react";
+import { createPortal } from "react-dom";
 import { Outlet, useNavigate, useLocation, Link } from "react-router-dom";
 import { Bell, PanelLeft, UserCog, LogOut, CheckCheck, Trash2, Calendar, AlertTriangle, CheckCircle2, FileText, Check, ExternalLink, Key, Clock, User } from "lucide-react";
 import { StudentSidebar } from "./ST_Sidebar";
@@ -332,6 +333,41 @@ export default function StudentLayout() {
 
   const [showFirstLoginFlash, setShowFirstLoginFlash] = useState(false);
 
+  const checkIsProfileUpdated = (userData, userKey) => {
+    if (!userData) return false;
+    const sp = userData.studentProfile || {};
+    const hasDetails = Boolean(
+      (userData.gender && String(userData.gender).trim()) ||
+      (userData.city && String(userData.city).trim()) ||
+      (sp.gender && String(sp.gender).trim()) ||
+      (sp.city && String(sp.city).trim()) ||
+      (userData.skills && String(userData.skills).trim().length > 0) ||
+      (sp.skills && String(sp.skills).trim().length > 0) ||
+      (userData.emergency_contact && String(userData.emergency_contact).trim().length > 0) ||
+      (sp.emergency_contact && String(sp.emergency_contact).trim().length > 0) ||
+      (userData.target_track && String(userData.target_track).trim().length > 0) ||
+      (sp.target_track && String(sp.target_track).trim().length > 0)
+    );
+
+    const hasExplicitSave = Boolean(
+      userKey && (
+        sessionStorage.getItem(`profile_updated_${userKey}`) === "true" ||
+        localStorage.getItem(`profile_updated_${userKey}`) === "true"
+      )
+    );
+
+    const backendFlag = Boolean(userData.is_profile_updated || sp.is_profile_updated);
+    return Boolean((backendFlag || hasExplicitSave) && hasDetails);
+  };
+
+  const checkIsDismissedThisSession = (userKey) => {
+    return Boolean(
+      sessionStorage.getItem("st_flash_skipped_session") === "true" ||
+      sessionStorage.getItem("st_flash_skipped_current") === "true" ||
+      (userKey && sessionStorage.getItem(`st_flash_skipped_${userKey}`) === "true")
+    );
+  };
+
   const handleDismissFirstLoginModal = (goToProfile = false) => {
     let key = user?.id || user?.email;
     if (!key) {
@@ -340,12 +376,14 @@ export default function StudentLayout() {
         key = u.id || u.email;
       } catch {}
     }
+    // Dismiss only for current session; next login will prompt again if profile remains incomplete
+    sessionStorage.setItem("st_flash_skipped_session", "true");
+    sessionStorage.setItem("st_flash_skipped_current", "true");
     if (key) {
       sessionStorage.setItem(`st_flash_skipped_${key}`, "true");
-      localStorage.setItem(`st_flash_skipped_${key}`, "true");
+      localStorage.removeItem(`st_flash_skipped_${key}`);
     }
-    sessionStorage.setItem("st_flash_skipped_current", "true");
-    localStorage.setItem("st_flash_skipped_current", "true");
+    localStorage.removeItem("st_flash_skipped_current");
     sessionStorage.removeItem("showFirstLoginAlert");
     setShowFirstLoginFlash(false);
     if (goToProfile) {
@@ -362,25 +400,8 @@ export default function StudentLayout() {
           setUser(fetchedUser);
 
           const userKey = fetchedUser.id || fetchedUser.email;
-          const isUpdated = Boolean(
-            res.data.is_profile_updated ||
-            res.data.studentProfile?.is_profile_updated ||
-            (userKey && (
-              sessionStorage.getItem(`profile_updated_${userKey}`) === "true" ||
-              localStorage.getItem(`profile_updated_${userKey}`) === "true"
-            )) ||
-            (res.data.gender && res.data.city) ||
-            ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
-          );
-
-          const isDismissed = Boolean(
-            (userKey && (
-              sessionStorage.getItem(`st_flash_skipped_${userKey}`) === "true" ||
-              localStorage.getItem(`st_flash_skipped_${userKey}`) === "true"
-            )) ||
-            sessionStorage.getItem("st_flash_skipped_current") === "true" ||
-            localStorage.getItem("st_flash_skipped_current") === "true"
-          );
+          const isUpdated = checkIsProfileUpdated(res.data, userKey);
+          const isDismissed = checkIsDismissedThisSession(userKey);
 
           if (!isUpdated && !isDismissed) {
             setShowFirstLoginFlash(true);
@@ -404,24 +425,9 @@ export default function StudentLayout() {
               setAvatarUrl(fetchedUser.avatar_url || fetchedUser.avatar);
             }
             const userKey = fetchedUser.id || fetchedUser.email;
-            const isUpdated = Boolean(
-              res.data.is_profile_updated ||
-              res.data.studentProfile?.is_profile_updated ||
-              (userKey && (
-                sessionStorage.getItem(`profile_updated_${userKey}`) === "true" ||
-                localStorage.getItem(`profile_updated_${userKey}`) === "true"
-              )) ||
-              (res.data.gender && res.data.city) ||
-              ((res.data.department || res.data.studentProfile?.department) && (res.data.skills || res.data.studentProfile?.skills))
-            );
-            const isDismissed = Boolean(
-              (userKey && (
-                sessionStorage.getItem(`st_flash_skipped_${userKey}`) === "true" ||
-                localStorage.getItem(`st_flash_skipped_${userKey}`) === "true"
-              )) ||
-              sessionStorage.getItem("st_flash_skipped_current") === "true" ||
-              localStorage.getItem("st_flash_skipped_current") === "true"
-            );
+            const isUpdated = checkIsProfileUpdated(res.data, userKey);
+            const isDismissed = checkIsDismissedThisSession(userKey);
+
             if (isUpdated || isDismissed) {
               setShowFirstLoginFlash(false);
             }
@@ -622,7 +628,14 @@ export default function StudentLayout() {
                             className="student-header__profile-item student-header__profile-item--danger"
                             onClick={() => {
                               setProfileOpen(false);
-                              navigate("/");
+                              sessionStorage.removeItem("token");
+                              sessionStorage.removeItem("authToken");
+                              sessionStorage.removeItem("user");
+                              sessionStorage.removeItem("role");
+                              sessionStorage.removeItem("st_flash_skipped_session");
+                              sessionStorage.removeItem("st_flash_skipped_current");
+                              sessionStorage.removeItem("st_first_login_dismissed");
+                              navigate("/login");
                             }}
                           >
                             <LogOut size={15} />
@@ -667,30 +680,32 @@ export default function StudentLayout() {
         onClose={() => setIsChangePasswordOpen(false)}
       />
 
-      {showFirstLoginFlash && (
-        <div className="st-firstlogin-overlay">
+      {showFirstLoginFlash && createPortal(
+        <div className="st-firstlogin-overlay" role="dialog" aria-modal="true" aria-labelledby="st-firstlogin-title">
           <div className="st-firstlogin-card">
             <div className="st-firstlogin-icon-box">
               <UserCog size={32} />
             </div>
 
             <div>
-              <h3 className="st-firstlogin-title">
-                Welcome to TrainX! 🎉
+              <h3 id="st-firstlogin-title" className="st-firstlogin-title">
+                Complete Your Profile 🎓
               </h3>
               <p className="st-firstlogin-desc">
-                Please take a moment to review and update your profile details to personalize your learning dashboard.
+                Welcome to TrainX! Please complete your profile details (gender, city, skills, target track) to unlock personalized training, assignments, and placement opportunities.
               </p>
             </div>
 
             <div className="st-firstlogin-actions">
               <button
+                type="button"
                 className="st-firstlogin-btn-secondary"
                 onClick={() => handleDismissFirstLoginModal(false)}
               >
                 Skip for now
               </button>
               <button
+                type="button"
                 className="st-firstlogin-btn-primary"
                 onClick={() => handleDismissFirstLoginModal(true)}
               >
@@ -698,7 +713,8 @@ export default function StudentLayout() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       <NotificationDetailModal
         notification={selectedNotifModal}

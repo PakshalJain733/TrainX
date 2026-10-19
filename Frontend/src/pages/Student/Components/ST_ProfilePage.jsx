@@ -461,9 +461,14 @@ export default function ProfilePage() {
         if (userKey) {
           sessionStorage.setItem(`profile_updated_${userKey}`, "true");
           localStorage.setItem(`profile_updated_${userKey}`, "true");
+          sessionStorage.removeItem(`st_flash_skipped_${userKey}`);
+          localStorage.removeItem(`st_flash_skipped_${userKey}`);
         }
         sessionStorage.removeItem("showFirstLoginAlert");
         sessionStorage.removeItem("st_first_login_dismissed");
+        sessionStorage.removeItem("st_flash_skipped_session");
+        sessionStorage.removeItem("st_flash_skipped_current");
+        localStorage.removeItem("st_flash_skipped_current");
         window.dispatchEvent(new Event("userProfileUpdated"));
       }
     } catch (err) {

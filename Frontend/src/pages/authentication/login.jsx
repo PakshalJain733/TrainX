@@ -316,13 +316,33 @@ function Login() {
 
     // Set flag for First Login Profile Update Alert
     const userKey = mergedUser.id || mergedUser.email;
-    const isUpdatedInStorage = sessionStorage.getItem(`profile_updated_${userKey}`) === "true";
+
+    // Reset per-session skip flag on every login so students who skipped are prompted again
+    sessionStorage.removeItem("st_flash_skipped_session");
+    sessionStorage.removeItem("st_flash_skipped_current");
+    sessionStorage.removeItem("st_first_login_dismissed");
+    if (userKey) {
+      sessionStorage.removeItem(`st_flash_skipped_${userKey}`);
+      localStorage.removeItem(`st_flash_skipped_${userKey}`);
+    }
+    localStorage.removeItem("st_flash_skipped_current");
+
+    const hasRealDetails = Boolean(
+      (mergedUser.gender && mergedUser.city) ||
+      (mergedUser.studentProfile?.gender && mergedUser.studentProfile?.city) ||
+      (mergedUser.skills && String(mergedUser.skills).trim().length > 0) ||
+      (mergedUser.studentProfile?.skills && String(mergedUser.studentProfile?.skills).trim().length > 0) ||
+      (mergedUser.studentProfile?.emergency_contact && String(mergedUser.studentProfile?.emergency_contact).trim().length > 0) ||
+      (mergedUser.studentProfile?.target_track && String(mergedUser.studentProfile?.target_track).trim().length > 0)
+    );
+
+    const isUpdatedInStorage = Boolean(
+      userKey && (sessionStorage.getItem(`profile_updated_${userKey}`) === "true" || localStorage.getItem(`profile_updated_${userKey}`) === "true")
+    );
+
     const isUpdatedOnServer = Boolean(
-      mergedUser.is_profile_updated ||
-      mergedUser.profileCompleted ||
-      mergedUser.studentProfile?.is_profile_updated ||
-      (mergedUser.department && mergedUser.semester && mergedUser.roll_number && (mergedUser.skills || mergedUser.studentProfile?.skills)) ||
-      (mergedUser.studentProfile?.department && mergedUser.studentProfile?.semester && mergedUser.studentProfile?.roll_number && (mergedUser.skills || mergedUser.studentProfile?.skills))
+      (mergedUser.is_profile_updated || mergedUser.studentProfile?.is_profile_updated) &&
+      hasRealDetails
     );
 
     if (isUpdatedOnServer || isUpdatedInStorage) {
@@ -331,6 +351,12 @@ function Login() {
         localStorage.setItem(`profile_updated_${userKey}`, "true");
       }
       sessionStorage.removeItem("showFirstLoginAlert");
+    } else {
+      if (userKey) {
+        sessionStorage.removeItem(`profile_updated_${userKey}`);
+        localStorage.removeItem(`profile_updated_${userKey}`);
+      }
+      sessionStorage.setItem("showFirstLoginAlert", "true");
     }
 
     navigate(dashboardPathForRole(mergedUser.role));
