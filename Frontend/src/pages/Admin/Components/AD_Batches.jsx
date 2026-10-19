@@ -1287,15 +1287,26 @@ export default function AdminBatches() {
       <div className="batches-grid">
         {visibleBatches.length === 0 ? (
           <div className="admin-empty-state-card" style={{ gridColumn: "1 / -1" }}>
-            <Users size={36} className="admin-empty-state-icon" />
+            <div className="admin-empty-state-icon-wrap">
+              <Users size={32} />
+            </div>
             <p className="admin-empty-state-title">
-              {activeStatusTab === "active" ? "No active batches found" : "No inactive batches found"}
+              {activeStatusTab === "active" ? "No Active Batches Found" : "No Inactive Batches Found"}
             </p>
             <p className="admin-empty-state-sub">
               {activeStatusTab === "active"
-                ? 'Click "Create New Batch" to add cohorts, assign trainer, and create student join codes.'
-                : 'Batches marked as inactive or deleted will appear here. You can reactivate them anytime.'}
+                ? 'Get started by creating your first batch cohort. Assign trainers, schedules, and generate 5-minute dynamic access codes for student enrollment.'
+                : 'Batches marked as inactive or archived will appear here. You can reactivate them anytime with full access restoration.'}
             </p>
+            {activeStatusTab === "active" && (
+              <button
+                type="button"
+                onClick={handleOpenForm}
+                className="admin-empty-state-cta-btn"
+              >
+                <Plus size={16} /> Create Your First Batch
+              </button>
+            )}
           </div>
         ) : (
           visibleBatches.map((b) => {

@@ -780,6 +780,36 @@ export const getMentorWeeklyReports = async (req, res, next) => {
 };
 
 // ---------------------------------------------------------------------------
+// GET /api/v1/mentor/mentors-list
+// ---------------------------------------------------------------------------
+export const getMentorDirectory = async (req, res, next) => {
+  try {
+    const mentorId = requireMentor(req, res);
+    if (!mentorId) return;
+
+    const userRows = await query('SELECT college_id FROM users WHERE id = ?', [mentorId]).catch(() => []);
+    const collegeId = userRows[0]?.college_id || req.user?.college_id;
+
+    let mentors = [];
+    if (collegeId) {
+      mentors = await query(
+        "SELECT id, name, email, target_track as specialization FROM users WHERE role = 'mentor' AND college_id = ? ORDER BY name ASC",
+        [collegeId]
+      ).catch(() => []);
+    }
+    if (!mentors || mentors.length === 0) {
+      mentors = await query(
+        "SELECT id, name, email, target_track as specialization FROM users WHERE role = 'mentor' ORDER BY name ASC"
+      ).catch(() => []);
+    }
+
+    return sendSuccess(res, 'Mentors list retrieved successfully', { mentors });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ---------------------------------------------------------------------------
 // POST /api/v1/mentor/weekly-reports
 // ---------------------------------------------------------------------------
 export const submitMentorWeeklyReport = async (req, res, next) => {
@@ -787,9 +817,12 @@ export const submitMentorWeeklyReport = async (req, res, next) => {
     const mentorId = requireMentor(req, res);
     if (!mentorId) return;
 
-    const { batchName, weekTitle, topicsCovered, attendanceNotes, defaulterNotes, keyAchievements, nextWeekPlan } = req.body || {};
+    const { batchName, weekTitle, topicsCovered, attendanceNotes, defaulterNotes, keyAchievements, nextWeekPlan, mentorName } = req.body || {};
 
     // Strict validation: Every single field is required and must contain genuine content
+    if (!mentorName || !mentorName.trim()) {
+      return sendError(res, 'Validation Error: Mentor Name selection is required.', 400);
+    }
     if (!batchName || !batchName.trim()) {
       return sendError(res, 'Validation Error: Target Batch is required.', 400);
     }
@@ -816,6 +849,7 @@ export const submitMentorWeeklyReport = async (req, res, next) => {
 
     const reportTitle = weekTitle.trim();
     const suggestionsArr = [
+      `Audited By Mentor: ${mentorName.trim()}`,
       `Topics Covered: ${topicsCovered.trim()}`,
       `Attendance Notes: ${attendanceNotes.trim()}`,
       `Defaulters: ${defaulterNotes.trim()}`,

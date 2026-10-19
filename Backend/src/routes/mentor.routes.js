@@ -7,6 +7,7 @@ import {
   getMentorStudentsPerformance,
   getMentorWeeklyReports,
   submitMentorWeeklyReport,
+  getMentorDirectory,
   getMentorAssignments,
   createMentorAssignment,
   deleteMentorAssignment,
@@ -42,6 +43,7 @@ router.get('/students', mentorOnly, getMentorStudentsPerformance);
 router.get('/students/performance', mentorOnly, getMentorStudentsPerformance);
 router.get('/weekly-reports', mentorOnly, getMentorWeeklyReports);
 router.post('/weekly-reports', mentorOnly, submitMentorWeeklyReport);
+router.get('/mentors-list', mentorOnly, getMentorDirectory);
 router.get('/interviews', mentorOnly, getMentorMenteeInterviews);
 router.get('/profile', mentorOnly, getMentorProfile);
 

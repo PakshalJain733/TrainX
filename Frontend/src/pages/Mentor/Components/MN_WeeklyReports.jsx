@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { apiFetch } from '../../../utils/api';
-import { FileCheck2, Plus, Download, RefreshCw, X, FileText, CheckCircle2, Maximize2, Minimize2, AlertCircle, Calendar, Sparkles, Send, ShieldAlert, Award, Layers, BookOpen, Users } from "lucide-react";
+import { FileCheck2, Plus, Download, RefreshCw, X, FileText, CheckCircle2, Maximize2, Minimize2, AlertCircle, Calendar, Sparkles, Send, ShieldAlert, Award, Layers, BookOpen, Users, UserCheck } from "lucide-react";
+import CustomSelect from '../../../components/ui/CustomSelect';
 import "../Styles/MN_WeeklyReports.css";
 
 const unwrap = (response) => {
@@ -24,8 +25,13 @@ export default function WeeklyReports() {
   const [submitting, setSubmitting] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  // Mentors and Batches for Form Selectors
+  const [mentorsList, setMentorsList] = useState([]);
+  const [batchesList, setBatchesList] = useState([]);
+
   // Form State
   const [formData, setFormData] = useState({
+    mentorName: "",
     batchName: "Computer Engineering - Batch A",
     weekTitle: "",
     topicsCovered: "",
@@ -37,6 +43,17 @@ export default function WeeklyReports() {
 
   const [fieldErrors, setFieldErrors] = useState({});
   const [formErrorBanner, setFormErrorBanner] = useState("");
+
+  const getReportMentor = (r) => {
+    if (!r) return "Assigned Mentor";
+    if (r.mentorName) return r.mentorName;
+    if (r.mentor) return r.mentor;
+    if (Array.isArray(r.suggestions)) {
+      const match = r.suggestions.find((s) => typeof s === "string" && s.startsWith("Audited By Mentor:"));
+      if (match) return match.replace("Audited By Mentor:", "").trim();
+    }
+    return "Assigned Mentor";
+  };
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -51,12 +68,104 @@ export default function WeeklyReports() {
     }
   }, []);
 
+  // Load mentors and batches for form dropdowns
   useEffect(() => {
+    let mounted = true;
+    const fetchMentorsAndBatches = async () => {
+      try {
+        const [mentorsRes, batchesRes] = await Promise.allSettled([
+          apiFetch("/mentor/mentors-list"),
+          apiFetch("/mentor/batches"),
+        ]);
+
+        let mList = [];
+        if (mentorsRes.status === "fulfilled" && mentorsRes.value) {
+          const unwrapped = unwrap(mentorsRes.value);
+          if (Array.isArray(unwrapped?.mentors)) mList = unwrapped.mentors;
+          else if (Array.isArray(unwrapped)) mList = unwrapped;
+        }
+
+        let bList = [];
+        if (batchesRes.status === "fulfilled" && batchesRes.value) {
+          const unwrappedB = unwrap(batchesRes.value);
+          if (Array.isArray(unwrappedB?.batches)) bList = unwrappedB.batches;
+          else if (Array.isArray(unwrappedB)) bList = unwrappedB;
+        }
+
+        if (mounted) {
+          setBatchesList(bList);
+
+          // Get logged in user if available
+          let localUser = {};
+          try {
+            localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+          } catch (e) {
+            localUser = {};
+          }
+
+          const nameSet = new Set();
+          const names = [];
+
+          if (localUser?.name) {
+            nameSet.add(localUser.name);
+            names.push({ value: localUser.name, label: `${localUser.name} (You)` });
+          }
+
+          mList.forEach((m) => {
+            const mName = m.name || m;
+            if (mName && !nameSet.has(mName)) {
+              nameSet.add(mName);
+              names.push({ value: mName, label: mName });
+            }
+          });
+
+          bList.forEach((b) => {
+            if (b.mentor && !nameSet.has(b.mentor)) {
+              nameSet.add(b.mentor);
+              names.push({ value: b.mentor, label: b.mentor });
+            }
+          });
+
+          // Fallback known mentors from college
+          const defaultMentors = ["Dr. Rajesh Sharma", "Prof. Ananya Verma", "Dr. Vikramaditya Joshi", "Mentoe"];
+          defaultMentors.forEach((dm) => {
+            if (!nameSet.has(dm)) {
+              nameSet.add(dm);
+              names.push({ value: dm, label: dm });
+            }
+          });
+
+          setMentorsList(names);
+
+          // Set default mentor name in form if not set
+          setFormData((prev) => {
+            if (prev.mentorName) return prev;
+            const initial = localUser?.name || (names.length > 0 ? names[0].value : "");
+            const initialBatch = bList.length > 0 ? (bList[0].name || bList[0].batchName || prev.batchName) : prev.batchName;
+            return {
+              ...prev,
+              mentorName: initial,
+              batchName: initialBatch,
+            };
+          });
+        }
+      } catch (err) {
+        console.error("Error loading mentors/batches:", err);
+      }
+    };
+
+    fetchMentorsAndBatches();
     loadReports();
+    return () => {
+      mounted = false;
+    };
   }, [loadReports]);
 
   const validateForm = () => {
     const errors = {};
+    if (!formData.mentorName || !formData.mentorName.trim()) {
+      errors.mentorName = "Mentor Name selection is required.";
+    }
     if (!formData.batchName || !formData.batchName.trim()) {
       errors.batchName = "Target Batch is required.";
     }
@@ -88,7 +197,7 @@ export default function WeeklyReports() {
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
-      setFormErrorBanner("All fields are strictly required. Please fill in genuine details for every box before submitting.");
+      setFormErrorBanner("All fields are strictly required. Please select a mentor and fill in genuine details for every box.");
       return;
     }
 
@@ -106,15 +215,16 @@ export default function WeeklyReports() {
       }
 
       setShowFormModal(false);
-      setFormData({
-        batchName: "Computer Engineering - Batch A",
+      setFormData((prev) => ({
+        mentorName: prev.mentorName,
+        batchName: batchesList.length > 0 ? (batchesList[0].name || batchesList[0].batchName || "") : "Computer Engineering - Batch A",
         weekTitle: "",
         topicsCovered: "",
         attendanceNotes: "",
         defaulterNotes: "",
         keyAchievements: "",
         nextWeekPlan: "",
-      });
+      }));
       loadReports();
     } catch (err) {
       console.error(err);
@@ -164,6 +274,7 @@ export default function WeeklyReports() {
               <thead>
                 <tr>
                   <th>Report Title</th>
+                  <th>Faculty Mentor</th>
                   <th>Covered Batch</th>
                   <th>Submission Date</th>
                   <th>Status</th>
@@ -174,6 +285,7 @@ export default function WeeklyReports() {
                 {reports.map((r, idx) => (
                   <tr key={r.id || idx}>
                     <td className="mentor-report-title">{r.title || r.week_label || `Weekly Performance Audit #${r.id}`}</td>
+                    <td style={{ fontWeight: 600, color: "#1e293b" }}>{getReportMentor(r)}</td>
                     <td className="mentor-report-batch">{r.batch || r.batch_name || "All Batches"}</td>
                     <td className="mentor-report-date">{r.created_at ? new Date(r.created_at).toLocaleDateString() : r.submittedAt || "Recent"}</td>
                     <td>
@@ -266,24 +378,83 @@ export default function WeeklyReports() {
                       <span className="section-tag">Required</span>
                     </div>
 
+                    {/* Faculty Mentor Name Selection */}
+                    <div className="mentor-report-field-group">
+                      <label className="mentor-report-label">
+                        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <UserCheck size={15} color="#4f46e5" />
+                          <span>Mentor Name <span style={{ color: "#ef4444" }}>*</span></span>
+                        </span>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 500 }}>
+                          Select in-charge mentor
+                        </span>
+                      </label>
+                      <CustomSelect
+                        value={formData.mentorName}
+                        options={mentorsList}
+                        onChange={(val) => {
+                          setFormData({ ...formData, mentorName: val });
+                          if (fieldErrors.mentorName) setFieldErrors({ ...fieldErrors, mentorName: null });
+                        }}
+                        placeholder="-- Select Mentor Name --"
+                        icon={UserCheck}
+                      />
+                      {mentorsList.length > 0 && (
+                        <div className="mentor-report-pills-row">
+                          <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 600 }}>Quick Pick:</span>
+                          {mentorsList.slice(0, 4).map((m) => (
+                            <button
+                              key={m.value}
+                              type="button"
+                              className={`mentor-report-quick-pill ${formData.mentorName === m.value ? "active" : ""}`}
+                              onClick={() => {
+                                setFormData({ ...formData, mentorName: m.value });
+                                if (fieldErrors.mentorName) setFieldErrors({ ...fieldErrors, mentorName: null });
+                              }}
+                            >
+                              {m.value}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {fieldErrors.mentorName && (
+                        <span style={{ fontSize: "12px", color: "#ef4444", marginTop: "3px" }}>{fieldErrors.mentorName}</span>
+                      )}
+                    </div>
+
                     <div className="mentor-report-field-group">
                       <label className="mentor-report-label">
                         <span>Target Batch <span style={{ color: "#ef4444" }}>*</span></span>
                       </label>
-                      <input
-                        type="text"
-                        required
-                        className="mentor-report-input"
-                        placeholder="e.g. Computer Engineering - Batch A"
-                        style={{
-                          borderColor: fieldErrors.batchName ? "#ef4444" : undefined
-                        }}
-                        value={formData.batchName}
-                        onChange={(e) => {
-                          setFormData({ ...formData, batchName: e.target.value });
-                          if (fieldErrors.batchName) setFieldErrors({ ...fieldErrors, batchName: null });
-                        }}
-                      />
+                      {batchesList.length > 0 ? (
+                        <CustomSelect
+                          value={formData.batchName}
+                          options={batchesList.map((b) => ({
+                            value: b.name || b.batchName || `Batch ${b.id}`,
+                            label: b.name || b.batchName || `Batch ${b.id}`
+                          }))}
+                          onChange={(val) => {
+                            setFormData({ ...formData, batchName: val });
+                            if (fieldErrors.batchName) setFieldErrors({ ...fieldErrors, batchName: null });
+                          }}
+                          placeholder="-- Select Target Batch --"
+                        />
+                      ) : (
+                        <input
+                          type="text"
+                          required
+                          className="mentor-report-input"
+                          placeholder="e.g. Computer Engineering - Batch A"
+                          style={{
+                            borderColor: fieldErrors.batchName ? "#ef4444" : undefined
+                          }}
+                          value={formData.batchName}
+                          onChange={(e) => {
+                            setFormData({ ...formData, batchName: e.target.value });
+                            if (fieldErrors.batchName) setFieldErrors({ ...fieldErrors, batchName: null });
+                          }}
+                        />
+                      )}
                       {fieldErrors.batchName && (
                         <span style={{ fontSize: "12px", color: "#ef4444", marginTop: "3px" }}>{fieldErrors.batchName}</span>
                       )}
@@ -560,7 +731,13 @@ export default function WeeklyReports() {
             </div>
 
             <div className="mentor-report-modal-body" style={{ background: "#ffffff" }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px", padding: "14px", background: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                <div>
+                  <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>Faculty Mentor</div>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>
+                    {getReportMentor(selectedReport)}
+                  </div>
+                </div>
                 <div>
                   <div style={{ fontSize: "11.5px", color: "#64748b", fontWeight: 600 }}>Target Batch</div>
                   <div style={{ fontSize: "14px", fontWeight: 700, color: "#0f172a", marginTop: "2px" }}>

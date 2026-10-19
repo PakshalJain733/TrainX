@@ -477,6 +477,8 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
   const [selectedMentor, setSelectedMentor] = useState("");
   const [studentSearch, setStudentSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
+  const [divFilter, setDivFilter] = useState("all");
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [successMsg, setSuccessMsg] = useState("");
 
@@ -494,11 +496,12 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
     return r.includes("student") || r === "user" || (!r && u.name);
   });
 
-  // Filter students based on department pills and search input
+  // Filter students based on Department, Year, Division, and Search input
   const filteredStudents = allStudents.filter(s => {
     const q = studentSearch.toLowerCase().trim();
     const deptStr = (s.department || s.dept || "").toLowerCase();
     
+    // 1. Department filter
     let matchesDept = true;
     if (deptFilter !== "all") {
       const filterLower = deptFilter.toLowerCase();
@@ -506,19 +509,49 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                     (filterLower.includes("computer") && (deptStr.includes("cs") || deptStr.includes("cse"))) ||
                     (filterLower.includes("information") && (deptStr.includes("it") || deptStr.includes("info"))) ||
                     (filterLower.includes("ai") && (deptStr.includes("data") || deptStr.includes("ds") || deptStr.includes("ai"))) ||
-                    (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec")));
+                    (filterLower.includes("electronics") && (deptStr.includes("ec") || deptStr.includes("extc") || deptStr.includes("elec") || deptStr.includes("ecs")));
     }
-    
     if (!matchesDept) return false;
+
+    // 2. Year filter (FE, SE, TE, BE)
+    let matchesYear = true;
+    if (yearFilter !== "all") {
+      const sYear = (s.year || "").toLowerCase().trim();
+      const targetYear = yearFilter.toLowerCase().trim();
+      matchesYear = sYear === targetYear ||
+                    (targetYear === "fe" && (sYear.includes("fe") || sYear.includes("first") || sYear === "1")) ||
+                    (targetYear === "se" && (sYear.includes("se") || sYear.includes("second") || sYear === "2")) ||
+                    (targetYear === "te" && (sYear.includes("te") || sYear.includes("third") || sYear === "3")) ||
+                    (targetYear === "be" && (sYear.includes("be") || sYear.includes("fourth") || sYear.includes("final") || sYear === "4"));
+    }
+    if (!matchesYear) return false;
+
+    // 3. Division filter (A, B, C, D)
+    let matchesDiv = true;
+    if (divFilter !== "all") {
+      const sDiv = (s.division || s.div || s.section || "").toLowerCase().trim();
+      const targetDiv = divFilter.toLowerCase().trim();
+      matchesDiv = sDiv === targetDiv || sDiv.includes(targetDiv);
+    }
+    if (!matchesDiv) return false;
+
+    // 4. Search Query
     if (!q) return true;
-    
     return (
       (s.name || "").toLowerCase().includes(q) ||
       (s.email || "").toLowerCase().includes(q) ||
       (s.roll_number || s.rollNo || s.roll || "").toLowerCase().includes(q) ||
       deptStr.includes(q) ||
-      (s.year || "").toLowerCase().includes(q)
+      (s.year || "").toLowerCase().includes(q) ||
+      (s.division || s.div || "").toLowerCase().includes(q)
     );
+  });
+
+  // Sort filtered students strictly in ascending order by their College ID / Roll Number
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    const idA = (a.roll_number || a.rollNo || a.roll || a.id || "").toString().toLowerCase().trim();
+    const idB = (b.roll_number || b.rollNo || b.roll || b.id || "").toString().toLowerCase().trim();
+    return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   const getDeptCount = (filterKey) => {
@@ -541,7 +574,7 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
   };
 
   const handleSelectAll = () => {
-    const allFilteredIds = filteredStudents.map(s => s.id);
+    const allFilteredIds = sortedStudents.map(s => s.id);
     setSelectedStudentIds(Array.from(new Set([...selectedStudentIds, ...allFilteredIds])));
   };
 
@@ -642,12 +675,12 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
 
 
 
-            {/* Selected Students Chips Banner */}
-            {selectedStudentsList.length > 0 && (
+            {/* Selected Students Chips Banner or Empty Helper */}
+            {selectedStudentsList.length > 0 ? (
               <div className="fs-portal-mentees-wrapper">
                 <div className="fs-portal-mentees-header">
                   <label className="fs-portal-mentees-title">
-                    Selected Mentees List ({selectedStudentsList.length})
+                    Selected Mentees ({selectedStudentsList.length})
                   </label>
                   <button type="button" onClick={handleDeselectAll} className="fs-portal-btn-clear">
                     Clear All
@@ -669,6 +702,14 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                     </span>
                   ))}
                 </div>
+              </div>
+            ) : (
+              <div className="fs-portal-no-mentees-placeholder">
+                <Users size={30} className="fs-portal-no-mentees-icon" />
+                <p className="fs-portal-no-mentees-text">No Mentees Selected</p>
+                <span className="fs-portal-no-mentees-hint">
+                  Select student checkboxes from the right roster to assign them to this mentor.
+                </span>
               </div>
             )}
 
@@ -734,38 +775,75 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                 )}
               </div>
 
-              {/* Department Filter Badges */}
-              <div className="fs-portal-dept-filters">
-                {[
-                  { id: "all", label: "All Depts" },
-                  { id: "computer science", label: "Computer Science" },
-                  { id: "information tech", label: "Information Tech" },
-                  { id: "ai & data science", label: "AI & Data Science" },
-                  { id: "electronics", label: "Electronics & CS" },
-                ].map(dept => {
-                  const isActive = deptFilter === dept.id;
-                  const count = getDeptCount(dept.id);
-                  return (
-                    <button
-                      key={dept.id}
-                      type="button"
-                      onClick={() => setDeptFilter(dept.id)}
-                      className={`fs-portal-dept-btn ${isActive ? 'fs-portal-dept-btn--active' : ''}`}
-                    >
-                      <span>{dept.label}</span>
-                      <span className="fs-portal-dept-count">
-                        {count}
-                      </span>
-                    </button>
-                  );
-                })}
+              {/* Dropdown Filters: Department, Year, Division */}
+              <div className="fs-portal-filter-bar">
+                <div className="fs-portal-filter-item">
+                  <AdminUserSelect
+                    value={deptFilter}
+                    options={[
+                      { value: "all", label: "All Departments" },
+                      { value: "computer science", label: "Computer Science" },
+                      { value: "information tech", label: "Information Tech" },
+                      { value: "ai & data science", label: "AI & Data Science" },
+                      { value: "electronics", label: "Electronics & CS" },
+                    ]}
+                    onChange={val => setDeptFilter(val)}
+                    placeholder="All Departments"
+                  />
+                </div>
+
+                <div className="fs-portal-filter-item">
+                  <AdminUserSelect
+                    value={yearFilter}
+                    options={[
+                      { value: "all", label: "All Years" },
+                      { value: "FE", label: "FE (First Year)" },
+                      { value: "SE", label: "SE (Second Year)" },
+                      { value: "TE", label: "TE (Third Year)" },
+                      { value: "BE", label: "BE (Fourth Year)" },
+                    ]}
+                    onChange={val => setYearFilter(val)}
+                    placeholder="All Years"
+                  />
+                </div>
+
+                <div className="fs-portal-filter-item">
+                  <AdminUserSelect
+                    value={divFilter}
+                    options={[
+                      { value: "all", label: "All Divisions" },
+                      { value: "A", label: "Division A" },
+                      { value: "B", label: "Division B" },
+                      { value: "C", label: "Division C" },
+                      { value: "D", label: "Division D" },
+                    ]}
+                    onChange={val => setDivFilter(val)}
+                    placeholder="All Divisions"
+                  />
+                </div>
+
+                {(deptFilter !== "all" || yearFilter !== "all" || divFilter !== "all" || studentSearch) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeptFilter("all");
+                      setYearFilter("all");
+                      setDivFilter("all");
+                      setStudentSearch("");
+                    }}
+                    className="fs-portal-btn-reset-filters"
+                    title="Reset all filters"
+                  >
+                    <RefreshCw size={13} /> Reset
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Multi-Select Student Checklist Grid */}
-            <div className="fs-portal-students-grid">
-              {filteredStudents.length === 0 ? (
-                <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #cbd5e1', gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+            {/* Multi-Select Student Checklist Table (Sorted by College ID) */}
+            <div className="fs-portal-table-container">
+              {sortedStudents.length === 0 ? (
+                <div style={{ padding: '48px 24px', textAlign: 'center', background: '#f8fafc', borderRadius: '14px', border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                   <Search size={32} color="#94a3b8" />
                   <div>
                     <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#334155' }}>No student profiles match your search</h4>
@@ -775,7 +853,12 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { setStudentSearch(""); setDeptFilter("all"); }}
+                    onClick={() => {
+                      setStudentSearch("");
+                      setDeptFilter("all");
+                      setYearFilter("all");
+                      setDivFilter("all");
+                    }}
                     className="btn-portal-submit"
                     style={{ width: 'auto', padding: '8px 18px', fontSize: '12.5px' }}
                   >
@@ -783,45 +866,97 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
                   </button>
                 </div>
               ) : (
-                filteredStudents.map(student => {
-                  const isChecked = selectedStudentIds.includes(student.id);
-                  return (
-                    <label
-                      key={student.id}
-                      className={`fs-portal-student-card ${isChecked ? 'fs-portal-student-card--checked' : ''}`}
-                    >
-                      <input
-                        type="checkbox"
-                        className="fs-portal-checkbox"
-                        checked={isChecked}
-                        onChange={() => toggleStudentSelect(student.id)}
-                      />
-                      
-                      <div className="fs-portal-student-avatar">
-                        {(student.name || 'S').charAt(0).toUpperCase()}
-                      </div>
-
-                      <div style={{ flex: 1, minWidth: 0, fontSize: '12.5px' }}>
-                        <div style={{ fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.name}</span>
-                          {student.year && (
-                            <span style={{ fontSize: '10px', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', background: '#e2e8f0', color: '#334155' }}>
-                              {student.year}
-                            </span>
-                          )}
-                        </div>
-
-                        <div style={{ color: '#64748b', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px', flexWrap: 'wrap' }}>
-                          <span className="fs-portal-student-roll">
-                            {student.roll_number || student.rollNo || `ID-${student.id}`}
-                          </span>
-                          <span>·</span>
-                          <span style={{ fontWeight: 600, color: '#475569' }}>{student.department || 'Computer Science'}</span>
-                        </div>
-                      </div>
-                    </label>
-                  );
-                })
+                <table className="fs-portal-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '44px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          className="fs-portal-checkbox"
+                          checked={sortedStudents.length > 0 && sortedStudents.every(s => selectedStudentIds.includes(s.id))}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              handleSelectAll();
+                            } else {
+                              handleDeselectAll();
+                            }
+                          }}
+                          title="Select / Deselect All Visible"
+                        />
+                      </th>
+                      <th style={{ width: '150px' }}>College ID / Roll No</th>
+                      <th>Student Name</th>
+                      <th style={{ width: '160px' }}>Department</th>
+                      <th style={{ width: '105px', textAlign: 'center' }}>Year / Div</th>
+                      <th style={{ width: '110px', textAlign: 'center' }}>Selection</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedStudents.map(student => {
+                      const isChecked = selectedStudentIds.includes(student.id);
+                      const roll = student.roll_number || student.rollNo || student.roll || `ID-${student.id}`;
+                      return (
+                        <tr
+                          key={student.id}
+                          className={`fs-portal-row ${isChecked ? 'fs-portal-row--checked' : ''}`}
+                          onClick={() => toggleStudentSelect(student.id)}
+                        >
+                          <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              className="fs-portal-checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleStudentSelect(student.id)}
+                            />
+                          </td>
+                          <td>
+                            <span className="fs-portal-student-roll">{roll}</span>
+                          </td>
+                          <td>
+                            <div className="fs-portal-student-cell">
+                              <div className="fs-portal-student-avatar-sm">
+                                {(student.name || 'S').charAt(0).toUpperCase()}
+                              </div>
+                              <div className="fs-portal-student-info">
+                                <span className="fs-portal-student-name">{student.name}</span>
+                                {student.email && (
+                                  <span className="fs-portal-student-email">{student.email}</span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="fs-portal-dept-text">{student.department || student.dept || 'Computer Science'}</span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                              {student.year ? (
+                                <span className="fs-portal-year-badge">{student.year}</span>
+                              ) : (
+                                <span style={{ color: '#94a3b8' }}>—</span>
+                              )}
+                              {(student.division || student.div) && (
+                                <span
+                                  className="fs-portal-div-badge"
+                                  title={`Division ${student.division || student.div}`}
+                                >
+                                  {String(student.division || student.div).replace(/^div\s*/i, '').trim()}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            {isChecked ? (
+                              <span className="fs-portal-status-pill fs-portal-status-pill--selected">Selected</span>
+                            ) : (
+                              <span className="fs-portal-status-pill fs-portal-status-pill--idle">Unselected</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>
