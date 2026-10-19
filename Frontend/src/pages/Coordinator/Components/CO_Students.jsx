@@ -888,14 +888,14 @@ export default function CoordinatorStudents() {
             <table className="coord-table">
               <thead>
                 <tr>
-                  <th className="th-student">Student</th>
-                  <th className="th-roll">Roll No & Batch</th>
-                  <th className="th-roadmap">Selected AI Roadmap</th>
-                  <th className="th-attendance">Attendance</th>
-                  <th className="th-quiz">Quiz Score</th>
-                  <th className="th-interview">AI Interview</th>
-                  <th className="th-risk">Risk Level</th>
-                  <th className="th-actions">Actions</th>
+                  <th>Student</th>
+                  <th>Roll No & Batch</th>
+                  <th>Selected AI Roadmap</th>
+                  <th>Attendance</th>
+                  <th>Quiz Score</th>
+                  <th>AI Interview</th>
+                  <th>Risk Level</th>
+                  <th className="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -934,7 +934,7 @@ export default function CoordinatorStudents() {
                         </span>
                       )}
                     </td>
-                    <td className="td-center">
+                    <td>
                       {s.attendance && s.attendance !== "—" ? (
                         <span
                           className={`student-metric-pill ${
@@ -951,7 +951,7 @@ export default function CoordinatorStudents() {
                         <span className="student-metric-empty">—</span>
                       )}
                     </td>
-                    <td className="td-center">
+                    <td>
                       {s.avgScore && s.avgScore !== "—" ? (
                         <span className="student-metric-pill metric-indigo">
                           {s.avgScore}
@@ -960,7 +960,7 @@ export default function CoordinatorStudents() {
                         <span className="student-metric-empty">—</span>
                       )}
                     </td>
-                    <td className="td-center">
+                    <td>
                       {s.interviewScore && s.interviewScore !== "—" ? (
                         <span className="student-metric-pill metric-purple">
                           {s.interviewScore}
@@ -969,7 +969,7 @@ export default function CoordinatorStudents() {
                         <span className="student-metric-empty">—</span>
                       )}
                     </td>
-                    <td className="td-center">
+                    <td>
                       <span
                         className={`coord-student-pill ${
                           s.riskStatus === "Top Performer"
@@ -984,7 +984,7 @@ export default function CoordinatorStudents() {
                         {s.riskStatus}
                       </span>
                     </td>
-                    <td className="td-center">
+                    <td className="text-center">
                       <button
                         className="coord-btn coord-btn--primary coord-table-action-btn"
                         onClick={() => handleOpenStudentDetail(s)}
