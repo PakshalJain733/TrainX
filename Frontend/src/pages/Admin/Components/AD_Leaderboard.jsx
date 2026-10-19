@@ -211,8 +211,11 @@ export default function AdminLeaderboard() {
             </div>
           ) : currentList.length === 0 ? (
             <div className="admin-empty-state-card">
-              <Trophy size={32} className="admin-empty-state-icon" />
+              <div className="admin-empty-state-icon-wrap">
+                <Trophy size={32} />
+              </div>
               <p className="admin-empty-state-title">No leaderboard entries found for this selection</p>
+              <p className="admin-empty-state-sub">Rankings will update dynamically as students in this batch complete quizzes, coding challenges, or AI mock interviews.</p>
             </div>
           ) : (
             <>

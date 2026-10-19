@@ -119,8 +119,14 @@
 }
 
 .ticket-resolved {
-  opacity: 0.85;
-  background: #fafafa !important;
+  opacity: 1 !important;
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+.ticket-resolved:hover {
+  border-color: #86efac !important;
+  box-shadow: 0 10px 24px -4px rgba(22, 163, 74, 0.1) !important;
 }
 
 .help-ticket-body {

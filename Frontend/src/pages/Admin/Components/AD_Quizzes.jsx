@@ -1181,9 +1181,18 @@ export default function AdminQuizzes() {
       <div className="quizzes-grid">
         {quizzes.length === 0 ? (
           <div className="admin-empty-state-card">
-            <GraduationCap size={36} className="admin-empty-state-icon" />
+            <div className="admin-empty-state-icon-wrap">
+              <GraduationCap size={32} />
+            </div>
             <p className="admin-empty-state-title">No quizzes created yet</p>
-            <p className="admin-empty-state-sub">Click "Create Quiz" to add a new assessment for your batches.</p>
+            <p className="admin-empty-state-sub">Click "Create Quiz" to add a new assessment for your batches using AI, manual entry, or bulk upload.</p>
+            <button
+              type="button"
+              className="admin-empty-state-cta-btn"
+              onClick={() => setShowForm(true)}
+            >
+              <Plus size={16} /> Create Quiz
+            </button>
           </div>
         ) : (
           quizzes.map(q => (

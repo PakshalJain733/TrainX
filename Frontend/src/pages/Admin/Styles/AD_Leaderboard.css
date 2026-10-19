@@ -456,3 +456,51 @@
   font-weight: 600;
   color: #475569;
 }
+
+/* ── Modern Empty State Card System ── */
+.admin-empty-state-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 56px 32px !important;
+  background: #ffffff !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  border-radius: 18px !important;
+  text-align: center !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02) !important;
+  margin: 12px 0 24px 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.admin-empty-state-icon-wrap,
+.admin-empty-state-icon {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 50% !important;
+  background: #eef2ff !important;
+  color: #4f46e5 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto 16px auto !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.12) !important;
+  flex-shrink: 0 !important;
+}
+
+.admin-empty-state-title {
+  font-size: 17px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 0 8px 0 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.admin-empty-state-sub {
+  font-size: 13.5px !important;
+  color: #64748b !important;
+  max-width: 480px !important;
+  margin: 0 auto !important;
+  line-height: 1.6 !important;
+}

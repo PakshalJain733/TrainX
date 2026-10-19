@@ -273,7 +273,8 @@ p {
 .mentor-defaulter-header-title svg,
 .mn-notif-header-title svg,
 .my-attendance-header-title svg {
-  display: none !important;
+  color: var(--primary-color, #4f46e5) !important;
+  flex-shrink: 0 !important;
 }
 
 .ui-section-desc,

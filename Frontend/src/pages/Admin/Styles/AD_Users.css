@@ -157,6 +157,55 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
+/* Role Filter Pills */
+.admin-users-filters {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.admin-filter-pill {
+  padding: 8px 18px !important;
+  border-radius: 20px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border: 1.5px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+  user-select: none !important;
+  outline: none !important;
+}
+
+.admin-filter-pill:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  transform: translateY(-1px) !important;
+}
+
+.admin-filter-pill--active {
+  background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%) !important;
+  color: #ffffff !important;
+  border-color: #4f46e5 !important;
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.28) !important;
+  transform: none !important;
+  font-weight: 700 !important;
+}
+
+.admin-filter-pill--active:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #2563eb 100%) !important;
+  color: #ffffff !important;
+  border-color: #4338ca !important;
+}
+
 /* User Table */
 .admin-users-table-card {
   background: #ffffff;
