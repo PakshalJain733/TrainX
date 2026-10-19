@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Check, Users, UserPlus, UserCog, Search, ShieldCheck, ShieldAlert, UserCheck, GraduationCap, Mail, Building2, Calendar, Clock, CheckCircle2, XCircle, Phone, BookOpen, Key, KeyRound, Copy, ChevronDown, X, Sparkles, Trash2, Briefcase, BookOpenCheck, Zap, User, FileSpreadsheet, UploadCloud, Download, AlertCircle, Eye, EyeOff, History } from "lucide-react";
+import { Check, Users, UserPlus, UserCog, Search, ShieldCheck, UserCheck, GraduationCap, Mail, Building2, Calendar, Clock, CheckCircle2, XCircle, Phone, BookOpen, Key, KeyRound, Copy, ChevronDown, X, Sparkles, Trash2, Briefcase, BookOpenCheck, Zap, User, FileSpreadsheet, UploadCloud, Download, AlertCircle, Eye, EyeOff, History } from "lucide-react";
 import * as XLSX from 'xlsx';
 import EmptyState from '../../../components/ui/EmptyState';
 import CustomSelect from '../../../components/ui/CustomSelect';
@@ -1423,22 +1423,6 @@ export default function ManageUsers() {
     }
   };
 
-  const handleTrigger2FA = async (userId, userName) => {
-    try {
-      const res = await apiFetch(`/admin/users/${userId}/trigger-2fa`, {
-        method: 'POST',
-      });
-      if (res && (res.success || res.status === 200 || (res.data && !res.error))) {
-        alert(res.message || `Two-step verification has been re-triggered for ${userName}. 2FA setup will be required on their next login.`);
-      } else {
-        alert(res?.error || res?.message || 'Failed to trigger two-step verification.');
-      }
-    } catch (err) {
-      console.error('Trigger 2FA error:', err);
-      alert(err?.message || 'Failed to trigger two-step verification.');
-    }
-  };
-
   const handleDeleteAdmin = async (userId, userName) => {
     if (!window.confirm(`Are you sure you want to permanently delete admin account "${userName}"? This action cannot be undone.`)) {
       return;
@@ -2080,15 +2064,6 @@ export default function ManageUsers() {
                               </div>
                             ) : (
                               <div className="manageusers-actions-row">
-                                <button
-                                  type="button"
-                                  onClick={() => handleTrigger2FA(req.id, req.name)}
-                                  className="manageusers-btn-retrigger-2fa"
-                                  title="Re-trigger 2-Step Verification setup for this Admin"
-                                >
-                                  <ShieldAlert size={13} />
-                                  <span>Re-trigger 2FA</span>
-                                </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteAdmin(req.id, req.name)}

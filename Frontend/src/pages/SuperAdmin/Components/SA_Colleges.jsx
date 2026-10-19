@@ -1343,45 +1343,6 @@ export default function Colleges() {
                 </div>
               </div>
             </div>
-
-            <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                type="button"
-                className="btn-modal-cancel"
-                onClick={() => {
-                  const targetId = viewCollegeModal.id;
-                  setViewCollegeModal(null);
-                  navigate(`/super-admin/colleges/${targetId}`);
-                }}
-              >
-                <GraduationCap size={15} style={{ marginRight: '6px' }} />
-                <span>Explore Departments</span>
-              </button>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="btn-modal-submit"
-                  onClick={() => {
-                    const c = viewCollegeModal;
-                    setViewCollegeModal(null);
-                    setEditErrors({});
-                    setEditCollege({
-                      ...c,
-                      name: c.name || '',
-                      code: c.code || '',
-                      location: c.location || c.city || '',
-                      domain: c.domain || '',
-                      adminName: c.adminName || c.admin_name || '',
-                      adminEmail: c.adminEmail || c.contact_email || '',
-                      status: c.status || 'Active',
-                    });
-                  }}
-                >
-                  <Edit2 size={14} style={{ marginRight: '6px' }} />
-                  <span>Edit Record</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>,
         document.body
