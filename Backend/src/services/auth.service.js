@@ -382,8 +382,14 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
     }
   }
 
+  const cleanMobile = (typeof data.mobile_number === 'string' && data.mobile_number.trim())
+    ? data.mobile_number.trim()
+    : ((typeof data.mobile === 'string' && data.mobile.trim())
+      ? data.mobile.trim()
+      : ((typeof data.phone === 'string' && data.phone.trim()) ? data.phone.trim() : null));
+
   try {
-    return await registerUser({ ...data, email, mobile_number: undefined });
+    return await registerUser({ ...data, email, mobile_number: cleanMobile });
   } catch (err) {
     if (isStudent) {
       await invalidateRegistrationOtps(email);

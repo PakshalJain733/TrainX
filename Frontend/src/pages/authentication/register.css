@@ -1192,7 +1192,18 @@
 
 /* 6-Digit OTP Section */
 .totp-otp-section {
-    margin-top: 2px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.login-otp-input-row {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+    margin-bottom: 4px;
+    box-sizing: border-box;
 }
 
 .totp-submit-btn {
@@ -1726,30 +1737,32 @@
 
 .login-otp-digit-input {
   width: 100%;
-  max-width: 46px;
-  height: 46px;
+  max-width: none;
+  height: 48px;
   padding: 0;
-  border: 1.5px solid #e2e8f0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 10px;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
   font-family: inherit;
   text-align: center;
-  color: #1e293b;
+  color: #0f172a;
   background: #f8fafc;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .login-otp-digit-input:focus {
   border-color: #2563eb;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .login-otp-digit-input.filled {
   border-color: #2563eb;
-  background: #fff;
+  background: #eff6ff;
+  color: #1d4ed8;
 }
 
 .reg-email-otp-meta {
@@ -2099,9 +2112,30 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px;
-  font-size: 14px;
+  padding: 12px 20px;
+  font-size: 14.5px;
   font-weight: 700;
+  font-family: inherit;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 0.2px;
+  margin-top: 10px;
+}
+
+.pending-approval-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+}
+
+.pending-approval-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
 }
 
 /* ── Approved Green Status State ── */
@@ -2147,13 +2181,13 @@
   border: none;
   box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .pending-approval-btn.approved:hover {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
 }
 
 /* ── Email Verification Badge & Button ── */

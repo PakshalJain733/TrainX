@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { UserCheck, Check, Search, CheckCircle2, XCircle, Clock, GraduationCap, Briefcase, Users, RefreshCw, AlertCircle, Mail, Phone, LayoutGrid, List, Eye, X, Sparkles, Copy, Building2, Calendar, UserCog, ShieldCheck } from "lucide-react";
+import { createPortal } from "react-dom";
+import { UserCheck, Check, Search, CheckCircle2, XCircle, Clock, GraduationCap, Briefcase, Users, RefreshCw, AlertCircle, Mail, Phone, LayoutGrid, List, Eye, X, Sparkles, Copy, Building2, Calendar, UserCog, ShieldCheck, BookOpen, Layers, Hash } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/AD_ApproveUsers.css";
 
@@ -136,7 +137,7 @@ export default function AD_ApproveUsers() {
       !q ||
       (u.name && u.name.toLowerCase().includes(q)) ||
       (u.email && u.email.toLowerCase().includes(q)) ||
-      (u.mobile_number && String(u.mobile_number).includes(q)) ||
+      ((u.mobile_number || u.mobile || u.phone) && String(u.mobile_number || u.mobile || u.phone).includes(q)) ||
       (u.college_name && u.college_name.toLowerCase().includes(q)) ||
       (u.college && u.college.toLowerCase().includes(q)) ||
       (u.department && u.department.toLowerCase().includes(q)) ||
@@ -578,10 +579,10 @@ export default function AD_ApproveUsers() {
                       </button>
                     </div>
 
-                    {u.mobile_number && (
+                    {(u.mobile_number || u.mobile || u.phone) && (
                       <div className="user-info-item">
                         <Phone size={14} className="user-info-icon" />
-                        <span className="user-info-val">{u.mobile_number}</span>
+                        <span className="user-info-val">{u.mobile_number || u.mobile || u.phone}</span>
                       </div>
                     )}
 
@@ -703,9 +704,9 @@ export default function AD_ApproveUsers() {
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "13px", color: "#334155" }}>
                           <Mail size={14} color="#64748b" /> <span>{u.email}</span>
                         </div>
-                        {u.mobile_number && (
+                        {(u.mobile_number || u.mobile || u.phone) && (
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12.5px", color: "#64748b", marginTop: "3px" }}>
-                            <Phone size={13} color="#94a3b8" /> <span>{u.mobile_number}</span>
+                            <Phone size={13} color="#94a3b8" /> <span>{u.mobile_number || u.mobile || u.phone}</span>
                           </div>
                         )}
                       </td>
@@ -841,135 +842,209 @@ export default function AD_ApproveUsers() {
       )}
 
       {/* USER DETAILS MODAL */}
-      {selectedUserModal && (
-        <div className="approve-modal-overlay" onClick={() => setSelectedUserModal(null)}>
-          <div className="approve-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="approve-modal-header">
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                <UserCog size={22} />
-                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: "800" }}>Registration Details</h3>
+      {selectedUserModal && createPortal(
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedUserModal(null);
+          }}
+        >
+          <div className="modal-dialog approve-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <UserCheck size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">Registration Details</h2>
+                  <p className="modal-subtitle">Review applicant credentials before granting access</p>
+                </div>
               </div>
               <button
                 type="button"
+                className="modal-close-btn"
                 onClick={() => setSelectedUserModal(null)}
-                style={{ background: "none", border: "none", color: "#ffffff", cursor: "pointer" }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className="approve-modal-body">
-              <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "20px" }}>
-                <div className="user-card-avatar user-avatar--student" style={{ width: "54px", height: "54px", fontSize: "18px" }}>
+            <div className="modal-body">
+              {/* Applicant Profile Hero Card */}
+              <div className="approve-modal-hero-card">
+                <div
+                  className={`user-card-avatar user-avatar--${(selectedUserModal.role || "student").toLowerCase()}`}
+                  style={{ width: "52px", height: "52px", fontSize: "17px", flexShrink: 0 }}
+                >
                   {getInitials(selectedUserModal.name)}
                 </div>
-                <div>
-                  <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", fontWeight: "800", color: "#0f172a" }}>
-                    {selectedUserModal.name}
-                  </h3>
-                  <span
-                    style={{
-                      padding: "3px 10px",
-                      borderRadius: "6px",
-                      fontSize: "12px",
-                      fontWeight: "700",
-                      background: "#ede9fe",
-                      color: "#6d28d9",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {selectedUserModal.role}
-                  </span>
+                <div className="approve-modal-hero-info">
+                  <div className="approve-modal-hero-name-row">
+                    <h3 className="approve-modal-hero-name">{selectedUserModal.name}</h3>
+                    <span
+                      style={{
+                        padding: "3px 10px",
+                        borderRadius: "6px",
+                        fontSize: "11.5px",
+                        fontWeight: "700",
+                        background: "#ede9fe",
+                        color: "#6d28d9",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {selectedUserModal.role}
+                    </span>
+                  </div>
+                  <div className="approve-modal-hero-status-row">
+                    <span className="approve-status-pill">
+                      <Clock size={12} /> Pending Approval
+                    </span>
+                    {selectedUserModal.created_at && (
+                      <span className="approve-registered-time">
+                        Registered on {new Date(selectedUserModal.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="modal-info-grid">
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Email Address</div>
-                  <div className="modal-info-val">{selectedUserModal.email}</div>
+              {/* Details Grid */}
+              <div className="sa-modal-details-grid" style={{ marginTop: "16px" }}>
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Mail size={13} className="sa-detail-label-icon" />
+                    <span>Email Address</span>
+                  </span>
+                  <span className="sa-modal-detail-value dept-hod-email-value" style={{ fontSize: "13px" }}>
+                    {selectedUserModal.email}
+                  </span>
                 </div>
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Mobile Number</div>
-                  <div className="modal-info-val">{selectedUserModal.mobile_number || "Not provided"}</div>
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Phone size={13} className="sa-detail-label-icon" />
+                    <span>Mobile Number</span>
+                  </span>
+                  <span className="sa-modal-detail-value">
+                    {(selectedUserModal.mobile_number || selectedUserModal.mobile || selectedUserModal.phone || selectedUserModal.contact_number) ? (
+                      selectedUserModal.mobile_number || selectedUserModal.mobile || selectedUserModal.phone || selectedUserModal.contact_number
+                    ) : (
+                      <span style={{ color: "#94a3b8", fontStyle: "italic", fontWeight: 500 }}>Not provided</span>
+                    )}
+                  </span>
                 </div>
 
                 {(selectedUserModal.college_name || selectedUserModal.college) && (
-                  <div className="modal-info-block">
-                    <div className="modal-info-lbl">College / Institution</div>
-                    <div className="modal-info-val">{selectedUserModal.college_name || selectedUserModal.college}</div>
+                  <div className="sa-modal-detail-item">
+                    <span className="sa-modal-detail-label">
+                      <Building2 size={13} className="sa-detail-label-icon" />
+                      <span>College / Institution</span>
+                    </span>
+                    <span className="sa-modal-detail-value">{selectedUserModal.college_name || selectedUserModal.college}</span>
                   </div>
                 )}
 
                 {selectedUserModal.department && (
-                  <div className="modal-info-block">
-                    <div className="modal-info-lbl">Department</div>
-                    <div className="modal-info-val">{selectedUserModal.department}</div>
+                  <div className="sa-modal-detail-item">
+                    <span className="sa-modal-detail-label">
+                      <GraduationCap size={13} className="sa-detail-label-icon" />
+                      <span>Department</span>
+                    </span>
+                    <span className="sa-modal-detail-value">{selectedUserModal.department}</span>
                   </div>
                 )}
 
                 {selectedUserModal.year && (
-                  <div className="modal-info-block">
-                    <div className="modal-info-lbl">Academic Year</div>
-                    <div className="modal-info-val">{selectedUserModal.year}</div>
+                  <div className="sa-modal-detail-item">
+                    <span className="sa-modal-detail-label">
+                      <Calendar size={13} className="sa-detail-label-icon" />
+                      <span>Academic Year</span>
+                    </span>
+                    <span className="sa-modal-detail-value">{selectedUserModal.year}</span>
                   </div>
                 )}
 
                 {selectedUserModal.semester && (
-                  <div className="modal-info-block">
-                    <div className="modal-info-lbl">Current Semester</div>
-                    <div className="modal-info-val">{selectedUserModal.semester}</div>
+                  <div className="sa-modal-detail-item">
+                    <span className="sa-modal-detail-label">
+                      <BookOpen size={13} className="sa-detail-label-icon" />
+                      <span>Current Semester</span>
+                    </span>
+                    <span className="sa-modal-detail-value">{selectedUserModal.semester}</span>
                   </div>
                 )}
 
                 {selectedUserModal.division && (
-                  <div className="modal-info-block">
-                    <div className="modal-info-lbl">Division</div>
-                    <div className="modal-info-val">{selectedUserModal.division}</div>
+                  <div className="sa-modal-detail-item">
+                    <span className="sa-modal-detail-label">
+                      <Layers size={13} className="sa-detail-label-icon" />
+                      <span>Division</span>
+                    </span>
+                    <span className="sa-modal-detail-value">{selectedUserModal.division}</span>
                   </div>
                 )}
 
                 {selectedUserModal.roll_number && (
-                  <div className="modal-info-block">
-                    <div className="modal-info-lbl">Roll Number</div>
-                    <div className="modal-info-val">{selectedUserModal.roll_number}</div>
+                  <div className="sa-modal-detail-item">
+                    <span className="sa-modal-detail-label">
+                      <Hash size={13} className="sa-detail-label-icon" />
+                      <span>Roll Number</span>
+                    </span>
+                    <span className="sa-modal-detail-value">{selectedUserModal.roll_number}</span>
                   </div>
                 )}
 
-                <div className="modal-info-block">
-                  <div className="modal-info-lbl">Registered On</div>
-                  <div className="modal-info-val">
+                <div className="sa-modal-detail-item">
+                  <span className="sa-modal-detail-label">
+                    <Clock size={13} className="sa-detail-label-icon" />
+                    <span>Registered On</span>
+                  </span>
+                  <span className="sa-modal-detail-value">
                     {selectedUserModal.created_at
                       ? new Date(selectedUserModal.created_at).toLocaleString("en-IN")
                       : "Recently"}
-                  </div>
+                  </span>
                 </div>
               </div>
+            </div>
 
-              <div style={{ marginTop: "24px", display: "flex", gap: "12px" }}>
-                <button
-                  type="button"
-                  disabled={actionLoadingId === selectedUserModal.id}
-                  onClick={() => handleApprove(selectedUserModal)}
-                  className="btn-card-approve"
-                  style={{ height: "44px" }}
-                >
-                  <CheckCircle2 size={18} /> Approve Account
-                </button>
-
+            <div className="modal-footer" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setSelectedUserModal(null)}
+              >
+                Close
+              </button>
+              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                 <button
                   type="button"
                   disabled={actionLoadingId === selectedUserModal.id}
                   onClick={() => handleReject(selectedUserModal)}
                   className="btn-card-reject"
-                  style={{ height: "44px" }}
+                  style={{ height: "38px", padding: "0 16px" }}
                 >
-                  <XCircle size={18} /> Reject
+                  <XCircle size={16} /> Reject
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoadingId === selectedUserModal.id}
+                  onClick={() => handleApprove(selectedUserModal)}
+                  className="btn-card-approve"
+                  style={{ height: "38px", padding: "0 18px" }}
+                >
+                  {actionLoadingId === selectedUserModal.id ? (
+                    <RefreshCw size={16} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={16} />
+                  )}
+                  <span>Approve Account</span>
                 </button>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

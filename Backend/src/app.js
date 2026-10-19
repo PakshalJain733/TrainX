@@ -148,8 +148,8 @@ app.use(apiMetricsMiddleware);
 
 // Security Rate Limiters
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 auth requests per windowMs
+  windowMs: 10 * 60 * 1000, // 15 minutes
+  max: 250, // Limit each IP to 100 auth requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many authentication attempts from this IP. Please try again after 15 minutes.' },
