@@ -684,10 +684,18 @@ select option,
 /* Universal Desktop Modal Footer & Action Buttons */
 .modal-footer,
 .modal-footer-users,
-.trainings-modal-footer {
+.trainings-modal-footer,
+.cp-modal-footer,
+.sa-modal-footer,
+.coord-modal-footer,
+.help-modal-footer,
+.assessment-form-footer,
+.coord-modal-actions-row,
+.coord-requests-form-actions,
+.profile-2fa-modal-actions {
   display: flex !important;
   align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: flex-end !important;
   gap: 12px !important;
   padding: 16px 24px !important;
   background: #f8fafc !important;
@@ -703,29 +711,21 @@ select option,
   margin-left: auto !important;
 }
 
-.btn-modal-cancel {
-  order: -1 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-  padding: 9px 18px !important;
-  height: 38px !important;
-  border-radius: 8px !important;
-  border: 1.5px solid #cbd5e1 !important;
-  background: #ffffff !important;
-  color: #475569 !important;
-  font-size: 13.5px !important;
-  font-weight: 600 !important;
-  cursor: pointer !important;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-  box-sizing: border-box !important;
-}
-
-.btn-modal-cancel:hover {
-  background: #f1f5f9 !important;
-  border-color: #94a3b8 !important;
-  color: #0f172a !important;
+/* Universally remove cancel buttons from cards and modal dialogs across the entire project */
+.btn-modal-cancel,
+.cp-btn-cancel,
+.mc-modal-cancel-btn,
+.profile-2fa-modal-cancel-btn,
+.sa-modal-btn-cancel,
+.quiz-cancel-btn,
+.help-cancel-btn,
+.assessment-btn-cancel,
+.coord-btn-action-cancel,
+.coord-btn-cancel,
+.coord-requests-cancel-btn,
+.mentor-btn-cancel,
+.mentor-btn-cancel-modal {
+  display: none !important;
 }
 
 .btn-modal-submit {

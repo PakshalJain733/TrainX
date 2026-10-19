@@ -57,7 +57,19 @@ const DEFAULT_MENTORS = [];
 
 const DEFAULT_STUDENTS = [];
 
-
+function formatDateDMY(dateVal) {
+  if (!dateVal) return '—';
+  if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateVal)) {
+    const [y, m, d] = dateVal.slice(0, 10).split('-');
+    return `${d}-${m}-${y}`;
+  }
+  const d = new Date(dateVal);
+  if (Number.isNaN(d.getTime())) return String(dateVal);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
 function RiskBadge({ risk }) {
   const color =
     risk === "Low Risk" ? { bg: "#ecfdf5", text: "#065f46", border: "#a7f3d0" } :
@@ -1672,7 +1684,7 @@ export default function ManageUsers() {
       students: 'student'
     };
 
-    const targetRole = roleMapping[newUserForm.role] || 'student';
+    const targetRole = roleMapping[newUserForm.role] || 'college_admin';
     const payload = {
       name: newUserForm.name,
       password: newUserForm.password,
@@ -1871,126 +1883,126 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {/* PENDING REGISTRATIONS APPROVAL SECTION */}
-      {pendingUsersList.length > 0 && (
-        <div className="manageusers-table-card mb-6" style={{ border: '1px solid #fcd34d', background: '#fffefb', marginBottom: '24px' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: '#92400e', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={18} color="#d97706" />
-              <span>Pending Admin Registrations Awaiting Approval ({pendingUsersList.length})</span>
-            </h3>
-            <span style={{ fontSize: '12px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', background: '#fef3c7', color: '#92400e', border: '1px solid #fcd34d' }}>
-              Action Required
-            </span>
-          </div>
-          <div className="manageusers-table-wrap">
-            <table className="manageusers-table">
-              <thead>
-                <tr className="manageusers-thead-row">
-                  <th className="manageusers-th">Admin Name &amp; Contact</th>
-                  <th className="manageusers-th">Requested Role</th>
-                  <th className="manageusers-th">College / Dept</th>
-                  <th className="manageusers-th">Status</th>
-                  <th className="manageusers-th-right">Governance Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingUsersList.map((user) => (
-                  <tr key={user.id} className="manageusers-tr">
-                    <td className="manageusers-td">
-                      <div className="manageusers-cell-title">{user.name}</div>
-                      <div className="manageusers-contact-row mt-1">
-                        <Mail size={14} className="manageusers-contact-icon" />
-                        <span className="manageusers-contact-text">{user.email || user.mobile_number || 'N/A'}</span>
-                      </div>
-                    </td>
-                    <td className="manageusers-td">
-                      <span style={{ textTransform: 'capitalize', fontWeight: 700, padding: '2px 8px', borderRadius: '6px', background: '#e0e7ff', color: '#3730a3', fontSize: '12px' }}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="manageusers-td">
-                      <div className="manageusers-contact-row manageusers-contact-row--bold">
-                        <Building2 size={15} className="manageusers-contact-icon manageusers-contact-icon--indigo" />
-                        <span>{user.college_name || user.department || 'Apex Institution'}</span>
-                      </div>
-                    </td>
-                    <td className="manageusers-td">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border bg-amber-50 text-amber-800 border-amber-200">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
-                        Pending Admin Approval
-                      </span>
-                    </td>
-                    <td className="manageusers-td-right">
-                      <div className="manageusers-actions-row">
-                        <button
-                          type="button"
-                          onClick={() => handleApprovePendingUser(user)}
-                          className="manageusers-btn-verify"
-                          style={{ background: '#16a34a', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer' }}
-                        >
-                          <CheckCircle2 size={15} />
-                          <span>Approve Account</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRejectPendingUser(user)}
-                          className="manageusers-btn-reject"
-                          style={{ background: '#ef4444', color: '#fff', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', cursor: 'pointer' }}
-                        >
-                          <XCircle size={15} />
-                          <span>Reject</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
       {/* TAB CONTENT: HODs & College Admins */}
       {activeTab === "admins" && (
         <div className="manageusers-tab-content">
           {codeRequests.length > 0 && (
             <div style={{
-              background: '#eff6ff',
-              border: '1px solid #bfdbfe',
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderLeft: '4px solid #3b82f6',
               borderRadius: '12px',
-              padding: '14px 18px',
-              marginBottom: '18px',
+              padding: '16px 20px',
+              marginBottom: '20px',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)'
+              flexDirection: 'column',
+              gap: '12px'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <KeyRound size={20} style={{ color: '#2563eb', flexShrink: 0 }} />
-                <div>
-                  <h4 style={{ margin: 0, fontSize: '13.5px', fontWeight: 800, color: '#1e3a8a' }}>
-                    {codeRequests.length} Admin Secure Code Request(s) Pending
-                  </h4>
-                  <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: '#3b82f6' }}>
-                    {codeRequests.map(r => `${r.name} (${r.email})`).join(', ')} requested an Admin Secure Code. Generate an access code and provide it to them.
-                  </p>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: '#eff6ff',
+                    border: '1px solid #bfdbfe',
+                    color: '#2563eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <KeyRound size={18} />
+                  </div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
+                        {codeRequests.length} Admin Secure Code Request{codeRequests.length > 1 ? 's' : ''} Pending
+                      </h4>
+                      <span style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        background: '#fef3c7',
+                        color: '#92400e',
+                        border: '1px solid #fcd34d'
+                      }}>
+                        Action Required
+                      </span>
+                    </div>
+                    <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
+                      Generate secure access invitation codes to approve and provision access for the requested administrators.
+                    </p>
+                  </div>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCodeRole('admins');
+                    setGeneratedCode(null);
+                    setIsGenerateCodeModalOpen(true);
+                  }}
+                  className="sa-btn-primary"
+                  style={{
+                    fontSize: '12.5px',
+                    padding: '8px 16px',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    flexShrink: 0
+                  }}
+                >
+                  <Key size={14} />
+                  <span>Generate Code</span>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setCodeRole('admins');
-                  setGeneratedCode(null);
-                  setIsGenerateCodeModalOpen(true);
-                }}
-                className="sa-btn-primary"
-                style={{ fontSize: '12px', padding: '8px 16px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Key size={14} />
-                <span>Generate Code</span>
-              </button>
+
+              {/* Individual Requester Badges */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                flexWrap: 'wrap',
+                paddingTop: '10px',
+                borderTop: '1px solid #f1f5f9'
+              }}>
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  color: '#64748b',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em'
+                }}>
+                  Requesters:
+                </span>
+                {codeRequests.map((r, i) => (
+                  <div key={i} style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    background: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontSize: '12px',
+                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)'
+                  }}>
+                    <User size={12} style={{ color: '#3b82f6' }} />
+                    <span style={{ fontWeight: 700, color: '#1e293b' }}>{r.name}</span>
+                    <span style={{ color: '#64748b', fontSize: '11.5px' }}>({r.email})</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
@@ -2012,7 +2024,7 @@ export default function ManageUsers() {
                       <th className="manageusers-th">Designation</th>
                       <th className="manageusers-th">Requested On</th>
                       <th className="manageusers-th">Status</th>
-                      <th className="manageusers-th-center">Governance Actions</th>
+                      <th className="manageusers-th-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2035,7 +2047,7 @@ export default function ManageUsers() {
                         <td className="manageusers-td">
                           <div className="manageusers-contact-row">
                             <Calendar size={14} className="manageusers-contact-icon" />
-                            <span className="manageusers-contact-text">{req.date}</span>
+                            <span className="manageusers-contact-text">{formatDateDMY(req.date)}</span>
                           </div>
                         </td>
                         <td className="manageusers-td">
@@ -2065,9 +2077,9 @@ export default function ManageUsers() {
                                   onClick={() => handleDeleteAdmin(req.id, req.name)}
                                   className="manageusers-btn-delete-admin"
                                   title="Delete this Admin account"
+                                  aria-label="Delete this Admin account"
                                 >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             ) : (
@@ -2077,9 +2089,9 @@ export default function ManageUsers() {
                                   onClick={() => handleDeleteAdmin(req.id, req.name)}
                                   className="manageusers-btn-delete-admin"
                                   title="Delete this Admin account"
+                                  aria-label="Delete this Admin account"
                                 >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             )}
@@ -2422,33 +2434,19 @@ export default function ManageUsers() {
 
             <form onSubmit={handleAddUserSubmit}>
               <div className="modal-body">
-                {/* Row 1: College Selection & Role Assignment (Side by Side) */}
-                <div className="form-row-2 sa-form-row-2">
-                  <div className="form-group-admin">
-                    <label>Select College Institution *</label>
-                    <MuSelect
-                      value={newUserForm.collegeId}
-                      placeholder="Select College Institution"
-                      wrapperClass="mu-select"
-                      options={collegesList.map((c) => ({
-                        value: c.id,
-                        label: `${c.name} (${c.code || ''})`
-                      }))}
-                      onChange={(val) => handleCollegeChange(val)}
-                    />
-                  </div>
-
-                  <div className="form-group-admin">
-                    <label>Assign Role *</label>
-                    <MuSelect
-                      value={newUserForm.role}
-                      wrapperClass="mu-select"
-                      options={[
-                        { value: "admins", label: "College Administrator (Admin)" },
-                      ]}
-                      onChange={(val) => setNewUserForm({ ...newUserForm, role: val })}
-                    />
-                  </div>
+                {/* College Selection (Full Width) */}
+                <div className="form-group-admin sa-form-group-full">
+                  <label>Select College Institution *</label>
+                  <MuSelect
+                    value={newUserForm.collegeId}
+                    placeholder="Select College Institution"
+                    wrapperClass="mu-select"
+                    options={collegesList.map((c) => ({
+                      value: c.id,
+                      label: `${c.name} (${c.code || ''})`
+                    }))}
+                    onChange={(val) => handleCollegeChange(val)}
+                  />
                 </div>
 
                 {/* Full Name & Password (Side-by-Side) */}
@@ -2466,12 +2464,11 @@ export default function ManageUsers() {
                   </div>
                   <div className="form-group-admin">
                     <label>Password *</label>
-                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <div className="password-input-wrap">
                       <input
                         type={showNewUserPassword ? "text" : "password"}
                         required
                         className="form-input-admin"
-                        style={{ paddingRight: '40px' }}
                         placeholder="••••••••"
                         value={newUserForm.password}
                         onChange={(e) => setNewUserForm({ ...newUserForm, password: e.target.value })}
@@ -2479,18 +2476,9 @@ export default function ManageUsers() {
                       <button
                         type="button"
                         onClick={() => setShowNewUserPassword(!showNewUserPassword)}
-                        style={{
-                          position: 'absolute',
-                          right: '12px',
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: '#64748b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: 0
-                        }}
+                        className="password-toggle-btn"
                         tabIndex={-1}
+                        aria-label={showNewUserPassword ? "Hide password" : "Show password"}
                       >
                         {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>

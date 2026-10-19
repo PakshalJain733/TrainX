@@ -1213,14 +1213,6 @@ export default function Colleges() {
 
               <div className="modal-footer">
                 <button
-                  type="button"
-                  className="btn-modal-cancel"
-                  onClick={() => setEditCollege(null)}
-                  disabled={isSavingEdit}
-                >
-                  Cancel
-                </button>
-                <button
                   type="submit"
                   className="btn-modal-submit"
                   disabled={isSavingEdit}
