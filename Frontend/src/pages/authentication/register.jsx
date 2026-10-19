@@ -1340,13 +1340,15 @@ function Register() {
                 {/* Row: Password | Confirm Password for Staff/Mentors */}
                 <div className="form-grid-2">
                   <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Password</FieldLabel>
+                    <FieldLabel icon={Icons.lock}>
+                      {role === "Admin" ? "Password (Assigned by Super Admin)" : "Password"}
+                    </FieldLabel>
                     <div className="register-password-wrapper">
                       <input
                         type={showPassword ? "text" : "password"}
                         name="password"
                         required
-                        placeholder="••••••••"
+                        placeholder={role === "Admin" ? "Enter password assigned by Super Admin" : "••••••••"}
                         value={formData.password}
                         onChange={handleChange}
                       />
@@ -1362,13 +1364,15 @@ function Register() {
                   </div>
 
                   <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
+                    <FieldLabel icon={Icons.lock}>
+                      {role === "Admin" ? "Confirm Assigned Password" : "Confirm Password"}
+                    </FieldLabel>
                     <div className="register-password-wrapper">
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         name="confirm_password"
                         required
-                        placeholder="••••••••"
+                        placeholder={role === "Admin" ? "Re-enter password assigned by Super Admin" : "••••••••"}
                         value={formData.confirm_password}
                         onChange={handleChange}
                       />
@@ -1383,6 +1387,20 @@ function Register() {
                     </div>
                   </div>
                 </div>
+
+                {role === "Admin" && (
+                  <p style={{
+                    fontSize: '11.5px',
+                    color: '#4f46e5',
+                    margin: '-4px 0 12px',
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    ℹ️ You must enter the exact initial password created for your account by the Super Administrator.
+                  </p>
+                )}
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>

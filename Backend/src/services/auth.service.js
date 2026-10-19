@@ -416,11 +416,13 @@ export const registerUser = async (data) => {
   }
 
   if (existingUser) {
-    if (existingUser.password_hash && existingUser.password_hash.trim().length > 0) {
+    // If the user already completed registration and has 2FA set up:
+    const isCompleted = (existingUser.is_profile_updated === 1 || existingUser.is_profile_updated === true) && !isBlank(existingUser.two_factor_secret);
+    if (isCompleted) {
       throw createAuthError('User with this email or mobile number already exists and has completed registration. Please log in.', 409);
     }
 
-    // User was pre-added by Admin and is now completing registration!
+    // User was pre-added by Super Admin / Admin and is now completing registration!
     let canonicalRole = existingUser.role;
     if (!canonicalRole && role) {
       const lowerRole = role.toLowerCase();
@@ -431,16 +433,29 @@ export const registerUser = async (data) => {
     }
     if (!canonicalRole) canonicalRole = ROLES.STUDENT;
 
+    // Strict Password Enforcement:
+    // If Super Admin created the user with an initial password (stored in password_hash),
+    // the registering admin MUST enter that exact same password.
+    if (existingUser.password_hash && existingUser.password_hash.trim().length > 0) {
+      const isPasswordMatch = await bcrypt.compare(password, existingUser.password_hash);
+      if (!isPasswordMatch) {
+        throw createAuthError(
+          'Password does not match the initial password assigned by the Super Administrator. You must use the password set by Super Admin.',
+          400
+        );
+      }
+    }
+
     let codeRecord = null;
     const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
     if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
-      if (!secure_code || String(secure_code).trim().length === 0) {
+      if (secure_code && String(secure_code).trim().length > 0) {
+        codeRecord = await findSecureCode(secure_code, canonicalRole);
+        if (!codeRecord) {
+          throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
+        }
+      } else if (canonicalRole !== ROLES.COLLEGE_ADMIN) {
         throw createAuthError(`Secure access code is required to register for role: ${role || canonicalRole}`, 400);
-      }
-
-      codeRecord = await findSecureCode(secure_code, canonicalRole);
-      if (!codeRecord) {
-        throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
       }
     }
 
@@ -457,7 +472,7 @@ export const registerUser = async (data) => {
       email: existingUser.email || email,
       mobile_number: mobile_number || existingUser.mobile_number,
       password: password || '',
-      password_hash: password || '',
+      password_hash: existingUser.password_hash || '',
       role: canonicalRole,
       department,
       year,
@@ -465,7 +480,7 @@ export const registerUser = async (data) => {
       semester: derivedSemester,
       roll_number,
       is_profile_updated: 1,
-      is_active: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
+      is_active: 1,
     });
 
     if (codeRecord && codeRecord.id) {
@@ -541,47 +556,11 @@ export const registerUser = async (data) => {
   const colInputId = parseInt(college_id || collegeId, 10);
 
   if (canonicalRole === ROLES.COLLEGE_ADMIN) {
-    const cleanEmail = String(email || '').trim().toLowerCase();
-    const cleanName = String(name || '').trim().toLowerCase();
-
-    let matchingCollege = await findCollegeByAdminEmail(cleanEmail);
-
-    if (!matchingCollege && codeRecord?.college_name) {
-      try {
-        const [cRows] = await pool.query('SELECT * FROM colleges WHERE name = ? OR code = ? LIMIT 1', [codeRecord.college_name, codeRecord.college_name]);
-        if (cRows.length > 0) matchingCollege = cRows[0];
-      } catch (_) {}
-    }
-
-    if (!matchingCollege && email && email.includes('@')) {
-      try {
-        matchingCollege = await findCollegeByEmailDomain(email);
-      } catch (_) {}
-    }
-
-    if (!matchingCollege && codeRecord) {
-      try {
-        const [firstCol] = await pool.query('SELECT * FROM colleges ORDER BY id ASC LIMIT 1');
-        if (firstCol.length > 0) matchingCollege = firstCol[0];
-      } catch (_) {}
-    }
-
-    if (!matchingCollege) {
-      const error = new Error(`Admin registration denied: Email '${email}' has not been registered as a College Admin by Super Admin.`);
-      error.statusCode = 403;
-      throw error;
-    }
-
-    if (matchingCollege.admin_name && matchingCollege.admin_name.trim().length > 0 && matchingCollege.contact_email && matchingCollege.contact_email.trim().toLowerCase() === cleanEmail) {
-      const dbAdminName = matchingCollege.admin_name.trim().toLowerCase();
-      if (dbAdminName !== cleanName && !codeRecord) {
-        const error = new Error(`Admin registration denied: Name '${name}' does not match the pre-registered Admin Name '${matchingCollege.admin_name}' registered for email '${email}'.`);
-        error.statusCode = 403;
-        throw error;
-      }
-    }
-
-    assignedCollegeId = matchingCollege.id || 1;
+    // College Admins must be provisioned by Super Admin beforehand with their initial password
+    throw createAuthError(
+      'Admin registration denied: No provisioned administrator account found for this email. Super Admin must create your account and assign your initial password before you can register.',
+      403
+    );
   } else {
     let matchingCollege = null;
     if (!isNaN(colInputId) && colInputId > 0) {
