@@ -35,35 +35,43 @@ export default function CustomSelect({
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
 
-    const estimatedHeight = Math.min(260, Math.max(60, normalizedOptions.length * 36 + 12));
+    // Show only first 3 items at once, then scroll
+    const maxVisibleItems = 3;
+    const itemHeight = 38;
+    const verticalPadding = 12; // 6px top + 6px bottom
+    const maxDropdownHeight = maxVisibleItems * itemHeight + verticalPadding; // 126px
+
+    const itemCount = normalizedOptions.length;
+    const naturalHeight = Math.max(48, itemCount * itemHeight + verticalPadding);
+    const estimatedHeight = Math.min(maxDropdownHeight, naturalHeight);
+
     const spaceBelow = viewportHeight - rect.bottom;
     const spaceAbove = rect.top;
 
     let openUp = false;
     if (direction === "up") {
-      openUp = spaceAbove >= 120 || spaceAbove > spaceBelow;
+      openUp = spaceAbove >= 100 || spaceAbove > spaceBelow;
     } else if (direction === "down") {
       openUp = false;
     } else {
       if (spaceBelow < estimatedHeight && spaceAbove > spaceBelow) {
         openUp = true;
-      } else if (spaceBelow < 140 && spaceAbove > 140) {
+      } else if (spaceBelow < 110 && spaceAbove > 110) {
         openUp = true;
       }
     }
 
     const availableSpace = openUp ? spaceAbove - 16 : spaceBelow - 16;
-    const maxHeight = Math.max(100, Math.min(260, availableSpace));
+    const maxHeight = Math.max(80, Math.min(maxDropdownHeight, availableSpace));
     
-    const minWidth = 180;
-    const targetWidth = Math.max(rect.width > 0 ? rect.width : 200, minWidth);
+    const targetWidth = rect.width > 0 ? rect.width : 160;
     const computedLeft = Math.max(8, Math.min(rect.left, viewportWidth - targetWidth - 8));
 
     const computedStyle = {
       position: "fixed",
       left: `${computedLeft}px`,
       width: `${targetWidth}px`,
-      minWidth: `${minWidth}px`,
+      minWidth: `${targetWidth}px`,
       maxHeight: `${maxHeight}px`,
       overflowY: "auto",
       zIndex: 2147483647,
@@ -89,6 +97,12 @@ export default function CustomSelect({
   useLayoutEffect(() => {
     if (isOpen) {
       updatePosition();
+      if (menuRef.current) {
+        const selectedEl = menuRef.current.querySelector(".custom-select-option--selected");
+        if (selectedEl) {
+          selectedEl.scrollIntoView({ block: "nearest" });
+        }
+      }
     }
   }, [isOpen, value, options]);
 

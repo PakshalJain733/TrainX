@@ -4,6 +4,7 @@ import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, 
 import * as XLSX from "xlsx";
 import { addSharedQuiz, getSharedQuizzes, EVENTS } from "../../../utils/sharedStore";
 import "../Styles/MN_Quizzes.css";
+import "../../Admin/Styles/AD_Quizzes.css";
 
 import CustomSelect from "../../../components/ui/CustomSelect";
 

@@ -17,7 +17,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
 }
 
 .superadmin-content,
@@ -29,7 +29,7 @@ body {
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
   padding: 12px 14px 14px 12px;
   box-sizing: border-box;
 }
@@ -1299,7 +1299,8 @@ body {
   padding: 16px 24px !important;
   border-top: 1px solid #f1f5f9 !important;
   display: flex !important;
-  justify-content: flex-end !important;
+  justify-content: space-between !important;
+  align-items: center !important;
   gap: 10px !important;
   background: #f8fafc !important;
   position: relative !important;

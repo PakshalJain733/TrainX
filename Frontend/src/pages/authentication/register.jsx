@@ -209,6 +209,7 @@ function Register() {
     const email = (formData.email || "").trim();
     if (!email.includes("@") || email.split("@")[1].length < 3) {
       setDeptOptions([]);
+      setFormData((prev) => ({ ...prev, department: "" }));
       return;
     }
 
@@ -223,11 +224,12 @@ function Register() {
               d.value ||
               d.name ||
               "";
+            const fullName = d.fullName || d.name || d.value || shortCode;
             return {
               value: shortCode,
-              label: shortCode,
+              label: fullName && fullName !== shortCode ? `${shortCode} - ${fullName}` : shortCode,
               code: shortCode,
-              fullName: d.fullName || d.name || d.value,
+              fullName: fullName,
             };
           });
           setDeptOptions(formatted);
@@ -235,12 +237,17 @@ function Register() {
             const hasExisting = formatted.some((d) => String(d.value).toLowerCase() === String(prev.department).toLowerCase());
             return {
               ...prev,
-              department: hasExisting ? prev.department : formatted[0].value,
+              department: hasExisting ? prev.department : (formatted[0]?.value || ""),
             };
           });
+        } else {
+          setDeptOptions([]);
+          setFormData((prev) => ({ ...prev, department: "" }));
         }
       } catch (err) {
         console.warn("Error fetching departments by email domain:", err);
+        setDeptOptions([]);
+        setFormData((prev) => ({ ...prev, department: "" }));
       }
     }, 300);
 
@@ -555,7 +562,34 @@ function Register() {
       setErrorMsg("Passwords do not match. Please re-enter passwords.");
       return false;
     }
-    if (role !== "Student") {
+    if (role === "Student") {
+      const roll = (formData.roll_number || "").trim();
+      if (!roll) {
+        setErrorMsg("Please enter your College ID.");
+        return false;
+      }
+      const mobile = (formData.mobile_number || "").trim();
+      if (!mobile) {
+        setErrorMsg("Please enter your mobile number.");
+        return false;
+      }
+      if (mobile.length < 10) {
+        setErrorMsg("Please enter a valid 10-digit mobile number.");
+        return false;
+      }
+      if (deptOptions.length > 0 && !formData.department) {
+        setErrorMsg("Please select your department.");
+        return false;
+      }
+      if (!formData.year) {
+        setErrorMsg("Please select your academic year.");
+        return false;
+      }
+      if (!(formData.division || "").trim()) {
+        setErrorMsg("Please enter your division.");
+        return false;
+      }
+    } else {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) {
         setErrorMsg("Please enter your Secure Access Code.");
@@ -982,8 +1016,8 @@ function Register() {
             {/* ── STUDENT ROLE FIELDS ── */}
             {role === "Student" && (
               <div key="Student">
-                {/* Row 1: Full Name | College ID */}
-                <div className="form-grid-2">
+                {/* Row 1: Full Name | College ID | Mobile Number */}
+                <div className="form-grid-student-row1">
                   <div className="input-group">
                     <FieldLabel icon={Icons.user}>Full Name</FieldLabel>
                     <input
@@ -1006,6 +1040,20 @@ function Register() {
                       placeholder="College ID"
                       value={formData.roll_number}
                       onChange={handleChange}
+                    />
+                  </div>
+
+                  <div className="input-group">
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
+                    <input
+                      type="tel"
+                      name="mobile_number"
+                      autoComplete="tel"
+                      required
+                      placeholder="Mobile number"
+                      value={formData.mobile_number}
+                      onChange={handleChange}
+                      maxLength={10}
                     />
                   </div>
                 </div>
@@ -1136,34 +1184,24 @@ function Register() {
                   )}
                 </div>
 
-                {/* Row 3: Mobile Number | Department | Year | Division */}
-                <div className={deptOptions.length > 0 ? "form-grid-4" : "form-grid-3"}>
+                {/* Row 3: Department | Year | Division */}
+                <div className="form-grid-student-row3">
                   <div className="input-group">
-                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
-                    <input
-                      type="tel"
-                      name="mobile_number"
-                      autoComplete="tel"
-                      required
-                      placeholder="Mobile number"
-                      value={formData.mobile_number}
-                      onChange={handleChange}
-                      maxLength={10}
+                    <FieldLabel icon={Icons.dept}>Department</FieldLabel>
+                    <RegSelect
+                      value={formData.department}
+                      wrapperClass="reg-select"
+                      options={deptOptions}
+                      onChange={(val) => setFormData({ ...formData, department: val })}
+                      placeholder={
+                        !formData.email || !formData.email.includes("@")
+                          ? "Enter college email first"
+                          : deptOptions.length > 0
+                          ? "Select Dept"
+                          : "No departments found"
+                      }
                     />
                   </div>
-
-                  {deptOptions.length > 0 && (
-                    <div className="input-group">
-                      <FieldLabel icon={Icons.dept}>Dept.</FieldLabel>
-                      <RegSelect
-                        value={formData.department}
-                        wrapperClass="reg-select"
-                        options={deptOptions}
-                        onChange={(val) => setFormData({ ...formData, department: val })}
-                        placeholder="Select Dept"
-                      />
-                    </div>
-                  )}
 
                   <div className="input-group">
                     <FieldLabel icon={Icons.year}>Year</FieldLabel>

@@ -1034,6 +1034,7 @@
   gap: 20px;
   padding: 20px;
   overflow-y: auto;
+  overflow-x: hidden !important;
   background: #f8fafc;
 }
 
@@ -1047,6 +1048,7 @@
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  overflow-x: hidden !important;
 }
 
 .fs-portal-panel-main {
@@ -1114,26 +1116,30 @@
 
 /* ── Primary Action Submit Button ── */
 .btn-portal-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 13px;
-  font-size: 14px;
-  font-weight: 800;
-  background: #2563eb;
-  border-radius: 12px;
-  color: #ffffff;
-  border: none;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-  cursor: pointer;
-  transition: all 0.15s ease;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: auto !important;
+  align-self: flex-start !important;
+  white-space: nowrap !important;
+  padding: 11px 22px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  background: #2563eb !important;
+  border-radius: 10px !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
 }
 
 .btn-portal-submit:hover {
-  background: #1d4ed8;
-  transform: translateY(-1px);
+  background: #1d4ed8 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35) !important;
 }
 
 /* ── Modal Portal Clean Utility Classes ── */
@@ -1197,6 +1203,16 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.fs-portal-grid-2col .form-group-admin {
+  min-width: 0;
+}
+
+.fs-portal-grid-2col .custom-select-wrap,
+.fs-portal-grid-2col .custom-select-trigger {
+  min-width: 0 !important;
+  width: 100% !important;
 }
 
 .fs-portal-textarea {
@@ -1885,6 +1901,213 @@
 .manageusers-track-text {
   font-weight: 500;
   color: #4f46e5;
+}
+
+/* ── Bulk Excel / CSV Upload Modal System ── */
+.bulk-modal-dialog {
+  max-width: 850px !important;
+  width: 92% !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: #ffffff !important;
+  box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(226, 232, 240, 0.8) !important;
+}
+
+.bulk-header-icon-wrap {
+  background: #ecfdf5 !important;
+  color: #059669 !important;
+}
+
+.bulk-template-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  background: #f8fafc;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.bulk-template-title {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 13.5px;
+}
+
+.bulk-template-desc {
+  margin: 2px 0 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.bulk-template-btn {
+  padding: 7px 14px;
+  font-size: 12.5px;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+
+.bulk-dropzone {
+  border: 2px dashed #cbd5e1;
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.bulk-dropzone--drag {
+  border-color: #10b981 !important;
+  background: #ecfdf5 !important;
+}
+
+.bulk-dropzone--hasfile {
+  border-color: #059669 !important;
+  background: #f0fdf4 !important;
+}
+
+.bulk-dropzone-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #d1fae5;
+  color: #059669;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.bulk-dropzone-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.bulk-dropzone-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+}
+
+.bulk-preview-wrap {
+  margin-top: 18px;
+}
+
+.bulk-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.bulk-preview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.bulk-preview-subtitle {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.bulk-preview-table-container {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.bulk-preview-table {
+  width: 100%;
+  font-size: 12.5px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.bulk-preview-table th {
+  padding: 8px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+}
+
+.bulk-preview-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bulk-row-valid {
+  background: #ffffff;
+}
+
+.bulk-row-invalid {
+  background: #fff1f2;
+}
+
+.bulk-badge-ready {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #d1fae5;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bulk-badge-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: #ffe4e6;
+  color: #be123c;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.bulk-submit-btn {
+  width: auto !important;
+  max-width: 100% !important;
+  white-space: nowrap !important;
+  padding: 10px 22px !important;
+  height: 40px !important;
+  font-size: 13.5px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+  color: #ffffff !important;
+  border: none !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.bulk-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #047857 0%, #059669 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35) !important;
+}
+
+.bulk-submit-btn:disabled {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 

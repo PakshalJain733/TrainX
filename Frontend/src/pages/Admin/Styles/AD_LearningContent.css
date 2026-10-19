@@ -351,6 +351,97 @@
   color: #4f46e5;
 }
 
+/* ── Modal Form Controls System ── */
+.form-input-admin {
+  width: 100% !important;
+  height: 40px !important;
+  padding: 0 14px !important;
+  background: #f8fafc !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 9px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02) !important;
+}
+
+.form-input-admin::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+}
+
+.form-input-admin:hover {
+  border-color: #94a3b8 !important;
+  background: #ffffff !important;
+}
+
+.form-input-admin:focus {
+  border-color: #4f46e5 !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12) !important;
+}
+
+.form-textarea-admin {
+  height: auto !important;
+  min-height: 84px !important;
+  padding: 10px 14px !important;
+  line-height: 1.5 !important;
+  font-family: inherit !important;
+  resize: vertical !important;
+}
+
+/* File Input Styling */
+.form-input-admin[type="file"],
+.form-file-input {
+  display: flex !important;
+  align-items: center !important;
+  padding: 3px 6px !important;
+  height: 40px !important;
+  cursor: pointer !important;
+  background: #f8fafc !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  border-radius: 9px !important;
+  color: #475569 !important;
+  font-size: 12.5px !important;
+}
+
+.form-input-admin[type="file"]:hover,
+.form-file-input:hover {
+  border-color: #4f46e5 !important;
+  background: #f5f3ff !important;
+}
+
+.form-input-admin[type="file"]:focus,
+.form-file-input:focus {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12) !important;
+}
+
+.form-input-admin[type="file"]::file-selector-button,
+.form-file-input::file-selector-button {
+  border: 1px solid #c7d2fe !important;
+  background: #eef2ff !important;
+  color: #4338ca !important;
+  padding: 5px 12px !important;
+  border-radius: 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  margin-right: 10px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: 0 1px 2px rgba(79, 70, 229, 0.08) !important;
+}
+
+.form-input-admin[type="file"]::file-selector-button:hover,
+.form-file-input::file-selector-button:hover {
+  background: #e0e7ff !important;
+  border-color: #a5b4fc !important;
+  color: #3730a3 !important;
+}
+
 /* ── Modern Search & Filter Card ── */
 .learning-search-card {
   background: #ffffff !important;

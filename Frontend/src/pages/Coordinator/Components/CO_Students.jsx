@@ -764,7 +764,7 @@ export default function CoordinatorStudents() {
             </div>
           </div>
           <div className="coord-kpi-value">
-            {stats.avgAtt !== null ? `${stats.avgAtt}%` : "—"}
+            {stats.avgAtt !== null ? `${stats.avgAtt}%` : "0"}
           </div>
           <div className="coord-kpi-hint">Department verified rate</div>
         </div>
@@ -777,7 +777,7 @@ export default function CoordinatorStudents() {
             </div>
           </div>
           <div className="coord-kpi-value">
-            {stats.avgQuiz !== null ? `${stats.avgQuiz}%` : "—"}
+            {stats.avgQuiz !== null ? `${stats.avgQuiz}%` : "0"}
           </div>
           <div className="coord-kpi-hint">Assessment benchmark</div>
         </div>

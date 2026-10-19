@@ -5,59 +5,12 @@ import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { apiFetch } from "../../../utils/api";
 import { getSharedCodingTasks, addSharedCodingTask, EVENTS } from "../../../utils/sharedStore";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/AD_PracticeProblems.css";
 
-/* ── Inline dropdown for Admin PracticeProblems (CSS: AdminPracticeProblems.css .admin-pp-select-*) ── */
-function AdminPpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, direction }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [dropUp, setDropUp] = useState(false);
-  const ref = useRef(null);
-  const safeOptions = Array.isArray(options) ? options : [];
-  const selected = safeOptions.find(o => String(o.value) === String(value));
-
-  useEffect(() => {
-    const h = e => { if (ref.current && !ref.current.contains(e.target)) setIsOpen(false); };
-    document.addEventListener('mousedown', h);
-    return () => document.removeEventListener('mousedown', h);
-  }, []);
-
-  const handleToggle = () => {
-    if (!isOpen && ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      if (direction === 'up') {
-        setDropUp(true);
-      } else if (direction === 'down') {
-        setDropUp(false);
-      } else {
-        setDropUp(spaceBelow < 240);
-      }
-    }
-    setIsOpen(v => !v);
-  };
-
-  return (
-    <div className={`admin-pp-select-wrap${isOpen ? ' admin-pp-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={handleToggle} className={`admin-pp-select-trigger${isOpen ? ' admin-pp-select-trigger--open' : ''}`}>
-        {Icon && <Icon className="admin-pp-select-icon" />}
-        <span className="admin-pp-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
-        <ChevronDown className={`admin-pp-select-arrow${isOpen ? ' admin-pp-select-arrow--rotate' : ''}`} />
-      </button>
-      {isOpen && (
-        <div className={`admin-pp-select-dropdown${dropUp ? ' admin-pp-select-dropdown--up' : ''}`}>
-          {safeOptions.map(opt => {
-            const isSel = String(opt.value) === String(value);
-            return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`admin-pp-select-option${isSel ? ' admin-pp-select-option--selected' : ''}`}>
-                <span className="admin-pp-select-option-label">{opt.label}</span>
-                {isSel && <Check className="admin-pp-select-check" />}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+/* ── Dropdown for Admin PracticeProblems (Uses CustomSelect) ── */
+function AdminPpSelect(props) {
+  return <CustomSelect {...props} />;
 }
 
 const initialCodingProblems = [];
@@ -247,21 +200,24 @@ export default function AdminPracticeProblems() {
 
     const tc = {
       id: Date.now(),
-      input: newTestCase.input,
-      output: newTestCase.output,
-      isHidden: newTestCase.isHidden,
+      input: newTestCase.input.trim(),
+      output: newTestCase.output.trim(),
+      isHidden: !!newTestCase.isHidden,
     };
+
+    const updatedTestCases = [...(selectedProblem.testCases || []), tc];
 
     const updatedProblems = problems.map((p) => {
       if (p.id === selectedProblem.id) {
-        return { ...p, testCases: [...(p.testCases || []), tc] };
+        return { ...p, testCases: updatedTestCases };
       }
       return p;
     });
 
+    setProblems(updatedProblems);
     setSelectedProblem({
       ...selectedProblem,
-      testCases: [...(selectedProblem.testCases || []), tc],
+      testCases: updatedTestCases,
     });
     setNewTestCase({ input: "", output: "", isHidden: false });
   };
@@ -483,11 +439,11 @@ export default function AdminPracticeProblems() {
       {/* ─── TAB 2: ASSIGN TO COHORT ─────────────────────────────────────────── */}
       {activeTab === "assign" && (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "20px" }}>
-          <div className="admin-users-table-card" style={{ padding: "20px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "14px" }}>
+          <div className="admin-users-table-card" style={{ padding: "24px", borderRadius: "16px" }}>
+            <h3 style={{ fontSize: "16px", fontWeight: 800, color: "#0f172a", marginBottom: "18px" }}>
               Publish Task to Batch
             </h3>
-            <form onSubmit={handleAssignSubmit} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <form onSubmit={handleAssignSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div className="form-group-admin">
                 <label>Assignment Title *</label>
                 <input
@@ -522,7 +478,7 @@ export default function AdminPracticeProblems() {
                 />
               </div>
 
-              <button type="submit" className="btn-modal-submit" style={{ marginTop: "10px" }}>
+              <button type="submit" className="btn-modal-submit" style={{ marginTop: "6px" }}>
                 <Send size={15} /> Publish Task to Batch
               </button>
             </form>
@@ -646,7 +602,7 @@ export default function AdminPracticeProblems() {
 
                   <div className="form-row-3 add-prob-grid-4">
                     <div className="form-group-admin">
-                      <label>Topic / Category *</label>
+                      <label>Topic / Category</label>
                       <input
                         required
                         type="text"
@@ -678,7 +634,7 @@ export default function AdminPracticeProblems() {
                       />
                     </div>
                     <div className="form-group-admin">
-                      <label>XP Reward Points *</label>
+                      <label>XP Reward Points</label>
                       <input
                         required
                         type="number"
@@ -832,7 +788,7 @@ export default function AdminPracticeProblems() {
                 <button type="button" className="btn-modal-cancel" onClick={() => setShowAddModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" className="btn-modal-submit add-prob-submit-btn">
+                <button type="submit" className="btn-modal-submit">
                   Save Problem & Test Cases
                 </button>
               </div>
@@ -845,15 +801,18 @@ export default function AdminPracticeProblems() {
       {/* ─── TEST CASES MODAL ───────────────────────────────────────────────── */}
       {showTestCaseModal && selectedProblem && createPortal(
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowTestCaseModal(false); }}>
-          <div className="modal-dialog" style={{ maxWidth: "650px" }}>
+          <div className="modal-dialog" style={{ maxWidth: "680px" }}>
             <div className="modal-header">
               <div className="modal-header-left">
                 <div className="modal-header-icon-wrap modal-header-icon--blue">
                   <ListChecks size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Edit Test Cases: {selectedProblem.title}</h2>
-                  <p className="modal-subtitle">Configure public and hidden evaluation test suites.</p>
+                  <h2 className="modal-title">
+                    <span>Edit Test Cases:</span>
+                    <span style={{ color: "#2563eb" }}>{selectedProblem.title}</span>
+                  </h2>
+                  <p className="modal-subtitle">Configure public example test cases and hidden evaluation suites.</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowTestCaseModal(false)} title="Close Modal">
@@ -862,80 +821,121 @@ export default function AdminPracticeProblems() {
             </div>
 
             <div className="modal-body">
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {(selectedProblem.testCases || []).length === 0 ? (
-                  <p style={{ color: "#64748b", fontSize: "13px", textAlign: "center", margin: "10px 0" }}>
-                    No test cases configured yet. Add one below!
-                  </p>
-                ) : (
-                  (selectedProblem.testCases || []).map((tc, idx) => (
-                    <div key={tc.id || idx} style={{ background: "#f8fafc", border: "1px solid #e2e8f0", padding: "12px", borderRadius: "10px", fontSize: "13px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                        <span style={{ fontWeight: 700, color: "#1e293b" }}>Test Case #{idx + 1}</span>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <span style={{ fontSize: "11px", fontWeight: 700, color: tc.isHidden ? "#dc2626" : "#059669", background: tc.isHidden ? "#fee2e2" : "#d1fae5", padding: "2px 8px", borderRadius: "4px" }}>
-                            {tc.isHidden ? "Hidden Test Case" : "Public Example"}
-                          </span>
+              {/* TOP: Add New Test Case Container */}
+              <form onSubmit={handleAddTestCase} className="tc-add-container">
+                <div className="tc-add-header">
+                  <h4 className="tc-add-heading">
+                    <Plus size={16} color="#2563eb" />
+                    <span>Add New Test Case</span>
+                  </h4>
+                  <span className="tc-add-hint">Auto-evaluated against student code</span>
+                </div>
+
+                <div className="tc-grid-2">
+                  <div className="form-group-admin">
+                    <label>Input (Stdin / Arguments) *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. nums = [2,7,11,15], target = 9"
+                      value={newTestCase.input}
+                      onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
+                      className="form-input-admin tc-code-input"
+                    />
+                  </div>
+                  <div className="form-group-admin">
+                    <label>Expected Output *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. [0,1]"
+                      value={newTestCase.output}
+                      onChange={(e) => setNewTestCase({ ...newTestCase, output: e.target.value })}
+                      className="form-input-admin tc-code-input"
+                    />
+                  </div>
+                </div>
+
+                <div className="tc-form-footer">
+                  <label className="tc-checkbox-wrap">
+                    <input
+                      type="checkbox"
+                      checked={newTestCase.isHidden}
+                      onChange={(e) => setNewTestCase({ ...newTestCase, isHidden: e.target.checked })}
+                    />
+                    <span>Mark as Hidden Test Case (Used for evaluation grade)</span>
+                  </label>
+
+                  <button type="submit" className="tc-add-btn">
+                    <Plus size={15} />
+                    <span>Add Test Case</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* BOTTOM: Configured Test Cases List */}
+              <div className="tc-list-section">
+                <div className="tc-section-header">
+                  <div className="tc-section-title-wrap">
+                    <span className="tc-section-title">Configured Test Cases</span>
+                    <span className="tc-count-badge">{(selectedProblem.testCases || []).length}</span>
+                  </div>
+                  {(selectedProblem.testCases || []).length > 0 && (
+                    <span className="tc-section-subtext">Students see public cases; hidden cases are for grading</span>
+                  )}
+                </div>
+
+                <div className="tc-list-wrap">
+                  {(selectedProblem.testCases || []).length === 0 ? (
+                    <div className="tc-empty-state">
+                      <div className="tc-empty-icon">
+                        <FileCode2 size={22} />
+                      </div>
+                      <div className="tc-empty-title">No test cases configured yet</div>
+                      <p className="tc-empty-desc">
+                        Use the form above to add your first public example or hidden evaluation case.
+                      </p>
+                    </div>
+                  ) : (
+                    (selectedProblem.testCases || []).map((tc, idx) => (
+                      <div key={tc.id || idx} className="tc-card">
+                        <div className="tc-card-header">
+                          <div className="tc-card-title-group">
+                            <span className="tc-card-num">Test Case #{idx + 1}</span>
+                            <span className={tc.isHidden ? "tc-badge--hidden" : "tc-badge--public"}>
+                              {tc.isHidden ? "Hidden Evaluation" : "Public Example"}
+                            </span>
+                          </div>
                           <button
                             type="button"
-                            onClick={() => handleDeleteTestCaseInModal(tc.id || idx)}
-                            style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", padding: "2px", display: "flex", alignItems: "center" }}
+                            onClick={() => handleDeleteTestCaseInModal(tc.id ?? idx)}
+                            className="tc-card-delete-btn"
                             title="Remove Test Case"
                           >
                             <Trash2 size={14} />
                           </button>
                         </div>
+                        <div className="tc-grid-2">
+                          <div className="tc-code-preview">
+                            <span className="tc-code-preview-lbl">Input (Stdin / Args)</span>
+                            <pre className="tc-code-preview-code">{tc.input || "—"}</pre>
+                          </div>
+                          <div className="tc-code-preview">
+                            <span className="tc-code-preview-lbl">Expected Output</span>
+                            <pre className="tc-code-preview-code">{tc.output || tc.expectedOutput || "—"}</pre>
+                          </div>
+                        </div>
                       </div>
-                      <div><strong>Input:</strong> <code>{tc.input || "—"}</code></div>
-                      <div><strong>Expected Output:</strong> <code>{tc.output || tc.expectedOutput || "—"}</code></div>
-                    </div>
-                  ))
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-
-              <form onSubmit={handleAddTestCase} style={{ borderTop: "1px solid #e2e8f0", paddingTop: "14px", marginTop: "10px" }}>
-                <h4 style={{ fontSize: "13.5px", fontWeight: 700, color: "#0f172a", marginBottom: "10px" }}>
-                  Add New Test Case
-                </h4>
-                <div className="form-group-admin" style={{ marginBottom: "10px" }}>
-                  <label>Input</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. nums = [2,7,11,15], target = 9"
-                    value={newTestCase.input}
-                    onChange={(e) => setNewTestCase({ ...newTestCase, input: e.target.value })}
-                    className="form-input-admin"
-                  />
-                </div>
-                <div className="form-group-admin" style={{ marginBottom: "10px" }}>
-                  <label>Expected Output</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. [0,1]"
-                    value={newTestCase.output}
-                    onChange={(e) => setNewTestCase({ ...newTestCase, output: e.target.value })}
-                    className="form-input-admin"
-                  />
-                </div>
-                <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12.5px", cursor: "pointer" }}>
-                  <input
-                    type="checkbox"
-                    checked={newTestCase.isHidden}
-                    onChange={(e) => setNewTestCase({ ...newTestCase, isHidden: e.target.checked })}
-                  />
-                  Mark as Hidden Test Case (Used for evaluation grade)
-                </label>
-                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "14px" }}>
-                  <button type="submit" className="btn-modal-submit">
-                    + Add Test Case
-                  </button>
-                </div>
-              </form>
             </div>
 
             <div className="modal-footer">
+              <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 600 }}>
+                {(selectedProblem.testCases || []).length} Test Cases configured
+              </span>
               <button type="button" className="btn-modal-cancel" onClick={() => setShowTestCaseModal(false)}>
                 Done
               </button>

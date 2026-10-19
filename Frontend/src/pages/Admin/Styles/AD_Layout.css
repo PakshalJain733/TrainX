@@ -30,7 +30,7 @@
 @media (max-width: 768px) {
   .admin-content {
     padding: 0 !important;
-    background: var(--app-page-bg, #f8fafc) !important;
+    background: var(--app-page-bg, #dbe6f2) !important;
   }
 
   .admin-page-card {
@@ -150,7 +150,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .stack-8 {
@@ -263,7 +263,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
 }
 
 /* Notification Dropdown */
@@ -690,7 +690,7 @@ body {
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
   padding: 12px 14px 14px 12px;
   box-sizing: border-box;
 }

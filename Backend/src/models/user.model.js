@@ -145,25 +145,48 @@ const getValidCollegeId = async (collegeId) => {
     const domain = parts[1].trim();
     if (!domain) return null;
 
+    const publicDomains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'icloud.com', 'rediffmail.com'];
+
     try {
+      // 1. Direct match on college domain column (exact or ends with college domain)
       const rows = await query(
         `SELECT id, name, code, contact_email, admin_name, domain FROM colleges 
-       WHERE (LOWER(status) = 'active' OR status IS NULL) AND (
-         LOWER(domain) = ? OR 
-         LOWER(domain) = ? OR 
-         LOWER(contact_email) LIKE ? OR 
-         LOWER(code) = ?
-       )
-       ORDER BY id ASC LIMIT 1`,
-        [domain, `@${domain}`, `%@${domain}`, domain.split('.')[0]]
+         WHERE (LOWER(status) = 'active' OR status IS NULL) AND domain IS NOT NULL AND TRIM(domain) != '' AND (
+           LOWER(TRIM(REPLACE(domain, '@', ''))) = ? OR 
+           ? LIKE CONCAT('%.', LOWER(TRIM(REPLACE(domain, '@', ''))))
+         )
+         ORDER BY id ASC LIMIT 1`,
+        [domain, domain]
       );
       if (rows && rows.length > 0) {
         return rows[0];
       }
 
-      const allColleges = await query(`SELECT id, name, code, contact_email, admin_name, domain FROM colleges WHERE (LOWER(status) = 'active' OR status IS NULL) ORDER BY id ASC LIMIT 1`);
-      if (allColleges && allColleges.length > 0) {
-        return allColleges[0];
+      // 2. Direct match on contact_email (if exact email matches contact_email)
+      const byContactEmail = await query(
+        `SELECT id, name, code, contact_email, admin_name, domain FROM colleges
+         WHERE (LOWER(status) = 'active' OR status IS NULL) AND contact_email IS NOT NULL AND LOWER(TRIM(contact_email)) = ?
+         ORDER BY id ASC LIMIT 1`,
+        [cleanEmail]
+      );
+      if (byContactEmail && byContactEmail.length > 0) {
+        return byContactEmail[0];
+      }
+
+      // 3. Domain match against contact_email domain only if not a public email provider
+      if (!publicDomains.includes(domain)) {
+        const byContactDomain = await query(
+          `SELECT id, name, code, contact_email, admin_name, domain FROM colleges
+           WHERE (LOWER(status) = 'active' OR status IS NULL) AND contact_email IS NOT NULL AND (
+             LOWER(contact_email) LIKE ? OR
+             LOWER(contact_email) LIKE ?
+           )
+           ORDER BY id ASC LIMIT 1`,
+          [`%@${domain}`, `%@%.${domain}`]
+        );
+        if (byContactDomain && byContactDomain.length > 0) {
+          return byContactDomain[0];
+        }
       }
     } catch (err) {
       console.warn(`[User Model Warning] findCollegeByEmailDomain error: ${err.message}`);

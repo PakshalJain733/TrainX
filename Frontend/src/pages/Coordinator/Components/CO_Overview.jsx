@@ -59,7 +59,7 @@ export default function CoordinatorOverview() {
 
   const [coordUser, setCoordUser] = useState(() => {
     try {
-      return JSON.parse(sessionStorage.getItem("user") || "{}");
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
     } catch (_) {
       return {};
     }
@@ -362,9 +362,17 @@ export default function CoordinatorOverview() {
     };
   }, [selectedDate]);
 
-  const fullName = coordUser.name || coordUser.fullName || coordUser.email?.split("@")[0] || "Department Coordinator";
-  const dept = coordUser.department || coordUser.dept || coordUser.coordinatorProfile?.department || "CSE Department";
+  const rawFullName = coordUser.name || coordUser.fullName || coordUser.full_name;
   const email = coordUser.email || "";
+  let fullName = rawFullName;
+  if (!fullName || fullName.includes("@")) {
+    const src = (email && email.includes("@")) ? email.split("@")[0] : (fullName && fullName.includes("@") ? fullName.split("@")[0] : "");
+    if (src) {
+      fullName = src.replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+    }
+  }
+  if (!fullName) fullName = "Department Coordinator";
+  const dept = coordUser.department || coordUser.dept || coordUser.coordinatorProfile?.department || "CSE Department";
   const role = coordUser.role || "Coordinator";
 
   const getInitials = (name) => {

@@ -419,7 +419,7 @@
 .trainings-modal-footer {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 12px;
   padding: 16px 24px;
   border-top: 1px solid #e2e8f0;
@@ -508,4 +508,38 @@
   .form-row-grid-2 {
     grid-template-columns: 1fr;
   }
+}
+
+/* Compact CustomSelect for Table Cells */
+.ad-training-table-select {
+  min-width: 120px !important;
+  max-width: 155px !important;
+  margin: 0 !important;
+}
+
+.ad-training-table-select .custom-select-trigger {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.ad-training-table-select .custom-select-trigger:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.ad-training-table-select .custom-select-dropdown {
+  min-width: 140px !important;
+  font-size: 12px !important;
+  z-index: 100 !important;
+}
+
+.ad-training-table-select .custom-select-option {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
 }

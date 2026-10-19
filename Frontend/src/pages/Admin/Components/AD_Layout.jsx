@@ -9,7 +9,7 @@ import ChangePasswordModal from "../../../components/ui/ChangePasswordModal";
 import BroadcastToast from "../../../components/ui/BroadcastToast";
 import FullNotificationModal from "../../../components/ui/FullNotificationModal";
 import NotificationDetailModal from "../../../components/ui/NotificationDetailModal";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onNavigate, onSelectNotification }) {
   const [activeTab, setActiveTab] = useState("all");
@@ -352,12 +352,34 @@ export default function AdminLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const formatDisplayName = (rawName, email, fallback = "Ganesh Shinde") => {
+    if (typeof rawName === "string" && rawName.trim()) {
+      const trimmed = rawName.trim();
+      if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const source = (typeof email === "string" && email.includes("@")) ? email.split("@")[0] : "";
+    if (source) {
+      const cleaned = source.replace(/[0-9_.-]+/g, " ").trim();
+      if (cleaned.length > 0) {
+        return cleaned
+          .split(" ")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+      }
+    }
+    return fallback;
+  };
+
   const loadProfile = () => {
     try {
-      const stored = JSON.parse(sessionStorage.getItem('user') || '{}');
-      const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || '{}');
-      const name = adminProf.name || stored.name || stored.email || "System Admin";
+      const stored = JSON.parse(sessionStorage.getItem('user') || localStorage.getItem('user') || '{}');
+      const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || localStorage.getItem('adminProfile') || '{}');
+      const rawName = adminProf.name || stored.name || stored.fullName || stored.full_name;
       const email = adminProf.email || stored.email || "admin@pvppcoe.ac.in";
+      const name = formatDisplayName(rawName, email, "Ganesh Shinde");
       return {
         name: name,
         email: email,
@@ -365,7 +387,7 @@ export default function AdminLayout() {
         avatar: adminProf.avatar || stored.avatar || stored.avatarUrl || null,
       };
     } catch (e) {
-      return { name: "System Admin", email: "admin@pvppcoe.ac.in", role: "College Administrator", avatar: null };
+      return { name: "Ganesh Shinde", email: "admin@pvppcoe.ac.in", role: "College Administrator", avatar: null };
     }
   };
 
@@ -373,7 +395,7 @@ export default function AdminLayout() {
 
   const fetchUser = async () => {
     try {
-      const token = sessionStorage.getItem('token') || sessionStorage.getItem('authToken');
+      const token = getAuthToken();
       if (!token) return;
       const res = await fetch(`${getApiBaseUrl()}/admin/profile`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -382,18 +404,22 @@ export default function AdminLayout() {
         const data = await res.json();
         if (data && data.data) {
           const u = data.data;
-          const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || '{}');
-          const name = adminProf.name || u.name || u.email || "System Admin";
+          const adminProf = JSON.parse(sessionStorage.getItem('adminProfile') || localStorage.getItem('adminProfile') || '{}');
+          const rawName = adminProf.name || u.name || u.fullName || u.full_name;
+          const email = adminProf.email || u.email || "admin@pvppcoe.ac.in";
+          const name = formatDisplayName(rawName, email, "Ganesh Shinde");
           const updated = {
             name: name,
-            email: adminProf.email || u.email || "admin@pvppcoe.ac.in",
+            email: email,
             role: adminProf.role || u.role || "College Administrator",
             avatar: adminProf.avatar || u.avatarUrl || u.avatar || null,
           };
           setUser(updated);
           let localUser = {};
-          try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-          sessionStorage.setItem("user", JSON.stringify({ ...localUser, ...updated }));
+          try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {}; } catch { }
+          const merged = { ...localUser, ...updated };
+          sessionStorage.setItem("user", JSON.stringify(merged));
+          localStorage.setItem("user", JSON.stringify(merged));
         }
       }
     } catch (err) {

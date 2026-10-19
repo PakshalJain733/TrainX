@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiFetch } from '../../../utils/api';
 import { FileCode, Plus, X, RefreshCw } from "lucide-react";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/MN_Assignments.css";
 
 const unwrap = (response) => {
@@ -310,15 +311,16 @@ export default function Assignments() {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, marginBottom: '4px' }}>Difficulty</label>
-                  <select
+                  <CustomSelect
                     value={formData.difficulty}
-                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
-                  >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, difficulty: val })}
+                    options={[
+                      { value: "Easy", label: "Easy" },
+                      { value: "Medium", label: "Medium" },
+                      { value: "Hard", label: "Hard" }
+                    ]}
+                    placeholder="Select difficulty"
+                  />
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

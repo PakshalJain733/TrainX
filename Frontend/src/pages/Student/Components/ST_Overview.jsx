@@ -33,13 +33,20 @@ const getInitials = (name) => {
 
 const getStoredUserName = () => {
   try {
-    const u = JSON.parse(sessionStorage.getItem("user") || "{}");
+    const u = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
     if (!u) return "Student";
-    return (typeof u.name === "string" && u.name) ||
+    const rawName = (typeof u.name === "string" && u.name) ||
       (typeof u.fullName === "string" && u.fullName) ||
-      (typeof u.full_name === "string" && u.full_name) ||
-      (typeof u.email === "string" && u.email.includes("@") ? u.email.split("@")[0] : "") ||
-      "Student";
+      (typeof u.full_name === "string" && u.full_name);
+    let name = rawName;
+    if (!name || name.includes("@")) {
+      const email = typeof u.email === "string" ? u.email : "";
+      const src = email.includes("@") ? email.split("@")[0] : (name && name.includes("@") ? name.split("@")[0] : "");
+      if (src) {
+        name = src.replace(/[0-9_.-]+/g, " ").trim().split(" ").filter(Boolean).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      }
+    }
+    return name || "Student";
   } catch { return "Student"; }
 };
 

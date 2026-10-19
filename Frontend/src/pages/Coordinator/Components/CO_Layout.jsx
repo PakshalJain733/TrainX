@@ -298,14 +298,36 @@ export default function CoordinatorLayout() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const formatDisplayName = (rawName, email, fallback = "Department Coordinator") => {
+    if (typeof rawName === "string" && rawName.trim()) {
+      const trimmed = rawName.trim();
+      if (!trimmed.includes("@") && !/^[0-9a-f]{8,}$/i.test(trimmed)) {
+        return trimmed;
+      }
+    }
+    const source = (typeof email === "string" && email.includes("@")) ? email.split("@")[0] : "";
+    if (source) {
+      const cleaned = source.replace(/[0-9_.-]+/g, " ").trim();
+      if (cleaned.length > 0) {
+        return cleaned
+          .split(" ")
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+      }
+    }
+    return fallback;
+  };
+
   const resolveUser = (rawUser) => {
     let localUser = {};
     let coordProf = {};
-    try { localUser = JSON.parse(sessionStorage.getItem("user")) || {}; } catch { }
-    try { coordProf = JSON.parse(sessionStorage.getItem("coordinatorProfile")) || {}; } catch { }
+    try { localUser = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user")) || {}; } catch { }
+    try { coordProf = JSON.parse(sessionStorage.getItem("coordinatorProfile") || localStorage.getItem("coordinatorProfile")) || {}; } catch { }
     const u = rawUser || {};
-    let name = coordProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name || u.email?.split("@")[0] || localUser.email?.split("@")[0] || "Department Coordinator";
-    let email = coordProf.email || localUser.email || u.email || "coordinator@pvppcoe.ac.in";
+    const rawName = coordProf.name || localUser.name || localUser.fullName || localUser.full_name || u.name || u.fullName || u.full_name;
+    const email = coordProf.email || localUser.email || u.email || "coordinator@pvppcoe.ac.in";
+    const name = formatDisplayName(rawName, email, "Department Coordinator");
     return { ...localUser, ...u, name, email };
   };
 

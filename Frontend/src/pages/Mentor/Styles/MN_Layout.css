@@ -158,7 +158,7 @@ a {
 .stack-6 {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
 }
 
 .stack-8 {
@@ -271,7 +271,7 @@ body {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
 }
 
 /* Modern Colorful Notification Dropdown (Matching Screenshot) */
@@ -862,7 +862,7 @@ body {
   height: 100dvh;
   min-width: 0;
   overflow: hidden;
-  background: var(--app-page-bg, #f8fafc);
+  background: var(--app-page-bg, #dbe6f2);
   padding: 12px 14px 14px 12px;
   box-sizing: border-box;
 }
@@ -1538,22 +1538,16 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Custom Scrollbar for mentor-card-body */
+/* Hide scrollbar for mentor-card-body */
+.mentor-card-body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
 .mentor-card-body::-webkit-scrollbar {
-  width: 6px;
-}
-
-.mentor-card-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.mentor-card-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.mentor-card-body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* Sub-containers inside page components */

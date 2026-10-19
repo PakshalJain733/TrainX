@@ -211,13 +211,15 @@
   gap: 12px;
 }
 
-.full-notif-body::-webkit-scrollbar {
-  width: 6px;
+.full-notif-body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-.full-notif-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
+.full-notif-body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .full-notif-card {

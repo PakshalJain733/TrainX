@@ -165,14 +165,13 @@ export default function CoordinatorAssessments() {
 
         <div className="coord-assess-header-actions">
           <button
-            className="coord-btn"
             className="coord-btn coord-assess-btn-secondary"
             onClick={() => alert("Downloading Department Quiz Scorecard CSV...")}
           >
             <Download size={15} /> Export Scorecards CSV
           </button>
-          <button className="coord-btn coord-btn--primary" onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} /> Publish New Quiz
+          <button className="add-quiz-btn" onClick={() => setShowCreateModal(true)}>
+            <Plus size={16} /> Create Quiz
           </button>
         </div>
       </div>

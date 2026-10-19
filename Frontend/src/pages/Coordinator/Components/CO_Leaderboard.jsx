@@ -27,8 +27,8 @@ export default function CoordinatorLeaderboard() {
     <div className="coordinator-leaderboard-container page-fade-in">
       <div className="mentor-page-header">
         <div>
-          <h2 className="mentor-page-title">
-            <Trophy size={20} color="#4f46e5" />
+          <h2 className="mentor-page-title" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Trophy size={20} color="#4f46e5" style={{ flexShrink: 0 }} />
             <span>Batch Leaderboard & Rankings</span>
           </h2>
           <p className="mentor-page-subtitle">Student coding points, solved problem counts, and active streaks fetched live from database</p>

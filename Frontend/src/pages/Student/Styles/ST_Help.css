@@ -8,6 +8,27 @@
   box-sizing: border-box;
 }
 
+.help-header-wrap {
+  margin-bottom: 0.5rem;
+}
+
+.help-header-title {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.help-header-desc {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 6px 0 0 0;
+}
+
 .help-table-empty-cell {
   text-align: center;
   padding: 40px 16px;

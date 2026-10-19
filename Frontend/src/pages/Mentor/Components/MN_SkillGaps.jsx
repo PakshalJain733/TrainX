@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, AlertTriangle, CheckCircle2, Sparkles, X, Send, Search } from "lucide-react";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import "../Styles/MN_SkillGaps.css";
 
 const initialSkillGaps = [];
@@ -149,16 +150,18 @@ export default function MentorSkillGaps() {
                 <label className="mentor-form-label">
                   Target Student / Batch
                 </label>
-                <select
+                <CustomSelect
                   value={selectedStudent}
-                  onChange={(e) => setSelectedStudent(e.target.value)}
-                  className="mentor-form-control"
-                >
-                  <option value="all">All High & Medium Priority Students (Deficient Concept)</option>
-                  {skillGaps.map(s => (
-                    <option key={s.id} value={s.studentName}>{s.studentName} ({s.rollNo}) - {s.topic}</option>
-                  ))}
-                </select>
+                  onChange={setSelectedStudent}
+                  options={[
+                    { value: "all", label: "All High & Medium Priority Students (Deficient Concept)" },
+                    ...skillGaps.map((s) => ({
+                      value: s.studentName,
+                      label: `${s.studentName} (${s.rollNo}) - ${s.topic}`
+                    }))
+                  ]}
+                  placeholder="Select target student..."
+                />
               </div>
 
               <div className="mentor-form-group">

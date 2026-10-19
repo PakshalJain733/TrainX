@@ -1190,7 +1190,15 @@ function BulkExcelUploadModal({ isOpen, onClose, onSuccess }) {
           )}
         </div>
 
-        <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div className="modal-footer modal-footer-users">
+          <button
+            type="button"
+            className="btn-modal-cancel"
+            onClick={onClose}
+            disabled={isProcessing}
+          >
+            Cancel
+          </button>
           <button
             type="button"
             className="btn-modal-submit bulk-submit-btn"

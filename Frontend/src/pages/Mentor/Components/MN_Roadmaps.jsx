@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Target, Sparkles, Search, BookOpen, Layers, CheckCircle2 } from "lucide-react";
+import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
 import "../Styles/MN_Roadmaps.css";
 
@@ -94,26 +95,17 @@ export default function MentorRoadmaps() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#64748b' }}>Filter Batch:</span>
-          <select
-            value={selectedBatch}
-            onChange={(e) => setSelectedBatch(e.target.value)}
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              fontSize: '0.82rem',
-              fontWeight: 600,
-              color: '#1e293b',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">All Batches ({roadmapTracks.length})</option>
-            {batchesList.map((b) => (
-              <option key={b} value={b}>{b}</option>
-            ))}
-          </select>
+          <div style={{ minWidth: '200px' }}>
+            <CustomSelect
+              value={selectedBatch}
+              onChange={setSelectedBatch}
+              options={[
+                { value: "all", label: `All Batches (${roadmapTracks.length})` },
+                ...batchesList.map((b) => ({ value: b, label: b }))
+              ]}
+              placeholder="All Batches"
+            />
+          </div>
         </div>
       </div>
 

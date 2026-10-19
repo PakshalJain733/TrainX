@@ -678,17 +678,17 @@ export default function AdminTrainings() {
                             )}
                           </td>
                           <td>
-                            <select
-                              className={`badge-status ${statusCls}`}
+                            <CustomSelect
                               value={t.status || "Open"}
-                              onChange={(e) => handleChangeProgramStatus(t.id, e.target.value)}
-                              style={{ cursor: "pointer", outline: "none" }}
-                            >
-                              <option value="Draft">Draft</option>
-                              <option value="Open">Open</option>
-                              <option value="Closed">Closed</option>
-                              <option value="Completed">Completed</option>
-                            </select>
+                              options={[
+                                { value: "Draft", label: "Draft" },
+                                { value: "Open", label: "Open" },
+                                { value: "Closed", label: "Closed" },
+                                { value: "Completed", label: "Completed" },
+                              ]}
+                              onChange={(val) => handleChangeProgramStatus(t.id, val)}
+                              className="ad-training-table-select"
+                            />
                           </td>
                           <td>
                             <span style={{ fontWeight: 700, color: "#0f172a" }}>{totalRegs}</span>
@@ -974,17 +974,18 @@ export default function AdminTrainings() {
                             </span>
                           </td>
                           <td>
-                            <select
-                              className={`c2c-status-select ${payMeta.cls}`}
+                            <CustomSelect
                               value={currentPayment}
                               disabled={isBusy}
-                              onChange={(e) => handlePaymentStatusChange(row.id, e.target.value)}
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Part Payment">Part Payment</option>
-                              <option value="Completed">Completed</option>
-                              <option value="Cancelled">Cancelled</option>
-                            </select>
+                              options={[
+                                { value: "Pending", label: "Pending" },
+                                { value: "Part Payment", label: "Part Payment" },
+                                { value: "Completed", label: "Completed" },
+                                { value: "Cancelled", label: "Cancelled" },
+                              ]}
+                              onChange={(val) => handlePaymentStatusChange(row.id, val)}
+                              className="ad-training-table-select"
+                            />
                           </td>
                           <td>
                             <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
@@ -1153,16 +1154,16 @@ export default function AdminTrainings() {
                   </div>
                   <div className="form-group">
                     <label className="form-label">Registration Status</label>
-                    <select
-                      className="form-select"
+                    <CustomSelect
                       value={programForm.status}
-                      onChange={(e) => setProgramForm({ ...programForm, status: e.target.value })}
-                    >
-                      <option value="Open">Open (Accepting Registrations)</option>
-                      <option value="Draft">Draft (Hidden)</option>
-                      <option value="Closed">Closed</option>
-                      <option value="Completed">Completed</option>
-                    </select>
+                      options={[
+                        { value: "Open", label: "Open (Accepting Registrations)" },
+                        { value: "Draft", label: "Draft (Hidden)" },
+                        { value: "Closed", label: "Closed" },
+                        { value: "Completed", label: "Completed" },
+                      ]}
+                      onChange={(val) => setProgramForm({ ...programForm, status: val })}
+                    />
                   </div>
                 </div>
 
