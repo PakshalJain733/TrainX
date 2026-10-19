@@ -76,11 +76,15 @@ export const getStudentProfile = async (req, res, next) => {
       });
     }
     const studentProfile = (await getStudentByUserId(userId)) || {};
-    const isProfileUpdated = Boolean(
-      user.is_profile_updated ||
-      studentProfile.is_profile_updated ||
+    const hasPersonalDetails = Boolean(
+      (user.gender && user.city) ||
       (studentProfile.gender && studentProfile.city) ||
-      (user.gender && user.city)
+      (studentProfile.skills && String(studentProfile.skills).trim().length > 0) ||
+      (studentProfile.emergency_contact && String(studentProfile.emergency_contact).trim().length > 0) ||
+      (studentProfile.target_track && String(studentProfile.target_track).trim().length > 0)
+    );
+    const isProfileUpdated = Boolean(
+      (user.is_profile_updated || studentProfile.is_profile_updated) && hasPersonalDetails
     );
 
     let training = { program: null, enrollment: null, mentor: null };

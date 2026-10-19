@@ -528,90 +528,27 @@ export default function Batches() {
           Loading enrolled batches...
         </div>
       ) : enrolledBatches.length === 0 ? (
-        /* Interactive Join Batch Hero Card when student is not enrolled in any batch */
+        /* Empty state when student is not enrolled in any batch */
         <div className="batches-empty-state">
-          <div className="batch-join-hero-badge">
-            <Sparkles size={13} />
-            <span>COHORT ENROLLMENT</span>
+          <div className="batches-empty-icon-wrap">
+            <Users size={32} />
           </div>
-
-          <div className="batches-empty-icon">
-            <KeyRound size={28} />
-          </div>
-
-          <h3 className="batches-empty-title">Join Your Training Batch</h3>
+          <h3 className="batches-empty-title">No Batches Joined</h3>
           <p className="batches-empty-desc">
-            Enter your unique batch invitation access code provided by your faculty coordinator or mentor to unlock coursework, practice labs, and assessments.
+            You haven't been enrolled in any training batches yet. Once your faculty coordinator assigns you to a batch, it will appear here.
           </p>
-
-          {/* Inline Fast-Join Form */}
-          <form onSubmit={handleJoinSubmit} className="batch-inline-join-form">
-            <div className="batch-inline-input-wrapper">
-              <KeyRound size={17} className="batch-inline-input-icon" />
-              <input
-                type="text"
-                className="batch-inline-input"
-                placeholder="ENTER ACCESS CODE (E.G. PYSH-MTQZ)"
-                value={joinCodeInput}
-                onChange={(e) => {
-                  setJoinCodeInput(e.target.value.toUpperCase());
-                  setModalError("");
-                }}
-                required
-              />
-              <button
-                type="submit"
-                className="batch-inline-submit-btn"
-                disabled={joining || !joinCodeInput.trim()}
-              >
-                {joining ? (
-                  <>
-                    <Loader2 size={15} className="animate-spin" />
-                    <span>Joining...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Join Batch</span>
-                    <ArrowRight size={15} />
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-
-          {/* Inline Feedback Alerts */}
-          {modalError && (
-            <div className="batch-inline-feedback batch-inline-feedback--error">
-              <AlertCircle size={15} />
-              <span>{modalError}</span>
-            </div>
-          )}
-          {modalSuccess && (
-            <div className="batch-inline-feedback batch-inline-feedback--success">
-              <CheckCircle2 size={15} />
-              <span>{modalSuccess}</span>
-            </div>
-          )}
-
-          {/* Quick Features List */}
-          <div className="batch-join-features">
-            <div className="batch-join-feature-item">
-              <BookOpen size={14} />
-              <span>Curriculum & Tasks</span>
-            </div>
-            <div className="batch-join-feature-item">
-              <Code2 size={14} />
-              <span>Interactive Coding Labs</span>
-            </div>
-            <div className="batch-join-feature-item">
-              <Trophy size={14} />
-              <span>Live Cohort Leaderboard</span>
-            </div>
-          </div>
-
-          <p className="batch-join-footer-hint">
-            Don't have a code? Contact your academic department coordinator or batch trainer.
-          </p>
+          <button
+            type="button"
+            className="batches-empty-join-btn"
+            onClick={() => {
+              setModalError("");
+              setModalSuccess("");
+              setShowJoinModal(true);
+            }}
+          >
+            <KeyRound size={15} />
+            <span>Join with Access Code</span>
+          </button>
         </div>
       ) : (
         /* Enrolled Batches Grid */

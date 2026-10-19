@@ -697,9 +697,8 @@ export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = fals
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
       is_profile_updated: Boolean(
-        user.is_profile_updated ||
-        studentProfile?.is_profile_updated ||
-        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+        (user.is_profile_updated || studentProfile?.is_profile_updated) &&
+        ((studentProfile?.gender && studentProfile?.city) || (user.gender && user.city) || (studentProfile?.skills && String(studentProfile.skills).trim().length > 0) || (studentProfile?.emergency_contact && String(studentProfile.emergency_contact).trim().length > 0) || (studentProfile?.target_track && String(studentProfile.target_track).trim().length > 0))
       ),
       studentProfile,
     },
@@ -894,9 +893,8 @@ export const verifyUserOtpAndLogin = async (identifier, otp, rememberMe = false)
       semester: studentProfile?.semester || '',
       roll_number: studentProfile?.roll_number || '',
       is_profile_updated: Boolean(
-        user.is_profile_updated ||
-        studentProfile?.is_profile_updated ||
-        (studentProfile?.department && studentProfile?.semester && studentProfile?.roll_number && studentProfile?.skills)
+        (user.is_profile_updated || studentProfile?.is_profile_updated) &&
+        ((studentProfile?.gender && studentProfile?.city) || (user.gender && user.city) || (studentProfile?.skills && String(studentProfile.skills).trim().length > 0) || (studentProfile?.emergency_contact && String(studentProfile.emergency_contact).trim().length > 0) || (studentProfile?.target_track && String(studentProfile.target_track).trim().length > 0))
       ),
       studentProfile,
     },
