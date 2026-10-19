@@ -57,7 +57,19 @@ const DEFAULT_MENTORS = [];
 
 const DEFAULT_STUDENTS = [];
 
-
+function formatDateDMY(dateVal) {
+  if (!dateVal) return '—';
+  if (typeof dateVal === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateVal)) {
+    const [y, m, d] = dateVal.slice(0, 10).split('-');
+    return `${d}-${m}-${y}`;
+  }
+  const d = new Date(dateVal);
+  if (Number.isNaN(d.getTime())) return String(dateVal);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
 function RiskBadge({ risk }) {
   const color =
     risk === "Low Risk" ? { bg: "#ecfdf5", text: "#065f46", border: "#a7f3d0" } :
@@ -1891,7 +1903,7 @@ export default function ManageUsers() {
                   <th className="manageusers-th">Requested Role</th>
                   <th className="manageusers-th">College / Dept</th>
                   <th className="manageusers-th">Status</th>
-                  <th className="manageusers-th-right">Governance Actions</th>
+                  <th className="manageusers-th-right">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -2012,7 +2024,7 @@ export default function ManageUsers() {
                       <th className="manageusers-th">Designation</th>
                       <th className="manageusers-th">Requested On</th>
                       <th className="manageusers-th">Status</th>
-                      <th className="manageusers-th-center">Governance Actions</th>
+                      <th className="manageusers-th-center">Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2035,7 +2047,7 @@ export default function ManageUsers() {
                         <td className="manageusers-td">
                           <div className="manageusers-contact-row">
                             <Calendar size={14} className="manageusers-contact-icon" />
-                            <span className="manageusers-contact-text">{req.date}</span>
+                            <span className="manageusers-contact-text">{formatDateDMY(req.date)}</span>
                           </div>
                         </td>
                         <td className="manageusers-td">
@@ -2065,9 +2077,9 @@ export default function ManageUsers() {
                                   onClick={() => handleDeleteAdmin(req.id, req.name)}
                                   className="manageusers-btn-delete-admin"
                                   title="Delete this Admin account"
+                                  aria-label="Delete this Admin account"
                                 >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             ) : (
@@ -2077,9 +2089,9 @@ export default function ManageUsers() {
                                   onClick={() => handleDeleteAdmin(req.id, req.name)}
                                   className="manageusers-btn-delete-admin"
                                   title="Delete this Admin account"
+                                  aria-label="Delete this Admin account"
                                 >
-                                  <Trash2 size={13} />
-                                  <span>Delete</span>
+                                  <Trash2 size={14} />
                                 </button>
                               </div>
                             )}

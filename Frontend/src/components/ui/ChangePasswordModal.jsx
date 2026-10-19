@@ -174,9 +174,6 @@ export default function ChangePasswordModal({ isOpen = true, onClose }) {
           </div>
 
           <div className="cp-modal-footer">
-            <button type="button" className="cp-btn-cancel" onClick={onClose}>
-              Cancel
-            </button>
             <button
               type="submit"
               className="cp-btn-submit"

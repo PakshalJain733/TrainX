@@ -270,14 +270,15 @@ export default function SuperAdminProfile() {
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
-            <div className="profile-roll-chip">
-              <ShieldCheck size={14} />
-              <strong>{form.role}</strong>
-            </div>
+            {form.name && form.name.trim().toLowerCase() !== "super admin" && form.name.trim().toLowerCase() !== "super administrator" && (
+              <div className="profile-roll-chip">
+                <ShieldCheck size={14} />
+                <strong>{form.role}</strong>
+              </div>
+            )}
 
             <div className="profile-badges-row">
               <Badge variant="success">Active Governance</Badge>
-              <Badge variant="default">Super Admin</Badge>
             </div>
           </div>
 
