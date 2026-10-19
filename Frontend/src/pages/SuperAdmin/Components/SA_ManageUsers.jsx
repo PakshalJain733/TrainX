@@ -1631,11 +1631,38 @@ export default function ManageUsers() {
         setGeneratedCode(generatedFallback);
       }
       await loadSecureCodes();
+
+      // Automatically resolve / clear pending code requests for admins once code is generated
+      if (codeRole === 'admins' || targetRole === 'college_admin') {
+        try {
+          await apiFetch('/auth/secure-code-requests/all', { method: 'DELETE' });
+        } catch (_) {}
+        await loadCodeRequests();
+      }
     } catch (err) {
       console.error("Error generating secure code:", err);
       setGeneratedCode(generatedFallback);
     } finally {
       setIsGeneratingCode(false);
+    }
+  };
+
+  const handleDismissCodeRequest = async (id, e) => {
+    if (e && e.stopPropagation) e.stopPropagation();
+    try {
+      await apiFetch(`/auth/secure-code-requests/${id}`, { method: 'DELETE' });
+      setCodeRequests(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      console.error("Failed to dismiss code request:", err);
+    }
+  };
+
+  const handleClearAllCodeRequests = async () => {
+    try {
+      await apiFetch('/auth/secure-code-requests/all', { method: 'DELETE' });
+      setCodeRequests([]);
+    } catch (err) {
+      console.error("Failed to clear code requests:", err);
     }
   };
 
@@ -1892,12 +1919,12 @@ export default function ManageUsers() {
               border: '1px solid #e2e8f0',
               borderLeft: '4px solid #3b82f6',
               borderRadius: '12px',
-              padding: '16px 20px',
+              padding: '14px 20px',
               marginBottom: '20px',
               boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
               display: 'flex',
               flexDirection: 'column',
-              gap: '12px'
+              gap: '10px'
             }}>
               <div style={{
                 display: 'flex',
@@ -1908,8 +1935,8 @@ export default function ManageUsers() {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{
-                    width: '38px',
-                    height: '38px',
+                    width: '36px',
+                    height: '36px',
                     borderRadius: '10px',
                     background: '#eff6ff',
                     border: '1px solid #bfdbfe',
@@ -1921,49 +1948,45 @@ export default function ManageUsers() {
                   }}>
                     <KeyRound size={18} />
                   </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
-                        {codeRequests.length} Admin Secure Code Request{codeRequests.length > 1 ? 's' : ''} Pending
-                      </h4>
-                      <span style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        background: '#fef3c7',
-                        color: '#92400e',
-                        border: '1px solid #fcd34d'
-                      }}>
-                        Action Required
-                      </span>
-                    </div>
-                    <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748b' }}>
-                      Generate secure access invitation codes to approve and provision access for the requested administrators.
-                    </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
+                      {codeRequests.length} Admin Secure Code Request{codeRequests.length > 1 ? 's' : ''} Pending
+                    </h4>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: '999px',
+                      background: '#fef3c7',
+                      color: '#92400e',
+                      border: '1px solid #fcd34d'
+                    }}>
+                      Action Required
+                    </span>
                   </div>
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setCodeRole('admins');
-                    setGeneratedCode(null);
-                    setIsGenerateCodeModalOpen(true);
-                  }}
-                  className="sa-btn-primary"
+                  onClick={handleClearAllCodeRequests}
                   style={{
-                    fontSize: '12.5px',
-                    padding: '8px 16px',
-                    whiteSpace: 'nowrap',
+                    fontSize: '12px',
+                    padding: '5px 12px',
+                    borderRadius: '7px',
+                    border: '1px solid #e2e8f0',
+                    background: '#f8fafc',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    fontWeight: 600,
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    flexShrink: 0
+                    gap: '5px',
+                    transition: 'all 0.15s ease'
                   }}
+                  title="Clear all pending requests"
                 >
-                  <Key size={14} />
-                  <span>Generate Code</span>
+                  <X size={13} />
+                  <span>Dismiss All</span>
                 </button>
               </div>
 
@@ -1973,7 +1996,7 @@ export default function ManageUsers() {
                 alignItems: 'center',
                 gap: '8px',
                 flexWrap: 'wrap',
-                paddingTop: '10px',
+                paddingTop: '8px',
                 borderTop: '1px solid #f1f5f9'
               }}>
                 <span style={{
@@ -1986,11 +2009,11 @@ export default function ManageUsers() {
                   Requesters:
                 </span>
                 {codeRequests.map((r, i) => (
-                  <div key={i} style={{
+                  <div key={r.id || i} style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    padding: '4px 10px',
+                    padding: '4px 8px 4px 10px',
                     background: '#f8fafc',
                     border: '1px solid #e2e8f0',
                     borderRadius: '8px',
@@ -2000,6 +2023,26 @@ export default function ManageUsers() {
                     <User size={12} style={{ color: '#3b82f6' }} />
                     <span style={{ fontWeight: 700, color: '#1e293b' }}>{r.name}</span>
                     <span style={{ color: '#64748b', fontSize: '11.5px' }}>({r.email})</span>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDismissCodeRequest(r.id, e)}
+                      title="Remove request"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#94a3b8',
+                        padding: '2px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        borderRadius: '4px',
+                        marginLeft: '2px'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                      onMouseLeave={(e) => e.currentTarget.style.color = '#94a3b8'}
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
                 ))}
               </div>

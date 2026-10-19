@@ -222,6 +222,12 @@ export const approveUserAdmin = async (req, res, next) => {
 
     await updateUserModel(id, updatePayload);
 
+    if (user.email) {
+      try {
+        await query(`UPDATE secure_code_requests SET status = 'Approved' WHERE LOWER(email) = LOWER(?)`, [user.email]);
+      } catch (_) {}
+    }
+
     if (user.email && user.email.includes('@')) {
       sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch(() => {});
     }

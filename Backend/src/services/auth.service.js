@@ -706,6 +706,9 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
     try {
       await updateUserModel(user.id, { is_active: 1 });
       user.is_active = 1;
+      if (user.email) {
+        await pool.query(`UPDATE secure_code_requests SET status = 'Approved' WHERE LOWER(email) = LOWER(?)`, [user.email]);
+      }
     } catch (_) {}
   }
 
