@@ -147,6 +147,11 @@ const Icons = {
       <polyline points="12 19 5 12 12 5" />
     </svg>
   ),
+  college: (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 21h18M3 10h18M5 10v11M19 10v11M9 10v11M15 10v11M12 2 2 7h20L12 2z" />
+    </svg>
+  ),
   refresh: (
     <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="23 4 23 10 17 10" />
@@ -174,6 +179,7 @@ function Register() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    college_name: "",
     mobile_number: "",
     roll_number: "",
     department: "",
@@ -375,9 +381,14 @@ function Register() {
   const handleRequestSecureCode = async () => {
     const name = (formData.name || "").trim();
     const email = (formData.email || "").trim();
+    const collegeName = (formData.college_name || "").trim();
 
     if (!name || !email) {
       setErrorMsg("Please enter your Full Name and Email before requesting a Secure Code.");
+      return;
+    }
+    if (!collegeName) {
+      setErrorMsg("Please enter or select your College / Institution Name before requesting a Secure Code.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -393,13 +404,19 @@ function Register() {
       const response = await fetch(`${getApiBaseUrl()}/auth/request-secure-code`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, role: role || "Admin" }),
+        body: JSON.stringify({
+          name,
+          email,
+          role: role || "Admin",
+          collegeName,
+          college_name: collegeName,
+        }),
       });
       const data = await response.json();
       if (data.success) {
         setCodeRequested(true);
-        setCodeRequestedMsg("✓ Secure code request sent to Super Admin! Super Admin will generate your code and share it with you.");
-        setSuccessMsg("Secure code request sent to Super Admin!");
+        setCodeRequestedMsg(`✓ Secure code request sent to Super Admin for "${collegeName}"! Super Admin will select your college and generate your code.`);
+        setSuccessMsg(`Secure code request sent for ${collegeName}!`);
       } else {
         setErrorMsg(data.message || "Failed to request secure code. Please try again.");
       }
@@ -599,6 +616,13 @@ function Register() {
         return false;
       }
     } else {
+      if (role === "Admin") {
+        const col = (formData.college_name || "").trim();
+        if (!col) {
+          setErrorMsg("Please enter your College / Institution Name.");
+          return false;
+        }
+      }
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) {
         setErrorMsg("Please enter your Secure Access Code.");
@@ -626,7 +650,11 @@ function Register() {
       const div = formData.division || "";
       if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
       if (deptOptions.length > 0 && !formData.department) return false;
-    } else if (role !== "Admin") {
+    } else if (role === "Admin") {
+      const col = (formData.college_name || "").trim();
+      const secureCode = (formData.secure_code || "").trim();
+      if (!col || !secureCode) return false;
+    } else {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
     }
@@ -1357,6 +1385,28 @@ function Register() {
                     />
                   </div>
                 </div>
+
+                {/* College Name input for Admin self-registration */}
+                {role === "Admin" && (
+                  <div className="input-group" style={{ marginTop: "4px", marginBottom: "16px" }}>
+                    <FieldLabel icon={Icons.college}>College / Institution Name *</FieldLabel>
+                    <input
+                      type="text"
+                      name="college_name"
+                      list="admin-colleges-datalist"
+                      required
+                      placeholder="Enter or select your College / Institution Name (e.g. PVPPCOE, Mumbai)"
+                      value={formData.college_name || ""}
+                      onChange={handleChange}
+                      style={{ width: "100%" }}
+                    />
+                    <datalist id="admin-colleges-datalist">
+                      {Array.isArray(colleges) && colleges.map((c, idx) => (
+                        <option key={c.id || idx} value={c.name} />
+                      ))}
+                    </datalist>
+                  </div>
+                )}
 
                 {/* Row: Password | Confirm Password for Staff/Mentors */}
                 <div className="form-grid-2">

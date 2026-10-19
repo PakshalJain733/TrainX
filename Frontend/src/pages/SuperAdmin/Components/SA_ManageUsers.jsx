@@ -1285,6 +1285,7 @@ export default function ManageUsers() {
       .then(data => {
         if (Array.isArray(data) && data.length > 0) {
           setCollegesList(data);
+          setCodeCollege(prev => (!prev || prev === 'Partner Campus') ? data[0].name : prev);
         }
       })
       .catch(err => console.error("Error loading colleges for ManageUsers modal:", err));
@@ -1582,9 +1583,42 @@ export default function ManageUsers() {
     } catch (_) {}
   };
 
+  const requestedColleges = Array.from(
+    new Set(codeRequests.map((r) => (r.college_name || "").trim()).filter(Boolean))
+  );
+
+  const targetCollegeOptions = (() => {
+    if (requestedColleges.length > 0) {
+      const reqOpts = requestedColleges.map((name) => ({
+        value: name,
+        label: `🏛️ ${name} (Requested by College Admin)`,
+      }));
+      const otherOpts = collegesList
+        .filter((c) => !requestedColleges.includes(c.name))
+        .map((c) => ({ value: c.name, label: c.name }));
+      return [...reqOpts, ...otherOpts];
+    }
+    if (collegesList.length > 0) {
+      return collegesList.map((c) => ({ value: c.name, label: c.name }));
+    }
+    return [{ value: "Awaiting College Admin Request...", label: "Awaiting College Admin Request..." }];
+  })();
+
+  useEffect(() => {
+    if (requestedColleges.length > 0) {
+      if (!codeCollege || codeCollege === 'Partner Campus' || !targetCollegeOptions.some(o => o.value === codeCollege)) {
+        setCodeCollege(requestedColleges[0]);
+      }
+    } else if (collegesList.length > 0 && (!codeCollege || codeCollege === 'Partner Campus')) {
+      setCodeCollege(collegesList[0].name);
+    }
+  }, [codeRequests, collegesList]);
+
   useEffect(() => {
     loadSecureCodes();
     loadCodeRequests();
+    const interval = setInterval(loadCodeRequests, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleGenerateCode = async (e) => {
@@ -2009,20 +2043,51 @@ export default function ManageUsers() {
                   Requesters:
                 </span>
                 {codeRequests.map((r, i) => (
-                  <div key={r.id || i} style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 8px 4px 10px',
-                    background: '#f8fafc',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)'
-                  }}>
+                  <div
+                    key={r.id || i}
+                    onClick={() => {
+                      if (r.college_name) setCodeCollege(r.college_name);
+                      setIsGenerateCodeModalOpen(true);
+                    }}
+                    title={`Click to generate registration code for ${r.college_name || r.name}`}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 8px 4px 10px',
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                      boxShadow: '0 1px 2px rgba(15, 23, 42, 0.03)',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f0fdf4';
+                      e.currentTarget.style.borderColor = '#86efac';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = '#f8fafc';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
                     <User size={12} style={{ color: '#3b82f6' }} />
                     <span style={{ fontWeight: 700, color: '#1e293b' }}>{r.name}</span>
                     <span style={{ color: '#64748b', fontSize: '11.5px' }}>({r.email})</span>
+                    {r.college_name && (
+                      <span style={{
+                        background: '#e0f2fe',
+                        color: '#0369a1',
+                        padding: '2px 7px',
+                        borderRadius: '5px',
+                        fontWeight: 700,
+                        fontSize: '11px',
+                        border: '1px solid #bae6fd'
+                      }}>
+                        🏛️ {r.college_name}
+                      </span>
+                    )}
                     <button
                       type="button"
                       onClick={(e) => handleDismissCodeRequest(r.id, e)}
@@ -2325,32 +2390,88 @@ export default function ManageUsers() {
             </div>
 
             <div className="modal-body modal-body-overflow-visible">
-              <div className="form-group-admin">
-                <label>Assign Target Role *</label>
-                <MuSelect
-                  value={codeRole}
-                  wrapperClass="mu-select"
-                  options={[
-                    { value: "admins", label: "Admin" },
-                  ]}
-                  onChange={(val) => setCodeRole(val)}
-                />
+              {/* College Admin Request Notification Banner */}
+              {requestedColleges.length > 0 && (
+                <div style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: '10px',
+                  padding: '9px 13px',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '12px',
+                  color: '#15803d',
+                  flexWrap: 'wrap',
+                  gap: '6px'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={14} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <span>
+                      <strong>Admin Request Pending:</strong> {codeRequests[0]?.name} submitted <strong>{codeRequests[0]?.college_name}</strong> on registration.
+                    </span>
+                  </div>
+                  {codeCollege !== codeRequests[0]?.college_name && codeRequests[0]?.college_name && (
+                    <button
+                      type="button"
+                      onClick={() => setCodeCollege(codeRequests[0]?.college_name)}
+                      style={{
+                        background: '#16a34a',
+                        color: '#fff',
+                        border: 'none',
+                        padding: '3px 9px',
+                        borderRadius: '5px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '11px'
+                      }}
+                    >
+                      Select {codeRequests[0]?.college_name}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Row 1: Role Box & Target College (Side-by-Side) */}
+              <div className="form-row-2 sa-form-row-2" style={{ marginBottom: '14px' }}>
+                <div className="form-group-admin">
+                  <label>Assign Target Role *</label>
+                  <div
+                    className="form-input-admin"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      background: '#f8fafc',
+                      color: '#1e293b',
+                      fontWeight: 600,
+                      fontSize: '13.5px',
+                      border: '1.5px solid #cbd5e1',
+                      borderRadius: '10px',
+                      height: '42px',
+                      padding: '0 14px',
+                      boxSizing: 'border-box',
+                      cursor: 'default',
+                      userSelect: 'none'
+                    }}
+                  >
+                    Admin
+                  </div>
+                </div>
+
+                <div className="form-group-admin" style={{ minWidth: 0 }}>
+                  <label>Target College *</label>
+                  <MuSelect
+                    value={codeCollege}
+                    wrapperClass="mu-select mu-select-scrollable-label"
+                    options={targetCollegeOptions}
+                    onChange={(val) => setCodeCollege(val)}
+                  />
+                </div>
               </div>
 
-              <div className="form-group-admin">
-                <label>Target College *</label>
-                <MuSelect
-                  value={codeCollege}
-                  wrapperClass="mu-select"
-                  options={collegesList.length > 0
-                    ? collegesList.map(c => ({ value: c.name, label: c.name }))
-                    : [{ value: "No colleges registered", label: "No colleges registered" }]
-                  }
-                  onChange={(val) => setCodeCollege(val)}
-                />
-              </div>
-
-              <div className="form-row-2">
+              {/* Row 2: Usage Limit (below role) & Expiry Duration (besides usage limit) */}
+              <div className="form-row-2 sa-form-row-2">
                 <div className="form-group-admin">
                   <label>Usage Limit (Max Uses) *</label>
                   <input
@@ -2373,6 +2494,10 @@ export default function ManageUsers() {
                     wrapperClass="mu-select"
                     options={[
                       { value: "1 Day", label: "1 Day" },
+                      { value: "3 Days", label: "3 Days" },
+                      { value: "7 Days", label: "7 Days" },
+                      { value: "30 Days", label: "30 Days" },
+                      { value: "Never / Unlimited", label: "Never / Unlimited" },
                     ]}
                     onChange={(val) => setCodeExpiry(val)}
                   />

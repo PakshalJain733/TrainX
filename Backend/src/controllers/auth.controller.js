@@ -278,7 +278,8 @@ export const checkRegistrationStatus = async (req, res, next) => {
 
 export const requestSecureCode = async (req, res, next) => {
   try {
-    const { name, email, role, collegeName } = req.body;
+    const { name, email, role, collegeName, college_name } = req.body;
+    const finalCollege = (collegeName || college_name || req.body.college || '').trim();
     if (!name || !email) {
       return sendError(res, 'Full Name and Email are required to request a secure code', 400);
     }
@@ -304,7 +305,7 @@ export const requestSecureCode = async (req, res, next) => {
     // 2. Insert request record
     await pool.query(
       `INSERT INTO secure_code_requests (name, email, role, college_name, status) VALUES (?, ?, ?, ?, 'Pending')`,
-      [cleanName, cleanEmail, targetRole, collegeName || null]
+      [cleanName, cleanEmail, targetRole, finalCollege || null]
     );
 
     // 3. Create a support ticket for Super Admin review
