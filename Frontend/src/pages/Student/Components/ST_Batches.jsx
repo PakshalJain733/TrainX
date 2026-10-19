@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
-import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2 } from "lucide-react";
+import { Users, Calendar, Clock, BookOpen, ArrowUpRight, Code2, Database, Layers, CheckCircle2, ArrowLeft, FileText, Video, PlayCircle, Trophy, AlertCircle, Clock3, CalendarDays, CheckSquare, Square, Award, Flame, Check, Plus, X, KeyRound, Loader2, Sparkles, ArrowRight } from "lucide-react";
 import { Badge } from "../../../components/ui/Badge";
-import { getApiBaseUrl } from "../../../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 import "../Styles/ST_Batches.css";
 
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
-
+  const token = getAuthToken() || "";
 
   return {
     "Content-Type": "application/json",
@@ -170,8 +169,15 @@ export default function Batches() {
   // Handle batch join submission
   const handleJoinSubmit = async (e) => {
     e.preventDefault();
-    if (!joinCodeInput.trim()) {
+    const cleanCode = (joinCodeInput || "").trim().toUpperCase();
+    if (!cleanCode) {
       setModalError("Please enter a valid batch code.");
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setModalError("Authentication session not found. Please log in again to join a batch.");
       return;
     }
 
@@ -184,9 +190,9 @@ export default function Batches() {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          join_code: joinCodeInput.trim(),
-          joinCode: joinCodeInput.trim(),
-          code: joinCodeInput.trim()
+          join_code: cleanCode,
+          joinCode: cleanCode,
+          code: cleanCode
         }),
       });
       const data = await res.json();
@@ -461,13 +467,26 @@ export default function Batches() {
   return (
     <div className="student-page-inner batches-page-container">
       <div className="student-header-box">
-        <h2 className="student-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
-          <span>Enrolled Training Batches</span>
-        </h2>
-        <p className="student-header-desc">
-          View your active C2C batches, faculty-led sessions, curriculum completion rates, and learning resources.
-        </p>
+        <div className="student-header-left">
+          <h2 className="student-header-title" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Code2 size={24} style={{ color: "#2563eb", flexShrink: 0 }} />
+            <span>Enrolled Training Batches</span>
+          </h2>
+          <p className="student-header-desc">
+            View your active C2C batches, faculty-led sessions, curriculum completion rates, and learning resources.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="join-batch-header-btn"
+          onClick={() => {
+            setModalError("");
+            setModalSuccess("");
+            setShowJoinModal(true);
+          }}
+        >
+          <Plus size={16} /> Join Batch
+        </button>
       </div>
 
       {/* Summary KPI Bar */}
@@ -509,27 +528,90 @@ export default function Batches() {
           Loading enrolled batches...
         </div>
       ) : enrolledBatches.length === 0 ? (
-        /* Empty state when student is not enrolled in any batch */
+        /* Interactive Join Batch Hero Card when student is not enrolled in any batch */
         <div className="batches-empty-state">
-          <div className="batches-empty-icon">
-            <Users size={28} />
+          <div className="batch-join-hero-badge">
+            <Sparkles size={13} />
+            <span>COHORT ENROLLMENT</span>
           </div>
-          <h3 className="batches-empty-title">You Have Not Joined Any Batch Yet</h3>
+
+          <div className="batches-empty-icon">
+            <KeyRound size={28} />
+          </div>
+
+          <h3 className="batches-empty-title">Join Your Training Batch</h3>
           <p className="batches-empty-desc">
-            To view your training curriculum, faculty sessions, and assignments, enter your batch join code provided by your admin or faculty lead.
+            Enter your unique batch invitation access code provided by your faculty coordinator or mentor to unlock coursework, practice labs, and assessments.
           </p>
-          <button
-            type="button"
-            className="join-batch-header-btn"
-            style={{ marginTop: "8px" }}
-            onClick={() => {
-              setModalError("");
-              setModalSuccess("");
-              setShowJoinModal(true);
-            }}
-          >
-            <KeyRound size={16} /> Join a Batch Now
-          </button>
+
+          {/* Inline Fast-Join Form */}
+          <form onSubmit={handleJoinSubmit} className="batch-inline-join-form">
+            <div className="batch-inline-input-wrapper">
+              <KeyRound size={17} className="batch-inline-input-icon" />
+              <input
+                type="text"
+                className="batch-inline-input"
+                placeholder="ENTER ACCESS CODE (E.G. PYSH-MTQZ)"
+                value={joinCodeInput}
+                onChange={(e) => {
+                  setJoinCodeInput(e.target.value.toUpperCase());
+                  setModalError("");
+                }}
+                required
+              />
+              <button
+                type="submit"
+                className="batch-inline-submit-btn"
+                disabled={joining || !joinCodeInput.trim()}
+              >
+                {joining ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    <span>Joining...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Join Batch</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+
+          {/* Inline Feedback Alerts */}
+          {modalError && (
+            <div className="batch-inline-feedback batch-inline-feedback--error">
+              <AlertCircle size={15} />
+              <span>{modalError}</span>
+            </div>
+          )}
+          {modalSuccess && (
+            <div className="batch-inline-feedback batch-inline-feedback--success">
+              <CheckCircle2 size={15} />
+              <span>{modalSuccess}</span>
+            </div>
+          )}
+
+          {/* Quick Features List */}
+          <div className="batch-join-features">
+            <div className="batch-join-feature-item">
+              <BookOpen size={14} />
+              <span>Curriculum & Tasks</span>
+            </div>
+            <div className="batch-join-feature-item">
+              <Code2 size={14} />
+              <span>Interactive Coding Labs</span>
+            </div>
+            <div className="batch-join-feature-item">
+              <Trophy size={14} />
+              <span>Live Cohort Leaderboard</span>
+            </div>
+          </div>
+
+          <p className="batch-join-footer-hint">
+            Don't have a code? Contact your academic department coordinator or batch trainer.
+          </p>
         </div>
       ) : (
         /* Enrolled Batches Grid */
@@ -613,6 +695,47 @@ export default function Batches() {
               </div>
             );
           })}
+
+          {/* Join Another Batch Card */}
+          <div
+            className="batch-card batch-card--join"
+            onClick={() => {
+              setModalError("");
+              setModalSuccess("");
+              setShowJoinModal(true);
+            }}
+            role="button"
+            tabIndex={0}
+          >
+            <div>
+              <div className="batch-card-top">
+                <div className="batch-card-join-icon">
+                  <Plus size={22} />
+                </div>
+                <span className="batch-card-join-tag">New Cohort</span>
+              </div>
+
+              <h3 className="batch-card-title">Join Another Batch</h3>
+              <p className="batch-card-desc">
+                Have an access code for another cohort or training module? Enter your code to enroll in new coursework.
+              </p>
+            </div>
+
+            <div className="batch-card-join-hint-box">
+              <KeyRound size={15} />
+              <span>Enter enrollment code from your instructor</span>
+            </div>
+
+            <div className="batch-card-actions">
+              <button
+                type="button"
+                className="batch-card-join-action-btn"
+              >
+                <span>Enter Join Code</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -642,23 +765,37 @@ export default function Batches() {
 
                 <div className="form-group-admin">
                   <label>Enter Batch Join Code *</label>
-                  <input
-                    type="text"
-                    className="form-input-admin"
-                    placeholder="e.g. BTCH-D3BX"
-                    value={joinCodeInput}
-                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                    required
-                    autoFocus
-                  />
+                  <div className="modal-input-wrapper">
+                    <KeyRound size={17} className="modal-input-icon" />
+                    <input
+                      type="text"
+                      className="form-input-admin modal-input-with-icon"
+                      placeholder="e.g. PYSH-MTQZ"
+                      value={joinCodeInput}
+                      onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <span className="modal-helper-text">
+                    Codes are case-insensitive and assigned by administrators (e.g. PYSH-MTQZ).
+                  </span>
                 </div>
               </div>
 
-              <div className="modal-footer" style={{ justifyContent: "flex-end" }}>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setShowJoinModal(false)}
+                  disabled={joining}
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   className="btn-modal-submit"
-                  disabled={joining}
+                  disabled={joining || !joinCodeInput.trim()}
                 >
                   {joining ? (
                     <>

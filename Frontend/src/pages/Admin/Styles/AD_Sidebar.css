@@ -163,33 +163,33 @@
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
-/* ── Content ── */
+/* ── Content (Scrollbar Hidden) ── */
 .sidebar-content {
   flex: 1;
   padding: 12px 12px;
   overflow-y: auto;
   overflow-x: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .sidebar-content::-webkit-scrollbar {
-  width: 3px;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-.sidebar-content::-webkit-scrollbar-track {
-  background: transparent;
+.admin-sidebar,
+.admin-sidebar * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-.sidebar-content::-webkit-scrollbar {
-  width: 3px;
-}
-
-.sidebar-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sidebar-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 85, 186, 0.3);
-  border-radius: 4px;
+.admin-sidebar::-webkit-scrollbar,
+.admin-sidebar *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ── Group label ── */

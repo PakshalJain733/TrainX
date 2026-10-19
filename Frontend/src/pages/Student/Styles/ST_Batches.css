@@ -816,7 +816,22 @@
   color: inherit;
 }
 
-/* ─── Join Batch Flash Modal & Header Action ───────────────────── */
+/* ─── Join Batch Header Action & Header Row ───────────────────── */
+
+.student-header-box {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+  margin-bottom: 20px !important;
+}
+
+.student-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
 
 .join-batch-header-btn {
   display: inline-flex;
@@ -825,49 +840,369 @@
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
   border: none;
-  padding: 10px 18px;
+  padding: 10px 20px;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
 }
 
 .join-batch-header-btn:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
 }
 
-.join-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+/* ─── Join Another Batch Card (in Grid) ───────────────────────── */
+.batches-page-container .batch-card--join {
+  position: relative !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 2px dashed #93c5fd !important;
+  border-radius: 20px !important;
+  padding: 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.04) !important;
+}
+
+.batches-page-container .batch-card--join::before {
+  display: none !important;
+}
+
+.batches-page-container .batch-card--join:hover {
+  border-color: #2563eb !important;
+  border-style: solid !important;
+  background: #f0f7ff !important;
+  transform: translateY(-4px) !important;
+  box-shadow: 0 12px 30px -8px rgba(37, 99, 235, 0.18) !important;
+}
+
+.batch-card-join-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
-  animation: fadeIn 0.2s ease-out;
-  padding: 20px;
-  border-radius: 20px;
-  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+  transition: all 0.25s ease;
 }
 
-.join-modal-card {
-  background: #ffffff;
-  width: 100%;
-  max-width: 520px;
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.3);
-  position: relative;
+.batches-page-container .batch-card--join:hover .batch-card-join-icon {
+  transform: scale(1.1) rotate(4deg);
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+}
+
+.batch-card-join-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.batch-card-join-hint-box {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-  animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.batch-card-join-action-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.batches-page-container .batch-card--join:hover .batch-card-join-action-btn {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+}
+
+/* ─── Batches Empty State: Interactive Join Batch Hero Card ──── */
+.batches-empty-state {
+  position: relative !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 60%, #e0effe 100%) !important;
+  border: 1.5px solid #bfdbfe !important;
+  border-radius: 24px !important;
+  padding: 44px 32px 36px !important;
+  text-align: center !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 16px !important;
+  box-shadow: 0 12px 36px -8px rgba(37, 99, 235, 0.12), 0 4px 12px rgba(0, 0, 0, 0.03) !important;
+  max-width: 680px !important;
+  margin: 20px auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.batches-empty-state::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 4px !important;
+  background: linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%) !important;
+}
+
+.batch-join-hero-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 5px 14px !important;
+  border-radius: 99px !important;
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  border: 1px solid #bfdbfe !important;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08) !important;
+}
+
+.batches-empty-icon {
+  width: 64px !important;
+  height: 64px !important;
+  border-radius: 20px !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3) !important;
+  margin-top: 4px !important;
+  transition: transform 0.25s ease !important;
+}
+
+.batches-empty-state:hover .batches-empty-icon {
+  transform: scale(1.06) rotate(3deg) !important;
+}
+
+.batches-empty-title {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  letter-spacing: -0.02em !important;
+}
+
+.batches-empty-desc {
+  font-size: 14px !important;
+  color: #475569 !important;
+  max-width: 500px !important;
+  margin: 0 !important;
+  line-height: 1.6 !important;
+}
+
+/* ─── Inline Fast-Join Form ──────────────────────────────────── */
+.batch-inline-join-form {
+  width: 100% !important;
+  max-width: 520px !important;
+  margin-top: 6px !important;
+}
+
+.batch-inline-input-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  background: #ffffff !important;
+  border: 2px solid #cbd5e1 !important;
+  border-radius: 14px !important;
+  padding: 4px 4px 4px 14px !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+  transition: all 0.2s ease !important;
+}
+
+.batch-inline-input-wrapper:focus-within {
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15), 0 6px 20px rgba(37, 99, 235, 0.1) !important;
+}
+
+.batch-inline-input-icon {
+  color: #94a3b8 !important;
+  flex-shrink: 0 !important;
+}
+
+.batch-inline-input {
+  flex: 1 !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px !important;
+  text-transform: uppercase !important;
+  color: #0f172a !important;
+  padding: 10px 12px !important;
+  min-width: 0 !important;
+}
+
+.batch-inline-input::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+.batch-inline-submit-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 11px 22px !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+}
+
+.batch-inline-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35) !important;
+}
+
+.batch-inline-submit-btn:disabled {
+  opacity: 0.6 !important;
+  cursor: not-allowed !important;
+}
+
+.batch-inline-feedback {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 16px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  width: 100% !important;
+  max-width: 520px !important;
+  box-sizing: border-box !important;
+  text-align: left !important;
+  animation: fadeIn 0.2s ease-out !important;
+}
+
+.batch-inline-feedback--error {
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
+}
+
+.batch-inline-feedback--success {
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #059669 !important;
+}
+
+.batch-join-features {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  margin-top: 6px !important;
+}
+
+.batch-join-feature-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  padding: 6px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(191, 219, 254, 0.7) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.batch-join-footer-hint {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin: 0 !important;
+}
+
+/* ─── Join Batch Modal Overlay & Dialog ───────────────────────── */
+.modal-overlay,
+.join-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  background: rgba(15, 23, 42, 0.65) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 20px !important;
+  animation: modalFadeIn 0.2s ease-out !important;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-dialog,
+.join-modal-card {
+  background: #ffffff !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid #e2e8f0 !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 @keyframes modalPopIn {
@@ -881,187 +1216,224 @@
   }
 }
 
-.join-modal-close {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: #f1f5f9;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.modal-header {
+  padding: 20px 24px !important;
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
 }
 
-.join-modal-close:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+.modal-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
 }
 
-.join-modal-icon-wrap {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
-  background: #eff6ff;
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.modal-header-icon-wrap {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
 }
 
-.join-modal-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0 0 4px 0;
+.modal-header-icon--indigo {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border: 1px solid #dbeafe !important;
 }
 
-.join-modal-subtitle {
-  font-size: 13px;
-  color: #64748b;
-  margin: 0;
+.modal-title {
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
 }
 
-.join-modal-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.modal-subtitle {
+  font-size: 12.5px !important;
+  color: #64748b !important;
+  margin: 3px 0 0 0 !important;
 }
 
-.join-modal-label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #334155;
+.modal-close-btn {
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  color: #64748b !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
 }
 
-.join-modal-input {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 12px;
-  border: 1.5px solid #cbd5e1;
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  outline: none;
-  transition: border-color 0.2s ease;
+.modal-close-btn:hover {
+  background: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  color: #ef4444 !important;
 }
 
-.join-modal-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+.modal-body {
+  padding: 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
 }
 
-.join-modal-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
+.modal-feedback-alert {
+  padding: 12px 16px !important;
+  border-radius: 10px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
 }
 
-.join-modal-success {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #059669;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 600;
+.modal-feedback--error {
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
 }
 
-.join-modal-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+.modal-feedback--success {
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #059669 !important;
 }
 
-.join-modal-cancel-btn {
-  padding: 10px 20px;
-  border-radius: 12px;
-  border: 1.5px solid #cbd5e1;
-  background: #ffffff;
-  color: #475569;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.form-group-admin label {
+  display: block !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #334155 !important;
+  margin-bottom: 8px !important;
 }
 
-.join-modal-cancel-btn:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
-  color: #1e293b;
+.modal-input-wrapper {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
 }
 
+.modal-input-icon {
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  left: 14px !important;
+  color: #94a3b8 !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+.form-input-admin.modal-input-with-icon {
+  padding-left: 42px !important;
+}
+
+.form-input-admin::placeholder {
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: #94a3b8 !important;
+  font-weight: 500 !important;
+}
+
+.form-input-admin {
+  width: 100% !important;
+  height: 48px !important;
+  padding: 0 16px !important;
+  border-radius: 12px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase !important;
+  color: #0f172a !important;
+  background: #f8fafc !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+.form-input-admin:focus {
+  border-color: #2563eb !important;
+  background: #ffffff !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.12) !important;
+}
+
+.modal-helper-text {
+  font-size: 11.5px !important;
+  color: #64748b !important;
+  margin-top: 6px !important;
+  display: block !important;
+}
+
+.modal-footer {
+  padding: 16px 24px !important;
+  background: #f8fafc !important;
+  border-top: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+}
+
+.btn-modal-cancel {
+  padding: 11px 20px !important;
+  border-radius: 12px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  outline: none !important;
+}
+
+.btn-modal-cancel:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+.btn-modal-submit,
 .join-modal-submit-btn {
-  padding: 10px 24px;
-  border-radius: 12px;
-  border: none;
-  background: #2563eb;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-  transition: all 0.2s ease;
+  padding: 11px 26px !important;
+  border-radius: 12px !important;
+  border: none !important;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25) !important;
+  transition: all 0.2s ease !important;
+  outline: none !important;
 }
 
+.btn-modal-submit:hover,
 .join-modal-submit-btn:hover {
-  background: #1d4ed8;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35) !important;
+  transform: translateY(-1px) !important;
 }
 
+.btn-modal-submit:disabled,
 .join-modal-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  opacity: 0.65 !important;
+  cursor: not-allowed !important;
+  transform: none !important;
 }
 
-.batches-empty-state {
-  background: #ffffff;
-  border: 2px solid #cbd5e1;
-  border-radius: 20px;
-  padding: 48px 24px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.batches-empty-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: #eff6ff;
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.batches-empty-title {
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-}
-
-.batches-empty-desc {
-  font-size: 14px;
-  color: #64748b;
-  max-width: 420px;
-  margin: 0;
-}
 

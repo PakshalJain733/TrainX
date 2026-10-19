@@ -267,6 +267,7 @@ app.use('/api/v1/admin', adminRoutes);
 app.use('/api/v1/colleges', collegeRoutes);
 app.use('/api/v1/departments', departmentRoutes);
 app.use('/api/v1/batches', batchRoutes);
+app.use('/api/batches', batchRoutes);
 app.use('/api/v1/trainings', trainingRoutes);
 app.use('/api/v1/assessments', assessmentRoutes);
 app.use('/api/v1/attendance', attendanceRoutes);

@@ -5,7 +5,7 @@ import { CalendarCheck, TrendingUp, Clock, Trophy, ArrowUpRight, Flame, Users, C
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
-import { apiFetch, getApiBaseUrl } from "../../../utils/api";
+import { apiFetch, getApiBaseUrl, getAuthToken } from "../../../utils/api";
 import { EVENTS } from "../../../utils/sharedStore";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import { getShortDept } from "../../../utils/departmentHelper";
@@ -14,8 +14,7 @@ import "../Styles/ST_Overview.css";
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
-
+  const token = getAuthToken() || "";
 
   return {
     "Content-Type": "application/json",
@@ -208,8 +207,15 @@ export default function Overview() {
   // Submit Join Batch from Hero Card Modal
   const handleJoinSubmit = async (e) => {
     e.preventDefault();
-    if (!joinCodeInput.trim()) {
+    const cleanCode = (joinCodeInput || "").trim().toUpperCase();
+    if (!cleanCode) {
       setModalError("Please enter a valid batch code.");
+      return;
+    }
+
+    const token = getAuthToken();
+    if (!token) {
+      setModalError("Authentication session not found. Please log in again to join a batch.");
       return;
     }
 
@@ -222,9 +228,9 @@ export default function Overview() {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
-          join_code: joinCodeInput.trim(),
-          joinCode: joinCodeInput.trim(),
-          code: joinCodeInput.trim()
+          join_code: cleanCode,
+          joinCode: cleanCode,
+          code: cleanCode
         }),
       });
       const data = await res.json();
@@ -534,24 +540,37 @@ export default function Overview() {
 
                 <div className="form-group-admin">
                   <label>Enter Batch Join Code *</label>
-                  <input
-                    type="text"
-                    className="form-input-admin"
-                    placeholder="e.g. BTCH-D3BX"
-                    value={joinCodeInput}
-                    onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
-                    required
-                    autoFocus
-                  />
+                  <div className="modal-input-wrapper">
+                    <KeyRound size={17} className="modal-input-icon" />
+                    <input
+                      type="text"
+                      className="form-input-admin modal-input-with-icon"
+                      placeholder="e.g. PYSH-MTQZ"
+                      value={joinCodeInput}
+                      onChange={(e) => setJoinCodeInput(e.target.value.toUpperCase())}
+                      required
+                      autoFocus
+                    />
+                  </div>
+                  <span className="modal-helper-text">
+                    Codes are case-insensitive and assigned by administrators (e.g. PYSH-MTQZ).
+                  </span>
                 </div>
               </div>
 
               <div className="modal-footer">
-
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setShowJoinModal(false)}
+                  disabled={joining}
+                >
+                  Cancel
+                </button>
                 <button
                   type="submit"
                   className="btn-modal-submit"
-                  disabled={joining}
+                  disabled={joining || !joinCodeInput.trim()}
                 >
                   {joining ? (
                     <>

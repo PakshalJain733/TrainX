@@ -73,13 +73,15 @@
   padding-top: 4px !important;
 }
 
-.lb-list::-webkit-scrollbar {
-  width: 5px;
+.lb-list {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-.lb-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
+.lb-list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .lb-item {

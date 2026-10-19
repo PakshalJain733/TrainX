@@ -13,17 +13,24 @@ import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications, onNavigate, onSelectNotification }) {
   const [activeTab, setActiveTab] = useState("all");
-  const dropdownRef = useRef(null);
+
+  const autoCloseTimerRef = useRef(null);
+
+  const startAutoCloseTimer = () => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    autoCloseTimerRef.current = setTimeout(() => {
+      if (onClose) onClose();
+    }, 5000);
+  };
+
+  const clearAutoCloseTimer = () => {
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+  };
 
   useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        if (onClose) onClose();
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+    startAutoCloseTimer();
+    return () => clearAutoCloseTimer();
+  }, []);
 
   const unreadCount = notifications.filter((n) => n.unread).length;
   const totalCount = notifications.length;
@@ -116,8 +123,9 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
 
   return (
     <div
-      ref={dropdownRef}
       className="notif-dropdown-box"
+      onMouseEnter={clearAutoCloseTimer}
+      onMouseLeave={startAutoCloseTimer}
     >
       {/* Header */}
       <div className="notif-header">
@@ -138,6 +146,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
             className="notif-mark-read-btn"
             onClick={handleMarkAllRead}
             disabled={unreadCount === 0}
+            style={{ opacity: unreadCount === 0 ? 0.5 : 1, cursor: unreadCount === 0 ? "default" : "pointer" }}
           >
             <Check size={14} className="notif-check-icon" /> Mark read
           </button>
@@ -163,7 +172,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
       {/* List - Small Form Preview Cards */}
       <div className="notif-list-wrap">
         {visibleNotifications.length === 0 ? (
-          <div className="notif-empty-state">
+          <div style={{ padding: "24px", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
             No notifications to display
           </div>
         ) : (
@@ -221,6 +230,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
           className="notif-clear-all-btn"
           onClick={handleClearAll}
           disabled={totalCount === 0}
+          style={{ opacity: totalCount === 0 ? 0.5 : 1, cursor: totalCount === 0 ? "default" : "pointer" }}
         >
           Clear all
         </button>

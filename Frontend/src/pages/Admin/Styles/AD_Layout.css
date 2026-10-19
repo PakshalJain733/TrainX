@@ -1452,7 +1452,7 @@ body {
   font-weight: 700;
 }
 
-/* Content Body inside the Big Card with clean scroll */
+/* Content Body inside the Big Card with clean hidden scroll */
 .admin-card-body {
   flex: 1;
   display: block;
@@ -1461,24 +1461,26 @@ body {
   overflow-y: auto !important;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
-/* Custom Scrollbar for admin-card-body */
-.admin-card-body::-webkit-scrollbar {
-  width: 6px;
+/* Hide scrollbars across the Admin dashboard & layout */
+.admin-card-body::-webkit-scrollbar,
+.admin-layout::-webkit-scrollbar,
+.admin-layout *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
-.admin-card-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.admin-card-body::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
-}
-
-.admin-card-body::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.admin-layout,
+.admin-layout *,
+.admin-content,
+.admin-main,
+.admin-page-card {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 /* Sub-containers inside page components */

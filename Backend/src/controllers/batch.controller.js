@@ -85,6 +85,20 @@ async function ensureTables() {
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN test_cases TEXT NULL");
     await safeAlter("ALTER TABLE batch_tasks ADD COLUMN language VARCHAR(50) DEFAULT 'Java'");
 
+    // Ensure all batches have unique persistent join codes
+    try {
+      await query(`
+        UPDATE batches 
+        SET code = COALESCE(NULLIF(code, ''), NULLIF(join_code, ''), CONCAT('BTCH-', LPAD(id, 4, '0'))),
+            join_code = COALESCE(NULLIF(join_code, ''), NULLIF(code, ''), CONCAT('BTCH-', LPAD(id, 4, '0')))
+        WHERE code IS NULL OR code = '' OR join_code IS NULL OR join_code = ''
+      `);
+      await query(`
+        INSERT IGNORE INTO student_batches (user_id, batch_id)
+        SELECT user_id, batch_id FROM students WHERE batch_id IS NOT NULL AND user_id IS NOT NULL
+      `);
+    } catch (e) {}
+
     tablesInitialized = true;
   } catch (e) {
     console.warn('[DB ensureTables error]', e.message);
@@ -300,34 +314,45 @@ export const deleteBatch = async (req, res, next) => {
 export const joinBatch = async (req, res, next) => {
   try {
     await ensureTables();
-    const inputCode = (req.body.joinCode || req.body.join_code || req.body.code || '').trim().toUpperCase();
+    const rawInput = (req.body.joinCode || req.body.join_code || req.body.code || '').trim();
+    const inputCode = rawInput.toUpperCase();
     if (!inputCode) {
       return sendError(res, 'Join code is required', 400);
     }
 
-    // 1. Check whether batch code exists in the database
+    // 1. Flexible matching: match by code, join_code, name, BATCH-id, BTCH-id, or numeric id
+    const numericId = parseInt(inputCode.replace(/[^0-9]/g, ''), 10) || -1;
     const rows = await query(
-      `SELECT * FROM batches WHERE UPPER(code) = ? OR UPPER(join_code) = ? LIMIT 1`,
-      [inputCode, inputCode]
+      `SELECT * FROM batches 
+       WHERE UPPER(COALESCE(code, '')) = ? 
+          OR UPPER(COALESCE(join_code, '')) = ? 
+          OR UPPER(name) = ?
+          OR UPPER(REPLACE(name, ' ', '')) = ?
+          OR UPPER(CONCAT('BATCH-', id)) = ?
+          OR UPPER(CONCAT('BTCH-', id)) = ?
+          OR UPPER(CONCAT('BTCH-', LPAD(id, 4, '0'))) = ?
+          OR (id = ? AND id > 0)
+       LIMIT 1`,
+      [inputCode, inputCode, inputCode, inputCode.replace(/\s+/g, ''), inputCode, inputCode, inputCode, numericId]
     );
 
     const foundBatch = rows && rows.length > 0 ? rows[0] : null;
 
     if (!foundBatch) {
-      return sendError(res, `Invalid batch join code '${inputCode}'. No matching batch exists in the database.`, 404);
+      return sendError(res, `Invalid batch join code '${rawInput}'. No matching batch exists in the database.`, 404);
     }
 
     // 2. Check whether batch is active
     const batchStatus = (foundBatch.status || 'Active').toLowerCase();
-    if (batchStatus === 'inactive' || batchStatus === 'archived' || batchStatus === 'expired') {
+    if (batchStatus === 'inactive' || batchStatus === 'archived' || batchStatus === 'expired' || batchStatus === 'deleted') {
       return sendError(res, `Batch '${foundBatch.name}' is currently ${batchStatus} and cannot be joined.`, 400);
     }
 
-    // 3. Check whether batch join code has expired
+    // 3. Expiration check: Only block if batch is not active and expiration timestamp was explicit
     const expiresAtVal = foundBatch.code_expires_at || foundBatch.expires_at || foundBatch.code_expires;
     if (expiresAtVal && String(expiresAtVal).toLowerCase() !== 'never') {
-      const expDate = new Date(expiresAtVal);
-      if (!isNaN(expDate.getTime()) && expDate.getTime() < Date.now()) {
+      const expDate = new Date(Number(expiresAtVal) || expiresAtVal);
+      if (!isNaN(expDate.getTime()) && expDate.getTime() < Date.now() && batchStatus !== 'active') {
         return sendError(res, `The join code for batch '${foundBatch.name}' has expired. Please request an updated code from your instructor or administrator.`, 400);
       }
     }
@@ -377,11 +402,13 @@ export const getMyBatches = async (req, res, next) => {
     }
 
     const dbEnrolled = await query(
-      `SELECT b.* FROM batches b
-       JOIN student_batches sb ON b.id = sb.batch_id
-       WHERE sb.user_id = ? AND (b.status IS NULL OR (LOWER(b.status) != 'inactive' AND LOWER(b.status) != 'deleted'))
+      `SELECT DISTINCT b.* FROM batches b
+       LEFT JOIN student_batches sb ON b.id = sb.batch_id AND sb.user_id = ?
+       LEFT JOIN students s ON s.user_id = ? AND s.batch_id = b.id
+       WHERE (sb.id IS NOT NULL OR s.id IS NOT NULL) 
+         AND (b.status IS NULL OR (LOWER(b.status) != 'inactive' AND LOWER(b.status) != 'deleted'))
        ORDER BY b.id DESC`,
-      [userId]
+      [userId, userId]
     );
 
     return sendSuccess(res, 'Enrolled batches retrieved successfully', dbEnrolled || []);

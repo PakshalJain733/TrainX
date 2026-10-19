@@ -101,7 +101,7 @@ function AdminBatchSelect({ value, options = [], onChange, placeholder = 'Select
 
 import { apiFetch } from "../../../utils/api";
 
-const CODE_DURATION_MS = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CODE_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days validity for batch join codes
 
 const generateJoinCode = (batchName = "") => {
   const clean = batchName.replace(/[^a-zA-Z0-9]/g, "");
