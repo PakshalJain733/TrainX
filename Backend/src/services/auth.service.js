@@ -459,6 +459,7 @@ export const registerUser = async (data) => {
       semester: derivedSemester,
       roll_number,
       is_profile_updated: 1,
+      is_active: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
     });
 
     if (codeRecord && codeRecord.id) {
@@ -477,13 +478,15 @@ export const registerUser = async (data) => {
     const totpSetup = await generateTotpSetup(updatedUser.email || name);
     await resetUserTwoFactorSecret(updatedUser.id, totpSetup.secret);
 
-    const token = generateToken({
-      userId: updatedUser.id,
-      email: updatedUser.email,
-      mobile: updatedUser.mobile_number,
-      role: updatedUser.role,
-      collegeId: updatedUser.college_id || 1,
-    });
+    const token = canonicalRole === ROLES.SUPER_ADMIN
+      ? generateToken({
+          userId: updatedUser.id,
+          email: updatedUser.email,
+          mobile: updatedUser.mobile_number,
+          role: updatedUser.role,
+          collegeId: updatedUser.college_id || 1,
+        })
+      : null;
 
     return {
       token,
@@ -635,7 +638,7 @@ export const registerUser = async (data) => {
   await resetUserTwoFactorSecret(user.id, totpSetup.secret);
 
   return {
-    token: generateFinalToken(user),
+    token: canonicalRole === ROLES.SUPER_ADMIN ? generateFinalToken(user) : null,
     qrCode: totpSetup.qrCode,
     secret: totpSetup.secret,
     user: {
@@ -677,6 +680,14 @@ export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = fals
   }
 
   await updateUserRememberMe(user.id, rememberMe);
+
+  if (user.role !== 'super_admin' && isInactiveUser(user)) {
+    return {
+      requiresTwoFactor: false,
+      pendingApproval: true,
+      message: '2FA verification completed. Your account is pending Admin approval.',
+    };
+  }
 
   const studentProfile = await getStudentByUserId(user.id);
   const token = generateFinalToken(user);
