@@ -608,7 +608,9 @@ const getValidCollegeId = async (collegeId) => {
     FROM users u
     LEFT JOIN colleges c ON u.college_id = c.id
     LEFT JOIN students s ON u.id = s.user_id
-    WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false) AND u.role != 'super_admin'
+    WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false)
+      AND u.role != 'super_admin'
+      AND (u.password_hash IS NOT NULL AND u.password_hash != '')
   `;
     const params = [];
     if (collegeId) {

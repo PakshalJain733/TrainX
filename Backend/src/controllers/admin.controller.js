@@ -332,6 +332,7 @@ export const createUserAdmin = async (req, res, next) => {
       mobile_number: mobile_number || '',
       role: canonicalRole,
       college_id: targetCollegeId,
+      is_active: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
     });
 
     let studentProfile = null;
