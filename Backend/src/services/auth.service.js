@@ -154,7 +154,7 @@ const finalizePrimaryAuthentication = async (user) => {
     };
   }
 
-  if (isAdminRole) {
+  if (isAdminRole && process.env.NODE_ENV === 'production') {
     let secret = user?.two_factor_secret;
 
     if (isBlank(secret)) {

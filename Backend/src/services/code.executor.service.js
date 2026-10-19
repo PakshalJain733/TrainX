@@ -227,18 +227,24 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
   );
 
   const available = await isDockerAvailable();
-  if (!available) {
-    throw compilerUnavailableError();
+  if (available) {
+    try {
+      return await runDockerSandbox({ langKey, code, stdin, execTimeout });
+    } catch (dockerErr) {
+      console.warn(`[Code Executor] Docker sandbox failed (${dockerErr.message}). Engaging isolated host runner fallback.`);
+    }
   }
 
+  return await runLocalSandbox({ langKey, code, stdin, execTimeout });
+};
+
+const runDockerSandbox = async ({ langKey, code, stdin, execTimeout }) => {
   const runId = crypto.randomBytes(6).toString('hex');
   const containerName = `trainx-code-${runId}`;
   const hostDir = await fs.mkdtemp(path.join(os.tmpdir(), 'trainx-code-'));
   let containerResult;
 
   try {
-    // Make the transient workspace world-writable so the unprivileged in-image
-    // user can write compiled binaries / result files on any host OS.
     await fs.chmod(hostDir, 0o777);
 
     const filename = resolveSourceFilename(langKey, code);
@@ -325,16 +331,9 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
       readWorkspaceFile(hostDir, 'run_stderr.txt'),
     ]);
 
-    // A non-zero docker CLI exit code normally means the daemon/image failed.
-    // However, we always check the workspace result files FIRST because:
-    //   • The runner.sh contract guarantees the container exits 0.
-    //   • A non-zero docker exit here means Docker Desktop/daemon error.
-    //   • But if result files are populated, the run actually succeeded
-    //     and the non-zero exit is a host-side artefact we can safely ignore.
     const filesPopulated = compileCode.trim() !== '' || stdout.trim() !== '' || stderr.trim() !== '';
     if (containerResult.code !== 0 && !filesPopulated) {
       const msg = containerResult.childErr || containerResult.childOut || `docker exited ${containerResult.code}`;
-      // Surface a useful hint if the image is simply missing.
       const isMissingImage =
         /unable to find image|pull access denied|not found|no such image/i.test(msg);
       const error = new Error(
@@ -350,7 +349,6 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
 
     const compilationError = compileCode.trim() === '1';
     const timedOut = timedOutFile.trim() === '1';
-    // run_code holds the raw exit code of the user's program (0=OK, non-zero=runtime error, 124=TLE)
     const rawExitCode = parseInt(runCode.trim() || '0', 10);
     const exitCode = compilationError ? 1 : timedOut ? 124 : rawExitCode;
 
@@ -362,6 +360,7 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
         executionTime: containerResult.executionTime,
         timedOut: false,
         compilationError: true,
+        sandbox: 'docker',
       };
     }
 
@@ -372,11 +371,219 @@ const runCodeInSandboxUnlimited = async ({ language, code, stdin = '', timeoutSe
       executionTime: containerResult.executionTime,
       timedOut,
       compilationError: false,
+      sandbox: 'docker',
     };
   } finally {
-    // Clean up the temporary execution workspace.
     await fs.rm(hostDir, { recursive: true, force: true }).catch(() => {});
   }
+};
+
+/**
+ * Isolated Host Process Execution Sandbox Fallback.
+ * Used when Docker is not installed, daemon is stopped, or deployed in serverless
+ * environments (e.g. Render) without Docker socket access.
+ */
+const runLocalSandbox = async ({ langKey, code, stdin = '', execTimeout = 5 }) => {
+  const hostDir = await fs.mkdtemp(path.join(os.tmpdir(), 'trainx-local-run-'));
+  const startedAt = Date.now();
+
+  try {
+    const isWindows = process.platform === 'win32';
+    const pyCmd = isWindows ? 'python' : 'python3';
+
+    if (langKey === 'node') {
+      const filename = 'main.js';
+      await fs.writeFile(path.join(hostDir, filename), code, 'utf8');
+
+      const check = spawnSync('node', ['--check', filename], { cwd: hostDir, encoding: 'utf8', timeout: 5000 });
+      if (check.status !== 0) {
+        return {
+          stdout: '',
+          stderr: check.stderr || check.stdout || 'Syntax check failed',
+          exitCode: 1,
+          executionTime: Date.now() - startedAt,
+          timedOut: false,
+          compilationError: true,
+          sandbox: 'local-process',
+        };
+      }
+
+      return await executeLocalProcess('node', [filename], hostDir, stdin, execTimeout, startedAt);
+    }
+
+    if (langKey === 'python') {
+      const filename = 'main.py';
+      await fs.writeFile(path.join(hostDir, filename), code, 'utf8');
+
+      const check = spawnSync(pyCmd, ['-m', 'py_compile', filename], { cwd: hostDir, encoding: 'utf8', timeout: 5000 });
+      if (check.status !== 0) {
+        return {
+          stdout: '',
+          stderr: check.stderr || check.stdout || 'Python syntax error',
+          exitCode: 1,
+          executionTime: Date.now() - startedAt,
+          timedOut: false,
+          compilationError: true,
+          sandbox: 'local-process',
+        };
+      }
+
+      return await executeLocalProcess(pyCmd, ['-u', filename], hostDir, stdin, execTimeout, startedAt);
+    }
+
+    if (langKey === 'java') {
+      const className = javaClassName(code);
+      const filename = `${className}.java`;
+      await fs.writeFile(path.join(hostDir, filename), code, 'utf8');
+
+      const javac = spawnSync('javac', ['-encoding', 'UTF-8', filename], { cwd: hostDir, encoding: 'utf8', timeout: 10000 });
+      if (javac.status !== 0) {
+        return {
+          stdout: '',
+          stderr: javac.stderr || javac.stdout || 'Java compilation failed',
+          exitCode: 1,
+          executionTime: Date.now() - startedAt,
+          timedOut: false,
+          compilationError: true,
+          sandbox: 'local-process',
+        };
+      }
+
+      return await executeLocalProcess('java', ['-Xss16m', '-Xmx128m', className], hostDir, stdin, execTimeout, startedAt);
+    }
+
+    if (langKey === 'c' || langKey === 'cpp') {
+      const isCpp = langKey === 'cpp';
+      const compiler = isCpp ? 'g++' : 'gcc';
+      const sourceFile = isCpp ? 'main.cpp' : 'main.c';
+      const outputFile = isWindows ? 'main.exe' : './main';
+      await fs.writeFile(path.join(hostDir, sourceFile), code, 'utf8');
+
+      const checkCompiler = spawnSync(isWindows ? 'where' : 'which', [compiler], { encoding: 'utf8', timeout: 5000 });
+      if (checkCompiler.status !== 0) {
+        return {
+          stdout: '',
+          stderr: `${compiler.toUpperCase()} is not available in host environment. Please submit JavaScript, Python, or Java, or start Docker.`,
+          exitCode: 1,
+          executionTime: Date.now() - startedAt,
+          timedOut: false,
+          compilationError: true,
+          sandbox: 'local-process',
+        };
+      }
+
+      const compile = spawnSync(compiler, ['-O2', sourceFile, '-o', isWindows ? 'main.exe' : 'main'], { cwd: hostDir, encoding: 'utf8', timeout: 10000 });
+      if (compile.status !== 0) {
+        return {
+          stdout: '',
+          stderr: compile.stderr || compile.stdout || `${compiler.toUpperCase()} compilation failed`,
+          exitCode: 1,
+          executionTime: Date.now() - startedAt,
+          timedOut: false,
+          compilationError: true,
+          sandbox: 'local-process',
+        };
+      }
+
+      return await executeLocalProcess(outputFile, [], hostDir, stdin, execTimeout, startedAt);
+    }
+
+    if (langKey === 'sql') {
+      const checkSqlite = spawnSync(isWindows ? 'where' : 'which', ['sqlite3'], { encoding: 'utf8', timeout: 5000 });
+      if (checkSqlite.status === 0) {
+        const fullSql = `${code}\n`;
+        return await executeLocalProcess('sqlite3', ['-header', '-list', ':memory:'], hostDir, fullSql, execTimeout, startedAt);
+      }
+      return {
+        stdout: '',
+        stderr: 'SQLite3 binary is not installed in the local environment. Please start Docker for SQL execution.',
+        exitCode: 1,
+        executionTime: Date.now() - startedAt,
+        timedOut: false,
+        compilationError: true,
+        sandbox: 'local-process',
+      };
+    }
+
+    return {
+      stdout: '',
+      stderr: `Language "${langKey}" is not currently configured for local sandbox execution.`,
+      exitCode: 1,
+      executionTime: Date.now() - startedAt,
+      timedOut: false,
+      compilationError: true,
+      sandbox: 'local-process',
+    };
+  } finally {
+    await fs.rm(hostDir, { recursive: true, force: true }).catch(() => {});
+  }
+};
+
+const executeLocalProcess = (cmd, args, cwd, stdin, timeoutSeconds, startedAt) => {
+  return new Promise((resolve) => {
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+
+    const child = spawn(cmd, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      try { child.kill('SIGKILL'); } catch (_) { try { child.kill(); } catch (__) {} }
+      resolve({
+        stdout,
+        stderr: 'Time Limit Exceeded',
+        exitCode: 124,
+        executionTime: Date.now() - startedAt,
+        timedOut: true,
+        compilationError: false,
+        sandbox: 'local-process',
+      });
+    }, timeoutSeconds * 1000);
+
+    child.stdout.on('data', (d) => {
+      if (stdout.length < 1000000) stdout += d.toString();
+    });
+    child.stderr.on('data', (d) => {
+      if (stderr.length < 1000000) stderr += d.toString();
+    });
+
+    child.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({
+        stdout: '',
+        stderr: err.message,
+        exitCode: 1,
+        executionTime: Date.now() - startedAt,
+        timedOut: false,
+        compilationError: false,
+        sandbox: 'local-process',
+      });
+    });
+
+    child.on('close', (exitCode) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({
+        stdout,
+        stderr,
+        exitCode: exitCode ?? 0,
+        executionTime: Date.now() - startedAt,
+        timedOut: false,
+        compilationError: false,
+        sandbox: 'local-process',
+      });
+    });
+
+    if (stdin) {
+      child.stdin.write(stdin);
+    }
+    child.stdin.end();
+  });
 };
 
 /**

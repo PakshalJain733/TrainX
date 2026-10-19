@@ -25,6 +25,7 @@ router.use(authenticateToken);
 // Retrieve student active roadmap
 router.get('/', getRoadmapData);
 router.get('/all', getAllRoadmaps);
+router.get('/my', getRoadmapData);
 router.get('/my-roadmap', getRoadmapData);
 router.get('/student/:id', getRoadmapData);
 

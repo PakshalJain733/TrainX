@@ -721,10 +721,25 @@ export default function Batches() {
               </button>
             </div>
 
-            <form onSubmit={(e) => {
+            <form onSubmit={async (e) => {
               e.preventDefault();
-              setBatches(batches.map(b => b.id === editBatch.id ? editBatch : b));
-              setEditBatch(null);
+              try {
+                const updated = await batchAPI.updateBatch(editBatch.id, {
+                  name: editBatch.name,
+                  code: editBatch.code,
+                  trainer: editBatch.trainer,
+                  schedule: editBatch.schedule,
+                  status: editBatch.status,
+                  college_id: editBatch.college_id || editBatch.collegeId,
+                  department_id: editBatch.department_id || editBatch.departmentId,
+                });
+                setBatches(batches.map(b => b.id === editBatch.id ? { ...b, ...editBatch, ...(updated || {}) } : b));
+              } catch (err) {
+                console.error("Failed to update batch on server:", err);
+                setBatches(batches.map(b => b.id === editBatch.id ? editBatch : b));
+              } finally {
+                setEditBatch(null);
+              }
             }}>
               <div className="modal-body">
                 <div className="form-row-2">

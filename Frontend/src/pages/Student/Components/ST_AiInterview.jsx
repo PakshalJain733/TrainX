@@ -1118,7 +1118,7 @@ export default function AIInterview() {
           if (phaseRef.current !== "result" && !completedRef.current) {
             finishInterview(null, finalReason, finalWarnings);
           }
-        }, 25000);
+        }, 45000);
       } else {
         finishInterview(null, finalReason, finalWarnings);
       }

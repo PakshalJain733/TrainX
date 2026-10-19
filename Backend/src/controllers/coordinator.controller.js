@@ -255,9 +255,9 @@ export const getCoordinatorStudents = async (req, res, next) => {
                WHERE iv.user_id = u.id
              ) as avg_interview_score,
              (
-               SELECT COALESCE(r.goal_name, r.target_role, r.career_track, 'Fullstack Web Development')
+               SELECT COALESCE(r.target_role, r.career_track, 'Fullstack Web Development')
                 FROM roadmaps r
-                WHERE (r.user_id = u.id OR r.student_id = u.id OR r.student_id = s.id)
+                WHERE (r.student_id = u.id OR r.student_id = s.id)
                 ORDER BY r.id DESC
                 LIMIT 1
              ) as roadmap_title

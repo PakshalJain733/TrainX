@@ -1,4 +1,5 @@
 import { sendSuccess, sendError } from '../utils/response.js';
+import { query } from '../config/db.js';
 import {
   createInterviewSessionModel,
   findInterviewSessionsByUserModel,
@@ -44,6 +45,22 @@ export const saveInterviewSession = async (req, res, next) => {
       grade: grade || details?.grade || details?.scorecard?.grade,
       feedback: feedback || details?.feedback || details?.scorecard?.feedback,
     });
+
+    // Idempotency check: prevent duplicate insertion if socket or recent request already saved in last 30s
+    const recent = await query(
+      `SELECT * FROM interview_sessions 
+       WHERE user_id = ? AND interview_type = ? AND created_at >= NOW() - INTERVAL 30 SECOND 
+       ORDER BY id DESC LIMIT 1`,
+      [userId, payload.interview_type]
+    );
+    if (recent && recent.length > 0) {
+      const existing = recent[0];
+      if (typeof existing.details === 'string') {
+        try { existing.details = JSON.parse(existing.details); } catch { existing.details = null; }
+      }
+      return sendSuccess(res, 'Interview session already saved', existing, 200);
+    }
+
     const session = await createInterviewSessionModel({
       user_id: userId,
       interview_type: payload.interview_type,

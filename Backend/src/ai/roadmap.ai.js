@@ -32,59 +32,30 @@ CRITICAL REQUIREMENTS FOR DYNAMIC, SKILL-TAILORED ROADMAP:
    - ABSOLUTE RULE: DO NOT use generic placeholders like "Core syntax & architectural patterns", "Hands-on lab project implementation", "Fundamentals of Milestone 1", or "Assessment quiz & code review". EVERY topic string MUST name concrete tools, technologies, concepts, or real-world project tasks specific to "${targetRole}".
 4. MILESTONE SCHEMA:
    Each milestone object must contain:
-   - "id": number (1 to 6)
+   - "id": number (1 to 5)
    - "title": string (descriptive milestone title, e.g. "Milestone 1: HTML5, CSS3 Layouts & Responsive Web Design")
    - "desc": string (2-3 sentences overview)
    - "status": "completed" | "in-progress" | "locked"
    - "progress": number (0 to 100)
    - "tags": array of 3-5 technology/skill strings
-   - "topics": array of 4 to 6 specific learning topics/objectives
-   - "syllabus": array of 2-3 detailed syllabus modules, each with { "moduleTitle": string, "duration": string, "concepts": string[], "practicalOutcome": string }
-   - "videos": array of 2-4 video tutorial objects, each with { "title": string, "channel": string, "duration": string, "searchQuery": string }
-   - "resources": array of 3-4 reference links/learning resources, each with { "title": string, "url": string, "type": "Documentation" | "Tutorial" | "Practice Portal" | "Guide", "provider": string }
-   - "quizzes": number (2 to 5)
-   - "exercises": number (5 to 15)
+   - "topics": array of 4 to 6 concrete, actionable technical topics/objectives
 
 Output ONLY valid JSON matching this exact structure without markdown backticks:
 {
   "milestones": [
     {
       "id": 1,
-      "title": "...",
+      "title": "Milestone 1: ...",
       "desc": "...",
       "status": "in-progress",
       "progress": 0,
       "tags": ["Tag1", "Tag2"],
       "topics": [
         "Specific Topic 1 for ${targetRole}",
-        "Specific Topic 2 with tool/framework"
-      ],
-      "syllabus": [
-        {
-          "moduleTitle": "Unit 1: Foundations & Environment Setup",
-          "duration": "10 Hours",
-          "concepts": ["Syntax & Architecture", "Tooling & Best Practices"],
-          "practicalOutcome": "Build foundation lab project"
-        }
-      ],
-      "videos": [
-        {
-          "title": "Topic 1 Tutorial & Masterclass",
-          "channel": "Tech Academy",
-          "duration": "25 mins",
-          "searchQuery": "Topic 1 tutorial ${targetRole}"
-        }
-      ],
-      "resources": [
-        {
-          "title": "Official MDN / Technical Documentation",
-          "url": "https://developer.mozilla.org",
-          "type": "Documentation",
-          "provider": "MDN Web Docs"
-        }
-      ],
-      "quizzes": 3,
-      "exercises": 8
+        "Specific Topic 2 with tool/framework",
+        "Specific Topic 3 practical lab",
+        "Specific Topic 4 capstone project"
+      ]
     }
   ]
 }`;
@@ -92,9 +63,9 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
   // Live AI generation through the configured provider (NVIDIA / Gemini / Groq).
   const parsed = await generateJSON(prompt, {
     system: 'You are a world-class AI Career & Curriculum Architect. Output valid JSON strictly matching the requested roadmap schema.',
-    temperature: 0.7,
-    maxTokens: 8000,
-    timeoutMs: 180000,
+    temperature: 0.6,
+    maxTokens: 2400,
+    timeoutMs: 45000,
   });
 
   if (parsed && Array.isArray(parsed.milestones) && parsed.milestones.length > 0) {

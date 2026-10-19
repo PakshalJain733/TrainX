@@ -17,6 +17,7 @@ import {
   getSuperAdminSupportTickets,
   updateSuperAdminSupportTicket,
 } from '../controllers/superadmin.controller.js';
+import { getAdminUsers } from '../controllers/admin.controller.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 import { authorizeRoles } from '../middleware/role.middleware.js';
 import { ROLES } from '../utils/constants.js';
@@ -28,6 +29,7 @@ router.use(authenticateToken, authorizeRoles(ROLES.SUPER_ADMIN));
 router.get('/overview', getSuperAdminOverview);
 router.get('/dashboard-summary', getSuperAdminDashboardSummary);
 router.get('/colleges', getSuperAdminColleges);
+router.get('/users', getAdminUsers);
 router.get('/departments', getSuperAdminDepartments);
 router.get('/batches', getSuperAdminBatches);
 router.get('/coordinators', getSuperAdminCoordinators);

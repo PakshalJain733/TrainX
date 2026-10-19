@@ -40,13 +40,20 @@ function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select.
   );
 }
 
-import { getApiBaseUrl } from "../../../utils/api.js";
+import { getApiBaseUrl, getAuthToken } from "../../../utils/api.js";
 
 const API_BASE = getApiBaseUrl();
 
 function getAuthHeaders() {
-  const token = sessionStorage.getItem("token") || sessionStorage.getItem("authToken") || "";
-
+  let token = getAuthToken();
+  if (!token) {
+    try {
+      const uSession = JSON.parse(
+        sessionStorage.getItem("user") || localStorage.getItem("user") || "{}"
+      );
+      token = uSession.token || uSession.authToken || uSession.auth_token || uSession.accessToken || uSession.jwt;
+    } catch (e) {}
+  }
 
   return {
     "Content-Type": "application/json",
