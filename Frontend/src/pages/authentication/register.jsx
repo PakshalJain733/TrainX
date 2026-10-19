@@ -20,7 +20,7 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
   }, []);
   return (
     <div className={`reg-select-wrap${isOpen ? ' reg-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger${isOpen ? ' reg-select-trigger--open' : ''}`}>
+      <button type="button" onClick={() => setIsOpen(v => !v)} className={`reg-select-trigger${isOpen ? ' reg-select-trigger--open' : ''}`} title={selected?.fullName || selected?.label || ""}>
         {Icon && <span className="reg-select-icon">{Icon}</span>}
         <span className="reg-select-text">{selected ? selected.label : <span style={{ color: '#94a3b8' }}>{placeholder}</span>}</span>
         <svg className={`reg-select-arrow${isOpen ? ' reg-select-arrow--rotate' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
@@ -30,7 +30,7 @@ function RegSelect({ value, options = [], onChange, placeholder = 'Select...', i
           {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
             return (
-              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`}>
+              <div key={opt.value} onClick={() => { onChange(opt.value); setIsOpen(false); }} className={`reg-select-option${isSel ? ' reg-select-option--selected' : ''}`} title={opt.fullName || opt.label}>
                 <span className="reg-select-option-label">{opt.label}</span>
                 {isSel && <svg className="reg-select-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
               </div>
@@ -219,15 +219,26 @@ function Register() {
         const data = await res.json();
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
           const formatted = data.data.map((d) => {
-            const shortCode = (d.code && d.code.trim()) ||
-              (d.label && d.label.includes("(") ? d.label.match(/\(([^)]+)\)/)?.[1] : null) ||
-              d.value ||
-              d.name ||
-              "";
+            let shortCode = (d.code && d.code.trim()) || "";
+            if (!shortCode && d.label) {
+              if (d.label.includes("(")) shortCode = d.label.match(/\(([^)]+)\)/)?.[1]?.trim() || "";
+              else if (d.label.includes("-")) shortCode = d.label.split("-")[0]?.trim() || "";
+            }
+            if (!shortCode && d.name) {
+              if (d.name.includes("(")) shortCode = d.name.match(/\(([^)]+)\)/)?.[1]?.trim() || "";
+              else if (d.name.includes("-")) shortCode = d.name.split("-")[0]?.trim() || "";
+            }
+            if (!shortCode && d.value) {
+              if (String(d.value).includes("(")) shortCode = String(d.value).match(/\(([^)]+)\)/)?.[1]?.trim() || "";
+              else if (String(d.value).includes("-")) shortCode = String(d.value).split("-")[0]?.trim() || "";
+            }
+            if (!shortCode) {
+              shortCode = (d.code || d.value || d.name || "").trim();
+            }
             const fullName = d.fullName || d.name || d.value || shortCode;
             return {
               value: shortCode,
-              label: fullName && fullName !== shortCode ? `${shortCode} - ${fullName}` : shortCode,
+              label: shortCode,
               code: shortCode,
               fullName: fullName,
             };
@@ -881,9 +892,24 @@ function Register() {
             <button
               type="button"
               onClick={() => navigate("/")}
-              className={`login-send-otp-btn pending-approval-btn ${isApproved ? "approved" : ""}`}
+              className={`pending-approval-btn ${isApproved ? "approved" : ""}`}
             >
-              {isApproved ? `Proceed to Login Screen (${redirectCountdown}s)` : "Return to Login Screen"}
+              {isApproved ? (
+                <>
+                  <span>Proceed to Login Screen ({redirectCountdown}s)</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </>
+              ) : (
+                <>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12" />
+                    <polyline points="12 19 5 12 12 5" />
+                  </svg>
+                  <span>Return to Login Screen</span>
+                </>
+              )}
             </button>
           </div>
         ) : showTotpSetup ? (
@@ -959,7 +985,7 @@ function Register() {
             {/* 6-Digit Verification Code Section */}
             <div className="totp-otp-section">
               <FieldLabel icon={Icons.key}>Enter 6-Digit Code from App</FieldLabel>
-              <div className="login-otp-input-row" onPaste={handleTotpPaste} style={{ marginTop: "6px" }}>
+              <div className="login-otp-input-row" onPaste={handleTotpPaste}>
                 {totpCode.map((digit, idx) => (
                   <input
                     key={idx}
