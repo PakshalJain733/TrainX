@@ -128,6 +128,11 @@ function Login() {
     sessionStorage.removeItem("tx_remembered_email");
     sessionStorage.removeItem("tx_remembered_password");
 
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("registered") === "true") {
+      setSuccessMsg("Registration and 2FA verified successfully! Please sign in with your email and password.");
+    }
+
     try {
       const storedUser = JSON.parse(sessionStorage.getItem("user") || "{}");
       if (storedUser.remember_me || storedUser.rememberMe) {

@@ -154,7 +154,7 @@ const finalizePrimaryAuthentication = async (user) => {
     };
   }
 
-  if (isAdminRole && process.env.NODE_ENV === 'production') {
+  if (isAdminRole) {
     let secret = user?.two_factor_secret;
 
     if (isBlank(secret)) {
@@ -416,34 +416,13 @@ export const registerUser = async (data) => {
   }
 
   if (existingUser) {
-    // If the user already completed registration and has 2FA set up:
+    // If the user already completed registration or was provisioned with a password:
     const isCompleted = (existingUser.is_profile_updated === 1 || existingUser.is_profile_updated === true) && !isBlank(existingUser.two_factor_secret);
-    if (isCompleted) {
-      throw createAuthError('User with this email or mobile number already exists and has completed registration. Please log in.', 409);
-    }
+    const hasPassword = Boolean(existingUser.password_hash && existingUser.password_hash.trim().length > 0);
+    const isAdmin = existingUser.role === ROLES.SUPER_ADMIN || existingUser.role === ROLES.COLLEGE_ADMIN || String(existingUser.role || '').toLowerCase().includes('admin');
 
-    // User was pre-added by Super Admin / Admin and is now completing registration!
-    let canonicalRole = existingUser.role;
-    if (!canonicalRole && role) {
-      const lowerRole = role.toLowerCase();
-      if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
-      else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
-      else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
-      else canonicalRole = ROLES.STUDENT;
-    }
-    if (!canonicalRole) canonicalRole = ROLES.STUDENT;
-
-    // Strict Password Enforcement:
-    // If Super Admin created the user with an initial password (stored in password_hash),
-    // the registering admin MUST enter that exact same password.
-    if (existingUser.password_hash && existingUser.password_hash.trim().length > 0) {
-      const isPasswordMatch = await bcrypt.compare(password, existingUser.password_hash);
-      if (!isPasswordMatch) {
-        throw createAuthError(
-          'Password does not match the initial password assigned by the Super Administrator. You must use the password set by Super Admin.',
-          400
-        );
-      }
+    if (isCompleted || hasPassword || isAdmin) {
+      throw createAuthError('You are already registered! Please log in with your email and password.', 409);
     }
 
     let codeRecord = null;
@@ -555,30 +534,31 @@ export const registerUser = async (data) => {
   let assignedCollegeId = 1;
   const colInputId = parseInt(college_id || collegeId, 10);
 
-  if (canonicalRole === ROLES.COLLEGE_ADMIN) {
-    // College Admins must be provisioned by Super Admin beforehand with their initial password
-    throw createAuthError(
-      'Admin registration denied: No provisioned administrator account found for this email. Super Admin must create your account and assign your initial password before you can register.',
-      403
-    );
-  } else {
-    let matchingCollege = null;
-    if (!isNaN(colInputId) && colInputId > 0) {
-      matchingCollege = await findCollegeById(colInputId);
-    }
-    if (!matchingCollege && email) {
-      matchingCollege = await findCollegeByEmailDomain(email);
-    }
+  let matchingCollege = null;
+  if (!isNaN(colInputId) && colInputId > 0) {
+    matchingCollege = await findCollegeById(colInputId);
+  }
+  if (!matchingCollege && email) {
+    matchingCollege = await findCollegeByEmailDomain(email);
+  }
 
-    if (matchingCollege) {
-      assignedCollegeId = matchingCollege.id;
-    } else if (email) {
+  if (matchingCollege) {
+    assignedCollegeId = matchingCollege.id;
+  } else if (codeRecord && codeRecord.college_name) {
+    try {
+      const [colRows] = await pool.query('SELECT id FROM colleges WHERE name = ? LIMIT 1', [codeRecord.college_name]);
+      if (colRows.length > 0) assignedCollegeId = colRows[0].id;
+    } catch (_) {}
+  } else if (email) {
+    if (canonicalRole === ROLES.COLLEGE_ADMIN && codeRecord) {
+      assignedCollegeId = 1;
+    } else {
       const domain = email.includes('@') ? email.split('@')[1] : email;
       throw createAuthError(`Registration denied: College does not exist or your email domain (@${domain}) is not authorized. You cannot register.`, 400);
     }
   }
 
-  // Create base User with is_active = 0 (pending Admin approval) for non-superadmin registrations
+  // Create base User with is_active = 1 for Super Admin and College Admin (provisioned with secure code)
   const user = await createUser({
     name,
     email: email || null,
@@ -586,7 +566,7 @@ export const registerUser = async (data) => {
     password,
     role: canonicalRole,
     college_id: assignedCollegeId,
-    is_active: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
+    is_active: (canonicalRole === ROLES.SUPER_ADMIN || canonicalRole === ROLES.COLLEGE_ADMIN) ? 1 : 0,
   });
 
   if (codeRecord && codeRecord.id) {

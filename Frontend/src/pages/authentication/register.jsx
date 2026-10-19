@@ -506,14 +506,12 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
-        if (data.data?.token && (role === "Admin" || data.data?.user?.role === "college_admin")) {
-          localStorage.setItem("token", data.data.token);
-          localStorage.setItem("user", JSON.stringify(data.data.user));
+        if (role === "Admin" || data.data?.user?.role === "college_admin") {
           setShowTotpSetup(false);
-          setSuccessMsg("🎉 Registration and 2FA verified successfully! Redirecting to your Admin Dashboard...");
+          setSuccessMsg("🎉 Registration and 2FA verified successfully! Please log in with your email and password.");
           setTimeout(() => {
-            navigate("/admin");
-          }, 1200);
+            navigate("/?registered=true");
+          }, 1500);
         } else {
           setRegisteredEmail(emailToVerify);
           setShowTotpSetup(false);
@@ -847,7 +845,30 @@ function Register() {
           </div>
         )}
 
-        {errorMsg && <div className="auth-error-msg">{errorMsg}</div>}
+        {errorMsg && (
+          <div className="auth-error-msg" style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+            <span>{errorMsg}</span>
+            {(errorMsg.toLowerCase().includes("already register") || errorMsg.toLowerCase().includes("please log in")) && (
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                style={{
+                  background: "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "6px 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  marginTop: "2px"
+                }}
+              >
+                Go to Login →
+              </button>
+            )}
+          </div>
+        )}
         {!showTotpSetup && !showPendingApproval && successMsg && <div className="auth-success-msg">{successMsg}</div>}
 
         {showPendingApproval ? (
@@ -1340,15 +1361,13 @@ function Register() {
                 {/* Row: Password | Confirm Password for Staff/Mentors */}
                 <div className="form-grid-2">
                   <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>
-                      {role === "Admin" ? "Password (Assigned by Super Admin)" : "Password"}
-                    </FieldLabel>
+                    <FieldLabel icon={Icons.lock}>Password</FieldLabel>
                     <div className="register-password-wrapper">
                       <input
                         type={showPassword ? "text" : "password"}
                         name="password"
                         required
-                        placeholder={role === "Admin" ? "Enter password assigned by Super Admin" : "••••••••"}
+                        placeholder="••••••••"
                         value={formData.password}
                         onChange={handleChange}
                       />
@@ -1364,15 +1383,13 @@ function Register() {
                   </div>
 
                   <div className="input-group">
-                    <FieldLabel icon={Icons.lock}>
-                      {role === "Admin" ? "Confirm Assigned Password" : "Confirm Password"}
-                    </FieldLabel>
+                    <FieldLabel icon={Icons.lock}>Confirm Password</FieldLabel>
                     <div className="register-password-wrapper">
                       <input
                         type={showConfirmPassword ? "text" : "password"}
                         name="confirm_password"
                         required
-                        placeholder={role === "Admin" ? "Re-enter password assigned by Super Admin" : "••••••••"}
+                        placeholder="••••••••"
                         value={formData.confirm_password}
                         onChange={handleChange}
                       />
@@ -1387,20 +1404,6 @@ function Register() {
                     </div>
                   </div>
                 </div>
-
-                {role === "Admin" && (
-                  <p style={{
-                    fontSize: '11.5px',
-                    color: '#4f46e5',
-                    margin: '-4px 0 12px',
-                    fontWeight: 500,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px'
-                  }}>
-                    ℹ️ You must enter the exact initial password created for your account by the Super Administrator.
-                  </p>
-                )}
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
