@@ -747,6 +747,90 @@ export const createAdminPracticeProblem = async (req, res, next) => {
   }
 };
 
+export const updateAdminPracticeProblem = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {
+      title,
+      difficulty = 'Medium',
+      category = 'General DSA',
+      topic = '',
+      tags = '',
+      companies = '',
+      description = '',
+      dueDate = '',
+      due_date = '',
+      points = 100,
+      xp = 50,
+      testCases = [],
+    } = req.body;
+
+    const rawDueDate = dueDate || due_date;
+    let normalizedDueDate = null;
+    if (rawDueDate && String(rawDueDate).trim()) {
+      try {
+        const d = new Date(rawDueDate);
+        if (!isNaN(d.getTime())) {
+          normalizedDueDate = d.toISOString().slice(0, 10);
+        }
+      } catch {
+        normalizedDueDate = null;
+      }
+    }
+
+    const tagsStr = Array.isArray(tags) ? tags.join(', ') : (Array.isArray(companies) ? companies.join(', ') : (tags || companies || ''));
+
+    try {
+      await query(
+        `UPDATE practice_problems
+         SET title = COALESCE(?, title),
+             description = COALESCE(?, description),
+             difficulty = COALESCE(?, difficulty),
+             category = COALESCE(?, category),
+             tags = COALESCE(?, tags),
+             points = COALESCE(?, points),
+             due_date = ?
+         WHERE id = ?`,
+        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, normalizedDueDate, id]
+      );
+    } catch (err) {
+      await query(
+        `UPDATE practice_problems
+         SET title = COALESCE(?, title),
+             description = COALESCE(?, description),
+             difficulty = COALESCE(?, difficulty),
+             category = COALESCE(?, category),
+             tags = COALESCE(?, tags),
+             points = COALESCE(?, points)
+         WHERE id = ?`,
+        [title?.trim() || null, description || null, difficulty || null, category || topic || null, tagsStr || null, points || xp || null, id]
+      );
+    }
+
+    if (Array.isArray(testCases)) {
+      try {
+        await query('DELETE FROM coding_test_cases WHERE problem_id = ?', [id]);
+        for (const tc of testCases) {
+          const inp = tc.input || '';
+          const out = tc.expectedOutput || tc.expected_output || tc.output || '';
+          if (inp || out) {
+            await query(
+              `INSERT INTO coding_test_cases (problem_id, input, expected_output, is_hidden) VALUES (?, ?, ?, ?)`,
+              [id, inp, out, (tc.isHidden || tc.is_hidden) ? 1 : 0]
+            );
+          }
+        }
+      } catch (e) {
+        console.warn('[updateAdminPracticeProblem testcases error]', e.message);
+      }
+    }
+
+    return sendSuccess(res, 'Coding problem updated successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const deleteAdminPracticeProblem = async (req, res, next) => {
   try {
     const { id } = req.params;

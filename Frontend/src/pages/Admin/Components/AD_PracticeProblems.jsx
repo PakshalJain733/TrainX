@@ -24,6 +24,7 @@ export default function AdminPracticeProblems() {
   const [problems, setProblems] = useState(initialCodingProblems);
   const [batches, setBatches] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProblemId, setEditingProblemId] = useState(null);
   const [showTestCaseModal, setShowTestCaseModal] = useState(false);
   const [selectedProblem, setSelectedProblem] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -190,6 +191,26 @@ export default function AdminPracticeProblems() {
     fetchBatches();
   }, []);
 
+  const handleOpenEditProblem = (p) => {
+    setEditingProblemId(p.id);
+    setNewProb({
+      title: p.title || "",
+      topic: p.topic || "",
+      difficulty: p.difficulty || "Easy",
+      xp: p.xp || 50,
+      companies: Array.isArray(p.companies) ? p.companies.join(", ") : (p.companies || ""),
+      timeLimit: p.timeLimit || "1.0s",
+      memoryLimit: p.memoryLimit || "128 MB",
+      description: p.description || "",
+      dueDate: p.dueDate || "",
+      sampleInput: p.sampleInput || "",
+      sampleOutput: p.sampleOutput || "",
+      testCases: p.testCases || [],
+    });
+    setFormTestCase({ input: "", output: "", isHidden: false });
+    setShowAddModal(true);
+  };
+
   const handleCreateProblem = async (e) => {
     e.preventDefault();
     if (!newProb.title.trim()) return;
@@ -213,16 +234,24 @@ export default function AdminPracticeProblems() {
     };
 
     try {
-      await apiFetch("/admin/practice-problems", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
+      if (editingProblemId) {
+        await apiFetch(`/admin/practice-problems/${editingProblemId}`, {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        });
+      } else {
+        await apiFetch("/admin/practice-problems", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
       await fetchApiProblems();
     } catch (err) {
-      console.error("Error creating practice problem in DB:", err);
+      console.error("Error saving practice problem in DB:", err);
     }
 
     setShowAddModal(false);
+    setEditingProblemId(null);
     setNewProb(emptyProbState);
     setFormTestCase({ input: "", output: "", isHidden: false });
   };
@@ -350,6 +379,7 @@ export default function AdminPracticeProblems() {
             <button
               className="admin-btn-add"
               onClick={() => {
+                setEditingProblemId(null);
                 setNewProb(emptyProbState);
                 setFormTestCase({ input: "", output: "", isHidden: false });
                 setShowAddModal(true);
@@ -428,12 +458,11 @@ export default function AdminPracticeProblems() {
             <table className="admin-users-table pp-table">
               <thead>
                 <tr>
-                  <th style={{ width: "26%" }}>Problem Details</th>
-                  <th style={{ width: "16%" }}>Topic</th>
-                  <th className="pp-table-th-center" style={{ width: "12%" }}>Difficulty</th>
-                  <th className="pp-table-th-center" style={{ width: "16%" }}>Due Date & Time</th>
+                  <th style={{ width: "32%" }}>Problem Details</th>
+                  <th style={{ width: "18%" }}>Topic</th>
+                  <th className="pp-table-th-center" style={{ width: "14%" }}>Difficulty</th>
+                  <th className="pp-table-th-center" style={{ width: "18%" }}>Due Date & Time</th>
                   <th className="pp-table-th-center" style={{ width: "10%" }}>XP Points</th>
-                  <th className="pp-table-th-center" style={{ width: "12%" }}>Test Cases</th>
                   <th className="th-actions-right pp-table-th-right" style={{ width: "8%" }}>Actions</th>
                 </tr>
               </thead>
@@ -463,27 +492,12 @@ export default function AdminPracticeProblems() {
                     <td className="pp-table-td-center">
                       <span className="pp-table-xp">+{p.xp || 50} XP</span>
                     </td>
-                    <td className="pp-table-td-center">
-                      <button
-                        className="pp-table-tc-btn"
-                        onClick={() => {
-                          setSelectedProblem(p);
-                          setShowTestCaseModal(true);
-                        }}
-                        title="Click to edit or add test cases"
-                      >
-                        <ListChecks size={14} /> Edit Test Cases ({(p.testCases || []).length})
-                      </button>
-                    </td>
                     <td className="pp-table-td-right">
                       <div className="action-btns-row action-btns-right">
                         <button
                           className="btn-table-action"
-                          onClick={() => {
-                            setSelectedProblem(p);
-                            setShowTestCaseModal(true);
-                          }}
-                          title="Edit Test Cases"
+                          onClick={() => handleOpenEditProblem(p)}
+                          title="Edit Problem"
                         >
                           <Edit size={14} />
                         </button>
@@ -637,8 +651,8 @@ export default function AdminPracticeProblems() {
                   <Code size={20} />
                 </div>
                 <div>
-                  <h2 className="modal-title">Create New Coding Problem</h2>
-                  <p className="modal-subtitle">Add problem statement, sample test cases, and evaluation test cases in one place.</p>
+                  <h2 className="modal-title">{editingProblemId ? "Edit Coding Problem" : "Create New Coding Problem"}</h2>
+                  <p className="modal-subtitle">{editingProblemId ? "Update problem details, difficulty, constraints, and test cases." : "Add problem statement, sample test cases, and evaluation test cases in one place."}</p>
                 </div>
               </div>
               <button className="modal-close-btn" onClick={() => setShowAddModal(false)} title="Close Modal">
@@ -910,7 +924,7 @@ export default function AdminPracticeProblems() {
                   Cancel
                 </button>
                 <button type="submit" className="btn-modal-submit">
-                  Save Problem & Test Cases
+                  {editingProblemId ? "Update Problem" : "Save Problem & Test Cases"}
                 </button>
               </div>
             </form>

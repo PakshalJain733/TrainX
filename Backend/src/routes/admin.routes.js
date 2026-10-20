@@ -12,6 +12,7 @@ import {
   deleteUserAdmin,
   getAdminPracticeProblems,
   createAdminPracticeProblem,
+  updateAdminPracticeProblem,
   deleteAdminPracticeProblem,
   generateAIPracticeProblemController,
   getAdminProfile,
@@ -57,6 +58,7 @@ router.put('/profile', updateAdminProfile);
 // Coding Tasks / Practice Problems
 router.get('/practice-problems', getAdminPracticeProblems);
 router.post('/practice-problems', createAdminPracticeProblem);
+router.put('/practice-problems/:id', updateAdminPracticeProblem);
 router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 

@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 
 import { io } from "socket.io-client";
 
-import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2 } from "lucide-react";
+import { Bot, Camera, CameraOff, Mic, MicOff, Volume2, VolumeX, Send, Timer, Award, Sparkles, RotateCcw, Play, Video, XCircle, AlertTriangle, Loader2, ShieldAlert, Eye, UserX, Users, Flag, ArrowLeft, Code2, MessageSquare, BrainCircuit, Activity, CheckCircle2, Clock } from "lucide-react";
 import { apiFetch, getApiBaseUrl, getBackendOrigin, getAuthToken } from "../../../utils/api";
 import "../Styles/ST_AiInterview.css";
 
@@ -358,17 +358,17 @@ export default function AIInterview() {
 
     const timestamp = new Date().toLocaleTimeString();
     const defaultMsgs = {
-      MULTIPLE_PERSONS: "Multiple persons / background occupants detected in camera feed!",
-      DEVICE_DETECTED: "Mobile phone or electronic copying device detected in camera view!",
-      LOOKING_AWAY: "Candidate looking away from screen (possible copying attempt)!",
-      NO_FACE: "Face not detected in camera frame! Please remain in front of camera.",
-      BACKGROUND_PERSON: "Background occupant or secondary person detected!",
-      TAB_SWITCH: "Tab switching or window focus lost during live interview!",
-      COPY_PASTE: "Copy or paste shortcut attempt detected on interview screen!",
-      RIGHT_CLICK: "Right-click context menu opened during live interview!",
+      MULTIPLE_PERSONS: "Multiple individuals detected within active camera feed.",
+      DEVICE_DETECTED: "Secondary electronic device detected in camera frame.",
+      LOOKING_AWAY: "Candidate gaze diverted from interview viewport for an extended duration.",
+      NO_FACE: "Candidate facial profile not detected in webcam feed.",
+      BACKGROUND_PERSON: "Secondary person detected in the test environment.",
+      TAB_SWITCH: "Focus loss or window minimizing detected during live session.",
+      COPY_PASTE: "Clipboard shortcut interaction detected on interview viewport.",
+      RIGHT_CLICK: "Context menu interaction detected.",
     };
 
-    const baseMsg = customMsg || defaultMsgs[type] || "Suspicious proctoring violation detected.";
+    const baseMsg = customMsg || defaultMsgs[type] || "Integrity violation recorded by proctoring engine.";
 
     setProctoringWarnings((prev) => {
       const warningCount = prev.length + 1;
@@ -391,10 +391,10 @@ export default function AIInterview() {
           level: 1,
           warningCount: 1,
           maxWarnings: 3,
-          title: "Proctoring Violation Warning (1/3)",
+          title: "Proctoring Integrity Warning (1/3)",
           type,
           message: baseMsg,
-          subtext: "Please remain alone in front of your camera and do not switch tabs or use external devices. You have 2 warnings remaining before auto-submission.",
+          subtext: "Please remain facing your camera and avoid switching browser tabs. You have 2 warnings remaining before auto-submission.",
           timestamp,
         });
         setIsInterviewFlagged(true);
@@ -405,18 +405,17 @@ export default function AIInterview() {
           level: 2,
           warningCount: 2,
           maxWarnings: 3,
-          title: "Serious Proctoring Warning (2/3)",
+          title: "Final Proctoring Warning (2/3)",
           type,
           message: baseMsg,
-          subtext: "FINAL CAUTION: One more violation will automatically terminate and submit your interview evaluation!",
+          subtext: "FINAL NOTICE: Any additional violation will immediately terminate and submit your interview evaluation.",
           timestamp,
         });
         setIsInterviewFlagged(true);
         speakNow("Warning 2 of 3. Final warning before interview termination.");
       } else if (warningCount >= 3) {
         // Warning 3 of 3 (Termination & Auto-submit!)
-        const strikesSummary = updated.map((v, i) => `Strike ${i + 1}: ${v.message} (${v.timestamp})`).join("; ");
-        const terminationReason = `Auto-Submitted: Maximum Proctoring Warnings Exceeded (3 Strikes). Violations: ${strikesSummary}`;
+        const terminationReason = "Auto-Submitted: Maximum Proctoring Warnings Exceeded (3 Strikes)";
         endReasonRef.current = terminationReason;
 
         setActiveProctoringModal({
@@ -672,7 +671,7 @@ export default function AIInterview() {
         lastWarningTimeRef.current = now;
         triggerProctoringWarning(
           "CAMERA_OFF",
-          "Camera turned off or disabled during live interview!"
+          "Camera feed paused or disabled during active session."
         );
       }
     } else {
@@ -703,7 +702,7 @@ export default function AIInterview() {
         lastWarningTimeRef.current = now;
         triggerProctoringWarning(
           "NO_FACE",
-          "Mandatory camera feed interrupted or disabled during live interview!"
+          "Mandatory webcam feed disconnected or disabled during active session."
         );
       }
     }
@@ -863,7 +862,7 @@ export default function AIInterview() {
             consecutiveViolationsRef.current.noFace = 0;
             triggerProctoringWarning(
               "NO_FACE",
-              "AI Face Recognition: Candidate face not detected in camera frame! Please sit facing your camera."
+              "Candidate face not detected in webcam feed. Please position yourself facing the camera."
             );
           }
         } else if (detectedFacesCount > 1) {
@@ -876,7 +875,7 @@ export default function AIInterview() {
             consecutiveViolationsRef.current.multipleFaces = 0;
             triggerProctoringWarning(
               "MULTIPLE_PERSONS",
-              `AI Face Recognition: Multiple persons (${detectedFacesCount} faces) detected in camera view! Candidate must be alone.`
+              `Multiple faces (${detectedFacesCount} detected) identified in camera view. Candidate must remain unaccompanied.`
             );
           }
         } else {
@@ -893,7 +892,7 @@ export default function AIInterview() {
                 consecutiveViolationsRef.current.lookingAway = 0;
                 triggerProctoringWarning(
                   "LOOKING_AWAY",
-                  "AI Gaze Monitor: Candidate looking completely away from the interview screen!"
+                  "Candidate gaze diverted away from testing viewport for an extended duration."
                 );
               }
             } else {
@@ -1141,7 +1140,7 @@ export default function AIInterview() {
           // 2.5s debounce: ignore momentary system dialogs, alt-tab slips, or notifications
           tabSwitchTimeout = setTimeout(() => {
             if (document.hidden && phaseRef.current === "live" && !endRequestedRef.current) {
-              triggerProctoringWarning("TAB_SWITCH", "Tab switching or window minimizing detected during live interview!");
+              triggerProctoringWarning("TAB_SWITCH", "Focus loss or window minimizing detected during live interview session.");
             }
           }, 2500);
         }
@@ -1156,7 +1155,7 @@ export default function AIInterview() {
     const preventCopy = (e) => {
       if (phaseRef.current === "live") {
         e.preventDefault();
-        triggerProctoringWarning("COPY_PASTE", "Copy/paste attempt detected on interview screen!");
+        triggerProctoringWarning("COPY_PASTE", "Clipboard copy or paste shortcut detected on interview viewport.");
       }
     };
 
@@ -1419,7 +1418,7 @@ export default function AIInterview() {
   useEffect(() => {
     const handleFullscreenChange = () => {
       if (typeof document !== "undefined" && !document.fullscreenElement && phaseRef.current === "live" && !endRequestedRef.current) {
-        triggerProctoringWarning("TAB_SWITCH", "Fullscreen mode exited during live interview! Please stay in fullscreen.");
+        triggerProctoringWarning("TAB_SWITCH", "Fullscreen mode exited during live interview session.");
       }
     };
 
@@ -2009,6 +2008,36 @@ export default function AIInterview() {
         const isTimeExpired = reasonStr.includes("time expired") || reasonStr.includes("duration");
         const warningsList = result?.proctoringWarnings || [];
 
+        const getCleanSubmissionReason = () => {
+          if (isAutoSubmitted) {
+            return "This interview session was automatically concluded after reaching the 3-strike integrity threshold. All responses and violation events have been archived for mentor evaluation.";
+          }
+          if (isTimeExpired) {
+            return "This interview session reached the scheduled duration limit and was submitted automatically. All questions completed within the allotted timeframe were evaluated.";
+          }
+          if (result?.endReason && !result.endReason.toLowerCase().includes("candidate voluntarily")) {
+            return result.endReason.split(". Violations:")[0];
+          }
+          return overallScore > 0
+            ? "All scheduled interview questions were completed and evaluated against AI technical and behavioral rubrics."
+            : "Interview session concluded.";
+        };
+
+        const formatProctoringType = (type) => {
+          const map = {
+            TAB_SWITCH: "Browser Focus Lost",
+            MULTIPLE_PERSONS: "Multiple Faces",
+            NO_FACE: "Face Undetected",
+            LOOKING_AWAY: "Gaze Aversion",
+            DEVICE_DETECTED: "Unauthorized Device",
+            COPY_PASTE: "Clipboard Action",
+            BACKGROUND_PERSON: "Secondary Person",
+            CAMERA_OFF: "Camera Inactive",
+            RIGHT_CLICK: "Context Menu",
+          };
+          return map[type] || (type ? type.replace(/_/g, " ") : "Integrity Flag");
+        };
+
         return (
           <div className="ai-result-wrapper">
 
@@ -2017,32 +2046,32 @@ export default function AIInterview() {
               <div className="status-banner-left">
                 <div className={`status-banner-icon-box ${isAutoSubmitted ? "icon-box-terminated" : isTimeExpired ? "icon-box-warn" : "icon-box-success"}`}>
                   {isAutoSubmitted ? (
-                    <ShieldAlert size={26} />
+                    <ShieldAlert size={22} />
                   ) : isTimeExpired ? (
-                    <Timer size={26} />
+                    <Timer size={22} />
                   ) : (
-                    <CheckCircle2 size={26} />
+                    <CheckCircle2 size={22} />
                   )}
                 </div>
                 <div className="status-banner-text">
                   <div className="status-banner-headline">
                     {isAutoSubmitted
-                      ? "Interview Auto-Submitted: Proctoring Violations Limit Reached"
+                      ? "Session Auto-Submitted • Proctoring Integrity Limit Reached"
                       : isTimeExpired
-                        ? "Interview Auto-Submitted: Session Time Limit Reached"
+                        ? "Session Auto-Submitted • Scheduled Time Limit Reached"
                         : "Interview Successfully Completed & Evaluated"}
                   </div>
                   <div className="status-banner-desc">
-                    <span className="status-banner-desc-label">Termination & Submission Reason:</span>{" "}
+                    <span className="status-banner-desc-label">Status Summary:</span>{" "}
                     <span className="status-banner-desc-text">
-                      {result?.endReason || (overallScore > 0 ? "Completed: All interview questions evaluated." : "Interview session concluded.")}
+                      {getCleanSubmissionReason()}
                     </span>
                   </div>
                 </div>
               </div>
               {isAutoSubmitted && (
                 <div className="status-banner-pill-danger">
-                  <AlertTriangle size={15} /> 3 Strikes Auto-Submit
+                  <ShieldAlert size={14} /> 3 Strikes Exceeded
                 </div>
               )}
             </div>
@@ -2051,21 +2080,42 @@ export default function AIInterview() {
             {warningsList.length > 0 && (
               <div className="ai-proctoring-audit-card">
                 <div className="ai-proctoring-audit-header">
-                  <ShieldAlert size={18} className="audit-alert-icon" />
-                  <span className="audit-header-title">Proctoring AI Audit Log & Incident Details</span>
+                  <div className="audit-header-left">
+                    <div className="audit-icon-wrap">
+                      <ShieldAlert size={16} />
+                    </div>
+                    <div>
+                      <span className="audit-header-title">Proctoring AI Audit Log</span>
+                      <span className="audit-header-subtitle">Chronological record of browser focus and vision compliance events</span>
+                    </div>
+                  </div>
                   <span className="audit-count-badge">
-                    {warningsList.length} Incident{warningsList.length !== 1 ? "s" : ""} Recorded
+                    <AlertTriangle size={12} /> {warningsList.length} Incident{warningsList.length !== 1 ? "s" : ""} Recorded
                   </span>
                 </div>
                 <div className="ai-proctoring-audit-list">
-                  {warningsList.map((warn, wIdx) => (
-                    <div key={wIdx} className="ai-proctoring-audit-row">
-                      <span className="audit-strike-badge">Strike {warn.warningCount || (wIdx + 1)}</span>
-                      <span className="audit-type-tag">{warn.type?.replace(/_/g, " ")}</span>
-                      <span className="audit-msg-text">{warn.message}</span>
-                      <span className="audit-timestamp">{warn.timestamp}</span>
-                    </div>
-                  ))}
+                  {warningsList.map((warn, wIdx) => {
+                    const cleanMsg = (warn.message || "")
+                      .replace(/^AI Face Recognition:\s*/i, "")
+                      .replace(/^AI Gaze Monitor:\s*/i, "")
+                      .replace(/!+$/, "")
+                      .trim();
+                    return (
+                      <div key={wIdx} className="ai-proctoring-audit-row">
+                        <div className="audit-row-left">
+                          <span className="audit-strike-badge">Strike {warn.warningCount || (wIdx + 1)} of 3</span>
+                          <span className="audit-type-tag">{formatProctoringType(warn.type)}</span>
+                          <span className="audit-msg-text">
+                            {cleanMsg || "Integrity violation recorded by proctoring engine."}
+                          </span>
+                        </div>
+                        <span className="audit-timestamp">
+                          <Clock size={12} />
+                          <span>{warn.timestamp}</span>
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

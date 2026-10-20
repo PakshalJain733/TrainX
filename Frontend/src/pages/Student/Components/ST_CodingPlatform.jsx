@@ -165,8 +165,8 @@ export default function CodingPlatform() {
   const initialTask = location.state?.task ? {
     ...location.state.task,
     language: location.state?.task?.language || location.state?.task?.lang || "",
-    source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'batch_task'),
-    description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic, location.state.task.description),
+    source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'practice_problem'),
+    description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic || location.state.task.category, location.state.task.description),
     testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || []),
     alreadySubmitted: Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')
   } : null;
@@ -229,7 +229,45 @@ export default function CodingPlatform() {
       setNotFound(false);
       const requested = String(taskId || '');
       const numeric = requested.replace(/[^0-9]/g, '');
+      const isPractice =
+        location.state?.source === 'practice' ||
+        location.state?.task?.source === 'practice_problem' ||
+        requested.toLowerCase().startsWith('practice') ||
+        Boolean(location.state?.task && !location.state?.task?.batch_id);
+
       try {
+        if (isPractice) {
+          if (numeric) {
+            try {
+              const probRes = await fetch(`${API_BASE}/student/practice-problems/${numeric}`, { headers: getAuthHeaders() });
+              const probData = await probRes.json();
+              if (probRes.ok && probData.success && probData.data) {
+                const p = probData.data;
+                const rawCases = p.testCases || p.cases || p.test_cases || [];
+                setTaskData({
+                  id: p.id,
+                  title: p.title,
+                  topic: p.category || p.topic || "General DSA",
+                  difficulty: p.difficulty || "Medium",
+                  points: p.points || 100,
+                  deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
+                  description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
+                  testCases: getDynamicSampleTestCases(p.title, rawCases),
+                  source: "practice_problem",
+                });
+                return;
+              }
+            } catch (err) {
+              console.warn("Failed fetching practice problem details:", err);
+            }
+          }
+
+          if (initialTask) {
+            setTaskData(initialTask);
+            return;
+          }
+        }
+
         const res = await fetch(`${API_BASE}/batches/tasks/detail/${taskId}`, { headers: getAuthHeaders() });
         const data = await res.json();
         if (data.success && data.data) {
@@ -238,8 +276,7 @@ export default function CodingPlatform() {
           const idMatch =
             (batchId && (batchId === requested || batchId === numeric)) ||
             (numeric && parseInt(batchId, 10) === parseInt(numeric, 10));
-          const slugLike = requested && !/^[^A-Za-z]*$/.test(requested) && !idMatch;
-          if (idMatch || slugLike) {
+          if (idMatch) {
             const rawCases = t.testCases || t.test_cases || [];
             const taskLang = t.language || "";
             const taskNormKey = normalizeLanguageKey(taskLang);
@@ -279,11 +316,11 @@ export default function CodingPlatform() {
           setTaskData({
             id: p.id,
             title: p.title,
-            topic: p.category || "General DSA",
+            topic: p.category || p.topic || "General DSA",
             difficulty: p.difficulty || "Medium",
             points: p.points || 100,
             deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
-            description: getDynamicProblemDescription(p.title, p.category, p.description),
+            description: getDynamicProblemDescription(p.title, p.category || p.topic, p.description),
             testCases: getDynamicSampleTestCases(p.title, rawCases),
             source: "practice_problem",
           });
@@ -667,8 +704,13 @@ export default function CodingPlatform() {
               <button 
                 type="button"
                 className="cp-nav-btn" 
-                onClick={() => navigate(`/student/coding-platform/task-${String(Math.max(1, currentTaskNum - 1)).padStart(2, '0')}`)}
-                disabled={currentTaskNum <= 1}
+                onClick={() => {
+                  const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
+                  const isPractice = taskData?.source === 'practice_problem' || String(taskId || '').toLowerCase().startsWith('practice');
+                  const prefix = isPractice ? 'practice-' : 'task-';
+                  navigate(`/student/coding-platform/${prefix}${Math.max(1, num - 1)}`);
+                }}
+                disabled={parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10) <= 1}
                 title="Previous Problem"
               >
                 <ChevronLeft size={14} />
@@ -676,7 +718,12 @@ export default function CodingPlatform() {
               <button 
                 type="button"
                 className="cp-nav-btn" 
-                onClick={() => navigate(`/student/coding-platform/task-${String(currentTaskNum + 1).padStart(2, '0')}`)}
+                onClick={() => {
+                  const num = parseInt(String(taskId || '').replace(/[^0-9]/g, '') || '1', 10);
+                  const isPractice = taskData?.source === 'practice_problem' || String(taskId || '').toLowerCase().startsWith('practice');
+                  const prefix = isPractice ? 'practice-' : 'task-';
+                  navigate(`/student/coding-platform/${prefix}${num + 1}`);
+                }}
                 title="Next Problem"
               >
                 <ChevronRight size={14} />

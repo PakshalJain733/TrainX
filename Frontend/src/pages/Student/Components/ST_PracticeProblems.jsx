@@ -283,7 +283,7 @@ export default function PracticeProblems() {
                     <td>
                       <div className="prob-title-box">
                         <Link
-                          to={`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`}
+                          to={`/student/coding-platform/practice-${prob.id}`}
                           state={{ task: prob, source: 'practice' }}
                           className="prob-title-link"
                         >
@@ -311,7 +311,7 @@ export default function PracticeProblems() {
                       <Button
                         size="sm"
                         className="solve-btn"
-                        onClick={() => navigate(`/student/coding-platform/task-${String(prob.id).padStart(2, '0')}`, { state: { task: prob, source: 'practice' } })}
+                        onClick={() => navigate(`/student/coding-platform/practice-${prob.id}`, { state: { task: prob, source: 'practice' } })}
                       >
                         <Terminal size={14} /> Solve
                       </Button>

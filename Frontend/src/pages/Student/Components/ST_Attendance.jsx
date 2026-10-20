@@ -164,7 +164,6 @@ export default function Attendance() {
   const handleScanSuccess = useCallback((codeVal) => {
     if (!codeVal) return;
     setScanResult(codeVal);
-    setCameraStatus("success");
     stopCamera();
 
     apiFetch("/attendance/mark", {
@@ -172,11 +171,23 @@ export default function Attendance() {
       body: JSON.stringify({ code: codeVal })
     })
       .then((res) => {
+        if (res?.error || (res?.status && res.status >= 400) || res?.success === false) {
+          const errMsg = res?.error || res?.message || "Failed to mark attendance. Please verify the QR code.";
+          setCameraStatus("error");
+          setCameraError(errMsg);
+          alert(`❌ ${errMsg}`);
+          return;
+        }
+
+        setCameraStatus("success");
         const message = res?.message || "Attendance marked Present successfully!";
 
         // Broadcast real-time scan event for Admin/Mentor live dashboards
         try {
-          const scanEvent = { studentName: res?.data?.summary?.studentName || "Student User", code: codeVal, timestamp: Date.now() };
+          const studentSummary = res?.data?.summary || {};
+          const studentName = studentSummary.studentName || studentSummary.student_name || "Student User";
+          const studentId = studentSummary.studentId || studentSummary.student_id || studentSummary.userId || studentSummary.user_id;
+          const scanEvent = { studentName, studentId, code: codeVal, timestamp: Date.now() };
           localStorage.setItem("admin_live_qr_scans", JSON.stringify([scanEvent]));
           window.dispatchEvent(new CustomEvent("qr_scan_completed", { detail: scanEvent }));
         } catch (_) {}

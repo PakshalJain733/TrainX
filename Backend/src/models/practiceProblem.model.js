@@ -104,8 +104,20 @@ export const createPracticeProblemModel = async ({
   testCases = [],
   due_date = null,
 }) => {
-  const cId = college_id ? parseInt(college_id, 10) : null;
   const tagsStr = Array.isArray(tags) ? tags.join(', ') : (tags || '');
+
+  // Validate college_id foreign key against colleges table
+  let validCollegeId = null;
+  if (college_id) {
+    try {
+      const colRows = await query('SELECT id FROM colleges WHERE id = ?', [parseInt(college_id, 10)]);
+      if (colRows && colRows.length > 0) {
+        validCollegeId = parseInt(college_id, 10);
+      }
+    } catch (e) {
+      validCollegeId = null;
+    }
+  }
 
   // Validate created_by foreign key against users table
   let validCreatedBy = null;
@@ -139,7 +151,7 @@ export const createPracticeProblemModel = async ({
       `INSERT INTO practice_problems 
         (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, due_date, created_by) 
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy]
+      [validCollegeId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy]
     );
   } catch (err) {
     if (err && err.message && err.message.includes("Unknown column 'due_date'")) {
@@ -148,7 +160,7 @@ export const createPracticeProblemModel = async ({
         `INSERT INTO practice_problems 
           (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, created_by) 
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, validCreatedBy]
+        [validCollegeId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, validCreatedBy]
       );
     } else {
       throw err;
@@ -157,6 +169,17 @@ export const createPracticeProblemModel = async ({
 
   if (res && res.insertId) {
     const probId = res.insertId;
+
+    try {
+      await query(
+        `INSERT INTO coding_problems (id, title, description, difficulty, category) 
+         VALUES (?, ?, ?, ?, ?) 
+         ON DUPLICATE KEY UPDATE title = VALUES(title), description = VALUES(description), difficulty = VALUES(difficulty), category = VALUES(category)`,
+        [probId, title.trim(), description || '', difficulty, category]
+      );
+    } catch (e) {
+      console.warn('[Practice Problem Model] coding_problems sync notice:', e.message);
+    }
 
     if (sampleInput || sampleOutput) {
       try {

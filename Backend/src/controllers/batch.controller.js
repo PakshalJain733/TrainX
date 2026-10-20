@@ -505,9 +505,6 @@ export const getTaskById = async (req, res, next) => {
 
     if (dbTasks && dbTasks.length > 0) {
       targetTask = dbTasks[0];
-    } else {
-      const allTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC LIMIT 1`);
-      if (allTasks && allTasks.length > 0) targetTask = allTasks[0];
     }
 
     if (!targetTask) {
@@ -586,21 +583,24 @@ export const getBatchStudents = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id).replace(/[^0-9]/g, '') || id;
 
-    // Query students enrolled explicitly via student_batches join table (joined via batch code)
+    // Query students enrolled via student_batches join table or students table
     const enrolledUsers = await query(
-      `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, s.roll_number AS rollNo, s.department
-       FROM student_batches sb
-       JOIN users u ON sb.user_id = u.id
+      `SELECT DISTINCT u.id, u.name, u.email, u.mobile_number, COALESCE(s.roll_number, '') AS rollNo, s.department
+       FROM users u
        LEFT JOIN students s ON u.id = s.user_id
-       WHERE sb.batch_id = ? OR sb.batch_id = ?
+       LEFT JOIN student_batches sb ON sb.user_id = u.id
+       WHERE (sb.batch_id = ? OR sb.batch_id = ? OR s.batch_id = ? OR s.batch_id = ?)
+         AND u.role = 'student'
        ORDER BY u.name ASC`,
-      [id, cleanId]
+      [id, cleanId, id, cleanId]
     );
 
     const formatted = (enrolledUsers || []).map((s, idx) => ({
       id: s.id,
       user_id: s.id,
-      rollNo: s.rollNo || s.roll_number || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
+      userId: s.id,
+      studentId: s.id,
+      rollNo: s.rollNo || `STU-${String(s.id || idx + 1).padStart(2, '0')}`,
       name: s.name || s.full_name || "Student User",
       email: s.email,
       department: s.department || "Computer Engineering",
