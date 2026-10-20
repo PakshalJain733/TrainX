@@ -806,9 +806,10 @@ export const updateUserModel = async (id, data) => {
 
   const rollVal = roll_number || rollNo || roll_no || null;
   const phoneVal = mobile_number || phone || null;
-  const hasPasswordUpdate = password !== undefined || password_hash !== undefined;
+  const rawPass = password !== undefined ? password : (data.password_hash !== undefined ? data.password_hash : data.passwordHash);
+  const hasPasswordUpdate = rawPass !== undefined && rawPass !== null && rawPass !== '';
   const passVal = hasPasswordUpdate
-    ? await hashPasswordValue(password !== undefined ? password : password_hash)
+    ? await hashPasswordValue(rawPass)
     : null;
   const genderVal = gender !== undefined ? gender : null;
   const cityVal = city !== undefined ? city : null;
