@@ -22,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN useradd --create-home --uid 10001 --shell /bin/sh codeuser
 
 COPY runner.sh /opt/runner.sh
-RUN chmod +x /opt/runner.sh && chown codeuser:codeuser /opt/runner.sh
+RUN sed -i -e 's/\r$//' /opt/runner.sh && chmod +x /opt/runner.sh && chown codeuser:codeuser /opt/runner.sh
 
 # The workspace is bind-mounted read/write from the Node.js host.
 WORKDIR /workspace
