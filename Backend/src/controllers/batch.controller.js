@@ -164,9 +164,23 @@ export const getBatches = async (req, res, next) => {
       sql += ' AND (b.college_id = ? OR b.college_id IS NULL)';
       params.push(collegeId);
     }
-    if (departmentId && departmentId !== 'all') {
+    let effDeptId = departmentId;
+    if ((!effDeptId || effDeptId === 'all') && (req.user?.role === 'coordinator' || String(req.user?.role || '').toLowerCase().includes('coordinator'))) {
+      effDeptId = req.user.department_id || req.user.departmentId;
+      if (!effDeptId && req.user.department) {
+        try {
+          const dRows = await query(
+            'SELECT id FROM departments WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+            [req.user.department, req.user.department]
+          );
+          if (dRows && dRows.length > 0) effDeptId = dRows[0].id;
+        } catch (_) {}
+      }
+    }
+
+    if (effDeptId && effDeptId !== 'all') {
       sql += ' AND (b.department_id = ? OR b.department_id IS NULL)';
-      params.push(departmentId);
+      params.push(effDeptId);
     }
 
     sql += ' ORDER BY b.id DESC';

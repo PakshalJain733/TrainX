@@ -17,7 +17,8 @@ import {
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
-import { sendWelcomeEmail } from '../services/email.service.js';
+import { sendWelcomeEmail, sendAccountApprovedEmail } from '../services/email.service.js';
+import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
 import { generateTotpSetup } from '../services/auth.service.js';
 
 /**
@@ -214,7 +215,7 @@ export const approveUserAdmin = async (req, res, next) => {
       }
     }
 
-    const updatePayload = { is_active: 1 };
+    const updatePayload = { is_active: 1, is_approved: 1, is_verified: 1 };
     const callerCollegeId = getCallerCollegeFilter(req);
     if (!user.college_id && callerCollegeId) {
       updatePayload.college_id = callerCollegeId;
@@ -229,7 +230,7 @@ export const approveUserAdmin = async (req, res, next) => {
     }
 
     if (user.email && user.email.includes('@')) {
-      sendWelcomeEmail({ to: user.email, name: user.name, role: user.role }).catch(() => {});
+      sendAccountApprovedEmail({ to: user.email, name: user.name, role: user.role }).catch(() => {});
     }
 
     return sendSuccess(res, 'User registration approved successfully');
@@ -285,6 +286,8 @@ export const createUserAdmin = async (req, res, next) => {
       semester,
       cgpa,
       skills,
+      secure_code,
+      code,
     } = req.body;
 
     if (!name || (!email && !mobile_number)) {
@@ -322,6 +325,7 @@ export const createUserAdmin = async (req, res, next) => {
 
     // Hierarchy validation: verify department & batch belong to the target college if specified
     let validatedDeptName = department || '';
+    let validatedDeptId = department_id ? parseInt(department_id, 10) : null;
     if (department_id) {
       const deptRecord = await getDepartmentByIdModel(department_id);
       if (deptRecord) {
@@ -329,6 +333,7 @@ export const createUserAdmin = async (req, res, next) => {
           return sendError(res, 'Cannot assign user to a department from another college', 403);
         }
         validatedDeptName = deptRecord.name;
+        validatedDeptId = deptRecord.id;
       }
     }
 
@@ -339,6 +344,41 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
+    // For non-student staff roles (Coordinator, Mentor, College Admin):
+    // Ensure a Secure Access Code exists so user can complete registration with it.
+    let targetSecureCode = (secure_code || code || '').trim().toUpperCase();
+    const isStaffRole = canonicalRole === ROLES.COORDINATOR || canonicalRole === ROLES.MENTOR || canonicalRole === ROLES.COLLEGE_ADMIN;
+    if (isStaffRole) {
+      if (!targetSecureCode) {
+        const prefix = canonicalRole === ROLES.COORDINATOR ? 'CO' : (canonicalRole === ROLES.MENTOR ? 'FAC' : 'ADM');
+        const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
+        targetSecureCode = `${prefix}-${randomHex}`;
+      }
+
+      // Check if code is already registered in DB, otherwise insert into secure_codes table
+      try {
+        const existingCodeRecord = await findSecureCode(targetSecureCode, canonicalRole);
+        if (!existingCodeRecord) {
+          const [colRows] = targetCollegeId ? await query('SELECT name FROM colleges WHERE id = ?', [targetCollegeId]) : [[]];
+          const collegeName = colRows && colRows[0] ? colRows[0].name : (req.user?.collegeName || null);
+          await createSecureCode({
+            code: targetSecureCode,
+            role: canonicalRole,
+            college_name: collegeName,
+            description: `Generated for ${canonicalRole} onboarding: ${name}`,
+            max_uses: 1,
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          });
+        }
+      } catch (err) {
+        console.warn(`[Admin User Creation Secure Code Warning] ${err.message}`);
+      }
+    }
+
+    // Admin added users should start as:
+    // 1. is_verified = 0 (Unverified until they complete registration & 2FA authenticator setup)
+    // 2. is_approved = 0 and is_active = 0 (Requires manual admin approval)
+    const isSuperAdminAccount = canonicalRole === ROLES.SUPER_ADMIN;
     const newUser = await createUser({
       name,
       password: password || '',
@@ -346,7 +386,11 @@ export const createUserAdmin = async (req, res, next) => {
       mobile_number: mobile_number || '',
       role: canonicalRole,
       college_id: targetCollegeId,
-      is_active: (canonicalRole === ROLES.SUPER_ADMIN || canonicalRole === ROLES.COLLEGE_ADMIN) ? 1 : 0,
+      department: validatedDeptName,
+      department_id: validatedDeptId,
+      is_active: isSuperAdminAccount ? 1 : 0,
+      is_verified: isSuperAdminAccount ? 1 : 0,
+      is_approved: isSuperAdminAccount ? 1 : 0,
     });
 
     let studentProfile = null;
@@ -354,7 +398,7 @@ export const createUserAdmin = async (req, res, next) => {
       studentProfile = await saveStudentDetails({
         user_id: newUser.id,
         college_id: targetCollegeId,
-        department_id: department_id ? parseInt(department_id, 10) : null,
+        department_id: validatedDeptId,
         batch_id: batch_id ? parseInt(batch_id, 10) : null,
         roll_number: roll_number || `AUTO_${newUser.id}`,
         department: validatedDeptName,
@@ -371,6 +415,7 @@ export const createUserAdmin = async (req, res, next) => {
         to: newUser.email,
         name: newUser.name,
         role: canonicalRole,
+        secure_code: targetSecureCode || '',
         mobile_number: mobile_number || newUser.mobile_number || '',
         roll_number: roll_number || (studentProfile && studentProfile.roll_number) || '',
         department: validatedDeptName || department || '',
@@ -383,9 +428,12 @@ export const createUserAdmin = async (req, res, next) => {
 
     return sendSuccess(
       res,
-      'User created and assigned hierarchy successfully',
+      'User created successfully. Registration invitation with secure access code dispatched.',
       {
         ...newUser,
+        secure_code: targetSecureCode || null,
+        is_verified: 0,
+        is_approved: 0,
         studentProfile,
       },
       201

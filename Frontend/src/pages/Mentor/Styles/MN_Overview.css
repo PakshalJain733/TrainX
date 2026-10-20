@@ -583,21 +583,124 @@
   color: #94a3b8;
 }
 
+/* Split Grid & Subcard Structure */
+.overview-split-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 20px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 992px) {
+  .overview-split-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.overview-subcard {
+  border-radius: 16px !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Card Header Flex Alignment */
+.overview-card-header-between {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  padding: 16px 20px !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  background: #ffffff !important;
+  min-height: 72px !important;
+  box-sizing: border-box !important;
+  gap: 16px !important;
+}
+
+.overview-header-left {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+.overview-header-icon-wrap {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 10px !important;
+  background: #eff6ff !important;
+  border: 1px solid #dbeafe !important;
+  color: #2563eb !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08) !important;
+}
+
+.overview-header-icon-wrap--trophy {
+  background: #eef2ff !important;
+  border-color: #e0e7ff !important;
+  color: #4f46e5 !important;
+  box-shadow: 0 1px 3px rgba(79, 70, 229, 0.08) !important;
+}
+
+.overview-header-icon {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.overview-card-title {
+  font-size: 15.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.01em !important;
+}
+
+.overview-card-desc {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin: 3px 0 0 0 !important;
+  line-height: 1.25 !important;
+}
+
 .mn-view-all-link {
-  font-size: 12px;
-  font-weight: 600;
-  color: #4f46e5;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: #4f46e5 !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 5px 11px !important;
+  border-radius: 8px !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
 }
 
 .mn-view-all-link:hover {
-  text-decoration: underline;
+  background: #eef2ff !important;
+  color: #3730a3 !important;
+  border-color: #c7d2fe !important;
+  text-decoration: none !important;
 }
 
 .mn-calendar-check-icon {
   color: #4f46e5 !important;
 }
+
 

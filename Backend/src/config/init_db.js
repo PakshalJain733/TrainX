@@ -148,6 +148,23 @@ export async function initializeDatabase() {
     try { await conn.query(`ALTER TABLE users DROP COLUMN linkedin_url`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN target_track VARCHAR(150) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE users ADD COLUMN is_profile_updated BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN department VARCHAR(100) NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN department_id INT NULL`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT FALSE`); } catch (_) { }
+    try { await conn.query(`ALTER TABLE users ADD COLUMN is_approved BOOLEAN DEFAULT FALSE`); } catch (_) { }
+
+    // 4.05 Ensure Coordinator Departments Mapping Table
+    await conn.query(`
+      CREATE TABLE IF NOT EXISTS coordinator_departments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        coordinator_id INT NOT NULL,
+        department_id INT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_coord_dept (coordinator_id, department_id),
+        FOREIGN KEY (coordinator_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+      )
+    `);
 
     // 4.1 Ensure OTPs Table
     await conn.query(`

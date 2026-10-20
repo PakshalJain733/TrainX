@@ -359,6 +359,9 @@ export default function Overview() {
                 <CardDescription className="overview-card-desc">Upcoming live training sessions & schedule</CardDescription>
               </div>
             </div>
+            <Link to="/mentor/sessions" className="mn-view-all-link">
+              View All <ChevronRight size={14} />
+            </Link>
           </CardHeader>
           <CardContent style={{ padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
             {loading ? (

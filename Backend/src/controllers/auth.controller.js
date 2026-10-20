@@ -143,14 +143,19 @@ export const getMe = async (req, res, next) => {
       (user.department && user.semester && user.roll_number && user.skills)
     );
     let resolvedDept = user.department || studentProfile.department || '';
-    if (studentProfile.department_id || resolvedDept) {
+    let resolvedDeptName = resolvedDept;
+    let resolvedDeptCode = resolvedDept;
+    let resolvedDeptId = user.department_id || studentProfile.department_id || null;
+    if (resolvedDeptId || resolvedDept) {
       try {
         const dRows = await query(
-          'SELECT code FROM departments WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
-          [studentProfile.department_id || 0, resolvedDept, resolvedDept]
+          'SELECT id, name, code FROM departments WHERE id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+          [resolvedDeptId || 0, resolvedDept, resolvedDept]
         );
-        if (dRows && dRows.length > 0 && dRows[0].code) {
-          resolvedDept = dRows[0].code.trim();
+        if (dRows && dRows.length > 0) {
+          resolvedDeptId = dRows[0].id;
+          resolvedDeptName = dRows[0].name || resolvedDept;
+          resolvedDeptCode = (dRows[0].code || resolvedDept).trim();
         }
       } catch (_) {}
     }
@@ -162,10 +167,13 @@ export const getMe = async (req, res, next) => {
       is_profile_updated: isProfileUpdated,
       studentProfile: {
         ...studentProfile,
-        department: resolvedDept,
+        department: resolvedDeptCode || resolvedDeptName,
         is_profile_updated: isProfileUpdated,
       },
-      department: resolvedDept,
+      department: resolvedDeptName || resolvedDeptCode || '',
+      department_id: resolvedDeptId,
+      departmentName: resolvedDeptName,
+      departmentCode: resolvedDeptCode,
       semester: user.semester || studentProfile.semester || '',
       cgpa: user.cgpa || studentProfile.cgpa || '',
       skills: user.skills || studentProfile.skills || '',

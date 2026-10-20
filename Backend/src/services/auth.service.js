@@ -67,8 +67,16 @@ const assertUserCanAuthenticate = (user) => {
   if (!user) {
     throw createAuthError('Invalid credentials.', 401);
   }
-  if (user.role !== 'super_admin' && isInactiveUser(user)) {
-    throw createAuthError('Your account registration is pending Admin approval. Please wait for an administrator to approve your account before logging in.', 403);
+  if (user.role === 'super_admin') return;
+
+  const isVerified = user.is_verified === 1 || user.is_verified === true || user.is_verified === '1' || Boolean(user.two_factor_enabled && user.password_hash);
+  if (!isVerified) {
+    throw createAuthError('Your registration is incomplete. Please complete your registration and link your Authenticator app using your secure access code.', 403);
+  }
+
+  const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
+  if (!isApproved) {
+    throw createAuthError('Your account has been verified, but is pending manual approval by your Administrator. Please wait for an administrator to approve your account before logging in.', 403);
   }
 };
 
@@ -110,7 +118,11 @@ const buildUserResponse = async (user) => {
     email: user.email || null,
     mobile_number: user.mobile_number || null,
     role: user.role,
-    department: studentProfile?.department || '',
+    department: user.department || studentProfile?.department || '',
+    department_id: user.department_id || studentProfile?.department_id || null,
+    is_verified: Boolean(user.is_verified || (user.two_factor_enabled && user.password_hash)),
+    is_approved: Boolean(user.is_approved || user.is_active),
+    is_active: user.is_active,
     year: studentProfile?.year || '',
     division: studentProfile?.division || '',
     semester: studentProfile?.semester || '',
@@ -125,6 +137,8 @@ const generateFinalToken = (user) => generateToken({
   mobile: user.mobile_number || null,
   role: user.role,
   collegeId: user.college_id ?? null,
+  department: user.department ?? null,
+  departmentId: user.department_id ?? null,
   tokenType: 'access',
 });
 
@@ -454,6 +468,23 @@ export const registerUser = async (data) => {
       else if (year === 'BE') derivedSemester = 'Semester 7';
     }
 
+    let existingDeptId = null;
+    let existingDeptName = department ? String(department).trim() : null;
+    if (existingDeptName) {
+      try {
+        const [deptMatch] = await pool.query(
+          `SELECT id, name, code FROM departments 
+           WHERE (LOWER(code) = LOWER(?) OR LOWER(name) = LOWER(?) OR name LIKE ? OR ? LIKE CONCAT('%', code, '%')) 
+           AND (college_id = ? OR college_id IS NULL) LIMIT 1`,
+          [existingDeptName, existingDeptName, `%${existingDeptName}%`, existingDeptName, existingUser.college_id || 1]
+        );
+        if (deptMatch && deptMatch.length > 0) {
+          existingDeptId = deptMatch[0].id;
+          existingDeptName = deptMatch[0].name;
+        }
+      } catch (_) {}
+    }
+
     await updateUserModel(existingUser.id, {
       name: name || existingUser.name,
       email: existingUser.email || email,
@@ -461,14 +492,26 @@ export const registerUser = async (data) => {
       password: password || '',
       password_hash: existingUser.password_hash || '',
       role: canonicalRole,
-      department,
+      department: existingDeptName || department || existingUser.department,
+      department_id: existingDeptId || existingUser.department_id,
       year,
       division,
       semester: derivedSemester,
       roll_number,
       is_profile_updated: 1,
-      is_active: 1,
+      is_active: 0,
+      is_verified: 0,
+      is_approved: 0,
     });
+
+    if (canonicalRole === ROLES.COORDINATOR && existingDeptId) {
+      try {
+        await pool.query(
+          'INSERT INTO coordinator_departments (coordinator_id, department_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE department_id = VALUES(department_id)',
+          [existingUser.id, existingDeptId]
+        );
+      } catch (_) {}
+    }
 
     if (codeRecord && codeRecord.id) {
       await markCodeAsUsed(codeRecord.id, existingUser.id);
@@ -583,6 +626,24 @@ export const registerUser = async (data) => {
     }
   }
 
+  // Resolve department ID and Name
+  let assignedDeptId = null;
+  let resolvedDeptName = department ? String(department).trim() : null;
+  if (resolvedDeptName) {
+    try {
+      const [deptMatch] = await pool.query(
+        `SELECT id, name, code FROM departments 
+         WHERE (LOWER(code) = LOWER(?) OR LOWER(name) = LOWER(?) OR name LIKE ? OR ? LIKE CONCAT('%', code, '%')) 
+         AND (college_id = ? OR college_id IS NULL) LIMIT 1`,
+        [resolvedDeptName, resolvedDeptName, `%${resolvedDeptName}%`, resolvedDeptName, assignedCollegeId]
+      );
+      if (deptMatch && deptMatch.length > 0) {
+        assignedDeptId = deptMatch[0].id;
+        resolvedDeptName = deptMatch[0].name;
+      }
+    } catch (_) {}
+  }
+
   // Create base User with is_active = 1 for Super Admin and College Admin (provisioned with secure code)
   const user = await createUser({
     name,
@@ -591,7 +652,11 @@ export const registerUser = async (data) => {
     password,
     role: canonicalRole,
     college_id: assignedCollegeId,
-    is_active: (canonicalRole === ROLES.SUPER_ADMIN || canonicalRole === ROLES.COLLEGE_ADMIN) ? 1 : 0,
+    department: resolvedDeptName || department || null,
+    department_id: assignedDeptId || null,
+    is_active: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
+    is_verified: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
+    is_approved: canonicalRole === ROLES.SUPER_ADMIN ? 1 : 0,
   });
 
   if (codeRecord && codeRecord.id) {
@@ -692,7 +757,8 @@ export const verifyTotpAndLogin = async (identifier, totpCode, rememberMe = fals
       mobile_number: user.mobile_number,
       role: user.role,
       remember_me: Boolean(rememberMe),
-      department: studentProfile?.department || '',
+      department: user.department || studentProfile?.department || '',
+      department_id: user.department_id || studentProfile?.department_id || null,
       year: studentProfile?.year || '',
       division: studentProfile?.division || '',
       semester: studentProfile?.semester || '',
@@ -725,23 +791,20 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
   }
 
   await enableTwoFactorForUser(user.id);
+  try {
+    await pool.query('UPDATE users SET is_verified = 1 WHERE id = ?', [user.id]);
+    user.is_verified = 1;
+  } catch (_) {}
 
-  const isCollegeAdminRole = user.role === 'college_admin' || user.role === 'admin' || String(user.role).toLowerCase().includes('admin');
-  if (isCollegeAdminRole) {
-    try {
-      await updateUserModel(user.id, { is_active: 1 });
-      user.is_active = 1;
-      if (user.email) {
-        await pool.query(`UPDATE secure_code_requests SET status = 'Approved' WHERE LOWER(email) = LOWER(?)`, [user.email]);
-      }
-    } catch (_) {}
-  }
+  const isSuperAdminRole = user.role === 'super_admin';
+  const isApproved = (user.is_approved === 1 || user.is_approved === true || user.is_approved === '1') && !isInactiveUser(user);
 
-  if (user.role !== 'super_admin' && !isCollegeAdminRole && isInactiveUser(user)) {
+  if (!isSuperAdminRole && !isApproved) {
     return {
       requiresTwoFactor: false,
       pendingApproval: true,
-      message: '2FA verification completed. Your account is pending Admin approval.',
+      is_verified: true,
+      message: 'Authenticator paired successfully! Your account status is now Verified. It is pending manual Administrator approval before you can log in.',
     };
   }
 
