@@ -1,15 +1,32 @@
 import { BrevoClient } from '@getbrevo/brevo';
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import path from 'path';
 import { query } from '../config/db.js';
 
 // Ensure environment variables are loaded
-if (!process.env.BREVO_API_KEY) {
+if (!process.env.BREVO_API_KEY && !process.env.SMTP_HOST) {
   dotenv.config({ path: path.resolve(process.cwd(), '.env') });
   dotenv.config({ path: path.resolve(process.cwd(), 'Backend/.env') });
 }
 
 let brevoClient = null;
+let smtpTransporter = null;
+
+const getSmtpTransporter = () => {
+  if (!smtpTransporter && process.env.SMTP_HOST) {
+    smtpTransporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
+      secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465',
+      auth: {
+        user: (process.env.SMTP_USER || '').trim(),
+        pass: (process.env.SMTP_PASS || '').trim(),
+      },
+    });
+  }
+  return smtpTransporter;
+};
 
 /**
  * Get or initialize Brevo Client instance
@@ -44,7 +61,7 @@ export const isEmailSystemDisabled = async () => {
 };
 
 /**
- * Centralized function to send emails via Brevo Transactional Email API (HTTPS REST)
+ * Centralized function to send emails via SMTP or Brevo API
  */
 export const sendEmail = async ({ to, toName = '', subject, htmlContent, textContent, templateId, params }) => {
   if (await isEmailSystemDisabled()) {
@@ -52,9 +69,36 @@ export const sendEmail = async ({ to, toName = '', subject, htmlContent, textCon
     throw new Error('Email delivery system is currently disabled by Super Admin maintenance policy.');
   }
 
+  const useSmtp = (process.env.EMAIL_PROVIDER || '').toLowerCase() === 'smtp' ||
+    Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
+
+  if (useSmtp) {
+    try {
+      const transporter = getSmtpTransporter();
+      if (!transporter) throw new Error('SMTP transporter is not configured');
+      const senderEmail = (process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'admin@trainingportal.com').trim();
+      const senderName = (process.env.SMTP_FROM_NAME || 'TrainX Portal').trim();
+      const info = await transporter.sendMail({
+        from: `"${senderName}" <${senderEmail}>`,
+        to: toName ? `"${toName}" <${to}>` : to,
+        subject,
+        text: textContent || '',
+        html: htmlContent || textContent || '',
+      });
+      console.log(`[SMTP] Email sent to ${to} (Message ID: ${info.messageId})`);
+      return info;
+    } catch (smtpErr) {
+      console.error(`[SMTP Error] Failed to send email to ${to}:`, smtpErr.message);
+      if (!process.env.BREVO_API_KEY) {
+        throw smtpErr;
+      }
+      console.warn('[SMTP Warning] Falling back to Brevo HTTPS API...');
+    }
+  }
+
   const apiKey = (process.env.BREVO_API_KEY || '').trim().replace(/^["']|["']$/g, '');
   if (!apiKey) {
-    console.warn('[Brevo Warning] BREVO_API_KEY is not configured in environment variables. Email logged locally.');
+    console.warn('[Email Warning] Neither SMTP nor BREVO_API_KEY is configured. Email logged locally.');
     console.log(`📧 [Email Dispatch Fallback] To: ${to} | Subject: ${subject}`);
     return { messageId: `fallback_${Date.now()}`, fallback: true };
   }
