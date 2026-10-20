@@ -1,8 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { UserCheck, Star, BookOpen, Users, UserCog, Mail, Phone, Search, Award, X, Building2, Eye } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { isSameDepartment } from "../../../utils/departmentHelper";
 import "../Styles/CO_Mentors.css";
 
 export default function CoordinatorMentors() {
@@ -17,11 +18,43 @@ export default function CoordinatorMentors() {
   const [reallocateMentor, setReallocateMentor] = useState(null);
   const [newBatchName, setNewBatchName] = useState("");
   const [dbDepartments, setDbDepartments] = useState([]);
+  const [coordUser, setCoordUser] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
+    } catch {
+      return {};
+    }
+  });
+
+  // Sync logged-in coordinator user profile
+  useEffect(() => {
+    apiFetch("/auth/me")
+      .then((res) => {
+        if (res && res.data) {
+          setCoordUser(res.data);
+          try {
+            sessionStorage.setItem("user", JSON.stringify(res.data));
+          } catch (_) {}
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const coordDept = useMemo(() => {
+    return (
+      coordUser.department ||
+      coordUser.dept ||
+      coordUser.departmentName ||
+      coordUser.coordinatorProfile?.department ||
+      ""
+    );
+  }, [coordUser]);
 
   const handleViewStudents = (mentor) => {
     setSelectedMentorStudentsModal(mentor);
     setLoadingStudents(true);
-    apiFetch(`/coordinator/mentors/${mentor.id}/students`)
+    const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
+    apiFetch(`/coordinator/mentors/${mentor.id}/students${queryParam}`)
       .then((res) => {
         const list = res?.data?.students || res?.students || res?.data || [];
         setAllottedStudents(Array.isArray(list) ? list : []);
@@ -43,19 +76,10 @@ export default function CoordinatorMentors() {
     department: "Computer Engineering",
   });
 
-  const getCoordinatorDept = () => {
-    try {
-      const local = JSON.parse(sessionStorage.getItem("user") || localStorage.getItem("user") || "{}");
-      return local.department || local.dept || local.departmentName || "";
-    } catch {
-      return "";
-    }
-  };
-  const coordDept = getCoordinatorDept();
-
   const fetchMentors = () => {
     setLoading(true);
-    apiFetch("/coordinator/mentors")
+    const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
+    apiFetch(`/coordinator/mentors${queryParam}`)
       .then((res) => {
         const rawList = res?.data?.mentors || res?.mentors || res?.data || (Array.isArray(res) ? res : []);
         const list = Array.isArray(rawList) ? rawList : [];
@@ -73,15 +97,11 @@ export default function CoordinatorMentors() {
           status: m.status || (m.is_active !== false ? "Active" : "Inactive"),
         }));
 
-        const deptMentors = mapped.filter(
-          (m) =>
-            !coordDept ||
-            !m.department ||
-            m.department.toLowerCase().includes(coordDept.toLowerCase()) ||
-            coordDept.toLowerCase().includes(m.department.toLowerCase())
-        );
+        const deptMentors = coordDept
+          ? mapped.filter((m) => isSameDepartment(m.department, coordDept))
+          : mapped;
 
-        setMentors(deptMentors.length > 0 ? deptMentors : mapped);
+        setMentors(deptMentors);
       })
       .catch(() => setMentors([]))
       .finally(() => setLoading(false));
@@ -101,7 +121,7 @@ export default function CoordinatorMentors() {
   useEffect(() => {
     fetchMentors();
     fetchDepartments();
-  }, []);
+  }, [coordDept]);
 
   const uniqueDeptNames = Array.from(
     new Set([
@@ -182,7 +202,7 @@ export default function CoordinatorMentors() {
 
     const matchesDept =
       deptFilter === "all" ||
-      (m.department || "").toLowerCase().includes(deptFilter.toLowerCase());
+      isSameDepartment(m.department, deptFilter);
 
     return matchesSearch && matchesDept;
   });

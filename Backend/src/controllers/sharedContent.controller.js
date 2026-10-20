@@ -6,6 +6,7 @@ import {
   createSharedContent,
   deleteSharedContent,
 } from '../models/sharedContent.model.js';
+import { filterContentByMentorAssignment } from '../utils/mentorStudentHelper.js';
 
 const getCollegeId = (req) => req.user?.collegeId || req.user?.college_id || 1;
 
@@ -26,6 +27,10 @@ export const getSharedContent = async (req, res, next) => {
       items = await getSharedContentByType(type, collegeId);
     } else {
       items = await getAllSharedContent(collegeId);
+    }
+
+    if (type !== 'maintenance' && req.user && Array.isArray(items)) {
+      items = await filterContentByMentorAssignment(items, req.user, 'created_by');
     }
 
     return sendSuccess(res, 'Shared content retrieved', items);

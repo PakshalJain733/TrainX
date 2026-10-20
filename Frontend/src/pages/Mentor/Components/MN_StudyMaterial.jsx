@@ -26,8 +26,14 @@ export default function StudyMaterial() {
 
   const fetchBatches = async () => {
     try {
-      const data = await batchAPI.getBatches();
-      if (Array.isArray(data) && data.length > 0) setBatchesList(data);
+      const res = await apiFetch("/mentor/batches");
+      const list = Array.isArray(res?.data?.batches) ? res.data.batches : (Array.isArray(res?.data) ? res.data : []);
+      if (list.length > 0) {
+        setBatchesList(list);
+      } else {
+        const data = await batchAPI.getBatches();
+        if (Array.isArray(data) && data.length > 0) setBatchesList(data);
+      }
     } catch {}
   };
 

@@ -1,6 +1,7 @@
 import { sendSuccess, sendError } from '../utils/response.js';
 import { query } from '../config/db.js';
 import { generateQuizQuestionsAI, verifyQuizQuestions } from '../ai/quiz.ai.js';
+import { filterContentByMentorAssignment, canStudentAccessMentorItem } from '../utils/mentorStudentHelper.js';
 
 let mockAssessments = [];
 
@@ -90,6 +91,10 @@ export const getAssessments = async (req, res, next) => {
       result = result.filter((a) => (a.batch_name || a.batch || '').toLowerCase().includes(batch.toLowerCase()));
     }
 
+    if (req.user) {
+      result = await filterContentByMentorAssignment(result, req.user, 'created_by');
+    }
+
     return sendSuccess(res, 'Assessments retrieved successfully', result);
   } catch (error) {
     next(error);
@@ -121,6 +126,13 @@ export const getAssessmentById = async (req, res, next) => {
       return sendError(res, 'Assessment not found', 404);
     }
 
+    if (req.user?.role === 'student' && assessment.created_by) {
+      const hasAccess = await canStudentAccessMentorItem(req.user?.userId || req.user?.id, assessment.created_by);
+      if (!hasAccess) {
+        return sendError(res, 'This quiz was created by a mentor not assigned to you', 403);
+      }
+    }
+
     const memoryQs = mockQuestionsByAssessment[id] || [];
     const finalQuestions = questions.length > 0 ? questions : (assessment.questions && assessment.questions.length > 0 ? assessment.questions : memoryQs);
 
@@ -145,7 +157,7 @@ export const createAssessment = async (req, res, next) => {
     let savedQuestions = [];
 
     try {
-      const collegeId = req.user?.collegeId ?? req.user?.college_id ?? 1;
+      const collegeId = req.user?.collegeId || req.user?.college_id || null;
       const userId = req.user?.userId || req.user?.id || null;
       const result = await query(
         `INSERT INTO assessments (title, description, category, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
@@ -667,6 +679,21 @@ export const startAssessment = async (req, res, next) => {
   try {
     const { id } = req.params;
     const userId = req.user?.userId || req.user?.id || 1;
+
+    if (req.user?.role === 'student') {
+      try {
+        const rows = await query(`SELECT created_by FROM assessments WHERE id = ?`, [id]);
+        if (rows && rows.length > 0 && rows[0].created_by) {
+          const hasAccess = await canStudentAccessMentorItem(userId, rows[0].created_by);
+          if (!hasAccess) {
+            return sendError(res, 'This quiz was created by a mentor not assigned to you', 403);
+          }
+        }
+      } catch (checkErr) {
+        console.warn('[startAssessment access check error]', checkErr.message);
+      }
+    }
+
     let attemptId = Date.now();
 
     try {

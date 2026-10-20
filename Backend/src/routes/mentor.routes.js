@@ -54,8 +54,9 @@ router.delete('/assignments/:id', mentorOnly, deleteMentorAssignment);
 router.get('/attendance/batches', mentorOnly, getMentorAttendanceBatches);
 router.post('/attendance/save', mentorOnly, saveMentorAttendance);
 
-// Live sessions are owned by the mentor who created them.
-router.get('/live-sessions', mentorOnly, getLiveSessions);
+// Live sessions are owned by the mentor who created them; assigned students can read.
+const liveSessionsAccess = authorizeRoles(ROLES.MENTOR, ROLES.SUPER_ADMIN, ROLES.STUDENT);
+router.get('/live-sessions', liveSessionsAccess, getLiveSessions);
 router.post('/live-sessions', mentorOnly, createLiveSession);
 router.delete('/live-sessions/:id', mentorOnly, deleteLiveSession);
 

@@ -11,6 +11,7 @@ import {
 import { getBroadcastsModel } from '../models/broadcast.model.js';
 import { ROLES } from '../utils/constants.js';
 import { getOverallLeaderboard, formatStudentName } from '../services/leaderboard.service.js';
+import { filterContentByMentorAssignment } from '../utils/mentorStudentHelper.js';
 
 export const getStudentData = async (req, res, next) => {
   try {
@@ -654,7 +655,10 @@ export const applyStudentLeave = async (req, res, next) => {
 export const getStudentNotifications = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || 1;
-    const broadcasts = await getBroadcastsModel(collegeId);
+    let broadcasts = await getBroadcastsModel(collegeId, 'student');
+    if (req.user) {
+      broadcasts = await filterContentByMentorAssignment(broadcasts, req.user, 'created_by');
+    }
 
     return sendSuccess(res, 'Student notifications retrieved', broadcasts);
   } catch (error) {
@@ -899,7 +903,6 @@ export const createSupportTicket = async (req, res, next) => {
 };
 
 export const getStudentMaterials = async (req, res, next) => {
-
   try {
     let materials = [];
     try {
@@ -910,6 +913,11 @@ export const getStudentMaterials = async (req, res, next) => {
     } catch (e) {
       console.warn('[getStudentMaterials DB error]', e.message);
     }
+
+    if (req.user) {
+      materials = await filterContentByMentorAssignment(materials, req.user, 'uploaded_by');
+    }
+
     return sendSuccess(res, 'Study materials retrieved', materials);
   } catch (error) {
     next(error);
