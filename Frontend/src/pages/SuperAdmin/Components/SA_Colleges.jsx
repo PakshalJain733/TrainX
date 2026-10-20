@@ -1247,7 +1247,7 @@ export default function Colleges() {
 
             <div className="modal-body">
               <p className="colleges-delete-confirm-text">
-                Are you sure you want to remove <strong className="colleges-delete-confirm-name">{deleteCollege.name}</strong>? All associated departments, batches, and student records will be archived.
+                Are you sure you want to permanently delete <strong className="colleges-delete-confirm-name">{deleteCollege.name}</strong>? This will permanently remove all associated users (admins, coordinators, mentors, students), departments, batches, assessments, and attendance records from the database.
               </p>
             </div>
 

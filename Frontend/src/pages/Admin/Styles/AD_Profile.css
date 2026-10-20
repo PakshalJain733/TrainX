@@ -126,6 +126,16 @@
   padding: 4px 10px;
   border-radius: 20px;
   border: 1px solid #c7d2fe;
+  margin-bottom: 6px;
+}
+
+.profile-badges-wrap {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .profile-academic-divider {

@@ -263,13 +263,15 @@ export default function AdminProfile() {
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
-            <div className="profile-roll-chip">
+            <div className="profile-roll-chip" style={{ marginBottom: '6px' }}>
               <ShieldCheck size={14} />
               <strong>{form.role}</strong>
             </div>
 
-            <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
-              <Badge variant="default">PVPPCOE</Badge>
+            <div className="profile-badges-wrap" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <Badge variant="default">
+                {(form.college && form.college.match(/\(([^)]+)\)/)?.[1]) || (form.college && form.college.length <= 15 ? form.college : form.college?.split(' ')[0]) || "PVPPCOE"}
+              </Badge>
             </div>
           </div>
 
