@@ -110,12 +110,12 @@ export default function Overview() {
       }),
       apiFetch("/mentor/students/performance").then((res) => {
         if (!mounted) return;
-        const list = res?.data || (Array.isArray(res) ? res : []);
+        const list = res?.data?.students || (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.students) ? res.students : (Array.isArray(res) ? res : [])));
         setStudentCount(list.length);
       }).catch(() => {
         apiFetch("/mentor/students").then((res) => {
           if (!mounted) return;
-          const list = res?.data || (Array.isArray(res) ? res : []);
+          const list = res?.data?.students || (Array.isArray(res?.data) ? res.data : (Array.isArray(res?.students) ? res.students : (Array.isArray(res) ? res : [])));
           setStudentCount(list.length);
         }).catch(() => {});
       }),
