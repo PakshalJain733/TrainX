@@ -167,33 +167,65 @@ export function pickFallbackQuestion(sessionId, topic, askedTopics) {
 }
 
 /**
+ * Live time of day greeting helper (India IST / client local hour).
+ * Good morning: 04:00 - 11:59
+ * Good afternoon: 12:00 - 16:59
+ * Good evening: 17:00 - 03:59
+ */
+export function getLiveTimeGreeting(clientHour = null) {
+  let hour = typeof clientHour === 'number' && !isNaN(clientHour) ? clientHour : null;
+  if (hour === null) {
+    try {
+      const now = new Date();
+      hour = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' })).getHours();
+    } catch {
+      hour = new Date().getHours();
+    }
+  }
+
+  if (hour >= 4 && hour < 12) {
+    return 'Good morning';
+  } else if (hour >= 12 && hour < 17) {
+    return 'Good afternoon';
+  } else {
+    return 'Good evening';
+  }
+}
+
+/**
  * Generate the FIRST interview question dynamically.
- * MUST always greet the candidate, ask them to introduce themselves,
- * and ask them to share one project they feel most confident in.
+ * MUST always greet the candidate using the live time greeting (Good morning/afternoon/evening),
+ * ask them to introduce themselves, and ask them to share one project they feel most confident in.
  * Strictly plain English, no code blocks or backticks.
  */
-export const generateOpeningQuestion = async ({ role, topic, difficulty, owner, candidateName = 'Candidate', sessionId = 'default' }) => {
+export const generateOpeningQuestion = async ({ role, topic, difficulty, owner, candidateName = 'Candidate', sessionId = 'default', clientHour = null }) => {
+  const timeGreeting = getLiveTimeGreeting(clientHour);
   const knowledge = await buildKnowledgeContext(`${role} ${topic} introduction`, owner);
   const prompt = `You are a senior technical interviewer opening a live voice mock interview for a candidate targeting the role: "${role}" (topic: "${topic}").
 
 Generate the FIRST introductory question for the interview.
 STRICT MANDATORY REQUIREMENTS:
-1. Greet the candidate professionally for their "${role}" interview in "${topic}".
+1. LIVE TIME GREETING: You MUST start your opening greeting strictly with "${timeGreeting}!" (e.g. "${timeGreeting}! Welcome to your ${role} interview in ${topic}..."). DO NOT say any other time greeting (e.g. NEVER say "Good morning" if current greeting is "${timeGreeting}").
 2. Ask them to INTRODUCE THEMSELVES and TELL YOU ABOUT ONE PROJECT they have built or feel most confident about.
 3. NO CODE BLOCKS OR CODE SNIPPETS: Do NOT include backticks (\`\` \` \`\`), code blocks, syntax symbols, or code snippets. Write purely in clean, natural, spoken plain English suitable for voice text-to-speech.
 
 Respond ONLY with valid JSON:
 {
-  "question": "The spoken introductory question asking for self-introduction and their best project",
+  "question": "${timeGreeting}! Welcome to your ${role} interview focusing on ${topic}. To get started, please introduce yourself and tell me about one project you have built or feel most confident about.",
   "topic": "Introduction & Project Overview",
   "hint": "Give a concise 60-90 second introduction covering your background, role focus, and a project you feel confident in."
 }`;
 
   try {
-    const raw = await callGemini(prompt, { temperature: 0.7, timeoutMs: 8000 });
+    const raw = await callGemini(prompt, { temperature: 0.6, timeoutMs: 8000 });
     const parsed = parseAIJson(raw);
     if (parsed && parsed.question) {
-      const cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
+      let cleanQuestion = String(parsed.question).replace(/```[\s\S]*?```/g, '').replace(/`/g, '').trim();
+      // Enforce live dynamic time greeting strictly on the returned text
+      cleanQuestion = cleanQuestion.replace(/^(good\s+(morning|afternoon|evening|day)[!,.]?\s*)/i, `${timeGreeting}! `);
+      if (!cleanQuestion.toLowerCase().startsWith('good')) {
+        cleanQuestion = `${timeGreeting}! ${cleanQuestion}`;
+      }
       return {
         source: 'ai-live',
         ...parsed,
@@ -204,10 +236,10 @@ Respond ONLY with valid JSON:
     console.warn('[Interview AI] generateOpeningQuestion error:', err.message);
   }
 
-  // Fallback opening
+  // Fallback opening strictly honoring current time of day
   return {
     source: 'fallback',
-    question: `Welcome to your ${role} interview focusing on ${topic}. To get started, please introduce yourself and tell me about one project you have built or feel most confident about.`,
+    question: `${timeGreeting}! Welcome to your ${role} interview focusing on ${topic}. To get started, please introduce yourself and tell me about one project you have built or feel most confident about.`,
     topic: 'Introduction & Project Overview',
     hint: 'Briefly state your background, role focus, and describe a project you built.',
   };
@@ -324,20 +356,26 @@ Reference knowledge context:
 ${knowledge || 'No reference knowledge provided.'}
 
 STRICT, UNCOMPROMISING EVALUATION POLICY:
-1. IRRELEVANT, GIBBERISH, WRONG, OR EVASIVE ANSWERS MUST RECEIVE 0 OR 1/10:
-   - "I don't know", "I forgot", blank responses, personal remarks, chit-chat, or random filler: SCORE 0/10.
-   - Statements that are factually wrong, confusing fundamental concepts, or talking about an unrelated technology: SCORE 0 or 1/10.
-2. VAGUE, CIRCULAR, OR QUESTION-REPEATING ANSWERS MUST RECEIVE 1 OR 2/10:
-   - Repeating words from the question prompt or using generic buzzwords without explaining real implementation, syntax, or concepts: SCORE 1 or 2/10.
-   - Example: "it is used in website development to make components fast and easy" is marketing buzz, NOT an engineering answer: SCORE 1/10.
+1. ABSOLUTE ZERO MARKS (0/10) FOR VAGUE, WRONG, OR CIRCULAR RESPONSES:
+   - "I don't know", "I am not sure", "I forgot", blank responses, personal comments, chit-chat, or random filler: SCORE 0/10.
+   - Statements that are factually wrong, confusing fundamental concepts, or describing an unrelated technology: SCORE 0/10.
+   - VAGUE, SUPERFICIAL, BUZZWORD-HEAVY, OR REPEATING THE QUESTION: SCORE 0/10 (at most 1/10).
+   - Example of VAGUE/BUZZWORD answers that MUST RECEIVE 0 MARKS:
+     * "It is used in website development to make code fast and components easy." -> SCORE 0/10.
+     * "It helps to build apps and manage data cleanly in project." -> SCORE 0/10.
+     * "It is a very good feature that everyone uses for optimization." -> SCORE 0/10.
+2. GENUINE ANSWERS ONLY GET PASSING MARKS (>= 5/10):
+   - You MUST ONLY award passing marks (5 or above) if the candidate explicitly explains the real internal mechanics, syntax, lifecycle, algorithms, or architectural implementation.
+   - If the answer has minor technical substance but is mostly vague: SCORE 1 or 2/10.
 3. SCORING RUBRIC (0-10):
-   - 0-2: Completely wrong, fake, gibberish, evasive, circular, or empty answer.
+   - 0: Completely wrong, vague, marketing buzzwords, evasive, circular, prompt-repeating, or empty answer.
+   - 1-2: Barely attempted, superficial, major technical misconceptions.
    - 3-4: Very surface-level, significant technical gaps, or confused terminology.
    - 5-6: Acceptable foundational answer covering basics with minor omissions.
    - 7-8: Solid, technically accurate answer clearly explaining working mechanisms.
    - 9-10: Complete, precise, in-depth architectural or engineering response.
 4. FEEDBACK:
-   - Must be a direct, sharp, professional 2-3 sentence technical critique explaining precisely WHAT was missing, WHAT was incorrect, and how to improve.
+   - Must be a direct, sharp, professional 2-3 sentence technical critique explaining precisely WHAT was missing, WHAT was incorrect, and why it received 0/low marks.
 
 Respond ONLY with valid JSON:
 {
@@ -345,17 +383,18 @@ Respond ONLY with valid JSON:
   "technical": <number 0-10>,
   "communication": <number 0-10>,
   "confidence": <number 0-10>,
-  "feedback": "Explicit 2-3 sentence technical critique explaining why the answer was correct or why it received low/0 marks.",
+  "feedback": "Explicit 2-3 sentence technical critique explaining why the answer was correct or why it received 0/low marks.",
   "modelAnswer": "3-4 concise technical key points the candidate should cover for THIS specific question. DO NOT repeat or quote the question.",
   "isCorrectDirection": true|false
 }`;
 
   try {
-    const raw = await callGemini(prompt, { temperature: 0.2, timeoutMs: 20000 });
+    const raw = await callGemini(prompt, { temperature: 0.15, timeoutMs: 20000 });
     const parsed = parseAIJson(raw);
 
     if (parsed && typeof parsed.score === 'number') {
-      const isZero = parsed.score <= 1 || (!parsed.isCorrectDirection && parsed.score <= 2);
+      const isIncorrectOrVague = !parsed.isCorrectDirection || parsed.score <= 2 || (parsed.technical ?? parsed.score) <= 2;
+      const finalScore = isIncorrectOrVague ? Math.min(1, parsed.score) : Math.min(10, Math.max(0, parsed.score));
       const rawModelAnswer = Array.isArray(parsed.modelAnswer)
         ? parsed.modelAnswer.join('. ')
         : String(parsed.modelAnswer || '');
@@ -371,13 +410,13 @@ Respond ONLY with valid JSON:
 
       return {
         source: 'ai-live',
-        score: Math.min(10, Math.max(0, parsed.score)),
-        technical: isZero ? Math.min(2, parsed.technical ?? parsed.score) : (parsed.technical ?? parsed.score),
-        communication: isZero ? Math.min(3, parsed.communication ?? parsed.score) : (parsed.communication ?? parsed.score),
-        confidence: isZero ? Math.min(2, parsed.confidence ?? parsed.score) : (parsed.confidence ?? parsed.score),
-        feedback: parsed.feedback || (isZero ? "Answer lacks required technical depth or is factually incorrect." : "Answer evaluated."),
+        score: finalScore,
+        technical: isIncorrectOrVague ? 0 : (parsed.technical ?? finalScore),
+        communication: isIncorrectOrVague ? Math.min(2, parsed.communication ?? 1) : (parsed.communication ?? finalScore),
+        confidence: isIncorrectOrVague ? Math.min(2, parsed.confidence ?? 1) : (parsed.confidence ?? finalScore),
+        feedback: parsed.feedback || (isIncorrectOrVague ? "Vague / Incorrect: Answer lacks required technical depth or is factually inaccurate. 0 marks awarded." : "Answer evaluated."),
         modelAnswer: cleanModelAns || `Core concepts in ${topic}, key principles, and practical application.`,
-        isCorrectDirection: !isZero && Boolean(parsed.isCorrectDirection),
+        isCorrectDirection: !isIncorrectOrVague,
       };
     }
   } catch (err) {
@@ -424,22 +463,22 @@ Respond ONLY with valid JSON:
 
   const qSnippet = (question || topic || 'this question').trim();
 
-  // If candidate answer provides very few new technical terms outside the question prompt, score 1
-  if (newTechnicalWords.length < 3 || words.length < 15) {
+  // If candidate answer provides very few new technical terms outside the question prompt, score strictly 0
+  if (newTechnicalWords.length < 5 || words.length < 15) {
     return {
       source: 'fallback',
-      score: 1,
-      technical: 1,
-      communication: 2,
+      score: 0,
+      technical: 0,
+      communication: 1,
       confidence: 1,
-      feedback: `Vague / Superficial: The response for "${qSnippet}" lacked essential technical mechanics and specific terminology. 1 mark awarded.`,
+      feedback: `Vague / Superficial: The response for "${qSnippet}" lacked essential technical mechanics, syntax, and accuracy. 0 marks awarded.`,
       modelAnswer: `Key concepts for "${qSnippet}": Explain the core architecture, exact execution mechanism, relevant methods/APIs, and production best practices.`,
       isCorrectDirection: false,
     };
   }
 
   // Only award solid marks if there is genuine length AND multiple domain keywords
-  const baseScore = newTechnicalWords.length >= 8 && words.length >= 30 ? 5 : newTechnicalWords.length >= 4 ? 3 : 2;
+  const baseScore = newTechnicalWords.length >= 10 && words.length >= 35 ? 6 : newTechnicalWords.length >= 6 ? 4 : 2;
 
   return {
     source: 'fallback',
@@ -449,7 +488,7 @@ Respond ONLY with valid JSON:
     confidence: baseScore,
     feedback: baseScore >= 5
       ? `Partially acceptable response for "${qSnippet}". Essential terms were mentioned, but deeper architectural explanation is needed.`
-      : `Incomplete answer for "${qSnippet}". The response lacks depth and accurate technical specifics. ${baseScore} marks awarded.`,
+      : `Incomplete / Weak answer for "${qSnippet}". The response lacks technical specifics. ${baseScore} marks awarded.`,
     modelAnswer: `Key concepts for "${qSnippet}": Explain the core architecture, exact execution mechanism, relevant methods/APIs, and production best practices.`,
     isCorrectDirection: baseScore >= 5,
   };

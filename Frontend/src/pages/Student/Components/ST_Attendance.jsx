@@ -215,18 +215,26 @@ export default function Attendance() {
             const missed = Number(summary.absent_count ?? summary.absent ?? Math.max(0, total - present));
             const pct = Number(summary.attendance_percentage ?? summary.percentage ?? (total > 0 ? Math.round((present / total) * 100) : 0));
 
-            setData({
-              overallPercentage: pct,
-              attendedClasses: present,
-              missedClasses: missed,
-              totalClasses: total,
-              requiredThreshold: 75,
-              status: pct >= 75 ? "Good" : "Low",
-              isLowAttendance: pct < 75 && total > 0,
-              warningMessage: "⚠ Attendance is below the required 75% threshold.",
-              subjects: formattedHistory,
-              attendanceHistory: formattedHistory,
-              verifications: attRes.data.verifications || []
+            const todayDate = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+            setData((prev) => {
+              const hasToday = formattedHistory.some(h => h.date === todayDate && h.status === "Present");
+              const mergedHistory = (!hasToday && prev?.attendanceHistory?.[0] && prev.attendanceHistory[0].date === todayDate)
+                ? [prev.attendanceHistory[0], ...formattedHistory]
+                : formattedHistory;
+
+              return {
+                overallPercentage: pct,
+                attendedClasses: Math.max(present, prev.attendedClasses || 0),
+                missedClasses: missed,
+                totalClasses: Math.max(total, prev.totalClasses || 0),
+                requiredThreshold: 75,
+                status: pct >= 75 ? "Good" : "Low",
+                isLowAttendance: pct < 75 && total > 0,
+                warningMessage: "⚠ Attendance is below the required 75% threshold.",
+                subjects: mergedHistory,
+                attendanceHistory: mergedHistory,
+                verifications: attRes.data.verifications || []
+              };
             });
           }
         }).catch(() => { });

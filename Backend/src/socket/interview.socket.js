@@ -7,6 +7,7 @@ import {
   evaluateAnswer,
   generateScorecard,
   pickFallbackQuestion,
+  getLiveTimeGreeting,
 } from '../ai/interview.ai.js';
 import { ingestDocument, clearOwnerKnowledge } from '../services/rag/rag.service.js';
 import { createInterviewSessionModel } from '../models/interview.model.js';
@@ -256,17 +257,21 @@ export function initInterviewSocket(httpServer) {
           });
         }
 
+        const clientHour = typeof payload.clientHour === 'number' ? payload.clientHour : new Date().getHours();
+        const timeGreeting = getLiveTimeGreeting(clientHour);
+
         const opening = await generateOpeningQuestion({
           role: session.role,
           topic: session.topic,
           difficulty: session.difficulty,
           owner: session.owner,
           sessionId: session.id,
+          clientHour,
         });
 
         const effectiveOpening = opening || {
           source: 'fallback-hardcoded',
-          question: `Welcome to your ${session.role || 'technical'} interview focusing on ${session.topic || 'Core CS'}. To get started, please introduce yourself and tell me about one project you have built or feel most confident in.`,
+          question: `${timeGreeting}! Welcome to your ${session.role || 'technical'} interview focusing on ${session.topic || 'Core CS'}. To get started, please introduce yourself and tell me about one project you have built or feel most confident in.`,
           topic: 'Introduction & Project Overview',
           hint: 'Briefly state your background, role focus, and describe a project you built.',
         };

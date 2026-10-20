@@ -92,8 +92,9 @@ export const getLowAttendanceStudents = async (req, res, next) => {
  */
 export const getAllStudentsAttendance = async (req, res, next) => {
   try {
-    const { department, batch, threshold } = req.query;
+    const { department, batch, threshold, date, session_date } = req.query;
     const collegeId = req.user?.college_id || req.user?.collegeId || null;
+    const targetDate = date || session_date || new Date().toISOString().split('T')[0];
 
     const data = await getFilteredStudentsAttendanceService({
       collegeId,
@@ -102,6 +103,35 @@ export const getAllStudentsAttendance = async (req, res, next) => {
       threshold: threshold ? Number(threshold) : 75,
       onlyLowAttendance: false,
     });
+
+    // Enrich with specific date attendance and scan records
+    try {
+      const dayRecords = await query(
+        `SELECT user_id, status FROM attendance WHERE session_date = ?`,
+        [targetDate]
+      );
+      const dayScans = await query(
+        `SELECT DISTINCT user_id FROM attendance_scans WHERE session_date = ?`,
+        [targetDate]
+      );
+      const statusMap = new Map();
+      (dayRecords || []).forEach(r => statusMap.set(Number(r.user_id), r.status));
+      const scanSet = new Set((dayScans || []).map(s => Number(s.user_id)));
+
+      if (Array.isArray(data)) {
+        data.forEach(st => {
+          const uId = Number(st.studentId || st.student_id);
+          const dayStat = statusMap.get(uId) || null;
+          const isScanned = scanSet.has(uId);
+          st.today_status = dayStat || (isScanned ? 'present' : null);
+          st.todayStatus = st.today_status;
+          st.is_scanned = isScanned || dayStat === 'present';
+          st.isScanned = st.is_scanned;
+        });
+      }
+    } catch (e) {
+      console.warn('[getAllStudentsAttendance date enrich fallback]', e.message);
+    }
 
     return sendSuccess(res, 'Students attendance list retrieved successfully', data);
   } catch (error) {
@@ -182,8 +212,19 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     // Check if payload is a batch roster save ({ batch_id, date, attendance })
     if (req.body && req.body.attendance && typeof req.body.attendance === 'object' && Object.keys(req.body.attendance).length > 0) {
       const attendanceMap = req.body.attendance;
-      const targetDate = req.body.date || todayStr;
-      const tBatchId = batch_id || 1;
+      let tBatchId = batch_id;
+      if (tBatchId) {
+        try {
+          const bCheck = await query(`SELECT id FROM batches WHERE id = ?`, [tBatchId]);
+          if (!bCheck || bCheck.length === 0) tBatchId = null;
+        } catch (e) { tBatchId = null; }
+      }
+      if (!tBatchId) {
+        try {
+          const firstB = await query(`SELECT id FROM batches ORDER BY id ASC LIMIT 1`);
+          tBatchId = firstB[0]?.id || null;
+        } catch (e) { tBatchId = null; }
+      }
 
       // Find or create session for this batch & date
       const sessionObj = await findOrCreateAttendanceSession({
@@ -386,12 +427,22 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     }
 
     for (const uId of uIdsToMark) {
-      await query(
-        `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
-         VALUES (?, ?, ?, ?, ?, 'present', ?)
-         ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
-        [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
-      );
+      try {
+        await query(
+          `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
+           VALUES (?, ?, ?, ?, ?, 'present', ?)
+           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
+          [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
+        );
+      } catch (attErr) {
+        console.warn('[attendance insert fallback without updated_at]', attErr.message);
+        await query(
+          `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
+           VALUES (?, ?, ?, ?, ?, 'present', ?)
+           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present'`,
+          [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
+        );
+      }
 
       // Log detailed scan entry into attendance_scans table
       try {

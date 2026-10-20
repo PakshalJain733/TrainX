@@ -1119,8 +1119,11 @@ export default function AIRoadmap() {
           milestones: enforceSequentialMilestoneLocks(rm.milestones || []),
         }));
         setAllRoadmaps(processed);
-        // Default select latest roadmap
+        // Default select latest roadmap and set active milestone to Milestone 1
         setCurrentRoadmap(processed[0]);
+        if (processed[0]?.milestones?.length > 0) {
+          setActiveMilestoneIdx(0);
+        }
       } else {
         // Fetch active single roadmap
         const resSingle = await apiFetch("/roadmaps");
@@ -1131,6 +1134,9 @@ export default function AIRoadmap() {
           };
           setAllRoadmaps([rm]);
           setCurrentRoadmap(rm);
+          if (rm.milestones?.length > 0) {
+            setActiveMilestoneIdx(0);
+          }
         }
       }
     } catch (err) {
