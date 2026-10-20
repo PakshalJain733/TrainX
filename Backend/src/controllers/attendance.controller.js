@@ -426,6 +426,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       } catch (e) {}
     }
 
+    for (const uId of uIdsToMark) {
       try {
         await query(
           `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
