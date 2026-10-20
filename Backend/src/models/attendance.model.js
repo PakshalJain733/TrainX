@@ -66,13 +66,13 @@ export const findOrCreateAttendanceSession = async ({
   const result = await query(
     `INSERT INTO attendance_sessions (college_id, batch_id, session_code, title, session_date, faculty_id)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [validCollegeId, validBatchId || 1, sessionCode ? sessionCode.trim() : null, title, sessionDate, validFacultyId]
+    [validCollegeId, validBatchId, sessionCode ? sessionCode.trim() : null, title, sessionDate, validFacultyId]
   );
 
   return {
     id: result.insertId,
     college_id: validCollegeId,
-    batch_id: validBatchId || 1,
+    batch_id: validBatchId,
     session_code: sessionCode,
     title,
     session_date: sessionDate,

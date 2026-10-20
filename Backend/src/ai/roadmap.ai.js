@@ -25,8 +25,8 @@ CRITICAL REQUIREMENTS FOR DYNAMIC, SKILL-TAILORED ROADMAP:
    - The roadmap MUST be 100% focused on "${targetRole}".
    - If "${targetRole}" is a non-software role (e.g., Accountant, Banker, Civil Engineer, Murti Making, Graphic Designer, HR Specialist, Legal Advisor, Marketing Specialist), generate milestones and topics purely for that profession. DO NOT include software or coding concepts unless "${targetRole}" explicitly calls for software/IT.
 2. TAILORED PROGRESSION BASED ON EXISTING SKILLS:
-   - Analyze user's confirmed skills [${skillsListStr}]. If they already master basic prerequisites of "${targetRole}", skip redundant beginner lessons or mark Milestone 1 as "completed" (progress: 100), and start the next milestone with status "in-progress".
-   - If they have skill gaps, specifically target those gaps in the milestones and key learning topics!
+   - Target the curriculum to bridge student's skill gaps while mastering "${targetRole}".
+   - CRITICAL SEQUENTIAL RULE: Every newly generated roadmap must start strictly at Milestone 1. Milestone 1 must ALWAYS have "status": "in-progress" and "progress": 0. ALL subsequent milestones (Milestone 2, 3, 4, 5, etc.) must ALWAYS have "status": "locked" and "progress": 0. DO NOT skip milestones or mark later milestones as in-progress.
 3. DYNAMIC & DETAILED TOPICS / OBJECTIVES (CRITICAL):
    - For EVERY milestone, provide a "topics" array containing 4 to 6 SPECIFIC, ACTIONABLE key learning topics, sub-modules, tools, algorithms, or practical project objectives.
    - ABSOLUTE RULE: DO NOT use generic placeholders like "Core syntax & architectural patterns", "Hands-on lab project implementation", "Fundamentals of Milestone 1", or "Assessment quiz & code review". EVERY topic string MUST name concrete tools, technologies, concepts, or real-world project tasks specific to "${targetRole}".
@@ -35,8 +35,8 @@ CRITICAL REQUIREMENTS FOR DYNAMIC, SKILL-TAILORED ROADMAP:
    - "id": number (1 to 5)
    - "title": string (descriptive milestone title, e.g. "Milestone 1: HTML5, CSS3 Layouts & Responsive Web Design")
    - "desc": string (2-3 sentences overview)
-   - "status": "completed" | "in-progress" | "locked"
-   - "progress": number (0 to 100)
+   - "status": "in-progress" (for milestone 1 only) | "locked" (for all subsequent milestones)
+   - "progress": 0
    - "tags": array of 3-5 technology/skill strings
    - "topics": array of 4 to 6 concrete, actionable technical topics/objectives
 
@@ -93,8 +93,8 @@ Output ONLY valid JSON matching this exact structure without markdown backticks:
         id: index + 1,
         title: m.title || `Milestone ${index + 1}: ${targetRole} Module`,
         desc: m.desc || `Core learning concepts and practical skills for ${targetRole}`,
-        status: m.status || (index === 0 ? 'in-progress' : 'locked'),
-        progress: typeof m.progress === 'number' ? m.progress : 0,
+        status: index === 0 ? 'in-progress' : 'locked',
+        progress: 0,
         tags: Array.isArray(m.tags) ? m.tags : [targetRole],
         topics: milestoneTopics,
         syllabus: Array.isArray(m.syllabus) && m.syllabus.length > 0 ? m.syllabus : generateRoleSpecificSyllabus(targetRole, m.title, index + 1, currentSkills),
@@ -229,41 +229,390 @@ export function generateRoleSpecificVideos(targetRole, title = '', topics = [], 
 }
 
 /**
- * Generates a complete 5-milestone dynamic roadmap structure
+ * Generates a comprehensive, progressive domain-tailored milestone roadmap structure.
  */
 function generateDynamicMilestones(targetRole, currentSkills = []) {
-  const cleanRole = targetRole || 'Specialized Role';
+  const cleanRole = (targetRole || 'Software Engineering').trim();
+  const lowerRole = cleanRole.toLowerCase();
 
-  return [1, 2, 3, 4, 5].map((step) => {
-    const titles = [
-      `Milestone 1: Fundamentals & Core Tools of ${cleanRole}`,
-      `Milestone 2: Intermediate Architecture & Practical Execution`,
-      `Milestone 3: Advanced Optimization & Industry Standards`,
-      `Milestone 4: Automation, Testing & System Integration`,
-      `Milestone 5: Production Capstone Project & Portfolio Mastery`
+  let milestoneTemplates = null;
+
+  if (lowerRole.includes('java fullstack') || lowerRole.includes('java developer') || (lowerRole.includes('java') && !lowerRole.includes('script'))) {
+    milestoneTemplates = [
+      {
+        title: `Milestone 1: Core Java 17+, OOP & Collections Architecture`,
+        desc: `Master modern Java language syntax, memory management, garbage collection, and essential OOP design principles.`,
+        tags: ['Core Java', 'OOP', 'Collections', 'Memory Model'],
+        topics: [
+          'Core Java 17+ Syntax: OOP Concepts, Inheritance, Interfaces & Records',
+          'Java Collections Framework: Lists, Sets, Maps & Big-O Complexities',
+          'Java Streams API, Functional Interfaces & Lambda Expressions',
+          'Exception Handling Hierarchies, Custom Exceptions & Try-with-Resources',
+          'JUnit 5 Unit Testing, Assertions & Mockito Mocking'
+        ]
+      },
+      {
+        title: `Milestone 2: Relational Databases, SQL & Hibernate ORM`,
+        desc: `Design robust normalized relational database schemas, complex SQL queries, and JPA persistence layers.`,
+        tags: ['PostgreSQL', 'MySQL', 'Hibernate', 'Spring Data JPA'],
+        topics: [
+          'Relational Database Modeling, Schema Normalization (3NF) & Indexing',
+          'Complex SQL Joins, Aggregations, Transactions & ACID Guarantees',
+          'Object-Relational Mapping (ORM) with Hibernate & JPA Entity Lifecycle',
+          'Spring Data JPA: Custom Query Methods, Pagination & Specifications',
+          'Database Migrations & Version Control using Flyway / Liquibase'
+        ]
+      },
+      {
+        title: `Milestone 3: Spring Boot Microservices & RESTful API Engineering`,
+        desc: `Build scalable enterprise microservices using Spring Boot, dependency injection, and clean DTO patterns.`,
+        tags: ['Spring Boot', 'REST APIs', 'Spring MVC', 'DTO Pattern'],
+        topics: [
+          'Spring Boot Core: Inversion of Control (IoC), Dependency Injection & Bean Scopes',
+          'RESTful API Contract Design (@RestController, RequestMapping, Status Codes)',
+          'Input Validation with Jakarta Validation (@Valid, @NotNull, @Size)',
+          'Global Exception Handling with @ControllerAdvice & Error Response Standardization',
+          'OpenAPI / Swagger API Documentation & Postman Integration'
+        ]
+      },
+      {
+        title: `Milestone 4: Security, Authentication & Distributed Caching`,
+        desc: `Secure microservices with Spring Security, JWT authentication, and high-performance Redis caching.`,
+        tags: ['Spring Security', 'JWT Auth', 'Redis Cache', 'RBAC'],
+        topics: [
+          'Spring Security Filter Chain & SecurityContext Management',
+          'Stateless JWT Token Authentication & Refresh Token Rotation',
+          'Role-Based & Permission-Based Authorization (@PreAuthorize)',
+          'In-Memory Distributed Caching with Redis (@Cacheable, Cache Eviction)',
+          'Asynchronous Messaging & Event-Driven Architecture with RabbitMQ / Kafka'
+        ]
+      },
+      {
+        title: `Milestone 5: Frontend Integration with React & Next.js`,
+        desc: `Connect enterprise backend APIs with responsive modern React UI components and state management.`,
+        tags: ['React', 'TypeScript', 'Axios', 'Tailwind CSS'],
+        topics: [
+          'React Functional Components, JSX, Props & State Management',
+          'Consuming REST APIs via Axios / TanStack Query with Error Interceptors',
+          'JWT Token Storage, Protected Routes & Client-Side Authentication Flow',
+          'Responsive UI Design with Tailwind CSS & Reusable Component Systems',
+          'Form Handling, Client-Side Validation & Asynchronous Submissions'
+        ]
+      },
+      {
+        title: `Milestone 6: Cloud Deployment, Docker Containerization & Enterprise Capstone`,
+        desc: `Containerize the fullstack application, configure CI/CD pipelines, and deploy to production cloud platforms.`,
+        tags: ['Docker', 'Kubernetes', 'CI/CD', 'Cloud Deployment'],
+        topics: [
+          'Multi-Stage Dockerfile Builds for Spring Boot & React Applications',
+          'Docker Compose Multi-Container Orchestration (App, DB, Redis, Gateway)',
+          'CI/CD Automated Testing & Build Pipelines via GitHub Actions',
+          'Cloud Hosting & Production Deployment on AWS ECS / DigitalOcean',
+          'End-to-End Enterprise Fullstack Banking / E-Commerce Capstone Project'
+        ]
+      }
     ];
-
-    const descs = [
-      `Master basic principles, foundational concepts, essential tools, and core practices required for ${cleanRole}.`,
-      `Develop hands-on technical proficiency, structural patterns, and execution skills specific to ${cleanRole}.`,
-      `Master intricate techniques, advanced workflows, quality assurance, and high-performance practices for ${cleanRole}.`,
-      `Learn integration standards, automated testing methods, durability testing, and industry compliance.`,
-      `Create an end-to-end master masterpiece project, building a professional portfolio and presentation for ${cleanRole}.`
+  } else if (lowerRole.includes('python') || lowerRole.includes('data science') || lowerRole.includes('machine learning') || lowerRole.includes('ai') || lowerRole.includes('spark')) {
+    milestoneTemplates = [
+      {
+        title: `Milestone 1: Python Fundamentals, Syntax & Memory Model`,
+        desc: `Master Python 3 core syntax, data structures, variable references, and idiomatic Pythonic conventions.`,
+        tags: ['Python 3', 'Syntax', 'Data Types', 'Virtual Environments'],
+        topics: [
+          'Python 3 Primitives, Variable Scoping & Reference vs Value Semantics',
+          'Built-in Data Structures: Lists, Tuples, Dictionaries & Sets',
+          'Functions, *args, **kwargs, Lambda Expressions & Comprehensions',
+          'Virtual Environments (venv/poetry), pip Package Management & Project Layout',
+          'File I/O, Context Managers (with statement) & Custom Exception Handling'
+        ]
+      },
+      {
+        title: `Milestone 2: Object-Oriented Python, Generators & Decorators`,
+        desc: `Implement advanced Python OOP patterns, decorators, lazy iterators, and clean modular codebases.`,
+        tags: ['OOP', 'Decorators', 'Generators', 'Dunder Methods'],
+        topics: [
+          'Classes, Encapsulation, Inheritance & Dunder Methods (__init__, __str__, __repr__)',
+          'Higher-Order Functions & Custom Function/Class Decorators',
+          'Iterators, Generators & the yield Keyword for Memory-Efficient Streaming',
+          'Static Type Hinting with typing Module & Static Type Checking with mypy',
+          'Unit Testing with pytest, Mocking & Test-Driven Development'
+        ]
+      },
+      {
+        title: `Milestone 3: Data Analysis, NumPy, Pandas & Data Pipelines`,
+        desc: `Process, clean, and analyze complex datasets using vectorized operations and data manipulation tools.`,
+        tags: ['NumPy', 'Pandas', 'Data Analysis', 'Vectorization'],
+        topics: [
+          'NumPy N-Dimensional Arrays, Broadcasting & High-Speed Vectorized Operations',
+          'Pandas DataFrames: Filtering, Grouping, Aggregation & Pivot Tables',
+          'Data Cleaning, Missing Value Imputation & Feature Transformation',
+          'Data Visualization with Matplotlib & Seaborn',
+          'Relational SQL Integration: SQLAlchemy ORM & SQLite/PostgreSQL Connectivity'
+        ]
+      },
+      {
+        title: `Milestone 4: Backend Web Frameworks (FastAPI / Django) & REST APIs`,
+        desc: `Build high-performance asynchronous REST APIs with Pydantic validation and automatic OpenAPI documentation.`,
+        tags: ['FastAPI', 'Pydantic', 'AsyncIO', 'REST APIs'],
+        topics: [
+          'Asynchronous Programming with asyncio, async/await & Event Loops',
+          'FastAPI Route Handlers, Query/Path Parameters & Request Lifecycle',
+          'Data Validation & Serialization using Pydantic Models',
+          'JWT Authentication, Password Hashing (bcrypt) & Dependency Injection',
+          'Database Integration with Async SQLAlchemy & Alembic Migrations'
+        ]
+      },
+      {
+        title: `Milestone 5: Testing, Performance Optimization & ML/Distributed Analytics`,
+        desc: `Apply predictive modeling, optimize Python code execution, and process scalable data streams.`,
+        tags: ['Scikit-Learn', 'ML Models', 'cProfile', 'Optimization'],
+        topics: [
+          'Supervised Machine Learning with Scikit-Learn: Classification & Regression',
+          'Model Evaluation Metrics: Confusion Matrix, ROC-AUC, Precision & Recall',
+          'Performance Profiling with cProfile & Memory Tracing with tracemalloc',
+          'Multiprocessing vs Multithreading: Overcoming CPython GIL Limits',
+          'Distributed Analytics & Data Pipelines with PySpark / Celery'
+        ]
+      },
+      {
+        title: `Milestone 6: Docker Containerization, Cloud Deployment & Capstone Project`,
+        desc: `Package the Python service into optimized container images and deploy live production systems.`,
+        tags: ['Docker', 'CI/CD', 'Cloud Deployment', 'Capstone'],
+        topics: [
+          'Containerizing Python Applications with Docker Multi-Stage Builds',
+          'Docker Compose for Python Backend, Database & Redis Services',
+          'Automated CI/CD Pipeline Configuration with GitHub Actions',
+          'Production Deployment on Cloud (AWS/GCP/Render) with Gunicorn & Uvicorn',
+          'End-to-End Capstone Project: Real-time Data Analytics / AI API Service'
+        ]
+      }
     ];
+  } else if (lowerRole.includes('react') || lowerRole.includes('frontend') || lowerRole.includes('ui/ux') || lowerRole.includes('web development')) {
+    milestoneTemplates = [
+      {
+        title: `Milestone 1: Modern JavaScript (ES6+), DOM & Core Web Fundamentals`,
+        desc: `Master modern ECMAScript standards, asynchronous promises, closures, and browser execution mechanics.`,
+        tags: ['ES6+', 'Async/Await', 'DOM API', 'Closures'],
+        topics: [
+          'Modern JavaScript Syntax: Arrow Functions, Destructuring, Spread & Rest Operators',
+          'Asynchronous Programming: Promises, Async/Await & Event Loop Microtasks',
+          'Closures, Lexical Scoping & the "this" Keyword Execution Context',
+          'DOM Manipulation, Event Bubbling & Performance Optimization',
+          'Fetch API, Axios & HTTP Request / Response Lifecycle'
+        ]
+      },
+      {
+        title: `Milestone 2: React Core: JSX, Components, Props & State Management`,
+        desc: `Build dynamic, reusable user interfaces using React functional components and declarative rendering.`,
+        tags: ['React 18', 'JSX', 'Components', 'Props'],
+        topics: [
+          'React Mental Model: Declarative UI, Virtual DOM & Reconciliation',
+          'Functional Components, JSX Syntax & Conditional Rendering',
+          'Props Passing, Prop Drilling & Component Composition Patterns',
+          'useState Hook: State Immutability, Batch Updates & Form Handling',
+          'Styling Architecture: CSS Modules, Styled Components & Tailwind CSS'
+        ]
+      },
+      {
+        title: `Milestone 3: Advanced React Hooks & Lifecycle Effects`,
+        desc: `Manage complex side effects, asynchronous data fetching, and component performance memoization.`,
+        tags: ['useEffect', 'useMemo', 'useCallback', 'useRef'],
+        topics: [
+          'useEffect Hook: Dependency Arrays, Cleanup Functions & Race Condition Prevention',
+          'useRef Hook: DOM References & Mutable Values Across Re-renders',
+          'Performance Optimization: useMemo, useCallback & React.memo',
+          'Custom Hooks: Extracting & Sharing Reusable Business Logic',
+          'Error Boundaries & Suspense for Asynchronous Component Loading'
+        ]
+      },
+      {
+        title: `Milestone 4: Global State Management, Routing & API Integration`,
+        desc: `Architect scalable client-side routing, global context stores, and automated server-state caching.`,
+        tags: ['React Router', 'Context API', 'Zustand', 'TanStack Query'],
+        topics: [
+          'Client-Side Routing with React Router v6: Dynamic Routes, Layouts & Loaders',
+          'Global State Architecture: React Context API vs Zustand / Redux Toolkit',
+          'Server State Management with TanStack Query (React Query): Caching & Invalidation',
+          'Form Architecture with React Hook Form & Zod Schema Validation',
+          'Authentication Flow: Protected Routes, JWT Interceptors & Session Handling'
+        ]
+      },
+      {
+        title: `Milestone 5: Next.js Fullstack Framework & Server-Side Rendering`,
+        desc: `Build production-grade hybrid web applications using Next.js App Router, SSR, and Server Components.`,
+        tags: ['Next.js', 'App Router', 'SSR / SSG', 'Server Components'],
+        topics: [
+          'Next.js 14+ App Router: Server Components vs Client Components',
+          'Rendering Strategies: Static Site Generation (SSG), SSR & Incremental Static Regeneration',
+          'Next.js Route Handlers (API Routes) & Server Actions',
+          'Search Engine Optimization (SEO): Metadata API, OpenGraph & Core Web Vitals',
+          'Image Optimization with next/image & Font Optimization'
+        ]
+      },
+      {
+        title: `Milestone 6: Testing, CI/CD & Production Capstone Project`,
+        desc: `Write automated tests with Jest and React Testing Library, and deploy high-performance applications.`,
+        tags: ['Jest', 'RTL', 'CI/CD', 'Vercel Deployment'],
+        topics: [
+          'Unit & Component Testing with Jest and React Testing Library (RTL)',
+          'End-to-End Testing Basics with Playwright / Cypress',
+          'Accessibility (a11y) Standards: ARIA Roles, Keyboard Navigation & Contrast',
+          'Automated CI/CD Pipeline & Deployment on Vercel / Cloudflare Pages',
+          'Full-Featured Enterprise SaaS / E-Commerce Production Capstone Project'
+        ]
+      }
+    ];
+  } else if (lowerRole.includes('data structure') || lowerRole.includes('algorithm') || lowerRole.includes('dsa') || lowerRole.includes('coding')) {
+    milestoneTemplates = [
+      {
+        title: `Milestone 1: Arrays, Strings, Two Pointers & Sliding Window`,
+        desc: `Build foundational problem-solving intuition and master linear data structure algorithmic patterns.`,
+        tags: ['Arrays', 'Strings', 'Two Pointers', 'Sliding Window'],
+        topics: [
+          'Time & Space Complexity Analysis: Asymptotic Big-O Notation',
+          'Arrays & Dynamic Arrays: Memory Layout & In-Place Operations',
+          'Two Pointer Technique: Opposite-Direction & Same-Direction Pointers',
+          'Fixed & Dynamic Sliding Window Patterns for Subarray / Substring Problems',
+          'Prefix Sum & Suffix Sum Arrays for Range Query Optimization'
+        ]
+      },
+      {
+        title: `Milestone 2: Hash Maps, Stacks, Queues & Linked Lists`,
+        desc: `Master amortized constant-time lookup tables, LIFO/FIFO structures, and pointer manipulation.`,
+        tags: ['Hash Tables', 'Stacks', 'Queues', 'Linked Lists'],
+        topics: [
+          'Hash Tables: Collision Resolution (Chaining vs Open Addressing) & Hash Functions',
+          'Monotonic Stack & Queue Patterns for Next Greater / Smaller Element',
+          'Singly & Doubly Linked Lists: Reversal, Cycle Detection (Floyd Algorithm)',
+          'Queue Implementation & Circular Queues',
+          'Design Problem: Least Recently Used (LRU) Cache Implementation'
+        ]
+      },
+      {
+        title: `Milestone 3: Recursion, Backtracking & Binary Search`,
+        desc: `Divide and conquer complex problem spaces and search sorted search spaces in logarithmic time.`,
+        tags: ['Binary Search', 'Recursion', 'Backtracking'],
+        topics: [
+          'Binary Search Algorithm: Exact Match, Lower Bound & Upper Bound Variations',
+          'Binary Search on Answer / Solution Space Optimization Problems',
+          'Recursion Call Stack Mechanics, Base Cases & Recurrence Relations',
+          'Backtracking: Subsets, Permutations, Combinations & N-Queens Problem',
+          'Pruning Branching Trees for Optimal Search Efficiency'
+        ]
+      },
+      {
+        title: `Milestone 4: Trees, Binary Search Trees & Heaps (Priority Queues)`,
+        desc: `Navigate hierarchical tree structures and priority heaps for top-K optimization problems.`,
+        tags: ['Binary Trees', 'BST', 'Heaps', 'Tree Traversal'],
+        topics: [
+          'Binary Tree Traversals: Inorder, Preorder, Postorder & Level-Order (BFS)',
+          'Binary Search Tree Properties, Validations & In-Order Successor / Predecessor',
+          'Lowest Common Ancestor (LCA) in Binary Trees & BSTs',
+          'Max-Heap & Min-Heap Implementations: Heapify, Insert & Extract-Max/Min',
+          'Top-K Frequent Elements & K-th Largest Element in an Array'
+        ]
+      },
+      {
+        title: `Milestone 5: Graph Algorithms: BFS, DFS, Dijkstra & Topological Sort`,
+        desc: `Model interconnected networks and solve shortest path, cycle detection, and connectivity queries.`,
+        tags: ['Graphs', 'BFS / DFS', 'Dijkstra', 'Topological Sort'],
+        topics: [
+          'Graph Representations: Adjacency List vs Adjacency Matrix',
+          'Breadth-First Search (BFS) for Shortest Path in Unweighted Graphs',
+          'Depth-First Search (DFS) for Connected Components & Cycle Detection',
+          'Topological Sort using Kahn Algorithm (BFS) & DFS with In-Degree Arrays',
+          'Dijkstra Algorithm for Single-Source Shortest Path in Weighted Graphs'
+        ]
+      },
+      {
+        title: `Milestone 6: Dynamic Programming & High-Difficulty Interview Mastery`,
+        desc: `Formulate optimal substructure transitions and master 1D/2D memoization and tabulation.`,
+        tags: ['Dynamic Programming', 'Memoization', 'Tabulation', 'Interview Prep'],
+        topics: [
+          'Dynamic Programming Mental Model: Overlapping Subproblems & Optimal Substructure',
+          '1D Dynamic Programming: Fibonacci, Climbing Stairs & House Robber Patterns',
+          '2D Dynamic Programming: Longest Common Subsequence (LCS) & Edit Distance',
+          '0/1 Knapsack & Unbounded Knapsack Problem Variations',
+          'Comprehensive Live Technical Coding Interview Mock Simulation'
+        ]
+      }
+    ];
+  } else {
+    // Custom role track: progressive, concrete 5-milestone structure
+    milestoneTemplates = [
+      {
+        title: `Milestone 1: Fundamentals, Core Tools & Environment for ${cleanRole}`,
+        desc: `Establish core foundational principles, essential tools, workflows, and workspace configuration for ${cleanRole}.`,
+        tags: [`${cleanRole} Basics`, 'Environment', 'Core Principles'],
+        topics: [
+          `Fundamental concepts, core terminology and foundational principles for ${cleanRole}`,
+          `Tooling setup, standard operating procedures and workflow configuration`,
+          `Essential methods, baseline rules and industry standards for ${cleanRole}`,
+          `Hands-on introductory lab exercise and competency check`
+        ]
+      },
+      {
+        title: `Milestone 2: Applied Architecture & Core Workflows in ${cleanRole}`,
+        desc: `Develop practical working mechanics, structural patterns, and execution methodologies specific to ${cleanRole}.`,
+        tags: [`${cleanRole} Architecture`, 'Workflows', 'Execution'],
+        topics: [
+          `Operational execution flow and structural architectural patterns in ${cleanRole}`,
+          `Key frameworks, modules and domain mechanisms`,
+          `Practical implementation exercises and scenario-based tasks`,
+          `Intermediate milestone lab project build`
+        ]
+      },
+      {
+        title: `Milestone 3: Advanced Optimization & Industry Standards for ${cleanRole}`,
+        desc: `Master intricate techniques, diagnostic workflows, quality standards, and high-performance practices.`,
+        tags: [`${cleanRole} Optimization`, 'Best Practices', 'Diagnostics'],
+        topics: [
+          `Advanced patterns, performance tuning and optimization in ${cleanRole}`,
+          `Diagnostic analysis, common failure points and preventive controls`,
+          `Quality assurance and adherence to industry best practices`,
+          `Comprehensive technical assessment and code/work review`
+        ]
+      },
+      {
+        title: `Milestone 4: Automation, Security & Integration in ${cleanRole}`,
+        desc: `Learn integration standards, automation methods, security compliance, and resilience testing.`,
+        tags: [`${cleanRole} Integration`, 'Automation', 'Compliance'],
+        topics: [
+          `Integration architectures, interfaces and communication protocols in ${cleanRole}`,
+          `Automated workflows, verification testing and reliability standards`,
+          `Security controls, risk management and operational compliance`,
+          `Multi-module integration project build`
+        ]
+      },
+      {
+        title: `Milestone 5: Enterprise Capstone Project & Portfolio Mastery for ${cleanRole}`,
+        desc: `Design and deliver an end-to-end production-grade capstone project establishing portfolio-level excellence.`,
+        tags: [`${cleanRole} Capstone`, 'Portfolio', 'Production Deployment'],
+        topics: [
+          `End-to-end enterprise capstone project architecture for ${cleanRole}`,
+          `Production validation, performance profiling and final polish`,
+          `Documentation, executive presentation and professional portfolio showcase`,
+          `Comprehensive career readiness and mock interview drill`
+        ]
+      }
+    ];
+  }
 
-    const stepTopics = generateRoleSpecificTopics(cleanRole, titles[step - 1], step, currentSkills);
+  return milestoneTemplates.map((m, idx) => {
+    const step = idx + 1;
+    const isFirst = step === 1;
 
     return {
       id: step,
-      title: titles[step - 1],
-      desc: descs[step - 1],
-      status: step === 1 ? 'in-progress' : 'locked',
+      title: m.title,
+      desc: m.desc,
+      status: isFirst ? 'in-progress' : 'locked',
       progress: 0,
-      tags: [`${cleanRole} Step ${step}`, 'Foundations', 'Practical Labs'],
-      topics: stepTopics,
-      syllabus: generateRoleSpecificSyllabus(cleanRole, titles[step - 1], step, currentSkills),
-      videos: generateRoleSpecificVideos(cleanRole, titles[step - 1], stepTopics, step),
-      resources: generateRoleSpecificResources(cleanRole, titles[step - 1], step),
+      tags: m.tags || [`${cleanRole} Step ${step}`],
+      topics: m.topics,
+      syllabus: generateRoleSpecificSyllabus(cleanRole, m.title, step, currentSkills),
+      videos: generateRoleSpecificVideos(cleanRole, m.title, m.topics, step),
+      resources: generateRoleSpecificResources(cleanRole, m.title, step),
       quizzes: 3 + (step % 2),
       exercises: 6 + step * 2,
     };

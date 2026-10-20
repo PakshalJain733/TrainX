@@ -1326,6 +1326,7 @@ export default function AIInterview() {
       topic: effectiveTopic,
       difficulty: "Medium",
       totalQuestions: 10,
+      clientHour: new Date().getHours(),
     });
   }, [role, topic, customTopic, startTimer, speakQuestion, finishInterview]);
 

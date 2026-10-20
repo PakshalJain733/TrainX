@@ -179,7 +179,8 @@ export default function AdminAttendance() {
 
       // Query database for attendance marked on the selected date or present via live scan
       try {
-        const attRes = await apiFetch('/attendance/list');
+        const queryDate = sessionDate || new Date().toISOString().split('T')[0];
+        const attRes = await apiFetch(`/attendance/list?date=${queryDate}&batch=${encodeURIComponent(selectedBatchCode || '')}`);
         const dbList = attRes && attRes.data && Array.isArray(attRes.data) ? attRes.data : [];
         
         const attendanceMap = {};
@@ -195,16 +196,31 @@ export default function AdminAttendance() {
             return matchesId || matchesName;
           });
           const isPresentInDb = record ? (
+            record.today_status === 'present' ||
+            record.is_scanned === true ||
             String(record.status || '').toLowerCase() === 'present' || 
             Number(record.present || record.present_count || 0) > 0 ||
             Number(record.attendance_percentage || 0) > 0
           ) : false;
           attendanceMap[s.id] = isPresentInDb;
-          if (isPresentInDb) scannedMap[s.id] = true;
+          if (isPresentInDb || (record && record.is_scanned)) scannedMap[s.id] = true;
         });
 
-        setAttendance(attendanceMap);
-        setQrScannedMap(scannedMap);
+        // Merge previous active scans so a freshly scanned student is never wiped out by background polling
+        setAttendance((prev) => {
+          const merged = { ...attendanceMap };
+          Object.keys(prev || {}).forEach((k) => {
+            if (prev[k]) merged[k] = true;
+          });
+          return merged;
+        });
+        setQrScannedMap((prev) => {
+          const merged = { ...scannedMap };
+          Object.keys(prev || {}).forEach((k) => {
+            if (prev[k]) merged[k] = true;
+          });
+          return merged;
+        });
       } catch (_) {
         const initialMap = {};
         fetchedStudents.forEach(s => { initialMap[s.id] = false; });
