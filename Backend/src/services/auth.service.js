@@ -455,6 +455,21 @@ export const registerUser = async (data) => {
         if (!codeRecord) {
           throw createAuthError(`Invalid or expired Secure Access Code for the selected role (${role || canonicalRole}). Please verify code with Super Admin.`, 400);
         }
+        if (codeRecord.college_name) {
+          const codeColName = codeRecord.college_name.trim();
+          let codeCollege = null;
+          try {
+            const [cRows] = await pool.query(
+              'SELECT id, name, code, domain FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+              [codeColName, codeColName]
+            );
+            if (cRows && cRows.length > 0) codeCollege = cRows[0];
+          } catch (_) {}
+
+          if (existingUser.college_id && codeCollege && existingUser.college_id !== codeCollege.id) {
+            throw createAuthError(`This Secure Access Code was generated for "${codeRecord.college_name}". You cannot use it for this account.`, 403);
+          }
+        }
       } else if (canonicalRole !== ROLES.COLLEGE_ADMIN) {
         throw createAuthError(`Secure access code is required to register for role: ${role || canonicalRole}`, 400);
       }
@@ -573,58 +588,61 @@ export const registerUser = async (data) => {
     }
   }
 
-  // College assignment and domain check
-  let assignedCollegeId = 1;
-  const colInputId = parseInt(college_id || collegeId, 10);
-
+  // College assignment: strictly determined by email domain and verified against secure code
   let matchingCollege = null;
-  if (!isNaN(colInputId) && colInputId > 0) {
-    matchingCollege = await findCollegeById(colInputId);
-  }
-  if (!matchingCollege && email) {
-    matchingCollege = await findCollegeByEmailDomain(email);
+  const userEmail = email ? String(email).trim().toLowerCase() : '';
+  const emailDomain = userEmail.includes('@') ? userEmail.split('@')[1].trim().toLowerCase() : '';
+
+  if (userEmail) {
+    matchingCollege = await findCollegeByEmailDomain(userEmail);
   }
 
-  if (matchingCollege) {
-    assignedCollegeId = matchingCollege.id;
-  } else if (codeRecord && codeRecord.college_name) {
+  // If a secure access code was used, strictly validate its designated college
+  if (codeRecord && codeRecord.college_name) {
+    const codeColName = codeRecord.college_name.trim();
+    let codeCollege = null;
     try {
-      const colName = codeRecord.college_name.trim();
-      const [colRows] = await pool.query('SELECT id FROM colleges WHERE name = ? LIMIT 1', [colName]);
-      if (colRows.length > 0) {
-        assignedCollegeId = colRows[0].id;
-      } else {
-        const colCode = colName.split(' ')[0].substring(0, 8).toUpperCase();
-        const [insertRes] = await pool.query(
-          'INSERT INTO colleges (name, code, location, status) VALUES (?, ?, ?, ?)',
-          [colName, colCode, 'Main Campus', 'Active']
-        );
-        assignedCollegeId = insertRes.insertId;
+      const [colRows] = await pool.query(
+        'SELECT id, name, code, domain FROM colleges WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1',
+        [codeColName, codeColName]
+      );
+      if (colRows && colRows.length > 0) {
+        codeCollege = colRows[0];
       }
     } catch (_) {}
-  } else if (data.college_name || data.collegeName) {
-    try {
-      const colName = (data.college_name || data.collegeName).trim();
-      const [colRows] = await pool.query('SELECT id FROM colleges WHERE name = ? LIMIT 1', [colName]);
-      if (colRows.length > 0) {
-        assignedCollegeId = colRows[0].id;
-      } else if (canonicalRole === ROLES.COLLEGE_ADMIN) {
-        const colCode = colName.split(' ')[0].substring(0, 8).toUpperCase();
-        const [insertRes] = await pool.query(
-          'INSERT INTO colleges (name, code, location, status) VALUES (?, ?, ?, ?)',
-          [colName, colCode, 'Main Campus', 'Active']
+
+    // Validation 1: User's email domain belongs to another known college -> reject!
+    if (matchingCollege && codeCollege && matchingCollege.id !== codeCollege.id) {
+      throw createAuthError(
+        `This Secure Access Code is reserved for "${codeRecord.college_name}". Your email address (@${emailDomain}) belongs to "${matchingCollege.name}". You cannot use this code for a different institution.`,
+        403
+      );
+    }
+
+    // Validation 2: Code's college has an authorized domain registered -> verify email matches!
+    if (codeCollege && codeCollege.domain && emailDomain) {
+      const expectedDomain = codeCollege.domain.trim().toLowerCase().replace(/^@/, '');
+      if (expectedDomain && !emailDomain.endsWith(expectedDomain) && !emailDomain.includes(expectedDomain)) {
+        throw createAuthError(
+          `This Secure Access Code was issued for "${codeRecord.college_name}". You must register with an official ${codeRecord.college_name} email address (@${expectedDomain}).`,
+          403
         );
-        assignedCollegeId = insertRes.insertId;
       }
-    } catch (_) {}
-  } else if (email) {
-    if (canonicalRole === ROLES.COLLEGE_ADMIN && codeRecord) {
-      assignedCollegeId = 1;
-    } else {
-      const domain = email.includes('@') ? email.split('@')[1] : email;
-      throw createAuthError(`Registration denied: College does not exist or your email domain (@${domain}) is not authorized. You cannot register.`, 400);
+    }
+
+    if (codeCollege) {
+      matchingCollege = codeCollege;
     }
   }
+
+  if (!matchingCollege) {
+    throw createAuthError(
+      `Registration denied: No registered institution matches your email domain (@${emailDomain || 'unknown'}). Please register with your authorized college email address.`,
+      400
+    );
+  }
+
+  const assignedCollegeId = matchingCollege.id;
 
   // Resolve department ID and Name
   let assignedDeptId = null;

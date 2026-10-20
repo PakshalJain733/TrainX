@@ -1,6 +1,6 @@
 import { sendRegistrationOtp, checkRegistrationEmailOtp, verifyRegistrationOtpAndRegister, sendUserOtp, verifyUserOtpAndLogin, loginWithPassword, verifyTotpAndLogin, verifyTotpPairing, changeUserPassword, resetUserPasswordWithOtp, setupUser2FA, verifyAndEnableUser2FA } from '../services/auth.service.js';
 import { sendSuccess, sendError } from '../utils/response.js';
-import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain } from '../models/user.model.js';
+import { findUserById, findUserByEmailOrMobile, getStudentByUserId, toSafeUser, updateUserModel, getDepartmentsByEmailDomain, findCollegeByEmailDomain } from '../models/user.model.js';
 import { pool, query } from '../config/db.js';
 
 export const getDepartmentsByEmail = async (req, res, next) => {
@@ -8,6 +8,21 @@ export const getDepartmentsByEmail = async (req, res, next) => {
     const { email } = req.query;
     const depts = await getDepartmentsByEmailDomain(email);
     return sendSuccess(res, 'Departments retrieved successfully', depts);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getCollegeByEmail = async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    if (!email || !String(email).includes('@')) {
+      return sendSuccess(res, 'Email required for college lookup', { college: null });
+    }
+    const college = await findCollegeByEmailDomain(String(email).trim());
+    return sendSuccess(res, 'College lookup completed', {
+      college: college ? { id: college.id, name: college.name, code: college.code, domain: college.domain } : null,
+    });
   } catch (error) {
     next(error);
   }
@@ -271,7 +286,8 @@ export const checkRegistrationStatus = async (req, res, next) => {
     if (!user) {
       return sendError(res, 'No registered account found for this email', 404);
     }
-    const isApproved = user.is_active === 1 || user.is_active === true || user.is_active === '\x01';
+    const isApproved = (user.is_active === 1 || user.is_active === true || user.is_active === '\x01') &&
+                       (user.is_approved === 1 || user.is_approved === true || user.is_approved === '\x01');
     return sendSuccess(res, 'Registration status retrieved successfully', {
       email: user.email,
       isApproved,

@@ -1302,7 +1302,9 @@ export default function ManageUsers() {
         if (res && res.data && Array.isArray(res.data)) {
           const adminOnly = res.data.filter(u => {
             const r = String(u.role || '').toLowerCase();
-            return r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin');
+            const isVerifiedOr2fa = u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
+                                    u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
+            return (r === 'college_admin' || r === 'admin' || r === 'hod' || r.includes('admin')) && isVerifiedOr2fa;
           });
           setPendingUsersList(adminOnly);
           setPendingUsersCount(adminOnly.length);
@@ -1320,9 +1322,14 @@ export default function ManageUsers() {
           apiFetch('/admin/pending-users').catch(() => null)
         ]);
 
-        const pendingData = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
+        const rawPending = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
           ? pendingRes.data
           : (Array.isArray(pendingRes) ? pendingRes : []);
+
+        const pendingData = rawPending.filter(u => {
+          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
+                 u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
+        });
 
         setPendingUsersList(pendingData);
         setPendingUsersCount(pendingData.length);
@@ -1653,6 +1660,8 @@ export default function ManageUsers() {
     const colCode = codeCollege ? String(codeCollege).split(' ')[0].substring(0, 4).toUpperCase() : 'PVPP';
     const generatedFallback = `${prefix}-${randomHex}-${colCode}`;
 
+    const selectedCollegeObj = collegesList.find((c) => c.name === codeCollege || c.id === codeCollege || (c.code && c.code === codeCollege));
+
     try {
       const res = await apiFetch('/secure-codes/generate', {
         method: 'POST',
@@ -1660,6 +1669,8 @@ export default function ManageUsers() {
           code: generatedFallback,
           role: targetRole,
           college_name: codeCollege,
+          admin_email: selectedCollegeObj?.adminEmail || selectedCollegeObj?.contact_email || null,
+          admin_name: selectedCollegeObj?.adminName || selectedCollegeObj?.admin_name || null,
           max_uses: parseInt(codeMaxUses, 10) || 1,
           expiry_option: codeExpiry,
           description: `Generated for ${codeCollege} - Max Uses: ${codeMaxUses === '0' ? 'Unlimited' : codeMaxUses} - Expiry: ${codeExpiry}`,

@@ -17,7 +17,7 @@ import {
 import { getDepartmentByIdModel } from '../models/department.model.js';
 import { getBatchByIdModel } from '../models/batch.model.js';
 import { ROLES } from '../utils/constants.js';
-import { sendWelcomeEmail, sendAccountApprovedEmail } from '../services/email.service.js';
+import { sendWelcomeEmail, sendAccountApprovedEmail, sendAdminCredentialsEmail } from '../services/email.service.js';
 import { findSecureCode, createSecureCode } from '../models/secureCode.model.js';
 import { generateTotpSetup } from '../services/auth.service.js';
 
@@ -344,11 +344,33 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
-    // For non-student staff roles (Coordinator, Mentor, College Admin):
-    // Ensure a Secure Access Code exists so user can complete registration with it.
+    // Resolve target college name for notification emails & code generation
+    let targetCollegeName = (req.body.college_name || '').trim();
+    if (!targetCollegeName && targetCollegeId) {
+      try {
+        const colRows = await query('SELECT name FROM colleges WHERE id = ?', [targetCollegeId]);
+        if (colRows && colRows.length > 0) {
+          targetCollegeName = colRows[0].name;
+        }
+      } catch (_) {}
+    }
+    if (!targetCollegeName && req.user?.collegeName) {
+      targetCollegeName = req.user.collegeName;
+    }
+
+    // Check if Super Admin is directly provisioning an Admin account
+    const isSuperAdminAccount = canonicalRole === ROLES.SUPER_ADMIN;
+    const isSuperAdminAddingAdmin = req.user?.role === ROLES.SUPER_ADMIN && (
+      canonicalRole === ROLES.COLLEGE_ADMIN || 
+      isSuperAdminAccount || 
+      String(canonicalRole).includes('admin')
+    );
+
+    // For non-student staff roles (Coordinator, Mentor) or self-registering College Admins:
+    // Ensure a Secure Access Code exists so user can complete registration with it if needed.
     let targetSecureCode = (secure_code || code || '').trim().toUpperCase();
     const isStaffRole = canonicalRole === ROLES.COORDINATOR || canonicalRole === ROLES.MENTOR || canonicalRole === ROLES.COLLEGE_ADMIN;
-    if (isStaffRole) {
+    if (isStaffRole && !isSuperAdminAddingAdmin) {
       if (!targetSecureCode) {
         const prefix = canonicalRole === ROLES.COORDINATOR ? 'CO' : (canonicalRole === ROLES.MENTOR ? 'FAC' : 'ADM');
         const randomHex = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -359,12 +381,10 @@ export const createUserAdmin = async (req, res, next) => {
       try {
         const existingCodeRecord = await findSecureCode(targetSecureCode, canonicalRole);
         if (!existingCodeRecord) {
-          const [colRows] = targetCollegeId ? await query('SELECT name FROM colleges WHERE id = ?', [targetCollegeId]) : [[]];
-          const collegeName = colRows && colRows[0] ? colRows[0].name : (req.user?.collegeName || null);
           await createSecureCode({
             code: targetSecureCode,
             role: canonicalRole,
-            college_name: collegeName,
+            college_name: targetCollegeName || null,
             description: `Generated for ${canonicalRole} onboarding: ${name}`,
             max_uses: 1,
             expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -375,22 +395,27 @@ export const createUserAdmin = async (req, res, next) => {
       }
     }
 
-    // Admin added users should start as:
-    // 1. is_verified = 0 (Unverified until they complete registration & 2FA authenticator setup)
-    // 2. is_approved = 0 and is_active = 0 (Requires manual admin approval)
-    const isSuperAdminAccount = canonicalRole === ROLES.SUPER_ADMIN;
+    // Determine account status and provisioned password:
+    // 1. If Super Admin adds an Admin:
+    //    The account is directly pre-approved, active, and verified.
+    //    Their login email and password are sent directly in a login credentials email.
+    // 2. Otherwise (coordinators, mentors, students):
+    //    is_verified = 0, is_approved = 0, is_active = 0 (Requires completing registration and manual approval)
+    const rawPassword = (password || '').trim();
+    const finalPassword = rawPassword || (isSuperAdminAddingAdmin ? `Admin@${Math.random().toString(36).slice(-6)}!` : '');
+
     const newUser = await createUser({
       name,
-      password: password || '',
+      password: finalPassword,
       email: email || '',
       mobile_number: mobile_number || '',
       role: canonicalRole,
       college_id: targetCollegeId,
       department: validatedDeptName,
       department_id: validatedDeptId,
-      is_active: isSuperAdminAccount ? 1 : 0,
-      is_verified: isSuperAdminAccount ? 1 : 0,
-      is_approved: isSuperAdminAccount ? 1 : 0,
+      is_active: isSuperAdminAddingAdmin ? 1 : 0,
+      is_verified: isSuperAdminAddingAdmin ? 1 : 0,
+      is_approved: isSuperAdminAddingAdmin ? 1 : 0,
     });
 
     let studentProfile = null;
@@ -411,29 +436,47 @@ export const createUserAdmin = async (req, res, next) => {
     }
 
     if (newUser.email && newUser.email.includes('@')) {
-      sendWelcomeEmail({
-        to: newUser.email,
-        name: newUser.name,
-        role: canonicalRole,
-        secure_code: targetSecureCode || '',
-        mobile_number: mobile_number || newUser.mobile_number || '',
-        roll_number: roll_number || (studentProfile && studentProfile.roll_number) || '',
-        department: validatedDeptName || department || '',
-        year: year || (studentProfile && studentProfile.year) || '',
-        division: division || (studentProfile && studentProfile.division) || '',
-      }).catch((err) => {
-        console.warn(`[Admin User Creation Email Notice] ${err.message}`);
-      });
+      if (isSuperAdminAddingAdmin) {
+        // Super Admin added an Admin -> send login credentials email with email and password
+        sendAdminCredentialsEmail({
+          to: newUser.email,
+          name: newUser.name,
+          password: finalPassword,
+          collegeName: targetCollegeName,
+          role: canonicalRole === ROLES.SUPER_ADMIN ? 'Super Administrator' : 'College Administrator',
+        }).catch((err) => {
+          console.warn(`[Admin Credentials Email Dispatch Notice] ${err.message}`);
+        });
+      } else {
+        // Staff/mentors/coordinators -> send registration invitation with secure code
+        sendWelcomeEmail({
+          to: newUser.email,
+          name: newUser.name,
+          role: canonicalRole,
+          secure_code: targetSecureCode || '',
+          mobile_number: mobile_number || newUser.mobile_number || '',
+          roll_number: roll_number || (studentProfile && studentProfile.roll_number) || '',
+          department: validatedDeptName || department || '',
+          year: year || (studentProfile && studentProfile.year) || '',
+          division: division || (studentProfile && studentProfile.division) || '',
+        }).catch((err) => {
+          console.warn(`[Admin User Creation Email Notice] ${err.message}`);
+        });
+      }
     }
+
+    const successMessage = isSuperAdminAddingAdmin
+      ? 'Administrator account created successfully. Login credentials email has been sent to the admin.'
+      : 'User created successfully. Registration invitation with secure access code dispatched.';
 
     return sendSuccess(
       res,
-      'User created successfully. Registration invitation with secure access code dispatched.',
+      successMessage,
       {
         ...newUser,
-        secure_code: targetSecureCode || null,
-        is_verified: 0,
-        is_approved: 0,
+        secure_code: isSuperAdminAddingAdmin ? null : (targetSecureCode || null),
+        is_verified: isSuperAdminAddingAdmin ? 1 : 0,
+        is_approved: isSuperAdminAddingAdmin ? 1 : 0,
         studentProfile,
       },
       201

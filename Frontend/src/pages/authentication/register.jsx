@@ -195,6 +195,7 @@ function Register() {
 
   const [colleges, setColleges] = useState([]);
   const [deptOptions, setDeptOptions] = useState([]);
+  const [detectedCollege, setDetectedCollege] = useState(null);
 
   useEffect(() => {
     fetch(`${getApiBaseUrl()}/colleges`)
@@ -214,6 +215,7 @@ function Register() {
   useEffect(() => {
     const email = (formData.email || "").trim();
     if (!email.includes("@") || email.split("@")[1].length < 3) {
+      setDetectedCollege(null);
       // Load general portal departments so coordinator/students can select immediately
       fetch(`${getApiBaseUrl()}/auth/departments-by-email?email=`)
         .then((res) => res.json())
@@ -228,6 +230,7 @@ function Register() {
 
     const timer = setTimeout(async () => {
       try {
+        // 1. Fetch departments by email domain
         const res = await fetch(`${getApiBaseUrl()}/auth/departments-by-email?email=${encodeURIComponent(email)}`);
         const data = await res.json();
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -266,8 +269,22 @@ function Register() {
             };
           });
         }
+
+        // 2. Determine affiliated college strictly by email domain
+        const colRes = await fetch(`${getApiBaseUrl()}/auth/college-by-email?email=${encodeURIComponent(email)}`);
+        const colData = await colRes.json();
+        if (colData.success && colData.data?.college) {
+          setDetectedCollege(colData.data.college);
+          setFormData((prev) => ({
+            ...prev,
+            college_id: colData.data.college.id,
+            college_name: colData.data.college.name,
+          }));
+        } else {
+          setDetectedCollege(null);
+        }
       } catch (err) {
-        console.warn("Error fetching departments by email domain:", err);
+        console.warn("Error fetching departments/college by email domain:", err);
       }
     }, 300);
 
@@ -390,14 +407,10 @@ function Register() {
   const handleRequestSecureCode = async () => {
     const name = (formData.name || "").trim();
     const email = (formData.email || "").trim();
-    const collegeName = (formData.college_name || "").trim();
+    const collegeName = detectedCollege?.name || (formData.college_name || "").trim();
 
     if (!name || !email) {
       setErrorMsg("Please enter your Full Name and Email before requesting a Secure Code.");
-      return;
-    }
-    if (!collegeName) {
-      setErrorMsg("Please enter or select your College / Institution Name before requesting a Secure Code.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -424,8 +437,8 @@ function Register() {
       const data = await response.json();
       if (data.success) {
         setCodeRequested(true);
-        setCodeRequestedMsg(`✓ Secure code request sent to Super Admin for "${collegeName}"! Super Admin will select your college and generate your code.`);
-        setSuccessMsg(`Secure code request sent for ${collegeName}!`);
+        setCodeRequestedMsg(`✓ Secure code request sent to Super Admin${collegeName ? ` for "${collegeName}"` : ""}! Super Admin will review your institutional request and issue your code.`);
+        setSuccessMsg(`Secure code request sent${collegeName ? ` for ${collegeName}` : ""}!`);
       } else {
         setErrorMsg(data.message || "Failed to request secure code. Please try again.");
       }
@@ -532,19 +545,11 @@ function Register() {
       });
       const data = await response.json();
       if (data.success) {
-        if (role === "Admin" || data.data?.user?.role === "college_admin") {
-          setShowTotpSetup(false);
-          setSuccessMsg("🎉 Registration and 2FA verified successfully! Please log in with your email and password.");
-          setTimeout(() => {
-            navigate("/?registered=true");
-          }, 1500);
-        } else {
-          setRegisteredEmail(emailToVerify);
-          setShowTotpSetup(false);
-          setShowPendingApproval(true);
-          setErrorMsg("");
-          setSuccessMsg("");
-        }
+        setRegisteredEmail(emailToVerify);
+        setShowTotpSetup(false);
+        setShowPendingApproval(true);
+        setErrorMsg("");
+        setSuccessMsg("");
       } else {
         setErrorMsg(data.message || "Invalid Authenticator Code. Please check Microsoft or Google Authenticator.");
       }
@@ -637,13 +642,6 @@ function Register() {
           return false;
         }
       }
-      if (role === "Admin") {
-        const col = (formData.college_name || "").trim();
-        if (!col) {
-          setErrorMsg("Please enter your College / Institution Name.");
-          return false;
-        }
-      }
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) {
         setErrorMsg("Please enter your Secure Access Code.");
@@ -675,10 +673,6 @@ function Register() {
       const colOrSecure = (formData.secure_code || "").trim();
       const dept = (formData.department || "").trim();
       if (!colOrSecure || !dept) return false;
-    } else if (role === "Admin") {
-      const col = (formData.college_name || "").trim();
-      const secureCode = (formData.secure_code || "").trim();
-      if (!col || !secureCode) return false;
     } else {
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) return false;
@@ -834,17 +828,10 @@ function Register() {
         setShowTotpSetup(true);
         setSuccessMsg("");
       } else if (data.success) {
-        if (role === "Admin") {
-          setSuccessMsg("Account created successfully!");
-          setTimeout(() => {
-            navigate("/");
-          }, 2500);
-        } else {
-          setRegisteredEmail(formData.email.trim());
-          setShowPendingApproval(true);
-          setErrorMsg("");
-          setSuccessMsg("");
-        }
+        setRegisteredEmail(formData.email.trim());
+        setShowPendingApproval(true);
+        setErrorMsg("");
+        setSuccessMsg("");
       } else {
         setErrorMsg(data.message || "Registration failed");
       }
@@ -946,20 +933,26 @@ function Register() {
 
             <p className="pending-approval-subtitle">
               {isApproved
-                ? "Your account has been officially approved by the College Administrator. You can now log in!"
+                ? (role === "Admin"
+                    ? "Your account has been officially approved by the Super Administrator. You can now log in!"
+                    : "Your account has been officially approved by the College Administrator. You can now log in!")
                 : "Your registration details and Authenticator app (2FA) pairing have been successfully verified."}
             </p>
 
             <div className={`pending-approval-box ${isApproved ? "approved" : ""}`}>
               <div className={`pending-approval-badge-row ${isApproved ? "approved" : ""}`}>
                 <span className={`pending-approval-badge ${isApproved ? "approved" : ""}`}>
-                  {isApproved ? "Status: Approved" : "Status: Pending Admin Approval"}
+                  {isApproved
+                    ? "Status: Approved"
+                    : (role === "Admin" ? "Status: Pending Super Admin Approval" : "Status: Pending Admin Approval")}
                 </span>
               </div>
               <p className={`pending-approval-desc ${isApproved ? "approved" : ""}`}>
                 {isApproved
                   ? `Your account is active and verified! Redirecting to login screen automatically in ${redirectCountdown}s...`
-                  : "You can login only after an Administrator approves your account. Your registration is currently under review by college administration."}
+                  : (role === "Admin"
+                      ? "You can login only after the Super Administrator approves your account. Your registration is currently under review."
+                      : "You can login only after an Administrator approves your account. Your registration is currently under review by college administration.")}
               </p>
             </div>
 
@@ -1221,20 +1214,15 @@ function Register() {
                             </button>
                           )}
                         </div>
-                        {(() => {
-                          if (!formData.email || !formData.email.includes("@")) return null;
-                          const userDomain = (formData.email.split("@")[1] || "").toLowerCase().trim();
-                          const selectedCollege = Array.isArray(colleges) ? colleges.find(c => String(c.id) === String(formData.college_id)) : null;
-                          const expectedDomain = (selectedCollege?.domain || selectedCollege?.email_domain || "pvppcoe.ac.in").toLowerCase().replace(/^@/, "");
-                          if (userDomain && expectedDomain && !userDomain.endsWith(expectedDomain) && !userDomain.includes(expectedDomain)) {
-                            return (
-                              <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "4px" }}>
-                                <span>⚠️ Non-college email domain (@{userDomain}). Flagged for Admin review.</span>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })()}
+                        {detectedCollege ? (
+                          <div style={{ fontSize: "12px", color: "#2563eb", marginTop: "5px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>🏛️ Institution: <strong>{detectedCollege.name}</strong></span>
+                          </div>
+                        ) : formData.email && formData.email.includes("@") && formData.email.split("@")[1].length >= 3 ? (
+                          <div style={{ fontSize: "12px", color: "#d97706", marginTop: "5px", fontWeight: 500, display: "flex", alignItems: "center", gap: "4px" }}>
+                            <span>⚠️ No registered college found for @{(formData.email.split("@")[1] || "").toLowerCase()}. Please enter an authorized college email.</span>
+                          </div>
+                        ) : null}
                       </div>
 
                       {/* Right Column: 6-Digit OTP Code beside Email Bar */}
@@ -1418,10 +1406,19 @@ function Register() {
                     type="email"
                     name="email"
                     required
-                    placeholder="user@pvppcoe.ac.in"
+                    placeholder="user@college.edu"
                     value={formData.email}
                     onChange={handleChange}
                   />
+                  {detectedCollege ? (
+                    <div style={{ fontSize: "12px", color: "#2563eb", marginTop: "6px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span>🏛️ Affiliated Institution: <strong>{detectedCollege.name}</strong></span>
+                    </div>
+                  ) : formData.email && formData.email.includes("@") && formData.email.split("@")[1].length >= 3 ? (
+                    <div style={{ fontSize: "12px", color: "#d97706", marginTop: "6px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span>⚠️ No registered college found for @{(formData.email.split("@")[1] || "").toLowerCase()}. Please enter an authorized college email.</span>
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Department dropdown for Coordinator */}
@@ -1439,28 +1436,6 @@ function Register() {
                           : "Select Department"
                       }
                     />
-                  </div>
-                )}
-
-                {/* College Name input for Admin self-registration */}
-                {role === "Admin" && (
-                  <div className="input-group" style={{ marginTop: "4px", marginBottom: "16px" }}>
-                    <FieldLabel icon={Icons.college}>College / Institution Name *</FieldLabel>
-                    <input
-                      type="text"
-                      name="college_name"
-                      list="admin-colleges-datalist"
-                      required
-                      placeholder="Enter or select your College / Institution Name (e.g. PVPPCOE, Mumbai)"
-                      value={formData.college_name || ""}
-                      onChange={handleChange}
-                      style={{ width: "100%" }}
-                    />
-                    <datalist id="admin-colleges-datalist">
-                      {Array.isArray(colleges) && colleges.map((c, idx) => (
-                        <option key={c.id || idx} value={c.name} />
-                      ))}
-                    </datalist>
                   </div>
                 )}
 
@@ -1513,47 +1488,15 @@ function Register() {
 
                 <div className="input-group">
                   <FieldLabel icon={Icons.shield}>Secure Code</FieldLabel>
-                  <div className="register-secure-code-wrap" style={{ display: 'flex', gap: '8px', alignItems: 'stretch' }}>
+                  <div className="register-secure-code-wrap">
                     <input
                       type="text"
                       name="secure_code"
                       placeholder={`Enter ${role} secure code`}
                       value={formData.secure_code}
                       onChange={handleChange}
-                      style={{ flex: 1, margin: 0 }}
                     />
-                    {role === "Admin" && (
-                      <button
-                        type="button"
-                        onClick={handleRequestSecureCode}
-                        disabled={isRequestingCode}
-                        className={`register-request-code-btn ${codeRequested ? 'requested' : ''}`}
-                        style={{
-                          padding: '0 16px',
-                          whiteSpace: 'nowrap',
-                          borderRadius: '8px',
-                          fontWeight: 600,
-                          fontSize: '12.5px',
-                          cursor: isRequestingCode ? 'wait' : 'pointer',
-                          background: codeRequested ? '#10b981' : '#2563eb',
-                          color: '#fff',
-                          border: 'none',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'all 0.2s ease',
-                          flexShrink: 0
-                        }}
-                      >
-                        {isRequestingCode ? "Sending..." : (codeRequested ? "✓ Code Requested" : "Generate / Request Code")}
-                      </button>
-                    )}
                   </div>
-                  {codeRequestedMsg && (
-                    <div style={{ fontSize: '12px', color: '#059669', marginTop: '6px', fontWeight: 500 }}>
-                      {codeRequestedMsg}
-                    </div>
-                  )}
                 </div>
               </div>
             )}

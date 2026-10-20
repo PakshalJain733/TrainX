@@ -44,6 +44,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Trust reverse proxy (Nginx / Cloudflare) so req.ip and rate limiting work correctly
+app.set('trust proxy', 1);
+
 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 const nodeEnv = process.env.NODE_ENV || 'development';
 
@@ -69,14 +72,12 @@ app.use((req, res, next) => {
   if (requestHeaders) {
     res.setHeader('Access-Control-Allow-Headers', requestHeaders);
   } else {
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-access-token, token, x-c2c-webhook-secret, sentry-trace, baggage, Cache-Control, Pragma, sec-ch-ua, sec-ch-ua-mobile, sec-ch-ua-platform'
-    );
+    res.setHeader('Access-Control-Allow-Headers', '*');
   }
 
-  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Authorization, token');
+  res.setHeader('Access-Control-Expose-Headers', '*');
   res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 24 hours
+  res.setHeader('Vary', 'Origin, Access-Control-Request-Headers, Access-Control-Request-Method');
 
   // Immediate handling of preflight OPTIONS requests across ALL routes
   if (req.method === 'OPTIONS') {
@@ -89,27 +90,11 @@ app.use((req, res, next) => {
 // Configure cors library for full express middleware compatibility
 app.use(
   cors({
-    origin: true,
+    origin: (origin, callback) => callback(null, true),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD'],
-    allowedHeaders: [
-      'Origin',
-      'X-Requested-With',
-      'Content-Type',
-      'Accept',
-      'Authorization',
-      'x-access-token',
-      'token',
-      'x-c2c-webhook-secret',
-      'sentry-trace',
-      'baggage',
-      'Cache-Control',
-      'Pragma',
-      'sec-ch-ua',
-      'sec-ch-ua-mobile',
-      'sec-ch-ua-platform',
-    ],
-    exposedHeaders: ['Content-Length', 'Content-Range', 'Authorization', 'token'],
+    allowedHeaders: '*',
+    exposedHeaders: '*',
     maxAge: 86400,
   })
 );
@@ -125,9 +110,9 @@ app.options('*', (req, res) => {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
   const requestHeaders = req.headers['access-control-request-headers'];
-  if (requestHeaders) {
-    res.setHeader('Access-Control-Allow-Headers', requestHeaders);
-  }
+  res.setHeader('Access-Control-Allow-Headers', requestHeaders || '*');
+  res.setHeader('Access-Control-Expose-Headers', '*');
+  res.setHeader('Access-Control-Max-Age', '86400');
   res.status(204).end();
 });
 
@@ -146,21 +131,47 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(apiMetricsMiddleware);
 
-// Security Rate Limiters
+// Security Rate Limiters (skip preflight OPTIONS and preserve CORS headers on 429)
 export const authLimiter = rateLimit({
-  windowMs: 10 * 60 * 1000, // 15 minutes
-  max: 250, // Limit each IP to 100 auth requests per windowMs
+  windowMs: 10 * 60 * 1000, // 10 minutes
+  max: 1000, // Limit each client IP to 1000 auth requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many authentication attempts from this IP. Please try again after 15 minutes.' },
+  skip: (req) => req.method === 'OPTIONS',
+  handler: (req, res, next, options) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.status(options.statusCode).json({
+      success: false,
+      message: 'Too many authentication attempts from this IP. Please try again after 10 minutes.',
+    });
+  },
 });
 
 export const aiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 120, // Limit each IP to 120 AI operations per windowMs
+  max: 500, // Limit each client IP to 500 AI operations per windowMs
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'AI rate limit reached. Please wait a few moments before trying again.' },
+  skip: (req) => req.method === 'OPTIONS',
+  handler: (req, res, next, options) => {
+    const origin = req.headers.origin;
+    if (origin) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.status(options.statusCode).json({
+      success: false,
+      message: 'AI rate limit reached. Please wait a few moments before trying again.',
+    });
+  },
 });
 
 // HTML escaping helper to prevent Reflected XSS

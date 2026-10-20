@@ -192,6 +192,48 @@ const getValidCollegeId = async (collegeId) => {
           return byContactDomain[0];
         }
       }
+
+      // 4. Substring and keyword matching on college code or distinct college name (e.g. 'pvppcoe' in 'pvppcoe.ac.in', 'somaiya' in 'somaiya.edu')
+      const allColleges = await query(
+        `SELECT id, name, code, contact_email, admin_name, domain FROM colleges WHERE LOWER(status) = 'active' OR status IS NULL ORDER BY id ASC`
+      );
+      if (allColleges && allColleges.length > 0) {
+        for (const col of allColleges) {
+          const colCode = (col.code || '').toLowerCase().trim();
+          const colName = (col.name || '').toLowerCase().trim();
+          if (colCode && colCode.length >= 3 && domain.includes(colCode)) {
+            return col;
+          }
+          const simplifiedName = colName.replace(/[^a-z0-9]/g, '');
+          if (simplifiedName && simplifiedName.length >= 5 && domain.replace(/[^a-z0-9]/g, '').includes(simplifiedName)) {
+            return col;
+          }
+          const words = colName.split(/\s+/).filter((w) => w.length >= 5 && !['college', 'engineering', 'technology', 'polytechnic', 'institute'].includes(w));
+          for (const w of words) {
+            if (domain.includes(w)) {
+              return col;
+            }
+          }
+        }
+      }
+
+      // 5. Check if this email was recorded in an approved secure code request for a specific college
+      const reqRows = await query(
+        `SELECT college_name FROM secure_code_requests 
+         WHERE LOWER(email) = ? AND college_name IS NOT NULL AND status != 'Rejected'
+         ORDER BY id DESC LIMIT 1`,
+        [cleanEmail]
+      );
+      if (reqRows && reqRows.length > 0 && reqRows[0].college_name) {
+        const colMatch = await query(
+          `SELECT id, name, code, contact_email, admin_name, domain FROM colleges 
+           WHERE LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) LIMIT 1`,
+          [reqRows[0].college_name.trim(), reqRows[0].college_name.trim()]
+        );
+        if (colMatch && colMatch.length > 0) {
+          return colMatch[0];
+        }
+      }
     } catch (err) {
       console.warn(`[User Model Warning] findCollegeByEmailDomain error: ${err.message}`);
     }
@@ -710,6 +752,7 @@ const getValidCollegeId = async (collegeId) => {
     WHERE (u.is_active = 0 OR u.is_active IS NULL OR u.is_active = false OR u.is_approved = 0)
       AND u.role != 'super_admin'
       AND (u.password_hash IS NOT NULL AND u.password_hash != '')
+      AND (u.is_verified = 1 OR u.two_factor_enabled = 1)
   `;
     const params = [];
     if (collegeId) {

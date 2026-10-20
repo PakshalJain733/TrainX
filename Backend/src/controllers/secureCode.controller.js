@@ -1,5 +1,7 @@
 import { getAllSecureCodes, createSecureCode, deleteSecureCode, findSecureCode } from '../models/secureCode.model.js';
 import { sendSuccess, sendError } from '../utils/response.js';
+import { query } from '../config/db.js';
+import { sendAdminRegistrationCodeEmail } from '../services/email.service.js';
 
 export const getCodes = async (req, res, next) => {
   try {
@@ -49,7 +51,75 @@ export const generateCode = async (req, res, next) => {
       expires_at: calculatedExpiry
     });
 
-    return sendSuccess(res, 'Secure access code created successfully', newCode, 201);
+    // Check if an email should be dispatched to the college administrator
+    const isTargetAdmin = !role || role === 'all' || role === 'college_admin' || role === 'admin' || role === 'admins' || String(role).includes('admin');
+    if (isTargetAdmin && college_name) {
+      try {
+        let adminEmail = (req.body.admin_email || '').trim();
+        let adminName = (req.body.admin_name || '').trim();
+        let collegeFullName = college_name;
+
+        // 1. Look up college in database
+        const colRows = await query(
+          `SELECT id, name, code, contact_email, admin_name FROM colleges 
+           WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) OR LOWER(TRIM(code)) = LOWER(TRIM(?))
+           ORDER BY id ASC LIMIT 1`,
+          [college_name, college_name]
+        );
+        if (colRows && colRows.length > 0) {
+          const col = colRows[0];
+          collegeFullName = col.name;
+          if (!adminEmail && col.contact_email) adminEmail = col.contact_email.trim();
+          if (!adminName && col.admin_name) adminName = col.admin_name.trim();
+        }
+
+        // 2. Check pending secure code requests if email still not found
+        if (!adminEmail) {
+          try {
+            const reqRows = await query(
+              `SELECT name, email FROM secure_code_requests 
+               WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?)) 
+               ORDER BY id DESC LIMIT 1`,
+              [college_name]
+            );
+            if (reqRows && reqRows.length > 0) {
+              if (!adminEmail && reqRows[0].email) adminEmail = reqRows[0].email.trim();
+              if (!adminName && reqRows[0].name) adminName = reqRows[0].name.trim();
+            }
+          } catch (_) {}
+        }
+
+        // 3. Check existing college_admin users if email still not found
+        if (!adminEmail && colRows && colRows.length > 0) {
+          try {
+            const uRows = await query(
+              `SELECT name, email FROM users WHERE college_id = ? AND (role = 'college_admin' OR role LIKE '%admin%') ORDER BY id ASC LIMIT 1`,
+              [colRows[0].id]
+            );
+            if (uRows && uRows.length > 0) {
+              adminEmail = uRows[0].email.trim();
+              if (!adminName) adminName = uRows[0].name.trim();
+            }
+          } catch (_) {}
+        }
+
+        // If admin email is found, send the registration invitation email with secure code!
+        if (adminEmail && adminEmail.includes('@')) {
+          sendAdminRegistrationCodeEmail({
+            to: adminEmail,
+            name: adminName || 'College Administrator',
+            secure_code: finalCode,
+            college_name: collegeFullName,
+          }).catch((emailErr) => {
+            console.warn(`[Secure Code Email Dispatch Warning] ${emailErr.message}`);
+          });
+        }
+      } catch (lookupErr) {
+        console.warn(`[Secure Code College Lookup Error] ${lookupErr.message}`);
+      }
+    }
+
+    return sendSuccess(res, 'Secure access code created successfully and dispatched to college administrator if email configured', newCode, 201);
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') {
       return sendError(res, 'This secure code already exists. Please use a unique code.', 409);

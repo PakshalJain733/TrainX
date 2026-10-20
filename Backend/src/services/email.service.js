@@ -467,6 +467,214 @@ export const sendAccountApprovedEmail = async ({ to, name, role = 'User' }) => {
 };
 
 /**
+ * Send Login Credentials Email to a newly created Admin (College Admin / Institutional Admin)
+ * Provisioned directly by Super Admin with pre-set password
+ */
+export const sendAdminCredentialsEmail = async ({
+  to,
+  name,
+  password,
+  collegeName = '',
+  role = 'College Administrator',
+}) => {
+  try {
+    const frontendBase = (process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com').replace(/\/+$/, '');
+    const loginUrl = `${frontendBase}/`;
+    const roleUpper = String(role).toUpperCase();
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Welcome ${name}! 🎉
+      </div>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Your <strong>${role}</strong> account on the <strong>Campus Training Portal</strong> has been created and approved by the <strong>Super Administrator</strong>.
+        You can now log in directly using the credentials provided below.
+      </p>
+
+      <!-- Credentials Box -->
+      <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border: 1.5px solid #cbd5e1; border-radius: 12px; padding: 22px; margin: 24px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+        <div style="font-size: 12px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;">
+          🔐 YOUR LOGIN CREDENTIALS
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; color: #334155;">
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b; width: 140px;">Portal Link:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <a href="${loginUrl}" style="color: #4f46e5; text-decoration: none;">${loginUrl}</a>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Login Email:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #e0e7ff; color: #3730a3; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 14px;">${to}</span>
+            </td>
+          </tr>
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Password:</td>
+            <td style="padding: 10px 0; font-weight: 700; color: #0f172a;">
+              <span style="background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 15px; letter-spacing: 0.5px;">${password}</span>
+            </td>
+          </tr>
+          ${collegeName ? `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">College / Institution:</td>
+            <td style="padding: 10px 0; font-weight: 600; color: #1e293b;">${collegeName}</td>
+          </tr>` : ''}
+          <tr>
+            <td style="padding: 10px 0; font-weight: 600; color: #64748b;">Assigned Role:</td>
+            <td style="padding: 10px 0;">
+              <span style="background-color: #6366f1; color: #ffffff; padding: 3px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                ${roleUpper}
+              </span>
+            </td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Quick Steps -->
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin: 20px 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Getting Started:</div>
+        <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13.5px; line-height: 1.6;">
+          <li>Click the <strong>Log In to Portal</strong> button below.</li>
+          <li>Enter your <strong>Login Email</strong> and <strong>Password</strong> shown above.</li>
+          <li>You will have direct access to your campus administrative dashboard, coordinators, and students.</li>
+          <li>For security, you may change your password anytime from your profile settings.</li>
+        </ol>
+      </div>
+
+      <!-- Login CTA Button -->
+      <div style="text-align: center; margin-top: 32px;">
+        <a href="${loginUrl}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          Log In to Portal &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Administrator Account Created',
+      subtitle: 'Your Login Credentials & Portal Access',
+      contentHtml,
+      footerNote: 'This email contains sensitive login credentials. Please keep it confidential.',
+    });
+
+    const subject = `Your Admin Account Credentials - Campus Training Portal`;
+    const textContent = `Hello ${name},\n\nYour Administrator account on Campus Training Portal has been successfully created by Super Admin.\n\nLogin URL: ${loginUrl}\nEmail: ${to}\nPassword: ${password}\n${collegeName ? `College: ${collegeName}\n` : ''}Role: ${roleUpper}\n\nYou can log in directly at ${loginUrl} using the credentials above.\n\nBest regards,\nCampus Training Portal Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAdminCredentialsEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+/**
+ * Send Secure Access Code & Registration Invitation Email to College Admin
+ * When Super Admin generates a code for that college.
+ */
+export const sendAdminRegistrationCodeEmail = async ({
+  to,
+  name = 'Administrator',
+  secure_code,
+  college_name = '',
+}) => {
+  try {
+    const frontendBase = (process.env.FRONTEND_URL || 'https://trainingportal.getflytechnologies.com').replace(/\/+$/, '');
+    const regUrl = `${frontendBase}/register?email=${encodeURIComponent(to)}&name=${encodeURIComponent(name)}&code=${encodeURIComponent(secure_code)}&role=admin`;
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Complete Your Registration 🔑
+      </div>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>, your Super Administrator has generated a Secure Authorization Code for <strong>${college_name || 'your institution'}</strong> on the <strong>Campus Training Portal</strong>.
+      </p>
+
+      <div style="background-color: #f0fdf4; border: 1.5px solid #86efac; border-radius: 12px; padding: 18px; margin: 20px 0; color: #166534; font-size: 14.5px; line-height: 1.5;">
+        <strong>Notice:</strong> Please complete your registration with this secure code and email.
+      </div>
+
+      <!-- Secure Code Hero Box -->
+      <div style="background-color: #f1f5f9; border: 2px dashed #4f46e5; border-radius: 14px; padding: 22px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px;">
+          🔑 Your Secure Access Code
+        </div>
+        <div style="font-family: monospace; font-size: 30px; font-weight: 800; color: #1e1b4b; letter-spacing: 4px; margin: 10px 0;">
+          ${secure_code}
+        </div>
+        <div style="font-size: 13.5px; color: #64748b; margin-top: 6px;">
+          Registered Email ID: <strong style="color: #1e293b;">${to}</strong>
+        </div>
+      </div>
+
+      <!-- Details Summary -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; margin: 22px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
+          Registration Credentials
+        </div>
+        <div style="font-size: 14px; color: #334155; margin-bottom: 6px;">
+          <strong>Registered Email:</strong> <span style="font-family: monospace; color: #4f46e5; font-weight: 700;">${to}</span>
+        </div>
+        <div style="font-size: 14px; color: #334155; margin-bottom: 6px;">
+          <strong>Secure Code:</strong> <span style="font-family: monospace; color: #0f172a; font-weight: 700;">${secure_code}</span>
+        </div>
+        ${college_name ? `
+        <div style="font-size: 14px; color: #334155; margin-bottom: 6px;">
+          <strong>Institution / College:</strong> ${college_name}
+        </div>` : ''}
+        <div style="font-size: 14px; color: #334155;">
+          <strong>Assigned Role:</strong> <span style="background: #4f46e5; color: #fff; padding: 2px 10px; border-radius: 10px; font-size: 12px; font-weight: 700;">COLLEGE ADMINISTRATOR</span>
+        </div>
+      </div>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin: 20px 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Registration Instructions:</div>
+        <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13.5px; line-height: 1.6;">
+          <li>Click the <strong>Complete Your Registration</strong> button below.</li>
+          <li>Your registered email and secure code will be pre-filled automatically.</li>
+          <li>Create and confirm your secure password.</li>
+          <li>Pair your <strong>Authenticator App</strong> (Microsoft Authenticator or Google Authenticator) for 2FA.</li>
+          <li>Once submitted, your account will be active on the portal.</li>
+        </ol>
+      </div>
+
+      <div style="text-align: center; margin-top: 32px;">
+        <a href="${regUrl}" style="background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 36px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          Complete Your Registration &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Complete Your Registration',
+      subtitle: `Secure Code for ${college_name || 'Institutional Administrator'}`,
+      contentHtml,
+      footerNote: 'Please keep this secure code confidential. Only use it with your registered email.',
+    });
+
+    const subject = `Action Required: Complete your registration with this secure code and email (${secure_code})`;
+    const textContent = `Hello ${name},\n\nYour Super Administrator has generated a Secure Authorization Code for ${college_name || 'your college'} on the Campus Training Portal.\n\nPlease complete your registration with this secure code and email:\n\nEmail ID: ${to}\nSecure Access Code: ${secure_code}\n${college_name ? `College: ${college_name}\n` : ''}Role: College Administrator\n\nComplete Registration URL:\n${regUrl}\n\nBest regards,\nCampus Training Portal Team`;
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject,
+      htmlContent,
+      textContent,
+    });
+  } catch (error) {
+    console.error(`[Email Service Error] sendAdminRegistrationCodeEmail failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+/**
  * Send Generic Email wrapped in standard Portal Template via Brevo
  */
 export const sendGenericEmail = async ({ to, subject, html, text }) => {

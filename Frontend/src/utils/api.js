@@ -15,9 +15,14 @@ export const getApiBaseUrl = () => {
     ) {
       return "/api/v1";
     }
+
+    // Direct production domain mapping
+    if (host.includes("trainingportal.getflytechnologies.com")) {
+      return "https://api.trainingportal.getflytechnologies.com/api/v1";
+    }
   }
 
-  // Deployed production API (Render live backend)
+  // Deployed production API (Render live backend fallback)
   return "https://trainx-6w8m.onrender.com/api/v1";
 };
 
@@ -35,6 +40,9 @@ export const getBackendOrigin = () => {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1" || host === "::1") {
       return `${window.location.protocol}//${host}:5000`;
+    }
+    if (host.includes("trainingportal.getflytechnologies.com")) {
+      return "https://api.trainingportal.getflytechnologies.com";
     }
   }
   return "https://trainx-6w8m.onrender.com";

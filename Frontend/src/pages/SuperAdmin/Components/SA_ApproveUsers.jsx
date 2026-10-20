@@ -24,7 +24,9 @@ export default function SuperAdminApproveUsers() {
       if (res && res.data && Array.isArray(res.data)) {
         const adminOnly = res.data.filter((u) => {
           const r = String(u.role || "").toLowerCase();
-          return (r === "college_admin" || r === "admin" || r === "hod" || r.includes("admin")) && !r.includes("super");
+          const isVerifiedOr2fa = u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
+                                  u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
+          return (r === "college_admin" || r === "admin" || r === "hod" || r.includes("admin")) && !r.includes("super") && isVerifiedOr2fa;
         });
         setPendingUsers(adminOnly);
       } else {

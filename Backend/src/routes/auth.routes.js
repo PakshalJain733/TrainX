@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail, getCollegeByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -10,6 +10,7 @@ const router = Router();
 // The legacy unauthenticated POST /register is intentionally gone so the
 // email verification cannot be bypassed.
 router.get('/departments-by-email', getDepartmentsByEmail);
+router.get('/college-by-email', getCollegeByEmail);
 router.get('/registration-status', checkRegistrationStatus);
 router.post('/register/send-otp', validateRequestBody(['email']), sendRegisterOtp);
 router.post('/register/verify-email-otp', validateRequestBody(['email', 'otp']), verifyRegisterEmailOtp);
