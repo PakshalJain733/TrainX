@@ -934,14 +934,61 @@ export const getAdminPerformance = async (req, res, next) => {
  */
 export const assignMentorToStudents = async (req, res, next) => {
   try {
-    const { mentorName, mentorEmail, studentIds } = req.body;
-    if (!mentorName) {
-      return sendError(res, 'Faculty Mentor Name is required', 400);
+    const { mentorId, mentorName, mentorEmail, studentIds } = req.body;
+    if (!mentorName && !mentorId) {
+      return sendError(res, 'Faculty Mentor Name or ID is required', 400);
+    }
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      return sendError(res, 'At least one student must be selected', 400);
     }
 
+    const parseId = (val) => {
+      if (val === null || val === undefined || val === '') return null;
+      const n = parseInt(String(val).replace(/^u-/i, '').replace(/^s-/i, ''), 10);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    // 1. Resolve Mentor Record
+    let resolvedMentorId = parseId(mentorId);
+    let resolvedMentorName = mentorName ? String(mentorName).trim() : '';
+    let resolvedMentorEmail = mentorEmail ? String(mentorEmail).trim().toLowerCase() : '';
+
+    const mentorSearchConditions = [];
+    const mentorParams = [];
+    if (resolvedMentorId) {
+      mentorSearchConditions.push('u.id = ?');
+      mentorParams.push(resolvedMentorId);
+    }
+    if (resolvedMentorEmail) {
+      mentorSearchConditions.push('LOWER(u.email) = ?');
+      mentorParams.push(resolvedMentorEmail);
+    }
+    if (resolvedMentorName) {
+      mentorSearchConditions.push('LOWER(u.name) = ?');
+      mentorParams.push(resolvedMentorName.toLowerCase());
+    }
+
+    if (mentorSearchConditions.length > 0) {
+      const foundMentors = await query(
+        `SELECT u.id, u.name, u.email, u.college_id
+         FROM users u
+         WHERE ${mentorSearchConditions.join(' OR ')}
+         ORDER BY (CASE WHEN u.role = 'mentor' THEN 0 ELSE 1 END), u.id ASC
+         LIMIT 1`,
+        mentorParams
+      );
+      if (foundMentors && foundMentors.length > 0) {
+        resolvedMentorId = parseId(foundMentors[0].id);
+        resolvedMentorName = foundMentors[0].name || resolvedMentorName;
+        resolvedMentorEmail = foundMentors[0].email || resolvedMentorEmail;
+      }
+    }
+
+    // 2. Ensure Database Schema Compatibility
     await query(`
       CREATE TABLE IF NOT EXISTS mentor_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_id INT NULL,
         mentor_name VARCHAR(100) NOT NULL,
         mentor_email VARCHAR(150) NULL,
         student_id VARCHAR(100) NOT NULL,
@@ -949,24 +996,98 @@ export const assignMentorToStudents = async (req, res, next) => {
         UNIQUE KEY unique_mentor_student (mentor_name, student_id)
       )
     `);
+    try { await query("ALTER TABLE mentor_assignments ADD COLUMN mentor_id INT NULL"); } catch (e) {}
 
-    if (Array.isArray(studentIds) && studentIds.length > 0) {
-      for (const sid of studentIds) {
+    await query(`
+      CREATE TABLE IF NOT EXISTS mentor_student_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mentor_id INT NOT NULL,
+        student_id INT NOT NULL,
+        batch_id INT DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY uq_mentor_student (student_id),
+        INDEX idx_mentor_student_assignments_mentor (mentor_id),
+        INDEX idx_mentor_student_assignments_batch (batch_id)
+      )
+    `);
+
+    try { await query("ALTER TABLE students ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await query("ALTER TABLE students ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+    try { await query("ALTER TABLE users ADD COLUMN mentor_name VARCHAR(150) NULL"); } catch (e) {}
+    try { await query("ALTER TABLE users ADD COLUMN mentor_id INT NULL"); } catch (e) {}
+
+    // 3. Process Each Assigned Student
+    let savedCount = 0;
+    for (const sid of studentIds) {
+      if (sid === null || sid === undefined || sid === '') continue;
+
+      const parsedSid = parseId(sid);
+
+      // Resolve student user_id and batch_id
+      const sRows = await query(
+        `SELECT u.id AS user_id, s.id AS student_table_id, s.batch_id
+         FROM users u
+         LEFT JOIN students s ON s.user_id = u.id
+         WHERE u.id = ? OR s.id = ? OR s.user_id = ?
+         LIMIT 1`,
+        [sid, sid, sid]
+      );
+
+      const targetStudentUserId = (sRows && sRows.length > 0 && sRows[0].user_id) ? parseId(sRows[0].user_id) : parsedSid;
+      const studentBatchId = (sRows && sRows.length > 0 && sRows[0].batch_id) ? parseId(sRows[0].batch_id) : null;
+
+      if (!targetStudentUserId) continue;
+
+      // 3a. Save to mentor_assignments
+      await query(
+        `INSERT INTO mentor_assignments (mentor_id, mentor_name, mentor_email, student_id)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           mentor_id = VALUES(mentor_id),
+           mentor_name = VALUES(mentor_name),
+           mentor_email = VALUES(mentor_email)`,
+        [resolvedMentorId || null, resolvedMentorName, resolvedMentorEmail || null, String(targetStudentUserId)]
+      );
+
+      // 3b. Save to mentor_student_assignments (PRIMARY TABLE for Mentor workspace)
+      if (resolvedMentorId) {
         await query(
-          `INSERT INTO mentor_assignments (mentor_name, mentor_email, student_id)
+          `INSERT INTO mentor_student_assignments (mentor_id, student_id, batch_id)
            VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE mentor_name = VALUES(mentor_name), mentor_email = VALUES(mentor_email)`,
-          [mentorName, mentorEmail || null, String(sid)]
+           ON DUPLICATE KEY UPDATE
+             mentor_id = VALUES(mentor_id),
+             batch_id = COALESCE(VALUES(batch_id), batch_id)`,
+          [resolvedMentorId, targetStudentUserId, studentBatchId || null]
         );
-        try {
-          await query(`UPDATE students SET mentor_name = ? WHERE user_id = ? OR id = ?`, [mentorName, sid, sid]);
-        } catch (e) {}
       }
+
+      // 3c. Update students and users tables
+      try {
+        await query(
+          `UPDATE students
+           SET mentor_name = ?, mentor_id = ?
+           WHERE user_id = ? OR id = ?`,
+          [resolvedMentorName, resolvedMentorId || null, targetStudentUserId, sid]
+        );
+      } catch (e) {}
+
+      try {
+        await query(
+          `UPDATE users
+           SET mentor_name = ?, mentor_id = ?
+           WHERE id = ?`,
+          [resolvedMentorName, resolvedMentorId || null, targetStudentUserId]
+        );
+      } catch (e) {}
+
+      savedCount++;
     }
 
-    return sendSuccess(res, `Successfully mapped ${studentIds?.length || 0} mentees to mentor ${mentorName} in database`, {
-      mentorName,
-      assignedCount: studentIds?.length || 0
+    return sendSuccess(res, `Successfully mapped ${savedCount} mentees to mentor ${resolvedMentorName} in database`, {
+      mentorId: resolvedMentorId,
+      mentorName: resolvedMentorName,
+      mentorEmail: resolvedMentorEmail,
+      assignedCount: savedCount
     });
   } catch (error) {
     next(error);

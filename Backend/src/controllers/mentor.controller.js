@@ -159,13 +159,73 @@ const loadMentorStudents = async (mentorId) => {
          LEFT JOIN departments d ON d.id = s.department_id
          LEFT JOIN batches b ON b.id = s.batch_id
          LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
-         WHERE (ma.mentor_name = ? OR ma.mentor_email = ?)
+         WHERE (ma.mentor_id = ? OR ma.mentor_name = ? OR ma.mentor_email = ? OR LOWER(ma.mentor_name) = LOWER(?) OR LOWER(ma.mentor_email) = LOWER(?))
          ORDER BY u.name ASC`,
-        [mentorUser.name, mentorUser.email]
+        [mentorId, mentorUser.name, mentorUser.email, mentorUser.name, mentorUser.email]
       )) || [];
     } catch (e) {
       // table not present or fallback
     }
+
+    // 4. Students directly assigned via students table mentor_id or mentor_name
+    try {
+      const studentAssignedRows = (await query(
+        `SELECT
+           u.id AS user_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           s.roll_number,
+           s.year,
+           s.division,
+           s.semester,
+           COALESCE(d.name, s.department) AS department,
+           s.department_id,
+           b.id AS batch_id,
+           b.name AS batch_name,
+           COALESCE(s.college_id, u.college_id) AS college_id,
+           c.name AS college_name
+         FROM students s
+         JOIN users u ON u.id = s.user_id
+         LEFT JOIN departments d ON d.id = s.department_id
+         LEFT JOIN batches b ON b.id = s.batch_id
+         LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
+         WHERE (s.mentor_id = ? OR LOWER(s.mentor_name) = LOWER(?) OR LOWER(s.mentor_name) = LOWER(?))
+         ORDER BY u.name ASC`,
+        [mentorId, mentorUser.name, mentorUser.email]
+      )) || [];
+      adminAssignedRows.push(...studentAssignedRows);
+    } catch (e) {}
+
+    // 5. Users directly mapped via users table mentor_id or mentor_name
+    try {
+      const userAssignedRows = (await query(
+        `SELECT
+           u.id AS user_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           s.roll_number,
+           s.year,
+           s.division,
+           s.semester,
+           COALESCE(d.name, s.department) AS department,
+           s.department_id,
+           b.id AS batch_id,
+           b.name AS batch_name,
+           COALESCE(s.college_id, u.college_id) AS college_id,
+           c.name AS college_name
+         FROM users u
+         LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN departments d ON d.id = s.department_id
+         LEFT JOIN batches b ON b.id = s.batch_id
+         LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
+         WHERE (u.mentor_id = ? OR LOWER(u.mentor_name) = LOWER(?) OR LOWER(u.mentor_name) = LOWER(?))
+         ORDER BY u.name ASC`,
+        [mentorId, mentorUser.name, mentorUser.email]
+      )) || [];
+      adminAssignedRows.push(...userAssignedRows);
+    } catch (e) {}
   }
 
   // Deduplicate all assigned students by user_id
