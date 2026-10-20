@@ -62,6 +62,13 @@ export default function SuperAdminTickets() {
   };
 
   const filteredTickets = tickets.filter(t => {
+    // Exclude secure code / access requests (these are routed to bell notifications)
+    if (
+      t.category === "Access Request" ||
+      (t.title || "").toLowerCase().includes("secure code")
+    ) {
+      return false;
+    }
     const matchesSearch =
       (t.title || "").toLowerCase().includes(search.toLowerCase()) ||
       (t.requesterName || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -74,9 +81,9 @@ export default function SuperAdminTickets() {
     return matchesSearch && matchesStatus;
   });
 
-  const openCount = tickets.filter(t => t.status === "Open").length;
-  const inProgressCount = tickets.filter(t => t.status === "In Progress").length;
-  const resolvedCount = tickets.filter(t => t.status === "Resolved").length;
+  const openCount = filteredTickets.filter(t => t.status === "Open").length;
+  const inProgressCount = filteredTickets.filter(t => t.status === "In Progress").length;
+  const resolvedCount = filteredTickets.filter(t => t.status === "Resolved").length;
 
   return (
     <div className="admin-help-container">
@@ -87,7 +94,7 @@ export default function SuperAdminTickets() {
               <span>Super Admin Issue Resolution Center</span>
             </h2>
             <p className="ui-section-desc">
-              Review, manage, and resolve system-wide support tickets.
+              Review, manage, and resolve system issues, bugs, and escalated problems raised by administrators.
             </p>
           </div>
           <div className="ui-section-action">
@@ -146,7 +153,7 @@ export default function SuperAdminTickets() {
           <div className="admin-empty-state-card">
             <MessageSquare size={36} className="admin-empty-state-icon" />
             <p className="admin-empty-state-title">No support tickets found</p>
-            <p className="admin-empty-state-sub">Student and mentor support tickets will appear here for Super Admin resolution.</p>
+            <p className="admin-empty-state-sub">System bugs, platform problems, and escalated issues raised by administrators will appear here for Super Admin resolution.</p>
           </div>
         ) : (
           filteredTickets.map(t => (

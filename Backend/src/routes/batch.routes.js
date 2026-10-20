@@ -15,6 +15,7 @@ import {
   getBatchById,
   getBatchDailyTopics,
   saveBatchDailyTopic,
+  getTaskSubmissions,
 } from '../controllers/batch.controller.js';
 
 const router = Router();
@@ -28,6 +29,8 @@ router.get('/:id/students', getBatchStudents);
 router.get('/:id/daily-topics', getBatchDailyTopics);
 router.post('/:id/daily-topics', saveBatchDailyTopic);
 router.get('/tasks/detail/:taskId', getTaskById);
+router.get('/tasks/:taskId/submissions', getTaskSubmissions);
+router.get('/:id/tasks/:taskId/submissions', getTaskSubmissions);
 router.get('/:id/tasks', getBatchTasks);
 router.post('/:id/tasks', createBatchTask);
 router.delete('/tasks/:taskId', deleteBatchTask);

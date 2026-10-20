@@ -11,77 +11,111 @@ import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 
 const defaultNotificationsList = [];
 
+export const fetchSuperAdminNotifications = async () => {
+  try {
+    const [broadcastRes, pendingRes, secureCodeRes] = await Promise.all([
+      apiFetch("/admin/broadcast").catch(() => null),
+      apiFetch("/admin/pending-users").catch(() => null),
+      apiFetch("/auth/secure-code-requests").catch(() => null),
+    ]);
+
+    const notifItems = [];
+
+    // 1. Pending secure code requests from College Admins
+    const rawCodeReqs = secureCodeRes && secureCodeRes.data && Array.isArray(secureCodeRes.data)
+      ? secureCodeRes.data
+      : (Array.isArray(secureCodeRes) ? secureCodeRes : []);
+    const pendingCodes = rawCodeReqs.filter(r => r.status === 'Pending' || !r.status);
+    pendingCodes.forEach(req => {
+      notifItems.push({
+        id: `secure-code-req-${req.id}`,
+        title: `🔑 Secure Code Request: ${req.name || req.email}`,
+        desc: `College Administrator registration request: ${req.name || 'User'} (${req.email}) has requested a Secure Authorization Code for self-registration${req.college_name ? ` at ${req.college_name}` : ''}.`,
+        message: `College Administrator registration request: ${req.name || 'User'} (${req.email}) has requested a Secure Authorization Code for self-registration${req.college_name ? ` at ${req.college_name}` : ''}. Please generate an Admin secure code and provide it to them.`,
+        time: req.created_at ? new Date(req.created_at).toLocaleDateString() : 'Pending Request',
+        unread: true,
+        type: 'key',
+        target: 'Super Admin',
+        priority: 'Urgent',
+        created_by_name: req.name || 'Admin Requester',
+        actionUrl: '/super-admin/users',
+        actionLabel: 'Generate Secure Code →',
+        actionColor: '#2563eb',
+      });
+    });
+
+    // 2. Pending user registrations alert
+    const rawPending = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
+      ? pendingRes.data
+      : (Array.isArray(pendingRes) ? pendingRes : []);
+
+    const pendingCount = rawPending.filter((u) => {
+      return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
+             u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
+    }).length;
+
+    if (pendingCount > 0) {
+      notifItems.push({
+        id: 'pending-users-approval-alert',
+        title: `⚠️ ${pendingCount} User Registration(s) Pending Approval`,
+        desc: `New user account(s) have registered and are waiting for administrator review and approval.`,
+        message: `New user account(s) have completed registration & 2FA setup and are waiting for administrator review and approval.`,
+        time: 'Action Required',
+        unread: true,
+        type: 'alert',
+        target: 'Super Admin',
+        priority: 'High Priority',
+        created_by_name: 'Registration System',
+        actionUrl: '/super-admin/approve-users',
+        actionLabel: 'Review & Approve Users →',
+        actionColor: '#d97706',
+      });
+    }
+
+    // 3. Broadcast announcements
+    if (broadcastRes && broadcastRes.data && Array.isArray(broadcastRes.data) && broadcastRes.data.length > 0) {
+      const serverItems = broadcastRes.data.map((b) => ({
+        id: b.id || `notif-${Math.random()}`,
+        title: b.title || "Announcement",
+        desc: b.message || b.desc || b.description || "",
+        message: b.message || b.desc || "",
+        time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
+        unread: b.unread !== undefined ? Boolean(b.unread) : true,
+        type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
+        target: b.target || "All Batches",
+        priority: b.priority || "General Notice",
+        created_by_name: b.created_by_name || "Admin",
+      }));
+      notifItems.push(...serverItems);
+    }
+
+    const unique = [];
+    const seenKeys = new Set();
+    for (const item of notifItems) {
+      const key = item.id || item.title.trim().toLowerCase();
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        unique.push(item);
+      }
+    }
+    return unique;
+  } catch (err) {
+    console.error('[fetchSuperAdminNotifications error]', err);
+    return [];
+  }
+};
+
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    Promise.all([
-      apiFetch("/admin/broadcast").catch(() => null),
-      apiFetch("/admin/pending-users").catch(() => null),
-    ])
-      .then(([broadcastRes, pendingRes]) => {
-        const notifItems = [];
-
-        // 1. Pending user registrations alert
-        const rawPending = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
-          ? pendingRes.data
-          : (Array.isArray(pendingRes) ? pendingRes : []);
-
-        const pendingCount = rawPending.filter((u) => {
-          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
-                 u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
-        }).length;
-
-        if (pendingCount > 0) {
-          notifItems.push({
-            id: 'pending-users-approval-alert',
-            title: `⚠️ ${pendingCount} User Registration(s) Pending Approval`,
-            desc: `New user account(s) have registered and are waiting for administrator review and approval.`,
-            message: `New user account(s) have completed registration & 2FA setup and are waiting for administrator review and approval.`,
-            time: 'Action Required',
-            unread: true,
-            type: 'alert',
-            target: 'Super Admin',
-            priority: 'High Priority',
-            created_by_name: 'Registration System',
-            actionUrl: '/super-admin/approve-users',
-          });
-        }
-
-        // 2. Broadcast announcements
-        if (broadcastRes && broadcastRes.data && Array.isArray(broadcastRes.data) && broadcastRes.data.length > 0) {
-          const serverItems = broadcastRes.data.map((b) => ({
-            id: b.id || `notif-${Math.random()}`,
-            title: b.title || "Announcement",
-            desc: b.message || b.desc || b.description || "",
-            message: b.message || b.desc || "",
-            time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-            unread: b.unread !== undefined ? Boolean(b.unread) : true,
-            type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-            target: b.target || "All Batches",
-            priority: b.priority || "General Notice",
-            created_by_name: b.created_by_name || "Admin",
-          }));
-          notifItems.push(...serverItems);
-        }
-
-        setNotifications((prev) => {
-          const combined = [...notifItems, ...defaultNotificationsList];
-          const unique = [];
-          const seenKeys = new Set();
-          for (const item of combined) {
-            const key = item.id || item.title.trim().toLowerCase();
-            if (!seenKeys.has(key)) {
-              seenKeys.add(key);
-              unique.push(item);
-            }
-          }
-          return unique;
-        });
-      })
-      .catch(() => { });
+    fetchSuperAdminNotifications().then((items) => {
+      if (items && items.length > 0) {
+        setNotifications(items);
+      }
+    });
   }, []);
 
   const autoCloseTimerRef = useRef(null);
@@ -139,6 +173,13 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
     const type = (n.type || "").toLowerCase();
     const titleLower = (n.title || "").toLowerCase();
 
+    if (titleLower.includes("secure code") || titleLower.includes("code request") || type === "key") {
+      return (
+        <div className="notif-colorful-icon-box notif-icon-blue">
+          <Key size={18} />
+        </div>
+      );
+    }
     if (titleLower.includes("placement") || titleLower.includes("drive") || titleLower.includes("goldman") || type === "calendar") {
       return (
         <div className="notif-colorful-icon-box notif-icon-rose">
@@ -284,7 +325,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                           navigate(n.actionUrl);
                         }}
                         style={{
-                          background: '#d97706',
+                          background: n.actionColor || '#d97706',
                           color: '#ffffff',
                           border: 'none',
                           borderRadius: '6px',
@@ -297,7 +338,7 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                           gap: '4px'
                         }}
                       >
-                        Review &amp; Approve Users →
+                        {n.actionLabel || 'Review & Approve Users →'}
                       </button>
                     </div>
                   )}
@@ -365,24 +406,21 @@ export default function SuperAdminLayout() {
   const hasUnreadNotif = notifications.some((n) => n.unread);
 
   useEffect(() => {
-    apiFetch("/admin/broadcast")
-      .then((res) => {
-        const rawItems = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
-        const serverItems = rawItems.map((b) => ({
-          id: b.id || `notif-${Math.random()}`,
-          title: b.title || "Announcement",
-          desc: b.message || b.desc || b.description || "",
-          message: b.message || b.desc || "",
-          time: b.time || (b.created_at ? new Date(b.created_at).toLocaleString() : "Today"),
-          unread: b.unread !== undefined ? Boolean(b.unread) : true,
-          type: b.type || (b.title?.toLowerCase().includes("broadcast") ? "broadcast" : "alert"),
-          target: b.target || "All Batches",
-          priority: b.priority || "General Notice",
-          created_by_name: b.created_by_name || "Admin",
-        }));
-        setNotifications(serverItems);
-      })
-      .catch(() => { });
+    fetchSuperAdminNotifications().then((items) => {
+      if (items && items.length > 0) {
+        setNotifications(items);
+      }
+    });
+
+    const handleFocus = () => {
+      fetchSuperAdminNotifications().then((items) => {
+        if (items && items.length > 0) {
+          setNotifications(items);
+        }
+      });
+    };
+    window.addEventListener("focus", handleFocus);
+    return () => window.removeEventListener("focus", handleFocus);
   }, []);
   const headerRightRef = useRef(null);
 

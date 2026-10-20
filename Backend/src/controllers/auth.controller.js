@@ -326,35 +326,15 @@ export const requestSecureCode = async (req, res, next) => {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     `);
 
-    // 2. Insert request record
+    // 2. Insert request record into secure_code_requests for Super Admin notifications
     await pool.query(
       `INSERT INTO secure_code_requests (name, email, role, college_name, status) VALUES (?, ?, ?, ?, 'Pending')`,
       [cleanName, cleanEmail, targetRole, finalCollege || null]
     );
 
-    // 3. Create a support ticket for Super Admin review
-    try {
-      const [superAdminRows] = await pool.query(
-        `SELECT id FROM users WHERE role = 'super_admin' ORDER BY id ASC LIMIT 1`
-      );
-      const superAdminId = superAdminRows && superAdminRows.length > 0 ? superAdminRows[0].id : 1;
-
-      await pool.query(
-        `INSERT INTO support_tickets (user_id, subject, category, priority, status, description)
-         VALUES (?, ?, 'Access Request', 'Urgent', 'Open', ?)`,
-        [
-          superAdminId,
-          `Secure Code Request: ${cleanName} (${cleanEmail})`,
-          `College Administrator registration request: ${cleanName} (${cleanEmail}) has requested a Secure Authorization Code for self-registration. Please generate an Admin secure code and provide it to them.`
-        ]
-      );
-    } catch (ticketErr) {
-      console.warn('[RequestSecureCode] Ticket creation warning:', ticketErr.message);
-    }
-
     return sendSuccess(
       res,
-      'Secure code request submitted successfully to Super Admin! Super Admin will generate your secure code and share it with you.'
+      'Secure code request submitted successfully to Super Admin! Super Admin will review your request and issue your code.'
     );
   } catch (error) {
     next(error);
