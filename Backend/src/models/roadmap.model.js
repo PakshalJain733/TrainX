@@ -242,25 +242,76 @@ export const saveRoadmap = async (studentId, targetRole, careerTrackName, milest
 };
 
 /**
- * Update milestone status & progress
+ * Update milestone status & progress (supports direct DB item id or student sequence order)
  */
 export const updateMilestoneItemStatus = async (studentId, itemId, status, progress, completedTopics) => {
   const sId = Number(studentId);
   const itId = Number(itemId);
+  const numProgress = typeof progress === 'number' ? progress : (status === 'completed' ? 100 : 0);
 
   try {
     const completedJson = completedTopics ? JSON.stringify(completedTopics) : null;
     let res;
-    if (completedJson !== null) {
-      res = await query(
-        'UPDATE roadmap_items SET status = ?, progress = ?, completed_topics = ? WHERE id = ?',
-        [status, progress, completedJson, itId]
+
+    // 1. Try updating by direct primary key id
+    if (!isNaN(itId) && itId > 0) {
+      if (completedJson !== null) {
+        res = await query(
+          'UPDATE roadmap_items SET status = ?, progress = ?, completed_topics = ? WHERE id = ?',
+          [status, numProgress, completedJson, itId]
+        );
+      } else {
+        res = await query(
+          'UPDATE roadmap_items SET status = ?, progress = ? WHERE id = ?',
+          [status, numProgress, itId]
+        );
+      }
+    }
+
+    // 2. If not matched, try by sequence_order on the student's active roadmap
+    if (!res || res.affectedRows === 0) {
+      const activeRm = await query(
+        'SELECT id FROM roadmaps WHERE student_id = ? ORDER BY updated_at DESC LIMIT 1',
+        [sId]
       );
+      if (activeRm && activeRm.length > 0) {
+        const rId = activeRm[0].id;
+        const seq = !isNaN(itId) && itId > 0 && itId <= 20 ? itId : 1;
+        if (completedJson !== null) {
+          res = await query(
+            'UPDATE roadmap_items SET status = ?, progress = ?, completed_topics = ? WHERE roadmap_id = ? AND sequence_order = ?',
+            [status, numProgress, completedJson, rId, seq]
+          );
+        } else {
+          res = await query(
+            'UPDATE roadmap_items SET status = ?, progress = ? WHERE roadmap_id = ? AND sequence_order = ?',
+            [status, numProgress, rId, seq]
+          );
+        }
+
+        // When milestone is completed, unlock the subsequent milestone in DB
+        if (status === 'completed') {
+          await query(
+            'UPDATE roadmap_items SET status = "in-progress" WHERE roadmap_id = ? AND sequence_order = ? AND status = "locked"',
+            [rId, seq + 1]
+          );
+        }
+
+        await query('UPDATE roadmaps SET updated_at = NOW() WHERE id = ?', [rId]);
+      }
     } else {
-      res = await query(
-        'UPDATE roadmap_items SET status = ?, progress = ? WHERE id = ?',
-        [status, progress, itId]
-      );
+      // Direct item ID updated successfully — touch parent roadmap and unlock next milestone
+      const itemRow = await query('SELECT roadmap_id, sequence_order FROM roadmap_items WHERE id = ?', [itId]);
+      if (itemRow && itemRow.length > 0) {
+        const { roadmap_id, sequence_order } = itemRow[0];
+        await query('UPDATE roadmaps SET updated_at = NOW() WHERE id = ?', [roadmap_id]);
+        if (status === 'completed') {
+          await query(
+            'UPDATE roadmap_items SET status = "in-progress" WHERE roadmap_id = ? AND sequence_order = ? AND status = "locked"',
+            [roadmap_id, sequence_order + 1]
+          );
+        }
+      }
     }
 
     if (res && res.affectedRows > 0) {
@@ -272,11 +323,87 @@ export const updateMilestoneItemStatus = async (studentId, itemId, status, progr
 
   const mockData = mockRoadmaps.get(sId);
   if (mockData && mockData.milestones) {
-    const item = mockData.milestones.find((m) => Number(m.id) === itId);
+    const item = mockData.milestones.find((m) => Number(m.id) === itId || m.id === itemId);
     if (item) {
       item.status = status;
-      if (progress !== undefined) item.progress = progress;
+      if (progress !== undefined) item.progress = numProgress;
       if (completedTopics !== undefined) item.completedTopics = completedTopics;
+    }
+    return mockData;
+  }
+
+  return null;
+};
+
+/**
+ * Update the entire roadmap's progress and all milestone states in DB
+ */
+export const updateFullRoadmapProgress = async (studentId, roadmapId, milestones = []) => {
+  const sId = Number(studentId);
+  const rId = Number(roadmapId);
+
+  try {
+    let targetRoadmapId = !isNaN(rId) && rId > 0 ? rId : null;
+    if (!targetRoadmapId) {
+      const rm = await query(
+        'SELECT id FROM roadmaps WHERE student_id = ? ORDER BY updated_at DESC LIMIT 1',
+        [sId]
+      );
+      if (rm && rm.length > 0) {
+        targetRoadmapId = rm[0].id;
+      }
+    }
+
+    if (targetRoadmapId) {
+      for (let i = 0; i < milestones.length; i++) {
+        const m = milestones[i];
+        const mProgress = typeof m.progress === 'number' ? m.progress : (m.status === 'completed' ? 100 : 0);
+        const mStatus = m.status || (mProgress === 100 ? 'completed' : 'locked');
+        const completedJson = m.completedTopics ? JSON.stringify(m.completedTopics) : null;
+
+        let updated = false;
+        if (m.id && !isNaN(Number(m.id)) && Number(m.id) > 0) {
+          const res = await query(
+            'UPDATE roadmap_items SET status = ?, progress = ?' + (completedJson ? ', completed_topics = ?' : '') + ' WHERE id = ? AND roadmap_id = ?',
+            completedJson ? [mStatus, mProgress, completedJson, Number(m.id), targetRoadmapId] : [mStatus, mProgress, Number(m.id), targetRoadmapId]
+          );
+          if (res && res.affectedRows > 0) {
+            updated = true;
+          }
+        }
+
+        if (!updated) {
+          const seqOrder = i + 1;
+          await query(
+            'UPDATE roadmap_items SET status = ?, progress = ?' + (completedJson ? ', completed_topics = ?' : '') + ' WHERE roadmap_id = ? AND sequence_order = ?',
+            completedJson ? [mStatus, mProgress, completedJson, targetRoadmapId, seqOrder] : [mStatus, mProgress, targetRoadmapId, seqOrder]
+          );
+        }
+      }
+
+      await query('UPDATE roadmaps SET updated_at = NOW() WHERE id = ?', [targetRoadmapId]);
+
+      const refreshedItems = await query(
+        'SELECT * FROM roadmap_items WHERE roadmap_id = ? ORDER BY sequence_order ASC',
+        [targetRoadmapId]
+      );
+      const parentRoadmap = await query('SELECT * FROM roadmaps WHERE id = ?', [targetRoadmapId]);
+      if (parentRoadmap && parentRoadmap.length > 0) {
+        return formatRoadmapResult(parentRoadmap[0], refreshedItems);
+      }
+    }
+  } catch (err) {
+    console.warn(`[Roadmap Model] Error in updateFullRoadmapProgress: ${err.message}`);
+  }
+
+  // Update in-memory mock store
+  const mockData = mockRoadmaps.get(sId);
+  if (mockData) {
+    mockData.milestones = milestones;
+    mockData.updatedAt = new Date();
+    mockRoadmaps.set(sId, mockData);
+    if (mockData.targetRole) {
+      mockRoadmaps.set(`${sId}__${mockData.targetRole.trim().toLowerCase()}`, mockData);
     }
     return mockData;
   }

@@ -6,6 +6,7 @@ import {
   getGlobalCachedRoadmap,
   saveRoadmap,
   updateMilestoneItemStatus,
+  updateFullRoadmapProgress,
 } from '../models/roadmap.model.js';
 import { query } from '../config/db.js';
 
@@ -108,17 +109,17 @@ export const generateNewRoadmap = async (studentId, targetRole = '', signalData 
 
   const isGenericBoilerplate = (ms) => Array.isArray(ms) && ms.some(m => String(m.title || '').includes('Intermediate Architecture & Practical Execution'));
 
-  // 1. If the student already has a roadmap for this role, restore it with saved progress (unless stale boilerplate)
+  // 1. If the student already has a roadmap for this role, restore it with saved progress
   if (!signalData.forceRefresh && targetRole && String(targetRole).trim()) {
     const existing = await getRoadmapByStudentAndRole(numericId, targetRole.trim());
-    if (existing && existing.milestones && existing.milestones.length > 0 && !isGenericBoilerplate(existing.milestones)) {
-      console.log(`[Roadmap Service] Restoring saved roadmap for student #${numericId}, role: "${targetRole}"`);
+    if (existing && existing.milestones && existing.milestones.length > 0) {
+      console.log(`[Roadmap Service] Restoring saved roadmap with progress for student #${numericId}, role: "${targetRole}"`);
       return { ...existing, restored: true };
     }
 
     // 2. Check if ANY student has previously generated this roadmap in the DB (Global Cache)
     const globalCached = await getGlobalCachedRoadmap(targetRole.trim());
-    if (globalCached && globalCached.milestones && globalCached.milestones.length > 0 && !isGenericBoilerplate(globalCached.milestones)) {
+    if (globalCached && globalCached.milestones && globalCached.milestones.length > 0) {
       console.log(`[Roadmap Service] Global DB Cache Hit! Reusing DB stored roadmap content for role: "${targetRole}" for student #${numericId}`);
       // Clean content reuse: reset status/progress for the new student so no progress bleed occurs
       const freshMilestonesForStudent = globalCached.milestones.map((m, idx) => ({
@@ -190,5 +191,13 @@ export const updateMilestoneProgress = async (studentId, itemId, status, progres
   if (!updated) {
     throw new Error('Milestone item not found or update failed');
   }
+  return updated;
+};
+
+/**
+ * Service: Save all milestones progress for a roadmap
+ */
+export const saveRoadmapProgress = async (studentId, roadmapId, milestones) => {
+  const updated = await updateFullRoadmapProgress(studentId, roadmapId, milestones);
   return updated;
 };

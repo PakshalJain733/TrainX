@@ -3659,6 +3659,213 @@
   color: #047857;
 }
 
+.roadmap-quiz-result-banner.failed {
+  background: #fffbeb;
+  border: 1.5px solid #fcd34d;
+}
+
+.roadmap-quiz-result-banner.failed .roadmap-quiz-result-score {
+  color: #b45309;
+}
+
+.roadmap-quiz-result-banner.failed .roadmap-quiz-result-desc {
+  color: #92400e;
+}
+
+.roadmap-quiz-criteria-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.roadmap-quiz-criteria-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.roadmap-quiz-criteria-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.roadmap-quiz-criteria-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.roadmap-score-chip-sm {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.roadmap-score-chip-sm.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.roadmap-score-chip-sm.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+
+.roadmap-score-chip-sm.info {
+  background: #e0e7ff;
+  color: #3730a3;
+  border: 1px solid #c7d2fe;
+}
+
+.roadmap-score-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.roadmap-score-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.roadmap-score-metric-card.highlight {
+  border-color: #6366f1;
+  background: #faf5ff;
+}
+
+.roadmap-score-metric-card.highlight.passed {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.roadmap-score-metric-card.highlight.failed {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.roadmap-score-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.roadmap-score-metric-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.roadmap-score-metric-card.highlight.passed .roadmap-score-metric-val {
+  color: #059669;
+}
+
+.roadmap-score-metric-card.highlight.failed .roadmap-score-metric-val {
+  color: #d97706;
+}
+
+.compiler-submit-practice-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.compiler-submit-practice-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.compiler-submit-practice-btn.submitted {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  cursor: default;
+}
+
+.roadmap-quiz-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.roadmap-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #ffffff;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.roadmap-btn-secondary:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.roadmap-btn-warning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  background: #f59e0b;
+  color: #ffffff;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.roadmap-btn-warning:hover {
+  background: #d97706;
+  transform: translateY(-1px);
+}
+
 .roadmap-btn-centered {
   margin: 8px auto 0 auto;
   display: flex;

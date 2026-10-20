@@ -4,6 +4,7 @@ import {
   getAllRoadmaps,
   generateRoadmap,
   updateMilestone,
+  saveRoadmapProgressController,
   generateTopicQuiz,
   generateMilestonePractice,
   generateMilestoneTheory,
@@ -36,7 +37,9 @@ router.post('/student/:id/generate', generateRoadmap);
 // AI Quiz Generation
 router.post('/quiz/generate', generateTopicQuiz);
 
-// Milestone Item Status & Progress Update
+// Milestone Item Status & Full Roadmap Progress Updates
 router.patch('/items/:itemId', updateMilestone);
+router.put('/:id/progress', saveRoadmapProgressController);
+router.post('/progress', saveRoadmapProgressController);
 
 export default router;

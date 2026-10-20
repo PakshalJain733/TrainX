@@ -5,6 +5,7 @@ import {
   fetchAllStudentRoadmaps,
   generateNewRoadmap,
   updateMilestoneProgress,
+  saveRoadmapProgress,
 } from '../services/roadmap.service.js';
 import { generateTopicQuizAI, generateMilestoneTheoryAI, generateMilestonePracticeAI } from '../ai/roadmap.ai.js';
 import {
@@ -112,6 +113,26 @@ export const updateMilestone = async (req, res, next) => {
 
     const updatedRoadmap = await updateMilestoneProgress(studentId, itemId, status, progress, completedTopics);
     return sendSuccess(res, 'Milestone status updated successfully', updatedRoadmap);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Controller: Update and persist full roadmap milestones progress
+ */
+export const saveRoadmapProgressController = async (req, res, next) => {
+  try {
+    const studentId = req.user?.id || req.user?.userId || 1;
+    const roadmapId = req.params.id || req.body?.roadmapId;
+    const { milestones } = req.body || {};
+
+    if (!Array.isArray(milestones)) {
+      return sendError(res, 'Milestones array is required', 400);
+    }
+
+    const updated = await saveRoadmapProgress(studentId, roadmapId, milestones);
+    return sendSuccess(res, 'Roadmap progress saved successfully', updated);
   } catch (error) {
     next(error);
   }

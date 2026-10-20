@@ -624,38 +624,226 @@ function getTheoryForMilestone(m, targetRole) {
 }
 
 function getPracticeQuestionForMilestone(m, targetRole) {
-  const title = (m?.title || "Topic Practice").replace(/^Milestone\s*\d+\s*:\s*/i, "");
+  const title = (m?.title || "Topic Practice").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
   const role = targetRole || "Software Engineering";
   const lang = resolveLanguageForRole(role, title);
+  const lower = `${title} ${role}`.toLowerCase();
 
-  if (lang === "react") {
+  if (lang === "react" || lower.includes("react") || lower.includes("hook") || lower.includes("component")) {
     return {
-      title: `Hands-on Practice: Build ${title} React Component`,
-      prompt: `Develop an interactive React component for ${title}. Implement functional components, state hooks, and test your UI live in the Live React Preview window.`,
-      sampleInput: `React JSX Functional Component with Hooks`,
-      sampleOutput: `Live Web Preview: Renders interactive React UI in the browser`,
-      starterCode: "",
+      title: `Hands-on React Challenge: Build an Interactive Component for ${title}`,
+      prompt: `Develop a functional React component demonstrating ${title}. Implement state management using React hooks, handle user interactions (like increment, decrement, and reset), and verify the live interactive UI in the Live Preview pane.`,
+      sampleInput: `Interactive button clicks & user input state transitions`,
+      sampleOutput: `Live Web Preview: Renders responsive styled React component with real-time state feedback`,
+      starterCode: `// React Interactive Playground for: ${title}
+import React, { useState } from 'react';
+
+export default function InteractiveApp() {
+  const [count, setCount] = useState(0);
+  const [history, setHistory] = useState([]);
+
+  const handleUpdate = (delta) => {
+    const newCount = count + delta;
+    setCount(newCount);
+    setHistory(prev => [...prev.slice(-4), \`Updated to \${newCount} at \${new Date().toLocaleTimeString()}\`]);
+  };
+
+  return (
+    <div style={{ padding: '24px', fontFamily: 'system-ui, sans-serif', maxWidth: '400px', margin: '20px auto', background: '#ffffff', borderRadius: '14px', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', border: '1px solid #e2e8f0' }}>
+      <h3 style={{ margin: '0 0 8px', color: '#1e293b' }}>${title}</h3>
+      <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 16px' }}>Current State: <strong style={{ color: '#4f46e5', fontSize: '18px' }}>{count}</strong></p>
+      
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <button onClick={() => handleUpdate(1)} style={{ padding: '8px 16px', background: '#4f46e5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>+ Increment</button>
+        <button onClick={() => handleUpdate(-1)} style={{ padding: '8px 16px', background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer' }}>- Decrement</button>
+        <button onClick={() => { setCount(0); setHistory([]); }} style={{ padding: '8px 16px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Reset</button>
+      </div>
+
+      <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+        <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 'bold' }}>STATE EVENT LOG:</span>
+        <ul style={{ margin: '8px 0 0', paddingLeft: '18px', fontSize: '12px', color: '#475569' }}>
+          {history.length === 0 ? <li>No actions yet. Click a button!</li> : history.map((item, i) => <li key={i}>{item}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+}`,
       language: "react"
     };
   }
 
-  if (lang === "html") {
+  if (lang === "html" || lower.includes("html") || lower.includes("css") || lower.includes("flexbox") || lower.includes("grid")) {
     return {
-      title: `Hands-on Practice: Build ${title} Web Layout`,
-      prompt: `Write clean HTML5 and modern CSS3 code for ${title}. Structure the page elements with semantic tags, apply attractive styles, and preview your layout live in the Live Web Preview pane.`,
-      sampleInput: `HTML5 Markup & CSS3 Styling`,
-      sampleOutput: `Live Web Preview: Renders responsive styled UI preview`,
-      starterCode: "",
+      title: `Hands-on Web Design Challenge: ${title}`,
+      prompt: `Write clean HTML5 markup and modern CSS3 styles for ${title}. Structure the page elements with semantic tags, apply Flexbox or Grid for alignment, and preview your layout live in the Live Web Preview pane.`,
+      sampleInput: `HTML5 semantic markup with CSS Flexbox styles`,
+      sampleOutput: `Live Web Preview: Displays a polished, responsive styled UI card with hover effects`,
+      starterCode: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${title} Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f1f5f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 80vh;
+      margin: 0;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 360px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 14px 30px rgba(79, 70, 229, 0.12);
+    }
+    .badge {
+      display: inline-block;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+    }
+    h2 { margin: 0 0 8px; color: #0f172a; font-size: 20px; }
+    p { margin: 0 0 16px; color: #64748b; font-size: 14px; line-height: 1.5; }
+    .btn {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: #4f46e5;
+      color: #ffffff;
+      font-weight: 600;
+      padding: 10px 0;
+      border-radius: 8px;
+      text-decoration: none;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <article class="card">
+    <span class="badge">TOPIC MODULE</span>
+    <h2>${title}</h2>
+    <p>Semantic HTML5 and CSS3 styling demonstration for ${role}. Flexbox provides flexible alignment across viewport sizes.</p>
+    <a href="#" class="btn">Explore Module</a>
+  </article>
+</body>
+</html>`,
       language: "html"
+    };
+  }
+
+  if (lower.includes("sql") || lower.includes("database") || lower.includes("query") || lower.includes("join")) {
+    return {
+      title: `Hands-on SQL Challenge: Relational Queries for ${title}`,
+      prompt: `Write a database manipulation algorithm for ${title}. Perform an inner join between sample users and orders datasets, calculating total order amounts per user.`,
+      sampleInput: `users = [{id: 1, name: 'Alice'}, {id: 2, name: 'Bob'}], orders = [{userId: 1, amount: 250}, {userId: 1, amount: 150}, {userId: 2, amount: 400}]`,
+      sampleOutput: `Expected: [{ userId: 1, name: 'Alice', totalSpent: 400 }, { userId: 2, name: 'Bob', totalSpent: 400 }]`,
+      starterCode: `// Relational Data Query Challenge for: ${title}
+
+function executeRelationalJoin(users, orders) {
+  // Aggregate orders by user ID
+  return users.map(user => {
+    const userOrders = orders.filter(o => o.userId === user.id);
+    const total = userOrders.reduce((acc, curr) => acc + curr.amount, 0);
+    return {
+      userId: user.id,
+      name: user.name,
+      orderCount: userOrders.length,
+      totalSpent: total
+    };
+  });
+}
+
+// Test Execution
+const users = [{ id: 1, name: "Alice" }, { id: 2, name: "Bob" }];
+const orders = [{ userId: 1, amount: 250 }, { userId: 1, amount: 150 }, { userId: 2, amount: 400 }];
+
+console.log("Executing Query for: ${title}...");
+const result = executeRelationalJoin(users, orders);
+console.log("Query Result:", JSON.stringify(result, null, 2));
+`,
+      language: "node"
+    };
+  }
+
+  if (lower.includes("python") || lower.includes("ai") || lower.includes("data") || lower.includes("ml")) {
+    return {
+      title: `Hands-on Python Challenge: ${title}`,
+      prompt: `Implement a clean Python data processing function for ${title}. Your code should validate input entries, compute statistical aggregations, and return a structured summary.`,
+      sampleInput: `values = [15, 22, 15, 45, 22, 15, 60, 30]`,
+      sampleOutput: `{'topic': '${title}', 'total_count': 8, 'average': 28.0, 'status': 'SUCCESS'}`,
+      starterCode: `# Python Implementation for: ${title}
+from typing import List, Dict, Any
+
+def process_metrics_pipeline(values: List[int]) -> Dict[str, Any]:
+    if not values:
+        return {"status": "EMPTY", "count": 0}
+
+    total = sum(values)
+    avg = total / len(values)
+
+    return {
+        "topic": "${title}",
+        "total_count": len(values),
+        "total_sum": total,
+        "average": round(avg, 2),
+        "status": "SUCCESS"
+    }
+
+# Test execution:
+test_data = [15, 22, 15, 45, 22, 15, 60, 30]
+print("Running Python Pipeline for: ${title}...")
+result = process_metrics_pipeline(test_data)
+print("Result Summary:", result)
+`,
+      language: "python"
     };
   }
 
   return {
     title: `Practice Challenge: Implement ${title} Logic`,
-    prompt: `Write a program that processes data using the core concepts of ${title}. Your code should iterate through the input dataset, handle edge cases, and output the computed total.`,
-    sampleInput: `Input: [10, 20, 30, 40, 50]`,
-    sampleOutput: `Expected Output: Processed 5 elements. Total sum: 150`,
-    starterCode: getStarterCodeForTopic(title, lang, role),
+    prompt: `Write a program that processes data applying the core principles of ${title} for ${role}. Your code should handle edge cases, calculate metrics, and return structured results.`,
+    sampleInput: `Input: [12, 45, 7, 23, 56, 89, 34]`,
+    sampleOutput: `Expected: { topic: "${title}", processedCount: 7, minValue: 7, maxValue: 89, status: "VERIFIED" }`,
+    starterCode: `// Algorithmic Challenge for: ${title}
+// Target Role: ${role}
+
+function executeModuleTask(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return { status: "EMPTY", items: [] };
+  }
+
+  const sorted = [...items].sort((a, b) => a - b);
+
+  return {
+    topic: "${title}",
+    processedCount: items.length,
+    minValue: sorted[0],
+    maxValue: sorted[sorted.length - 1],
+    sortedList: sorted,
+    status: "VERIFIED"
+  };
+}
+
+// Sample execution
+const testInput = [12, 45, 7, 23, 56, 89, 34];
+console.log("Executing task for ${title}...");
+const output = executeModuleTask(testInput);
+console.log("Output Result:", JSON.stringify(output, null, 2));
+`,
     language: lang
   };
 }
@@ -878,6 +1066,10 @@ export default function AIRoadmap() {
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizScore, setQuizScore] = useState(0);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+
+  // Practice Challenge Completion & Combined Passing State (50% Gate)
+  const [practiceScores, setPracticeScores] = useState({}); // { [mKey]: 100 }
+  const [milestoneCombinedResults, setMilestoneCombinedResults] = useState({}); // { [mKey]: { practiceScore, quizScore, combinedScore, isPassed } }
 
   // Compiler State
   const [compilerLanguage, setCompilerLanguage] = useState("node");
@@ -1109,15 +1301,115 @@ export default function AIRoadmap() {
     });
   };
 
+  const calculateRoadmapProgress = (milestonesList = []) => {
+    if (!Array.isArray(milestonesList) || milestonesList.length === 0) return 0;
+    const sum = milestonesList.reduce(
+      (acc, m) => acc + (typeof m.progress === "number" ? m.progress : (m.status === "completed" ? 100 : 0)),
+      0
+    );
+    return Math.round(sum / milestonesList.length);
+  };
+
+  const getStorageKey = (role, id) => {
+    const cleanRole = role ? String(role).trim().toLowerCase() : (id ? `rm_${id}` : 'default');
+    return `roadmap_progress_cache_${cleanRole}`;
+  };
+
+  const mergeCachedProgress = (rm) => {
+    if (!rm) return rm;
+    const storageKey = getStorageKey(rm.targetRole, rm.id);
+    let cached = null;
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) cached = JSON.parse(raw);
+    } catch (e) {}
+
+    let milestones = rm.milestones || [];
+    if (cached && Array.isArray(cached.milestones) && cached.milestones.length > 0) {
+      milestones = milestones.map((m, idx) => {
+        const cachedM = cached.milestones[idx] || cached.milestones.find((cm) => cm.id === m.id || cm.title === m.title);
+        if (!cachedM) return m;
+        const isCompleted = m.status === 'completed' || cachedM.status === 'completed';
+        const higherProgress = Math.max(m.progress || 0, cachedM.progress || 0);
+        return {
+          ...m,
+          status: isCompleted ? 'completed' : (cachedM.status || m.status),
+          progress: isCompleted ? 100 : higherProgress,
+        };
+      });
+    }
+
+    const enforced = enforceSequentialMilestoneLocks(milestones);
+    return {
+      ...rm,
+      milestones: enforced,
+    };
+  };
+
+  const saveProgressToServer = async (targetRoadmap, updatedMilestones, activeItemId, activeProgress, activeStatus) => {
+    const rm = targetRoadmap || currentRoadmap;
+    if (!rm) return;
+
+    // 1. Immediately cache in localStorage for instant recall on page reload or re-login
+    try {
+      const storageKey = getStorageKey(rm.targetRole, rm.id);
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          roadmapId: rm.id,
+          targetRole: rm.targetRole,
+          milestones: updatedMilestones,
+          updatedAt: Date.now(),
+        })
+      );
+    } catch (e) {
+      console.warn("Local storage cache warning:", e);
+    }
+
+    // 2. Persist full roadmap progress to backend DB
+    try {
+      if (rm.id) {
+        await apiFetch(`/roadmaps/${rm.id}/progress`, {
+          method: "PUT",
+          body: JSON.stringify({
+            milestones: updatedMilestones,
+          }),
+        });
+      } else {
+        await apiFetch(`/roadmaps/progress`, {
+          method: "POST",
+          body: JSON.stringify({
+            roadmapId: rm.id,
+            targetRole: rm.targetRole,
+            milestones: updatedMilestones,
+          }),
+        });
+      }
+    } catch (err) {
+      console.warn("Full roadmap progress save warning:", err);
+    }
+
+    // 3. Also patch active milestone item as fallback
+    try {
+      const itemIdToPatch = activeItemId || (activeMilestoneIdx !== null ? activeMilestoneIdx + 1 : 1);
+      await apiFetch(`/roadmaps/items/${itemIdToPatch}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: activeStatus,
+          progress: activeProgress,
+        }),
+      });
+    } catch (err) {
+      console.warn("Milestone patch backup warning:", err);
+    }
+  };
+
   const loadAllRoadmaps = async () => {
     setIsLoading(true);
     try {
       const res = await apiFetch("/roadmaps/all");
       if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-        const processed = res.data.map((rm) => ({
-          ...rm,
-          milestones: enforceSequentialMilestoneLocks(rm.milestones || []),
-        }));
+        const processed = res.data.map((rm) => mergeCachedProgress(rm));
         setAllRoadmaps(processed);
         // Default select latest roadmap and set active milestone to Milestone 1
         setCurrentRoadmap(processed[0]);
@@ -1128,10 +1420,7 @@ export default function AIRoadmap() {
         // Fetch active single roadmap
         const resSingle = await apiFetch("/roadmaps");
         if (resSingle && resSingle.data && resSingle.data.milestones) {
-          const rm = {
-            ...resSingle.data,
-            milestones: enforceSequentialMilestoneLocks(resSingle.data.milestones || []),
-          };
+          const rm = mergeCachedProgress(resSingle.data);
           setAllRoadmaps([rm]);
           setCurrentRoadmap(rm);
           if (rm.milestones?.length > 0) {
@@ -1147,10 +1436,7 @@ export default function AIRoadmap() {
   };
 
   const handleSelectRoadmap = (rm) => {
-    const processed = {
-      ...rm,
-      milestones: enforceSequentialMilestoneLocks(rm.milestones || []),
-    };
+    const processed = mergeCachedProgress(rm);
     setCurrentRoadmap(processed);
     setActiveMilestoneIdx(0);
     setViewMode("milestones");
@@ -1165,7 +1451,7 @@ export default function AIRoadmap() {
 
     if (targetM.status === "locked") {
       const prevTitle = milestones[index - 1]?.title || `Milestone ${index}`;
-      setError(`🔒 Milestone ${index + 1} ("${targetM.title}") is locked! Complete Milestone ${index} ("${prevTitle}") assessment quiz first.`);
+      setError(`🔒 Milestone ${index + 1} ("${targetM.title}") is locked! You must achieve at least 50% combined score across both the Practice Challenge and Assessment Quiz in Milestone ${index} ("${prevTitle}") to unlock it.`);
       return;
     }
 
@@ -1194,6 +1480,43 @@ export default function AIRoadmap() {
     setQuizAnswers({});
     setQuizSubmitted(false);
     setQuizScore(0);
+  };
+
+  const handleRetakeQuiz = () => {
+    resetQuizState();
+  };
+
+  const recordPracticeSuccess = async () => {
+    const activeM = milestones[activeMilestoneIdx];
+    const mKey = activeM?.id || `m_${activeMilestoneIdx}`;
+    setPracticeScores((prev) => ({ ...prev, [mKey]: 100 }));
+
+    if (activeM && activeM.status !== "completed") {
+      const newProgress = Math.max(activeM.progress || 0, 50);
+      const updatedMilestonesRaw = milestones.map((m, idx) =>
+        idx === activeMilestoneIdx
+          ? {
+              ...m,
+              progress: newProgress,
+              status: "in-progress",
+            }
+          : m
+      );
+      const updatedMilestones = enforceSequentialMilestoneLocks(updatedMilestonesRaw);
+      setCurrentRoadmap((prev) => ({ ...prev, milestones: updatedMilestones }));
+      setAllRoadmaps((prev) =>
+        prev.map((r) => (r.id === currentRoadmap?.id ? { ...r, milestones: updatedMilestones } : r))
+      );
+
+      saveProgressToServer(currentRoadmap, updatedMilestones, activeM.id, newProgress, "in-progress");
+    }
+  };
+
+  const handleSubmitPractice = () => {
+    recordPracticeSuccess();
+    setCompilerStatus("success");
+    const activeM = milestones[activeMilestoneIdx];
+    setCompilerOutput(`✅ Practice Challenge Solution Submitted Successfully!\nScore: 100% on Hands-on Challenge for "${activeM?.title || 'Milestone'}".\nMilestone progress updated dynamically! This earns 50% towards unlocking the next milestone. Complete the Assessment Quiz in Part 4 to pass.`);
   };
 
   const handleGenerate = async (e) => {
@@ -1248,6 +1571,7 @@ export default function AIRoadmap() {
     const activeM = milestones[activeMilestoneIdx];
     if (!activeM) return;
 
+    const mKey = activeM.id || `m_${activeMilestoneIdx}`;
     const cleanTitle = String(activeM.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
     const cleanRole = String(currentRoadmap?.targetRole || "").trim();
     const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
@@ -1264,44 +1588,70 @@ export default function AIRoadmap() {
       }
     });
 
+    const quizPct = Math.round((correctCount / Math.max(questions.length, 1)) * 100);
+    const practicePct = practiceScores[mKey] !== undefined ? practiceScores[mKey] : (compilerStatus === "success" ? 100 : 0);
+    const combinedScore = Math.round((practicePct + quizPct) / 2);
+    const isPassed = combinedScore >= 50;
+
     setQuizScore(correctCount);
     setQuizSubmitted(true);
-    setIsUpdatingStatus(true);
+    setMilestoneCombinedResults((prev) => ({
+      ...prev,
+      [mKey]: {
+        practiceScore: practicePct,
+        quizScore: quizPct,
+        quizCorrectCount: correctCount,
+        quizTotalCount: questions.length,
+        combinedScore,
+        isPassed,
+      },
+    }));
 
-    // Update milestone status to COMPLETED & 100% progress
-    const updatedMilestonesRaw = milestones.map((m, idx) =>
-      idx === activeMilestoneIdx
-        ? {
-            ...m,
-            status: "completed",
-            progress: 100,
-            completedTopics: getTopicsForMilestone(m, currentRoadmap?.targetRole).map((_, i) => i),
-          }
-        : m
-    );
+    if (isPassed) {
+      setIsUpdatingStatus(true);
 
-    // Enforce unlocking next milestone M(activeMilestoneIdx + 1)
-    const updatedMilestones = enforceSequentialMilestoneLocks(updatedMilestonesRaw);
-    setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+      // Update milestone status to COMPLETED & 100% progress
+      const updatedMilestonesRaw = milestones.map((m, idx) =>
+        idx === activeMilestoneIdx
+          ? {
+              ...m,
+              status: "completed",
+              progress: 100,
+              completedTopics: getTopicsForMilestone(m, currentRoadmap?.targetRole).map((_, i) => i),
+            }
+          : m
+      );
 
-    // Also update in allRoadmaps list
-    setAllRoadmaps((prev) =>
-      prev.map((r) => (r.id === currentRoadmap.id ? { ...r, milestones: updatedMilestones } : r))
-    );
+      // Enforce unlocking next milestone M(activeMilestoneIdx + 1)
+      const updatedMilestones = enforceSequentialMilestoneLocks(updatedMilestonesRaw);
+      setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
 
-    try {
-      await apiFetch(`/roadmaps/items/${activeM.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          status: "completed",
-          progress: 100,
-          completedTopics: getTopicsForMilestone(activeM, currentRoadmap?.targetRole).map((_, i) => i),
-        }),
-      });
-    } catch (err) {
-      console.warn("Milestone status update warning:", err);
-    } finally {
+      // Also update in allRoadmaps list
+      setAllRoadmaps((prev) =>
+        prev.map((r) => (r.id === currentRoadmap.id ? { ...r, milestones: updatedMilestones } : r))
+      );
+
+      saveProgressToServer(currentRoadmap, updatedMilestones, activeM.id, 100, "completed");
       setIsUpdatingStatus(false);
+    } else {
+      // Failed passing score (< 50% combined score) -> Next milestone remains LOCKED!
+      const currentCombined = Math.max(combinedScore, 10);
+      const updatedMilestonesRaw = milestones.map((m, idx) =>
+        idx === activeMilestoneIdx
+          ? {
+              ...m,
+              status: "in-progress",
+              progress: currentCombined,
+            }
+          : m
+      );
+      const updatedMilestones = enforceSequentialMilestoneLocks(updatedMilestonesRaw);
+      setCurrentRoadmap({ ...currentRoadmap, milestones: updatedMilestones });
+      setAllRoadmaps((prev) =>
+        prev.map((r) => (r.id === currentRoadmap.id ? { ...r, milestones: updatedMilestones } : r))
+      );
+
+      saveProgressToServer(currentRoadmap, updatedMilestones, activeM.id, currentCombined, "in-progress");
     }
   };
 
@@ -1325,6 +1675,7 @@ export default function AIRoadmap() {
       setCompilerStatus("success");
       setCompilerOutput(`✅ Live ${compilerLanguage === "react" ? "React JSX" : "HTML/CSS"} Preview Rendered Successfully! Check the Preview tab.`);
       setCompilerActiveTab("preview");
+      recordPracticeSuccess();
       return;
     }
 
@@ -1350,6 +1701,7 @@ export default function AIRoadmap() {
         } else {
           setCompilerStatus("success");
           setCompilerOutput(result.stdout || result.output || "(Execution completed with no console output)");
+          recordPracticeSuccess();
         }
       } else {
         runClientFallbackExecution(elapsed);
@@ -1379,6 +1731,7 @@ export default function AIRoadmap() {
         runFn(customConsole);
         setCompilerStatus("success");
         setCompilerOutput(logs.length > 0 ? logs.join("\n") : "(Execution succeeded with no console output)");
+        recordPracticeSuccess();
       } catch (jsErr) {
         setCompilerStatus("error");
         setCompilerOutput(`🔴 ${compilerLanguage.toUpperCase()} Runtime Error:\n\n${jsErr.name}: ${jsErr.message}`);
@@ -1386,14 +1739,11 @@ export default function AIRoadmap() {
     } else {
       setCompilerStatus("success");
       setCompilerOutput(`✅ Code Executed Successfully (${compilerLanguage.toUpperCase()})\n\nOutput Log:\nExecuting practice challenge for ${compilerLanguage.toUpperCase()}...\nResult: All assertions and logic checks passed cleanly!`);
+      recordPracticeSuccess();
     }
   };
 
-  const totalProgressSum = milestones.reduce(
-    (acc, m) => acc + (typeof m.progress === "number" ? m.progress : (m.status === "completed" ? 100 : 0)),
-    0
-  );
-  const overallProgress = milestones.length > 0 ? Math.round(totalProgressSum / milestones.length) : 0;
+  const overallProgress = calculateRoadmapProgress(milestones);
 
   return (
     <div className="roadmap-container stack-6">
@@ -1529,7 +1879,7 @@ export default function AIRoadmap() {
                 {allRoadmaps.map((rm) => {
                   const ms = rm.milestones || [];
                   const doneCount = ms.filter((m) => m.status === "completed").length;
-                  const prog = ms.length > 0 ? Math.round((doneCount / ms.length) * 100) : 0;
+                  const prog = calculateRoadmapProgress(ms);
 
                   return (
                     <div
@@ -1543,14 +1893,14 @@ export default function AIRoadmap() {
                             {ms.length} Milestones
                           </span>
                           <span className={prog === 100 ? "roadmap-card-status-done" : "roadmap-card-status-progress"}>
-                            {prog === 100 ? "Completed ✓" : prog > 0 ? "In Progress" : "Fresh Start"}
+                            {prog === 100 ? "Completed ✓" : prog > 0 ? `${prog}% In Progress` : "Fresh Start"}
                           </span>
                         </div>
                         <h4 className="roadmap-card-title">
                           {rm.targetRole || "Career Roadmap"}
                         </h4>
                         <p className="roadmap-card-sub">
-                          {doneCount} of {ms.length} milestones unlocked
+                          {doneCount} of {ms.length} milestones completed
                         </p>
                       </div>
 
@@ -1653,7 +2003,7 @@ export default function AIRoadmap() {
                           {m.title}
                         </div>
                         <div className="roadmap-milestone-sub">
-                          {isCompleted ? "Completed ✓" : isLocked ? "Locked 🔒" : isActive ? "Active Now" : "Unlocked"}
+                          {isCompleted ? "Completed (100%) ✓" : isLocked ? "Locked 🔒" : m.progress > 0 ? `${m.progress}% In Progress` : isActive ? "Active Now" : "Unlocked"}
                         </div>
                       </div>
                     </button>
@@ -1793,24 +2143,26 @@ export default function AIRoadmap() {
                 const cleanRole = String(currentRoadmap?.targetRole || "").trim();
                 const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
                 const fetchedTheory = aiTheoryCache[cacheKey];
+                const immediateTheory = getTheoryForMilestone(activeMilestone, cleanRole);
+                const theoryData = fetchedTheory || immediateTheory;
 
-                if (!fetchedTheory) {
+                if (!theoryData) {
                   return (
                     <div className="roadmap-section-card roadmap-theory-loading">
                       <div className="roadmap-loading-orb-wrap">
                         <Sparkles size={36} className="roadmap-icon-amber roadmap-spin-pulse" />
                       </div>
                       <h4 className="roadmap-empty-title">
-                        Generating 100% Live AI Technical Theory for "{cleanTitle}"...
+                        Generating Educational Theory for "{cleanTitle}"...
                       </h4>
                       <p className="roadmap-empty-desc">
-                        Groq AI is synthesizing authentic, topic-specific curriculum from foundational basics to deep runtime engine architecture, working code, and enterprise standards.
+                        Synthesizing authentic, topic-specific curriculum from foundational basics to working mechanics, practical code, and senior best practices.
                       </p>
                       <div className="roadmap-loading-steps-pills">
-                        <span className="roadmap-load-step-chip">L1: Foundational Basics</span>
+                        <span className="roadmap-load-step-chip">L1: Intuition & Concepts</span>
                         <span className="roadmap-load-step-chip">L2: Working Mechanics</span>
-                        <span className="roadmap-load-step-chip">L3: Core Architecture</span>
-                        <span className="roadmap-load-step-chip">L4: Production Mastery</span>
+                        <span className="roadmap-load-step-chip">L3: Core Internals</span>
+                        <span className="roadmap-load-step-chip">L4: Senior Best Practices</span>
                       </div>
                       {!isTheoryLoading && (
                         <button
@@ -1826,11 +2178,34 @@ export default function AIRoadmap() {
                   );
                 }
 
-                const theoryData = fetchedTheory;
                 const sectionsList = theoryData.sections || [];
 
                 return (
                   <div className="roadmap-section-card">
+                    {/* Live Background AI Generation Notification Banner */}
+                    {!fetchedTheory && isTheoryLoading && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                          padding: "10px 16px",
+                          marginBottom: "16px",
+                          borderRadius: "10px",
+                          background: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(99, 102, 241, 0.12))",
+                          border: "1px solid rgba(245, 158, 11, 0.3)",
+                          color: "#d97706",
+                          fontSize: "13px",
+                          fontWeight: 500
+                        }}
+                      >
+                        <Sparkles size={16} className="roadmap-icon-amber roadmap-spin-pulse" style={{ flexShrink: 0 }} />
+                        <span>
+                          <strong>Live AI Curriculum Generator:</strong> Synthesizing live personalized deep theory for "{cleanTitle}" in the background... You can start reading the structured guide below immediately!
+                        </span>
+                      </div>
+                    )}
+
                     <div>
                       <div className="roadmap-part-header-bar">
                         <span className="roadmap-part-pill">
@@ -1838,7 +2213,7 @@ export default function AIRoadmap() {
                         </span>
                         <span className="roadmap-ai-tag-pill">
                           <Sparkles size={12} className="roadmap-icon-emerald" />
-                          <span>100% Live AI Generated Theory</span>
+                          <span>{fetchedTheory ? "100% Live AI Generated Theory" : "Comprehensive Educational Guide"}</span>
                         </span>
                         <button
                           type="button"
@@ -1848,7 +2223,7 @@ export default function AIRoadmap() {
                           title="Regenerate this topic's theory fresh with AI"
                         >
                           <RefreshCw size={12} className={isTheoryLoading ? "roadmap-spin-loader" : ""} />
-                          <span>{isTheoryLoading ? "Regenerating..." : "Regenerate with AI"}</span>
+                          <span>{isTheoryLoading ? "Generating AI Theory..." : "Regenerate with AI"}</span>
                         </button>
                       </div>
                       <h3 className="roadmap-section-heading">
@@ -1863,12 +2238,12 @@ export default function AIRoadmap() {
                       <div className="roadmap-theory-level-bar">
                         <div className="roadmap-theory-level-title">
                           <Sparkles size={15} className="roadmap-icon-amber" />
-                          <span>Curriculum Track: Foundational Basics ➔ Core Architecture</span>
+                          <span>Curriculum Track: {theoryData.difficultyProgression || "Intuition & Concept ➔ Working Mechanics ➔ Core Internals ➔ Senior Best Practices"}</span>
                         </div>
                         <div className="roadmap-theory-level-steps">
                           <div className="roadmap-theory-step-pill step-lvl-1">
                             <span className="step-num">L1</span>
-                            <span className="step-lbl">Basics</span>
+                            <span className="step-lbl">Intuition</span>
                           </div>
                           <span className="roadmap-theory-step-arrow">→</span>
                           <div className="roadmap-theory-step-pill step-lvl-2">
@@ -1878,30 +2253,30 @@ export default function AIRoadmap() {
                           <span className="roadmap-theory-step-arrow">→</span>
                           <div className="roadmap-theory-step-pill step-lvl-3">
                             <span className="step-num">L3</span>
-                            <span className="step-lbl">Core Internals</span>
+                            <span className="step-lbl">Internals</span>
                           </div>
                           <span className="roadmap-theory-step-arrow">→</span>
                           <div className="roadmap-theory-step-pill step-lvl-4">
                             <span className="step-num">L4</span>
-                            <span className="step-lbl">Production Mastery</span>
+                            <span className="step-lbl">Best Practices</span>
                           </div>
                         </div>
                       </div>
 
                       <h4 className="roadmap-section-subheading">
                         {isTechnicalCodingRole(currentRoadmap?.targetRole, activeMilestone?.title) 
-                          ? "Progressive Technical Architecture & Core Internals" 
-                          : "Core Methodology & Framework Mechanics"}
+                          ? "Step-by-Step Educational Curriculum & Under-the-Hood Mechanics" 
+                          : "Core Methodology & Practical Framework"}
                       </h4>
 
                       {sectionsList.map((sec, sIdx) => {
                         const points = extractPointsFromSection(sec);
                         const lvlTier = sIdx % 4;
                         const levelConfig = [
-                          { label: "Level 1: Foundational Basics", badge: "Basics", colorClass: "lvl-emerald", Icon: BookOpen },
-                          { label: "Level 2: Working Mechanics & Lifecycle", badge: "Mechanics", colorClass: "lvl-sky", Icon: Cpu },
+                          { label: "Level 1: Core Concept & Real-World Intuition", badge: "Intuition", colorClass: "lvl-emerald", Icon: BookOpen },
+                          { label: "Level 2: Working Mechanics & Step-by-Step Flow", badge: "Mechanics", colorClass: "lvl-sky", Icon: Cpu },
                           { label: "Level 3: Deep Core Internals & Architecture", badge: "Core Internals", colorClass: "lvl-indigo", Icon: Layers },
-                          { label: "Level 4: Advanced Production Standards & Anti-Patterns", badge: "Advanced Mastery", colorClass: "lvl-amber", Icon: ShieldCheck }
+                          { label: "Level 4: Common Pitfalls & Senior Best Practices", badge: "Senior Best Practices", colorClass: "lvl-amber", Icon: ShieldCheck }
                         ][lvlTier];
 
                         const sectionLevel = sec.level || levelConfig.label;
@@ -2146,7 +2521,7 @@ export default function AIRoadmap() {
                         height="400px"
                       />
 
-                      {/* Action Bar with Run button and Output tab switchers */}
+                      {/* Action Bar with Run button, Submit Solution, and Output tab switchers */}
                       <div className="compiler-actions-bar">
                         <div className="compiler-actions-left">
                           <button
@@ -2161,6 +2536,15 @@ export default function AIRoadmap() {
                               <Play size={14} />
                             )}
                             <span>{compilerStatus === "running" ? "Running..." : "Run Code"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={handleSubmitPractice}
+                            className={`compiler-submit-practice-btn ${practiceScores[activeMilestone?.id || `m_${activeMilestoneIdx}`] === 100 ? "submitted" : ""}`}
+                          >
+                            <CheckCircle2 size={14} />
+                            <span>{practiceScores[activeMilestone?.id || `m_${activeMilestoneIdx}`] === 100 ? "Practice Submitted (100%)" : "Submit Practice Solution"}</span>
                           </button>
 
                           <div className="compiler-tabs-group">
@@ -2185,11 +2569,15 @@ export default function AIRoadmap() {
                         </div>
 
                         <div className="compiler-actions-right">
-                          {compilerStatus === "success" && (
+                          {practiceScores[activeMilestone?.id || `m_${activeMilestoneIdx}`] === 100 ? (
+                            <span className="compiler-status-badge success">
+                              <CheckCircle2 size={13} /> Practice Score: 100%
+                            </span>
+                          ) : compilerStatus === "success" ? (
                             <span className="compiler-status-badge success">
                               <CheckCircle2 size={13} /> Succeeded
                             </span>
-                          )}
+                          ) : null}
                           {compilerStatus === "error" && (
                             <span className="compiler-status-badge error">Runtime Error</span>
                           )}
@@ -2242,6 +2630,7 @@ export default function AIRoadmap() {
 
               {/* ── PART 4: ASSESSMENT QUIZ & UNLOCKING M2 ── */}
               {activeSection === "quiz" && (() => {
+                const mKey = activeMilestone.id || `m_${activeMilestoneIdx}`;
                 const cleanTitle = String(activeMilestone.title || "").replace(/^Milestone\s*\d+\s*:\s*/i, "").trim();
                 const cleanRole = String(currentRoadmap?.targetRole || "").trim();
                 const cacheKey = `${cleanTitle.toLowerCase()}__${cleanRole.toLowerCase()}`;
@@ -2254,6 +2643,8 @@ export default function AIRoadmap() {
                   correctAnswer: q.correctAnswer ?? q.correctAnswerIndex ?? 0,
                   explanation: q.explanation || `Core concept of ${cleanTitle} verified.`
                 }));
+                const currentPracticeScore = practiceScores[mKey] !== undefined ? practiceScores[mKey] : (compilerStatus === "success" ? 100 : 0);
+
                 return (
                   <div className="roadmap-section-card">
                     <div>
@@ -2276,6 +2667,38 @@ export default function AIRoadmap() {
                       </h3>
                       <p className="roadmap-meta-text">
                         Complete this 5-question assessment quiz to verify your understanding of <strong>{cleanTitle}</strong> and unlock Milestone {activeMilestoneIdx + 2}!
+                      </p>
+                    </div>
+
+                    {/* Unlocking Requirement Notice Banner */}
+                    <div className="roadmap-quiz-criteria-box">
+                      <div className="roadmap-quiz-criteria-header">
+                        <span className="roadmap-quiz-criteria-title">
+                          <ShieldCheck size={16} color="#6366f1" />
+                          <span>Unlocking Requirement: 50% Combined Score Across Practice & Quiz</span>
+                        </span>
+                        <div className="roadmap-quiz-criteria-badges">
+                          <span className={`roadmap-score-chip-sm ${currentPracticeScore === 100 ? "success" : "warning"}`}>
+                            {currentPracticeScore === 100 ? (
+                              <>
+                                <CheckCircle2 size={12} />
+                                <span>Practice Problem: 100% (Completed)</span>
+                              </>
+                            ) : (
+                              <>
+                                <AlertTriangle size={12} />
+                                <span>Practice Problem: 0% (Pending Run/Submit)</span>
+                              </>
+                            )}
+                          </span>
+                          <span className="roadmap-score-chip-sm info">
+                            <HelpCircle size={12} />
+                            <span>Quiz Weight: 50%</span>
+                          </span>
+                        </div>
+                      </div>
+                      <p className="roadmap-meta-text" style={{ margin: 0, fontSize: "12px", color: "#475569" }}>
+                        Milestone {activeMilestoneIdx + 2} will unlock only when your combined score <code>(Practice Score % + Quiz Score %) / 2</code> reaches at least <strong>50%</strong>.
                       </p>
                     </div>
 
@@ -2325,7 +2748,7 @@ export default function AIRoadmap() {
                       ))}
                     </div>
 
-                    {/* Quiz Controls */}
+                    {/* Quiz Controls & Results */}
                     {!quizSubmitted ? (
                       <button
                         type="button"
@@ -2333,32 +2756,109 @@ export default function AIRoadmap() {
                         disabled={Object.keys(quizAnswers).length < questions.length}
                         className={`roadmap-quiz-submit-btn ${Object.keys(quizAnswers).length === questions.length ? "btn-ready" : "btn-disabled"}`}
                       >
-                        Submit Quiz & Unlock Next Milestone
+                        Submit Quiz & Verify Unlocking
                       </button>
-                    ) : (
-                      <div className="roadmap-quiz-result-banner">
-                        <div className="roadmap-quiz-result-score">
-                          🎉 Quiz Score: {quizScore} / {questions.length} ({Math.round((quizScore / questions.length) * 100)}%)
-                        </div>
-                        <p className="roadmap-quiz-result-desc">
-                          Milestone {activeMilestoneIdx + 1} ("{activeMilestone.title}") is now completed (100%)!
-                          {activeMilestoneIdx + 1 < milestones.length
-                            ? ` Milestone ${activeMilestoneIdx + 2} ("${milestones[activeMilestoneIdx + 1]?.title}") is unlocked!`
-                            : " You have completed all milestones in this roadmap!"}
-                        </p>
+                    ) : (() => {
+                      const mResult = milestoneCombinedResults[mKey] || {
+                        practiceScore: currentPracticeScore,
+                        quizScore: Math.round((quizScore / Math.max(questions.length, 1)) * 100),
+                        quizCorrectCount: quizScore,
+                        quizTotalCount: questions.length,
+                        combinedScore: Math.round((currentPracticeScore + Math.round((quizScore / Math.max(questions.length, 1)) * 100)) / 2),
+                        isPassed: Math.round((currentPracticeScore + Math.round((quizScore / Math.max(questions.length, 1)) * 100)) / 2) >= 50
+                      };
+                      const { practiceScore, quizScore: qPct, combinedScore, isPassed } = mResult;
 
-                        {activeMilestoneIdx + 1 < milestones.length && (
-                          <button
-                            type="button"
-                            onClick={handleProceedToNextMilestone}
-                            className="roadmap-proceed-btn roadmap-btn-centered"
-                          >
-                            <span>Proceed to Milestone {activeMilestoneIdx + 2}</span>
-                            <ArrowRight size={16} />
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      return isPassed ? (
+                        <div className="roadmap-quiz-result-banner">
+                          <div className="roadmap-quiz-result-score">
+                            🎉 Passed! Combined Score: {combinedScore}% (≥ 50% Required to Unlock Next Milestone)
+                          </div>
+
+                          {/* Score Breakdown Cards */}
+                          <div className="roadmap-score-breakdown-grid">
+                            <div className="roadmap-score-metric-card">
+                              <div className="roadmap-score-metric-label">Practice Challenge</div>
+                              <div className="roadmap-score-metric-val">{practiceScore}%</div>
+                            </div>
+                            <div className="roadmap-score-metric-card">
+                              <div className="roadmap-score-metric-label">Assessment Quiz</div>
+                              <div className="roadmap-score-metric-val">{qPct}% ({quizScore}/{questions.length})</div>
+                            </div>
+                            <div className="roadmap-score-metric-card highlight passed">
+                              <div className="roadmap-score-metric-label">Combined Score</div>
+                              <div className="roadmap-score-metric-val">{combinedScore}%</div>
+                            </div>
+                          </div>
+
+                          <p className="roadmap-quiz-result-desc">
+                            Milestone {activeMilestoneIdx + 1} ("{activeMilestone.title}") is completed (100%)!
+                            {activeMilestoneIdx + 1 < milestones.length
+                              ? ` Milestone ${activeMilestoneIdx + 2} ("${milestones[activeMilestoneIdx + 1]?.title}") is now UNLOCKED!`
+                              : " You have completed all milestones in this roadmap!"}
+                          </p>
+
+                          {activeMilestoneIdx + 1 < milestones.length && (
+                            <button
+                              type="button"
+                              onClick={handleProceedToNextMilestone}
+                              className="roadmap-proceed-btn roadmap-btn-centered"
+                            >
+                              <span>Proceed to Milestone {activeMilestoneIdx + 2}</span>
+                              <ArrowRight size={16} />
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="roadmap-quiz-result-banner failed">
+                          <div className="roadmap-quiz-result-score">
+                            ⚠️ Passing Criteria Not Reached: Combined Score {combinedScore}% (&lt; 50% Required)
+                          </div>
+
+                          {/* Score Breakdown Cards */}
+                          <div className="roadmap-score-breakdown-grid">
+                            <div className="roadmap-score-metric-card">
+                              <div className="roadmap-score-metric-label">Practice Challenge</div>
+                              <div className="roadmap-score-metric-val">{practiceScore}%</div>
+                            </div>
+                            <div className="roadmap-score-metric-card">
+                              <div className="roadmap-score-metric-label">Assessment Quiz</div>
+                              <div className="roadmap-score-metric-val">{qPct}% ({quizScore}/{questions.length})</div>
+                            </div>
+                            <div className="roadmap-score-metric-card highlight failed">
+                              <div className="roadmap-score-metric-label">Combined Score</div>
+                              <div className="roadmap-score-metric-val">{combinedScore}%</div>
+                            </div>
+                          </div>
+
+                          <p className="roadmap-quiz-result-desc">
+                            Milestone {activeMilestoneIdx + 2} remains locked until you achieve at least 50% combined score.
+                            {practiceScore === 0 ? " You currently have 0% on the Hands-on Practice Problem. Running and submitting your practice solution will award 100% practice marks, instantly lifting your combined score to 50%+ and unlocking the next milestone!" : " You can re-attempt the quiz or re-run the practice challenge to reach 50% combined score."}
+                          </p>
+
+                          <div className="roadmap-quiz-actions-row">
+                            {practiceScore === 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setActiveSection("practice")}
+                                className="roadmap-btn-warning"
+                              >
+                                <Code2 size={15} />
+                                <span>Go to Practice Challenge (Earn 100%)</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleRetakeQuiz}
+                              className="roadmap-btn-secondary"
+                            >
+                              <RotateCcw size={15} />
+                              <span>Retake Assessment Quiz</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })()}

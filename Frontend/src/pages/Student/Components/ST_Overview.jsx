@@ -361,69 +361,6 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* Overall Training Activity & Curriculum Progress Bar Card */}
-      <div className="overview-progress-hero-card">
-        <div className="oph-top-row">
-          <div className="oph-title-group">
-            <div className="oph-icon-badge">
-              <TrendingUp size={22} className="oph-icon" />
-            </div>
-            <div>
-              <div className="oph-badge-row">
-                <span className="oph-tag">CURRICULUM VELOCITY</span>
-                <span className="oph-live-indicator"><span className="oph-dot" /> LIVE SYNC</span>
-              </div>
-              <h3 className="oph-heading">Overall Training Activity Progress</h3>
-              <p className="oph-subtext">Real-time completion across coding challenges, academic quizzes, attendance, and milestone tasks.</p>
-            </div>
-          </div>
-          <div className="oph-stats-badge">
-            <span className="oph-pct-number">{dashboard.overallProgress || 0}%</span>
-            <span className="oph-pct-label">Completed</span>
-          </div>
-        </div>
-
-        {/* Progress Bar Track */}
-        <div className="oph-track-wrapper">
-          <div className="oph-progress-track">
-            <div
-              className="oph-progress-fill"
-              style={{ width: `${Math.min(100, Math.max(0, dashboard.overallProgress || 0))}%` }}
-            >
-              <div className="oph-progress-glow" />
-            </div>
-          </div>
-        </div>
-
-        {/* Breakdown Badges */}
-        <div className="oph-breakdown-row">
-          <div className="oph-chip">
-            <span className="oph-chip-dot oph-chip-dot--indigo" />
-            <span className="oph-chip-label">Coding:</span>
-            <strong className="oph-chip-val">{dashboard.codingProgress?.solvedCount || 0} Solved</strong>
-          </div>
-          <div className="oph-chip">
-            <span className="oph-chip-dot oph-chip-dot--emerald" />
-            <span className="oph-chip-label">Quizzes:</span>
-            <strong className="oph-chip-val">{dashboard.quizCompletedCount || 0} Finished</strong>
-          </div>
-          <div className="oph-chip">
-            <span className="oph-chip-dot oph-chip-dot--amber" />
-            <span className="oph-chip-label">Attendance:</span>
-            <strong className="oph-chip-val">{Math.round(dashboard.attendanceSummary?.percentage || 0)}%</strong>
-          </div>
-          <div className="oph-chip">
-            <span className="oph-chip-dot oph-chip-dot--purple" />
-            <span className="oph-chip-label">Earned XP:</span>
-            <strong className="oph-chip-val">{dashboard.earnedPoints || `${dashboard.codingProgress?.earnedXp || 0} XP`}</strong>
-          </div>
-          <Link to="/student/progress-analytics" className="oph-analytics-link">
-            <span>View Analytics</span>
-            <ArrowRight size={14} />
-          </Link>
-        </div>
-      </div>
-
       {/* 4 Stats Cards Row */}
       <div className="overview-grid-4">
         {studentStats.map((s) => (

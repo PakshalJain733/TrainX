@@ -281,12 +281,12 @@ function MN_ProfilePage() {
             </div>
 
             <h2 className="profile-name">{form.name}</h2>
-            <div className="profile-roll-chip">
+            <div className="profile-roll-chip" style={{ marginBottom: '6px' }}>
               <ShieldCheck size={14} />
               <strong>{form.role}</strong>
             </div>
 
-            <div className="mt-3 flex items-center justify-center gap-2 flex-wrap">
+            <div className="profile-badges-wrap" style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <Badge variant="success">Active Mentor</Badge>
               <Badge variant="default">{form.department || "Engineering"}</Badge>
             </div>
