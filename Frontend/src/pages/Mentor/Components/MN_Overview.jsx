@@ -89,15 +89,35 @@ export default function Overview() {
           setOverview(inner && typeof inner === "object" ? { ...payload, ...inner } : payload);
         }
       }),
-      apiFetch("/batches").then((res) => {
-        if (mounted && res && res.data && Array.isArray(res.data)) {
-          setBatches(res.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
+      apiFetch("/mentor/batches").then((res) => {
+        if (!mounted) return;
+        const list = res?.data?.batches || res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(list) && list.length > 0) {
+          setBatches(list.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
+        } else {
+          return apiFetch("/batches").then((bRes) => {
+            if (mounted && bRes?.data && Array.isArray(bRes.data)) {
+              setBatches(bRes.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
+            }
+          });
         }
+      }).catch(() => {
+        apiFetch("/batches").then((bRes) => {
+          if (mounted && bRes?.data && Array.isArray(bRes.data)) {
+            setBatches(bRes.data.filter(b => b.status !== 'Inactive' && b.status !== 'inactive'));
+          }
+        });
       }),
-      apiFetch("/students").then((res) => {
+      apiFetch("/mentor/students/performance").then((res) => {
         if (!mounted) return;
         const list = res?.data || (Array.isArray(res) ? res : []);
         setStudentCount(list.length);
+      }).catch(() => {
+        apiFetch("/mentor/students").then((res) => {
+          if (!mounted) return;
+          const list = res?.data || (Array.isArray(res) ? res : []);
+          setStudentCount(list.length);
+        }).catch(() => {});
       }),
       apiFetch("/mentor/live-sessions").then((res) => {
         if (!mounted) return;
@@ -134,7 +154,24 @@ export default function Overview() {
   if (!fullName) fullName = "Mentor";
   const role = mentorUser.role || asText(firstValue(mentor, ["role", "designation"])) || "Mentor";
   const department = mentorUser.department || asText(firstValue(mentor, ["department", "departmentName", "department_name", "dept"])) || "Computer Engineering";
-  const assignedStudents = getNumber(mentor, ["assignedStudents", "totalStudents", "studentsCount", "studentCount", "assigned_students"]) ?? 0;
+
+  // Resolve assigned students count from mentor overview stats, mentor student performance, or batch roster
+  const overviewAssigned =
+    getNumber(overviewData?.stats, ["totalStudents", "assignedStudents", "studentsCount"]) ??
+    getNumber(overviewData, ["totalStudents", "assignedStudents", "studentsCount"]) ??
+    getNumber(mentor, ["assignedStudents", "totalStudents", "studentsCount", "studentCount", "assigned_students"]);
+
+  const batchEnrolledSum = batches.reduce((acc, b) => {
+    const count = getNumber(b, ["enrolledStudents", "studentCount", "studentsCount", "totalStudents", "assignedStudents"])
+      ?? (Array.isArray(b.students) ? b.students.length : 0);
+    return acc + (Number.isFinite(count) ? count : 0);
+  }, 0);
+
+  const finalAssignedStudentsCount =
+    overviewAssigned !== null && overviewAssigned !== undefined
+      ? overviewAssigned
+      : (studentCount > 0 ? studentCount : (batchEnrolledSum > 0 ? batchEnrolledSum : 0));
+
   const assignedBatches = getNumber(mentor, ["assignedBatches", "totalBatches", "batchesCount", "batchCount", "assigned_batches"]) ?? batches.length;
   const pendingReviews = getNumber(mentor, ["pendingReviews", "pendingEvaluations", "pendingEvaluationsCount", "pending_reviews"]) ?? 0;
   const upcomingSessions = sessionsList.length > 0
@@ -143,7 +180,7 @@ export default function Overview() {
 
   const mentorStats = [
     { label: "Active Batches", value: `${batches.length} Cohorts`, hint: "Live assigned cohorts", icon: Layers },
-    { label: "Total Students", value: `${studentCount} Students`, hint: "Live student count", icon: Users },
+    { label: "Assigned Students", value: `${finalAssignedStudentsCount} Students`, hint: "Assigned student count", icon: Users },
     { label: "Upcoming Sessions", value: `${sessionsCount} Scheduled`, hint: "Scheduled live sessions", icon: CalendarCheck },
     { label: "Published Tasks", value: `${tasksCount} Tasks`, hint: "Active coding assignments", icon: FileCode },
   ];

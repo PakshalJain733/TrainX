@@ -27,6 +27,7 @@ import {
   getAdminPracticeProblems,
   createAdminPracticeProblem,
   deleteAdminPracticeProblem,
+  generateAIPracticeProblemController,
 } from '../controllers/admin.controller.js';
 
 router.get('/overview', getCoordinatorOverview);
@@ -44,6 +45,7 @@ router.post('/live-sessions', createCoordinatorLiveSession);
 router.get('/notifications', getCoordinatorNotifications);
 router.get('/practice-problems', getAdminPracticeProblems);
 router.post('/practice-problems', createAdminPracticeProblem);
+router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 
 export default router;

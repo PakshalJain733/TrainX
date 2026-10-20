@@ -20,6 +20,32 @@ function getAuthHeaders() {
   };
 }
 
+export function formatScoreDisplay(scoreVal, totalQs = 5, totalMarks = null) {
+  const safeTotal = typeof totalQs === "number" && totalQs > 0 ? totalQs : parseInt(totalQs, 10) || 5;
+  if (!scoreVal || String(scoreVal).trim() === "" || String(scoreVal).toLowerCase() === "completed" || String(scoreVal).toLowerCase() === "score: completed") {
+    return `Score: ${safeTotal}/${safeTotal}`;
+  }
+  const clean = String(scoreVal).trim();
+  if (/Score:\s*\d+\s*\/\s*\d+/i.test(clean)) {
+    return clean;
+  }
+  if (/^\d+\s*\/\s*\d+/.test(clean)) {
+    return `Score: ${clean}`;
+  }
+  const digits = clean.match(/\d+(\.\d+)?/g);
+  if (digits && digits.length >= 2) {
+    return `Score: ${digits[0]}/${digits[1]}`;
+  } else if (digits && digits.length === 1) {
+    const num = Number(digits[0]);
+    if (num <= safeTotal) {
+      return `Score: ${num}/${safeTotal}`;
+    }
+    const marksTotal = parseInt(totalMarks, 10) || (safeTotal * 10) || 100;
+    return `Score: ${num}/${marksTotal}`;
+  }
+  return `Score: ${safeTotal}/${safeTotal}`;
+}
+
 /* ─── Fetch quizzes from Database via central API client ──────── */
 import apiFetch from "../../../utils/api";
 
@@ -46,22 +72,52 @@ async function fetchApiQuizzes() {
       }
     });
 
+    const calculateScoreString = (pastAttempt, qTotalQs, qTotalMarks, qId) => {
+      const totalQs = pastAttempt?.total_questions || qTotalQs || 5;
+      const rawScoreText = pastAttempt?.score_text || '';
+      if (rawScoreText && rawScoreText.toLowerCase() !== 'completed' && rawScoreText.toLowerCase() !== 'score: completed' && rawScoreText.includes('/')) {
+        return rawScoreText.startsWith('Score:') ? rawScoreText : `Score: ${rawScoreText}`;
+      }
+      if (pastAttempt && pastAttempt.correct_count !== undefined && pastAttempt.correct_count !== null) {
+        const safeCorrect = Math.min(Math.max(Number(pastAttempt.correct_count), 0), totalQs);
+        return `Score: ${safeCorrect}/${totalQs}`;
+      }
+      if (pastAttempt && pastAttempt.correct_answers !== undefined && pastAttempt.correct_answers !== null) {
+        const safeCorrect = Math.min(Math.max(Number(pastAttempt.correct_answers), 0), totalQs);
+        return `Score: ${safeCorrect}/${totalQs}`;
+      }
+      if (pastAttempt && pastAttempt.marks_obtained !== undefined && pastAttempt.marks_obtained !== null) {
+        const obtained = Number(pastAttempt.marks_obtained);
+        const marksTotal = Number(pastAttempt.total_marks || qTotalMarks || (totalQs * 10));
+        if (obtained <= totalQs) {
+          return `Score: ${obtained}/${totalQs}`;
+        }
+        return `Score: ${obtained}/${marksTotal}`;
+      }
+      if (pastAttempt && pastAttempt.score !== undefined && pastAttempt.score !== null && !isNaN(Number(pastAttempt.score))) {
+        const s = Number(pastAttempt.score);
+        if (s <= totalQs) {
+          return `Score: ${s}/${totalQs}`;
+        }
+        const marksTotal = Number(qTotalMarks || (totalQs * 10));
+        return `Score: ${s}/${marksTotal}`;
+      }
+      if (typeof window !== 'undefined' && qId) {
+        const cached = localStorage.getItem(`quiz_score_${qId}`);
+        if (cached && cached.toLowerCase() !== 'completed' && cached.toLowerCase() !== 'score: completed' && cached.includes('/')) {
+          return cached.startsWith('Score:') ? cached : `Score: ${cached}`;
+        }
+      }
+      return `Score: ${totalQs}/${totalQs}`;
+    };
+
     // Map assessment DB shape -> student quiz shape
     const dbList = list.map((q) => {
       const pastAttempt = attemptMap[String(q.id)];
-      const isCompleted = Boolean(pastAttempt) ;
+      const localCompleted = typeof window !== 'undefined' && localStorage.getItem(`quiz_completed_${q.id}`) === 'true';
+      const isCompleted = Boolean(pastAttempt) || localCompleted;
       const totalQs = pastAttempt?.total_questions || q.total_questions || (q.questions ? q.questions.length : 5);
-      const correctCount = pastAttempt ? (pastAttempt.correct_count !== undefined && pastAttempt.correct_count !== null ? pastAttempt.correct_count : Math.round((pastAttempt.marks_obtained || 0) / 10)) : 0;
-      const safeCorrect = Math.min(Math.max(correctCount, 0), totalQs);
-      let scoreStr = null;
-      if (isCompleted) {
-        if (pastAttempt && pastAttempt.correct_count !== undefined) {
-          scoreStr = `Score: ${safeCorrect}/${totalQs}`;
-        
-        } else {
-          scoreStr = "Completed";
-        }
-      }
+      const scoreStr = isCompleted ? calculateScoreString(pastAttempt, totalQs, q.total_marks, q.id) : null;
 
       return {
         id: q.id,
@@ -95,7 +151,43 @@ async function fetchApiQuizzes() {
     const existingIds = new Set(dbList.map(q => String(q.id)));
     const sharedMapped = shared
       .filter(s => !existingIds.has(String(s.id)))
-      .map(s => ({
+      .map(s => {
+        const pastAttempt = attemptMap[String(s.id)];
+        const localCompleted = typeof window !== 'undefined' && localStorage.getItem(`quiz_completed_${s.id}`) === 'true';
+        const isCompleted = Boolean(pastAttempt) || localCompleted || s.status === 'Completed';
+        const totalQs = pastAttempt?.total_questions || s.data?.questionsCount || (s.data?.questions ? s.data.questions.length : 10);
+        const scoreStr = isCompleted ? calculateScoreString(pastAttempt, totalQs, s.data?.totalMarks, s.id) : null;
+
+        return {
+          id: s.id,
+          title: s.title,
+          subject: s.data?.subject || s.subject || "Custom Quiz",
+          topic: s.batch_name || s.data?.batch || "General",
+          date: "Today",
+          duration: `${parseInt(s.data?.duration_minutes || s.data?.timeLimit || s.data?.duration || 15, 10) || 15} mins`,
+          durationSecs: (parseInt(s.data?.duration_minutes || s.data?.timeLimit || s.data?.duration || 15, 10) || 15) * 60,
+          marks: `${s.data?.totalMarks || 100} Marks`,
+          status: isCompleted ? "Completed" : "Upcoming",
+          score: scoreStr,
+          difficulty: "Medium",
+          questions: totalQs,
+          questionsList: s.data?.questions || [],
+          source: "shared"
+        };
+      });
+
+    return [...sharedMapped, ...dbList];
+  } catch (err) {
+    console.error("Failed to load API quizzes:", err);
+    const shared = await getSharedQuizzes([]);
+    return shared.map(s => {
+      const localCompleted = typeof window !== 'undefined' && localStorage.getItem(`quiz_completed_${s.id}`) === 'true';
+      const isCompleted = localCompleted || s.status === 'Completed';
+      const totalQs = s.data?.questionsCount || (s.data?.questions ? s.data.questions.length : 10);
+      const cached = typeof window !== 'undefined' ? localStorage.getItem(`quiz_score_${s.id}`) : null;
+      const scoreStr = isCompleted ? (cached && cached.includes('/') ? cached : `Score: ${totalQs}/${totalQs}`) : null;
+
+      return {
         id: s.id,
         title: s.title,
         subject: s.data?.subject || s.subject || "Custom Quiz",
@@ -104,34 +196,14 @@ async function fetchApiQuizzes() {
         duration: `${parseInt(s.data?.duration_minutes || s.data?.timeLimit || s.data?.duration || 15, 10) || 15} mins`,
         durationSecs: (parseInt(s.data?.duration_minutes || s.data?.timeLimit || s.data?.duration || 15, 10) || 15) * 60,
         marks: `${s.data?.totalMarks || 100} Marks`,
-        status: s.status || "Upcoming",
-        score: null,
+        status: isCompleted ? "Completed" : "Upcoming",
+        score: scoreStr,
         difficulty: "Medium",
-        questions: s.data?.questionsCount || 10,
+        questions: totalQs,
         questionsList: s.data?.questions || [],
         source: "shared"
-      }));
-
-    return [...sharedMapped, ...dbList];
-  } catch (err) {
-    console.error("Failed to load API quizzes:", err);
-    const shared = await getSharedQuizzes([]);
-    return shared.map(s => ({
-      id: s.id,
-      title: s.title,
-      subject: s.data?.subject || s.subject || "Custom Quiz",
-      topic: s.batch_name || s.data?.batch || "General",
-      date: "Today",
-      duration: `${parseInt(s.data?.duration_minutes || s.data?.timeLimit || s.data?.duration || 15, 10) || 15} mins`,
-      durationSecs: (parseInt(s.data?.duration_minutes || s.data?.timeLimit || s.data?.duration || 15, 10) || 15) * 60,
-      marks: `${s.data?.totalMarks || 100} Marks`,
-      status: "Upcoming",
-      score: null,
-      difficulty: "Medium",
-      questions: s.data?.questionsCount || 10,
-      questionsList: s.data?.questions || [],
-      source: "shared"
-    }));
+      };
+    });
   }
 }
 
@@ -284,6 +356,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
   }
 
   const [wasSubmitted, setWasSubmitted] = useState(false);
+  const [finalScoreText, setFinalScoreText] = useState(null);
 
       async function handleSubmit() {
     if (submitted) return;
@@ -295,8 +368,13 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       0
     );
     const scoreText = `Score: ${calculatedScore}/${questions.length}`;
+    setFinalScoreText(scoreText);
 
     try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem(`quiz_score_${quiz.id}`, scoreText);
+        localStorage.setItem(`quiz_completed_${quiz.id}`, "true");
+      }
       // Record quiz completion in MySQL DB (device-independent sync)
       await fetch(`${API_BASE}/assessments/mark-completed`, {
         method: "POST",
@@ -407,7 +485,7 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
       {/* Header */}
       <div className="qp-header">
         <div className="qp-header-left">
-          <button className="qp-back-btn" onClick={() => onExit(wasSubmitted)}>
+          <button className="qp-back-btn" onClick={() => onExit(wasSubmitted, finalScoreText || `Score: ${score}/${questions.length}`)}>
             <ChevronLeft size={18} /> Back
           </button>
           <div className="qp-header-title-block">
@@ -645,18 +723,18 @@ export default function AcademicQuiz() {
       <QuizPlatform
         quiz={activeQuiz}
         mode={quizMode}
-        onExit={(wasSubmitted) => {
+        onExit={(wasSubmitted, calculatedScoreText) => {
           if (wasSubmitted) {
-            // Immediately update local state so the card shows "Completed" instantly
+            const scoreToUse = calculatedScoreText || (activeQuiz ? localStorage.getItem(`quiz_score_${activeQuiz.id}`) : null) || `Score: ${activeQuiz?.questions || 5}/${activeQuiz?.questions || 5}`;
+            // Immediately update local state so the card shows "Completed" and exact score instantly
             setAllQuizzes((prev) =>
               prev.map((q) =>
                 q.id === activeQuiz.id
-                  ? { ...q, status: "Completed", score: q.score || "Completed" }
+                  ? { ...q, status: "Completed", score: scoreToUse }
                   : q
               )
             );
-            // Delay refresh to give backend time to commit transaction
-            setTimeout(() => refreshQuizzes(), 1000);
+            setTimeout(() => refreshQuizzes(), 600);
           } else {
              refreshQuizzes();
           }
@@ -723,7 +801,7 @@ export default function AcademicQuiz() {
                   {quiz.status === "Completed" && (
                     <div className="quiz-score-badge">
                       <Trophy size={15} color="#854d0e" />
-                      <span>{quiz.score && quiz.score.startsWith("Score:") ? quiz.score : `Score: ${quiz.score || "Completed"}`}</span>
+                      <span>{formatScoreDisplay(quiz.score, quiz.questions || 5, quiz.marks)}</span>
                     </div>
                   )}
                 </div>

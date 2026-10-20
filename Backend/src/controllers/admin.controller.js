@@ -573,6 +573,7 @@ import {
   createPracticeProblemModel,
   deletePracticeProblemModel,
 } from '../models/practiceProblem.model.js';
+import { generateAIPracticeProblem } from '../ai/practice.ai.js';
 
 export const getAdminPracticeProblems = async (req, res, next) => {
   try {
@@ -654,6 +655,16 @@ export const deleteAdminPracticeProblem = async (req, res, next) => {
     const { id } = req.params;
     await deletePracticeProblemModel(id);
     return sendSuccess(res, 'Coding problem deleted successfully');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const generateAIPracticeProblemController = async (req, res, next) => {
+  try {
+    const { topic = 'Arrays & Hashing', difficulty = 'Medium', companies = '' } = req.body || {};
+    const problem = await generateAIPracticeProblem({ topic, difficulty, companies });
+    return sendSuccess(res, 'AI practice problem generated successfully', problem);
   } catch (error) {
     next(error);
   }

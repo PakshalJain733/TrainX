@@ -599,6 +599,11 @@ function Register() {
         return false;
       }
     } else {
+      const mobile = (formData.mobile_number || "").trim();
+      if (mobile && mobile.length < 10) {
+        setErrorMsg("Please enter a valid 10-digit mobile number.");
+        return false;
+      }
       const secureCode = (formData.secure_code || "").trim();
       if (!secureCode) {
         setErrorMsg("Please enter your Secure Access Code.");
@@ -1346,16 +1351,29 @@ function Register() {
                   </div>
 
                   <div className="input-group">
-                    <FieldLabel icon={Icons.email}>Email</FieldLabel>
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
                     <input
-                      type="email"
-                      name="email"
-                      required
-                      placeholder="user@pvppcoe.ac.in"
-                      value={formData.email}
+                      type="tel"
+                      name="mobile_number"
+                      autoComplete="tel"
+                      placeholder="Mobile number (optional)"
+                      value={formData.mobile_number}
                       onChange={handleChange}
+                      maxLength={10}
                     />
                   </div>
+                </div>
+
+                <div className="input-group">
+                  <FieldLabel icon={Icons.email}>Email</FieldLabel>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="user@pvppcoe.ac.in"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 {/* Row: Password | Confirm Password for Staff/Mentors */}

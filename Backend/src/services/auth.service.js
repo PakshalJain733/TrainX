@@ -401,6 +401,14 @@ export const verifyRegistrationOtpAndRegister = async (data = {}) => {
 export const registerUser = async (data) => {
   const { name, email, mobile_number, password, role, secure_code, college_id, collegeId, roll_number, department, year, division, semester } = data;
 
+  let canonicalRole = ROLES.STUDENT;
+  if (role) {
+    const lowerRole = role.toLowerCase();
+    if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
+    else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
+    else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
+  }
+
   if (isBlank(email) && isBlank(mobile_number)) {
     throw createAuthError('An email address or mobile number is required.', 400);
   }
@@ -509,14 +517,6 @@ export const registerUser = async (data) => {
     };
   }
 
-  let canonicalRole = ROLES.STUDENT;
-  if (role) {
-    const lowerRole = role.toLowerCase();
-    if (lowerRole.includes('faculty') || lowerRole.includes('mentor')) canonicalRole = ROLES.MENTOR;
-    else if (lowerRole.includes('admin') || lowerRole.includes('hod')) canonicalRole = ROLES.COLLEGE_ADMIN;
-    else if (lowerRole.includes('coordinator')) canonicalRole = ROLES.COORDINATOR;
-  }
-
   let codeRecord = null;
   const isNonStudentRole = canonicalRole !== ROLES.STUDENT;
   if (isNonStudentRole || (secure_code && String(secure_code).trim().length > 0)) {
@@ -590,6 +590,7 @@ export const registerUser = async (data) => {
       year: year || '',
       division: division || '',
       semester: derivedSemester,
+      mobile_number: mobile_number || user.mobile_number || null,
     });
   }
 

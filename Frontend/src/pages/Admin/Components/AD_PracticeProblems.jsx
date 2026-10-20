@@ -49,6 +49,13 @@ export default function AdminPracticeProblems() {
   const [formTestCase, setFormTestCase] = useState({ input: "", output: "", isHidden: false });
   const [newTestCase, setNewTestCase] = useState({ input: "", output: "", isHidden: false });
 
+  // AI Problem Generator State
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiPromptTopic, setAiPromptTopic] = useState("");
+  const [aiDifficulty, setAiDifficulty] = useState("Medium");
+  const [aiCompanies, setAiCompanies] = useState("Google, Amazon, TCS, Infosys");
+
   // Tab 2 States
   const [assignments, setAssignments] = useState(mockAssignments);
   const [assignForm, setAssignForm] = useState({
@@ -57,6 +64,42 @@ export default function AdminPracticeProblems() {
     title: "",
     dueDate: "",
   });
+
+  const handleGenerateProblemAI = async (topicToUse, diffToUse) => {
+    const topic = (topicToUse || aiPromptTopic || "").trim() || "Arrays & Hashing";
+    const difficulty = diffToUse || aiDifficulty || "Medium";
+    setIsGeneratingAI(true);
+    try {
+      const res = await apiFetch("/admin/practice-problems/generate-ai", {
+        method: "POST",
+        body: JSON.stringify({ topic, difficulty, companies: aiCompanies }),
+      });
+      if (res && res.data) {
+        const d = res.data;
+        setNewProb({
+          title: d.title || "",
+          topic: d.category || d.topic || topic,
+          difficulty: d.difficulty || difficulty,
+          xp: d.points || (difficulty === "Easy" ? 50 : difficulty === "Medium" ? 100 : 150),
+          companies: d.tags || d.companies || aiCompanies,
+          timeLimit: d.timeLimit || "1.0s",
+          memoryLimit: d.memoryLimit || "256 MB",
+          description: d.description || "",
+          dueDate: "",
+          sampleInput: d.sampleInput || "",
+          sampleOutput: d.sampleOutput || "",
+          testCases: Array.isArray(d.testCases) ? d.testCases : [],
+        });
+        setShowAiModal(false);
+        setShowAddModal(true);
+      }
+    } catch (err) {
+      console.error("AI Coding Problem Generation failed:", err);
+      alert("Failed to generate AI coding problem: " + (err.message || "Unknown error"));
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   const handleAddTestCaseToForm = (e) => {
     e.preventDefault();
@@ -278,7 +321,32 @@ export default function AdminPracticeProblems() {
               Build algorithmic question banks, configure test cases, and assign coding tasks to student cohorts.
             </p>
           </div>
-          <div className="ui-section-action">
+          <div className="ui-section-action" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button
+              type="button"
+              className="admin-btn-ai-generate"
+              onClick={() => {
+                setAiPromptTopic("");
+                setShowAiModal(true);
+              }}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                color: "#ffffff",
+                border: "none",
+                padding: "8px 16px",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "13px",
+                cursor: "pointer",
+                boxShadow: "0 4px 12px rgba(79, 70, 229, 0.25)",
+                transition: "all 0.2s ease"
+              }}
+            >
+              <Sparkles size={16} /> Generate with AI
+            </button>
             <button
               className="admin-btn-add"
               onClick={() => {
@@ -580,6 +648,59 @@ export default function AdminPracticeProblems() {
 
             <form onSubmit={handleCreateProblem}>
               <div className="modal-body add-prob-modal-body">
+
+                {/* AI AUTO-FILL BANNER */}
+                <div style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "center",
+                  background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)",
+                  padding: "12px 16px",
+                  borderRadius: "10px",
+                  border: "1px dashed #818cf8",
+                  marginBottom: "20px"
+                }}>
+                  <Sparkles size={18} color="#6366f1" style={{ flexShrink: 0 }} />
+                  <div style={{ flex: 1, display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                    <span style={{ fontSize: "12px", fontWeight: 700, color: "#4f46e5" }}>AI Quick-Fill:</span>
+                    <input
+                      type="text"
+                      placeholder="e.g. Graph BFS Shortest Path, Sliding Window, DP..."
+                      value={aiPromptTopic}
+                      onChange={(e) => setAiPromptTopic(e.target.value)}
+                      style={{
+                        flex: 1,
+                        minWidth: "180px",
+                        padding: "6px 12px",
+                        borderRadius: "6px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "13px",
+                        background: "#fff"
+                      }}
+                      disabled={isGeneratingAI}
+                    />
+                    <button
+                      type="button"
+                      disabled={isGeneratingAI}
+                      onClick={() => handleGenerateProblemAI(aiPromptTopic, newProb.difficulty)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                        color: "#fff",
+                        border: "none",
+                        padding: "6px 14px",
+                        borderRadius: "6px",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        cursor: isGeneratingAI ? "not-allowed" : "pointer"
+                      }}
+                    >
+                      <Sparkles size={13} /> {isGeneratingAI ? "Generating..." : "Generate & Fill"}
+                    </button>
+                  </div>
+                </div>
                 
                 {/* SECTION 1: PROBLEM DETAILS */}
                 <div className="add-prob-section">
@@ -793,6 +914,113 @@ export default function AdminPracticeProblems() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ─── DEDICATED AI PROBLEM GENERATOR MODAL ────────────────────────────── */}
+      {showAiModal && createPortal(
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowAiModal(false); }}>
+          <div className="modal-dialog" style={{ maxWidth: "560px" }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap" style={{ background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)", color: "#fff" }}>
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h2 className="modal-title">AI Coding Problem Generator</h2>
+                  <p className="modal-subtitle">Generate complete algorithmic problems with test cases using Groq & Gemini AI.</p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setShowAiModal(false)} title="Close Modal">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="modal-body" style={{ padding: "24px" }}>
+              <div className="form-group-admin" style={{ marginBottom: "16px" }}>
+                <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
+                  Algorithm / Topic *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Dynamic Programming (0/1 Knapsack), Trie, Linked List Cycle"
+                  value={aiPromptTopic}
+                  onChange={(e) => setAiPromptTopic(e.target.value)}
+                  className="form-input-admin"
+                  style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "16px" }}>
+                <div className="form-group-admin">
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
+                    Difficulty Level
+                  </label>
+                  <AdminPpSelect
+                    value={aiDifficulty}
+                    onChange={(val) => setAiDifficulty(val)}
+                    options={[
+                      { value: "Easy", label: "🟢 Easy (50 XP)" },
+                      { value: "Medium", label: "🟡 Medium (100 XP)" },
+                      { value: "Hard", label: "🔴 Hard (150 XP)" },
+                    ]}
+                  />
+                </div>
+
+                <div className="form-group-admin">
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: 600, fontSize: "13px", color: "#334155" }}>
+                    Target Companies
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Google, Amazon, TCS"
+                    value={aiCompanies}
+                    onChange={(e) => setAiCompanies(e.target.value)}
+                    className="form-input-admin"
+                    style={{ width: "100%", padding: "10px 14px", borderRadius: "8px", border: "1px solid #cbd5e1" }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 16px", fontSize: "12px", color: "#64748b" }}>
+                💡 The AI will generate a complete problem specification, problem description, constraints, sample input/output, and 4 test cases (including hidden edge cases). You will be able to review and edit before saving to the database.
+              </div>
+            </div>
+
+            <div className="modal-footer" style={{ display: "flex", justifyContent: "flex-end", gap: "10px", padding: "16px 24px", borderTop: "1px solid #f1f5f9" }}>
+              <button
+                type="button"
+                className="btn-modal-cancel"
+                onClick={() => setShowAiModal(false)}
+                disabled={isGeneratingAI}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isGeneratingAI}
+                onClick={() => handleGenerateProblemAI(aiPromptTopic, aiDifficulty)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "10px 20px",
+                  borderRadius: "8px",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  cursor: isGeneratingAI ? "not-allowed" : "pointer"
+                }}
+              >
+                <Sparkles size={16} />
+                {isGeneratingAI ? "Generating Problem with AI..." : "Generate Problem"}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

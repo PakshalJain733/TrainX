@@ -357,18 +357,43 @@ const getValidCollegeId = async (collegeId) => {
     semester = '',
     cgpa = '8.5',
     skills = '',
+    mobile_number = null,
   }) => {
     const validCollegeId = await getValidCollegeId(college_id);
-    const res = await query(
-      `INSERT INTO students 
-      (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [user_id, validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills]
-    );
-    if (res && res.insertId) {
-      return { id: res.insertId, user_id, college_id: validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills };
+    let res;
+    try {
+      res = await query(
+        `INSERT INTO students 
+        (user_id, college_id, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [user_id, validCollegeId, department_id, batch_id, roll_number, mobile_number || null, department, year, division, semester, cgpa, skills]
+      );
+    } catch (insertErr) {
+      if (insertErr.message && insertErr.message.includes("Unknown column 'mobile_number'")) {
+        try {
+          await query('ALTER TABLE students ADD COLUMN mobile_number VARCHAR(20) NULL AFTER roll_number');
+          res = await query(
+            `INSERT INTO students 
+            (user_id, college_id, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [user_id, validCollegeId, department_id, batch_id, roll_number, mobile_number || null, department, year, division, semester, cgpa, skills]
+          );
+        } catch (_) {
+          res = await query(
+            `INSERT INTO students 
+            (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [user_id, validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills]
+          );
+        }
+      } else {
+        throw insertErr;
+      }
     }
-    return { user_id, college_id: validCollegeId, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills };
+    if (res && res.insertId) {
+      return { id: res.insertId, user_id, college_id: validCollegeId, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills };
+    }
+    return { user_id, college_id: validCollegeId, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills };
   };
 
   export const getStudentByUserId = async (userId) => {
@@ -741,50 +766,101 @@ const getValidCollegeId = async (collegeId) => {
     ) {
       const existing = await query('SELECT * FROM students WHERE user_id = ?', [numId]);
       if (existing && existing.length > 0) {
-        await query(
-          `UPDATE students SET 
-          roll_number = COALESCE(?, roll_number), 
-          college_id = COALESCE(?, college_id),
-          department_id = COALESCE(?, department_id),
-          batch_id = COALESCE(?, batch_id),
-          department = COALESCE(?, department), 
-          year = COALESCE(?, year), 
-          division = COALESCE(?, division), 
-          semester = COALESCE(?, semester),
-          cgpa = COALESCE(?, cgpa),
-          skills = COALESCE(?, skills),
-          gender = COALESCE(?, gender),
-          city = COALESCE(?, city),
-          emergency_contact = COALESCE(?, emergency_contact),
-          target_track = COALESCE(?, target_track),
-          is_profile_updated = COALESCE(?, is_profile_updated)
-         WHERE user_id = ?`,
-          [
-            rollVal,
-            validCollegeId,
-            department_id || null,
-            batch_id || null,
-            department || null,
-            year || null,
-            division || null,
-            semester || null,
-            cgpa || null,
-            skills || null,
-            genderVal,
-            cityVal,
-            emergencyVal,
-            trackVal,
-            isProfileUpdatedVal,
-            numId,
-          ]
-        );
+        try {
+          await query(
+            `UPDATE students SET 
+            roll_number = COALESCE(?, roll_number), 
+            mobile_number = COALESCE(?, mobile_number),
+            college_id = COALESCE(?, college_id),
+            department_id = COALESCE(?, department_id),
+            batch_id = COALESCE(?, batch_id),
+            department = COALESCE(?, department), 
+            year = COALESCE(?, year), 
+            division = COALESCE(?, division), 
+            semester = COALESCE(?, semester),
+            cgpa = COALESCE(?, cgpa),
+            skills = COALESCE(?, skills),
+            gender = COALESCE(?, gender),
+            city = COALESCE(?, city),
+            emergency_contact = COALESCE(?, emergency_contact),
+            target_track = COALESCE(?, target_track),
+            is_profile_updated = COALESCE(?, is_profile_updated)
+           WHERE user_id = ?`,
+            [
+              rollVal,
+              phoneVal,
+              validCollegeId,
+              department_id || null,
+              batch_id || null,
+              department || null,
+              year || null,
+              division || null,
+              semester || null,
+              cgpa || null,
+              skills || null,
+              genderVal,
+              cityVal,
+              emergencyVal,
+              trackVal,
+              isProfileUpdatedVal,
+              numId,
+            ]
+          );
+        } catch (_) {
+          await query(
+            `UPDATE students SET 
+            roll_number = COALESCE(?, roll_number), 
+            college_id = COALESCE(?, college_id),
+            department_id = COALESCE(?, department_id),
+            batch_id = COALESCE(?, batch_id),
+            department = COALESCE(?, department), 
+            year = COALESCE(?, year), 
+            division = COALESCE(?, division), 
+            semester = COALESCE(?, semester),
+            cgpa = COALESCE(?, cgpa),
+            skills = COALESCE(?, skills),
+            gender = COALESCE(?, gender),
+            city = COALESCE(?, city),
+            emergency_contact = COALESCE(?, emergency_contact),
+            target_track = COALESCE(?, target_track),
+            is_profile_updated = COALESCE(?, is_profile_updated)
+           WHERE user_id = ?`,
+            [
+              rollVal,
+              validCollegeId,
+              department_id || null,
+              batch_id || null,
+              department || null,
+              year || null,
+              division || null,
+              semester || null,
+              cgpa || null,
+              skills || null,
+              genderVal,
+              cityVal,
+              emergencyVal,
+              trackVal,
+              isProfileUpdatedVal,
+              numId,
+            ]
+          );
+        }
       } else {
-        await query(
-          `INSERT INTO students 
-          (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
-        );
+        try {
+          await query(
+            `INSERT INTO students 
+            (user_id, college_id, department_id, batch_id, roll_number, mobile_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', phoneVal, department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
+          );
+        } catch (_) {
+          await query(
+            `INSERT INTO students 
+            (user_id, college_id, department_id, batch_id, roll_number, department, year, division, semester, cgpa, skills, gender, city, emergency_contact, target_track) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [numId, validCollegeId, department_id || null, batch_id || null, rollVal || '', department || '', year || '', division || '', semester || '', cgpa || '8.5', skills || '', genderVal || '', cityVal || '', emergencyVal || '', trackVal || '']
+          );
+        }
       }
     }
 

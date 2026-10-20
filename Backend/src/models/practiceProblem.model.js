@@ -133,12 +133,27 @@ export const createPracticeProblemModel = async ({
     }
   }
 
-  const res = await query(
-    `INSERT INTO practice_problems 
-      (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, due_date, created_by) 
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy]
-  );
+  let res;
+  try {
+    res = await query(
+      `INSERT INTO practice_problems 
+        (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, due_date, created_by) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, due_date || null, validCreatedBy]
+    );
+  } catch (err) {
+    if (err && err.message && err.message.includes("Unknown column 'due_date'")) {
+      console.warn('[Practice Problem Model] due_date column not found in table, falling back to insert without due_date');
+      res = await query(
+        `INSERT INTO practice_problems 
+          (college_id, batch_id, batch_name, title, description, difficulty, category, tags, points, created_by) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [cId, validBatchId, batch_name || 'All Batches', title.trim(), description || '', difficulty, category, tagsStr, points || 100, validCreatedBy]
+      );
+    } else {
+      throw err;
+    }
+  }
 
   if (res && res.insertId) {
     const probId = res.insertId;

@@ -68,7 +68,8 @@ const normalizeStatus = (value) => {
  * `mentor_student_assignments` for the authenticated mentor only.
  */
 const loadMentorStudents = async (mentorId) => {
-  const rows = await query(
+  // 1. Direct mentor_student_assignments
+  const directRows = (await query(
     `SELECT
        u.id AS user_id,
        u.name,
@@ -93,8 +94,90 @@ const loadMentorStudents = async (mentorId) => {
      WHERE msa.mentor_id = ?
      ORDER BY b.name ASC, u.name ASC`,
     [mentorId]
-  );
-  return rows || [];
+  )) || [];
+
+  // Fetch mentor user details to check batch and mentor_assignments allocations
+  const mentorUsers = (await query(`SELECT id, name, email FROM users WHERE id = ?`, [mentorId])) || [];
+  const mentorUser = mentorUsers[0] || null;
+
+  let batchRows = [];
+  let adminAssignedRows = [];
+
+  if (mentorUser) {
+    // 2. Batch assignments where mentor is assigned to batch
+    try {
+      batchRows = (await query(
+        `SELECT
+           u.id AS user_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           s.roll_number,
+           s.year,
+           s.division,
+           s.semester,
+           COALESCE(d.name, s.department) AS department,
+           s.department_id,
+           b.id AS batch_id,
+           b.name AS batch_name,
+           COALESCE(s.college_id, u.college_id) AS college_id,
+           c.name AS college_name
+         FROM students s
+         JOIN users u ON u.id = s.user_id
+         JOIN batches b ON (s.batch_id = b.id OR s.user_id IN (SELECT sb.user_id FROM student_batches sb WHERE sb.batch_id = b.id))
+         LEFT JOIN departments d ON d.id = s.department_id
+         LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
+         WHERE (b.mentor = ? OR b.trainer = ? OR b.mentor = ?)
+         ORDER BY b.name ASC, u.name ASC`,
+        [mentorUser.name, mentorUser.name, mentorUser.email]
+      )) || [];
+    } catch (e) {
+      // batch query fallback
+    }
+
+    // 3. Admin mentor_assignments table
+    try {
+      adminAssignedRows = (await query(
+        `SELECT
+           u.id AS user_id,
+           u.name,
+           u.email,
+           u.mobile_number,
+           s.roll_number,
+           s.year,
+           s.division,
+           s.semester,
+           COALESCE(d.name, s.department) AS department,
+           s.department_id,
+           b.id AS batch_id,
+           b.name AS batch_name,
+           COALESCE(s.college_id, u.college_id) AS college_id,
+           c.name AS college_name
+         FROM mentor_assignments ma
+         JOIN users u ON (u.id = ma.student_id OR CAST(u.id AS CHAR) = ma.student_id)
+         LEFT JOIN students s ON s.user_id = u.id
+         LEFT JOIN departments d ON d.id = s.department_id
+         LEFT JOIN batches b ON b.id = s.batch_id
+         LEFT JOIN colleges c ON c.id = COALESCE(s.college_id, u.college_id)
+         WHERE (ma.mentor_name = ? OR ma.mentor_email = ?)
+         ORDER BY u.name ASC`,
+        [mentorUser.name, mentorUser.email]
+      )) || [];
+    } catch (e) {
+      // table not present or fallback
+    }
+  }
+
+  // Deduplicate all assigned students by user_id
+  const studentMap = new Map();
+  [...directRows, ...batchRows, ...adminAssignedRows].forEach((row) => {
+    const uid = Number(row.user_id);
+    if (!studentMap.has(uid)) {
+      studentMap.set(uid, row);
+    }
+  });
+
+  return Array.from(studentMap.values());
 };
 
 /**
@@ -522,6 +605,24 @@ export const getMentorBatches = async (req, res, next) => {
 
     const students = await loadMentorStudentsWithMetrics(mentorId);
     const batchIds = [...new Set(students.map((s) => s.batchId).filter((v) => v != null))];
+
+    const mentorRows = (await query(`SELECT id, name, email FROM users WHERE id = ?`, [mentorId])) || [];
+    const mentorUser = mentorRows[0] || null;
+
+    if (mentorUser) {
+      try {
+        const extraBatches = (await query(
+          `SELECT id FROM batches WHERE (mentor = ? OR trainer = ? OR mentor = ?)`,
+          [mentorUser.name, mentorUser.name, mentorUser.email]
+        )) || [];
+        extraBatches.forEach((r) => {
+          const bid = toInt(r.id);
+          if (bid && !batchIds.includes(bid)) {
+            batchIds.push(bid);
+          }
+        });
+      } catch (e) {}
+    }
 
     const batchRows = batchIds.length
       ? await query(
