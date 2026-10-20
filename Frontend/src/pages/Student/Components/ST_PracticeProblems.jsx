@@ -39,6 +39,18 @@ export default function PracticeProblems() {
       }
     };
     loadProblems();
+
+    window.addEventListener(EVENTS.CODING_UPDATED, loadProblems);
+    window.addEventListener("codeSubmitted", loadProblems);
+    window.addEventListener("portal_coding_updated", loadProblems);
+    window.addEventListener("focus", loadProblems);
+
+    return () => {
+      window.removeEventListener(EVENTS.CODING_UPDATED, loadProblems);
+      window.removeEventListener("codeSubmitted", loadProblems);
+      window.removeEventListener("portal_coding_updated", loadProblems);
+      window.removeEventListener("focus", loadProblems);
+    };
   }, []);
   const [selectedTopic, setSelectedTopic] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");

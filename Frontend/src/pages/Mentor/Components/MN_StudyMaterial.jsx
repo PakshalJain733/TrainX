@@ -143,6 +143,23 @@ export default function StudyMaterial() {
     }, 1200);
   };
 
+  const resolveUrl = (rawUrl) => {
+    if (!rawUrl || rawUrl === "#") return null;
+    if (
+      rawUrl.startsWith("http://") ||
+      rawUrl.startsWith("https://") ||
+      rawUrl.startsWith("blob:") ||
+      rawUrl.startsWith("data:")
+    ) {
+      return rawUrl;
+    }
+    const normalizedPath = rawUrl.startsWith("/") ? rawUrl : `/${rawUrl}`;
+    const apiBase = getApiBaseUrl();
+    const origin = apiBase.startsWith("http") ? new URL(apiBase).origin : window.location.origin;
+    const backendHost = (origin.includes(":5173") || origin.includes(":3000")) ? "http://localhost:5000" : origin;
+    return `${backendHost}${normalizedPath}`;
+  };
+
   return (
     <div className="mentor-studymaterial-container">
       {/* Header */}
@@ -185,7 +202,7 @@ export default function StudyMaterial() {
                 </tr>
               ) : (
                 materials.map((m) => {
-                  const targetUrl = m.file_url || m.link || "#";
+                  const targetUrl = resolveUrl(m.file_url || m.link) || m.file_url || m.link || "#";
                   return (
                     <tr key={m.id}>
                       <td className="mentor-material-title">

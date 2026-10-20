@@ -137,8 +137,8 @@ app.use(
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     crossOriginEmbedderPolicy: false,
     contentSecurityPolicy: false, // Allows Vite HMR, custom CDNs, and Google Fonts
-    frameguard: { action: 'deny' },
-    xContentTypeOptions: true,
+    frameguard: false, // Allows same-site document previews in portal modals
+    xContentTypeOptions: false,
   })
 );
 

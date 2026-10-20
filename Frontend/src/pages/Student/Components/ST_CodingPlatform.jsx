@@ -3,6 +3,7 @@ import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
+import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
@@ -469,6 +470,12 @@ export default function CodingPlatform() {
       // Refresh submissions tab
       setActiveTab("submissions");
       loadSubmissions();
+
+      // Dispatch global events to update dashboard & practice problems progress bars
+      window.dispatchEvent(new CustomEvent("codeSubmitted", { detail: result }));
+      window.dispatchEvent(new Event("codeSubmitted"));
+      window.dispatchEvent(new Event(EVENTS.CODING_UPDATED));
+      window.dispatchEvent(new Event("portal_coding_updated"));
     } catch (err) {
       setConsoleStatus("error");
       setConsoleOutput(`❌ Network error: ${err.message}`);

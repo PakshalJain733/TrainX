@@ -310,6 +310,8 @@ function QuizPlatform({ quiz = {}, mode, onExit }) {
         }),
       }).catch(() => {});
       window.dispatchEvent(new Event('quizCompletedUpdated'));
+      window.dispatchEvent(new Event(EVENTS.QUIZ_UPDATED));
+      window.dispatchEvent(new Event('portal_quiz_updated'));
     } catch (e) {}
 
     if (quiz.source !== "admin") return; // builtin quizzes don't need backend
