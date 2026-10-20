@@ -219,7 +219,7 @@ export const getMentorDefaulterQueueService = async (user = {}, queryParams = {}
  */
 export const getCoordinatorDefaulterQueueService = async (user = {}, queryParams = {}) => {
   const collegeId = user.college_id || 1;
-  const deptId = queryParams.department_id || queryParams.department;
+  const deptId = queryParams.department_id || queryParams.department || user.department_id || user.department;
 
   let defaulters = await getAllDefaultersModel({ college_id: collegeId, department_id: deptId });
 

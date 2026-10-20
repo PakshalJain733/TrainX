@@ -301,6 +301,7 @@ export const sendWelcomeEmail = async ({
   to,
   name,
   role = 'student',
+  secure_code = '',
   mobile_number = '',
   roll_number = '',
   department = '',
@@ -311,7 +312,7 @@ export const sendWelcomeEmail = async ({
     const roleUpper = role.toUpperCase();
     const badgeBg = role.toLowerCase() === 'admin' ? '#ef4444' : role.toLowerCase() === 'coordinator' ? '#f59e0b' : '#3b82f6';
     
-    const queryParams = new URLSearchParams({
+    const queryParamsObj = {
       email: to || '',
       name: name || '',
       role: role || 'student',
@@ -320,8 +321,13 @@ export const sendWelcomeEmail = async ({
       department: department || '',
       year: year || '',
       division: division || '',
-    }).toString();
+    };
+    if (secure_code) {
+      queryParamsObj.secure_code = secure_code;
+      queryParamsObj.code = secure_code;
+    }
 
+    const queryParams = new URLSearchParams(queryParamsObj).toString();
     const regUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/register?${queryParams}`;
 
     const contentHtml = `
@@ -329,8 +335,22 @@ export const sendWelcomeEmail = async ({
         Welcome ${name}! 🎉
       </div>
       <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
-        Your account on the <strong>Campus Training & Placement Portal</strong> has been created by your Administrator. Click below to complete your registration with your pre-configured profile details.
+        Your account on the <strong>Campus Training & Placement Portal</strong> has been created by your Administrator. Complete your registration below using your assigned Secure Access Code.
       </p>
+
+      ${secure_code ? `
+      <div style="background-color: #f1f5f9; border: 2px dashed #6366f1; border-radius: 12px; padding: 20px; text-align: center; margin: 24px 0;">
+        <div style="font-size: 12px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+          🔑 Your Secure Access Code
+        </div>
+        <div style="font-family: monospace; font-size: 28px; font-weight: 800; color: #1e1b4b; letter-spacing: 4px; margin: 8px 0;">
+          ${secure_code}
+        </div>
+        <p style="margin: 0; color: #475569; font-size: 13px;">
+          Keep this code ready or click the button below to have it filled in automatically.
+        </p>
+      </div>
+      ` : ''}
 
       <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin: 24px 0;">
         <div style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
@@ -354,13 +374,15 @@ export const sendWelcomeEmail = async ({
         </div>
       </div>
 
-      <div style="background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 14px 16px; border-radius: 6px; margin: 20px 0;">
-        <div style="font-weight: 700; color: #1e40af; font-size: 14px; margin-bottom: 4px;">
-          ⚠️ One-Click Registration Link:
-        </div>
-        <div style="color: #1e3a8a; font-size: 13.5px; line-height: 1.5;">
-          Clicking the button below will open the registration page with your details pre-filled. Simply create your password to finalize registration.
-        </div>
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin: 20px 0;">
+        <div style="font-size: 13px; font-weight: 700; color: #334155; margin-bottom: 8px;">Onboarding & Verification Steps:</div>
+        <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.6;">
+          <li>Click the <strong>Complete Your Registration</strong> button below.</li>
+          <li>Enter your new account password and confirm it.</li>
+          <li>Link your <strong>Authenticator App</strong> (Microsoft Authenticator or Google Authenticator) by scanning the QR code.</li>
+          <li>Once 2FA is verified, your status will change from <strong>Unverified</strong> to <strong>Verified</strong>.</li>
+          <li>Your Administrator will then perform a final review and <strong>manually approve</strong> your account.</li>
+        </ol>
       </div>
 
       <div style="text-align: center; margin-top: 32px;">
@@ -372,13 +394,15 @@ export const sendWelcomeEmail = async ({
 
     const htmlContent = renderBaseTemplate({
       title: 'Welcome to Campus Training Portal',
-      subtitle: 'Complete Your Registration',
+      subtitle: secure_code ? 'Action Required: Complete Your Registration' : 'Complete Your Registration',
       contentHtml,
       footerNote: 'Need assistance? Reach out to your campus administrator or coordinator.',
     });
 
-    const subject = `Welcome ${name}! Complete your registration`;
-    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nBest regards,\nCampus Training Portal Team`;
+    const subject = secure_code 
+      ? `Action Required: Complete Your ${roleUpper} Registration (Secure Code: ${secure_code})`
+      : `Welcome ${name}! Complete your registration`;
+    const textContent = `Hello ${name},\n\nWelcome to Campus Training Portal!\n\nYour account with role ${roleUpper} has been created by your Administrator. ${secure_code ? `Your Secure Access Code is: ${secure_code}\n\n` : ''}Please complete your registration using your registered email: ${to}\n\nComplete Registration URL: ${regUrl}\n\nNote: Once registration and Authenticator 2FA are paired, your status changes to Verified and will be manually approved by your Administrator.\n\nBest regards,\nCampus Training Portal Team`;
 
     return await sendEmail({
       to,
@@ -389,6 +413,55 @@ export const sendWelcomeEmail = async ({
     });
   } catch (error) {
     console.error(`[Brevo Error] Welcome email dispatch failed for ${to}:`, error.message);
+    return null;
+  }
+};
+
+export const sendAccountApprovedEmail = async ({ to, name, role = 'User' }) => {
+  try {
+    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/`;
+    const roleUpper = String(role).toUpperCase();
+
+    const contentHtml = `
+      <div style="font-size: 20px; color: #0f172a; font-weight: 700; margin-bottom: 12px;">
+        Account Approved! 🎉
+      </div>
+      <p style="margin: 0 0 20px 0; color: #475569; font-size: 15px; line-height: 1.6;">
+        Hello <strong>${name}</strong>, your account registration for the role of <strong>${roleUpper}</strong> has been officially approved by the Administrator.
+      </p>
+
+      <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 8px; margin: 24px 0;">
+        <div style="font-weight: 700; color: #065f46; font-size: 14px; margin-bottom: 4px;">
+          ✅ Account Status: Active & Approved
+        </div>
+        <div style="color: #047857; font-size: 13.5px; line-height: 1.5;">
+          You can now log in using your registered email, password, and 6-digit Authenticator app code.
+        </div>
+      </div>
+
+      <div style="text-align: center; margin-top: 32px;">
+        <a href="${loginUrl}" style="background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);">
+          Log In Now &rarr;
+        </a>
+      </div>
+    `;
+
+    const htmlContent = renderBaseTemplate({
+      title: 'Campus Training Portal',
+      subtitle: 'Account Approved',
+      contentHtml,
+      footerNote: 'Need assistance? Reach out to your campus administrator.',
+    });
+
+    return await sendEmail({
+      to,
+      toName: name,
+      subject: `🎉 Account Approved: You can now log in to Campus Training Portal`,
+      htmlContent,
+      textContent: `Hello ${name},\n\nYour account with role ${roleUpper} has been officially approved by the Administrator!\n\nYou can now log in at: ${loginUrl}\n\nBest regards,\nCampus Training Portal Team`,
+    });
+  } catch (error) {
+    console.error(`[Email Error] sendAccountApprovedEmail failed for ${to}:`, error.message);
     return null;
   }
 };

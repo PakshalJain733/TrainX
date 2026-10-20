@@ -415,6 +415,9 @@ export const getCompleteLeaderboardData = async (user = {}, queryParams = {}) =>
   if (role === ROLES.COLLEGE_ADMIN || role === ROLES.COORDINATOR) {
     // Lock to user's college
     filters.college_id = userCollegeId || 1;
+    if (role === ROLES.COORDINATOR && !filters.department_id) {
+      filters.department_id = user.department_id || user.departmentId || user.department;
+    }
   } else if (role === ROLES.MENTOR) {
     // Lock to mentor's college or batch
     if (!filters.college_id && userCollegeId) {

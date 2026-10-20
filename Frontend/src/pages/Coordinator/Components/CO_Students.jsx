@@ -279,11 +279,31 @@ export default function CoordinatorStudents() {
 
         // Strict department filter if coordinator department is known
         if (coordDept && Array.isArray(fetched) && fetched.length > 0) {
-          const target = coordDept.toLowerCase().trim();
+          const isDeptMatch = (deptA, deptB) => {
+            if (!deptA || !deptB) return false;
+            const a = String(deptA).toLowerCase().trim();
+            const b = String(deptB).toLowerCase().trim();
+            if (a === b || a.includes(b) || b.includes(a)) return true;
+            const acronyms = {
+              cs: ["computer", "comp", "cse", "ce"],
+              ce: ["computer", "comp", "cse", "cs"],
+              it: ["information technology", "info tech"],
+              aids: ["artificial intelligence", "data science", "ai&ds", "ai-ds", "ai/ds"],
+              ecs: ["electronics & computer", "electronics and computer"],
+              extc: ["electronics and telecommunication", "telecommunication"],
+              mech: ["mechanical"],
+            };
+            for (const [code, aliases] of Object.entries(acronyms)) {
+              const aMatches = a === code || aliases.some((al) => a.includes(al));
+              const bMatches = b === code || aliases.some((al) => b.includes(al));
+              if (aMatches && bMatches) return true;
+            }
+            return false;
+          };
+
           const deptFiltered = fetched.filter((s) => {
             if (!s.department) return false;
-            const sDept = String(s.department).toLowerCase().trim();
-            return sDept.includes(target) || target.includes(sDept);
+            return isDeptMatch(s.department, coordDept);
           });
           setStudents(deptFiltered);
         } else {

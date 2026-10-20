@@ -202,37 +202,71 @@ export default function CoordinatorOverview() {
     return dsaSyllabus[offset % dsaSyllabus.length];
   };
 
+  const coordDept = coordUser?.department || coordUser?.dept || coordUser?.departmentName || "";
+
   useEffect(() => {
     // 1. Fetch Logged-in User Profile from MySQL DB
     apiFetch("/auth/me")
       .then((res) => {
         if (res && res.data) {
           setCoordUser(res.data);
+          try {
+            sessionStorage.setItem("user", JSON.stringify(res.data));
+          } catch (_) {}
         }
       })
       .catch(() => {});
+  }, []);
 
+  useEffect(() => {
     // 2. Fetch Enrolled Department Students from DB & compute defaulters / avg attendance
-    apiFetch("/coordinator/students")
+    const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
+    apiFetch(`/coordinator/students${queryParam}`)
       .then((res) => {
         const studentList = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(studentList)) {
-          setStudents(studentList);
-          setStudentCount(studentList.length);
+          const isDeptMatch = (deptA, deptB) => {
+            if (!deptA || !deptB) return false;
+            const a = String(deptA).toLowerCase().trim();
+            const b = String(deptB).toLowerCase().trim();
+            if (a === b || a.includes(b) || b.includes(a)) return true;
+            const acronyms = {
+              cs: ["computer", "comp", "cse", "ce"],
+              ce: ["computer", "comp", "cse", "cs"],
+              it: ["information technology", "info tech"],
+              aids: ["artificial intelligence", "data science", "ai&ds", "ai-ds", "ai/ds"],
+              ecs: ["electronics & computer", "electronics and computer"],
+              extc: ["electronics and telecommunication", "telecommunication"],
+              mech: ["mechanical"],
+            };
+            for (const [code, aliases] of Object.entries(acronyms)) {
+              const aMatches = a === code || aliases.some((al) => a.includes(al));
+              const bMatches = b === code || aliases.some((al) => b.includes(al));
+              if (aMatches && bMatches) return true;
+            }
+            return false;
+          };
+
+          const filteredList = coordDept
+            ? studentList.filter((s) => !s.department || isDeptMatch(s.department, coordDept))
+            : studentList;
+
+          setStudents(filteredList);
+          setStudentCount(filteredList.length);
 
           // Calculate department average attendance from DB records
-          if (studentList.length > 0) {
-            const totalAtt = studentList.reduce((sum, s) => {
+          if (filteredList.length > 0) {
+            const totalAtt = filteredList.reduce((sum, s) => {
               const val = Number(s.attendance ?? s.attendance_rate ?? s.studentProfile?.attendance ?? 0);
               return sum + (isNaN(val) ? 0 : val);
             }, 0);
-            setAttendanceRate(`${Math.round(totalAtt / studentList.length)}%`);
+            setAttendanceRate(`${Math.round(totalAtt / filteredList.length)}%`);
           } else {
             setAttendanceRate("0%");
           }
 
           // Filter high risk students from DB records (<75% attendance or high risk status)
-          const flagged = studentList.filter((s) => {
+          const flagged = filteredList.filter((s) => {
             const att = Number(s.attendance ?? s.attendance_rate ?? s.studentProfile?.attendance ?? 100);
             const risk = String(s.riskStatus || s.risk_level || s.risk_status || "");
             return att < 75 || risk.toLowerCase().includes("high");
@@ -244,7 +278,9 @@ export default function CoordinatorOverview() {
         setStudentCount(0);
         setAttendanceRate("0%");
       });
+  }, [coordDept]);
 
+  useEffect(() => {
     // 3. Fetch Department Assigned Mentors from MySQL DB
     apiFetch("/coordinator/mentors")
       .then((res) => {

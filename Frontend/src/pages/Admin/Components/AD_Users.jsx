@@ -1469,17 +1469,21 @@ export default function AdminUsers() {
     setFeedback({ type: "", message: "" });
 
     try {
+      const payload = {
+        ...formData,
+        secure_code: generatedCode || formData.secure_code || "",
+      };
       const res = await apiFetch("/admin/users", {
         method: "POST",
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
-      if (res && res.data) {
+      if (res && (res.data || res.success)) {
         setIsAddModalOpen(false);
         fetchUsers();
         fetchStats();
       } else {
-        setFeedback({ type: "error", message: res.error || "Failed to create user" });
+        setFeedback({ type: "error", message: res?.error || res?.message || "Failed to create user" });
       }
     } catch (err) {
       setFeedback({ type: "error", message: err.message || "An error occurred" });
@@ -1758,10 +1762,28 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td>
-                      <span className={`status-badge ${u.is_active ? "status-badge--active" : "status-badge--inactive"}`}>
-                        <span className="status-dot"></span>
-                        {u.is_active ? "Active" : "Inactive"}
-                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px", alignItems: "flex-start" }}>
+                        <span className={`status-badge ${u.is_active || u.is_approved ? "status-badge--active" : "status-badge--inactive"}`}>
+                          <span className="status-dot"></span>
+                          {u.is_active || u.is_approved ? "Approved" : "Pending Approval"}
+                        </span>
+                        <span 
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "10.5px",
+                            fontWeight: 650,
+                            padding: "2px 7px",
+                            borderRadius: "10px",
+                            background: (u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "#ecfdf5" : "#fffbeb",
+                            color: (u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "#059669" : "#b45309",
+                            border: `1px solid ${(u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "#a7f3d0" : "#fde68a"}`
+                          }}
+                        >
+                          {(u.is_verified || (u.two_factor_enabled && (u.password_hash || u.is_profile_updated))) ? "✓ Verified (2FA)" : "⚠ Unverified"}
+                        </span>
+                      </div>
                     </td>
                     <td>
                       <div className="action-btns-row action-btns-right">

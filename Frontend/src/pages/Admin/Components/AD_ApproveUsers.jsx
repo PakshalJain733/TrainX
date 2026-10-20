@@ -551,7 +551,31 @@ export default function AD_ApproveUsers() {
                             borderRadius: "6px",
                           }}
                         >
-                          <Clock size={12} /> Pending
+                          <Clock size={12} /> Pending Approval
+                        </span>
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px",
+                            fontSize: "11px",
+                            fontWeight: "650",
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            background: u.is_verified || u.two_factor_enabled ? "#ecfdf5" : "#fffbeb",
+                            color: u.is_verified || u.two_factor_enabled ? "#059669" : "#b45309",
+                            border: `1px solid ${u.is_verified || u.two_factor_enabled ? "#a7f3d0" : "#fde68a"}`,
+                          }}
+                        >
+                          {u.is_verified || u.two_factor_enabled ? (
+                            <>
+                              <ShieldCheck size={12} /> Verified (2FA)
+                            </>
+                          ) : (
+                            <>
+                              <AlertCircle size={12} /> Unverified
+                            </>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -753,21 +777,47 @@ export default function AD_ApproveUsers() {
 
                       {/* Status */}
                       <td>
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "5px",
-                            padding: "4px 10px",
-                            borderRadius: "9999px",
-                            background: "#fef3c7",
-                            color: "#d97706",
-                            fontSize: "12px",
-                            fontWeight: "700",
-                          }}
-                        >
-                          <Clock size={13} /> Pending
-                        </span>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "4px", alignItems: "flex-start" }}>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "5px",
+                              padding: "4px 10px",
+                              borderRadius: "9999px",
+                              background: "#fef3c7",
+                              color: "#d97706",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                            }}
+                          >
+                            <Clock size={13} /> Pending Approval
+                          </span>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontSize: "11px",
+                              fontWeight: "650",
+                              padding: "2px 8px",
+                              borderRadius: "6px",
+                              background: u.is_verified || u.two_factor_enabled ? "#ecfdf5" : "#fffbeb",
+                              color: u.is_verified || u.two_factor_enabled ? "#059669" : "#b45309",
+                              border: `1px solid ${u.is_verified || u.two_factor_enabled ? "#a7f3d0" : "#fde68a"}`,
+                            }}
+                          >
+                            {u.is_verified || u.two_factor_enabled ? (
+                              <>
+                                <ShieldCheck size={12} /> Verified (2FA)
+                              </>
+                            ) : (
+                              <>
+                                <AlertCircle size={12} /> Unverified
+                              </>
+                            )}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Actions */}

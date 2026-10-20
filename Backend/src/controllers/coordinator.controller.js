@@ -15,17 +15,20 @@ const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
     const cleanDept = String(reqDept).trim();
     try {
       const matchedDepts = await query(
-        `SELECT id, name FROM departments WHERE (name LIKE ? OR code LIKE ?) AND (college_id = ? OR college_id IS NULL)`,
-        [`%${cleanDept}%`, `%${cleanDept}%`, collegeId || 1]
+        `SELECT id, name, code FROM departments WHERE (name LIKE ? OR code LIKE ? OR ? LIKE CONCAT('%', code, '%')) AND (college_id = ? OR college_id IS NULL)`,
+        [`%${cleanDept}%`, `%${cleanDept}%`, cleanDept, collegeId || 1]
       );
       if (matchedDepts && matchedDepts.length > 0) {
-        deptIds = matchedDepts.map((d) => d.id);
-        deptNames = matchedDepts.map((d) => d.name);
+        matchedDepts.forEach((d) => {
+          if (d.id && !deptIds.includes(d.id)) deptIds.push(d.id);
+          if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
+          if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
+        });
       } else {
-        deptNames = [cleanDept];
+        deptNames.push(cleanDept);
       }
     } catch (_) {
-      deptNames = [cleanDept];
+      deptNames.push(cleanDept);
     }
   }
 
@@ -33,29 +36,50 @@ const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
   if (deptIds.length === 0 && userId) {
     try {
       const deptRows = await query(
-        `SELECT cd.department_id, d.name 
+        `SELECT cd.department_id, d.name, d.code
          FROM coordinator_departments cd
          JOIN departments d ON cd.department_id = d.id
          WHERE cd.coordinator_id = ?`,
         [userId]
       );
       if (Array.isArray(deptRows) && deptRows.length > 0) {
-        deptIds = deptRows.map((d) => d.department_id).filter(Boolean);
-        deptNames = deptRows.map((d) => d.name).filter(Boolean);
+        deptRows.forEach((d) => {
+          if (d.department_id && !deptIds.includes(d.department_id)) deptIds.push(d.department_id);
+          if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
+          if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
+        });
       }
     } catch (_) {}
   }
 
   // 3. Check users table
-  if (deptIds.length === 0 && userId) {
+  if (userId) {
     try {
-      const uRows = await query(`SELECT department, department_id FROM users WHERE id = ?`, [userId]);
+      const uRows = await query(`SELECT department, department_id, college_id FROM users WHERE id = ?`, [userId]);
       if (uRows && uRows[0]) {
-        if (uRows[0].department_id) deptIds.push(uRows[0].department_id);
-        if (uRows[0].department) deptNames.push(uRows[0].department);
+        const uDept = (uRows[0].department || '').trim();
+        const uDeptId = uRows[0].department_id ? parseInt(uRows[0].department_id, 10) : null;
+        if (uDeptId && !deptIds.includes(uDeptId)) deptIds.push(uDeptId);
+        if (uDept && !deptNames.includes(uDept)) deptNames.push(uDept);
+
+        if (uDept || uDeptId) {
+          const matchedDepts = await query(
+            `SELECT id, name, code FROM departments 
+             WHERE (id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) OR name LIKE ? OR ? LIKE CONCAT('%', code, '%')) 
+             AND (college_id = ? OR college_id IS NULL)`,
+            [uDeptId || 0, uDept, uDept, `%${uDept}%`, uDept, collegeId || uRows[0].college_id || 1]
+          );
+          matchedDepts.forEach((d) => {
+            if (d.id && !deptIds.includes(d.id)) deptIds.push(d.id);
+            if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
+            if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
+          });
+        }
       }
     } catch (_) {}
   }
+
+  const primaryDeptName = deptNames.find((n) => n && n.length > 3) || deptNames[0] || null;
 
   return {
     collegeId: collegeId || 1,
@@ -63,7 +87,7 @@ const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
     deptNames,
     hasDept: deptIds.length > 0 || deptNames.length > 0,
     deptList: deptIds.length > 0 ? deptIds.join(',') : '-1',
-    primaryDeptName: deptNames[0] || null,
+    primaryDeptName,
   };
 };
 
@@ -75,59 +99,77 @@ export const getCoordinatorOverview = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const scope = await resolveCoordinatorScope(userId, collegeId);
 
     // Fetch user details
     const [user] = await query(
-      `SELECT u.id, u.name, u.email, u.mobile_number, u.role, c.name as college_name
+      `SELECT u.id, u.name, u.email, u.mobile_number, u.role, u.department, c.name as college_name
        FROM users u
        LEFT JOIN colleges c ON u.college_id = c.id
        WHERE u.id = ?`,
       [userId]
     );
 
-    // Fetch department assigned to coordinator
-    const coordDepts = await query(
-      `SELECT d.id, d.name, d.code
-       FROM coordinator_departments cd
-       JOIN departments d ON cd.department_id = d.id
-       WHERE cd.coordinator_id = ?`,
-      [userId]
-    );
-    const departmentName = coordDepts.length > 0 ? coordDepts[0].name : 'Engineering & Technology';
-    const deptId = coordDepts.length > 0 ? coordDepts[0].id : null;
+    const departmentName = scope.primaryDeptName || user?.department || 'Engineering';
 
     // Real stats
-    let studentSql = `SELECT COUNT(DISTINCT u.id) as count FROM users u JOIN students s ON u.id = s.user_id WHERE u.college_id = ? AND u.role = 'student'`;
+    let studentSql = `SELECT COUNT(DISTINCT u.id) as count FROM users u JOIN students s ON u.id = s.user_id WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'student'`;
     const studentParams = [collegeId];
-    if (deptId) {
-      studentSql += ` AND (s.department_id = ? OR s.department = ?)`;
-      studentParams.push(deptId, departmentName);
+    if (scope.hasDept) {
+      const conditions = [];
+      if (scope.deptIds.length > 0) {
+        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
+        studentParams.push(...scope.deptIds);
+      }
+      if (scope.deptNames.length > 0) {
+        scope.deptNames.forEach((dName) => {
+          conditions.push(`LOWER(s.department) LIKE ?`);
+          studentParams.push(`%${dName.toLowerCase().trim()}%`);
+        });
+      }
+      if (conditions.length > 0) {
+        studentSql += ` AND (${conditions.join(' OR ')})`;
+      }
     }
     const [studentCount] = await query(studentSql, studentParams);
 
     let batchSql = `SELECT COUNT(*) as count FROM batches WHERE college_id = ? AND status = 'active'`;
     const batchParams = [collegeId];
-    if (deptId) {
-      batchSql += ` AND department_id = ?`;
-      batchParams.push(deptId);
+    if (scope.hasDept && scope.deptIds.length > 0) {
+      batchSql += ` AND department_id IN (${scope.deptList})`;
     }
     const [batchCount] = await query(batchSql, batchParams);
 
-    let mentorSql = `SELECT COUNT(DISTINCT id) as count FROM users WHERE college_id = ? AND role = 'mentor'`;
+    let mentorSql = `SELECT COUNT(DISTINCT id) as count FROM users WHERE (college_id = ? OR college_id IS NULL) AND role = 'mentor'`;
     const [mentorCount] = await query(mentorSql, [collegeId]);
 
-    // Average attendance
-    const [attData] = await query(
-      `SELECT ROUND(AVG(att.attendance_percentage), 1) as avg_attendance
+    // Average attendance for department students
+    let attSql = `SELECT ROUND(AVG(att.attendance_percentage), 1) as avg_attendance
        FROM attendance_summary att
        JOIN users u ON att.user_id = u.id
-       WHERE u.college_id = ?`,
-      [collegeId]
-    );
+       JOIN students s ON u.id = s.user_id
+       WHERE (u.college_id = ? OR u.college_id IS NULL)`;
+    const attParams = [collegeId];
+    if (scope.hasDept) {
+      const conditions = [];
+      if (scope.deptIds.length > 0) {
+        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
+        attParams.push(...scope.deptIds);
+      }
+      if (scope.deptNames.length > 0) {
+        scope.deptNames.forEach((dName) => {
+          conditions.push(`LOWER(s.department) LIKE ?`);
+          attParams.push(`%${dName.toLowerCase().trim()}%`);
+        });
+      }
+      if (conditions.length > 0) {
+        attSql += ` AND (${conditions.join(' OR ')})`;
+      }
+    }
+    const [attData] = await query(attSql, attParams);
 
-    // High risk students
-    const highRiskStudents = await query(
-      `SELECT u.id, u.name, u.email, s.roll_number, s.department, b.name as batch_name,
+    // High risk students in department
+    let highRiskSql = `SELECT u.id, u.name, u.email, s.roll_number, s.department, b.name as batch_name,
               COALESCE(att.attendance_percentage, 0) as attendance,
               COALESCE(ROUND(AVG(aa.percentage), 1), 0) as avg_quiz_score
        FROM users u
@@ -135,12 +177,26 @@ export const getCoordinatorOverview = async (req, res, next) => {
        LEFT JOIN batches b ON s.batch_id = b.id
        LEFT JOIN attendance_summary att ON u.id = att.user_id
        LEFT JOIN assessment_attempts aa ON u.id = aa.user_id
-       WHERE u.college_id = ? AND u.role = 'student'
-       GROUP BY u.id, s.id, b.id, att.id
-       HAVING attendance < 75 OR avg_quiz_score < 50
-       LIMIT 10`,
-      [collegeId]
-    );
+       WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'student'`;
+    const highRiskParams = [collegeId];
+    if (scope.hasDept) {
+      const conditions = [];
+      if (scope.deptIds.length > 0) {
+        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
+        highRiskParams.push(...scope.deptIds);
+      }
+      if (scope.deptNames.length > 0) {
+        scope.deptNames.forEach((dName) => {
+          conditions.push(`LOWER(s.department) LIKE ?`);
+          highRiskParams.push(`%${dName.toLowerCase().trim()}%`);
+        });
+      }
+      if (conditions.length > 0) {
+        highRiskSql += ` AND (${conditions.join(' OR ')})`;
+      }
+    }
+    highRiskSql += ` GROUP BY u.id, s.id, b.id, att.id HAVING attendance < 75 OR avg_quiz_score < 50 LIMIT 10`;
+    const highRiskStudents = await query(highRiskSql, highRiskParams);
 
     const statsList = [
       { id: 'students', label: 'Enrolled Students', value: String(studentCount?.count || 0), hint: `Active in ${departmentName}` },
@@ -160,7 +216,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
         college: user?.college_name || 'Engineering College',
       },
       stats: statsList,
-      highRiskStudents: highRiskStudents.map((s) => ({
+      highRiskStudents: (highRiskStudents || []).map((s) => ({
         id: `st-${s.id}`,
         studentId: s.id,
         name: s.name,

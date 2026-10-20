@@ -214,8 +214,15 @@ function Register() {
   useEffect(() => {
     const email = (formData.email || "").trim();
     if (!email.includes("@") || email.split("@")[1].length < 3) {
-      setDeptOptions([]);
-      setFormData((prev) => ({ ...prev, department: "" }));
+      // Load general portal departments so coordinator/students can select immediately
+      fetch(`${getApiBaseUrl()}/auth/departments-by-email?email=`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+            setDeptOptions(data.data);
+          }
+        })
+        .catch(() => {});
       return;
     }
 
@@ -242,9 +249,10 @@ function Register() {
               shortCode = (d.code || d.value || d.name || "").trim();
             }
             const fullName = d.fullName || d.name || d.value || shortCode;
+            const displayLabel = d.label || (fullName && shortCode && !fullName.includes(shortCode) ? `${fullName} (${shortCode})` : fullName);
             return {
               value: shortCode,
-              label: shortCode,
+              label: displayLabel,
               code: shortCode,
               fullName: fullName,
             };
@@ -257,14 +265,9 @@ function Register() {
               department: hasExisting ? prev.department : (formatted[0]?.value || ""),
             };
           });
-        } else {
-          setDeptOptions([]);
-          setFormData((prev) => ({ ...prev, department: "" }));
         }
       } catch (err) {
         console.warn("Error fetching departments by email domain:", err);
-        setDeptOptions([]);
-        setFormData((prev) => ({ ...prev, department: "" }));
       }
     }, 300);
 
@@ -280,8 +283,9 @@ function Register() {
     const deptParam = searchParams.get("department") || searchParams.get("dept");
     const yearParam = searchParams.get("year");
     const divParam = searchParams.get("division") || searchParams.get("div");
+    const secureCodeParam = searchParams.get("secure_code") || searchParams.get("code") || searchParams.get("token");
 
-    if (emailParam || nameParam) {
+    if (emailParam || nameParam || secureCodeParam) {
       if (roleParam) {
         const formattedRole = roleParam.charAt(0).toUpperCase() + roleParam.slice(1).toLowerCase();
         setRole(formattedRole);
@@ -295,8 +299,13 @@ function Register() {
         department: deptParam || prev.department,
         year: yearParam || prev.year,
         division: divParam || prev.division,
+        secure_code: secureCodeParam ? secureCodeParam.trim().toUpperCase() : prev.secure_code,
       }));
-      setSuccessMsg("Pre-registered account loaded! Your details added by Administrator are pre-filled below. Create a password to complete registration.");
+      setSuccessMsg(
+        secureCodeParam
+          ? "Pre-configured account details and Secure Access Code loaded! Create a password to complete registration."
+          : "Pre-registered account loaded! Your details added by Administrator are pre-filled below. Create a password to complete registration."
+      );
     }
   }, [searchParams]);
 
@@ -621,6 +630,13 @@ function Register() {
         setErrorMsg("Please enter a valid 10-digit mobile number.");
         return false;
       }
+      if (role === "Coordinator") {
+        const dept = (formData.department || "").trim();
+        if (!dept) {
+          setErrorMsg("Please select your department.");
+          return false;
+        }
+      }
       if (role === "Admin") {
         const col = (formData.college_name || "").trim();
         if (!col) {
@@ -655,6 +671,10 @@ function Register() {
       const div = formData.division || "";
       if (!roll || !mobile || mobile.length < 10 || !yr || !div) return false;
       if (deptOptions.length > 0 && !formData.department) return false;
+    } else if (role === "Coordinator") {
+      const colOrSecure = (formData.secure_code || "").trim();
+      const dept = (formData.department || "").trim();
+      if (!colOrSecure || !dept) return false;
     } else if (role === "Admin") {
       const col = (formData.college_name || "").trim();
       const secureCode = (formData.secure_code || "").trim();
@@ -1403,6 +1423,24 @@ function Register() {
                     onChange={handleChange}
                   />
                 </div>
+
+                {/* Department dropdown for Coordinator */}
+                {role === "Coordinator" && (
+                  <div className="input-group" style={{ marginTop: "4px", marginBottom: "16px" }}>
+                    <FieldLabel icon={Icons.dept}>Coordinator Department *</FieldLabel>
+                    <RegSelect
+                      value={formData.department}
+                      wrapperClass="reg-select"
+                      options={deptOptions}
+                      onChange={(val) => setFormData({ ...formData, department: val })}
+                      placeholder={
+                        deptOptions.length > 0
+                          ? "Select Coordinator Department (e.g. CS, IT)"
+                          : "Select Department"
+                      }
+                    />
+                  </div>
+                )}
 
                 {/* College Name input for Admin self-registration */}
                 {role === "Admin" && (
