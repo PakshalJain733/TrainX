@@ -332,12 +332,15 @@ export default function MentorQuizzes() {
 
   const fetchBatches = async () => {
     try {
-      const r = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
+      const r = await fetch(`${API_BASE}/mentor/batches`, { headers: getAuthHeaders() });
       const d = await r.json();
-      if (d.success && Array.isArray(d.data)) {
-        setAvailableBatches(d.data);
+      const list = Array.isArray(d.data?.batches) ? d.data.batches : (Array.isArray(d.data) ? d.data : []);
+      if (list.length > 0) {
+        setAvailableBatches(list);
       } else {
-        setAvailableBatches([]);
+        const fallback = await fetch(`${API_BASE}/batches`, { headers: getAuthHeaders() });
+        const fb = await fallback.json();
+        if (fb.success && Array.isArray(fb.data)) setAvailableBatches(fb.data);
       }
     } catch {
       setAvailableBatches([]);

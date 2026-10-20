@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { AlertTriangle, Search, ShieldAlert, Sparkles, RefreshCw, SlidersHorizontal, X, PlusCircle, TrendingUp, TrendingDown, Eye, BarChart3, BrainCircuit, CheckCircle, Filter, Building2, User } from "lucide-react";
 import { apiFetch } from "../../../utils/api";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { isSameDepartment } from "../../../utils/departmentHelper";
 import "../Styles/CO_CodingPerformance.css";
 import "../Styles/CO_StudentsNeedImprovement.css";
 
@@ -78,12 +79,10 @@ export default function StudentsNeedImprovement() {
         if (fetched.length > 0) {
           // Department filter in-memory if coordinator has department
           if (coordDept) {
-            const target = coordDept.toLowerCase().trim();
-            const deptFiltered = fetched.filter((s) => {
-              const sDept = String(s.department_name || s.department || "").toLowerCase().trim();
-              return !sDept || sDept.includes(target) || target.includes(sDept);
+            fetched = fetched.filter((s) => {
+              const sDept = s.department_name || s.department || "";
+              return !sDept || isSameDepartment(sDept, coordDept);
             });
-            if (deptFiltered.length > 0) fetched = deptFiltered;
           }
 
           setDataList(

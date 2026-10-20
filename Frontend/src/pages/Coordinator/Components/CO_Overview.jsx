@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../..
 import { Badge } from "../../../components/ui/Badge";
 import CustomSelect from "../../../components/ui/CustomSelect";
 import { apiFetch } from "../../../utils/api";
-import { getShortDept } from "../../../utils/departmentHelper";
+import { getShortDept, isSameDepartment } from "../../../utils/departmentHelper";
 import "../Styles/CO_Overview.css";
 
 const DEFAULT_TRAINING_SESSIONS = [];
@@ -225,30 +225,8 @@ export default function CoordinatorOverview() {
       .then((res) => {
         const studentList = res?.data || (Array.isArray(res) ? res : []);
         if (Array.isArray(studentList)) {
-          const isDeptMatch = (deptA, deptB) => {
-            if (!deptA || !deptB) return false;
-            const a = String(deptA).toLowerCase().trim();
-            const b = String(deptB).toLowerCase().trim();
-            if (a === b || a.includes(b) || b.includes(a)) return true;
-            const acronyms = {
-              cs: ["computer", "comp", "cse", "ce"],
-              ce: ["computer", "comp", "cse", "cs"],
-              it: ["information technology", "info tech"],
-              aids: ["artificial intelligence", "data science", "ai&ds", "ai-ds", "ai/ds"],
-              ecs: ["electronics & computer", "electronics and computer"],
-              extc: ["electronics and telecommunication", "telecommunication"],
-              mech: ["mechanical"],
-            };
-            for (const [code, aliases] of Object.entries(acronyms)) {
-              const aMatches = a === code || aliases.some((al) => a.includes(al));
-              const bMatches = b === code || aliases.some((al) => b.includes(al));
-              if (aMatches && bMatches) return true;
-            }
-            return false;
-          };
-
           const filteredList = coordDept
-            ? studentList.filter((s) => !s.department || isDeptMatch(s.department, coordDept))
+            ? studentList.filter((s) => !s.department || isSameDepartment(s.department, coordDept))
             : studentList;
 
           setStudents(filteredList);
@@ -282,20 +260,20 @@ export default function CoordinatorOverview() {
 
   useEffect(() => {
     // 3. Fetch Department Assigned Mentors from MySQL DB
-    apiFetch("/coordinator/mentors")
+    const queryParam = coordDept ? `?department=${encodeURIComponent(coordDept)}` : "";
+    apiFetch(`/coordinator/mentors${queryParam}`)
       .then((res) => {
-        const mentorList = res?.data || (Array.isArray(res) ? res : []);
-        setMentorCount(mentorList.length);
+        const rawList = res?.data?.mentors || res?.mentors || res?.data || (Array.isArray(res) ? res : []);
+        const mentorList = Array.isArray(rawList) ? rawList : [];
+        const filtered = coordDept
+          ? mentorList.filter((m) => isSameDepartment(m.department, coordDept))
+          : mentorList;
+        setMentorCount(filtered.length);
       })
       .catch(() => {
-        apiFetch("/mentors")
-          .then((res) => {
-            const list = res?.data || (Array.isArray(res) ? res : []);
-            setMentorCount(list.length);
-          })
-          .catch(() => setMentorCount(0));
+        setMentorCount(0);
       });
-  }, []);
+  }, [coordDept]);
 
   // Fetch batches & dynamic sessions whenever selectedDate changes
   useEffect(() => {

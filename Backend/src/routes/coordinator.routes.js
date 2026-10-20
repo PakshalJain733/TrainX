@@ -4,6 +4,7 @@ import {
   getCoordinatorBatches,
   getCoordinatorStudents,
   getCoordinatorMentors,
+  createCoordinatorMentor,
   getCoordinatorMentorStudents,
   getCoordinatorRequests,
   updateCoordinatorRequestStatus,
@@ -34,6 +35,7 @@ router.get('/overview', getCoordinatorOverview);
 router.get('/batches', getCoordinatorBatches);
 router.get('/students', getCoordinatorStudents);
 router.get('/mentors', getCoordinatorMentors);
+router.post('/mentors', createCoordinatorMentor);
 router.get('/mentors/:id/students', getCoordinatorMentorStudents);
 router.get('/requests', getCoordinatorRequests);
 router.put('/requests/:id', updateCoordinatorRequestStatus);

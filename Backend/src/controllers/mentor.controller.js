@@ -7,6 +7,7 @@ import { ROLES } from '../utils/constants.js';
 import { createSharedContent, deleteSharedContent } from '../models/sharedContent.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
 import { generateRealGoogleMeetLink } from '../utils/googleMeet.js';
+import { filterContentByMentorAssignment, getStudentMentorIds } from '../utils/mentorStudentHelper.js';
 
 const ATTENDANCE_THRESHOLD = DEFAULTER_THRESHOLDS.ATTENDANCE_THRESHOLD;
 const PERFORMANCE_THRESHOLD = DEFAULTER_THRESHOLDS.PERFORMANCE_THRESHOLD;
@@ -1519,6 +1520,27 @@ export const getMentorProfile = async (req, res, next) => {
 // ---------------------------------------------------------------------------
 export const getLiveSessions = async (req, res, next) => {
   try {
+    const userRole = (req.user?.role || '').toLowerCase();
+    const userId = toInt(req.user?.userId || req.user?.id);
+
+    if (userRole === 'student') {
+      const assignedMentorIds = await getStudentMentorIds(userId);
+      if (assignedMentorIds.length === 0) {
+        return sendSuccess(res, 'Live sessions retrieved', []);
+      }
+      const placeholders = inPlaceholders(assignedMentorIds);
+      const sessions = await query(
+        `SELECT ls.id, ls.mentor_id, ls.title, ls.subject, ls.batch, ls.student_id, ls.student_name,
+                ls.date, ls.time, ls.duration, ls.meeting_link, ls.notes, ls.status, ls.created_at
+           FROM live_sessions ls
+          WHERE ls.mentor_id IN (${placeholders})
+            AND (ls.student_id = 'all' OR ls.student_id = ? OR ls.student_id IS NULL)
+          ORDER BY ls.id DESC`,
+        [...assignedMentorIds, String(userId)]
+      );
+      return sendSuccess(res, 'Live sessions retrieved', sessions || []);
+    }
+
     const mentorId = requireMentor(req, res);
     if (!mentorId) return;
 
@@ -1696,6 +1718,9 @@ export const getStudyMaterials = async (req, res, next) => {
     } catch (e) {
       console.warn('[DB getStudyMaterials fallback]', e.message);
     }
+    if (req.user) {
+      materials = await filterContentByMentorAssignment(materials || [], req.user, 'uploaded_by');
+    }
     return sendSuccess(res, 'Study materials retrieved', materials || []);
   } catch (error) {
     next(error);
@@ -1804,6 +1829,15 @@ export const getMentorNotifications = async (req, res, next) => {
 
 export const getMentorMenteeInterviews = async (req, res, next) => {
   try {
+    const mentorId = requireMentor(req, res);
+    if (!mentorId) return;
+
+    const students = await loadMentorStudents(mentorId);
+    const menteeUserIds = students.map((s) => Number(s.user_id));
+    if (menteeUserIds.length === 0) {
+      return sendSuccess(res, 'Mentee interview progress retrieved successfully', []);
+    }
+
     const rows = await query(
       `SELECT 
         iv.id,
@@ -1823,7 +1857,9 @@ export const getMentorMenteeInterviews = async (req, res, next) => {
        JOIN users u ON iv.user_id = u.id
        LEFT JOIN students s ON u.id = s.user_id
        LEFT JOIN batches b ON s.batch_id = b.id
-       ORDER BY iv.created_at DESC, iv.id DESC`
+       WHERE iv.user_id IN (${inPlaceholders(menteeUserIds)})
+       ORDER BY iv.created_at DESC, iv.id DESC`,
+      menteeUserIds
     );
 
     const formatted = (rows || []).map((r) => ({

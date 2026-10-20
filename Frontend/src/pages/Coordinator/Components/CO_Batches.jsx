@@ -5,6 +5,7 @@ import { coordinatorBatches, coordinatorMentors, coordinatorStudents } from "../
 import { batchAPI } from "../../../services/api";
 import { EVENTS } from "../../../utils/sharedStore";
 import CustomSelect from "../../../components/ui/CustomSelect";
+import { isSameDepartment } from "../../../utils/departmentHelper";
 import "../Styles/CO_Batches.css";
 
 export default function CoordinatorBatches() {
@@ -87,7 +88,7 @@ export default function CoordinatorBatches() {
         (s.name || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
         (s.rollNo || "").toLowerCase().includes(studentSearch.toLowerCase()) ||
         (s.department && s.department.toLowerCase().includes(studentSearch.toLowerCase()));
-      const matchesDept = !coordDept || !s.department || s.department.toLowerCase().includes(coordDept.toLowerCase()) || coordDept.toLowerCase().includes(s.department.toLowerCase());
+      const matchesDept = !coordDept || !s.department || isSameDepartment(s.department, coordDept);
       return matchesSearch && matchesDept;
     }
   );

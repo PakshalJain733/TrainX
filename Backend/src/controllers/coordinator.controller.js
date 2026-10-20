@@ -1,39 +1,21 @@
 import { query } from '../config/db.js';
 import { sendSuccess, sendError } from '../utils/response.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
+import { getShortDept, isSameDepartment } from '../utils/departmentHelper.js';
 
 /**
  * Resolve the coordinator's scoped department(s) and college.
- * When the coordinator has no assigned departments, falls back to college-wide scope.
+ * Strictly separates academic branches (e.g. CS vs ECS) without substring leakage.
  */
 const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
   let deptIds = [];
   let deptNames = [];
+  let detectedDept = reqDept && String(reqDept).trim() && String(reqDept).toLowerCase() !== 'all'
+    ? String(reqDept).trim()
+    : null;
 
-  // 1. Check if department is requested directly
-  if (reqDept && String(reqDept).trim() && String(reqDept).toLowerCase() !== 'all') {
-    const cleanDept = String(reqDept).trim();
-    try {
-      const matchedDepts = await query(
-        `SELECT id, name, code FROM departments WHERE (name LIKE ? OR code LIKE ? OR ? LIKE CONCAT('%', code, '%')) AND (college_id = ? OR college_id IS NULL)`,
-        [`%${cleanDept}%`, `%${cleanDept}%`, cleanDept, collegeId || 1]
-      );
-      if (matchedDepts && matchedDepts.length > 0) {
-        matchedDepts.forEach((d) => {
-          if (d.id && !deptIds.includes(d.id)) deptIds.push(d.id);
-          if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
-          if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
-        });
-      } else {
-        deptNames.push(cleanDept);
-      }
-    } catch (_) {
-      deptNames.push(cleanDept);
-    }
-  }
-
-  // 2. Check coordinator_departments table
-  if (deptIds.length === 0 && userId) {
+  // 1. Check coordinator_departments table
+  if (userId) {
     try {
       const deptRows = await query(
         `SELECT cd.department_id, d.name, d.code
@@ -47,12 +29,13 @@ const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
           if (d.department_id && !deptIds.includes(d.department_id)) deptIds.push(d.department_id);
           if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
           if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
+          if (!detectedDept) detectedDept = d.code || d.name;
         });
       }
     } catch (_) {}
   }
 
-  // 3. Check users table
+  // 2. Check users table
   if (userId) {
     try {
       const uRows = await query(`SELECT department, department_id, college_id FROM users WHERE id = ?`, [userId]);
@@ -61,34 +44,105 @@ const resolveCoordinatorScope = async (userId, collegeId, reqDept = null) => {
         const uDeptId = uRows[0].department_id ? parseInt(uRows[0].department_id, 10) : null;
         if (uDeptId && !deptIds.includes(uDeptId)) deptIds.push(uDeptId);
         if (uDept && !deptNames.includes(uDept)) deptNames.push(uDept);
-
-        if (uDept || uDeptId) {
-          const matchedDepts = await query(
-            `SELECT id, name, code FROM departments 
-             WHERE (id = ? OR LOWER(name) = LOWER(?) OR LOWER(code) = LOWER(?) OR name LIKE ? OR ? LIKE CONCAT('%', code, '%')) 
-             AND (college_id = ? OR college_id IS NULL)`,
-            [uDeptId || 0, uDept, uDept, `%${uDept}%`, uDept, collegeId || uRows[0].college_id || 1]
-          );
-          matchedDepts.forEach((d) => {
-            if (d.id && !deptIds.includes(d.id)) deptIds.push(d.id);
-            if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
-            if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
-          });
-        }
+        if (!detectedDept && (uDept || uDeptId)) detectedDept = uDept || String(uDeptId);
       }
     } catch (_) {}
   }
 
-  const primaryDeptName = deptNames.find((n) => n && n.length > 3) || deptNames[0] || null;
+  // Canonical branch code: 'CS', 'ECS', 'IT', 'AIDS', 'EXTC', 'MECH', etc.
+  const targetShort = detectedDept
+    ? getShortDept(detectedDept)
+    : deptNames.length > 0
+    ? getShortDept(deptNames[0])
+    : null;
+
+  // Strictly match college departments belonging only to this exact branch family
+  if (targetShort) {
+    try {
+      const allCollegeDepts = await query(
+        `SELECT id, name, code FROM departments WHERE college_id = ? OR college_id IS NULL`,
+        [collegeId || 1]
+      );
+      allCollegeDepts.forEach((d) => {
+        const dShortName = getShortDept(d.name);
+        const dShortCode = getShortDept(d.code);
+        if (dShortName === targetShort || dShortCode === targetShort) {
+          if (d.id && !deptIds.includes(d.id)) deptIds.push(d.id);
+          if (d.name && !deptNames.includes(d.name)) deptNames.push(d.name);
+          if (d.code && !deptNames.includes(d.code)) deptNames.push(d.code);
+        }
+      });
+    } catch (_) {}
+  }
+
+  const primaryDeptName =
+    deptNames.find((n) => n && n.length > 3) ||
+    deptNames[0] ||
+    (targetShort === 'CS'
+      ? 'Computer Engineering'
+      : targetShort === 'ECS'
+      ? 'Electronics & Computer Science'
+      : targetShort === 'IT'
+      ? 'Information Technology'
+      : targetShort === 'AIDS'
+      ? 'Artificial Intelligence & Data Science'
+      : targetShort || null);
 
   return {
     collegeId: collegeId || 1,
     deptIds,
     deptNames,
-    hasDept: deptIds.length > 0 || deptNames.length > 0,
+    targetShort,
+    hasDept: Boolean(targetShort || deptIds.length > 0 || deptNames.length > 0),
     deptList: deptIds.length > 0 ? deptIds.join(',') : '-1',
     primaryDeptName,
   };
+};
+
+/**
+ * Helper to construct SQL where clauses for students strictly adhering to coordinator's branch
+ */
+const buildDeptStudentConditions = (scope, sTableAlias = 's') => {
+  const conds = [];
+  const params = [];
+  if (scope.deptIds.length > 0) {
+    conds.push(`${sTableAlias}.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
+    params.push(...scope.deptIds);
+  }
+  if (scope.targetShort === 'CS') {
+    conds.push(`(
+      LOWER(${sTableAlias}.department) IN ('computer engineering', 'computer science', 'cs', 'ce', 'cse')
+      OR LOWER(${sTableAlias}.department) LIKE '%computer%'
+    )`);
+  } else if (scope.targetShort === 'ECS') {
+    conds.push(`(
+      LOWER(${sTableAlias}.department) IN ('electronics & computer science', 'electronics and computer science', 'ecs')
+      OR LOWER(${sTableAlias}.department) LIKE '%electronic%'
+      OR LOWER(${sTableAlias}.department) = 'ecs'
+    )`);
+  } else if (scope.targetShort === 'IT') {
+    conds.push(`(
+      LOWER(${sTableAlias}.department) IN ('information technology', 'it')
+      OR LOWER(${sTableAlias}.department) LIKE '%information tech%'
+    )`);
+  } else if (scope.targetShort === 'AIDS') {
+    conds.push(`(
+      LOWER(${sTableAlias}.department) IN ('artificial intelligence & data science', 'artificial intelligence and data science', 'aids', 'ai&ds', 'ai-ds')
+      OR LOWER(${sTableAlias}.department) LIKE '%data science%'
+      OR LOWER(${sTableAlias}.department) LIKE '%artificial intelligence%'
+    )`);
+  } else if (scope.deptNames.length > 0) {
+    scope.deptNames.forEach((dName) => {
+      conds.push(`LOWER(${sTableAlias}.department) = ?`);
+      params.push(dName.toLowerCase().trim());
+    });
+  }
+
+  let sqlClause = conds.length > 0 ? `(${conds.join(' OR ')})` : '';
+  if (scope.targetShort === 'CS') {
+    sqlClause += (sqlClause ? ' AND ' : '') + `(LOWER(COALESCE(${sTableAlias}.department, '')) NOT LIKE '%electronic%' AND LOWER(COALESCE(${sTableAlias}.department, '')) != 'ecs')`;
+  }
+  return { sqlClause, params };
 };
 
 /**
@@ -99,7 +153,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
   try {
     const userId = req.user?.userId || req.user?.id;
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const scope = await resolveCoordinatorScope(userId, collegeId);
+    const scope = await resolveCoordinatorScope(userId, collegeId, req.query?.department);
 
     // Fetch user details
     const [user] = await query(
@@ -112,36 +166,61 @@ export const getCoordinatorOverview = async (req, res, next) => {
 
     const departmentName = scope.primaryDeptName || user?.department || 'Engineering';
 
-    // Real stats
+    // Real stats: Strictly scoped students
     let studentSql = `SELECT COUNT(DISTINCT u.id) as count FROM users u JOIN students s ON u.id = s.user_id WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'student'`;
     const studentParams = [collegeId];
     if (scope.hasDept) {
-      const conditions = [];
-      if (scope.deptIds.length > 0) {
-        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
-        studentParams.push(...scope.deptIds);
-      }
-      if (scope.deptNames.length > 0) {
-        scope.deptNames.forEach((dName) => {
-          conditions.push(`LOWER(s.department) LIKE ?`);
-          studentParams.push(`%${dName.toLowerCase().trim()}%`);
-        });
-      }
-      if (conditions.length > 0) {
-        studentSql += ` AND (${conditions.join(' OR ')})`;
+      const { sqlClause, params: deptParams } = buildDeptStudentConditions(scope, 's');
+      if (sqlClause) {
+        studentSql += ` AND ${sqlClause}`;
+        studentParams.push(...deptParams);
       }
     }
     const [studentCount] = await query(studentSql, studentParams);
 
-    let batchSql = `SELECT COUNT(*) as count FROM batches WHERE college_id = ? AND status = 'active'`;
+    let batchSql = `SELECT COUNT(*) as count FROM batches WHERE (college_id = ? OR college_id IS NULL) AND status = 'active'`;
     const batchParams = [collegeId];
     if (scope.hasDept && scope.deptIds.length > 0) {
       batchSql += ` AND department_id IN (${scope.deptList})`;
     }
     const [batchCount] = await query(batchSql, batchParams);
 
-    let mentorSql = `SELECT COUNT(DISTINCT id) as count FROM users WHERE (college_id = ? OR college_id IS NULL) AND role = 'mentor'`;
-    const [mentorCount] = await query(mentorSql, [collegeId]);
+    // Filter mentors strictly assigned to / belonging to this branch
+    let mentorCount = 0;
+    try {
+      const allMentorsSql = `
+        SELECT u.id, u.department as user_department, u.department_id as user_department_id,
+               GROUP_CONCAT(DISTINCT b.name SEPARATOR ', ') as assignedBatch,
+               GROUP_CONCAT(DISTINCT d.name SEPARATOR ', ') as batch_dept_names,
+               (
+                 SELECT GROUP_CONCAT(DISTINCT s2.department SEPARATOR ', ')
+                 FROM mentor_student_assignments msa4
+                 JOIN students s2 ON msa4.student_id = s2.user_id
+                 WHERE msa4.mentor_id = u.id
+               ) as student_departments
+        FROM users u
+        LEFT JOIN batches b ON (
+          b.mentor = u.name 
+          OR b.trainer = u.name 
+          OR b.id IN (SELECT msa2.batch_id FROM mentor_student_assignments msa2 WHERE msa2.mentor_id = u.id)
+        )
+        LEFT JOIN departments d ON b.department_id = d.id
+        WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'mentor'
+        GROUP BY u.id`;
+      const allMentors = await query(allMentorsSql, [collegeId]);
+      const targetShort = scope.targetShort;
+      const deptMentors = targetShort
+        ? (allMentors || []).filter((m) => {
+            if (m.user_department && isSameDepartment(m.user_department, targetShort)) return true;
+            if (m.user_department_id && scope.deptIds.includes(Number(m.user_department_id))) return true;
+            if (m.batch_dept_names && m.batch_dept_names.split(',').some((name) => isSameDepartment(name, targetShort))) return true;
+            if (m.assignedBatch && m.assignedBatch.split(',').some((b) => isSameDepartment(b, targetShort))) return true;
+            if (m.student_departments && m.student_departments.split(',').some((d) => isSameDepartment(d, targetShort))) return true;
+            return false;
+          })
+        : allMentors;
+      mentorCount = deptMentors.length;
+    } catch (_) {}
 
     // Average attendance for department students
     let attSql = `SELECT ROUND(AVG(att.attendance_percentage), 1) as avg_attendance
@@ -151,19 +230,10 @@ export const getCoordinatorOverview = async (req, res, next) => {
        WHERE (u.college_id = ? OR u.college_id IS NULL)`;
     const attParams = [collegeId];
     if (scope.hasDept) {
-      const conditions = [];
-      if (scope.deptIds.length > 0) {
-        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
-        attParams.push(...scope.deptIds);
-      }
-      if (scope.deptNames.length > 0) {
-        scope.deptNames.forEach((dName) => {
-          conditions.push(`LOWER(s.department) LIKE ?`);
-          attParams.push(`%${dName.toLowerCase().trim()}%`);
-        });
-      }
-      if (conditions.length > 0) {
-        attSql += ` AND (${conditions.join(' OR ')})`;
+      const { sqlClause, params: deptParams } = buildDeptStudentConditions(scope, 's');
+      if (sqlClause) {
+        attSql += ` AND ${sqlClause}`;
+        attParams.push(...deptParams);
       }
     }
     const [attData] = await query(attSql, attParams);
@@ -180,19 +250,10 @@ export const getCoordinatorOverview = async (req, res, next) => {
        WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'student'`;
     const highRiskParams = [collegeId];
     if (scope.hasDept) {
-      const conditions = [];
-      if (scope.deptIds.length > 0) {
-        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
-        highRiskParams.push(...scope.deptIds);
-      }
-      if (scope.deptNames.length > 0) {
-        scope.deptNames.forEach((dName) => {
-          conditions.push(`LOWER(s.department) LIKE ?`);
-          highRiskParams.push(`%${dName.toLowerCase().trim()}%`);
-        });
-      }
-      if (conditions.length > 0) {
-        highRiskSql += ` AND (${conditions.join(' OR ')})`;
+      const { sqlClause, params: deptParams } = buildDeptStudentConditions(scope, 's');
+      if (sqlClause) {
+        highRiskSql += ` AND ${sqlClause}`;
+        highRiskParams.push(...deptParams);
       }
     }
     highRiskSql += ` GROUP BY u.id, s.id, b.id, att.id HAVING attendance < 75 OR avg_quiz_score < 50 LIMIT 10`;
@@ -201,7 +262,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
     const statsList = [
       { id: 'students', label: 'Enrolled Students', value: String(studentCount?.count || 0), hint: `Active in ${departmentName}` },
       { id: 'batches', label: 'Managed Batches', value: `${batchCount?.count || 0} Batches`, hint: 'Current active batches' },
-      { id: 'mentors', label: 'Faculty & Mentors', value: `${mentorCount?.count || 0} Trainers`, hint: 'Assigned mentors' },
+      { id: 'mentors', label: 'Faculty & Mentors', value: `${mentorCount} Trainers`, hint: `Assigned to ${departmentName}` },
       { id: 'attendance', label: 'Attendance Rate', value: `${attData?.avg_attendance || 0}%`, hint: 'Department average' },
     ];
 
@@ -238,7 +299,7 @@ export const getCoordinatorOverview = async (req, res, next) => {
 export const getCoordinatorBatches = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId);
+    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, req.query?.department);
 
     let sql = `
       SELECT b.id, b.name, b.schedule, b.status, b.year, b.division, b.mentor,
@@ -249,9 +310,9 @@ export const getCoordinatorBatches = async (req, res, next) => {
        LEFT JOIN students s ON b.id = s.batch_id
        LEFT JOIN attendance_summary att ON s.user_id = att.user_id
        LEFT JOIN assessment_attempts aa ON s.user_id = aa.user_id
-       WHERE b.college_id = ?`;
+       WHERE (b.college_id = ? OR b.college_id IS NULL)`;
     const params = [scope.collegeId];
-    if (scope.hasDept) {
+    if (scope.hasDept && scope.deptIds.length > 0) {
       sql += ` AND b.department_id IN (${scope.deptList})`;
     }
     sql += ` GROUP BY b.id ORDER BY b.id DESC`;
@@ -277,7 +338,7 @@ export const getCoordinatorBatches = async (req, res, next) => {
 
 /**
  * GET /api/v1/coordinator/students
- * Strictly returns students belonging to the coordinator's department with real metrics
+ * Strictly returns students belonging only to the coordinator's department
  */
 export const getCoordinatorStudents = async (req, res, next) => {
   try {
@@ -295,7 +356,7 @@ export const getCoordinatorStudents = async (req, res, next) => {
                WHERE att.user_id = u.id
              ) as attendance_from_table,
              (
-               SELECT atts.attendance_percentage
+               SELECT ROUND(atts.attendance_percentage, 0)
                FROM attendance_summary atts
                WHERE atts.user_id = u.id
                LIMIT 1
@@ -329,21 +390,10 @@ export const getCoordinatorStudents = async (req, res, next) => {
     }
 
     if (scope.hasDept) {
-      const conditions = [];
-      if (scope.deptIds.length > 0) {
-        conditions.push(`s.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
-        params.push(...scope.deptIds);
-        conditions.push(`b.department_id IN (${scope.deptIds.map(() => '?').join(',')})`);
-        params.push(...scope.deptIds);
-      }
-      if (scope.deptNames.length > 0) {
-        scope.deptNames.forEach((dName) => {
-          conditions.push(`LOWER(s.department) LIKE ?`);
-          params.push(`%${dName.toLowerCase().trim()}%`);
-        });
-      }
-      if (conditions.length > 0) {
-        sql += ` AND (${conditions.join(' OR ')})`;
+      const { sqlClause, params: deptParams } = buildDeptStudentConditions(scope, 's');
+      if (sqlClause) {
+        sql += ` AND ${sqlClause}`;
+        params.push(...deptParams);
       }
     }
 
@@ -351,7 +401,20 @@ export const getCoordinatorStudents = async (req, res, next) => {
 
     const students = await query(sql, params);
 
-    const formatted = students.map((s) => {
+    // In-memory filter as absolute guarantee against cross-branch bleed (e.g. CS vs ECS)
+    const filteredStudents = scope.targetShort
+      ? (students || []).filter((s) => {
+          if (s.department) {
+            return isSameDepartment(s.department, scope.targetShort);
+          }
+          if (s.department_id && scope.deptIds.length > 0) {
+            return scope.deptIds.includes(Number(s.department_id));
+          }
+          return false;
+        })
+      : students;
+
+    const formatted = (filteredStudents || []).map((s) => {
       const rawAtt = s.attendance_from_table !== null && s.attendance_from_table !== undefined
         ? s.attendance_from_table
         : s.attendance_from_summary;
@@ -377,7 +440,7 @@ export const getCoordinatorStudents = async (req, res, next) => {
       return {
         id: `st-${s.student_id}`,
         studentId: s.student_id,
-        userId: s.id,
+        userId: s.student_id,
         name: s.name,
         email: s.email,
         phone: s.mobile_number || '—',
@@ -404,21 +467,32 @@ export const getCoordinatorStudents = async (req, res, next) => {
 
 /**
  * GET /api/v1/coordinator/mentors
+ * Strictly returns only mentors assigned to or belonging to coordinator's branch
  */
 export const getCoordinatorMentors = async (req, res, next) => {
   try {
     const collegeId = req.user?.collegeId || req.user?.college_id || 1;
-    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId);
+    const reqDept = req.query?.department || req.query?.dept;
+    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, reqDept);
 
     let sql = `
       SELECT u.id, u.name, u.email, u.mobile_number, u.target_track as specialization,
-             COALESCE(MAX(d.name), 'Computer Engineering') as department,
+             u.department as user_department, u.department_id as user_department_id,
              GROUP_CONCAT(DISTINCT b.name SEPARATOR ', ') as assignedBatch,
+             GROUP_CONCAT(DISTINCT b.department_id) as batch_dept_ids,
+             GROUP_CONCAT(DISTINCT d.name SEPARATOR ', ') as batch_dept_names,
+             GROUP_CONCAT(DISTINCT d.code SEPARATOR ', ') as batch_dept_codes,
              COALESCE((
                SELECT COUNT(DISTINCT msa.student_id)
                FROM mentor_student_assignments msa
                WHERE msa.mentor_id = u.id
-             ), 0) as studentsCount
+             ), 0) as studentsCount,
+             (
+               SELECT GROUP_CONCAT(DISTINCT s2.department SEPARATOR ', ')
+               FROM mentor_student_assignments msa4
+               JOIN students s2 ON msa4.student_id = s2.user_id
+               WHERE msa4.mentor_id = u.id
+             ) as student_departments
       FROM users u
       LEFT JOIN batches b ON (
         b.mentor = u.name 
@@ -426,25 +500,110 @@ export const getCoordinatorMentors = async (req, res, next) => {
         OR b.id IN (SELECT msa2.batch_id FROM mentor_student_assignments msa2 WHERE msa2.mentor_id = u.id)
       )
       LEFT JOIN departments d ON b.department_id = d.id
-      WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'mentor'`;
-    const params = [scope.collegeId];
-    if (scope.hasDept) {
-      sql += ` AND (
-        b.department_id IN (${scope.deptList})
-        OR u.id IN (
-          SELECT DISTINCT msa3.mentor_id 
-          FROM mentor_student_assignments msa3
-          JOIN batches b3 ON msa3.batch_id = b3.id
-          WHERE b3.department_id IN (${scope.deptList})
-        )
-        OR b.id IS NULL
-      )`;
+      WHERE (u.college_id = ? OR u.college_id IS NULL) AND u.role = 'mentor'
+      GROUP BY u.id
+      ORDER BY u.name ASC`;
+
+    const mentors = await query(sql, [scope.collegeId]);
+
+    const targetShort = scope.targetShort;
+    const filteredMentors = targetShort
+      ? (mentors || []).filter((m) => {
+          // 1. Direct user department
+          if (m.user_department && isSameDepartment(m.user_department, targetShort)) return true;
+          if (m.user_department_id && scope.deptIds.includes(Number(m.user_department_id))) return true;
+
+          // 2. Batch department names or codes
+          if (m.batch_dept_names && m.batch_dept_names.split(',').some((name) => isSameDepartment(name, targetShort))) {
+            return true;
+          }
+          if (m.batch_dept_codes && m.batch_dept_codes.split(',').some((code) => isSameDepartment(code, targetShort))) {
+            return true;
+          }
+
+          // 3. Batch names
+          if (m.assignedBatch) {
+            const batchNames = m.assignedBatch.split(',').map((s) => s.trim());
+            if (batchNames.some((bName) => isSameDepartment(bName, targetShort))) return true;
+          }
+
+          // 4. Assigned student departments
+          if (m.student_departments) {
+            const studentDepts = m.student_departments.split(',').map((s) => s.trim());
+            if (studentDepts.some((dept) => isSameDepartment(dept, targetShort))) return true;
+          }
+
+          return false;
+        })
+      : mentors;
+
+    const formattedMentors = (filteredMentors || []).map((m) => {
+      let deptName = scope.primaryDeptName || 'Engineering';
+      if (m.user_department && isSameDepartment(m.user_department, targetShort)) {
+        deptName = m.user_department;
+      } else if (m.batch_dept_names) {
+        const matching = m.batch_dept_names.split(',').map((s) => s.trim()).find((d) => isSameDepartment(d, targetShort));
+        if (matching) deptName = matching;
+      }
+
+      return {
+        id: m.id,
+        name: m.name,
+        email: m.email,
+        mobile_number: m.mobile_number,
+        specialization: m.specialization || 'Full Stack Software Engineering',
+        department: deptName,
+        assignedBatch: m.assignedBatch || 'Unassigned',
+        studentsCount: m.studentsCount || 0,
+        status: 'Active',
+      };
+    });
+
+    return sendSuccess(res, 'Mentors retrieved successfully', { mentors: formattedMentors });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/coordinator/mentors
+ * Add or assign a new mentor within coordinator's branch
+ */
+export const createCoordinatorMentor = async (req, res, next) => {
+  try {
+    const { name, email, specialization, assignedBatch, department } = req.body;
+    if (!name || !email) {
+      return sendError(res, 'Name and email are required', 400);
     }
-    sql += ` GROUP BY u.id ORDER BY u.name ASC`;
+    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, req.query?.department);
+    const mentorDept = department || scope.primaryDeptName || 'Computer Engineering';
 
-    const mentors = await query(sql, params);
+    const [existing] = await query('SELECT id FROM users WHERE email = ?', [email]);
+    let mentorId;
+    if (existing) {
+      mentorId = existing.id;
+      await query('UPDATE users SET role = ?, department = ?, college_id = ? WHERE id = ?', ['mentor', mentorDept, collegeId, mentorId]);
+    } else {
+      const result = await query(
+        'INSERT INTO users (name, email, role, department, college_id, password) VALUES (?, ?, ?, ?, ?, ?)',
+        [name, email, 'mentor', mentorDept, collegeId, '$2a$10$abcdefghijklmnopqrstuu']
+      );
+      mentorId = result.insertId;
+    }
 
-    return sendSuccess(res, 'Mentors retrieved successfully', { mentors });
+    if (assignedBatch && assignedBatch !== 'Unassigned') {
+      await query('UPDATE batches SET mentor = ? WHERE name = ? AND (college_id = ? OR college_id IS NULL)', [name, assignedBatch, collegeId]);
+    }
+
+    return sendSuccess(res, 'Mentor created/assigned successfully', {
+      id: mentorId,
+      name,
+      email,
+      department: mentorDept,
+      assignedBatch: assignedBatch || 'Unassigned',
+      status: 'Active',
+    });
   } catch (error) {
     next(error);
   }
@@ -452,11 +611,13 @@ export const getCoordinatorMentors = async (req, res, next) => {
 
 /**
  * GET /api/v1/coordinator/mentors/:id/students
- * Retrieve real allotted students for a given mentor from the database
+ * Retrieve real allotted students for a given mentor from the database, strictly scoped to coordinator branch
  */
 export const getCoordinatorMentorStudents = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const collegeId = req.user?.collegeId || req.user?.college_id || 1;
+    const scope = await resolveCoordinatorScope(req.user?.userId || req.user?.id, collegeId, req.query?.department);
 
     // 1. Direct mentor_student_assignments
     let sql = `
@@ -483,11 +644,16 @@ export const getCoordinatorMentorStudents = async (req, res, next) => {
       students = await query(sql, [id]);
     }
 
-    const formattedStudents = (students || []).map((s) => ({
+    // Filter students by coordinator's branch if scoped
+    const filtered = scope.targetShort
+      ? (students || []).filter((s) => isSameDepartment(s.department, scope.targetShort))
+      : students;
+
+    const formattedStudents = (filtered || []).map((s) => ({
       id: s.id,
       name: s.name,
       rollNo: s.rollNo || 'N/A',
-      department: s.department || 'N/A',
+      department: s.department || scope.primaryDeptName || 'N/A',
       status: s.status !== false ? 'Active' : 'Inactive',
     }));
 
