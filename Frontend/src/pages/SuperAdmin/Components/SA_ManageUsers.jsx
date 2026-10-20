@@ -1888,56 +1888,6 @@ export default function ManageUsers() {
         </div>
       </div>
 
-      {pendingUsersCount > 0 && (
-        <div
-          style={{
-            background: '#fffbeb',
-            border: '1px solid #fcd34d',
-            borderRadius: '12px',
-            padding: '14px 18px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            boxShadow: '0 2px 8px rgba(217, 119, 6, 0.08)'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Clock size={20} style={{ color: '#b45309', flexShrink: 0 }} />
-            <div>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 800, color: '#92400e' }}>
-                {pendingUsersCount} User Registration(s) Pending Approval
-              </h4>
-              <p style={{ margin: 0, fontSize: '12.5px', color: '#b45309' }}>
-                New user accounts have completed registration &amp; 2FA setup and are waiting for administrator review and approval.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/super-admin/approve-users')}
-            style={{
-              background: '#d97706',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '8px 16px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <UserCheck size={15} />
-            <span>Review &amp; Approve Users</span>
-          </button>
-        </div>
-      )}
-
       {/* Search Input */}
       <div className="sa-search-card">
         <div className="sa-search-wrap mu-search-wrap-full">

@@ -12,14 +12,47 @@ import { apiFetch, getApiBaseUrl } from "../../../utils/api";
 const defaultNotificationsList = [];
 
 function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifications, setNotifications }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("all");
   const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    apiFetch("/admin/broadcast")
-      .then((res) => {
-        if (res && res.data && Array.isArray(res.data) && res.data.length > 0) {
-          const serverItems = res.data.map((b) => ({
+    Promise.all([
+      apiFetch("/admin/broadcast").catch(() => null),
+      apiFetch("/admin/pending-users").catch(() => null),
+    ])
+      .then(([broadcastRes, pendingRes]) => {
+        const notifItems = [];
+
+        // 1. Pending user registrations alert
+        const rawPending = pendingRes && pendingRes.data && Array.isArray(pendingRes.data)
+          ? pendingRes.data
+          : (Array.isArray(pendingRes) ? pendingRes : []);
+
+        const pendingCount = rawPending.filter((u) => {
+          return u.is_verified === 1 || u.is_verified === true || u.is_verified === "1" ||
+                 u.two_factor_enabled === 1 || u.two_factor_enabled === true || u.two_factor_enabled === "1";
+        }).length;
+
+        if (pendingCount > 0) {
+          notifItems.push({
+            id: 'pending-users-approval-alert',
+            title: `⚠️ ${pendingCount} User Registration(s) Pending Approval`,
+            desc: `New user account(s) have registered and are waiting for administrator review and approval.`,
+            message: `New user account(s) have completed registration & 2FA setup and are waiting for administrator review and approval.`,
+            time: 'Action Required',
+            unread: true,
+            type: 'alert',
+            target: 'Super Admin',
+            priority: 'High Priority',
+            created_by_name: 'Registration System',
+            actionUrl: '/super-admin/approve-users',
+          });
+        }
+
+        // 2. Broadcast announcements
+        if (broadcastRes && broadcastRes.data && Array.isArray(broadcastRes.data) && broadcastRes.data.length > 0) {
+          const serverItems = broadcastRes.data.map((b) => ({
             id: b.id || `notif-${Math.random()}`,
             title: b.title || "Announcement",
             desc: b.message || b.desc || b.description || "",
@@ -31,21 +64,22 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
             priority: b.priority || "General Notice",
             created_by_name: b.created_by_name || "Admin",
           }));
-
-          setNotifications((prev) => {
-            const combined = [...serverItems, ...defaultNotificationsList];
-            const unique = [];
-            const seenTitles = new Set();
-            for (const item of combined) {
-              const key = item.title.trim().toLowerCase();
-              if (!seenTitles.has(key)) {
-                seenTitles.add(key);
-                unique.push(item);
-              }
-            }
-            return unique;
-          });
+          notifItems.push(...serverItems);
         }
+
+        setNotifications((prev) => {
+          const combined = [...notifItems, ...defaultNotificationsList];
+          const unique = [];
+          const seenKeys = new Set();
+          for (const item of combined) {
+            const key = item.id || item.title.trim().toLowerCase();
+            if (!seenKeys.has(key)) {
+              seenKeys.add(key);
+              unique.push(item);
+            }
+          }
+          return unique;
+        });
       })
       .catch(() => { });
   }, []);
@@ -220,6 +254,11 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                 className={`notif-list-card ${n.unread ? "unread" : ""}`}
                 onClick={() => {
                   if (n.unread) toggleSingleRead(n.id);
+                  if (n.actionUrl) {
+                    if (onClose) onClose();
+                    navigate(n.actionUrl);
+                    return;
+                  }
                   setExpandedId(isExpanded ? null : n.id);
                 }}
               >
@@ -234,6 +273,34 @@ function NotificationDropdown({ onClose, onUnreadChange, onOpenViewAll, notifica
                     <Clock size={11} className="notif-time-icon" />
                     <span>{n.time}</span>
                   </div>
+
+                  {n.actionUrl && (
+                    <div style={{ marginTop: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (onClose) onClose();
+                          navigate(n.actionUrl);
+                        }}
+                        style={{
+                          background: '#d97706',
+                          color: '#ffffff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        Review &amp; Approve Users →
+                      </button>
+                    </div>
+                  )}
 
                   {isExpanded && (
                     <div className="notif-expanded-desc">
