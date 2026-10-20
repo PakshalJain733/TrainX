@@ -11,8 +11,15 @@
 }
 
 @keyframes saApproveFadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Page Header Section */
@@ -155,9 +162,20 @@
   flex-shrink: 0;
 }
 
-.sa-icon-amber { background: #fef3c7; color: #d97706; }
-.sa-icon-blue { background: #e0f2fe; color: #0284c7; }
-.sa-icon-emerald { background: #dcfce7; color: #16a34a; }
+.sa-icon-amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.sa-icon-blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.sa-icon-emerald {
+  background: #dcfce7;
+  color: #16a34a;
+}
 
 /* Toolbar Section */
 .sa-approve-toolbar {
@@ -165,7 +183,6 @@
   border: 1px solid #e2e8f0;
   border-radius: 16px;
   padding: 16px 20px;
-  margin-bottom: 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -574,8 +591,15 @@
 }
 
 @keyframes saApproveScaleIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .sa-approve-modal-header {
@@ -693,8 +717,15 @@
 }
 
 @keyframes saApprovePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Text and Inline Copy Tags */

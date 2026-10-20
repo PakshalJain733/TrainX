@@ -1410,15 +1410,6 @@ function Register() {
                     value={formData.email}
                     onChange={handleChange}
                   />
-                  {detectedCollege ? (
-                    <div style={{ fontSize: "12px", color: "#2563eb", marginTop: "6px", fontWeight: 600, display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span>🏛️ Affiliated Institution: <strong>{detectedCollege.name}</strong></span>
-                    </div>
-                  ) : formData.email && formData.email.includes("@") && formData.email.split("@")[1].length >= 3 ? (
-                    <div style={{ fontSize: "12px", color: "#d97706", marginTop: "6px", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span>⚠️ No registered college found for @{(formData.email.split("@")[1] || "").toLowerCase()}. Please enter an authorized college email.</span>
-                    </div>
-                  ) : null}
                 </div>
 
                 {/* Department dropdown for Coordinator */}
