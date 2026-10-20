@@ -69,11 +69,31 @@ export default function Students() {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
+
+    const extractList = (res) => {
+      if (!res) return [];
+      if (Array.isArray(res)) return res;
+      if (Array.isArray(res.data?.students)) return res.data.students;
+      if (Array.isArray(res.data?.roster)) return res.data.roster;
+      if (Array.isArray(res.data)) return res.data;
+      if (Array.isArray(res.students)) return res.students;
+      return [];
+    };
+
     apiFetch("/mentor/students/performance")
       .then((res) => {
-        if (mounted) {
-          const list = res && res.data && Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+        if (!mounted) return;
+        const list = extractList(res);
+        if (list.length > 0) {
           setStudents(list);
+        } else {
+          apiFetch("/mentor/students").then((fallbackRes) => {
+            if (!mounted) return;
+            const fallbackList = extractList(fallbackRes);
+            setStudents(fallbackList);
+          }).catch(() => {
+            if (mounted) setStudents([]);
+          });
         }
       })
       .catch(() => {
@@ -357,19 +377,21 @@ export default function Students() {
                       <span className="mentor-student-roll">{s.rollNo || s.roll_number || 'N/A'}</span>
                     </td>
                     <td>
-                      <span className="mentor-student-batch">{s.batch || s.department || 'Batch'}</span>
+                      <span className="mentor-student-batch">{s.batch || s.batch_name || s.department || 'Batch'}</span>
                     </td>
                     <td>
-                      <span className={`mentor-student-attendance ${getAttendanceClass(s.attendance || '0%')}`}>
-                        {s.attendance || '0%'}
+                      <span className={`mentor-student-attendance ${getAttendanceClass(s.attendance)}`}>
+                        {typeof s.attendance === 'number' ? `${s.attendance}%` : (s.attendance || '0%')}
                       </span>
                     </td>
                     <td>
-                      <span className="mentor-student-score">{s.avgScore || s.score || '0%'}</span>
+                      <span className="mentor-student-score">
+                        {typeof s.overallScore === 'number' ? `${s.overallScore}%` : (s.avgScore || s.score || '0%')}
+                      </span>
                     </td>
                     <td>
-                      <span className={`mentor-risk-pill ${getRiskClass(s.riskLevel || 'Good')}`}>
-                        {s.riskLevel || 'Good'}
+                      <span className={`mentor-risk-pill ${getRiskClass(s.riskLevel || s.status || 'Good')}`}>
+                        {s.riskLevel || s.status || 'Good'}
                       </span>
                     </td>
                     <td className="mentor-actions-cell">

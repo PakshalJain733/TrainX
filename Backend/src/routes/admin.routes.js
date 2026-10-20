@@ -13,6 +13,7 @@ import {
   getAdminPracticeProblems,
   createAdminPracticeProblem,
   deleteAdminPracticeProblem,
+  generateAIPracticeProblemController,
   getAdminProfile,
   updateAdminProfile,
   getAdminBroadcasts,
@@ -56,6 +57,7 @@ router.put('/profile', updateAdminProfile);
 // Coding Tasks / Practice Problems
 router.get('/practice-problems', getAdminPracticeProblems);
 router.post('/practice-problems', createAdminPracticeProblem);
+router.post('/practice-problems/generate-ai', generateAIPracticeProblemController);
 router.delete('/practice-problems/:id', deleteAdminPracticeProblem);
 
 // Broadcast Notifications Center

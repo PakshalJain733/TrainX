@@ -177,6 +177,7 @@ export async function initializeDatabase() {
         department_id INT NULL,
         batch_id INT NULL,
         roll_number VARCHAR(100) NOT NULL,
+        mobile_number VARCHAR(20) NULL,
         department VARCHAR(100),
         year VARCHAR(20),
         division VARCHAR(20),
@@ -196,6 +197,8 @@ export async function initializeDatabase() {
       )
     `);
 
+    try { await conn.query(`ALTER TABLE students ADD COLUMN mobile_number VARCHAR(20) NULL AFTER roll_number`); } catch (_) { }
+    try { await conn.query(`UPDATE students s JOIN users u ON s.user_id = u.id SET s.mobile_number = u.mobile_number WHERE s.mobile_number IS NULL OR s.mobile_number = ''`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN gender VARCHAR(50) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN city VARCHAR(100) NULL`); } catch (_) { }
     try { await conn.query(`ALTER TABLE students ADD COLUMN emergency_contact VARCHAR(50) NULL`); } catch (_) { }
@@ -729,6 +732,7 @@ export async function initializeDatabase() {
         category VARCHAR(100) DEFAULT 'General DSA',
         tags VARCHAR(255) NULL,
         points INT DEFAULT 100,
+        due_date DATE NULL,
         created_by INT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (college_id) REFERENCES colleges(id) ON DELETE SET NULL,
@@ -736,6 +740,7 @@ export async function initializeDatabase() {
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
+    try { await conn.query(`ALTER TABLE practice_problems ADD COLUMN due_date DATE NULL AFTER points`); } catch (_) { }
 
     // 24. Ensure Mock Drives Table
     await conn.query(`

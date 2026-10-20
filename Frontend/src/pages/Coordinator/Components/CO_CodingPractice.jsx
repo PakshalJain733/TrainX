@@ -1,5 +1,5 @@
 import CustomSelect from "../../../components/ui/CustomSelect";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Code, Plus, Search, Filter, CheckCircle2, XCircle, Clock, Send, Eye, Edit, Trash2, Sparkles, BookOpen, Users, Check, X, FileCode, SlidersHorizontal, ChevronRight, AlertCircle, BarChart3, Layers, Calendar, Award, Terminal, RefreshCw } from "lucide-react";
 import {
   initialCodingProblems,
@@ -8,6 +8,7 @@ import {
 } from "../../../data/codingPracticeMockData";
 import { coordinatorBatches } from "../../../data/coordinatorMockData";
 import { CodingPerformance } from "./CO_Performances";
+import { apiFetch } from "../../../utils/api";
 import "../Styles/CO_CodingPractice.css";
 
 export default function CodingPractice() {
@@ -36,6 +37,13 @@ export default function CodingPractice() {
   const [selectedProblemToAssign, setSelectedProblemToAssign] = useState(null);
 
   const [selectedSubmissionCode, setSelectedSubmissionCode] = useState(null);
+
+  // AI Problem Generator State
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiTopic, setAiTopic] = useState("");
+  const [aiDiff, setAiDiff] = useState("Medium");
+  const [aiCompanies, setAiCompanies] = useState("Google, Amazon, TCS, Infosys");
 
   // Form State for Problem (Create/Edit)
   const [problemForm, setProblemForm] = useState({
@@ -104,52 +112,158 @@ export default function CodingPractice() {
     return matchesSearch && matchesVerdict && matchesBatch;
   });
 
-  // Handle Save Problem
-  const handleSaveProblem = (e) => {
+  // Database Fetch Logic
+  const fetchDbProblems = async () => {
+    try {
+      const res = await apiFetch("/coordinator/practice-problems");
+      const rawList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      if (rawList && rawList.length > 0) {
+        const mapped = rawList.map((p) => ({
+          id: p.id,
+          title: p.title,
+          topic: p.category || p.topic || "General DSA",
+          difficulty: p.difficulty || "Medium",
+          points: p.points || 100,
+          timeLimit: p.timeLimit || "1.0s",
+          memoryLimit: p.memoryLimit || "256 MB",
+          description: p.description || "",
+          status: "Active",
+          createdDate: p.created_at ? new Date(p.created_at).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+          createdBy: "Coordinator Workspace",
+          college: "College Campus",
+          acceptanceRate: "100%",
+          totalSubmissions: 0,
+          tags: Array.isArray(p.tags) ? p.tags : (p.tags ? p.tags.split(",").map(t => t.trim()) : ["DSA"]),
+          companies: Array.isArray(p.tags) ? p.tags : (p.tags ? p.tags.split(",").map(t => t.trim()) : ["TCS", "Infosys"]),
+          testCases: Array.isArray(p.testCases) && p.testCases.length > 0 ? p.testCases.map((tc, idx) => ({
+            id: tc.id || `tc-${Date.now()}-${idx}`,
+            input: tc.input || "",
+            expectedOutput: tc.expected_output || tc.expectedOutput || tc.output || "",
+            output: tc.expected_output || tc.expectedOutput || tc.output || "",
+            isHidden: Boolean(tc.is_hidden || tc.isHidden),
+            description: tc.description || `Test case ${idx + 1}`
+          })) : [
+            {
+              id: `tc-${Date.now()}`,
+              input: p.sampleInput || "",
+              expectedOutput: p.sampleOutput || "",
+              output: p.sampleOutput || "",
+              isHidden: false,
+              description: "Sample test case",
+            }
+          ],
+          starterCode: {
+            python: "def solution():\n    pass",
+            cpp: "#include <iostream>\nusing namespace std;\nint main() { return 0; }",
+          },
+        }));
+        setProblems(mapped);
+      }
+    } catch (err) {
+      console.warn("Failed to load DB practice problems for coordinator:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDbProblems();
+  }, []);
+
+  const handleGenerateProblemAI = async (topicToUse, diffToUse) => {
+    const topic = (topicToUse || aiTopic || "").trim() || "Arrays & Hashing";
+    const difficulty = diffToUse || aiDiff || "Medium";
+    setIsGeneratingAI(true);
+    try {
+      const res = await apiFetch("/coordinator/practice-problems/generate-ai", {
+        method: "POST",
+        body: JSON.stringify({ topic, difficulty, companies: aiCompanies }),
+      });
+      if (res && res.data) {
+        const d = res.data;
+        setProblemForm({
+          title: d.title || "",
+          topic: d.category || d.topic || topic,
+          difficulty: d.difficulty || difficulty,
+          points: d.points || (difficulty === "Easy" ? 50 : difficulty === "Medium" ? 100 : 150),
+          timeLimit: d.timeLimit || "1.0s",
+          memoryLimit: d.memoryLimit || "256 MB",
+          description: d.description || "",
+          inputFormat: "Standard formatted input from stdin",
+          outputFormat: "Required computed output to stdout",
+          sampleInput: d.sampleInput || "",
+          sampleOutput: d.sampleOutput || "",
+          tags: d.tags || d.companies || "Algorithms, Data Structures",
+          companies: d.companies || d.tags || aiCompanies,
+        });
+        setShowAiModal(false);
+        setIsProblemModalOpen(true);
+      }
+    } catch (err) {
+      console.error("AI Generation failed:", err);
+      alert("Failed to generate AI coding problem: " + (err.message || "Unknown error"));
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
+  // Handle Save Problem with MySQL Persistence
+  const handleSaveProblem = async (e) => {
     e.preventDefault();
     if (!problemForm.title.trim()) return;
 
-    if (editingProblem) {
-      setProblems((prev) =>
-        prev.map((p) =>
-          p.id === editingProblem.id
-            ? {
-                ...p,
-                ...problemForm,
-                tags: problemForm.tags.split(",").map((t) => t.trim()),
-                companies: problemForm.companies.split(",").map((c) => c.trim()),
-              }
-            : p
-        )
-      );
-    } else {
-      const newId = `prob-${String(problems.length + 1).padStart(3, "0")}`;
-      const created = {
-        id: newId,
-        ...problemForm,
-        tags: problemForm.tags.split(",").map((t) => t.trim()),
-        companies: problemForm.companies.split(",").map((c) => c.trim()),
-        status: "Active",
-        createdDate: new Date().toISOString().split("T")[0],
-        createdBy: "Coordinator Workspace",
-        college: "Apex Institute of Technology",
-        acceptanceRate: "100%",
-        totalSubmissions: 0,
-        testCases: [
-          {
-            id: `tc-${Date.now()}`,
-            input: problemForm.sampleInput,
-            expectedOutput: problemForm.sampleOutput,
-            isHidden: false,
-            description: "Sample test case",
-          },
-        ],
-        starterCode: {
-          python: "def solution():\n    pass",
-          cpp: "#include <iostream>\nusing namespace std;\nint main() { return 0; }",
-        },
-      };
-      setProblems([created, ...problems]);
+    const payload = {
+      title: problemForm.title.trim(),
+      topic: problemForm.topic,
+      category: problemForm.topic,
+      difficulty: problemForm.difficulty,
+      points: Number(problemForm.points) || 100,
+      xp: Number(problemForm.points) || 100,
+      timeLimit: problemForm.timeLimit || "1.0s",
+      memoryLimit: problemForm.memoryLimit || "256 MB",
+      description: problemForm.description || "",
+      sampleInput: problemForm.sampleInput || "",
+      sampleOutput: problemForm.sampleOutput || "",
+      tags: problemForm.tags,
+      companies: problemForm.companies,
+      testCases: (newTestCase.input && newTestCase.expectedOutput) ? [
+        {
+          input: newTestCase.input,
+          expectedOutput: newTestCase.expectedOutput,
+          isHidden: newTestCase.isHidden,
+        }
+      ] : [],
+    };
+
+    try {
+      await apiFetch("/coordinator/practice-problems", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      await fetchDbProblems();
+    } catch (err) {
+      console.error("Failed to save coordinator coding problem to database:", err);
+      if (editingProblem) {
+        setProblems((prev) =>
+          prev.map((p) => (p.id === editingProblem.id ? { ...p, ...problemForm } : p))
+        );
+      } else {
+        const created = {
+          id: `prob-${Date.now()}`,
+          ...problemForm,
+          status: "Active",
+          tags: problemForm.tags.split(",").map((t) => t.trim()),
+          companies: problemForm.companies.split(",").map((c) => c.trim()),
+          testCases: [
+            {
+              id: `tc-${Date.now()}`,
+              input: problemForm.sampleInput,
+              expectedOutput: problemForm.sampleOutput,
+              isHidden: false,
+              description: "Sample test case",
+            },
+          ],
+        };
+        setProblems([created, ...problems]);
+      }
     }
 
     setIsProblemModalOpen(false);
@@ -157,47 +271,15 @@ export default function CodingPractice() {
     resetProblemForm();
   };
 
-  const resetProblemForm = () => {
-    setProblemForm({
-      title: "",
-      topic: "Arrays & Hashing",
-      difficulty: "Easy",
-      points: 100,
-      timeLimit: "1.0s",
-      memoryLimit: "256MB",
-      description: "",
-      inputFormat: "",
-      outputFormat: "",
-      sampleInput: "",
-      sampleOutput: "",
-      tags: "Array, Hash Table",
-      companies: "TCS, Infosys",
-    });
-  };
-
-  const handleEditClick = (p) => {
-    setEditingProblem(p);
-    setProblemForm({
-      title: p.title,
-      topic: p.topic,
-      difficulty: p.difficulty,
-      points: p.points,
-      timeLimit: p.timeLimit,
-      memoryLimit: p.memoryLimit,
-      description: p.description,
-      inputFormat: p.inputFormat || "",
-      outputFormat: p.outputFormat || "",
-      sampleInput: p.sampleInput || "",
-      sampleOutput: p.sampleOutput || "",
-      tags: Array.isArray(p.tags) ? p.tags.join(", ") : (p.tags || ""),
-      companies: Array.isArray(p.companies) ? p.companies.join(", ") : (p.companies || ""),
-    });
-    setIsProblemModalOpen(true);
-  };
-
-  const handleDeleteProblem = (id) => {
+  const handleDeleteProblem = async (id) => {
     if (window.confirm("Are you sure you want to delete this coding problem?")) {
-      setProblems((prev) => prev.filter((p) => p.id !== id));
+      try {
+        await apiFetch(`/coordinator/practice-problems/${id}`, { method: "DELETE" });
+        await fetchDbProblems();
+      } catch (err) {
+        console.error("Failed to delete problem from DB:", err);
+        setProblems((prev) => prev.filter((p) => p.id !== id));
+      }
     }
   };
 
@@ -295,7 +377,32 @@ export default function CodingPractice() {
             Create coding problems, manage test cases, assign practice tracks to departments/batches, and track real-time student submissions & performance.
           </p>
         </div>
-        <div className="coord-cp-header-actions">
+        <div className="coord-cp-header-actions" style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setAiTopic("");
+              setShowAiModal(true);
+            }}
+            className="coord-cp-btn-ai"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "8px",
+              background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+              color: "#ffffff",
+              border: "none",
+              padding: "10px 18px",
+              borderRadius: "8px",
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(99, 102, 241, 0.25)"
+            }}
+          >
+            <Sparkles size={16} />
+            Generate with AI
+          </button>
           <button
             onClick={() => {
               setEditingProblem(null);
@@ -809,6 +916,59 @@ export default function CodingPractice() {
             </div>
 
             <form onSubmit={handleSaveProblem} className="coord-cp-modal-body">
+              {/* AI Quick-Fill Banner */}
+              <div style={{
+                display: "flex",
+                gap: "10px",
+                alignItems: "center",
+                background: "linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%)",
+                padding: "12px 16px",
+                borderRadius: "10px",
+                border: "1px dashed #818cf8",
+                marginBottom: "20px"
+              }}>
+                <Sparkles size={18} color="#6366f1" style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#4f46e5" }}>AI Auto-Fill:</span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Binary Search, Dynamic Programming, Sliding Window..."
+                    value={aiTopic}
+                    onChange={(e) => setAiTopic(e.target.value)}
+                    style={{
+                      flex: 1,
+                      minWidth: "180px",
+                      padding: "6px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #cbd5e1",
+                      fontSize: "13px",
+                      background: "#fff"
+                    }}
+                    disabled={isGeneratingAI}
+                  />
+                  <button
+                    type="button"
+                    disabled={isGeneratingAI}
+                    onClick={() => handleGenerateProblemAI(aiTopic, problemForm.difficulty)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                      color: "#fff",
+                      border: "none",
+                      padding: "6px 14px",
+                      borderRadius: "6px",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      cursor: isGeneratingAI ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    <Sparkles size={13} /> {isGeneratingAI ? "Generating..." : "Generate with AI"}
+                  </button>
+                </div>
+              </div>
+
               <div className="coord-cp-form-grid-2">
                 <div className="coord-cp-form-group">
                   <label className="coord-cp-form-label">Problem Title *</label>
@@ -1236,6 +1396,112 @@ export default function CodingPractice() {
                 className="coord-cp-btn-primary"
               >
                 Close Viewer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 5: DEDICATED AI PROBLEM GENERATOR */}
+      {showAiModal && (
+        <div className="coord-cp-modal-backdrop">
+          <div className="coord-cp-modal-window" style={{ maxWidth: "560px" }}>
+            <div className="coord-cp-modal-header">
+              <div className="coord-cp-modal-title-group">
+                <div style={{
+                  width: "36px",
+                  height: "36px",
+                  borderRadius: "8px",
+                  background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                  marginRight: "10px"
+                }}>
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <h3 className="coord-cp-modal-title">AI Coding Problem Generator</h3>
+                  <p className="coord-cp-modal-subtitle">Generate challenges with test cases via Groq / Gemini AI</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAiModal(false)}
+                className="coord-cp-modal-close-btn"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="coord-cp-modal-body" style={{ padding: "20px" }}>
+              <div className="coord-cp-form-group" style={{ marginBottom: "16px" }}>
+                <label className="coord-cp-form-label">Algorithm / Topic *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Dynamic Programming (Coin Change), Graph DFS, Heap"
+                  value={aiTopic}
+                  onChange={(e) => setAiTopic(e.target.value)}
+                  className="coord-cp-form-input"
+                  autoFocus
+                />
+              </div>
+
+              <div className="coord-cp-form-grid-2" style={{ marginBottom: "16px" }}>
+                <div className="coord-cp-form-group">
+                  <label className="coord-cp-form-label">Difficulty Level</label>
+                  <CustomSelect
+                    value={aiDiff}
+                    onChange={(val) => setAiDiff(val)}
+                    options={[
+                      { value: "Easy", label: "🟢 Easy (50 XP)" },
+                      { value: "Medium", label: "🟡 Medium (100 XP)" },
+                      { value: "Hard", label: "🔴 Hard (150 XP)" },
+                    ]}
+                  />
+                </div>
+
+                <div className="coord-cp-form-group">
+                  <label className="coord-cp-form-label">Target Companies</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Google, Amazon, TCS"
+                    value={aiCompanies}
+                    onChange={(e) => setAiCompanies(e.target.value)}
+                    className="coord-cp-form-input"
+                  />
+                </div>
+              </div>
+
+              <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "12px 14px", fontSize: "12px", color: "#64748b" }}>
+                💡 The AI will generate a complete problem specification, problem description, constraints, sample input/output, and test cases. You can review and edit before saving directly into MySQL!
+              </div>
+            </div>
+
+            <div className="coord-cp-form-footer">
+              <button
+                type="button"
+                onClick={() => setShowAiModal(false)}
+                className="coord-cp-btn-secondary"
+                disabled={isGeneratingAI}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isGeneratingAI}
+                onClick={() => handleGenerateProblemAI(aiTopic, aiDiff)}
+                className="coord-cp-btn-primary"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  background: "linear-gradient(135deg, #6366f1 0%, #a855f7 100%)",
+                  border: "none"
+                }}
+              >
+                <Sparkles size={16} />
+                {isGeneratingAI ? "Generating Problem..." : "Generate Problem"}
               </button>
             </div>
           </div>

@@ -607,16 +607,23 @@ function AssignMentorModal({ isOpen, onClose, users = [] }) {
     const activeMentor = mentors.find(m => m.name === selectedMentor);
 
     try {
-      await apiFetch('/admin/assign-mentor', {
+      const res = await apiFetch('/admin/assign-mentor', {
         method: 'POST',
         body: JSON.stringify({
+          mentorId: activeMentor?.id || null,
           mentorName: selectedMentor,
           mentorEmail: activeMentor?.email || null,
           studentIds: selectedStudentIds
         })
       });
+      if (res && res.error) {
+        alert(res.message || res.error || "Failed to assign mentor. Please try again.");
+        return;
+      }
     } catch (err) {
       console.warn('[DB Save Mentor Assignment Error]', err);
+      alert("Failed to save mentor assignment. Please try again.");
+      return;
     }
 
     const count = selectedStudentIds.length;

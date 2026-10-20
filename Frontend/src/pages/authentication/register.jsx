@@ -616,6 +616,11 @@ function Register() {
         return false;
       }
     } else {
+      const mobile = (formData.mobile_number || "").trim();
+      if (mobile && mobile.length < 10) {
+        setErrorMsg("Please enter a valid 10-digit mobile number.");
+        return false;
+      }
       if (role === "Admin") {
         const col = (formData.college_name || "").trim();
         if (!col) {
@@ -1272,8 +1277,8 @@ function Register() {
                         !formData.email || !formData.email.includes("@")
                           ? "Enter college email first"
                           : deptOptions.length > 0
-                          ? "Select Dept"
-                          : "No departments found"
+                            ? "Select Dept"
+                            : "No departments found"
                       }
                     />
                   </div>
@@ -1374,16 +1379,29 @@ function Register() {
                   </div>
 
                   <div className="input-group">
-                    <FieldLabel icon={Icons.email}>Email</FieldLabel>
+                    <FieldLabel icon={Icons.phone}>Mobile No.</FieldLabel>
                     <input
-                      type="email"
-                      name="email"
-                      required
-                      placeholder="user@pvppcoe.ac.in"
-                      value={formData.email}
+                      type="tel"
+                      name="mobile_number"
+                      autoComplete="tel"
+                      placeholder="Mobile number (optional)"
+                      value={formData.mobile_number}
                       onChange={handleChange}
+                      maxLength={10}
                     />
                   </div>
+                </div>
+
+                <div className="input-group">
+                  <FieldLabel icon={Icons.email}>Email</FieldLabel>
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    placeholder="user@pvppcoe.ac.in"
+                    value={formData.email}
+                    onChange={handleChange}
+                  />
                 </div>
 
                 {/* College Name input for Admin self-registration */}
