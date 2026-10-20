@@ -195,13 +195,31 @@ export const getAggregatedStudentsAttendance = async ({
   }
 
   if (batchId) {
-    whereClauses.push('(s.batch_id = ? OR a.batch_id = ?)');
-    params.push(batchId, batchId);
+    whereClauses.push('(s.batch_id = ? OR sb.batch_id = ? OR a.batch_id = ?)');
+    params.push(batchId, batchId, batchId);
   }
 
   if (batchName && batchName.trim() !== '') {
-    whereClauses.push('(LOWER(b.name) LIKE LOWER(?))');
-    params.push(`%${batchName.trim()}%`);
+    const term = batchName.trim();
+    let numId = 0;
+    if (term.toUpperCase().startsWith('BATCH-')) {
+      numId = parseInt(term.toUpperCase().replace('BATCH-', ''), 10) || 0;
+    } else if (term.toUpperCase().startsWith('BTCH-')) {
+      numId = parseInt(term.toUpperCase().replace('BTCH-', ''), 10) || 0;
+    } else {
+      numId = parseInt(term.replace(/[^0-9]/g, ''), 10) || 0;
+    }
+
+    whereClauses.push(`(
+      LOWER(COALESCE(b.name, '')) LIKE LOWER(?)
+      OR LOWER(COALESCE(b.code, '')) = LOWER(?)
+      OR LOWER(COALESCE(b.join_code, '')) = LOWER(?)
+      OR (b.id = ? AND ? > 0)
+      OR (sb.batch_id = ? AND ? > 0)
+      OR (s.batch_id = ? AND ? > 0)
+      OR (a.batch_id = ? AND ? > 0)
+    )`);
+    params.push(`%${term}%`, term, term, numId, numId, numId, numId, numId, numId, numId, numId);
   }
 
   const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
@@ -209,23 +227,28 @@ export const getAggregatedStudentsAttendance = async ({
   const sql = `
     SELECT 
       u.id AS student_id,
+      u.id AS user_id,
+      u.id AS id,
       u.name AS student_name,
       u.email AS student_email,
+      COALESCE(s.roll_number, '') AS roll_number,
       COALESCE(s.department, d.name, d.code, 'General') AS department,
       u.college_id,
       COALESCE(b.name, 'Unassigned Batch') AS batch_name,
-      COUNT(a.id) AS total_classes,
+      b.id AS batch_id,
+      COUNT(DISTINCT a.id) AS total_classes,
       SUM(CASE WHEN a.status IN ('present', 'late') THEN 1 ELSE 0 END) AS present_count,
       SUM(CASE WHEN a.status = 'absent' THEN 1 ELSE 0 END) AS absent_count,
       SUM(CASE WHEN a.status = 'late' THEN 1 ELSE 0 END) AS late_count,
       SUM(CASE WHEN a.status = 'excused' THEN 1 ELSE 0 END) AS excused_count
     FROM users u
     LEFT JOIN students s ON u.id = s.user_id
+    LEFT JOIN student_batches sb ON sb.user_id = u.id
     LEFT JOIN departments d ON s.department_id = d.id
-    LEFT JOIN batches b ON s.batch_id = b.id
+    LEFT JOIN batches b ON (s.batch_id = b.id OR sb.batch_id = b.id)
     LEFT JOIN attendance a ON u.id = a.user_id
     ${whereSql}
-    GROUP BY u.id, u.name, u.email, department, u.college_id, batch_name
+    GROUP BY u.id, u.name, u.email, s.roll_number, department, u.college_id, b.name, b.id
     ORDER BY u.name ASC
   `;
 

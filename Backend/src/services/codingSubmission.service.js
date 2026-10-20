@@ -11,6 +11,7 @@ import {
   normalizeOutput,
   deriveSubmissionStatus,
 } from './code.executor.service.js';
+import { query } from '../config/db.js';
 
 /**
  * Safe Evaluation Sandbox Layer:
@@ -134,7 +135,7 @@ export const evaluateCodeInSandbox = async ({ submittedCode: code, language, tes
  * Hidden expected outputs are never included in the payload returned to the
  * client.
  */
-export const submitCodeAndSaveService = async ({ student_id, problem_id, code, language }) => {
+export const submitCodeAndSaveService = async ({ student_id, problem_id, code, language, source = null, task_id = null }) => {
   if (!problem_id) {
     const error = new Error('problem_id is required');
     error.statusCode = 400;
@@ -163,18 +164,117 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
     throw error;
   }
 
-  const problem = await findCodingProblemById(problem_id);
-  if (!problem) {
-    const error = new Error(`Coding problem with ID ${problem_id} not found`);
-    error.statusCode = 404;
-    throw error;
+  let problem = null;
+  let testCases = [];
+  let isBatchTask = false;
+  let batchTaskRecord = null;
+
+  const numericProblemId = parseInt(problem_id, 10);
+  const cleanTaskId = task_id ? String(task_id).replace(/[^0-9]/g, '') : null;
+  const numericTaskId = cleanTaskId ? parseInt(cleanTaskId, 10) : null;
+
+  // 1. Check if this is a coursework batch task from batch_tasks table
+  if (source === 'batch_task' || numericTaskId || !isNaN(numericProblemId)) {
+    try {
+      const candidates = [numericTaskId, numericProblemId].filter((v) => v && !isNaN(v));
+      if (candidates.length > 0) {
+        const placeholders = candidates.map(() => '?').join(',');
+        const bRows = await query(`SELECT * FROM batch_tasks WHERE id IN (${placeholders}) LIMIT 1`, candidates);
+        if (bRows && bRows.length > 0 && (source === 'batch_task' || numericTaskId || bRows[0].id === numericProblemId)) {
+          batchTaskRecord = bRows[0];
+          isBatchTask = true;
+          problem = {
+            id: batchTaskRecord.id,
+            title: batchTaskRecord.title,
+            description: batchTaskRecord.description || '',
+            total_marks: batchTaskRecord.points || 100,
+            time_limit_ms: 3000,
+          };
+          let rawCases = [];
+          if (batchTaskRecord.test_cases) {
+            try {
+              rawCases = typeof batchTaskRecord.test_cases === 'string' ? JSON.parse(batchTaskRecord.test_cases) : batchTaskRecord.test_cases;
+            } catch (_) {
+              rawCases = [];
+            }
+          }
+          if (Array.isArray(rawCases) && rawCases.length > 0) {
+            testCases = rawCases.map((tc, idx) => ({
+              id: tc.id || idx + 1,
+              problem_id: batchTaskRecord.id,
+              input: tc.input || '',
+              expected_output: tc.expectedOutput || tc.expected_output || tc.output || '',
+              is_hidden: Boolean(tc.isHidden || tc.is_hidden),
+              weightage: tc.weightage || Math.round(100 / rawCases.length),
+            }));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('[submitCodeAndSaveService] batch_tasks lookup fallback:', e.message);
+    }
   }
 
-  const testCases = await findCodingTestCasesByProblemId(problem_id);
+  // 2. If not a batch task, check practice_problems
+  if (!problem && (source === 'practice_problem' || !isNaN(numericProblemId))) {
+    try {
+      const pRows = await query('SELECT * FROM practice_problems WHERE id = ? LIMIT 1', [numericProblemId]);
+      if (pRows && pRows.length > 0) {
+        problem = {
+          id: pRows[0].id,
+          title: pRows[0].title,
+          description: pRows[0].description,
+          total_marks: pRows[0].points || 100,
+          time_limit_ms: 3000,
+        };
+        const tcRows = await query('SELECT * FROM coding_test_cases WHERE problem_id = ? ORDER BY id ASC', [numericProblemId]);
+        if (tcRows && tcRows.length > 0) {
+          testCases = tcRows;
+        }
+      }
+    } catch (e) {
+      console.warn('[submitCodeAndSaveService] practice_problems lookup fallback:', e.message);
+    }
+  }
+
+  // 3. Fallback to standard coding_problems table
+  if (!problem) {
+    problem = await findCodingProblemById(problem_id);
+    if (!problem) {
+      const error = new Error(`Coding problem with ID ${problem_id} not found`);
+      error.statusCode = 404;
+      throw error;
+    }
+    testCases = await findCodingTestCasesByProblemId(problem_id);
+  }
+
+  // If a batch task has no test cases configured at all, synthesize 1 basic test case
   if (!testCases || testCases.length === 0) {
-    const error = new Error(`No test cases configured for problem ID ${problem_id}`);
-    error.statusCode = 409;
-    throw error;
+    if (isBatchTask) {
+      testCases = [{ id: 1, problem_id: problem.id, input: '', expected_output: '', is_hidden: false, weightage: 100 }];
+    } else {
+      const error = new Error(`No test cases configured for problem ID ${problem_id}`);
+      error.statusCode = 409;
+      throw error;
+    }
+  }
+
+  // Enforce single-submission rule: Reattempts are strictly not allowed once submitted
+  if (isBatchTask && batchTaskRecord) {
+    try {
+      const existing = await query(
+        `SELECT id, status, submitted_at FROM task_submissions WHERE task_id = ? AND user_id = ? LIMIT 1`,
+        [batchTaskRecord.id, student.id || student_id]
+      );
+      if (existing && existing.length > 0) {
+        const error = new Error('You have already submitted this task. Reattempts are not allowed.');
+        error.statusCode = 403;
+        throw error;
+      }
+    } catch (e) {
+      if (e.statusCode) throw e;
+      console.warn('[submitCodeAndSaveService] check existing task_submission fallback:', e.message);
+    }
   }
 
   const problemTimeLimitMs = parseInt(problem.time_limit_ms, 10) || 5000;
@@ -322,6 +422,26 @@ export const submitCodeAndSaveService = async ({ student_id, problem_id, code, l
       results: executed,
     },
   });
+
+  if (isBatchTask && batchTaskRecord) {
+    try {
+      await query(
+        `INSERT INTO task_submissions (task_id, user_id, batch_id, code_submission, status, marks_obtained, feedback, submitted_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          batchTaskRecord.id,
+          student.id || student_id,
+          batchTaskRecord.batch_id || null,
+          code,
+          (status === 'accepted' || status === 'passed') ? 'Passed' : 'Wrong Answer',
+          score,
+          `Passed ${passedTests}/${totalTests} test cases`,
+        ]
+      );
+    } catch (e) {
+      console.warn('[task_submissions save error]', e.message);
+    }
+  }
 
   const { execution_details, submitted_code, ...safeSubmission } =
     submissionRecord && typeof submissionRecord === 'object' ? submissionRecord : {};

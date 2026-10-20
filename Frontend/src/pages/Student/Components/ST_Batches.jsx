@@ -119,6 +119,10 @@ export default function Batches() {
           status: t.status || "Pending",
           platform: t.platform || "coding",
           points: Number(t.points) || 100,
+          language: t.language || "",
+          description: t.description || t.desc || "",
+          testCases: t.testCases || t.test_cases || [],
+          batch_id: t.batch_id || batch.id,
         }));
 
         // Initial batch XP starts at 0, afterwards increases according to task performance

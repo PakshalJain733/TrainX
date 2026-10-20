@@ -495,18 +495,53 @@ export const getTaskById = async (req, res, next) => {
     const { taskId } = req.params;
     const cleanId = String(taskId).replace(/[^0-9]/g, '') || taskId;
     const isStudent = req.user?.role?.toLowerCase() === 'student' || req.user?.role_name?.toLowerCase() === 'student';
+    const studentId = req.user?.userId || req.user?.id;
 
+    let targetTask = null;
     const dbTasks = await query(
       `SELECT * FROM batch_tasks WHERE id = ? OR id = ? LIMIT 1`,
       [taskId, cleanId]
     );
 
     if (dbTasks && dbTasks.length > 0) {
-      return sendSuccess(res, 'Task retrieved successfully', parseTaskRecord(dbTasks[0], isStudent));
+      targetTask = dbTasks[0];
+    } else {
+      const allTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC LIMIT 1`);
+      if (allTasks && allTasks.length > 0) targetTask = allTasks[0];
     }
 
-    const allTasks = await query(`SELECT * FROM batch_tasks ORDER BY id DESC LIMIT 1`);
-    return sendSuccess(res, 'Task retrieved successfully', parseTaskRecord(allTasks[0], isStudent) || null);
+    if (!targetTask) {
+      return sendSuccess(res, 'Task retrieved successfully', null);
+    }
+
+    let alreadySubmitted = false;
+    let submission = null;
+    if (studentId) {
+      const subRows = await query(
+        `SELECT * FROM task_submissions WHERE task_id = ? AND user_id = ? ORDER BY id DESC LIMIT 1`,
+        [targetTask.id, studentId]
+      );
+      if (subRows && subRows.length > 0) {
+        alreadySubmitted = true;
+        submission = subRows[0];
+      } else {
+        const codeSubRows = await query(
+          `SELECT * FROM coding_submissions WHERE problem_id = ? AND student_id = ? ORDER BY id DESC LIMIT 1`,
+          [targetTask.id, studentId]
+        );
+        if (codeSubRows && codeSubRows.length > 0) {
+          alreadySubmitted = true;
+          submission = codeSubRows[0];
+        }
+      }
+    }
+
+    const parsed = parseTaskRecord(targetTask, isStudent);
+    return sendSuccess(res, 'Task retrieved successfully', {
+      ...parsed,
+      alreadySubmitted,
+      submission,
+    });
   } catch (error) {
     next(error);
   }
@@ -718,6 +753,50 @@ export const saveBatchDailyTopic = async (req, res, next) => {
     );
 
     return sendSuccess(res, 'Daily topic saved successfully', dbTopics || []);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getTaskSubmissions = async (req, res, next) => {
+  try {
+    await ensureTables();
+    const { taskId } = req.params;
+    const cleanId = parseInt(String(taskId).replace(/[^0-9]/g, ''), 10);
+    if (!cleanId) {
+      return sendSuccess(res, 'Submissions retrieved successfully', []);
+    }
+
+    const rows = await query(
+      `SELECT ts.id, ts.task_id, ts.user_id, ts.batch_id, ts.code_submission, ts.status, ts.marks_obtained, ts.feedback, ts.submitted_at,
+              COALESCE(u.name, 'Student') AS name, u.email, s.roll_number, s.department
+       FROM task_submissions ts
+       JOIN users u ON ts.user_id = u.id
+       LEFT JOIN students s ON s.user_id = u.id
+       WHERE ts.task_id = ?
+       ORDER BY ts.submitted_at DESC`,
+      [cleanId]
+    );
+
+    if (rows && rows.length > 0) {
+      return sendSuccess(res, 'Submissions retrieved successfully', rows);
+    }
+
+    // Fallback: Check coding_submissions table for this problem/task
+    const codingRows = await query(
+      `SELECT cs.id, cs.problem_id AS task_id, cs.student_id AS user_id, NULL AS batch_id, cs.submitted_code AS code_submission,
+              IF(cs.status = 'accepted' OR cs.status = 'passed', 'Passed', 'Wrong Answer') AS status,
+              cs.score AS marks_obtained, NULL AS feedback, cs.submitted_at,
+              COALESCE(u.name, 'Student') AS name, u.email, s.roll_number, s.department
+       FROM coding_submissions cs
+       JOIN users u ON cs.student_id = u.id
+       LEFT JOIN students s ON s.user_id = u.id
+       WHERE cs.problem_id = ?
+       ORDER BY cs.submitted_at DESC`,
+      [cleanId]
+    );
+
+    return sendSuccess(res, 'Submissions retrieved successfully', codingRows || []);
   } catch (error) {
     next(error);
   }

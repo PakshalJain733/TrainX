@@ -110,6 +110,13 @@ const generateJoinCode = (batchName = "") => {
   return `${prefix}-${randomPart}`;
 };
 
+const getInitials = (name) => {
+  if (!name) return "ST";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const formatTimeRemaining = (expiresAt, now) => {
   if (!expiresAt) return { expired: true, text: "Expired", seconds: 0 };
   const expNum = typeof expiresAt === "string" ? new Date(expiresAt).getTime() : Number(expiresAt);
@@ -580,9 +587,18 @@ export default function AdminBatches() {
           {/* TAB 1: Enrolled Students */}
           {batchTab === "students" && (
             <div className="batch-tab-section">
-              <div className="batch-tab-header" style={{ marginBottom: "16px" }}>
-                <h3 className="batch-tab-title" style={{ fontSize: "18px" }}>Batch Student Roster</h3>
-                <p className="batch-tab-sub">All active students currently enrolled in {selectedBatch.name}</p>
+              <div className="batch-tab-header" style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "12px" }}>
+                <div>
+                  <h3 className="batch-tab-title" style={{ fontSize: "18px", fontWeight: "800", color: "#0f172a", margin: "0 0 4px" }}>Batch Student Roster</h3>
+                  <p className="batch-tab-sub" style={{ fontSize: "13.5px", color: "#64748b", margin: 0 }}>
+                    All active students currently enrolled in <strong style={{ color: "#334155" }}>{selectedBatch.name}</strong>
+                  </p>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "12.5px", fontWeight: "700", color: "#4f46e5", background: "#eef2ff", padding: "6px 14px", borderRadius: "20px", border: "1px solid #c7d2fe", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                    <Users size={14} /> {batchStudents.length} {batchStudents.length === 1 ? "Student" : "Students"} Enrolled
+                  </span>
+                </div>
               </div>
               {batchStudents.length === 0 ? (
                 <div className="admin-empty-state-card" style={{ padding: "60px 20px" }}>
@@ -591,31 +607,57 @@ export default function AdminBatches() {
                   <p className="admin-empty-state-sub" style={{ fontSize: "14px" }}>Students can use code <strong style={{ color: "#4f46e5" }}>{selectedBatch.joinCode}</strong> to self-enroll into this batch.</p>
                 </div>
               ) : (
-                <div className="table-responsive">
-                  <table className="admin-users-table">
-                    <thead>
-                      <tr>
-                        <th>Student Name</th>
-                        <th>Roll No / ID</th>
-                        <th>Department</th>
-                        <th>Email</th>
-                        <th style={{ textAlign: "right" }}>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {batchStudents.map((st) => (
-                        <tr key={st.id}>
-                          <td className="user-name-cell">{st.name || st.fullName}</td>
-                          <td>{st.roll_number || st.rollNo || "N/A"}</td>
-                          <td>{st.department || "COMPS"}</td>
-                          <td>{st.email}</td>
-                          <td style={{ textAlign: "right" }}>
-                            <span className="status-badge status-active">Active</span>
-                          </td>
+                <div className="admin-users-table-card">
+                  <div className="admin-users-table-responsive">
+                    <table className="admin-users-table">
+                      <thead>
+                        <tr>
+                          <th>Student Details</th>
+                          <th>Roll No / ID</th>
+                          <th>Department</th>
+                          <th>Email Address</th>
+                          <th style={{ textAlign: "right" }}>Enrollment Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {batchStudents.map((st) => (
+                          <tr key={st.id}>
+                            <td>
+                              <div className="user-cell">
+                                <div className="user-avatar">{getInitials(st.name || st.fullName)}</div>
+                                <div>
+                                  <div className="user-name-title">{st.name || st.fullName || "Student"}</div>
+                                  <div className="user-email-sub">{st.email || "No email registered"}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>
+                              <span className="roster-badge-roll">
+                                {st.roll_number || st.rollNo || "N/A"}
+                              </span>
+                            </td>
+                            <td>
+                              <span className="roster-badge-dept">
+                                <GraduationCap size={13} />
+                                <span>{st.department || "COMPS"}</span>
+                              </span>
+                            </td>
+                            <td>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontSize: "13px" }}>
+                                <Mail size={13} style={{ color: "#94a3b8", flexShrink: 0 }} />
+                                <span>{st.email}</span>
+                              </div>
+                            </td>
+                            <td style={{ textAlign: "right" }}>
+                              <span className="status-badge status-badge--active">
+                                <span className="status-dot"></span> Active
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -1089,36 +1131,48 @@ export default function AdminBatches() {
                       <p className="admin-empty-state-sub" style={{ fontSize: "13px" }}>Students in {selectedBatch.name} have not submitted code for this task yet.</p>
                     </div>
                   ) : (
-                    <div className="table-responsive">
-                      <table className="admin-users-table">
-                        <thead>
-                          <tr>
-                            <th>Student</th>
-                            <th>Roll Number</th>
-                            <th>Status</th>
-                            <th>Submitted At</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {taskSubmissions.map((sub) => (
-                            <tr key={sub.id}>
-                              <td className="user-name-cell">
-                                {sub.name || "Student"}
-                                <div style={{ fontSize: "11px", color: "#64748b", fontWeight: "normal" }}>{sub.email}</div>
-                              </td>
-                              <td>{sub.roll_number || "N/A"}</td>
-                              <td>
-                                <span className={`status-badge ${sub.status === "Passed" ? "status-active" : "status-inactive"}`}>
-                                  {sub.status || "Submitted"}
-                                </span>
-                              </td>
-                              <td style={{ fontSize: "12px", color: "#64748b" }}>
-                                {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : "N/A"}
-                              </td>
+                    <div className="admin-users-table-card" style={{ border: "1px solid #e2e8f0" }}>
+                      <div className="admin-users-table-responsive">
+                        <table className="admin-users-table">
+                          <thead>
+                            <tr>
+                              <th>Student Details</th>
+                              <th>Roll Number</th>
+                              <th>Submission Result</th>
+                              <th style={{ textAlign: "right" }}>Submitted At</th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {taskSubmissions.map((sub) => (
+                              <tr key={sub.id}>
+                                <td>
+                                  <div className="user-cell">
+                                    <div className="user-avatar" style={{ width: "34px", height: "34px", fontSize: "12px" }}>
+                                      {getInitials(sub.name)}
+                                    </div>
+                                    <div>
+                                      <div className="user-name-title" style={{ fontSize: "13.5px" }}>{sub.name || "Student"}</div>
+                                      <div className="user-email-sub" style={{ fontSize: "11.5px" }}>{sub.email}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="roster-badge-roll">{sub.roll_number || "N/A"}</span>
+                                </td>
+                                <td>
+                                  <span className={`status-badge ${sub.status === "Passed" ? "status-badge--active" : "status-badge--inactive"}`}>
+                                    <span className="status-dot"></span>
+                                    {sub.status || "Submitted"}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: "right", fontSize: "12.5px", color: "#64748b" }}>
+                                  {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : "N/A"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   )}
                 </div>

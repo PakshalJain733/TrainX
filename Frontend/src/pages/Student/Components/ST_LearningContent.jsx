@@ -190,7 +190,7 @@ export default function LearningContent() {
         <p className="student-header-desc">Access module lecture notes, reference guides, coding cheatsheets, and faculty curriculum resources.</p>
       </div>
 
-      {/* Search and Category Filter Card */}
+      {/* Search Bar Card */}
       <div className="learning-search-card">
         <div className="learning-search-bar">
           <Search size={18} className="learning-search-icon" />
@@ -211,18 +211,6 @@ export default function LearningContent() {
               <X size={14} />
             </button>
           )}
-        </div>
-
-        <div className="learning-filter-pills">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              className={`learning-filter-btn ${selectedFilter === cat ? "active" : ""}`}
-              onClick={() => setSelectedFilter(cat)}
-            >
-              {cat}
-            </button>
-          ))}
         </div>
       </div>
 
@@ -333,28 +321,6 @@ export default function LearningContent() {
         )}
       </div>
 
-      {/* Topic Mastery Coverage */}
-      <div className="topic-coverage-card">
-        <div className="topic-coverage-header">
-          <BookOpen size={18} className="topic-coverage-header-icon" />
-          <span>Topic coverage</span>
-        </div>
-        <p className="topic-coverage-subtitle">
-          Topics and skills unlocked across your personal curriculum roadmap
-        </p>
-
-        <div className="topic-coverage-tags">
-          {allTopics.length === 0 ? (
-            <span className="topic-empty-label">No topics registered yet.</span>
-          ) : (
-            allTopics.map((topic, idx) => (
-              <span key={idx} className="topic-coverage-tag-pill">
-                {topic}
-              </span>
-            ))
-          )}
-        </div>
-      </div>
 
       {/* Dynamic File & Video Viewer Modal */}
       {viewerModal && createPortal(

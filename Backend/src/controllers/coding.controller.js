@@ -40,7 +40,7 @@ export const runCodeController = async (req, res, next) => {
  */
 export const submitCodeController = async (req, res, next) => {
   try {
-    const { problem_id, language, code } = req.body || {};
+    const { problem_id, language, code, source, task_id } = req.body || {};
 
     if (!problem_id) {
       return sendError(res, 'problem_id is required', 400);
@@ -64,6 +64,8 @@ export const submitCodeController = async (req, res, next) => {
       problem_id,
       code,
       language,
+      source,
+      task_id,
     });
 
     return sendSuccess(res, 'Submission evaluated and saved successfully', result, 201);

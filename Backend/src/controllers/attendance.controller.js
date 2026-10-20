@@ -107,11 +107,11 @@ export const getAllStudentsAttendance = async (req, res, next) => {
     // Enrich with specific date attendance and scan records
     try {
       const dayRecords = await query(
-        `SELECT user_id, status FROM attendance WHERE session_date = ?`,
+        `SELECT user_id, status FROM attendance WHERE DATE(session_date) = DATE(?)`,
         [targetDate]
       );
       const dayScans = await query(
-        `SELECT DISTINCT user_id FROM attendance_scans WHERE session_date = ?`,
+        `SELECT DISTINCT user_id FROM attendance_scans WHERE DATE(session_date) = DATE(?)`,
         [targetDate]
       );
       const statusMap = new Map();
@@ -120,13 +120,16 @@ export const getAllStudentsAttendance = async (req, res, next) => {
 
       if (Array.isArray(data)) {
         data.forEach(st => {
-          const uId = Number(st.studentId || st.student_id);
+          const uId = Number(st.userId || st.user_id || st.studentId || st.student_id || st.id);
           const dayStat = statusMap.get(uId) || null;
           const isScanned = scanSet.has(uId);
           st.today_status = dayStat || (isScanned ? 'present' : null);
           st.todayStatus = st.today_status;
           st.is_scanned = isScanned || dayStat === 'present';
           st.isScanned = st.is_scanned;
+          st.id = uId;
+          st.userId = uId;
+          st.studentId = uId;
         });
       }
     } catch (e) {
@@ -324,17 +327,20 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     let targetBatchId = batch_id;
 
     if (cleanPrimary.length > 0) {
-      // Check if primaryCode is formatted as "BATCH-X" or is numeric
+      // Check if primaryCode is formatted as "BATCH-X", "BTCH-X" or is numeric
       let potentialId = null;
       if (cleanPrimary.startsWith('BATCH-')) {
         const parsed = parseInt(cleanPrimary.replace('BATCH-', ''), 10);
+        if (!isNaN(parsed)) potentialId = parsed;
+      } else if (cleanPrimary.startsWith('BTCH-')) {
+        const parsed = parseInt(cleanPrimary.replace('BTCH-', ''), 10);
         if (!isNaN(parsed)) potentialId = parsed;
       } else if (!isNaN(parseInt(cleanPrimary, 10))) {
         potentialId = parseInt(cleanPrimary, 10);
       }
 
-      let queryStr = `SELECT id, name, status, code_expires_at FROM batches WHERE UPPER(code) = ? OR UPPER(join_code) = ? OR UPPER(name) = ? OR UPPER(code) = ? OR UPPER(join_code) = ?`;
-      let queryParams = [cleanPrimary, cleanPrimary, cleanPrimary, cleanRaw, cleanRaw];
+      let queryStr = `SELECT id, name, status, code_expires_at FROM batches WHERE UPPER(code) = ? OR UPPER(join_code) = ? OR UPPER(name) = ? OR UPPER(REPLACE(name, ' ', '')) = ? OR UPPER(code) = ? OR UPPER(join_code) = ?`;
+      let queryParams = [cleanPrimary, cleanPrimary, cleanPrimary, cleanPrimary.replace(/\s+/g, ''), cleanRaw, cleanRaw];
 
       if (potentialId) {
         queryStr += ` OR id = ?`;
@@ -351,17 +357,28 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         }
         targetBatchId = foundB.id;
       } else {
+        // Look up in attendance_sessions without querying non-existent 'status' column
         const sessionRows = await query(
-          `SELECT batch_id, status FROM attendance_sessions WHERE UPPER(session_code) = ? OR UPPER(session_code) = ? LIMIT 1`,
+          `SELECT batch_id FROM attendance_sessions WHERE UPPER(session_code) = ? OR UPPER(session_code) = ? LIMIT 1`,
           [cleanPrimary, cleanRaw]
         );
-        if (sessionRows && sessionRows.length > 0) {
+        if (sessionRows && sessionRows.length > 0 && sessionRows[0].batch_id) {
           targetBatchId = sessionRows[0].batch_id;
         }
       }
     }
 
-    // If batch not found by code, fallback to student's enrolled batch
+    // If batch not found by code, fallback to student's enrolled batch in student_batches or students table
+    if (!targetBatchId) {
+      const sbRows = await query(
+        `SELECT sb.batch_id, b.name as batch_name FROM student_batches sb JOIN batches b ON sb.batch_id = b.id WHERE sb.user_id = ? LIMIT 1`,
+        [userId]
+      );
+      if (sbRows && sbRows.length > 0 && sbRows[0].batch_id) {
+        targetBatchId = sbRows[0].batch_id;
+      }
+    }
+
     if (!targetBatchId) {
       const userRows = await query(
         `SELECT s.batch_id, b.name as batch_name FROM users u LEFT JOIN students s ON u.id = s.user_id LEFT JOIN batches b ON s.batch_id = b.id WHERE u.id = ? AND s.batch_id IS NOT NULL LIMIT 1`,
@@ -393,6 +410,20 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       }
     }
 
+    // Ensure student is registered in student_batches join table for this batch
+    if (targetBatchId && userId) {
+      try {
+        await query(
+          `INSERT IGNORE INTO student_batches (user_id, batch_id) VALUES (?, ?)`,
+          [userId, targetBatchId]
+        );
+        await query(
+          `UPDATE students SET batch_id = ? WHERE user_id = ? AND (batch_id IS NULL OR batch_id = 0)`,
+          [targetBatchId, userId]
+        );
+      } catch (_) {}
+    }
+
     // Create or find dedicated session in attendance_sessions table
     const sessionObj = await findOrCreateAttendanceSession({
       collegeId: validCollegeId,
@@ -405,9 +436,11 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
     // Find user email/mobile to ensure attendance is recorded for user ID
     let userEmail = req.user?.email || '';
     let userMobile = req.user?.mobile || '';
+    let studentRealName = req.user?.name || '';
     try {
-      const userRows = await query(`SELECT email, mobile_number FROM users WHERE id = ?`, [userId]);
+      const userRows = await query(`SELECT name, email, mobile_number FROM users WHERE id = ?`, [userId]);
       if (userRows && userRows.length > 0) {
+        studentRealName = userRows[0].name || studentRealName;
         userEmail = userRows[0].email || userEmail;
         userMobile = userRows[0].mobile_number || userMobile;
       }
@@ -431,7 +464,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         await query(
           `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
            VALUES (?, ?, ?, ?, ?, 'present', ?)
-           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
+           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), batch_id = VALUES(batch_id), status = 'present', updated_at = CURRENT_TIMESTAMP`,
           [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
         );
       } catch (attErr) {
@@ -439,7 +472,7 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
         await query(
           `INSERT INTO attendance (college_id, batch_id, user_id, session_id, session_date, status, remarks)
            VALUES (?, ?, ?, ?, ?, 'present', ?)
-           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), status = 'present'`,
+           ON DUPLICATE KEY UPDATE session_id = VALUES(session_id), batch_id = VALUES(batch_id), status = 'present'`,
           [validCollegeId, targetBatchId, uId, sessionObj?.id || null, todayStr, `Scanned QR Code: ${primaryCode || 'VALIDATED'}`]
         );
       }
@@ -468,7 +501,12 @@ export const markSelfAttendanceByCode = async (req, res, next) => {
       marked: true,
       session_date: todayStr,
       status: 'present',
-      summary,
+      summary: {
+        ...summary,
+        studentName: studentRealName || 'Student User',
+        studentId: userId,
+        userId: userId,
+      },
     });
   } catch (error) {
     console.error("[markSelfAttendanceByCode error]", error);

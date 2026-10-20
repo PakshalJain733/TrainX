@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useParams, useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, Play, CheckCircle2, Terminal, Code2, FileText, Check, Settings, Layout, ChevronDown, ChevronLeft, ChevronRight, Maximize2, Minimize2, Lock } from "lucide-react";
 import MonacoCodeEditor from "../../../components/ui/MonacoCodeEditor";
 import { useSystemMaintenance } from "../../../context/SystemMaintenanceContext";
 import { EVENTS } from "../../../utils/sharedStore";
 import "../Styles/ST_CodingPlatform.css";
 
 /* ── Inline dropdown for Coding Platform (CSS: CodingPlatform.css .student-cp-select-*) ── */
-function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon }) {
+function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select...', icon: Icon, disabled = false, disabledTooltip = '' }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = React.useRef(null);
   const safeOptions = Array.isArray(options) ? options : [];
@@ -18,13 +18,25 @@ function StudentCpSelect({ value, options = [], onChange, placeholder = 'Select.
     return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className={`student-cp-select-wrap${isOpen ? ' student-cp-select-wrap--open' : ''}`} ref={ref}>
-      <button type="button" onClick={() => setIsOpen(v => !v)} className={`student-cp-select-trigger${isOpen ? ' student-cp-select-trigger--open' : ''}`}>
+    <div className={`student-cp-select-wrap${isOpen ? ' student-cp-select-wrap--open' : ''}${disabled ? ' student-cp-select-wrap--disabled' : ''}`} ref={ref} title={disabled ? (disabledTooltip || 'Language locked for this assignment') : ''}>
+      <button 
+        type="button" 
+        onClick={() => { if (!disabled) setIsOpen(v => !v); }} 
+        className={`student-cp-select-trigger${isOpen ? ' student-cp-select-trigger--open' : ''}`}
+        disabled={disabled}
+        style={disabled ? { opacity: 0.9, cursor: 'not-allowed', background: '#f8fafc', borderColor: '#cbd5e1' } : {}}
+      >
         {Icon && <Icon className="student-cp-select-icon" />}
         <span className="student-cp-select-text">{selected ? selected.label : <span className="student-cp-select-placeholder">{placeholder}</span>}</span>
-        <ChevronDown className={`student-cp-select-arrow${isOpen ? ' student-cp-select-arrow--rotate' : ''}`} />
+        {disabled ? (
+          <span style={{ fontSize: '11px', background: '#e0e7ff', color: '#4338ca', padding: '1px 6px', borderRadius: '4px', marginLeft: '6px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+            <Lock size={10} /> Assigned
+          </span>
+        ) : (
+          <ChevronDown className={`student-cp-select-arrow${isOpen ? ' student-cp-select-arrow--rotate' : ''}`} />
+        )}
       </button>
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="student-cp-select-dropdown">
           {safeOptions.map(opt => {
             const isSel = String(opt.value) === String(value);
@@ -123,6 +135,28 @@ const STARTER_TEMPLATES = {
   sql: `-- Write your SQL query here\nSELECT * FROM solution;\n`
 };
 
+function normalizeLanguageKey(lang = "") {
+  if (!lang) return null;
+  const l = String(lang).toLowerCase().trim();
+  if (l === "any" || l === "any language" || l === "all" || l === "none" || l === "") return null;
+  if (l.includes("py")) return "python";
+  if (l.includes("java") && !l.includes("script")) return "java";
+  if (l.includes("c++") || l.includes("cpp")) return "cpp";
+  if (l === "c") return "c";
+  if (l.includes("node") || l.includes("js") || l.includes("script") || l.includes("ts") || l.includes("type")) return "node";
+  if (l.includes("sql")) return "sql";
+  return null;
+}
+
+const ALL_LANGUAGE_OPTIONS = [
+  { value: "python", label: "Python 3.10" },
+  { value: "node", label: "Node.js 18" },
+  { value: "java", label: "Java 17" },
+  { value: "cpp", label: "C++ 20" },
+  { value: "c", label: "C (C11)" },
+  { value: "sql", label: "SQL (SQLite3)" },
+];
+
 export default function CodingPlatform() {
   const { taskId } = useParams();
   const location = useLocation();
@@ -130,16 +164,21 @@ export default function CodingPlatform() {
 
   const initialTask = location.state?.task ? {
     ...location.state.task,
+    language: location.state?.task?.language || location.state?.task?.lang || "",
+    source: location.state?.source || location.state?.task?.source || (location.state?.task?.batch_id ? 'batch_task' : 'batch_task'),
     description: getDynamicProblemDescription(location.state.task.title, location.state.task.topic, location.state.task.description),
-    testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || [])
+    testCases: getDynamicSampleTestCases(location.state.task.title, location.state.task.testCases || location.state.task.test_cases || []),
+    alreadySubmitted: Boolean(location.state?.task?.alreadySubmitted || location.state?.task?.status === 'Completed' || location.state?.task?.status === 'submitted')
   } : null;
 
   const { isModuleActive, getModuleConfig } = useSystemMaintenance();
   const [taskData, setTaskData] = useState(initialTask);
   const [loading, setLoading] = useState(!initialTask);
   const [notFound, setNotFound] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("java");
-  const [code, setCode] = useState(() => STARTER_TEMPLATES.java || "");
+  const initialLangKey = normalizeLanguageKey(initialTask?.language) || "java";
+  const [selectedLang, setSelectedLang] = useState(initialLangKey);
+  const [code, setCode] = useState(() => STARTER_TEMPLATES[initialLangKey] || STARTER_TEMPLATES.java || "");
+  const [hasSubmitted, setHasSubmitted] = useState(Boolean(initialTask?.alreadySubmitted));
   const [consoleOutput, setConsoleOutput] = useState("");
   const [consoleStatus, setConsoleStatus] = useState("");
   const [consoleTab, setConsoleTab] = useState("output");
@@ -202,8 +241,21 @@ export default function CodingPlatform() {
           const slugLike = requested && !/^[^A-Za-z]*$/.test(requested) && !idMatch;
           if (idMatch || slugLike) {
             const rawCases = t.testCases || t.test_cases || [];
+            const taskLang = t.language || "";
+            const taskNormKey = normalizeLanguageKey(taskLang);
+            if (taskNormKey) {
+              setSelectedLang(taskNormKey);
+              setCode((prevCode) => {
+                const prev = typeof prevCode === "string" ? prevCode : "";
+                return prev.trim() ? prev : (STARTER_TEMPLATES[taskNormKey] || "");
+              });
+            }
+            if (t.alreadySubmitted) {
+              setHasSubmitted(true);
+            }
             setTaskData({
               id: t.id,
+              batch_id: t.batch_id,
               title: t.title,
               topic: t.topic || "General Assignment",
               difficulty: t.difficulty || "Medium",
@@ -211,6 +263,9 @@ export default function CodingPlatform() {
               deadline: t.deadline || "",
               description: getDynamicProblemDescription(t.title, t.topic, t.description || t.desc),
               testCases: getDynamicSampleTestCases(t.title, rawCases),
+              source: "batch_task",
+              language: taskLang,
+              alreadySubmitted: Boolean(t.alreadySubmitted),
             });
             return;
           }
@@ -230,6 +285,7 @@ export default function CodingPlatform() {
             deadline: p.due_date ? new Date(p.due_date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (p.dueDate || ""),
             description: getDynamicProblemDescription(p.title, p.category, p.description),
             testCases: getDynamicSampleTestCases(p.title, rawCases),
+            source: "practice_problem",
           });
           return;
         }
@@ -294,7 +350,13 @@ export default function CodingPlatform() {
 
   const currentTaskNum = taskId ? parseInt(taskId.replace(/[^0-9]/g, '')) || 1 : 1;
 
+  const assignedLangKey = normalizeLanguageKey(taskData?.language || location.state?.task?.language);
+  const isLanguageLocked = Boolean(assignedLangKey);
+
   const handleLanguageChange = (newLang) => {
+    if (isLanguageLocked && newLang !== assignedLangKey) {
+      return;
+    }
     setSelectedLang(newLang);
     setCode((prevCode) => {
       const prev = typeof prevCode === "string" ? prevCode : "";
@@ -307,6 +369,11 @@ export default function CodingPlatform() {
   
   const handleRun = async () => {
     if (isRunning || isSubmitting) return;
+    if (hasSubmitted) {
+      setConsoleStatus("error");
+      setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
+      return;
+    }
     if (!isModuleActive("codingCompiler")) {
       setConsoleStatus("error");
       setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution is currently undergoing maintenance."}`);
@@ -339,7 +406,7 @@ export default function CodingPlatform() {
       if (!res.ok) {
         setConsoleStatus("error");
         if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
-          setConsoleOutput(`🐳 Compiler service unavailable.\n\nDocker must be running. Start Docker Desktop and try again.\n\nError: ${data.message}`);
+          setConsoleOutput(`⚠️ Compiler service is currently unavailable. Please try again later.`);
         } else {
           setConsoleOutput(`❌ Error: ${data.message || "Unknown error"}`);
         }
@@ -382,6 +449,11 @@ export default function CodingPlatform() {
 
   const handleSubmit = async () => {
     if (isSubmitting || isRunning) return;
+    if (hasSubmitted) {
+      setConsoleStatus("error");
+      setConsoleOutput("⚠️ This task has already been submitted. Reattempts are not allowed.");
+      return;
+    }
     if (!isModuleActive("codingCompiler")) {
       setConsoleStatus("error");
       setConsoleOutput(`⚠️ Compiler service disabled:\n${getModuleConfig("codingCompiler")?.message || "Code Execution and Submission is currently undergoing maintenance."}`);
@@ -400,7 +472,7 @@ export default function CodingPlatform() {
     }
     setIsSubmitting(true);
     setConsoleStatus("running");
-    setConsoleOutput("Evaluating all test cases in Docker sandbox...");
+    setConsoleOutput("Evaluating all test cases...");
     setMobileView("code");
 
     try {
@@ -411,14 +483,19 @@ export default function CodingPlatform() {
           language: selectedLang,
           code,
           problem_id: taskData.id,
+          task_id: taskId,
+          source: taskData.source || (taskData.batch_id ? 'batch_task' : undefined),
         }),
       });
       const data = await res.json();
 
       if (!res.ok) {
         setConsoleStatus("error");
-        if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
-          setConsoleOutput(`🐳 Compiler service unavailable.\n\nDocker must be running. Start Docker Desktop and try again.\n\nError: ${data.message}`);
+        if (data?.message?.includes("already been submitted")) {
+          setHasSubmitted(true);
+          setConsoleOutput(`🔒 ${data.message}`);
+        } else if (data?.message?.includes("Docker") || data?.message?.includes("unavailable")) {
+          setConsoleOutput(`⚠️ Compiler service is currently unavailable. Please try again later.`);
         } else {
           setConsoleOutput(`❌ Submission failed: ${data.message || "Unknown error"}`);
         }
@@ -467,7 +544,8 @@ export default function CodingPlatform() {
         [header, scoreLine, timeLine, "\nTest Cases:", ...tcLines].filter(Boolean).join("\n")
       );
 
-      // Refresh submissions tab
+      // Lock task against reattempt upon successful submission
+      setHasSubmitted(true);
       setActiveTab("submissions");
       loadSubmissions();
 
@@ -491,9 +569,11 @@ export default function CodingPlatform() {
       const data = await res.json();
       if (res.ok && data?.data?.submissions) {
         const problemId = String(taskData?.id || "");
-        setSubmissions(
-          data.data.submissions.filter((s) => String(s.problem_id) === problemId)
-        );
+        const matched = data.data.submissions.filter((s) => String(s.problem_id) === problemId);
+        setSubmissions(matched);
+        if (matched.length > 0) {
+          setHasSubmitted(true);
+        }
       }
     } catch { /* ignore */ } finally {
       setSubmissionsLoading(false);
@@ -607,37 +687,55 @@ export default function CodingPlatform() {
           <div className="cp-header-right">
             <StudentCpSelect
               value={selectedLang}
-              options={[
-                { value: "python", label: "Python 3.10" },
-                { value: "node", label: "Node.js 18" },
-                { value: "java", label: "Java 17" },
-                { value: "cpp", label: "C++ 20" },
-                { value: "c", label: "C (C11)" },
-                { value: "sql", label: "SQL (SQLite3)" },
-              ]}
+              options={
+                isLanguageLocked
+                  ? ALL_LANGUAGE_OPTIONS.filter((o) => o.value === assignedLangKey).map((o) => ({
+                      ...o,
+                      label: `${o.label} (Assigned)`,
+                    }))
+                  : ALL_LANGUAGE_OPTIONS
+              }
               onChange={handleLanguageChange}
+              disabled={isLanguageLocked}
+              disabledTooltip={`Language is strictly locked to ${taskData?.language || 'assigned language'} for this task.`}
             />
             
             <button
               type="button"
-              className={`cp-run-btn ${!isModuleActive("codingCompiler") ? 'cp-btn--off' : ''}`}
+              className={`cp-run-btn ${!isModuleActive("codingCompiler") || hasSubmitted ? 'cp-btn--off' : ''}`}
               onClick={handleRun}
-              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting}
-              title={!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code"}
-              style={!isModuleActive("codingCompiler") ? { opacity: 0.55, cursor: "not-allowed", filter: "grayscale(0.6)" } : {}}
+              disabled={!isModuleActive("codingCompiler") || isRunning || isSubmitting || hasSubmitted}
+              title={
+                hasSubmitted 
+                  ? "This task has already been submitted. Reattempts are disabled." 
+                  : (!isModuleActive("codingCompiler") ? "Code execution is currently disabled by administrator" : "Run Code")
+              }
+              style={(!isModuleActive("codingCompiler") || hasSubmitted) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
             >
-              {isRunning ? <span>Running...</span> : <><Play size={13} fill="currentColor" /> <span>{isModuleActive("codingCompiler") ? "Run" : "Run (Off)"}</span></>}
+              {hasSubmitted ? (
+                <span>Run (Submitted)</span>
+              ) : isRunning ? (
+                <span>Running...</span>
+              ) : (
+                <><Play size={13} fill="currentColor" /> <span>{isModuleActive("codingCompiler") ? "Run" : "Run (Off)"}</span></>
+              )}
             </button>
             
             <button
               type="button"
-              className={`cp-submit-btn ${!isModuleActive("codingCompiler") ? 'cp-btn--off' : ''}`}
+              className={`cp-submit-btn ${!isModuleActive("codingCompiler") || hasSubmitted ? 'cp-btn--off' : ''}`}
               onClick={handleSubmit}
-              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning}
-              title={!isModuleActive("codingCompiler") ? "Code submission is currently disabled by administrator" : "Submit Code"}
-              style={!isModuleActive("codingCompiler") ? { opacity: 0.55, cursor: "not-allowed", filter: "grayscale(0.6)" } : {}}
+              disabled={!isModuleActive("codingCompiler") || isSubmitting || isRunning || hasSubmitted}
+              title={
+                hasSubmitted 
+                  ? "This task has already been submitted. Reattempts are disabled." 
+                  : (!isModuleActive("codingCompiler") ? "Code submission is currently disabled by administrator" : "Submit Code")
+              }
+              style={(!isModuleActive("codingCompiler") || hasSubmitted) ? { opacity: 0.55, cursor: "not-allowed" } : {}}
             >
-              {isSubmitting ? (
+              {hasSubmitted ? (
+                <><CheckCircle2 size={14} /> <span>Submitted</span></>
+              ) : isSubmitting ? (
                 <span>Evaluating...</span>
               ) : (
                 <><CheckCircle2 size={14} /> <span>{isModuleActive("codingCompiler") ? "Submit" : "Submit (Off)"}</span></>
@@ -813,18 +911,37 @@ export default function CodingPlatform() {
 
           {/* Right Pane: Code Editor & Console */}
           <div className={`cp-editor-pane ${mobileView === 'code' ? 'cp-pane-mobile-active' : 'cp-pane-mobile-hidden'}`}>
+            {hasSubmitted && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '9px 16px',
+                background: '#fef2f2',
+                borderBottom: '1px solid #fecaca',
+                color: '#991b1b',
+                fontSize: '13px',
+                fontWeight: 600,
+              }}>
+                <Lock size={15} color="#dc2626" />
+                <span>Task Submitted — Reattempts are disabled for this assignment.</span>
+              </div>
+            )}
             <div className="cp-editor-area cp-editor-area--monaco">
               <MonacoCodeEditor
                 value={typeof code === "string" ? code : String(code ?? "")}
                 onChange={(val) => {
+                  if (hasSubmitted) return;
                   const strVal = typeof val === "string" ? val : (val?.target?.value ?? "");
                   setCode(strVal);
                 }}
                 language={selectedLang}
                 height="100%"
+                readOnly={hasSubmitted}
                 options={{
                   fontSize: 13,
-                  padding: { top: 12, bottom: 12 }
+                  padding: { top: 12, bottom: 12 },
+                  readOnly: hasSubmitted,
                 }}
               />
             </div>
