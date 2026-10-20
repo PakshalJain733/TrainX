@@ -411,7 +411,41 @@ export const getMyBatches = async (req, res, next) => {
       [userId, userId]
     );
 
-    return sendSuccess(res, 'Enrolled batches retrieved successfully', dbEnrolled || []);
+    const batchesWithProgress = await Promise.all((dbEnrolled || []).map(async (b) => {
+      let progress = 0;
+      try {
+        const tasks = await query(`SELECT id FROM batch_tasks WHERE batch_id = ?`, [b.id]);
+        if (tasks && tasks.length > 0) {
+          const taskIds = tasks.map(t => t.id);
+          const completed = await query(
+            `SELECT COUNT(DISTINCT task_id) as count FROM task_submissions 
+             WHERE user_id = ? AND task_id IN (?) AND LOWER(status) IN ('completed', 'passed')`,
+            [userId, taskIds]
+          );
+          const done = completed && completed[0] ? Number(completed[0].count) : 0;
+          progress = Math.round((done / tasks.length) * 100);
+        } else {
+          // If no specific batch tasks, check general activity or fallback
+          const generalSub = await query(
+            `SELECT COUNT(*) as count FROM task_submissions WHERE user_id = ? AND LOWER(status) IN ('completed', 'passed')`,
+            [userId]
+          );
+          if (generalSub && generalSub[0] && Number(generalSub[0].count) > 0) {
+            progress = Math.min(100, Number(generalSub[0].count) * 20);
+          } else {
+            progress = Number(b.progress) || 0;
+          }
+        }
+      } catch (e) {
+        progress = Number(b.progress) || 0;
+      }
+      return {
+        ...b,
+        progress: Number(progress) || Number(b.progress) || 0
+      };
+    }));
+
+    return sendSuccess(res, 'Enrolled batches retrieved successfully', batchesWithProgress);
   } catch (error) {
     next(error);
   }

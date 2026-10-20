@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send, UploadCloud, FileSpreadsheet, FileText, Copy, Download, FileCheck } from "lucide-react";
+import { Plus, Trash2, GraduationCap, Sparkles, ListPlus, CheckCircle2, X, Eye, HelpCircle, BookOpen, RefreshCw, ChevronDown, Check, ShieldCheck, ShieldX, AlertTriangle, Send, UploadCloud, FileSpreadsheet, FileText, Copy, Download, FileCheck, Pencil, BarChart2, Users, Search, Clock } from "lucide-react";
 import * as XLSX from "xlsx";
 import { Card, CardContent } from "../../../components/ui/Card";
 import { Badge } from "../../../components/ui/Badge";
@@ -52,6 +52,22 @@ function mapAssessment(a) {
   const rawQs = Array.isArray(a.questions) ? a.questions : [];
   const normalizedQs = rawQs.map(normalizeQuestion);
 
+  // Dynamic quiz type detection
+  let type = "Manual";
+  const cat = (a.category || "").toLowerCase();
+  const desc = (a.description || "").toLowerCase();
+  if (cat.includes("ai") || desc.includes("ai generated")) {
+    type = "AI Generated";
+  } else if (cat.includes("bulk") || desc.includes("bulk upload") || desc.includes("excel")) {
+    type = "Bulk Upload";
+  }
+
+  const subCount = a.submission_count !== undefined 
+    ? Number(a.submission_count) 
+    : a.submissions !== undefined 
+    ? Number(a.submissions) 
+    : 0;
+
   return {
     id: a.id,
     title: a.title,
@@ -59,9 +75,10 @@ function mapAssessment(a) {
     duration_minutes: a.duration_minutes || 15,
     duration: `${a.duration_minutes || 15} mins`,
     questionsCount: a.total_questions || normalizedQs.length || 0,
-    type: a.category === "AI Generated" ? "AI Generated" : "Manual",
-    status: a.status === "published" ? "Active" : a.status === "draft" ? "Draft" : a.status,
-    submissions: a.submission_count || 0,
+    type,
+    category: a.category || type,
+    status: a.status === "published" ? "Active" : a.status === "draft" ? "Draft" : (a.status || "Active"),
+    submissions: subCount,
     questionsList: normalizedQs,
     description: a.description || "",
   };
@@ -89,6 +106,8 @@ export default function AdminQuizzes() {
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifiedQuestions, setVerifiedQuestions] = useState([]);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [editingQIdx, setEditingQIdx] = useState(null);
+  const [editingQData, setEditingQData] = useState(null);
 
   // Manual Questions State
   const [showManualModal, setShowManualModal] = useState(false);
@@ -195,6 +214,40 @@ export default function AdminQuizzes() {
 
   // View Quiz Questions Modal
   const [activeQuizQuestions, setActiveQuizQuestions] = useState(null);
+
+  // View Submissions / Results Modal State
+  const [viewSubmissionsQuiz, setViewSubmissionsQuiz] = useState(null);
+  const [submissionsList, setSubmissionsList] = useState([]);
+  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [submissionSearch, setSubmissionSearch] = useState("");
+  const [submissionFilterStatus, setSubmissionFilterStatus] = useState("all");
+
+  const handleOpenSubmissions = async (quiz) => {
+    setViewSubmissionsQuiz(quiz);
+    setLoadingSubmissions(true);
+    setSubmissionsList([]);
+    setSubmissionSearch("");
+    setSubmissionFilterStatus("all");
+
+    try {
+      const res = await fetch(`${API_BASE}/assessments/${quiz.id}/results`, {
+        headers: getAuthHeaders(),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.results) {
+        setSubmissionsList(data.data.results);
+      } else if (data.success && Array.isArray(data.data)) {
+        setSubmissionsList(data.data);
+      } else {
+        setSubmissionsList([]);
+      }
+    } catch (err) {
+      console.error("Failed to load submissions:", err);
+      setSubmissionsList([]);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  };
 
   const handleViewQuestions = async (q) => {
     if (q.questionsList && q.questionsList.length > 0) {
@@ -412,14 +465,97 @@ export default function AdminQuizzes() {
     }));
   };
 
+  // Manually change correct answer by clicking an option directly
+  const handleSetCorrectAnswer = (idx, newCorrectKey) => {
+    setVerifiedQuestions(prev => prev.map((q, i) => {
+      if (i !== idx) return q;
+      return {
+        ...q,
+        correct: newCorrectKey,
+        correctOptionVerified: newCorrectKey,
+        manuallyEdited: true,
+        verified: true, // Mark verified since admin manually selected the correct answer
+        confidence: 'high',
+        verificationNote: `Manually set correct answer to Option ${newCorrectKey.toUpperCase()}`,
+      };
+    }));
+  };
+
+  // Start full inline editing of a question
+  const handleStartEditQ = (idx, q) => {
+    setEditingQIdx(idx);
+    setEditingQData({
+      text: q.text || q.question_text || '',
+      options: {
+        a: q.options?.a || '',
+        b: q.options?.b || '',
+        c: q.options?.c || '',
+        d: q.options?.d || '',
+      },
+      correct: (q.correctOptionVerified || q.correct || 'a').toLowerCase(),
+    });
+  };
+
+  // Cancel inline editing
+  const handleCancelEditQ = () => {
+    setEditingQIdx(null);
+    setEditingQData(null);
+  };
+
+  // Save inline edited question
+  const handleSaveEditedQ = (idx) => {
+    if (!editingQData) return;
+    if (!editingQData.text.trim()) {
+      alert("Question text cannot be empty.");
+      return;
+    }
+    if (!editingQData.options.a.trim() || !editingQData.options.b.trim()) {
+      alert("Options A and B are required.");
+      return;
+    }
+
+    setVerifiedQuestions(prev => prev.map((q, i) => {
+      if (i !== idx) return q;
+      return {
+        ...q,
+        text: editingQData.text.trim(),
+        question_text: editingQData.text.trim(),
+        options: {
+          a: editingQData.options.a.trim(),
+          b: editingQData.options.b.trim(),
+          c: editingQData.options.c.trim() || 'N/A',
+          d: editingQData.options.d.trim() || 'N/A',
+        },
+        correct: editingQData.correct,
+        correctOptionVerified: editingQData.correct,
+        manuallyEdited: true,
+        verified: true,
+        confidence: 'high',
+        verificationNote: "Manually edited and verified by Admin",
+      };
+    }));
+
+    setEditingQIdx(null);
+    setEditingQData(null);
+  };
+
   // Remove a question from verification preview
   const handleRemoveVerifiedQ = (idx) => {
     setVerifiedQuestions(prev => prev.filter((_, i) => i !== idx));
+    if (editingQIdx === idx) {
+      setEditingQIdx(null);
+      setEditingQData(null);
+    }
   };
 
   // Publish only the approved questions from verification preview
   const handlePublishVerifiedQuiz = async () => {
-    const toPublish = verifiedQuestions.filter(q => q.verified !== false || q._forceInclude);
+    const toPublish = verifiedQuestions
+      .filter(q => q.verified !== false || q._forceInclude)
+      .map(q => ({
+        ...q,
+        correct: (q.correctOptionVerified || q.correct || 'a').toLowerCase(),
+      }));
     if (toPublish.length === 0) {
       alert("No questions to publish. Please keep at least one approved question.");
       return;
@@ -879,12 +1015,22 @@ export default function AdminQuizzes() {
               })()}
             </div>
 
+            {/* Instruction Banner */}
+            <div className="verify-instruction-banner">
+              <Sparkles size={14} style={{ color: "#2563eb", flexShrink: 0 }} />
+              <span>
+                <strong>Quick Edit:</strong> Click any option box directly to change the correct answer, or click <strong>Edit Question</strong> to modify question text and choices.
+              </span>
+            </div>
+
             {/* Questions List */}
             <div className="verify-questions-scroll">
               {verifiedQuestions.map((q, idx) => {
                 const isPassed = q.verified !== false;
                 const isForced = q._forceInclude;
                 const conf = q.confidence || 'medium';
+                const isEditing = editingQIdx === idx;
+
                 return (
                   <div
                     key={q.id || idx}
@@ -894,6 +1040,11 @@ export default function AdminQuizzes() {
                       <span className="verify-q-num">Q{idx + 1}</span>
                       <p className="verify-q-text">{q.text || q.question_text}</p>
                       <div className="verify-q-badges">
+                        {q.manuallyEdited && (
+                          <span className="vbadge vbadge--manual" title="Manually edited/verified by Admin">
+                            <Pencil size={11} /> Edited
+                          </span>
+                        )}
                         {isPassed ? (
                           <span className={`vbadge vbadge--${conf}`}>
                             {conf === 'high' ? <ShieldCheck size={11} /> : conf === 'medium' ? <AlertTriangle size={11} /> : <ShieldX size={11} />}
@@ -906,46 +1057,133 @@ export default function AdminQuizzes() {
                         )}
                       </div>
                     </div>
-                    {/* Options preview */}
-                    <div className="verify-q-options">
-                      {Object.entries(q.options || {}).map(([key, val]) => (
-                        <span
-                          key={key}
-                          className={`verify-opt ${(q.correctOptionVerified || q.correct) === key ? 'verify-opt--correct' : ''}`}
-                        >
-                          <strong>{key.toUpperCase()}.</strong> {val}
-                          {(q.correctOptionVerified || q.correct) === key && <span className="correct-tick">✓</span>}
-                        </span>
-                      ))}
-                    </div>
-                    {/* Verification note */}
-                    {q.verificationNote && (
-                      <p className="verify-q-note">
-                        <AlertTriangle size={11} /> {q.verificationNote}
-                      </p>
+
+                    {isEditing ? (
+                      /* Inline Full Editor */
+                      <div className="verify-inline-edit-box">
+                        <label className="verify-edit-label">Question Text:</label>
+                        <textarea
+                          className="verify-edit-input"
+                          value={editingQData?.text || ''}
+                          onChange={(e) => setEditingQData({ ...editingQData, text: e.target.value })}
+                          rows={3}
+                          placeholder="Type question text..."
+                        />
+
+                        <label className="verify-edit-label" style={{ marginTop: '8px' }}>
+                          Options &amp; Correct Answer (select radio for correct option):
+                        </label>
+                        <div className="verify-edit-options-grid">
+                          {['a', 'b', 'c', 'd'].map((key) => (
+                            <div key={key} className="verify-edit-opt-item">
+                              <div className="verify-edit-opt-header">
+                                <label className="verify-edit-radio-label">
+                                  <input
+                                    type="radio"
+                                    name={`edit-correct-${idx}`}
+                                    checked={editingQData?.correct === key}
+                                    onChange={() => setEditingQData({ ...editingQData, correct: key })}
+                                  />
+                                  <span>Option {key.toUpperCase()} {editingQData?.correct === key ? '(Correct)' : ''}</span>
+                                </label>
+                              </div>
+                              <input
+                                type="text"
+                                className="verify-edit-input"
+                                value={editingQData?.options?.[key] || ''}
+                                onChange={(e) => setEditingQData({
+                                  ...editingQData,
+                                  options: { ...editingQData.options, [key]: e.target.value }
+                                })}
+                                placeholder={`Option ${key.toUpperCase()}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="verify-edit-actions-row">
+                          <button
+                            type="button"
+                            className="verify-edit-save-btn"
+                            onClick={() => handleSaveEditedQ(idx)}
+                          >
+                            <Check size={13} /> Save Changes
+                          </button>
+                          <button
+                            type="button"
+                            className="verify-edit-cancel-btn"
+                            onClick={handleCancelEditQ}
+                          >
+                            <X size={13} /> Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Options preview with 1-click select */}
+                        <div className="verify-q-options">
+                          {Object.entries(q.options || {}).map(([key, val]) => {
+                            const currentCorrect = ((q.correctOptionVerified || q.correct) || '').toLowerCase();
+                            const isCorrect = currentCorrect === key.toLowerCase();
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                className={`verify-opt ${isCorrect ? 'verify-opt--correct' : ''}`}
+                                onClick={() => handleSetCorrectAnswer(idx, key.toLowerCase())}
+                                title={`Click to set Option ${key.toUpperCase()} as correct answer`}
+                              >
+                                <span className="verify-opt-radio">
+                                  {isCorrect && <span className="verify-opt-radio-inner" />}
+                                </span>
+                                <span>
+                                  <strong>{key.toUpperCase()}.</strong> {val}
+                                </span>
+                                {isCorrect && <span className="correct-tick" title="Correct Answer">✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Verification note */}
+                        {q.verificationNote && (
+                          <p className="verify-q-note">
+                            <AlertTriangle size={11} /> {q.verificationNote}
+                          </p>
+                        )}
+
+                        {/* Actions */}
+                        <div className="verify-q-actions">
+                          <button
+                            type="button"
+                            className="verify-edit-btn"
+                            onClick={() => handleStartEditQ(idx, q)}
+                            title="Edit question text and answers"
+                          >
+                            <Pencil size={13} /> Edit Question
+                          </button>
+                          {!isPassed && (
+                            <button
+                              type="button"
+                              className={`verify-force-btn ${isForced ? 'verify-force-btn--active' : ''}`}
+                              onClick={() => handleToggleForceInclude(idx)}
+                              title={isForced ? "Remove from publish" : "Force include despite rejection"}
+                            >
+                              {isForced ? <CheckCircle2 size={13} /> : <Plus size={13} />}
+                              {isForced ? 'Included (Override)' : 'Force Include'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="verify-remove-btn"
+                            onClick={() => handleRemoveVerifiedQ(idx)}
+                            title="Remove this question"
+                          >
+                            <Trash2 size={13} /> Remove
+                          </button>
+                        </div>
+                      </>
                     )}
-                    {/* Actions */}
-                    <div className="verify-q-actions">
-                      {!isPassed && (
-                        <button
-                          type="button"
-                          className={`verify-force-btn ${isForced ? 'verify-force-btn--active' : ''}`}
-                          onClick={() => handleToggleForceInclude(idx)}
-                          title={isForced ? "Remove from publish" : "Force include despite rejection"}
-                        >
-                          {isForced ? <CheckCircle2 size={13} /> : <Plus size={13} />}
-                          {isForced ? 'Included (Override)' : 'Force Include'}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="verify-remove-btn"
-                        onClick={() => handleRemoveVerifiedQ(idx)}
-                        title="Remove this question"
-                      >
-                        <Trash2 size={13} /> Remove
-                      </button>
-                    </div>
                   </div>
                 );
               })}
@@ -1177,6 +1415,202 @@ export default function AdminQuizzes() {
         document.body
       )}
 
+      {/* VIEW QUIZ SUBMISSIONS & RESULTS MODAL */}
+      {viewSubmissionsQuiz && createPortal(
+        <div className="quiz-modal-backdrop" onClick={() => setViewSubmissionsQuiz(null)} style={{ zIndex: 10000 }}>
+          <div className="quiz-modal-content modal-flash-in view-submissions-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '920px' }}>
+            <div className="modal-header">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-wrap modal-header-icon--indigo">
+                  <BarChart2 size={20} />
+                </div>
+                <div>
+                  <h3 className="modal-title">{viewSubmissionsQuiz.title} — Student Submissions</h3>
+                  <p className="modal-subtitle">
+                    Batch: <strong>{viewSubmissionsQuiz.batch}</strong> • Assessment Type: <strong>{viewSubmissionsQuiz.type}</strong>
+                  </p>
+                </div>
+              </div>
+              <button className="modal-close-btn" onClick={() => setViewSubmissionsQuiz(null)}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ padding: '20px 24px', overflowY: 'auto', maxHeight: '72vh' }}>
+              {/* KPI Summary Cards */}
+              {(() => {
+                const total = submissionsList.length;
+                const avg = total > 0 ? Math.round(submissionsList.reduce((acc, s) => acc + (parseFloat(s.percentage || s.score || 0)), 0) / total) : 0;
+                const passed = submissionsList.filter(s => (parseFloat(s.percentage || 0) >= 50 || s.status === 'passed')).length;
+                const failed = total - passed;
+                return (
+                  <div className="submissions-kpi-grid">
+                    <div className="sub-kpi-card">
+                      <span className="sub-kpi-val" style={{ color: '#2563eb' }}>{total}</span>
+                      <span className="sub-kpi-lbl">Total Attempts</span>
+                    </div>
+                    <div className="sub-kpi-card">
+                      <span className="sub-kpi-val" style={{ color: '#d97706' }}>{avg}%</span>
+                      <span className="sub-kpi-lbl">Average Score</span>
+                    </div>
+                    <div className="sub-kpi-card">
+                      <span className="sub-kpi-val" style={{ color: '#16a34a' }}>{passed}</span>
+                      <span className="sub-kpi-lbl">Passed (≥50%)</span>
+                    </div>
+                    <div className="sub-kpi-card">
+                      <span className="sub-kpi-val" style={{ color: '#dc2626' }}>{failed}</span>
+                      <span className="sub-kpi-lbl">Needs Improvement</span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Filter / Search Bar */}
+              <div className="submissions-filter-bar">
+                <div className="submissions-search-wrap">
+                  <Search size={14} className="submissions-search-icon" />
+                  <input
+                    type="text"
+                    className="submissions-search-input"
+                    placeholder="Search by student name or email..."
+                    value={submissionSearch}
+                    onChange={e => setSubmissionSearch(e.target.value)}
+                  />
+                  {submissionSearch && (
+                    <button className="sub-clear-search" onClick={() => setSubmissionSearch("")}>
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+                <div className="submissions-status-pills">
+                  {['all', 'passed', 'failed'].map(st => (
+                    <button
+                      key={st}
+                      type="button"
+                      className={`sub-pill-btn ${submissionFilterStatus === st ? 'active' : ''}`}
+                      onClick={() => setSubmissionFilterStatus(st)}
+                    >
+                      {st.charAt(0).toUpperCase() + st.slice(1)}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    className="sub-refresh-btn"
+                    onClick={() => handleOpenSubmissions(viewSubmissionsQuiz)}
+                    title="Refresh Submissions"
+                  >
+                    <RefreshCw size={13} className={loadingSubmissions ? 'spin' : ''} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Submissions Table / Empty State */}
+              {loadingSubmissions ? (
+                <div className="submissions-loading">
+                  <RefreshCw size={24} className="spin" style={{ color: '#3b82f6', marginBottom: 10 }} />
+                  <p>Loading real-time submissions from database...</p>
+                </div>
+              ) : submissionsList.length === 0 ? (
+                <div className="submissions-empty-state">
+                  <Users size={38} className="sub-empty-icon" />
+                  <h4>No Submissions Yet</h4>
+                  <p>
+                    Students enrolled in <strong>"{viewSubmissionsQuiz.batch}"</strong> have not submitted attempts for this quiz yet.
+                  </p>
+                  <span className="sub-empty-hint">
+                    As soon as students open and submit this assessment from their Student Portal, their scores, percentage, and completion timestamps will appear here in real-time.
+                  </span>
+                </div>
+              ) : (
+                <div className="submissions-table-wrap">
+                  <table className="submissions-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Score</th>
+                        <th>Percentage</th>
+                        <th>Status</th>
+                        <th>Submitted At</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {submissionsList
+                        .filter(s => {
+                          const matchesSearch = !submissionSearch.trim() ||
+                            (s.student_name || '').toLowerCase().includes(submissionSearch.toLowerCase()) ||
+                            (s.student_email || '').toLowerCase().includes(submissionSearch.toLowerCase());
+                          const isPass = (parseFloat(s.percentage || 0) >= 50 || s.status === 'passed');
+                          const matchesFilter = submissionFilterStatus === 'all' ||
+                            (submissionFilterStatus === 'passed' && isPass) ||
+                            (submissionFilterStatus === 'failed' && !isPass);
+                          return matchesSearch && matchesFilter;
+                        })
+                        .map((s, idx) => {
+                          const pct = parseFloat(s.percentage || 0);
+                          const isPass = pct >= 50 || s.status === 'passed';
+                          const dateStr = s.submitted_at
+                            ? new Date(s.submitted_at).toLocaleString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Just now';
+
+                          return (
+                            <tr key={s.id || idx}>
+                              <td>
+                                <div className="sub-student-name">{s.student_name || `Student #${s.user_id}`}</div>
+                                <div className="sub-student-email">{s.student_email || 'student@domain.edu'}</div>
+                              </td>
+                              <td>
+                                <span className="sub-score-text">
+                                  <strong>{s.marks_obtained !== undefined ? s.marks_obtained : (s.score !== undefined ? s.score : '-')}</strong> / {s.total_marks || (viewSubmissionsQuiz.questionsCount * 10) || 100}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="sub-pct-bar-wrap">
+                                  <div className="sub-pct-bar">
+                                    <div
+                                      className={`sub-pct-fill ${isPass ? 'sub-pct-fill--pass' : 'sub-pct-fill--fail'}`}
+                                      style={{ width: `${Math.min(pct, 100)}%` }}
+                                    />
+                                  </div>
+                                  <span className="sub-pct-text">{pct}%</span>
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`sub-status-badge ${isPass ? 'sub-status--pass' : 'sub-status--fail'}`}>
+                                  {isPass ? 'Passed' : 'Failed'}
+                                </span>
+                              </td>
+                              <td className="sub-date-cell">
+                                <Clock size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: '-1px' }} />
+                                {dateStr}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="modal-done-btn"
+                onClick={() => setViewSubmissionsQuiz(null)}
+              >
+                Close Submissions
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Quizzes List */}
       <div className="quizzes-grid">
         {quizzes.length === 0 ? (
@@ -1201,6 +1635,8 @@ export default function AdminQuizzes() {
                 <div className="quiz-icon-wrap">
                   {q.type === "AI Generated" ? (
                     <Sparkles size={20} className="ai-icon-pulse" />
+                  ) : q.type === "Bulk Upload" ? (
+                    <FileSpreadsheet size={20} style={{ color: "#0284c7" }} />
                   ) : (
                     <GraduationCap size={20} />
                   )}
@@ -1210,14 +1646,35 @@ export default function AdminQuizzes() {
                   <div className="quiz-meta">
                     <span className="quiz-batch-tag">{q.batch}</span>
                     <span className="quiz-questions">{q.questionsCount} Questions</span>
-                    <span className={`quiz-type-tag ${q.type === "AI Generated" ? "type-ai" : "type-manual"}`}>
-                      {q.type === "AI Generated" ? "AI Generated" : "Manual"}
+                    <span className={`quiz-type-tag ${
+                      q.type === "AI Generated"
+                        ? "type-ai"
+                        : q.type === "Bulk Upload"
+                        ? "type-bulk"
+                        : "type-manual"
+                    }`}>
+                      {q.type === "AI Generated" ? "✨ AI Generated" : q.type === "Bulk Upload" ? "📊 Bulk Upload" : "📝 Manual"}
                     </span>
-                    <span className="quiz-submissions">{q.submissions} submissions</span>
+                    <button
+                      type="button"
+                      className="quiz-submissions-btn"
+                      onClick={() => handleOpenSubmissions(q)}
+                      title="Click to view student submissions"
+                    >
+                      <Users size={12} />
+                      <strong>{q.submissions}</strong> {q.submissions === 1 ? 'submission' : 'submissions'}
+                    </button>
                   </div>
                 </div>
                 <div className="quiz-right">
                   <Badge variant={statusVariant(q.status)}>{q.status}</Badge>
+                  <button
+                    className="quiz-submissions-action-btn"
+                    onClick={() => handleOpenSubmissions(q)}
+                    title="View Submissions & Performance"
+                  >
+                    <BarChart2 size={14} /> Submissions
+                  </button>
                   <button
                     className="quiz-view-btn"
                     onClick={() => handleViewQuestions(q)}

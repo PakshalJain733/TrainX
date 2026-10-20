@@ -25,15 +25,53 @@ export const getAssessments = async (req, res, next) => {
           console.warn('[DB questions query fallback]', qErr.message);
         }
 
+        // Query dynamic submission counts from assessment_attempts and student_quiz_completions
+        let submissionCounts = {};
+        try {
+          const attemptCounts = await query(
+            `SELECT assessment_id, COUNT(*) as count 
+             FROM assessment_attempts 
+             WHERE status = 'completed' OR submitted_at IS NOT NULL OR score IS NOT NULL OR marks_obtained IS NOT NULL
+             GROUP BY assessment_id`
+          ).catch(() => []);
+          if (Array.isArray(attemptCounts)) {
+            attemptCounts.forEach(row => {
+              if (row.assessment_id) {
+                submissionCounts[row.assessment_id] = (submissionCounts[row.assessment_id] || 0) + Number(row.count);
+              }
+            });
+          }
+
+          const compCounts = await query(
+            `SELECT quiz_id as assessment_id, COUNT(*) as count 
+             FROM student_quiz_completions 
+             GROUP BY quiz_id`
+          ).catch(() => []);
+          if (Array.isArray(compCounts)) {
+            compCounts.forEach(row => {
+              if (row.assessment_id) {
+                const curr = submissionCounts[row.assessment_id] || 0;
+                submissionCounts[row.assessment_id] = Math.max(curr, Number(row.count));
+              }
+            });
+          }
+        } catch (subErr) {
+          console.warn('[DB submission counts query]', subErr.message);
+        }
+
         result = dbRows.map(r => {
           const qsForThis = (allQuestions || []).filter(q => String(q.assessment_id) === String(r.id));
           const memoryQs = mockQuestionsByAssessment[r.id] || [];
           const combinedQs = qsForThis.length > 0 ? qsForThis : memoryQs;
+          const subCount = submissionCounts[r.id] || 0;
           return {
             ...r,
+            category: r.category || (r.description?.includes('AI Generated') ? 'AI Generated' : r.description?.includes('Bulk Upload') ? 'Bulk Upload' : 'Manual'),
             batch_name: r.batch_name || r.batch || "All Batches",
             total_questions: combinedQs.length || r.total_questions || 5,
-            questions: combinedQs
+            questions: combinedQs,
+            submission_count: subCount,
+            submissions: subCount
           };
         });
       }
@@ -110,9 +148,9 @@ export const createAssessment = async (req, res, next) => {
       const collegeId = req.user?.collegeId ?? req.user?.college_id ?? 1;
       const userId = req.user?.userId || req.user?.id || null;
       const result = await query(
-        `INSERT INTO assessments (title, description, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [title, description || '', collegeId, batch_id || null, userId, duration_minutes || 30, total_marks || 100, pass_marks || 60, status || 'published']
+        `INSERT INTO assessments (title, description, category, college_id, batch_id, created_by, duration_minutes, total_marks, pass_marks, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [title, description || '', category || 'Manual', collegeId, batch_id || null, userId, duration_minutes || 30, total_marks || 100, pass_marks || 60, status || 'published']
       );
       if (result && result.insertId) insertId = result.insertId;
 
@@ -417,35 +455,37 @@ export const getAssessmentResults = async (req, res, next) => {
     }
 
     if (!results || results.length === 0) {
-      results = mockAssessmentResults[id] || [
-        {
-          id: 101,
-          user_id: 1,
-          student_name: 'Ganesh Shinde',
-          student_email: 'ganesh@acadnexus.edu',
-          marks_obtained: 85,
-          total_marks: 100,
-          percentage: 85,
-          correct_count: 8,
-          status: 'passed',
-          submitted_at: new Date().toISOString()
-        },
-        {
-          id: 102,
-          user_id: 2,
-          student_name: 'Priya Nair',
-          student_email: 'priya@acadnexus.edu',
-          marks_obtained: 90,
-          total_marks: 100,
-          percentage: 90,
-          correct_count: 9,
-          status: 'passed',
-          submitted_at: new Date().toISOString()
+      try {
+        const compResults = await query(
+          `SELECT c.id, c.user_id, c.quiz_id AS assessment_id, c.completed_at AS submitted_at,
+                  u.name AS student_name, u.email AS student_email
+           FROM student_quiz_completions c
+           LEFT JOIN users u ON c.user_id = u.id
+           WHERE c.quiz_id = ?
+           ORDER BY c.id DESC`,
+          [id]
+        );
+        if (compResults && compResults.length > 0) {
+          results = compResults.map(r => ({
+            id: r.id,
+            user_id: r.user_id,
+            student_name: r.student_name || `Student #${r.user_id}`,
+            student_email: r.student_email || '',
+            marks_obtained: 100,
+            total_marks: 100,
+            percentage: 100,
+            status: 'passed',
+            submitted_at: r.submitted_at,
+          }));
         }
-      ];
+      } catch (_) {}
     }
 
-    return sendSuccess(res, 'Assessment results retrieved', { results });
+    if (!results || results.length === 0) {
+      results = mockAssessmentResults[id] || [];
+    }
+
+    return sendSuccess(res, 'Assessment results retrieved', { results: results || [] });
   } catch (error) {
     next(error);
   }

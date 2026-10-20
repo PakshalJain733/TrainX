@@ -278,7 +278,8 @@ export const checkRegistrationStatus = async (req, res, next) => {
 
 export const requestSecureCode = async (req, res, next) => {
   try {
-    const { name, email, role, collegeName } = req.body;
+    const { name, email, role, collegeName, college_name } = req.body;
+    const finalCollege = (collegeName || college_name || req.body.college || '').trim();
     if (!name || !email) {
       return sendError(res, 'Full Name and Email are required to request a secure code', 400);
     }
@@ -304,7 +305,7 @@ export const requestSecureCode = async (req, res, next) => {
     // 2. Insert request record
     await pool.query(
       `INSERT INTO secure_code_requests (name, email, role, college_name, status) VALUES (?, ?, ?, ?, 'Pending')`,
-      [cleanName, cleanEmail, targetRole, collegeName || null]
+      [cleanName, cleanEmail, targetRole, finalCollege || null]
     );
 
     // 3. Create a support ticket for Super Admin review
@@ -339,8 +340,16 @@ export const requestSecureCode = async (req, res, next) => {
 export const getSecureCodeRequests = async (req, res, next) => {
   try {
     try {
+      // Auto-mark any requests as Approved if the user already exists and is active / college admin
+      await pool.query(`
+        UPDATE secure_code_requests scr
+        JOIN users u ON LOWER(scr.email) = LOWER(u.email)
+        SET scr.status = 'Approved'
+        WHERE scr.status = 'Pending' AND (u.is_active = 1 OR u.role = 'college_admin' OR u.two_factor_enabled = 1)
+      `);
+
       const [rows] = await pool.query(
-        `SELECT * FROM secure_code_requests ORDER BY id DESC LIMIT 50`
+        `SELECT * FROM secure_code_requests WHERE status = 'Pending' ORDER BY id DESC LIMIT 50`
       );
       return sendSuccess(res, 'Secure code requests retrieved', rows);
     } catch (_) {
@@ -350,4 +359,43 @@ export const getSecureCodeRequests = async (req, res, next) => {
     next(error);
   }
 };
+
+export const resolveSecureCodeRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (id === 'all') {
+      await pool.query(`UPDATE secure_code_requests SET status = 'Approved' WHERE status = 'Pending'`);
+      return sendSuccess(res, 'All pending requests marked as approved and cleared');
+    }
+    await pool.query(`UPDATE secure_code_requests SET status = 'Approved' WHERE id = ?`, [id]);
+    return sendSuccess(res, 'Secure code request resolved');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSecureCodeRequest = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (id === 'all') {
+      await pool.query(`DELETE FROM secure_code_requests`);
+      return sendSuccess(res, 'All secure code requests cleared');
+    }
+    await pool.query(`DELETE FROM secure_code_requests WHERE id = ?`, [id]);
+    return sendSuccess(res, 'Secure code request removed');
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteSecureCodeRequestByEmail = async (req, res, next) => {
+  try {
+    const { email } = req.params;
+    await pool.query(`DELETE FROM secure_code_requests WHERE LOWER(email) = LOWER(?)`, [email]);
+    return sendSuccess(res, 'Secure code request removed');
+  } catch (error) {
+    next(error);
+  }
+};
+
 

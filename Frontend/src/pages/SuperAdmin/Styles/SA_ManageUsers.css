@@ -2145,6 +2145,63 @@
   box-shadow: none !important;
 }
 
+/* Scrollable College Label when long in Generate Code Modal */
+.mu-select-scrollable-label .custom-select-trigger {
+  overflow: hidden;
+  height: 42px;
+}
+
+.mu-select-scrollable-label .custom-select-left {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  white-space: nowrap !important;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.mu-select-scrollable-label .custom-select-left::-webkit-scrollbar {
+  height: 3px;
+}
+
+.mu-select-scrollable-label .custom-select-left::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.mu-select-scrollable-label .custom-select-label {
+  display: inline-block;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+.mu-select-scrollable-label .custom-select-dropdown {
+  max-width: min(520px, 90vw);
+}
+
+.mu-select-scrollable-label .custom-select-option {
+  overflow-x: auto !important;
+  scrollbar-width: thin;
+}
+
+.mu-select-scrollable-label .custom-select-option::-webkit-scrollbar {
+  height: 3px;
+}
+
+.mu-select-scrollable-label .custom-select-option-left {
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+.mu-select-scrollable-label .custom-select-option-left span {
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+
 
 
 

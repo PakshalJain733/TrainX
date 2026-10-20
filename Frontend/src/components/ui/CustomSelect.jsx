@@ -181,7 +181,7 @@ export default function CustomSelect({
       >
         <div className="custom-select-left">
           {Icon && <Icon className="custom-select-icon" size={16} />}
-          <span className="custom-select-label">
+          <span className="custom-select-label" title={selectedOption ? selectedOption.label : placeholder}>
             {selectedOption ? (
               selectedOption.label
             ) : (
@@ -231,7 +231,7 @@ export default function CustomSelect({
                   >
                     <div className="custom-select-option-left">
                       {OptIcon && <OptIcon size={15} className="custom-select-opt-icon" />}
-                      <span>{opt.label}</span>
+                      <span title={opt.label}>{opt.label}</span>
                     </div>
                     {isSelected && <Check size={15} className="custom-select-check" />}
                   </div>

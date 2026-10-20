@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests } from '../controllers/auth.controller.js';
+import { sendRegisterOtp, verifyRegisterEmailOtp, verifyRegisterOtp, checkRegistrationStatus, sendOtp, verifyOtpAndLogin, passwordLogin, verifyTotp, getMe, updateProfile, changePassword, resetPasswordWithOtp, setup2FA, verify2FA, getDepartmentsByEmail, registerInstitution, requestSecureCode, getSecureCodeRequests, resolveSecureCodeRequest, deleteSecureCodeRequest, deleteSecureCodeRequestByEmail } from '../controllers/auth.controller.js';
 import { validateRequestBody } from '../middleware/validation.middleware.js';
 import { authenticateToken } from '../middleware/auth.middleware.js';
 
@@ -16,6 +16,9 @@ router.post('/register/verify-email-otp', validateRequestBody(['email', 'otp']),
 router.post('/register/verify-otp', validateRequestBody(['email']), verifyRegisterOtp);
 router.post('/request-secure-code', requestSecureCode);
 router.get('/secure-code-requests', getSecureCodeRequests);
+router.patch('/secure-code-requests/:id', resolveSecureCodeRequest);
+router.delete('/secure-code-requests/:id', deleteSecureCodeRequest);
+router.delete('/secure-code-requests/by-email/:email', deleteSecureCodeRequestByEmail);
 
 // OTP, TOTP & Password Login flows
 router.post('/send-otp', sendOtp);

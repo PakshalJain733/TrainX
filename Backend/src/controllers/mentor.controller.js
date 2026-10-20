@@ -2,7 +2,7 @@ import { sendSuccess, sendError } from '../utils/response.js';
 import { query, pool } from '../config/db.js';
 import { tableAvailabilityMap, inPlaceholders } from '../utils/tableAvailability.js';
 import { DEFAULTER_THRESHOLDS } from '../services/intervention.service.js';
-import { uploadFileToS3 } from '../utils/s3Upload.js';
+import { uploadFileToS3, deleteFileFromStorage } from '../utils/s3Upload.js';
 import { ROLES } from '../utils/constants.js';
 import { createSharedContent, deleteSharedContent } from '../models/sharedContent.model.js';
 import { getBroadcastsModel } from '../models/broadcast.model.js';
@@ -1709,7 +1709,7 @@ export const deleteStudyMaterial = async (req, res, next) => {
       return sendError(res, 'Invalid study material id', 400);
     }
 
-    const [row] = await query(`SELECT id, uploaded_by FROM study_materials WHERE id = ?`, [id]);
+    const [row] = await query(`SELECT id, uploaded_by, file_url FROM study_materials WHERE id = ?`, [id]);
     if (!row) {
       return sendError(res, 'Study material not found', 404);
     }
@@ -1717,6 +1717,12 @@ export const deleteStudyMaterial = async (req, res, next) => {
     const role = req.user?.role;
     if (role !== ROLES.SUPER_ADMIN && role !== ROLES.COLLEGE_ADMIN && toInt(row.uploaded_by) !== toInt(req.user?.userId || req.user?.id)) {
       return sendError(res, 'You can only delete study materials that you uploaded', 403);
+    }
+
+    if (row.file_url) {
+      try {
+        await deleteFileFromStorage(row.file_url);
+      } catch (e) {}
     }
 
     await query(`DELETE FROM study_materials WHERE id = ?`, [id]);

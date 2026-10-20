@@ -256,6 +256,9 @@ export default function Attendance() {
           };
         });
 
+        window.dispatchEvent(new Event('attendanceUpdated'));
+        window.dispatchEvent(new Event('portal_attendance_updated'));
+
         alert(`✅ ${message}`);
       })
       .catch((err) => {

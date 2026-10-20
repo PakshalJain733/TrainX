@@ -546,8 +546,33 @@ export const registerUser = async (data) => {
     assignedCollegeId = matchingCollege.id;
   } else if (codeRecord && codeRecord.college_name) {
     try {
-      const [colRows] = await pool.query('SELECT id FROM colleges WHERE name = ? LIMIT 1', [codeRecord.college_name]);
-      if (colRows.length > 0) assignedCollegeId = colRows[0].id;
+      const colName = codeRecord.college_name.trim();
+      const [colRows] = await pool.query('SELECT id FROM colleges WHERE name = ? LIMIT 1', [colName]);
+      if (colRows.length > 0) {
+        assignedCollegeId = colRows[0].id;
+      } else {
+        const colCode = colName.split(' ')[0].substring(0, 8).toUpperCase();
+        const [insertRes] = await pool.query(
+          'INSERT INTO colleges (name, code, location, status) VALUES (?, ?, ?, ?)',
+          [colName, colCode, 'Main Campus', 'Active']
+        );
+        assignedCollegeId = insertRes.insertId;
+      }
+    } catch (_) {}
+  } else if (data.college_name || data.collegeName) {
+    try {
+      const colName = (data.college_name || data.collegeName).trim();
+      const [colRows] = await pool.query('SELECT id FROM colleges WHERE name = ? LIMIT 1', [colName]);
+      if (colRows.length > 0) {
+        assignedCollegeId = colRows[0].id;
+      } else if (canonicalRole === ROLES.COLLEGE_ADMIN) {
+        const colCode = colName.split(' ')[0].substring(0, 8).toUpperCase();
+        const [insertRes] = await pool.query(
+          'INSERT INTO colleges (name, code, location, status) VALUES (?, ?, ?, ?)',
+          [colName, colCode, 'Main Campus', 'Active']
+        );
+        assignedCollegeId = insertRes.insertId;
+      }
     } catch (_) {}
   } else if (email) {
     if (canonicalRole === ROLES.COLLEGE_ADMIN && codeRecord) {
@@ -706,6 +731,9 @@ export const verifyTotpPairing = async (identifier, totpCode) => {
     try {
       await updateUserModel(user.id, { is_active: 1 });
       user.is_active = 1;
+      if (user.email) {
+        await pool.query(`UPDATE secure_code_requests SET status = 'Approved' WHERE LOWER(email) = LOWER(?)`, [user.email]);
+      }
     } catch (_) {}
   }
 
