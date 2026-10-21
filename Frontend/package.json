@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "test": "eslint . --quiet && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postinstall": "node scripts/patch-node18.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
