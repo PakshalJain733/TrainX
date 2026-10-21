@@ -295,6 +295,15 @@ export const deleteCollege = async (req, res, next) => {
     const batchRows = await query('SELECT id FROM batches WHERE college_id = ?', [numId]);
     const batchIds = batchRows.map((b) => b.id);
 
+    // Helper for safe non-fatal cascading deletions across auxiliary tables
+    const safeDelete = async (sql, params = []) => {
+      try {
+        await query(sql, params);
+      } catch (err) {
+        console.warn(`[deleteCollege safeDelete skipped] ${sql.substring(0, 60)}:`, err.message);
+      }
+    };
+
     // Disable foreign key checks temporarily for seamless cascading deletion across interrelated tables
     await query('SET FOREIGN_KEY_CHECKS = 0');
 
@@ -303,101 +312,100 @@ export const deleteCollege = async (req, res, next) => {
       if (userIds.length > 0) {
         const uPlaceholders = userIds.map(() => '?').join(',');
 
-        await query(`DELETE FROM students WHERE user_id IN (${uPlaceholders}) OR college_id = ?`, [...userIds, numId]);
-        await query(`DELETE FROM student_batches WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM student_quiz_completions WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM coordinator_departments WHERE coordinator_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM mentor_student_assignments WHERE mentor_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM mentor_assignments WHERE student_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM attendance_summary WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM attendance_scans WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM attendance WHERE user_id IN (${uPlaceholders}) OR college_id = ?`, [...userIds, numId]);
-        await query(`DELETE FROM defaulters WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM interventions WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM interview_sessions WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM interview_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM interviews WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM leave_requests WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM live_sessions WHERE mentor_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM milestones WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM practice_problem_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM roadmaps WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM skill_gap_analysis WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM study_materials WHERE uploaded_by IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM support_tickets WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM task_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM weekly_reports WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
-        await query(`DELETE FROM coding_submissions WHERE student_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM drive_participations WHERE student_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM training_enrollments WHERE student_user_id IN (${uPlaceholders})`, userIds);
-        await query(`DELETE FROM c2c_enrollments WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM students WHERE user_id IN (${uPlaceholders}) OR college_id = ?`, [...userIds, numId]);
+        await safeDelete(`DELETE FROM student_batches WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM student_quiz_completions WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM coordinator_departments WHERE coordinator_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM mentor_student_assignments WHERE mentor_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM mentor_assignments WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM attendance_summary WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM attendance_scans WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM attendance WHERE user_id IN (${uPlaceholders}) OR college_id = ?`, [...userIds, numId]);
+        await safeDelete(`DELETE FROM defaulters WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM interventions WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM interview_sessions WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM interview_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM interviews WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM leave_requests WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM live_sessions WHERE mentor_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM milestones WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM practice_problem_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM roadmaps WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM skill_gap_analysis WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM study_materials WHERE uploaded_by IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM support_tickets WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM task_submissions WHERE user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM weekly_reports WHERE user_id IN (${uPlaceholders}) OR student_id IN (${uPlaceholders})`, [...userIds, ...userIds]);
+        await safeDelete(`DELETE FROM coding_submissions WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM drive_participations WHERE student_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM training_enrollments WHERE student_user_id IN (${uPlaceholders})`, userIds);
+        await safeDelete(`DELETE FROM c2c_enrollments WHERE student_id IN (${uPlaceholders})`, userIds);
       }
 
       // 4. Delete OTP records of users
       if (userEmails.length > 0) {
         const emailPlaceholders = userEmails.map(() => '?').join(',');
-        await query(`DELETE FROM otps WHERE LOWER(email) IN (${emailPlaceholders})`, userEmails.map((e) => e.toLowerCase()));
+        await safeDelete(`DELETE FROM otps WHERE LOWER(email) IN (${emailPlaceholders})`, userEmails.map((e) => e.toLowerCase()));
       }
 
       // 5. Delete Batch tasks and batch-scoped records
       if (batchIds.length > 0) {
         const bPlaceholders = batchIds.map(() => '?').join(',');
-        await query(`DELETE FROM batch_daily_topics WHERE batch_id IN (${bPlaceholders})`, batchIds);
-        await query(`DELETE FROM task_submissions WHERE task_id IN (SELECT id FROM batch_tasks WHERE batch_id IN (${bPlaceholders}))`, batchIds);
-        await query(`DELETE FROM batch_tasks WHERE batch_id IN (${bPlaceholders})`, batchIds);
-        await query(`DELETE FROM attendance_sessions WHERE batch_id IN (${bPlaceholders})`, batchIds);
-        await query(`DELETE FROM student_batches WHERE batch_id IN (${bPlaceholders})`, batchIds);
-        await query(`DELETE FROM mentor_student_assignments WHERE batch_id IN (${bPlaceholders})`, batchIds);
-        await query(`DELETE FROM training_enrollments WHERE batch_id IN (${bPlaceholders})`, batchIds);
-        await query(`DELETE FROM practice_problems WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM batch_daily_topics WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM task_submissions WHERE task_id IN (SELECT id FROM batch_tasks WHERE batch_id IN (${bPlaceholders}))`, batchIds);
+        await safeDelete(`DELETE FROM batch_tasks WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM attendance_sessions WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM student_batches WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM mentor_student_assignments WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM training_enrollments WHERE batch_id IN (${bPlaceholders})`, batchIds);
+        await safeDelete(`DELETE FROM practice_problems WHERE batch_id IN (${bPlaceholders})`, batchIds);
       }
 
       // 6. Delete Department associations
       if (deptIds.length > 0) {
         const dPlaceholders = deptIds.map(() => '?').join(',');
-        await query(`DELETE FROM coordinator_departments WHERE department_id IN (${dPlaceholders})`, deptIds);
+        await safeDelete(`DELETE FROM coordinator_departments WHERE department_id IN (${dPlaceholders})`, deptIds);
       }
 
       // 7. Delete College-level assessments and quizzes
-      await query(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE college_id = ?)`, [numId]);
-      await query(`DELETE FROM assessment_attempts WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM assessment_questions WHERE assessment_id IN (SELECT id FROM assessments WHERE college_id = ?)`, [numId]);
-      await query(`DELETE FROM assessments WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM assessment_answers WHERE attempt_id IN (SELECT id FROM assessment_attempts WHERE college_id = ?)`, [numId]);
+      await safeDelete(`DELETE FROM assessment_attempts WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM assessment_questions WHERE assessment_id IN (SELECT id FROM assessments WHERE college_id = ?)`, [numId]);
+      await safeDelete(`DELETE FROM assessments WHERE college_id = ?`, [numId]);
 
       // 8. Delete Broadcasts and notifications
-      await query(`DELETE FROM broadcast_notifications WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM broadcasts WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM broadcast_notifications WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM broadcasts WHERE college_id = ?`, [numId]);
 
       // 9. Delete Mock Drives & Training Programs
-      await query(`DELETE FROM drive_participations WHERE drive_id IN (SELECT id FROM mock_drives WHERE college_id = ?)`, [numId]);
-      await query(`DELETE FROM mock_drives WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM training_enrollments WHERE program_id IN (SELECT id FROM training_programs WHERE college_id = ?)`, [numId]);
-      await query(`DELETE FROM training_programs WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM trainings WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM drive_participations WHERE drive_id IN (SELECT id FROM mock_drives WHERE college_id = ?)`, [numId]);
+      await safeDelete(`DELETE FROM mock_drives WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM training_enrollments WHERE program_id IN (SELECT id FROM training_programs WHERE college_id = ?)`, [numId]);
+      await safeDelete(`DELETE FROM training_programs WHERE college_id = ?`, [numId]);
 
       // 10. Delete Attendance sessions, shared content, practice problems
-      await query(`DELETE FROM attendance_sessions WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM attendance WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM shared_content WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM practice_problems WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM attendance_sessions WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM attendance WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM shared_content WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM practice_problems WHERE college_id = ?`, [numId]);
 
       // 11. Delete Batches, Departments, Students
-      await query(`DELETE FROM batches WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM departments WHERE college_id = ?`, [numId]);
-      await query(`DELETE FROM students WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM batches WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM departments WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM students WHERE college_id = ?`, [numId]);
 
       // 12. Delete Secure codes, code requests, and C2C enrollments referencing this college name/code
       if (collegeName) {
-        await query(`DELETE FROM secure_codes WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?))`, [collegeName]);
-        await query(`DELETE FROM secure_code_requests WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?))`, [collegeName]);
-        await query(`DELETE FROM c2c_enrollments WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeName]);
+        await safeDelete(`DELETE FROM secure_codes WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?))`, [collegeName]);
+        await safeDelete(`DELETE FROM secure_code_requests WHERE LOWER(TRIM(college_name)) = LOWER(TRIM(?))`, [collegeName]);
+        await safeDelete(`DELETE FROM c2c_enrollments WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeName]);
       }
       if (collegeCode) {
-        await query(`DELETE FROM c2c_enrollments WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeCode]);
+        await safeDelete(`DELETE FROM c2c_enrollments WHERE LOWER(TRIM(college)) = LOWER(TRIM(?))`, [collegeCode]);
       }
 
       // 13. Delete ALL users belonging to this college
-      await query(`DELETE FROM users WHERE college_id = ?`, [numId]);
+      await safeDelete(`DELETE FROM users WHERE college_id = ?`, [numId]);
 
       // 14. Finally, delete the college row itself
       await query(`DELETE FROM colleges WHERE id = ?`, [numId]);
