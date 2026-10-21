@@ -37,17 +37,29 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (id.includes('node_modules')) {
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'vendor-react';
-            }
-            if (id.includes('recharts')) {
-              return 'vendor-charts';
-            }
-            if (id.includes('lucide-react')) {
+          const normalized = id.replace(/\\/g, '/');
+          if (normalized.includes('node_modules')) {
+            if (normalized.includes('/lucide-react/')) {
               return 'vendor-icons';
             }
-            if (id.includes('xlsx') || id.includes('socket.io-client') || id.includes('qrcode')) {
+            if (
+              normalized.includes('/react/') ||
+              normalized.includes('/react-dom/') ||
+              normalized.includes('/react-is/') ||
+              normalized.includes('/react-router/') ||
+              normalized.includes('/react-router-dom/') ||
+              normalized.includes('/scheduler/')
+            ) {
+              return 'vendor-react';
+            }
+            if (normalized.includes('/recharts/')) {
+              return 'vendor-charts';
+            }
+            if (
+              normalized.includes('/xlsx/') ||
+              normalized.includes('/socket.io-client/') ||
+              normalized.includes('/qrcode/')
+            ) {
               return 'vendor-utils';
             }
             return 'vendor';
