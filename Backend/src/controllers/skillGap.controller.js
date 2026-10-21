@@ -15,7 +15,8 @@ import {
  */
 export const getSkillGapData = async (req, res, next) => {
   try {
-    const studentId = req.params.studentId || req.query.student_id;
+    const isStudent = String(req.user?.role || '').toLowerCase() === 'student';
+    const studentId = req.params.studentId || req.query.student_id || (isStudent ? (req.user?.userId || req.user?.id) : null);
     if (studentId) {
       const analysis = await getStudentSkillGapAnalysis(studentId);
       return sendSuccess(res, 'Skill gap analysis retrieved successfully', analysis);

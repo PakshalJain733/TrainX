@@ -678,7 +678,19 @@ export const applyStudentLeave = async (req, res, next) => {
     }
 
     let insertId = Date.now();
+    let assignedMentorName = "Assigned Mentor";
     try {
+      // Find assigned mentor
+      const mentorRows = await query(
+        `SELECT m.id, m.name FROM users m
+         JOIN mentor_student_assignments msa ON msa.mentor_id = m.id
+         WHERE msa.student_id = ?`,
+        [userId]
+      );
+      if (mentorRows && mentorRows.length > 0) {
+        assignedMentorName = mentorRows[0].name;
+      }
+
       const result = await query(
         `INSERT INTO leave_requests (user_id, college_id, title, category, status, days, start_date, end_date, reason, remarks)
          VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?, ?, ?)`,
@@ -695,6 +707,25 @@ export const applyStudentLeave = async (req, res, next) => {
         ]
       );
       if (result && result.insertId) insertId = result.insertId;
+
+      // Broadcast notification to assigned mentor
+      try {
+        const uRows = await query('SELECT name FROM users WHERE id = ?', [userId]);
+        const studentName = uRows && uRows[0] ? uRows[0].name : 'Student';
+
+        await query(
+          `INSERT INTO broadcasts (college_id, title, message, target, priority, created_by_name, sender_role)
+           VALUES (?, ?, ?, 'Mentor', 'Normal', ?, 'Leave Approval')`,
+          [
+            collegeId,
+            `📋 Student Leave Request: ${studentName}`,
+            `Leave request submitted by ${studentName} (${category || 'General'}, ${days || 1} day(s): ${startDate} to ${endDate || startDate}) routed for your approval. Reason: ${reason || 'Personal'}`,
+            studentName
+          ]
+        );
+      } catch (notifErr) {
+        console.warn('[applyStudentLeave notify error]', notifErr.message);
+      }
     } catch (e) {
       console.warn('[applyStudentLeave DB error]', e.message);
     }
@@ -708,9 +739,10 @@ export const applyStudentLeave = async (req, res, next) => {
       days: days || 1,
       reason: reason || 'Personal Leave',
       status: 'Pending',
+      mentor: assignedMentorName,
       submittedAt: new Date().toISOString(),
     };
-    return sendSuccess(res, 'Leave application submitted successfully in database', newLeave, 201);
+    return sendSuccess(res, 'Leave application submitted successfully and forwarded to mentor', newLeave, 201);
   } catch (error) {
     next(error);
   }
