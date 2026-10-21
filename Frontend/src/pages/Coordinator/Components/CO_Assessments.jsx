@@ -258,7 +258,6 @@ export default function CoordinatorAssessments() {
               <Search size={16} className="coord-assess-search-icon" />
               <input
                 type="text"
-                className="coord-search-input"
                 placeholder="Search quiz title or batch..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
