@@ -1387,6 +1387,81 @@ export default function AdminTrainings() {
         </div>,
         document.body
       )}
+
+      {/* =========================================================================
+          MODAL: TRANSFER STUDENT TO ANOTHER TRAINING PROGRAM
+          ========================================================================= */}
+      {isTransferModalOpen && createPortal(
+        <div className="trainings-modal-backdrop" onClick={() => setIsTransferModalOpen(false)}>
+          <div className="trainings-modal-dialog" style={{ maxWidth: "460px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="trainings-modal-header">
+              <h3 className="trainings-modal-title">Move / Transfer Student Training</h3>
+              <button
+                type="button"
+                className="trainings-modal-close"
+                onClick={() => setIsTransferModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmTransfer}>
+              <div className="trainings-modal-body">
+                <p style={{ fontSize: "13.5px", color: "#475569", margin: 0 }}>
+                  Re-assign student <strong>{transferModalData.studentName}</strong> to a different training program based on their registration response or preference.
+                </p>
+
+                <div style={{ background: "#f8fafc", padding: "12px", borderRadius: "8px", fontSize: "13px" }}>
+                  <div style={{ marginBottom: "4px" }}>
+                    Current Training: <strong>{transferModalData.currentTrainingName}</strong>
+                  </div>
+                  <div style={{ color: "#64748b", fontSize: "12px" }}>
+                    Student enrollment record, payments, and progress will be moved to the selected training.
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">
+                    Target Training Program <span className="req">*</span>
+                  </label>
+                  <CustomSelect
+                    value={transferModalData.targetTrainingId}
+                    onChange={(val) => setTransferModalData({ ...transferModalData, targetTrainingId: val })}
+                    options={trainingsList
+                      .filter((t) => t.id !== selectedTrainingId)
+                      .map((t) => ({
+                        value: String(t.id),
+                        label: `${t.name} (${t.code}) · ${formatCurrency(t.fee_amount || 3500)}`,
+                      }))}
+                    placeholder="Select destination training program..."
+                  />
+                  <span className="form-hint">
+                    Program fee, payments, and balance will be automatically synchronized with the new training.
+                  </span>
+                </div>
+              </div>
+
+              <div className="trainings-modal-footer">
+                <button
+                  type="button"
+                  className="trainings-btn-secondary"
+                  onClick={() => setIsTransferModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="trainings-btn-primary"
+                  disabled={!transferModalData.targetTrainingId || actionInProgressId === transferModalData.enrollmentId}
+                >
+                  Confirm Transfer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
